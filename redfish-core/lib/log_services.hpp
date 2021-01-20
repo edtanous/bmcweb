@@ -396,6 +396,29 @@ static bool
     return !redfishLogFiles.empty();
 }
 
+std::vector<std::pair<std::string, std::string>>
+    parseOEMAdditionalData(const std::string &oemData)
+{
+    // Parse OEM data for encoded format string
+    // oemDiagnosticDataType = "key1=value1;key2=value2;key3=value3"
+    std::vector<std::pair<std::string, std::string>> additionalData;
+    std::vector<std::string> tokens;
+    boost::split(tokens, oemData, boost::is_any_of(";"));
+    if (!tokens.empty()){
+        std::vector<std::string> subTokens;
+        for (unsigned int i = 0; i < tokens.size(); i++)
+        {
+            boost::split(subTokens, tokens[i], boost::is_any_of("="));
+            // Include only <key,value> pair with '=' delimiter
+            if (subTokens.size() == 2)
+            {
+                additionalData.emplace_back(std::make_pair(subTokens[0], subTokens[1]));
+            }
+        }
+    }
+    return additionalData;
+}
+
 inline void getDumpEntryCollection(std::shared_ptr<AsyncResp>& asyncResp,
                                    const std::string& dumpType)
 {
@@ -777,6 +800,7 @@ inline void createDump(crow::Response& res, const crow::Request& req,
 
     std::optional<std::string> diagnosticDataType;
     std::optional<std::string> oemDiagnosticDataType;
+    std::vector<std::pair<std::string, std::string>> createDumpParamVec;
 
     if (!redfish::json_util::readJson(
             req, asyncResp->res, "DiagnosticDataType", diagnosticDataType,
@@ -787,6 +811,9 @@ inline void createDump(crow::Response& res, const crow::Request& req,
 
     if (dumpType == "System")
     {
+        // Decode oemDiagnosticDataType string format
+        createDumpParamVec = parseOEMAdditionalData(*oemDiagnosticDataType);
+
         if (!oemDiagnosticDataType || !diagnosticDataType)
         {
             BMCWEB_LOG_ERROR << "CreateDump action parameter "
@@ -797,8 +824,7 @@ inline void createDump(crow::Response& res, const crow::Request& req,
                 "DiagnosticDataType & OEMDiagnosticDataType");
             return;
         }
-        if ((*oemDiagnosticDataType != "System") ||
-            (*diagnosticDataType != "OEM"))
+        else if (*diagnosticDataType != "OEM")
         {
             BMCWEB_LOG_ERROR << "Wrong parameter values passed";
             messages::invalidObject(asyncResp->res,
@@ -825,8 +851,6 @@ inline void createDump(crow::Response& res, const crow::Request& req,
             return;
         }
     }
-
-    std::vector<std::pair<std::string, std::string>> createDumpParamVec;
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, req](const boost::system::error_code ec,
