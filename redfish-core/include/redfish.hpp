@@ -34,6 +34,8 @@
 #include "../lib/network_protocol.hpp"
 #include "../lib/pcie.hpp"
 #include "../lib/power.hpp"
+#include "../lib/power_subsystem.hpp"
+#include "../lib/power_supply.hpp"
 #include "../lib/processor.hpp"
 #include "../lib/redfish_sessions.hpp"
 #include "../lib/roles.hpp"
@@ -80,6 +82,11 @@ class RedfishService
 #endif
         requestRoutesThermalSubsystem(app);
         requestRoutesThermalMetrics(app);
+#ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
+        requestRoutesPowerSubsystem(app);
+        requestRoutesPowerSupplyCollection(app);
+        requestRoutesPowerSupply(app);
+#endif
         requestRoutesManagerCollection(app);
         requestRoutesManager(app);
         requestRoutesManagerResetAction(app);

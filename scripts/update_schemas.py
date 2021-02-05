@@ -75,6 +75,9 @@ include_list = [
     'PortCollection',
     'PortMetrics',
     'Power',
+    'PowerSubsystem',
+    'PowerSupplyCollection',
+    'PowerSupply',
     'Privileges',  # Used in Role
     'Processor',
     'ProcessorCollection',
