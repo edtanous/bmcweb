@@ -543,7 +543,7 @@ inline void requestRoutesChassis(App& app)
                         }
 
                         asyncResp->res.jsonValue["@odata.type"] =
-                            "#Chassis.v1_14_0.Chassis";
+                            "#Chassis.v1_15_0.Chassis";
                         asyncResp->res.jsonValue["@odata.id"] =
                             "/redfish/v1/Chassis/" + chassisId;
                         asyncResp->res.jsonValue["Name"] = "Chassis Collection";
@@ -654,6 +654,11 @@ inline void requestRoutesChassis(App& app)
                                 asyncResp->res.jsonValue["Thermal"] = {
                                     {"@odata.id", "/redfish/v1/Chassis/" +
                                                       chassisId + "/Thermal"}};
+
+                                asyncResp->res.jsonValue["ThermalSubsystem"] = {
+                                    {"@odata.id", "/redfish/v1/Chassis/" +
+                                                      chassisId +
+                                                      "/ThermalSubsystem"}};
                                 // Power object
                                 asyncResp->res.jsonValue["Power"] = {
                                     {"@odata.id", "/redfish/v1/Chassis/" +
@@ -798,7 +803,7 @@ inline void requestRoutesChassis(App& app)
 
                     // Couldn't find an object with that name.  return an error
                     messages::resourceNotFound(
-                        asyncResp->res, "#Chassis.v1_14_0.Chassis", chassisId);
+                        asyncResp->res, "#Chassis.v1_15_0.Chassis", chassisId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
@@ -929,7 +934,7 @@ inline void requestRoutesChassis(App& app)
                     }
 
                     messages::resourceNotFound(
-                        asyncResp->res, "#Chassis.v1_14_0.Chassis", chassisId);
+                        asyncResp->res, "#Chassis.v1_15_0.Chassis", chassisId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
