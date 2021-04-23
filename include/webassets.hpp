@@ -45,14 +45,23 @@ inline void requestRoutes(App& app)
              {".json", "application/json"},
              {".jpg", "image/jpeg"},
              {".jpeg", "image/jpeg"},
-             {".json", "application/json"},
              // dev tools don't care about map type, setting to json causes
              // browser to show as text
              // https://stackoverflow.com/questions/19911929/what-mime-type-should-i-use-for-javascript-source-map-files
              {".map", "application/json"}}};
 
     std::filesystem::path rootpath{"/usr/share/www/"};
-    std::filesystem::recursive_directory_iterator dirIter(rootpath);
+
+    std::error_code ec;
+
+    std::filesystem::recursive_directory_iterator dirIter(rootpath, ec);
+    if (ec)
+    {
+        BMCWEB_LOG_ERROR << "Unable to find or open " << rootpath
+                         << " static file hosting disabled";
+        return;
+    }
+
     // In certain cases, we might have both a gzipped version of the file AND a
     // non-gzipped version.  To avoid duplicated routes, we need to make sure we
     // get the gzipped version first.  Because the gzipped path should be longer
@@ -134,16 +143,18 @@ inline void requestRoutes(App& app)
             }
 
             app.routeDynamic(webpath)(
-                [absolutePath, contentType,
-                 contentEncoding](const crow::Request&, crow::Response& res) {
+                [absolutePath, contentType, contentEncoding](
+                    const crow::Request&,
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
                     if (contentType != nullptr)
                     {
-                        res.addHeader("Content-Type", contentType);
+                        asyncResp->res.addHeader("Content-Type", contentType);
                     }
 
                     if (contentEncoding != nullptr)
                     {
-                        res.addHeader("Content-Encoding", contentEncoding);
+                        asyncResp->res.addHeader("Content-Encoding",
+                                                 contentEncoding);
                     }
 
                     // res.set_header("Cache-Control", "public, max-age=86400");
@@ -151,15 +162,14 @@ inline void requestRoutes(App& app)
                     if (!inf)
                     {
                         BMCWEB_LOG_DEBUG << "failed to read file";
-                        res.result(
+                        asyncResp->res.result(
                             boost::beast::http::status::internal_server_error);
-                        res.end();
                         return;
                     }
 
-                    res.body() = {std::istreambuf_iterator<char>(inf),
-                                  std::istreambuf_iterator<char>()};
-                    res.end();
+                    asyncResp->res.body() = {
+                        std::istreambuf_iterator<char>(inf),
+                        std::istreambuf_iterator<char>()};
                 });
         }
     }

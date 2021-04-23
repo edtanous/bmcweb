@@ -136,7 +136,7 @@ inline std::string translateMemoryTypeToRedfish(const std::string& memoryType)
     return "";
 }
 
-inline void dimmPropToHex(const std::shared_ptr<AsyncResp>& aResp,
+inline void dimmPropToHex(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                           const char* key,
                           const std::pair<std::string, DimmProperty>& property)
 {
@@ -151,9 +151,9 @@ inline void dimmPropToHex(const std::shared_ptr<AsyncResp>& aResp,
     aResp->res.jsonValue[key] = (boost::format("0x%04x") % *value).str();
 }
 
-inline void
-    getPersistentMemoryProperties(const std::shared_ptr<AsyncResp>& aResp,
-                                  const DimmProperties& properties)
+inline void getPersistentMemoryProperties(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const DimmProperties& properties)
 {
     for (const auto& property : properties)
     {
@@ -184,7 +184,7 @@ inline void
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for "
                                     "VolatileRegionSizeLimitKiB";
-                continue;
+                return;
             }
             aResp->res.jsonValue["VolatileRegionSizeLimitMiB"] = (*value) >> 10;
         }
@@ -197,7 +197,7 @@ inline void
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG
                     << "Invalid property type for PmRegioSizeLimitKiB";
-                continue;
+                return;
             }
             aResp->res.jsonValue["PersistentRegionSizeLimitMiB"] =
                 (*value) >> 10;
@@ -211,7 +211,7 @@ inline void
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG
                     << "Invalid property type for VolatileSizeInKiB";
-                continue;
+                return;
             }
             aResp->res.jsonValue["VolatileSizeMiB"] = (*value) >> 10;
         }
@@ -222,7 +222,7 @@ inline void
             {
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for PmSizeInKiB";
-                continue;
+                return;
             }
             aResp->res.jsonValue["NonVolatileSizeMiB"] = (*value) >> 10;
         }
@@ -233,7 +233,7 @@ inline void
             {
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for CacheSizeInKB";
-                continue;
+                return;
             }
             aResp->res.jsonValue["CacheSizeMiB"] = (*value >> 10);
         }
@@ -247,7 +247,7 @@ inline void
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for "
                                     "VolatileRegionMaxSizeInKib";
-                continue;
+                return;
             }
             aResp->res.jsonValue["VolatileRegionSizeMaxMiB"] = (*value) >> 10;
         }
@@ -260,7 +260,7 @@ inline void
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG
                     << "Invalid property type for PmRegionMaxSizeInKiB";
-                continue;
+                return;
             }
             aResp->res.jsonValue["PersistentRegionSizeMaxMiB"] = (*value) >> 10;
         }
@@ -273,7 +273,7 @@ inline void
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for "
                                     "AllocationIncrementInKiB";
-                continue;
+                return;
             }
             aResp->res.jsonValue["AllocationIncrementMiB"] = (*value) >> 10;
         }
@@ -286,7 +286,7 @@ inline void
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for "
                                     "AllocationAlignmentInKiB";
-                continue;
+                return;
             }
             aResp->res.jsonValue["AllocationAlignmentMiB"] = (*value) >> 10;
         }
@@ -296,7 +296,7 @@ inline void
             if (value == nullptr)
             {
                 messages::internalError(aResp->res);
-                continue;
+                return;
             }
             aResp->res.jsonValue["VolatileRegionNumberLimit"] = *value;
         }
@@ -306,7 +306,7 @@ inline void
             if (value == nullptr)
             {
                 messages::internalError(aResp->res);
-                continue;
+                return;
             }
             aResp->res.jsonValue["PersistentRegionNumberLimit"] = *value;
         }
@@ -316,7 +316,7 @@ inline void
             if (value == nullptr)
             {
                 messages::internalError(aResp->res);
-                continue;
+                return;
             }
             aResp->res.jsonValue["SpareDeviceCount"] = *value;
         }
@@ -326,7 +326,7 @@ inline void
             if (value == nullptr)
             {
                 messages::internalError(aResp->res);
-                continue;
+                return;
             }
             aResp->res.jsonValue["IsSpareDeviceEnabled"] = *value;
         }
@@ -336,7 +336,7 @@ inline void
             if (value == nullptr)
             {
                 messages::internalError(aResp->res);
-                continue;
+                return;
             }
             aResp->res.jsonValue["IsRankSpareEnabled"] = *value;
         }
@@ -349,7 +349,7 @@ inline void
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for "
                                     "MaxAveragePowerLimitmW";
-                continue;
+                return;
             }
             aResp->res.jsonValue["MaxTDPMilliWatts"] = *value;
         }
@@ -359,7 +359,7 @@ inline void
             if (value == nullptr)
             {
                 messages::internalError(aResp->res);
-                continue;
+                return;
             }
             aResp->res.jsonValue["ConfigurationLocked"] = *value;
         }
@@ -371,7 +371,7 @@ inline void
             {
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for FormFactor";
-                continue;
+                return;
             }
             constexpr const std::array<const char*, 3> values{"Volatile",
                                                               "PMEM", "Block"};
@@ -393,7 +393,7 @@ inline void
             {
                 messages::internalError(aResp->res);
                 BMCWEB_LOG_DEBUG << "Invalid property type for MemoryMedia";
-                continue;
+                return;
             }
             constexpr const std::array<const char*, 3> values{"DRAM", "NAND",
                                                               "Intel3DXPoint"};
@@ -416,7 +416,7 @@ inline void
             if (value == nullptr)
             {
                 messages::internalError(aResp->res);
-                continue;
+                return;
             }
             aResp->res.jsonValue["SecurityCapabilities"][property.first] =
                 *value;
@@ -428,7 +428,7 @@ inline void
             if (value == nullptr)
             {
                 messages::internalError(aResp->res);
-                continue;
+                return;
             }
             aResp->res.jsonValue["SecurityCapabilities"][property.first] =
                 *value;
@@ -436,7 +436,7 @@ inline void
     }
 }
 
-inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
+inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                  const std::string& dimmId,
                                  const std::string& service,
                                  const std::string& objPath)
@@ -527,10 +527,25 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
                         messages::internalError(aResp->res);
                         BMCWEB_LOG_DEBUG
                             << "Invalid property type for RevisionCode";
-                        continue;
+                        return;
                     }
                     aResp->res.jsonValue["FirmwareRevision"] =
                         std::to_string(*value);
+                }
+                else if (property.first == "Present")
+                {
+                    const bool* value = std::get_if<bool>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        BMCWEB_LOG_DEBUG
+                            << "Invalid property type for Dimm Presence";
+                        return;
+                    }
+                    if (*value == false)
+                    {
+                        aResp->res.jsonValue["Status"]["State"] = "Absent";
+                    }
                 }
                 else if (property.first == "MemoryTotalWidth")
                 {
@@ -550,7 +565,7 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
                     {
                         messages::internalError(aResp->res);
                         BMCWEB_LOG_DEBUG << "Invalid property type for ECC";
-                        continue;
+                        return;
                     }
                     constexpr const std::array<const char*, 4> values{
                         "NoECC", "SingleBitECC", "MultiBitECC",
@@ -574,7 +589,7 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
                         messages::internalError(aResp->res);
                         BMCWEB_LOG_DEBUG
                             << "Invalid property type for FormFactor";
-                        continue;
+                        return;
                     }
                     constexpr const std::array<const char*, 11> values{
                         "RDIMM",        "UDIMM",        "SO_DIMM",
@@ -617,7 +632,7 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
                         messages::internalError(aResp->res);
                         BMCWEB_LOG_DEBUG
                             << "Invalid property type for MemoryAttributes";
-                        continue;
+                        return;
                     }
                     aResp->res.jsonValue["RankCount"] =
                         static_cast<uint64_t>(*value);
@@ -667,7 +682,7 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
                     if (value == nullptr)
                     {
                         messages::internalError(aResp->res);
-                        continue;
+                        return;
                     }
                     aResp->res.jsonValue["MemoryLocation"][property.first] =
                         *value;
@@ -679,7 +694,7 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
                     if (value == nullptr)
                     {
                         messages::internalError(aResp->res);
-                        continue;
+                        return;
                     }
                     aResp->res.jsonValue["SparePartNumber"] = *value;
                 }
@@ -690,7 +705,7 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
                     if (value == nullptr)
                     {
                         messages::internalError(aResp->res);
-                        continue;
+                        return;
                     }
                     aResp->res.jsonValue["Model"] = *value;
                 }
@@ -701,7 +716,7 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
                     if (value == nullptr)
                     {
                         messages::internalError(aResp->res);
-                        continue;
+                        return;
                     }
                     aResp->res
                         .jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
@@ -716,7 +731,7 @@ inline void getDimmDataByService(std::shared_ptr<AsyncResp> aResp,
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
-inline void getDimmPartitionData(std::shared_ptr<AsyncResp> aResp,
+inline void getDimmPartitionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                  const std::string& service,
                                  const std::string& path)
 {
@@ -745,7 +760,7 @@ inline void getDimmPartitionData(std::shared_ptr<AsyncResp> aResp,
                     if (value == nullptr)
                     {
                         messages::internalError(aResp->res);
-                        continue;
+                        return;
                     }
                     partition[key] = *value;
                 }
@@ -755,7 +770,7 @@ inline void getDimmPartitionData(std::shared_ptr<AsyncResp> aResp,
                     if (value == nullptr)
                     {
                         messages::internalError(aResp->res);
-                        continue;
+                        return;
                     }
 
                     partition["OffsetMiB"] = (*value >> 10);
@@ -766,7 +781,7 @@ inline void getDimmPartitionData(std::shared_ptr<AsyncResp> aResp,
                     if (value == nullptr)
                     {
                         messages::internalError(aResp->res);
-                        continue;
+                        return;
                     }
                     partition["RegionId"] = *value;
                 }
@@ -777,7 +792,7 @@ inline void getDimmPartitionData(std::shared_ptr<AsyncResp> aResp,
                     if (value == nullptr)
                     {
                         messages::internalError(aResp->res);
-                        continue;
+                        return;
                     }
                     partition["PassphraseEnabled"] = *value;
                 }
@@ -789,7 +804,7 @@ inline void getDimmPartitionData(std::shared_ptr<AsyncResp> aResp,
                         messages::internalError(aResp->res);
                         BMCWEB_LOG_DEBUG
                             << "Invalid property type for SizeInKiB";
-                        continue;
+                        return;
                     }
                     partition["SizeMiB"] = (*value >> 10);
                 }
@@ -800,7 +815,7 @@ inline void getDimmPartitionData(std::shared_ptr<AsyncResp> aResp,
         "xyz.openbmc_project.Inventory.Item.PersistentMemory.Partition");
 }
 
-inline void getDimmData(std::shared_ptr<AsyncResp> aResp,
+inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         const std::string& dimmId)
 {
     BMCWEB_LOG_DEBUG << "Get available system dimm resources.";
@@ -886,13 +901,14 @@ class MemoryCollection : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
-               const std::vector<std::string>&) override
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&, const std::vector<std::string>&) override
     {
-        res.jsonValue["@odata.type"] = "#MemoryCollection.MemoryCollection";
-        res.jsonValue["Name"] = "Memory Module Collection";
-        res.jsonValue["@odata.id"] = "/redfish/v1/Systems/system/Memory";
-        auto asyncResp = std::make_shared<AsyncResp>(res);
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#MemoryCollection.MemoryCollection";
+        asyncResp->res.jsonValue["Name"] = "Memory Module Collection";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/system/Memory";
 
         collection_util::getCollectionMembers(
             asyncResp, "/redfish/v1/Systems/system/Memory",
@@ -922,23 +938,22 @@ class Memory : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&,
                const std::vector<std::string>& params) override
     {
         // Check if there is required param, truly entering this shall be
         // impossible
         if (params.size() != 1)
         {
-            messages::internalError(res);
-            res.end();
+            messages::internalError(asyncResp->res);
             return;
         }
         const std::string& dimmId = params[0];
 
-        res.jsonValue["@odata.type"] = "#Memory.v1_11_0.Memory";
-        res.jsonValue["@odata.id"] =
+        asyncResp->res.jsonValue["@odata.type"] = "#Memory.v1_11_0.Memory";
+        asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/Systems/system/Memory/" + dimmId;
-        auto asyncResp = std::make_shared<AsyncResp>(res);
 
         getDimmData(asyncResp, dimmId);
     }

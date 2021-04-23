@@ -78,9 +78,10 @@ static std::shared_ptr<persistent_data::UserSession>
     // needed.
     // This whole flow needs to be revisited anyway, as we can't be
     // calling directly into pam for every request
+    std::string unsupportedClientId = "";
     return persistent_data::SessionStore::getInstance().generateUserSession(
-        user, persistent_data::PersistenceType::SINGLE_REQUEST,
-        isConfigureSelfOnly, clientIp.to_string());
+        user, clientIp.to_string(), unsupportedClientId,
+        persistent_data::PersistenceType::SINGLE_REQUEST, isConfigureSelfOnly);
 }
 #endif
 
@@ -192,11 +193,13 @@ static std::shared_ptr<persistent_data::UserSession>
             cookieValue.find("SESSION=") == std::string::npos)
         {
             // TODO: change this to not switch to cookie auth
-            res.addHeader("Set-Cookie", "XSRF-TOKEN=" + sp->csrfToken +
-                                            "; Secure\r\nSet-Cookie: SESSION=" +
-                                            sp->sessionToken +
-                                            "; Secure; HttpOnly\r\nSet-Cookie: "
-                                            "IsAuthenticated=true; Secure");
+            res.addHeader(
+                "Set-Cookie",
+                "XSRF-TOKEN=" + sp->csrfToken +
+                    "; SameSite=Strict; Secure\r\nSet-Cookie: SESSION=" +
+                    sp->sessionToken +
+                    "; SameSite=Strict; Secure; HttpOnly\r\nSet-Cookie: "
+                    "IsAuthenticated=true; Secure");
             BMCWEB_LOG_DEBUG << " TLS session: " << sp->uniqueId
                              << " with cookie will be used for this request.";
             return sp;

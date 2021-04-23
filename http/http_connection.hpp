@@ -239,12 +239,12 @@ class Connection :
                 return true;
             }
             sslUser.resize(lastChar);
-
-            session =
-                persistent_data::SessionStore::getInstance()
-                    .generateUserSession(
-                        sslUser, persistent_data::PersistenceType::TIMEOUT,
-                        false, req->ipAddress.to_string());
+            std::string unsupportedClientId = "";
+            session = persistent_data::SessionStore::getInstance()
+                          .generateUserSession(
+                              sslUser, req->ipAddress.to_string(),
+                              unsupportedClientId,
+                              persistent_data::PersistenceType::TIMEOUT);
             if (auto sp = session.lock())
             {
                 BMCWEB_LOG_DEBUG << this
@@ -356,6 +356,7 @@ class Connection :
                     res.completeRequestHandler = nullptr;
                     return;
                 }
+<<<<<<< HEAD
                 std::string url(req->target());
                 std::size_t pos = url.rfind("Dump/attachment");
                 if (pos != std::string::npos)
@@ -368,6 +369,12 @@ class Connection :
                     return;
                 }
                 handler->handle(*req, res);
+||||||| merged common ancestors
+                handler->handle(*req, res);
+=======
+                auto asyncResp = std::make_shared<bmcweb::AsyncResp>(res);
+                handler->handle(*req, asyncResp);
+>>>>>>> origin/master
             }
             else
             {

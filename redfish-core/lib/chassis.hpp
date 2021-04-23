@@ -34,7 +34,7 @@ namespace redfish
  *
  * @return None.
  */
-inline void getChassisState(std::shared_ptr<AsyncResp> aResp)
+inline void getChassisState(std::shared_ptr<bmcweb::AsyncResp> aResp)
 {
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
@@ -86,7 +86,7 @@ using ManagedObjectsType = std::vector<std::pair<
 
 using PropertiesType = boost::container::flat_map<std::string, VariantType>;
 
-inline void getIntrusionByService(std::shared_ptr<AsyncResp> aResp,
+inline void getIntrusionByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                   const std::string& service,
                                   const std::string& objPath)
 {
@@ -121,7 +121,7 @@ inline void getIntrusionByService(std::shared_ptr<AsyncResp> aResp,
 /**
  * Retrieves physical security properties over dbus
  */
-inline void getPhysicalSecurityData(std::shared_ptr<AsyncResp> aResp)
+inline void getPhysicalSecurityData(std::shared_ptr<bmcweb::AsyncResp> aResp)
 {
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
@@ -176,14 +176,13 @@ class ChassisCollection : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
-               const std::vector<std::string>&) override
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&, const std::vector<std::string>&) override
     {
-        res.jsonValue["@odata.type"] = "#ChassisCollection.ChassisCollection";
-        res.jsonValue["@odata.id"] = "/redfish/v1/Chassis";
-        res.jsonValue["Name"] = "Chassis Collection";
-
-        auto asyncResp = std::make_shared<AsyncResp>(res);
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#ChassisCollection.ChassisCollection";
+        asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis";
+        asyncResp->res.jsonValue["Name"] = "Chassis Collection";
 
         collection_util::getCollectionMembers(
             asyncResp, "/redfish/v1/Chassis",
@@ -213,7 +212,8 @@ class Chassis : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&,
                const std::vector<std::string>& params) override
     {
         const std::array<const char*, 2> interfaces = {
@@ -224,13 +224,11 @@ class Chassis : public Node
         // impossible.
         if (params.size() != 1)
         {
-            messages::internalError(res);
-            res.end();
+            messages::internalError(asyncResp->res);
             return;
         }
         const std::string& chassisId = params[0];
 
-        auto asyncResp = std::make_shared<AsyncResp>(res);
         crow::connections::systemBus->async_method_call(
             [asyncResp, chassisId(std::string(chassisId))](
                 const boost::system::error_code ec,
@@ -323,6 +321,41 @@ class Chassis : public Node
                         }
                     }
 
+                    const std::string locationInterface =
+                        "xyz.openbmc_project.Inventory.Decorator.LocationCode";
+                    if (std::find(interfaces2.begin(), interfaces2.end(),
+                                  locationInterface) != interfaces2.end())
+                    {
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, chassisId(std::string(chassisId))](
+                                const boost::system::error_code ec,
+                                const std::variant<std::string>& property) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_DEBUG
+                                        << "DBUS response error for Location";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+
+                                const std::string* value =
+                                    std::get_if<std::string>(&property);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                        "for locaton code";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res
+                                    .jsonValue["Location"]["PartLocation"]
+                                              ["ServiceLabel"] = *value;
+                            },
+                            connectionName, path,
+                            "org.freedesktop.DBus.Properties", "Get",
+                            locationInterface, "LocationCode");
+                    }
+
                     crow::connections::systemBus->async_method_call(
                         [asyncResp, chassisId(std::string(chassisId))](
                             const boost::system::error_code /*ec2*/,
@@ -392,19 +425,19 @@ class Chassis : public Node
         getPhysicalSecurityData(asyncResp);
     }
 
-    void doPatch(crow::Response& res, const crow::Request& req,
+    void doPatch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                 const crow::Request& req,
                  const std::vector<std::string>& params) override
     {
         std::optional<bool> locationIndicatorActive;
         std::optional<std::string> indicatorLed;
-        auto asyncResp = std::make_shared<AsyncResp>(res);
 
         if (params.size() != 1)
         {
             return;
         }
 
-        if (!json_util::readJson(req, res, "LocationIndicatorActive",
+        if (!json_util::readJson(req, asyncResp->res, "LocationIndicatorActive",
                                  locationIndicatorActive, "IndicatorLED",
                                  indicatorLed))
         {
@@ -418,9 +451,9 @@ class Chassis : public Node
         }
         if (indicatorLed)
         {
-            res.addHeader(boost::beast::http::field::warning,
-                          "299 - \"IndicatorLED is deprecated. Use "
-                          "LocationIndicatorActive instead.\"");
+            asyncResp->res.addHeader(boost::beast::http::field::warning,
+                                     "299 - \"IndicatorLED is deprecated. Use "
+                                     "LocationIndicatorActive instead.\"");
         }
 
         const std::array<const char*, 2> interfaces = {
@@ -517,7 +550,8 @@ class Chassis : public Node
     }
 };
 
-inline void doChassisPowerCycle(const std::shared_ptr<AsyncResp>& asyncResp)
+inline void
+    doChassisPowerCycle(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     const char* busName = "xyz.openbmc_project.ObjectMapper";
     const char* path = "/xyz/openbmc_project/object_mapper";
@@ -596,13 +630,13 @@ class ChassisResetAction : public Node
      * Function handles POST method request.
      * Analyzes POST body before sending Reset request data to D-Bus.
      */
-    void doPost(crow::Response& res, const crow::Request& req,
+    void doPost(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                const crow::Request& req,
                 const std::vector<std::string>&) override
     {
         BMCWEB_LOG_DEBUG << "Post Chassis Reset.";
 
         std::string resetType;
-        auto asyncResp = std::make_shared<AsyncResp>(res);
 
         if (!json_util::readJson(req, asyncResp->res, "ResetType", resetType))
         {
@@ -648,28 +682,28 @@ class ChassisResetActionInfo : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&,
                const std::vector<std::string>& params) override
     {
         if (params.size() != 1)
         {
-            messages::internalError(res);
-            res.end();
+            messages::internalError(asyncResp->res);
             return;
         }
         const std::string& chassisId = params[0];
 
-        res.jsonValue = {{"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
-                         {"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                           "/ResetActionInfo"},
-                         {"Name", "Reset Action Info"},
-                         {"Id", "ResetActionInfo"},
-                         {"Parameters",
-                          {{{"Name", "ResetType"},
-                            {"Required", true},
-                            {"DataType", "String"},
-                            {"AllowableValues", {"PowerCycle"}}}}}};
-        res.end();
+        asyncResp->res.jsonValue = {
+            {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
+            {"@odata.id",
+             "/redfish/v1/Chassis/" + chassisId + "/ResetActionInfo"},
+            {"Name", "Reset Action Info"},
+            {"Id", "ResetActionInfo"},
+            {"Parameters",
+             {{{"Name", "ResetType"},
+               {"Required", true},
+               {"DataType", "String"},
+               {"AllowableValues", {"PowerCycle"}}}}}};
     }
 };
 

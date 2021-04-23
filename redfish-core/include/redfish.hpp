@@ -141,11 +141,7 @@ class RedfishService
         nodes.emplace_back(std::make_unique<CrashdumpEntry>(app));
         nodes.emplace_back(std::make_unique<CrashdumpFile>(app));
         nodes.emplace_back(std::make_unique<CrashdumpClear>(app));
-        nodes.emplace_back(std::make_unique<OnDemandCrashdump>(app));
-        nodes.emplace_back(std::make_unique<TelemetryCrashdump>(app));
-#ifdef BMCWEB_ENABLE_REDFISH_RAW_PECI
-        nodes.emplace_back(std::make_unique<SendRawPECI>(app));
-#endif // BMCWEB_ENABLE_REDFISH_RAW_PECI
+        nodes.emplace_back(std::make_unique<CrashdumpCollect>(app));
 #endif // BMCWEB_ENABLE_REDFISH_CPU_LOG
 
         nodes.emplace_back(std::make_unique<ProcessorCollection>(app));
@@ -172,6 +168,7 @@ class RedfishService
         nodes.emplace_back(std::make_unique<DBusLogServiceActionsClear>(app));
         nodes.emplace_back(std::make_unique<DBusEventLogEntryCollection>(app));
         nodes.emplace_back(std::make_unique<DBusEventLogEntry>(app));
+        nodes.emplace_back(std::make_unique<DBusEventLogEntryDownload>(app));
 #endif
 
         nodes.emplace_back(

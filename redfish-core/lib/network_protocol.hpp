@@ -141,11 +141,9 @@ class NetworkProtocol : public Node
     }
 
   private:
-    void doGet(crow::Response& res, const crow::Request&,
-               const std::vector<std::string>&) override
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&, const std::vector<std::string>&) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
-
         getData(asyncResp);
     }
 
@@ -161,7 +159,8 @@ class NetworkProtocol : public Node
         return hostName;
     }
 
-    void getNTPProtocolEnabled(const std::shared_ptr<AsyncResp>& asyncResp)
+    void getNTPProtocolEnabled(
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code errorCode,
@@ -190,7 +189,7 @@ class NetworkProtocol : public Node
             "xyz.openbmc_project.Time.Synchronization", "TimeSyncMethod");
     }
 
-    void getData(const std::shared_ptr<AsyncResp>& asyncResp)
+    void getData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         asyncResp->res.jsonValue["@odata.type"] =
             "#ManagerNetworkProtocol.v1_5_0.ManagerNetworkProtocol";
@@ -354,8 +353,10 @@ class NetworkProtocol : public Node
             "org.freedesktop.systemd1.Manager", "ListUnits");
     }
 
-    void handleHostnamePatch(const std::string& hostName,
-                             const std::shared_ptr<AsyncResp>& asyncResp)
+#ifdef BMCWEB_ALLOW_DEPRECATED_HOSTNAME_PATCH
+    void
+        handleHostnamePatch(const std::string& hostName,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec) {
@@ -371,9 +372,11 @@ class NetworkProtocol : public Node
             "xyz.openbmc_project.Network.SystemConfiguration", "HostName",
             std::variant<std::string>(hostName));
     }
+#endif
 
-    void handleNTPProtocolEnabled(const bool& ntpEnabled,
-                                  const std::shared_ptr<AsyncResp>& asyncResp)
+    void handleNTPProtocolEnabled(
+        const bool& ntpEnabled,
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         std::string timeSyncMethod;
         if (ntpEnabled)
@@ -401,8 +404,9 @@ class NetworkProtocol : public Node
             std::variant<std::string>{timeSyncMethod});
     }
 
-    void handleNTPServersPatch(const std::vector<std::string>& ntpServers,
-                               const std::shared_ptr<AsyncResp>& asyncResp)
+    void handleNTPServersPatch(
+        const std::vector<std::string>& ntpServers,
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec) {
@@ -418,8 +422,9 @@ class NetworkProtocol : public Node
             std::variant<std::vector<std::string>>{ntpServers});
     }
 
-    void handleIpmiProtocolEnabled(const bool ipmiProtocolEnabled,
-                                   const std::shared_ptr<AsyncResp>& asyncResp)
+    void handleIpmiProtocolEnabled(
+        const bool ipmiProtocolEnabled,
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         crow::connections::systemBus->async_method_call(
             [ipmiProtocolEnabled,
@@ -476,32 +481,37 @@ class NetworkProtocol : public Node
                 "xyz.openbmc_project.Control.Service.Attributes"});
     }
 
-    void doPatch(crow::Response& res, const crow::Request& req,
+    void doPatch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                 const crow::Request& req,
                  const std::vector<std::string>&) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
+
         std::optional<std::string> newHostName;
         std::optional<nlohmann::json> ntp;
         std::optional<nlohmann::json> ipmi;
 
-        if (!json_util::readJson(req, res, "HostName", newHostName, "NTP", ntp,
-                                 "IPMI", ipmi))
+        if (!json_util::readJson(req, asyncResp->res, "NTP", ntp, "HostName",
+                                 newHostName, "IPMI", ipmi))
         {
             return;
         }
 
-        res.result(boost::beast::http::status::no_content);
+        asyncResp->res.result(boost::beast::http::status::no_content);
         if (newHostName)
         {
+#ifdef BMCWEB_ALLOW_DEPRECATED_HOSTNAME_PATCH
             handleHostnamePatch(*newHostName, asyncResp);
+#else
+            messages::propertyNotWritable(asyncResp->res, "HostName");
+#endif
         }
 
         if (ntp)
         {
             std::optional<std::vector<std::string>> ntpServers;
             std::optional<bool> ntpEnabled;
-            if (!json_util::readJson(*ntp, res, "NTPServers", ntpServers,
-                                     "ProtocolEnabled", ntpEnabled))
+            if (!json_util::readJson(*ntp, asyncResp->res, "NTPServers",
+                                     ntpServers, "ProtocolEnabled", ntpEnabled))
             {
                 return;
             }
@@ -525,7 +535,7 @@ class NetworkProtocol : public Node
         if (ipmi)
         {
             std::optional<bool> ipmiProtocolEnabled;
-            if (!json_util::readJson(*ipmi, res, "ProtocolEnabled",
+            if (!json_util::readJson(*ipmi, asyncResp->res, "ProtocolEnabled",
                                      ipmiProtocolEnabled))
             {
                 return;

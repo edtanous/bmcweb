@@ -322,6 +322,43 @@ inline bool extractEthernetInterfaceData(const std::string& ethifaceId,
                                 ethData.domainnames = *domainNames;
                             }
                         }
+                        else if (propertyPair.first == "DefaultGateway")
+                        {
+                            const std::string* defaultGateway =
+                                std::get_if<std::string>(&propertyPair.second);
+                            if (defaultGateway != nullptr)
+                            {
+                                std::string defaultGatewayStr = *defaultGateway;
+                                if (defaultGatewayStr.empty())
+                                {
+                                    ethData.default_gateway = "0.0.0.0";
+                                }
+                                else
+                                {
+                                    ethData.default_gateway = defaultGatewayStr;
+                                }
+                            }
+                        }
+                        else if (propertyPair.first == "DefaultGateway6")
+                        {
+                            const std::string* defaultGateway6 =
+                                std::get_if<std::string>(&propertyPair.second);
+                            if (defaultGateway6 != nullptr)
+                            {
+                                std::string defaultGateway6Str =
+                                    *defaultGateway6;
+                                if (defaultGateway6Str.empty())
+                                {
+                                    ethData.ipv6_default_gateway =
+                                        "0:0:0:0:0:0:0:0";
+                                }
+                                else
+                                {
+                                    ethData.ipv6_default_gateway =
+                                        defaultGateway6Str;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -387,24 +424,6 @@ inline bool extractEthernetInterfaceData(const std::string& ethifaceId,
                         if (hostname != nullptr)
                         {
                             ethData.hostname = *hostname;
-                        }
-                    }
-                    else if (propertyPair.first == "DefaultGateway")
-                    {
-                        const std::string* defaultGateway =
-                            std::get_if<std::string>(&propertyPair.second);
-                        if (defaultGateway != nullptr)
-                        {
-                            ethData.default_gateway = *defaultGateway;
-                        }
-                    }
-                    else if (propertyPair.first == "DefaultGateway6")
-                    {
-                        const std::string* defaultGateway6 =
-                            std::get_if<std::string>(&propertyPair.second);
-                        if (defaultGateway6 != nullptr)
-                        {
-                            ethData.ipv6_default_gateway = *defaultGateway6;
                         }
                     }
                 }
@@ -525,15 +544,6 @@ inline void
                             if (address != nullptr)
                             {
                                 ipv4Address.address = *address;
-                            }
-                        }
-                        else if (property.first == "Gateway")
-                        {
-                            const std::string* gateway =
-                                std::get_if<std::string>(&property.second);
-                            if (gateway != nullptr)
-                            {
-                                ipv4Address.gateway = *gateway;
                             }
                         }
                         else if (property.first == "Origin")
@@ -696,7 +706,7 @@ inline bool ipv4VerifyIpAndGetBitcount(const std::string& ip,
  * @return None
  */
 inline void deleteIPv4(const std::string& ifaceId, const std::string& ipHash,
-                       const std::shared_ptr<AsyncResp>& asyncResp)
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec) {
@@ -710,6 +720,25 @@ inline void deleteIPv4(const std::string& ifaceId, const std::string& ipHash,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 
+inline void updateIPv4DefaultGateway(
+    const std::string& ifaceId, const std::string& gateway,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.result(boost::beast::http::status::no_content);
+        },
+        "xyz.openbmc_project.Network",
+        "/xyz/openbmc_project/network/" + ifaceId,
+        "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Network.EthernetInterface", "DefaultGateway",
+        std::variant<std::string>(gateway));
+}
 /**
  * @brief Creates a static IPv4 entry
  *
@@ -723,16 +752,20 @@ inline void deleteIPv4(const std::string& ifaceId, const std::string& ipHash,
  */
 inline void createIPv4(const std::string& ifaceId, uint8_t prefixLength,
                        const std::string& gateway, const std::string& address,
-                       const std::shared_ptr<AsyncResp>& asyncResp)
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+    auto createIpHandler = [asyncResp, ifaceId,
+                            gateway](const boost::system::error_code ec) {
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        updateIPv4DefaultGateway(ifaceId, gateway, asyncResp);
+    };
+
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
-            if (ec)
-            {
-                messages::internalError(asyncResp->res);
-            }
-        },
-        "xyz.openbmc_project.Network",
+        std::move(createIpHandler), "xyz.openbmc_project.Network",
         "/xyz/openbmc_project/network/" + ifaceId,
         "xyz.openbmc_project.Network.IP.Create", "IP",
         "xyz.openbmc_project.Network.IP.Protocol.IPv4", address, prefixLength,
@@ -752,11 +785,11 @@ inline void createIPv4(const std::string& ifaceId, uint8_t prefixLength,
  *
  * @return None
  */
-inline void deleteAndCreateIPv4(const std::string& ifaceId,
-                                const std::string& id, uint8_t prefixLength,
-                                const std::string& gateway,
-                                const std::string& address,
-                                const std::shared_ptr<AsyncResp>& asyncResp)
+inline void
+    deleteAndCreateIPv4(const std::string& ifaceId, const std::string& id,
+                        uint8_t prefixLength, const std::string& gateway,
+                        const std::string& address,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, ifaceId, address, prefixLength,
@@ -764,13 +797,18 @@ inline void deleteAndCreateIPv4(const std::string& ifaceId,
             if (ec)
             {
                 messages::internalError(asyncResp->res);
+                return;
             }
+
             crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code ec2) {
+                [asyncResp, ifaceId,
+                 gateway](const boost::system::error_code ec2) {
                     if (ec2)
                     {
                         messages::internalError(asyncResp->res);
+                        return;
                     }
+                    updateIPv4DefaultGateway(ifaceId, gateway, asyncResp);
                 },
                 "xyz.openbmc_project.Network",
                 "/xyz/openbmc_project/network/" + ifaceId,
@@ -793,7 +831,7 @@ inline void deleteAndCreateIPv4(const std::string& ifaceId,
  * @return None
  */
 inline void deleteIPv6(const std::string& ifaceId, const std::string& ipHash,
-                       const std::shared_ptr<AsyncResp>& asyncResp)
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec) {
@@ -819,10 +857,10 @@ inline void deleteIPv6(const std::string& ifaceId, const std::string& ipHash,
  *
  * @return None
  */
-inline void deleteAndCreateIPv6(const std::string& ifaceId,
-                                const std::string& id, uint8_t prefixLength,
-                                const std::string& address,
-                                const std::shared_ptr<AsyncResp>& asyncResp)
+inline void
+    deleteAndCreateIPv6(const std::string& ifaceId, const std::string& id,
+                        uint8_t prefixLength, const std::string& address,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, ifaceId, address,
@@ -861,7 +899,7 @@ inline void deleteAndCreateIPv6(const std::string& ifaceId,
  */
 inline void createIPv6(const std::string& ifaceId, uint8_t prefixLength,
                        const std::string& address,
-                       const std::shared_ptr<AsyncResp>& asyncResp)
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     auto createIpHandler = [asyncResp](const boost::system::error_code ec) {
         if (ec)
@@ -919,7 +957,7 @@ void getEthernetIfaceData(const std::string& ethifaceId,
             {
                 if (((ipv4.linktype == LinkType::Global) &&
                      (ipv4.gateway == "0.0.0.0")) ||
-                    (ipv4.origin == "DHCP"))
+                    (ipv4.origin == "DHCP") || (ipv4.origin == "Static"))
                 {
                     ipv4.gateway = ethData.default_gateway;
                 }
@@ -1007,17 +1045,18 @@ class EthernetCollection : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
-               const std::vector<std::string>&) override
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&, const std::vector<std::string>&) override
     {
-        res.jsonValue["@odata.type"] =
+        asyncResp->res.jsonValue["@odata.type"] =
             "#EthernetInterfaceCollection.EthernetInterfaceCollection";
-        res.jsonValue["@odata.id"] =
+        asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/Managers/bmc/EthernetInterfaces";
-        res.jsonValue["Name"] = "Ethernet Network Interface Collection";
-        res.jsonValue["Description"] =
+        asyncResp->res.jsonValue["Name"] =
+            "Ethernet Network Interface Collection";
+        asyncResp->res.jsonValue["Description"] =
             "Collection of EthernetInterfaces for this Manager";
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
+
         // Get eth interface list, and call the below callback for JSON
         // preparation
         getEthernetIfaceList(
@@ -1077,8 +1116,9 @@ class EthernetInterface : public Node
     }
 
   private:
-    void handleHostnamePatch(const std::string& hostname,
-                             const std::shared_ptr<AsyncResp>& asyncResp)
+    void
+        handleHostnamePatch(const std::string& hostname,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         // SHOULD handle host names of up to 255 characters(RFC 1123)
         if (hostname.length() > 255)
@@ -1101,9 +1141,9 @@ class EthernetInterface : public Node
             std::variant<std::string>(hostname));
     }
 
-    void handleDomainnamePatch(const std::string& ifaceId,
-                               const std::string& domainname,
-                               const std::shared_ptr<AsyncResp>& asyncResp)
+    void handleDomainnamePatch(
+        const std::string& ifaceId, const std::string& domainname,
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         std::vector<std::string> vectorDomainname = {domainname};
         crow::connections::systemBus->async_method_call(
@@ -1121,7 +1161,7 @@ class EthernetInterface : public Node
     }
 
     void handleFqdnPatch(const std::string& ifaceId, const std::string& fqdn,
-                         const std::shared_ptr<AsyncResp>& asyncResp)
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         // Total length of FQDN must not exceed 255 characters(RFC 1035)
         if (fqdn.length() > 255)
@@ -1179,9 +1219,9 @@ class EthernetInterface : public Node
         return std::regex_match(domainname, pattern);
     }
 
-    void handleMACAddressPatch(const std::string& ifaceId,
-                               const std::string& macAddress,
-                               const std::shared_ptr<AsyncResp>& asyncResp)
+    void handleMACAddressPatch(
+        const std::string& ifaceId, const std::string& macAddress,
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp, macAddress](const boost::system::error_code ec) {
@@ -1201,7 +1241,7 @@ class EthernetInterface : public Node
     void setDHCPEnabled(const std::string& ifaceId,
                         const std::string& propertyName, const bool v4Value,
                         const bool v6Value,
-                        const std::shared_ptr<AsyncResp>& asyncResp)
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         const std::string dhcp = getDhcpEnabledEnumeration(v4Value, v6Value);
         crow::connections::systemBus->async_method_call(
@@ -1212,6 +1252,7 @@ class EthernetInterface : public Node
                     messages::internalError(asyncResp->res);
                     return;
                 }
+                messages::success(asyncResp->res);
             },
             "xyz.openbmc_project.Network",
             "/xyz/openbmc_project/network/" + ifaceId,
@@ -1222,7 +1263,7 @@ class EthernetInterface : public Node
 
     void setEthernetInterfaceBoolProperty(
         const std::string& ifaceId, const std::string& propertyName,
-        const bool& value, const std::shared_ptr<AsyncResp>& asyncResp)
+        const bool& value, const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec) {
@@ -1241,7 +1282,7 @@ class EthernetInterface : public Node
     }
 
     void setDHCPv4Config(const std::string& propertyName, const bool& value,
-                         const std::shared_ptr<AsyncResp>& asyncResp)
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         BMCWEB_LOG_DEBUG << propertyName << " = " << value;
         crow::connections::systemBus->async_method_call(
@@ -1264,7 +1305,7 @@ class EthernetInterface : public Node
                          const EthernetInterfaceData& ethData,
                          const DHCPParameters& v4dhcpParms,
                          const DHCPParameters& v6dhcpParms,
-                         const std::shared_ptr<AsyncResp>& asyncResp)
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         bool ipv4Active = translateDHCPEnabledToBool(ethData.DHCPEnabled, true);
         bool ipv6Active =
@@ -1399,7 +1440,7 @@ class EthernetInterface : public Node
     void handleIPv4StaticPatch(
         const std::string& ifaceId, nlohmann::json& input,
         const boost::container::flat_set<IPv4AddressData>& ipv4Data,
-        const std::shared_ptr<AsyncResp>& asyncResp)
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         if ((!input.is_array()) || input.empty())
         {
@@ -1582,7 +1623,7 @@ class EthernetInterface : public Node
     void handleStaticNameServersPatch(
         const std::string& ifaceId,
         const std::vector<std::string>& updatedStaticNameServers,
-        const std::shared_ptr<AsyncResp>& asyncResp)
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec) {
@@ -1603,7 +1644,7 @@ class EthernetInterface : public Node
     void handleIPv6StaticAddressesPatch(
         const std::string& ifaceId, const nlohmann::json& input,
         const boost::container::flat_set<IPv6AddressData>& ipv6Data,
-        const std::shared_ptr<AsyncResp>& asyncResp)
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         if (!input.is_array() || input.empty())
         {
@@ -1724,8 +1765,8 @@ class EthernetInterface : public Node
     }
 
     void parseInterfaceData(
-        const std::shared_ptr<AsyncResp>& asyncResp, const std::string& ifaceId,
-        const EthernetInterfaceData& ethData,
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+        const std::string& ifaceId, const EthernetInterfaceData& ethData,
         const boost::container::flat_set<IPv4AddressData>& ipv4Data,
         const boost::container::flat_set<IPv6AddressData>& ipv6Data)
     {
@@ -1832,7 +1873,13 @@ class EthernetInterface : public Node
             }
         }
 
-        jsonResponse["IPv6DefaultGateway"] = ethData.ipv6_default_gateway;
+        std::string ipv6GatewayStr = ethData.ipv6_default_gateway;
+        if (ipv6GatewayStr.empty())
+        {
+            ipv6GatewayStr = "0:0:0:0:0:0:0:0";
+        }
+
+        jsonResponse["IPv6DefaultGateway"] = ipv6GatewayStr;
 
         nlohmann::json& ipv6Array = jsonResponse["IPv6Addresses"];
         nlohmann::json& ipv6StaticArray = jsonResponse["IPv6StaticAddresses"];
@@ -1861,10 +1908,10 @@ class EthernetInterface : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&,
                const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
         if (params.size() != 1)
         {
             messages::internalError(asyncResp->res);
@@ -1897,10 +1944,11 @@ class EthernetInterface : public Node
             });
     }
 
-    void doPatch(crow::Response& res, const crow::Request& req,
+    void doPatch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                 const crow::Request& req,
                  const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
+
         if (params.size() != 1)
         {
             messages::internalError(asyncResp->res);
@@ -1923,7 +1971,7 @@ class EthernetInterface : public Node
         DHCPParameters v6dhcpParms;
 
         if (!json_util::readJson(
-                req, res, "HostName", hostname, "FQDN", fqdn,
+                req, asyncResp->res, "HostName", hostname, "FQDN", fqdn,
                 "IPv4StaticAddresses", ipv4StaticAddresses, "MACAddress",
                 macAddress, "StaticNameServers", staticNameServers,
                 "IPv6DefaultGateway", ipv6DefaultGateway, "IPv6StaticAddresses",
@@ -1934,7 +1982,7 @@ class EthernetInterface : public Node
         }
         if (dhcpv4)
         {
-            if (!json_util::readJson(*dhcpv4, res, "DHCPEnabled",
+            if (!json_util::readJson(*dhcpv4, asyncResp->res, "DHCPEnabled",
                                      v4dhcpParms.dhcpv4Enabled, "UseDNSServers",
                                      v4dhcpParms.useDNSServers, "UseNTPServers",
                                      v4dhcpParms.useNTPServers, "UseDomainName",
@@ -1946,7 +1994,7 @@ class EthernetInterface : public Node
 
         if (dhcpv6)
         {
-            if (!json_util::readJson(*dhcpv6, res, "OperatingMode",
+            if (!json_util::readJson(*dhcpv6, asyncResp->res, "OperatingMode",
                                      v6dhcpParms.dhcpv6OperatingMode,
                                      "UseDNSServers", v6dhcpParms.useDNSServers,
                                      "UseNTPServers", v6dhcpParms.useNTPServers,
@@ -2101,26 +2149,25 @@ class VlanNetworkInterface : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&,
                const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
         // TODO(Pawel) this shall be parameterized call (two params) to get
         // EthernetInterfaces for any Manager, not only hardcoded 'openbmc'.
         // Check if there is required param, truly entering this shall be
         // impossible.
         if (params.size() != 2)
         {
-            messages::internalError(res);
-            res.end();
+            messages::internalError(asyncResp->res);
             return;
         }
 
         const std::string& parentIfaceId = params[0];
         const std::string& ifaceId = params[1];
-        res.jsonValue["@odata.type"] =
+        asyncResp->res.jsonValue["@odata.type"] =
             "#VLanNetworkInterface.v1_1_0.VLanNetworkInterface";
-        res.jsonValue["Name"] = "VLAN Network Interface";
+        asyncResp->res.jsonValue["Name"] = "VLAN Network Interface";
 
         if (!verifyNames(parentIfaceId, ifaceId))
         {
@@ -2152,10 +2199,11 @@ class VlanNetworkInterface : public Node
             });
     }
 
-    void doPatch(crow::Response& res, const crow::Request& req,
+    void doPatch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                 const crow::Request& req,
                  const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
+
         if (params.size() != 2)
         {
             messages::internalError(asyncResp->res);
@@ -2175,8 +2223,8 @@ class VlanNetworkInterface : public Node
         bool vlanEnable = false;
         uint32_t vlanId = 0;
 
-        if (!json_util::readJson(req, res, "VLANEnable", vlanEnable, "VLANId",
-                                 vlanId))
+        if (!json_util::readJson(req, asyncResp->res, "VLANEnable", vlanEnable,
+                                 "VLANId", vlanId))
         {
             return;
         }
@@ -2231,10 +2279,10 @@ class VlanNetworkInterface : public Node
             });
     }
 
-    void doDelete(crow::Response& res, const crow::Request&,
+    void doDelete(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                  const crow::Request&,
                   const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
         if (params.size() != 2)
         {
             messages::internalError(asyncResp->res);
@@ -2310,10 +2358,10 @@ class VlanNetworkInterfaceCollection : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&,
                const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
         if (params.size() != 1)
         {
             // This means there is a problem with the router
@@ -2373,10 +2421,10 @@ class VlanNetworkInterfaceCollection : public Node
             });
     }
 
-    void doPost(crow::Response& res, const crow::Request& req,
+    void doPost(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                const crow::Request& req,
                 const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
         if (params.size() != 1)
         {
             messages::internalError(asyncResp->res);
@@ -2384,8 +2432,8 @@ class VlanNetworkInterfaceCollection : public Node
         }
         bool vlanEnable = false;
         uint32_t vlanId = 0;
-        if (!json_util::readJson(req, res, "VLANId", vlanId, "VLANEnable",
-                                 vlanEnable))
+        if (!json_util::readJson(req, asyncResp->res, "VLANId", vlanId,
+                                 "VLANEnable", vlanEnable))
         {
             return;
         }

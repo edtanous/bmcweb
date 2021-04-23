@@ -24,7 +24,7 @@ namespace redfish
  *
  * @return None.
  */
-inline void getHypervisorState(const std::shared_ptr<AsyncResp>& aResp)
+inline void getHypervisorState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 {
     BMCWEB_LOG_DEBUG << "Get hypervisor state information.";
     crow::connections::systemBus->async_method_call(
@@ -103,7 +103,8 @@ inline void getHypervisorState(const std::shared_ptr<AsyncResp>& aResp)
  *
  * @return None.
  */
-inline void getHypervisorActions(const std::shared_ptr<AsyncResp>& aResp)
+inline void
+    getHypervisorActions(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 {
     BMCWEB_LOG_DEBUG << "Get hypervisor actions.";
     crow::connections::systemBus->async_method_call(
@@ -169,10 +170,9 @@ class HypervisorSystem : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
-               const std::vector<std::string>&) override
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&, const std::vector<std::string>&) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec,
                         const std::variant<std::string>& /*hostName*/) {
@@ -227,10 +227,9 @@ class HypervisorInterfaceCollection : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
-               const std::vector<std::string>&) override
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&, const std::vector<std::string>&) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
         const std::array<const char*, 1> interfaces = {
             "xyz.openbmc_project.Network.EthernetInterface"};
 
@@ -474,9 +473,10 @@ void getHypervisorIfaceData(const std::string& ethIfaceId,
  *
  * @return None.
  */
-inline void setHypervisorIPv4Address(const std::shared_ptr<AsyncResp>& aResp,
-                                     const std::string& ethIfaceId,
-                                     const std::string& ipv4Address)
+inline void
+    setHypervisorIPv4Address(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& ethIfaceId,
+                             const std::string& ipv4Address)
 {
     BMCWEB_LOG_DEBUG << "Setting the Hypervisor IPaddress : " << ipv4Address
                      << " on Iface: " << ethIfaceId;
@@ -505,9 +505,9 @@ inline void setHypervisorIPv4Address(const std::shared_ptr<AsyncResp>& aResp,
  *
  * @return None.
  */
-inline void setHypervisorIPv4Subnet(const std::shared_ptr<AsyncResp>& aResp,
-                                    const std::string& ethIfaceId,
-                                    const uint8_t subnet)
+inline void
+    setHypervisorIPv4Subnet(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& ethIfaceId, const uint8_t subnet)
 {
     BMCWEB_LOG_DEBUG << "Setting the Hypervisor subnet : " << subnet
                      << " on Iface: " << ethIfaceId;
@@ -537,8 +537,9 @@ inline void setHypervisorIPv4Subnet(const std::shared_ptr<AsyncResp>& aResp,
  *
  * @return None.
  */
-inline void setHypervisorIPv4Gateway(const std::shared_ptr<AsyncResp>& aResp,
-                                     const std::string& gateway)
+inline void
+    setHypervisorIPv4Gateway(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& gateway)
 {
     BMCWEB_LOG_DEBUG
         << "Setting the DefaultGateway to the last configured gateway";
@@ -570,11 +571,10 @@ inline void setHypervisorIPv4Gateway(const std::shared_ptr<AsyncResp>& aResp,
  *
  * @return None
  */
-inline void createHypervisorIPv4(const std::string& ifaceId,
-                                 uint8_t prefixLength,
-                                 const std::string& gateway,
-                                 const std::string& address,
-                                 const std::shared_ptr<AsyncResp>& asyncResp)
+inline void
+    createHypervisorIPv4(const std::string& ifaceId, uint8_t prefixLength,
+                         const std::string& gateway, const std::string& address,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     setHypervisorIPv4Address(asyncResp, ifaceId, address);
     setHypervisorIPv4Gateway(asyncResp, gateway);
@@ -589,8 +589,9 @@ inline void createHypervisorIPv4(const std::string& ifaceId,
  *
  * @return None
  */
-inline void deleteHypervisorIPv4(const std::string& ifaceId,
-                                 const std::shared_ptr<AsyncResp>& asyncResp)
+inline void
+    deleteHypervisorIPv4(const std::string& ifaceId,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     std::string address = "0.0.0.0";
     std::string gateway = "0.0.0.0";
@@ -662,7 +663,7 @@ class HypervisorInterface : public Node
 
     void handleHypervisorIPv4StaticPatch(
         const std::string& ifaceId, const nlohmann::json& input,
-        const std::shared_ptr<AsyncResp>& asyncResp)
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         if ((!input.is_array()) || input.empty())
         {
@@ -784,8 +785,9 @@ class HypervisorInterface : public Node
         return std::regex_match(hostName, pattern);
     }
 
-    void handleHostnamePatch(const std::string& hostName,
-                             const std::shared_ptr<AsyncResp>& asyncResp)
+    void
+        handleHostnamePatch(const std::string& hostName,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         if (!isHostnameValid(hostName))
         {
@@ -809,9 +811,9 @@ class HypervisorInterface : public Node
             std::variant<std::string>(hostName));
     }
 
-    void setIPv4InterfaceEnabled(const std::string& ifaceId,
-                                 const bool& isActive,
-                                 const std::shared_ptr<AsyncResp>& asyncResp)
+    void setIPv4InterfaceEnabled(
+        const std::string& ifaceId, const bool& isActive,
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec) {
@@ -831,7 +833,7 @@ class HypervisorInterface : public Node
     }
 
     void setDHCPEnabled(const std::string& ifaceId, const bool& ipv4DHCPEnabled,
-                        const std::shared_ptr<AsyncResp>& asyncResp)
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         const std::string dhcp =
             getDhcpEnabledEnumeration(ipv4DHCPEnabled, false);
@@ -885,10 +887,10 @@ class HypervisorInterface : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&,
                const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
         if (params.size() != 1)
         {
             messages::internalError(asyncResp->res);
@@ -917,10 +919,11 @@ class HypervisorInterface : public Node
             });
     }
 
-    void doPatch(crow::Response& res, const crow::Request& req,
+    void doPatch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                 const crow::Request& req,
                  const std::vector<std::string>& params) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
+
         if (params.size() != 1)
         {
             messages::internalError(asyncResp->res);
@@ -929,12 +932,12 @@ class HypervisorInterface : public Node
 
         const std::string& ifaceId = params[0];
         std::optional<std::string> hostName;
-        std::optional<nlohmann::json> ipv4StaticAddresses;
+        std::optional<std::vector<nlohmann::json>> ipv4StaticAddresses;
         std::optional<nlohmann::json> ipv4Addresses;
         std::optional<nlohmann::json> dhcpv4;
         std::optional<bool> ipv4DHCPEnabled;
 
-        if (!json_util::readJson(req, res, "HostName", hostName,
+        if (!json_util::readJson(req, asyncResp->res, "HostName", hostName,
                                  "IPv4StaticAddresses", ipv4StaticAddresses,
                                  "IPv4Addresses", ipv4Addresses, "DHCPv4",
                                  dhcpv4))
@@ -949,7 +952,7 @@ class HypervisorInterface : public Node
 
         if (dhcpv4)
         {
-            if (!json_util::readJson(*dhcpv4, res, "DHCPEnabled",
+            if (!json_util::readJson(*dhcpv4, asyncResp->res, "DHCPEnabled",
                                      ipv4DHCPEnabled))
             {
                 return;
@@ -973,6 +976,29 @@ class HypervisorInterface : public Node
                 if (ipv4StaticAddresses)
                 {
                     const nlohmann::json& ipv4Static = *ipv4StaticAddresses;
+                    if (ipv4Static.begin() == ipv4Static.end())
+                    {
+                        messages::propertyValueTypeError(
+                            asyncResp->res,
+                            ipv4Static.dump(
+                                2, ' ', true,
+                                nlohmann::json::error_handler_t::replace),
+                            "IPv4StaticAddresses");
+                        return;
+                    }
+
+                    // One and only one hypervisor instance supported
+                    if (ipv4Static.size() != 1)
+                    {
+                        messages::propertyValueFormatError(
+                            asyncResp->res,
+                            ipv4Static.dump(
+                                2, ' ', true,
+                                nlohmann::json::error_handler_t::replace),
+                            "IPv4StaticAddresses");
+                        return;
+                    }
+
                     const nlohmann::json& ipv4Json = ipv4Static[0];
                     // Check if the param is 'null'. If its null, it means that
                     // user wants to delete the IP address. Deleting the IP
@@ -1007,7 +1033,7 @@ class HypervisorInterface : public Node
                 // updated settings from the user.
                 setIPv4InterfaceEnabled(ifaceId, false, asyncResp);
             });
-        res.result(boost::beast::http::status::accepted);
+        asyncResp->res.result(boost::beast::http::status::accepted);
     }
 };
 
@@ -1037,11 +1063,9 @@ class HypervisorResetActionInfo : public Node
     /**
      * Functions triggers appropriate requests on DBus
      */
-    void doGet(crow::Response& res, const crow::Request&,
-               const std::vector<std::string>&) override
+    void doGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const crow::Request&, const std::vector<std::string>&) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
-
         // Only return action info if hypervisor D-Bus object present
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec,
@@ -1113,13 +1137,13 @@ class HypervisorActionsReset : public Node
      * Function handles POST method request.
      * Analyzes POST body message before sends Reset request data to D-Bus.
      */
-    void doPost(crow::Response& res, const crow::Request& req,
+    void doPost(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                const crow::Request& req,
                 const std::vector<std::string>&) override
     {
-        std::shared_ptr<AsyncResp> asyncResp = std::make_shared<AsyncResp>(res);
 
         std::optional<std::string> resetType;
-        if (!json_util::readJson(req, res, "ResetType", resetType))
+        if (!json_util::readJson(req, asyncResp->res, "ResetType", resetType))
         {
             // readJson adds appropriate error to response
             return;

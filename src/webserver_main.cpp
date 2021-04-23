@@ -67,6 +67,9 @@ int main(int /*argc*/, char** /*argv*/)
     auto io = std::make_shared<boost::asio::io_context>();
     App app(io);
 
+    crow::connections::systemBus =
+        std::make_shared<sdbusplus::asio::connection>(*io);
+
     // Static assets need to be initialized before Authorization, because auth
     // needs to build the whitelist from the static routes
 
@@ -79,7 +82,11 @@ int main(int /*argc*/, char** /*argv*/)
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH
-    crow::redfish::requestRoutes(app);
+    redfish::requestRoutes(app);
+    redfish::RedfishService redfish(app);
+
+    // Create EventServiceManager instance and initialize Config
+    redfish::EventServiceManager::getInstance();
 #endif
 
 #ifdef BMCWEB_ENABLE_DBUS_REST
@@ -110,14 +117,9 @@ int main(int /*argc*/, char** /*argv*/)
 
     setupSocket(app);
 
-    crow::connections::systemBus =
-        std::make_shared<sdbusplus::asio::connection>(*io);
-
 #ifdef BMCWEB_ENABLE_VM_NBDPROXY
     crow::nbd_proxy::requestRoutes(app);
 #endif
-
-    redfish::RedfishService redfish(app);
 
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
     int rc = redfish::EventServiceManager::startEventLogMonitor(*io);

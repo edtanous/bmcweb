@@ -74,14 +74,13 @@ feature_map = {
 'redfish-cpu-log'                 : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
 'redfish-dbus-log'                : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
 'redfish-provisioning-feature'    : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
-'redfish-raw-peci'                : '-DBMCWEB_ENABLE_REDFISH_RAW_PECI',
 'redfish-dump-log'                : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
 'rest'                            : '-DBMCWEB_ENABLE_DBUS_REST',
 'insecure-sensor-override'        : '-DBMCWEB_INSECURE_UNRESTRICTED_SENSOR_OVERRIDE',
 'static-hosting'                  : '-DBMCWEB_ENABLE_STATIC_HOSTING',
 'insecure-tftp-update'            : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
 'validate-unsecure-feature'       : '-DBMCWEB_ENABLE_VALIDATION_UNSECURE_FEATURE',
-'vm-nbdproxy'                     : '-DBMCWEB_ENABLE_VM_NBDPROXY',
+#'vm-nbdproxy'                     : '-DBMCWEB_ENABLE_VM_NBDPROXY',
 'vm-websocket'                    : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
 }
 
@@ -203,6 +202,16 @@ if (cxx.get_id() == 'gcc' and cxx.version().version_compare('>8.0'))
 
       summary({'debug' :'-DBMCWEB_ENABLE_DEBUG',
                'logging' : '-DBMCWEB_ENABLE_LOGGING',
+              },section : 'Enabled Features')
+    endif
+
+    if( get_option('redfish-allow-deprecated-hostname-patch').enabled())
+     add_project_arguments([
+       '-DBMCWEB_ALLOW_DEPRECATED_HOSTNAME_PATCH'
+       ],
+      language : 'cpp')
+
+      summary({'hostname-patch' :'-DBMCWEB_ALLOW_DEPRECATED_HOSTNAME_PATCH'
               },section : 'Enabled Features')
     endif
 
@@ -335,6 +344,7 @@ srcfiles_unittest = ['include/ut/dbus_utility_test.cpp',
                      'redfish-core/ut/privileges_test.cpp',
                      'redfish-core/ut/lock_test.cpp',
                      'redfish-core/ut/configfile_test.cpp',
+                     'redfish-core/ut/time_utils_test.cpp',
                      'http/ut/utility_test.cpp']
 
 # Gather the Configuration data

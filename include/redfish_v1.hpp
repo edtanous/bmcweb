@@ -1,19 +1,22 @@
 #pragma once
 
 #include <app.hpp>
+#include <http_request.hpp>
+#include <http_response.hpp>
+#include <rf_async_resp.hpp>
 
-namespace crow
-{
+#include <string>
+
 namespace redfish
 {
+
 inline void requestRoutes(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/")
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&, crow::Response& res) {
-                res.jsonValue = {{"v1", "/redfish/v1/"}};
-                res.end();
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                asyncResp->res.jsonValue = {{"v1", "/redfish/v1/"}};
             });
 }
 } // namespace redfish
-} // namespace crow

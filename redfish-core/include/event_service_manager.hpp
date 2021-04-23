@@ -18,6 +18,7 @@
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
+#include "registries/task_event_message_registry.hpp"
 
 #include <sys/inotify.h>
 
@@ -47,6 +48,27 @@ static constexpr const char* metricReportFormatType = "MetricReport";
 
 static constexpr const char* eventServiceFile =
     "/var/lib/bmcweb/eventservice_config.json";
+
+namespace message_registries
+{
+inline boost::beast::span<const MessageEntry>
+    getRegistryFromPrefix(const std::string& registryName)
+{
+    if (task_event::header.registryPrefix == registryName)
+    {
+        return boost::beast::span<const MessageEntry>(task_event::registry);
+    }
+    if (openbmc::header.registryPrefix == registryName)
+    {
+        return boost::beast::span<const MessageEntry>(openbmc::registry);
+    }
+    if (base::header.registryPrefix == registryName)
+    {
+        return boost::beast::span<const MessageEntry>(base::registry);
+    }
+    return boost::beast::span<const MessageEntry>(openbmc::registry);
+}
+} // namespace message_registries
 
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
 static std::optional<boost::asio::posix::stream_descriptor> inotifyConn;
@@ -97,18 +119,7 @@ static const Message* formatMessage(const std::string_view& messageID)
     std::string& messageKey = fields[3];
 
     // Find the right registry and check it for the MessageKey
-    if (std::string(base::header.registryPrefix) == registryName)
-    {
-        return getMsgFromRegistry(
-            messageKey, boost::beast::span<const MessageEntry>(base::registry));
-    }
-    if (std::string(openbmc::header.registryPrefix) == registryName)
-    {
-        return getMsgFromRegistry(
-            messageKey,
-            boost::beast::span<const MessageEntry>(openbmc::registry));
-    }
-    return nullptr;
+    return getMsgFromRegistry(messageKey, getRegistryFromPrefix(registryName));
 }
 } // namespace message_registries
 
