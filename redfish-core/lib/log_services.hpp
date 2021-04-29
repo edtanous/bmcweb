@@ -400,7 +400,6 @@ static bool
     return !redfishLogFiles.empty();
 }
 
-<<<<<<< HEAD
 std::vector<std::pair<std::string, std::string>>
     parseOEMAdditionalData(const std::string &oemData)
 {
@@ -424,16 +423,9 @@ std::vector<std::pair<std::string, std::string>>
     return additionalData;
 }
 
-inline void getDumpEntryCollection(std::shared_ptr<AsyncResp>& asyncResp,
-                                   const std::string& dumpType)
-||||||| merged common ancestors
-inline void getDumpEntryCollection(std::shared_ptr<AsyncResp>& asyncResp,
-                                   const std::string& dumpType)
-=======
 inline void
     getDumpEntryCollection(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& dumpType)
->>>>>>> origin/master
 {
     std::string dumpPath;
     if (dumpType == "BMC")
@@ -721,23 +713,11 @@ inline void deleteDumpEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 
-<<<<<<< HEAD
-inline void createDumpTaskCallback(
-    const crow::Request& req, const std::shared_ptr<AsyncResp>& asyncResp,
-    const sdbusplus::message::object_path& createdObjPath)
-||||||| merged common ancestors
-inline void createDumpTaskCallback(const crow::Request& req,
-                                   const std::shared_ptr<AsyncResp>& asyncResp,
-                                   const uint32_t& dumpId,
-                                   const std::string& dumpPath,
-                                   const std::string& dumpType)
-=======
 inline void
     createDumpTaskCallback(const crow::Request& req,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const uint32_t& dumpId, const std::string& dumpPath,
                            const std::string& dumpType)
->>>>>>> origin/master
 {
     const std::string& dumpPath = createdObjPath.parent_path().str;
     const std::string& dumpId = createdObjPath.filename();
