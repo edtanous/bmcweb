@@ -531,6 +531,10 @@ inline void requestRoutesChassis(App& app)
                                 asyncResp->res.jsonValue["Status"] = {
                                     {"State", "Enabled"},
                                 };
+                                // Assembly collection
+                                asyncResp->res.jsonValue["Assembly"] = {
+                                    {"@odata.id", "/redfish/v1/Chassis/" +
+                                                      chassisId + "/Assembly"}};
 
                                 asyncResp->res
                                     .jsonValue["Links"]["ComputerSystems"] = {

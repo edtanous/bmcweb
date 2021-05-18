@@ -16,6 +16,7 @@
 #pragma once
 
 #include "../lib/account_service.hpp"
+#include "../lib/assembly.hpp"
 #include "../lib/bios.hpp"
 #include "../lib/certificate_service.hpp"
 #include "../lib/chassis.hpp"
@@ -62,6 +63,7 @@ class RedfishService
     RedfishService(App& app)
     {
         requestAccountServiceRoutes(app);
+        requestAssemblyRoutes(app);
         requestRoutesRoles(app);
         requestRoutesRoleCollection(app);
         requestRoutesServiceRoot(app);
