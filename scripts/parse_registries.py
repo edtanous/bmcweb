@@ -64,15 +64,15 @@ def make_getter(dmtf_name, header_name, type_name):
 
 
 files = []
-files.append(make_getter('Base.1.8.1.json',
+files.append(make_getter('Base.1.10.0.json',
                          'base_message_registry.hpp', 'base'))
-files.append(make_getter('TaskEvent.1.0.2.json',
+files.append(make_getter('TaskEvent.1.0.3.json',
                          'task_event_message_registry.hpp', 'task_event'))
 files.append(make_getter('ResourceEvent.1.0.3.json',
                          'resource_event_message_registry.hpp', 'resource_event'))
 
 # Remove the old files
-for file, json, namespace, url in files:
+for file, json_dict, namespace, url in files:
     try:
         os.remove(file)
     except BaseException:
@@ -82,22 +82,22 @@ for file, json, namespace, url in files:
         registry.write(REGISTRY_HEADER.format(namespace))
         # Parse the Registry header info
         registry.write("const Header header = {")
-        registry.write("\"{}\",".format(json["@Redfish.Copyright"]))
-        registry.write("\"{}\",".format(json["@odata.type"]))
-        registry.write("\"{}\",".format(json["Id"]))
-        registry.write("\"{}\",".format(json["Name"]))
-        registry.write("\"{}\",".format(json["Language"]))
-        registry.write("\"{}\",".format(json["Description"]))
-        registry.write("\"{}\",".format(json["RegistryPrefix"]))
-        registry.write("\"{}\",".format(json["RegistryVersion"]))
-        registry.write("\"{}\",".format(json["OwningEntity"]))
+        registry.write("\"{}\",".format(json_dict["@Redfish.Copyright"]))
+        registry.write("\"{}\",".format(json_dict["@odata.type"]))
+        registry.write("\"{}\",".format(json_dict["Id"]))
+        registry.write("\"{}\",".format(json_dict["Name"]))
+        registry.write("\"{}\",".format(json_dict["Language"]))
+        registry.write("\"{}\",".format(json_dict["Description"]))
+        registry.write("\"{}\",".format(json_dict["RegistryPrefix"]))
+        registry.write("\"{}\",".format(json_dict["RegistryVersion"]))
+        registry.write("\"{}\",".format(json_dict["OwningEntity"]))
         registry.write("};")
 
         registry.write('constexpr const char * url = "{}";\n\n'.format(url))
         # Parse each Message entry
         registry.write("constexpr std::array<MessageEntry, {}> registry = {{".format(
-            len(json["Messages"])))
-        for messageId, message in sorted(json["Messages"].items()):
+            len(json_dict["Messages"])))
+        for messageId, message in sorted(json_dict["Messages"].items()):
             registry.write("MessageEntry{")
             registry.write("\"{}\",".format(messageId))
             registry.write("{")
@@ -115,4 +115,4 @@ for file, json, namespace, url in files:
             registry.write("\"{}\",".format(message["Resolution"]))
             registry.write("}},")
         registry.write("};}\n")
-    subprocess.check_call(["clang-format-10", "-i", file])
+    subprocess.check_call(["clang-format-11", "-i", file])
