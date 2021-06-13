@@ -33,6 +33,7 @@ include_list = [
     'DriveCollection',
     'Endpoint',
     'EndpointCollection',
+    'EnvironmentMetrics',
     'EthernetInterface',
     'EthernetInterfaceCollection',
     'Event',
