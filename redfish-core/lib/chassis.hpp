@@ -317,7 +317,7 @@ inline void getPhysicalSecurityData(std::shared_ptr<bmcweb::AsyncResp> aResp)
 inline void requestRoutesChassisCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -340,7 +340,7 @@ inline void requestRoutesChassisCollection(App& app)
 inline void requestRoutesChassis(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
                                               const std::shared_ptr<
@@ -517,6 +517,7 @@ inline void requestRoutesChassis(App& app)
                                 }
                                 asyncResp->res.jsonValue["Name"] = chassisId;
                                 asyncResp->res.jsonValue["Id"] = chassisId;
+#ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
                                 asyncResp->res.jsonValue["Thermal"] = {
                                     {"@odata.id", "/redfish/v1/Chassis/" +
                                                       chassisId + "/Thermal"}};
@@ -524,6 +525,7 @@ inline void requestRoutesChassis(App& app)
                                 asyncResp->res.jsonValue["Power"] = {
                                     {"@odata.id", "/redfish/v1/Chassis/" +
                                                       chassisId + "/Power"}};
+#endif
                                 // SensorCollection
                                 asyncResp->res.jsonValue["Sensors"] = {
                                     {"@odata.id", "/redfish/v1/Chassis/" +
@@ -667,7 +669,7 @@ inline void requestRoutesChassis(App& app)
         });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/")
-        .privileges({"ConfigureComponents"})
+        .privileges({{"ConfigureComponents"}})
         .methods(
             boost::beast::http::verb::
                 patch)([](const crow::Request& req,
@@ -866,7 +868,7 @@ inline void
 inline void requestRoutesChassisResetAction(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Chassis.Reset/")
-        .privileges({"ConfigureComponents"})
+        .privileges({{"ConfigureComponents"}})
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -901,7 +903,7 @@ inline void requestRoutesChassisResetAction(App& app)
 inline void requestRoutesChassisResetActionInfo(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/ResetActionInfo/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,

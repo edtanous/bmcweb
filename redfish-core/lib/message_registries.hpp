@@ -32,7 +32,7 @@ inline void requestRoutesMessageRegistryFileCollection(App& app)
      * Functions triggers appropriate requests on DBus
      */
     BMCWEB_ROUTE(app, "/redfish/v1/Registries/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -57,7 +57,7 @@ inline void requestRoutesMessageRegistryFileCollection(App& app)
 inline void requestRoutesMessageRegistryFile(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Registries/<str>/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -123,7 +123,7 @@ inline void requestRoutesMessageRegistryFile(App& app)
 inline void requestRoutesMessageRegistry(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Registries/<str>/<str>/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -213,6 +213,7 @@ inline void requestRoutesMessageRegistry(App& app)
                     if (message->second.numberOfArgs > 0)
                     {
                         nlohmann::json& messageParamArray = obj["ParamTypes"];
+                        messageParamArray = nlohmann::json::array();
                         for (const char* str : message->second.paramTypes)
                         {
                             if (str == nullptr)

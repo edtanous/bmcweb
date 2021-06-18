@@ -40,7 +40,7 @@ static constexpr const uint8_t maxNoOfSubscriptions = 20;
 inline void requestRoutesEventService(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -83,7 +83,7 @@ inline void requestRoutesEventService(App& app)
             });
 
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/")
-        .privileges({"ConfigureManager"})
+        .privileges({{"ConfigureManager"}})
         .methods(boost::beast::http::verb::patch)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
@@ -149,7 +149,7 @@ inline void requestRoutesSubmitTestEvent(App& app)
 
     BMCWEB_ROUTE(
         app, "/redfish/v1/EventService/Actions/EventService.SubmitTestEvent/")
-        .privileges({"ConfigureManager"})
+        .privileges({{"ConfigureManager"}})
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -161,7 +161,7 @@ inline void requestRoutesSubmitTestEvent(App& app)
 inline void requestRoutesEventDestinationCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -188,7 +188,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 }
             });
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/")
-        .privileges({"ConfigureManager"})
+        .privileges({{"ConfigureManager"}})
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -483,8 +483,8 @@ inline void requestRoutesEventDestinationCollection(App& app)
 
 inline void requestRoutesEventDestination(App& app)
 {
-    BMCWEB_ROUTE(app, "redfish/v1/EventService/Subscriptions/<str>/")
-        .privileges({"Login"})
+    BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/<str>/")
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -535,8 +535,8 @@ inline void requestRoutesEventDestination(App& app)
             });
     /////redfish/v1/EventService/Subscriptions/
     // ConfigureManager
-    BMCWEB_ROUTE(app, "redfish/v1/EventService/Subscriptions/<str>/")
-        .privileges({"ConfigureManager"})
+    BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/<str>/")
+        .privileges({{"ConfigureManager"}})
         .methods(boost::beast::http::verb::patch)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -588,8 +588,8 @@ inline void requestRoutesEventDestination(App& app)
 
                 EventServiceManager::getInstance().updateSubscriptionData();
             });
-    BMCWEB_ROUTE(app, "redfish/v1/EventService/Subscriptions/<str>/")
-        .privileges({"ConfigureManager"})
+    BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/<str>/")
+        .privileges({{"ConfigureManager"}})
         .methods(boost::beast::http::verb::delete_)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
