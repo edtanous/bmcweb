@@ -564,7 +564,7 @@ inline void
 inline void requestRoutesFabricCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -585,7 +585,7 @@ inline void requestRoutesFabricCollection(App& app)
 inline void requestRoutesFabric(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
                                               const std::shared_ptr<
@@ -698,7 +698,7 @@ inline void requestRoutesFabric(App& app)
 inline void requestRoutesSwitchCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -749,7 +749,7 @@ inline void requestRoutesSwitchCollection(App& app)
 inline void requestRoutesSwitch(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
                                               const std::shared_ptr<
@@ -857,7 +857,7 @@ inline void requestRoutesSwitch(App& app)
 inline void requestRoutesPortCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
                                               const std::shared_ptr<
@@ -938,7 +938,7 @@ inline void requestRoutesPortCollection(App& app)
 inline void requestRoutesPort(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
                                               const std::shared_ptr<

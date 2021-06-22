@@ -584,99 +584,11 @@ inline void requestRoutesSystemPCIeFunction(App& app)
     BMCWEB_ROUTE(
         app,
         "/redfish/v1/Systems/system/PCIeDevices/<str>/PCIeFunctions/<str>/")
-<<<<<<< HEAD
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& device, const std::string& function) {
-||||||| 0588a3b
-        .privileges({"Login"})
-        .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
-                                              const std::shared_ptr<
-                                                  bmcweb::AsyncResp>& asyncResp,
-                                              const std::string& device,
-                                              const std::string& function) {
-            auto getPCIeDeviceCallback = [asyncResp, device, function](
-                                             const boost::system::error_code ec,
-                                             boost::container::flat_map<
-                                                 std::string,
-                                                 std::variant<std::string>>&
-                                                 pcieDevProperties) {
-                if (ec)
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "failed to get PCIe Device properties ec: "
-                        << ec.value() << ": " << ec.message();
-                    if (ec.value() ==
-                        boost::system::linux_error::bad_request_descriptor)
-                    {
-                        messages::resourceNotFound(asyncResp->res, "PCIeDevice",
-                                                   device);
-                    }
-                    else
-                    {
-                        messages::internalError(asyncResp->res);
-                    }
-                    return;
-                }
-
-                // Check if this function exists by looking for a device ID
-                std::string devIDProperty = "Function" + function + "DeviceId";
-                if (std::string* property = std::get_if<std::string>(
-                        &pcieDevProperties[devIDProperty]);
-                    property && property->empty())
-                {
-                    messages::resourceNotFound(asyncResp->res, "PCIeFunction",
-                                               function);
-                    return;
-                }
-
-=======
-        .privileges({{"Login"}})
-        .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
-                                              const std::shared_ptr<
-                                                  bmcweb::AsyncResp>& asyncResp,
-                                              const std::string& device,
-                                              const std::string& function) {
-            auto getPCIeDeviceCallback = [asyncResp, device, function](
-                                             const boost::system::error_code ec,
-                                             boost::container::flat_map<
-                                                 std::string,
-                                                 std::variant<std::string>>&
-                                                 pcieDevProperties) {
-                if (ec)
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "failed to get PCIe Device properties ec: "
-                        << ec.value() << ": " << ec.message();
-                    if (ec.value() ==
-                        boost::system::linux_error::bad_request_descriptor)
-                    {
-                        messages::resourceNotFound(asyncResp->res, "PCIeDevice",
-                                                   device);
-                    }
-                    else
-                    {
-                        messages::internalError(asyncResp->res);
-                    }
-                    return;
-                }
-
-                // Check if this function exists by looking for a device ID
-                std::string devIDProperty = "Function" + function + "DeviceId";
-                if (std::string* property = std::get_if<std::string>(
-                        &pcieDevProperties[devIDProperty]);
-                    property && property->empty())
-                {
-                    messages::resourceNotFound(asyncResp->res, "PCIeFunction",
-                                               function);
-                    return;
-                }
-
->>>>>>> origin/master
                 asyncResp->res.jsonValue = {
                     {"@odata.type", "#PCIeFunction.v1_2_0.PCIeFunction"},
                     {"@odata.id", "/redfish/v1/Systems/system/PCIeDevices/" +
@@ -699,7 +611,7 @@ inline void requestRoutesChassisPCIeDeviceCollection(App& app)
      * Functions triggers appropriate requests on DBus
      */
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/PCIeDevices/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -726,7 +638,7 @@ inline void requestRoutesChassisPCIeDeviceCollection(App& app)
 inline void requestRoutesChassisPCIeDevice(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/PCIeDevices/<str>/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
                                               const std::shared_ptr<
@@ -825,7 +737,7 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
 {
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Chassis/<str>/PCIeDevices/<str>/PCIeFunctions/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -899,7 +811,7 @@ inline void requestRoutesChassisPCIeFunction(App& app)
 {
     BMCWEB_ROUTE(
         app, "/redfish/v1/Chassis/<str>/PCIeDevices/<str>/PCIeFunctions/<str>/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,

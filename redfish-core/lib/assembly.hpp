@@ -142,7 +142,7 @@ inline void
 inline void requestAssemblyRoutes(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Assembly/")
-        .privileges({"Login"})
+        .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
                                               const std::shared_ptr<
