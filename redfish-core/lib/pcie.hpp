@@ -688,7 +688,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                         pcieDeviceURI += "/PCIeDevices/";
                         pcieDeviceURI += device;
                         std::string pcieFunctionURI = pcieDeviceURI;
-                        pcieFunctionURI += "/PCIeFunctions/";
+                        pcieFunctionURI += "/PCIeFunctions";
                         asyncResp->res.jsonValue = {
                             {"@odata.type", "#PCIeDevice.v1_5_0.PCIeDevice"},
                             {"@odata.id", pcieDeviceURI},
