@@ -824,22 +824,16 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", 0,
-        std::array<const char*, 8>{
+        std::array<const char*, 9>{
             "xyz.openbmc_project.Common.UUID",
             "xyz.openbmc_project.Inventory.Decorator.Asset",
             "xyz.openbmc_project.Inventory.Decorator.Revision",
             "xyz.openbmc_project.Inventory.Item.Cpu",
             "xyz.openbmc_project.Inventory.Decorator.LocationCode",
             "xyz.openbmc_project.Inventory.Item.Accelerator",
-<<<<<<< HEAD
-            "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig",
-            "xyz.openbmc_project.Software.Version"});
-||||||| 0256b69
-            "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig"});
-=======
+            "xyz.openbmc_project.Software.Version",
             "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig",
             "xyz.openbmc_project.Inventory.Decorator.UniqueIdentifier"});
->>>>>>> origin/master
 }
 
 inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
@@ -881,23 +875,19 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getCpuLocationCode(aResp, serviceName, objectPath);
             }
-            else if (interface == "xyz.openbmc_project.Common.UUID")
-            {
-                getProcessorUUID(aResp, serviceName, objectPath);
-            }
-<<<<<<< HEAD
             else if (interface == "xyz.openbmc_project.Software.Version")
             {
                 getProcessorFirmwareVersion(aResp, serviceName, objectPath);
             }
-||||||| 0256b69
-=======
+            else if (interface == "xyz.openbmc_project.Common.UUID")
+            {
+                getProcessorUUID(aResp, serviceName, objectPath);
+            }
             else if (interface == "xyz.openbmc_project.Inventory."
                                   "Decorator.UniqueIdentifier")
             {
                 getCpuUniqueId(aResp, serviceName, objectPath);
             }
->>>>>>> origin/master
         }
     }
 }
