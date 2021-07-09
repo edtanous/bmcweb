@@ -19,6 +19,7 @@
 #include "openbmc_dbus_rest.hpp"
 
 #include <app.hpp>
+#include <registries/privilege_registry.hpp>
 #include <utils/json_utils.hpp>
 
 #include <optional>
@@ -128,7 +129,8 @@ void getEthernetIfaceData(CallbackFunc&& callback)
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
 
-void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const crow::Request& req)
 {
     asyncResp->res.jsonValue["@odata.type"] =
         "#ManagerNetworkProtocol.v1_5_0.ManagerNetworkProtocol";
@@ -186,19 +188,29 @@ void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
             }
         });
 
+    Privileges effectiveUserPrivileges =
+        redfish::getUserPrivileges(req.userRole);
+
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code e,
-                    const std::vector<UnitStruct>& r) {
+        [asyncResp,
+         &effectiveUserPrivileges](const boost::system::error_code e,
+                                   const std::vector<UnitStruct>& r) {
             if (e)
             {
                 asyncResp->res.jsonValue = nlohmann::json::object();
                 messages::internalError(asyncResp->res);
                 return;
             }
-            asyncResp->res.jsonValue["HTTPS"]["Certificates"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol/"
-                              "HTTPS/Certificates"}};
-
+            // /redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates is
+            // something only ConfigureManager can access then only display when
+            // the user has permissions ConfigureManager
+            if (isOperationAllowedWithPrivileges({{"ConfigureManager"}},
+                                                 effectiveUserPrivileges))
+            {
+                asyncResp->res.jsonValue["HTTPS"]["Certificates"] = {
+                    {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol/"
+                                  "HTTPS/Certificates"}};
+            }
             for (auto& unit : r)
             {
                 /* Only traverse through <xyz>.socket units */
@@ -447,7 +459,7 @@ void getNTPProtocolEnabled(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 inline void requestRoutesNetworkProtocol(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/NetworkProtocol/")
-        .privileges({{"ConfigureManager"}})
+        .privileges(redfish::privileges::patchManagerNetworkProtocol)
         .methods(boost::beast::http::verb::patch)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -539,11 +551,11 @@ inline void requestRoutesNetworkProtocol(App& app)
             });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/NetworkProtocol/")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getManagerNetworkProtocol)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                getNetworkData(asyncResp);
+                getNetworkData(asyncResp, req);
             });
 }
 

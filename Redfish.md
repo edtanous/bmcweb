@@ -66,7 +66,7 @@ Fields common to all schemas
 ##### ManagerAccountCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/AccountService/Accounts/{ManagerAccountId}/
 ##### ManagerAccount
@@ -75,7 +75,7 @@ Fields common to all schemas
 - Enabled
 - Links/Role
 - Locked
-- Locked\@Redfish.AllowableValues
+- Locked@Redfish.AllowableValues
 - Password
 - PasswordChangeRequired
 - RoleId
@@ -85,14 +85,14 @@ Fields common to all schemas
 ##### CertificateCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/AccountService/Roles/
 ##### RoleCollection
 - Description
 - Members
   - By default will contain 3 roles, "Administrator", "Operator", and "ReadOnly"
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/AccountService/Roles/{RoleId}/
 ##### Role
@@ -120,12 +120,12 @@ Fields common to all schemas
 ##### CertificateLocations
 - Description
 - Links/Certificates
-- Links/Certificates\@odata.count
+- Links/Certificates@odata.count
 
 #### /redfish/v1/Chassis/
 ##### ChassisCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Chassis/{ChassisId}/
 ##### Chassis
@@ -155,7 +155,7 @@ Fields common to all schemas
 ##### SensorCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Chassis/{ChassisId}/Sensors/{Id}/
 ##### Sensor
@@ -278,7 +278,7 @@ PowerControl Voltages PowerSupplies Redundancy
 #### /redfish/v1/EventService/Subscriptions/
 ##### EventDestinationCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/EventService/Subscriptions/{EventName}/
 ##### EventDestination
@@ -292,7 +292,7 @@ PowerControl Voltages PowerSupplies Redundancy
 #### /redfish/v1/JsonSchemas/
 ##### JsonSchemaFileCollection
 - Description
-- Members\@odata.count
+- Members@odata.count
 - Members
 
 #### /redfish/v1/JsonSchemas/{Id}/
@@ -300,19 +300,20 @@ PowerControl Voltages PowerSupplies Redundancy
 - Schema
 - Description
 - Languages
-- Languages\@odata.count
+- Languages@odata.count
 - Location
-- Location\@odata.count
+- Location@odata.count
 
 #### /redfish/v1/Managers/
 ##### ManagerCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Managers/bmc/
 ##### Manager
 - Actions
 - DateTime
+- DateTimeLocalOffset
 - Description
 - EthernetInterfaces
 - FirmwareVersion
@@ -320,12 +321,12 @@ PowerControl Voltages PowerSupplies Redundancy
 - LastResetTime
 - Links/ActiveSoftwareImage
 - Links/ManagerForChassis
-- Links/ManagerForChassis\@odata.count
+- Links/ManagerForChassis@odata.count
 - Links/ManagerForServers
-- Links/ManagerForServers\@odata.count
+- Links/ManagerForServers@odata.count
 - Links/ManagerInChassis
 - Links/SoftwareImages
-- Links/SoftwareImages\@odata.count
+- Links/SoftwareImages@odata.count
 - LogServices
 - ManagerType
 - Manufacturer
@@ -345,7 +346,7 @@ PowerControl Voltages PowerSupplies Redundancy
 ##### EthernetInterfaceCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Managers/bmc/EthernetInterfaces/{EthernetInterfaceId}/
 ##### EthernetInterface
@@ -372,7 +373,7 @@ PowerControl Voltages PowerSupplies Redundancy
 #### /redfish/v1/Managers/bmc/EthernetInterfaces/{EthernetInterfaceId}/VLANs/
 ##### VLanNetworkInterfaceCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Managers/bmc/LogServices/
 
@@ -405,7 +406,7 @@ the other.
 ##### LogServiceCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Managers/bmc/LogServices/RedfishLog/
 ##### LogService
@@ -438,7 +439,7 @@ the other.
 ##### CertificateCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates/{CertificateId}/
 ##### Certificate
@@ -461,15 +462,15 @@ the other.
 - Description
 - Members
   - Should support Base, CommonMessages, and EventingMessages
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Registries/{MessageRegistryFileId}/
 ##### MessageRegistryFile
 - Description
 - Languages
-- Languages\@odata.count
+- Languages@odata.count
 - Location
-- Location\@odata.count
+- Location@odata.count
 - Registry
 
 #### /redfish/v1/SessionService/
@@ -483,7 +484,7 @@ the other.
 ##### SessionCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/SessionService/Sessions/{SessionId}/
 ##### Session
@@ -496,7 +497,7 @@ the other.
 ##### ComputerSystemCollection
 - Members
   - Should support one system
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Systems/system/Bios/
 ##### Bios
@@ -504,7 +505,7 @@ the other.
 - Description
 - Links/ActiveSoftwareImage
 - Links/SoftwareImages
-- Links/SoftwareImages\@odata.count
+- Links/SoftwareImages@odata.count
 
 #### /redfish/v1/Systems/system/
 ##### ComputerSystem
@@ -527,6 +528,7 @@ the other.
 - MemorySummary
 - Model
 - PartNumber
+- PowerMode
 - PowerRestorePolicy
 - PowerState
 - ProcessorSummary
@@ -540,7 +542,7 @@ the other.
 #### /redfish/v1/Systems/system/EthernetInterfaces/
 ##### EthernetInterfaceCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 - Description
 
 #### /redfish/v1/Systems/system/LogServices/
@@ -548,11 +550,13 @@ the other.
 - Description
 - Members
   - Should default to one member, named SEL
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Systems/system/LogServices/EventLog/
 ##### LogService
 - Actions
+- DateTime
+- DateTimeLocalOffset
 - Description
 - Entries
 - OverWritePolicy
@@ -561,7 +565,7 @@ the other.
 ##### LogEntryCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Systems/system/LogServices/EventLog/Entries/{LogEntryId}/
 ##### LogEntry
@@ -576,7 +580,7 @@ the other.
 #### /redfish/v1/Systems/system/LogServices/SEL/Entries/
 ##### LogEntryCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 - Description
 - @odata.nextLink
 
@@ -594,7 +598,7 @@ the other.
 #### /redfish/v1/Systems/system/Memory/
 ##### MemoryCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Systems/system/Memory/{MemoryId}/
 ##### Memory
@@ -623,13 +627,13 @@ the other.
 ##### PCIeDeviceCollection
 - Description
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Systems/system/Processors/
 ##### ProcessorCollection
 - Members
   - Should Support CPU1 and CPU2 for dual socket systems
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Systems/system/Processors/{ProcessorId}/
 ##### Processor
@@ -651,12 +655,12 @@ the other.
 #### /redfish/v1/Systems/system/Storage/
 ##### StorageCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/Systems/system/Storage/{StorageId}/
 ##### Storage
 - Drives
-- Drives\@odata.count
+- Drives@odata.count
 - Status
 
 #### /redfish/v1/TaskService/
@@ -671,7 +675,7 @@ the other.
 #### /redfish/v1/TaskService/Tasks/
 ##### TaskCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/TelemetryService/
 ##### TelemetryService
@@ -684,12 +688,12 @@ the other.
 #### /redfish/v1/TelemetryService/MetricReportDefinitions/
 ##### MetricReportDefinitionCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/TelemetryService/MetricReports/
 ##### MetricReportCollection
 - Members
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/UpdateService/
 ##### UpdateService
@@ -698,18 +702,19 @@ the other.
 - FirmwareInventory
 - HttpPushUri
 - HttpPushUriOptions
+- MaxImageSizeBytes
 - ServiceEnabled
 
 #### /redfish/v1/UpdateService/FirmwareInventory/
 ##### SoftwareInventoryCollection
 - Members
   - Should Support BMC, ME, CPLD and BIOS
-- Members\@odata.count
+- Members@odata.count
 
 #### /redfish/v1/UpdateService/FirmwareInventory/{SoftwareInventoryId}/
 ##### SoftwareInventory
 - Description
-- RelatedItem\@odata.count
+- RelatedItem@odata.count
 - RelatedItem
 - Status
 - Updateable

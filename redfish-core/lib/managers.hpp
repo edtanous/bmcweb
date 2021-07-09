@@ -22,6 +22,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time.hpp>
 #include <dbus_utility.hpp>
+#include <registries/privilege_registry.hpp>
 #include <utils/fw_utils.hpp>
 #include <utils/systemd_utils.hpp>
 
@@ -109,7 +110,7 @@ inline void requestRoutesManagerResetAction(App& app)
      */
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/Actions/Manager.Reset/")
-        .privileges({{"ConfigureManager"}})
+        .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -165,7 +166,7 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
 
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults/")
-        .privileges({{"ConfigureManager"}})
+        .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -224,7 +225,7 @@ inline void requestRoutesManagerResetActionInfo(App& app)
      */
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/ResetActionInfo/")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -2075,6 +2076,7 @@ inline void requestRoutesManager(App& app)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
 
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/")
         .privileges({{"Login"}})
         .methods(
@@ -2110,12 +2112,76 @@ inline void requestRoutesManager(App& app)
                 asyncResp->res.jsonValue["EthernetInterfaces"] = {
                     {"@odata.id",
                      "/redfish/v1/Managers/bmc/EthernetInterfaces"}};
+||||||| 49e429c
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/")
+        .privileges({{"Login"}})
+        .methods(boost::beast::http::verb::get)([uuid](const crow::Request&,
+                                                       const std::shared_ptr<
+                                                           bmcweb::AsyncResp>&
+                                                           asyncResp) {
+            asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers/bmc";
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#Manager.v1_11_0.Manager";
+            asyncResp->res.jsonValue["Id"] = "bmc";
+            asyncResp->res.jsonValue["Name"] = "OpenBmc Manager";
+            asyncResp->res.jsonValue["Description"] =
+                "Baseboard Management Controller";
+            asyncResp->res.jsonValue["PowerState"] = "On";
+            asyncResp->res.jsonValue["Status"] = {{"State", "Enabled"},
+                                                  {"Health", "OK"}};
+            asyncResp->res.jsonValue["ManagerType"] = "BMC";
+            asyncResp->res.jsonValue["UUID"] = systemd_utils::getUuid();
+            asyncResp->res.jsonValue["ServiceEntryPointUUID"] = uuid;
+            asyncResp->res.jsonValue["Model"] =
+                "OpenBmc"; // TODO(ed), get model
+
+            asyncResp->res.jsonValue["LogServices"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/LogServices"}};
+
+            asyncResp->res.jsonValue["NetworkProtocol"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol"}};
+
+            asyncResp->res.jsonValue["EthernetInterfaces"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/EthernetInterfaces"}};
+=======
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/")
+        .privileges(redfish::privileges::getManager)
+        .methods(boost::beast::http::verb::get)([uuid](const crow::Request&,
+                                                       const std::shared_ptr<
+                                                           bmcweb::AsyncResp>&
+                                                           asyncResp) {
+            asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers/bmc";
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#Manager.v1_11_0.Manager";
+            asyncResp->res.jsonValue["Id"] = "bmc";
+            asyncResp->res.jsonValue["Name"] = "OpenBmc Manager";
+            asyncResp->res.jsonValue["Description"] =
+                "Baseboard Management Controller";
+            asyncResp->res.jsonValue["PowerState"] = "On";
+            asyncResp->res.jsonValue["Status"] = {{"State", "Enabled"},
+                                                  {"Health", "OK"}};
+            asyncResp->res.jsonValue["ManagerType"] = "BMC";
+            asyncResp->res.jsonValue["UUID"] = systemd_utils::getUuid();
+            asyncResp->res.jsonValue["ServiceEntryPointUUID"] = uuid;
+            asyncResp->res.jsonValue["Model"] =
+                "OpenBmc"; // TODO(ed), get model
+
+            asyncResp->res.jsonValue["LogServices"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/LogServices"}};
+
+            asyncResp->res.jsonValue["NetworkProtocol"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol"}};
+
+            asyncResp->res.jsonValue["EthernetInterfaces"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/EthernetInterfaces"}};
+>>>>>>> origin/master
 
 #ifdef BMCWEB_ENABLE_VM_NBDPROXY
                 asyncResp->res.jsonValue["VirtualMedia"] = {
                     {"@odata.id", "/redfish/v1/Managers/bmc/VirtualMedia"}};
 #endif // BMCWEB_ENABLE_VM_NBDPROXY
 
+<<<<<<< HEAD
                 // default oem data
                 nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
                 nlohmann::json& oemOpenbmc = oem["OpenBmc"];
@@ -2159,6 +2225,91 @@ inline void requestRoutesManager(App& app)
                 asyncResp->res
                     .jsonValue["SerialConsole"]["ConnectTypesSupported"] = {
                     "IPMI", "SSH"};
+||||||| 49e429c
+            // default oem data
+            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
+            nlohmann::json& oemOpenbmc = oem["OpenBmc"];
+            oem["@odata.type"] = "#OemManager.Oem";
+            oem["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem";
+            oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
+            oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem/OpenBmc";
+            oemOpenbmc["Certificates"] = {
+                {"@odata.id",
+                 "/redfish/v1/Managers/bmc/Truststore/Certificates"}};
+
+            // Manager.Reset (an action) can be many values, OpenBMC only
+            // supports BMC reboot.
+            nlohmann::json& managerReset =
+                asyncResp->res.jsonValue["Actions"]["#Manager.Reset"];
+            managerReset["target"] =
+                "/redfish/v1/Managers/bmc/Actions/Manager.Reset";
+            managerReset["@Redfish.ActionInfo"] =
+                "/redfish/v1/Managers/bmc/ResetActionInfo";
+
+            // ResetToDefaults (Factory Reset) has values like
+            // PreserveNetworkAndUsers and PreserveNetwork that aren't supported
+            // on OpenBMC
+            nlohmann::json& resetToDefaults =
+                asyncResp->res.jsonValue["Actions"]["#Manager.ResetToDefaults"];
+            resetToDefaults["target"] =
+                "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
+            resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
+
+            asyncResp->res.jsonValue["DateTime"] = crow::utility::dateTimeNow();
+
+            // Fill in SerialConsole info
+            asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
+            asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
+                15;
+            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
+                {"IPMI", "SSH"};
+=======
+            // default oem data
+            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
+            nlohmann::json& oemOpenbmc = oem["OpenBmc"];
+            oem["@odata.type"] = "#OemManager.Oem";
+            oem["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem";
+            oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
+            oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem/OpenBmc";
+            oemOpenbmc["Certificates"] = {
+                {"@odata.id",
+                 "/redfish/v1/Managers/bmc/Truststore/Certificates"}};
+
+            // Manager.Reset (an action) can be many values, OpenBMC only
+            // supports BMC reboot.
+            nlohmann::json& managerReset =
+                asyncResp->res.jsonValue["Actions"]["#Manager.Reset"];
+            managerReset["target"] =
+                "/redfish/v1/Managers/bmc/Actions/Manager.Reset";
+            managerReset["@Redfish.ActionInfo"] =
+                "/redfish/v1/Managers/bmc/ResetActionInfo";
+
+            // ResetToDefaults (Factory Reset) has values like
+            // PreserveNetworkAndUsers and PreserveNetwork that aren't supported
+            // on OpenBMC
+            nlohmann::json& resetToDefaults =
+                asyncResp->res.jsonValue["Actions"]["#Manager.ResetToDefaults"];
+            resetToDefaults["target"] =
+                "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
+            resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
+
+            std::pair<std::string, std::string> redfishDateTimeOffset =
+                crow::utility::getDateTimeOffsetNow();
+
+            asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
+            asyncResp->res.jsonValue["DateTimeLocalOffset"] =
+                redfishDateTimeOffset.second;
+
+            // TODO (Gunnar): Remove these one day since moved to ComputerSystem
+            // Still used by OCP profiles
+            // https://github.com/opencomputeproject/OCP-Profiles/issues/23
+            // Fill in SerialConsole info
+            asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
+            asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
+                15;
+            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
+                {"IPMI", "SSH"};
+>>>>>>> origin/master
 #ifdef BMCWEB_ENABLE_KVM
                 // Fill in GraphicalConsole info
                 asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
@@ -2386,7 +2537,7 @@ inline void requestRoutesManager(App& app)
         });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/")
-        .privileges({{"ConfigureManager"}})
+        .privileges(redfish::privileges::patchManager)
         .methods(
             boost::beast::http::verb::
                 patch)([](const crow::Request& req,
@@ -2469,6 +2620,7 @@ inline void requestRoutesManager(App& app)
 inline void requestRoutesManagerCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/")
+<<<<<<< HEAD
         .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::
@@ -2521,5 +2673,36 @@ inline void requestRoutesManagerCollection(App& app)
                 "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
                 "/xyz/openbmc_project/inventory", 0, interface);
         });
+||||||| 49e429c
+        .privileges({{"Login"}})
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                // Collections don't include the static data added by SubRoute
+                // because it has a duplicate entry for members
+                asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers";
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#ManagerCollection.ManagerCollection";
+                asyncResp->res.jsonValue["Name"] = "Manager Collection";
+                asyncResp->res.jsonValue["Members@odata.count"] = 1;
+                asyncResp->res.jsonValue["Members"] = {
+                    {{"@odata.id", "/redfish/v1/Managers/bmc"}}};
+            });
+=======
+        .privileges(redfish::privileges::getManagerCollection)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                // Collections don't include the static data added by SubRoute
+                // because it has a duplicate entry for members
+                asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers";
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#ManagerCollection.ManagerCollection";
+                asyncResp->res.jsonValue["Name"] = "Manager Collection";
+                asyncResp->res.jsonValue["Members@odata.count"] = 1;
+                asyncResp->res.jsonValue["Members"] = {
+                    {{"@odata.id", "/redfish/v1/Managers/bmc"}}};
+            });
+>>>>>>> origin/master
 }
 } // namespace redfish

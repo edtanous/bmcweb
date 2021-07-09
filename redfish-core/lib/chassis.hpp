@@ -20,6 +20,7 @@
 
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
+#include <registries/privilege_registry.hpp>
 #include <utils/collection.hpp>
 
 #include <variant>
@@ -449,7 +450,7 @@ inline void getPhysicalSecurityData(std::shared_ptr<bmcweb::AsyncResp> aResp)
 inline void requestRoutesChassisCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getChassisCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -472,7 +473,7 @@ inline void requestRoutesChassisCollection(App& app)
 inline void requestRoutesChassis(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getChassis)
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
                                               const std::shared_ptr<
@@ -808,7 +809,7 @@ inline void requestRoutesChassis(App& app)
         });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/")
-        .privileges({{"ConfigureComponents"}})
+        .privileges(redfish::privileges::patchChassis)
         .methods(
             boost::beast::http::verb::
                 patch)([](const crow::Request& req,
@@ -1007,7 +1008,7 @@ inline void
 inline void requestRoutesChassisResetAction(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Chassis.Reset/")
-        .privileges({{"ConfigureComponents"}})
+        .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -1042,7 +1043,7 @@ inline void requestRoutesChassisResetAction(App& app)
 inline void requestRoutesChassisResetActionInfo(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/ResetActionInfo/")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,

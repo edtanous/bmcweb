@@ -75,6 +75,7 @@ include_list = [
     'Port',
     'PortCollection',
     'Power',
+    'Privileges', #Used in Role
     'Processor',
     'ProcessorCollection',
     'RedfishError',
