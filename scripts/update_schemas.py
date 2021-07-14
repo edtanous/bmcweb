@@ -79,6 +79,7 @@ include_list = [
     'Privileges', #Used in Role
     'Processor',
     'ProcessorCollection',
+    'ProcessorMetrics',
     'RedfishError',
     'RedfishExtensions',
     'Redundancy',
