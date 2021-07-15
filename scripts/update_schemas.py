@@ -75,6 +75,7 @@ include_list = [
     'PCIeFunctionCollection',
     'Port',
     'PortCollection',
+    'PortMetrics',
     'Power',
     'Privileges', #Used in Role
     'Processor',
