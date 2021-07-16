@@ -2076,382 +2076,15 @@ inline void requestRoutesManager(App& app)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
 
-<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getManager)
         .methods(
             boost::beast::http::verb::
                 get)([uuid](const crow::Request&,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& bmcId) {
-            if (bmcId == "bmc")
-            {
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/bmc";
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#Manager.v1_11_0.Manager";
-                asyncResp->res.jsonValue["Id"] = "bmc";
-                asyncResp->res.jsonValue["Name"] = "OpenBmc Manager";
-                asyncResp->res.jsonValue["Description"] =
-                    "Baseboard Management Controller";
-                asyncResp->res.jsonValue["PowerState"] = "On";
-                asyncResp->res.jsonValue["Status"] = {{"State", "Enabled"},
-                                                      {"Health", "OK"}};
-                asyncResp->res.jsonValue["ManagerType"] = "BMC";
-                asyncResp->res.jsonValue["UUID"] = systemd_utils::getUuid();
-                asyncResp->res.jsonValue["ServiceEntryPointUUID"] = uuid;
-                asyncResp->res.jsonValue["Model"] =
-                    "OpenBmc"; // TODO(ed), get model
-
-                asyncResp->res.jsonValue["LogServices"] = {
-                    {"@odata.id", "/redfish/v1/Managers/bmc/LogServices"}};
-
-                asyncResp->res.jsonValue["NetworkProtocol"] = {
-                    {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol"}};
-
-                asyncResp->res.jsonValue["EthernetInterfaces"] = {
-                    {"@odata.id",
-                     "/redfish/v1/Managers/bmc/EthernetInterfaces"}};
-||||||| 49e429c
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/")
-        .privileges({{"Login"}})
-        .methods(boost::beast::http::verb::get)([uuid](const crow::Request&,
-                                                       const std::shared_ptr<
-                                                           bmcweb::AsyncResp>&
-                                                           asyncResp) {
-            asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers/bmc";
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#Manager.v1_11_0.Manager";
-            asyncResp->res.jsonValue["Id"] = "bmc";
-            asyncResp->res.jsonValue["Name"] = "OpenBmc Manager";
-            asyncResp->res.jsonValue["Description"] =
-                "Baseboard Management Controller";
-            asyncResp->res.jsonValue["PowerState"] = "On";
-            asyncResp->res.jsonValue["Status"] = {{"State", "Enabled"},
-                                                  {"Health", "OK"}};
-            asyncResp->res.jsonValue["ManagerType"] = "BMC";
-            asyncResp->res.jsonValue["UUID"] = systemd_utils::getUuid();
-            asyncResp->res.jsonValue["ServiceEntryPointUUID"] = uuid;
-            asyncResp->res.jsonValue["Model"] =
-                "OpenBmc"; // TODO(ed), get model
-
-            asyncResp->res.jsonValue["LogServices"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/LogServices"}};
-
-            asyncResp->res.jsonValue["NetworkProtocol"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol"}};
-
-            asyncResp->res.jsonValue["EthernetInterfaces"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/EthernetInterfaces"}};
-=======
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/")
-        .privileges(redfish::privileges::getManager)
-        .methods(boost::beast::http::verb::get)([uuid](const crow::Request&,
-                                                       const std::shared_ptr<
-                                                           bmcweb::AsyncResp>&
-                                                           asyncResp) {
-            asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers/bmc";
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#Manager.v1_11_0.Manager";
-            asyncResp->res.jsonValue["Id"] = "bmc";
-            asyncResp->res.jsonValue["Name"] = "OpenBmc Manager";
-            asyncResp->res.jsonValue["Description"] =
-                "Baseboard Management Controller";
-            asyncResp->res.jsonValue["PowerState"] = "On";
-            asyncResp->res.jsonValue["Status"] = {{"State", "Enabled"},
-                                                  {"Health", "OK"}};
-            asyncResp->res.jsonValue["ManagerType"] = "BMC";
-            asyncResp->res.jsonValue["UUID"] = systemd_utils::getUuid();
-            asyncResp->res.jsonValue["ServiceEntryPointUUID"] = uuid;
-            asyncResp->res.jsonValue["Model"] =
-                "OpenBmc"; // TODO(ed), get model
-
-            asyncResp->res.jsonValue["LogServices"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/LogServices"}};
-
-            asyncResp->res.jsonValue["NetworkProtocol"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol"}};
-
-            asyncResp->res.jsonValue["EthernetInterfaces"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/EthernetInterfaces"}};
->>>>>>> origin/master
-
-#ifdef BMCWEB_ENABLE_VM_NBDPROXY
-                asyncResp->res.jsonValue["VirtualMedia"] = {
-                    {"@odata.id", "/redfish/v1/Managers/bmc/VirtualMedia"}};
-#endif // BMCWEB_ENABLE_VM_NBDPROXY
-
-<<<<<<< HEAD
-                // default oem data
-                nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
-                nlohmann::json& oemOpenbmc = oem["OpenBmc"];
-                oem["@odata.type"] = "#OemManager.Oem";
-                oem["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem";
-                oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
-                oemOpenbmc["@odata.id"] =
-                    "/redfish/v1/Managers/bmc#/Oem/OpenBmc";
-                oemOpenbmc["Certificates"] = {
-                    {"@odata.id",
-                     "/redfish/v1/Managers/bmc/Truststore/Certificates"}};
-
-                // Manager.Reset (an action) can be many values, OpenBMC only
-                // supports BMC reboot.
-                nlohmann::json& managerReset =
-                    asyncResp->res.jsonValue["Actions"]["#Manager.Reset"];
-                managerReset["target"] =
-                    "/redfish/v1/Managers/bmc/Actions/Manager.Reset";
-                managerReset["@Redfish.ActionInfo"] =
-                    "/redfish/v1/Managers/bmc/ResetActionInfo";
-
-                // ResetToDefaults (Factory Reset) has values like
-                // PreserveNetworkAndUsers and PreserveNetwork that aren't
-                // supported on OpenBMC
-                nlohmann::json& resetToDefaults =
-                    asyncResp->res
-                        .jsonValue["Actions"]["#Manager.ResetToDefaults"];
-                resetToDefaults["target"] =
-                    "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
-                resetToDefaults["ResetType@Redfish.AllowableValues"] = {
-                    "ResetAll"};
-
-                asyncResp->res.jsonValue["DateTime"] =
-                    crow::utility::dateTimeNow();
-
-                // Fill in SerialConsole info
-                asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] =
-                    true;
-                asyncResp->res
-                    .jsonValue["SerialConsole"]["MaxConcurrentSessions"] = 15;
-                asyncResp->res
-                    .jsonValue["SerialConsole"]["ConnectTypesSupported"] = {
-                    "IPMI", "SSH"};
-||||||| 49e429c
-            // default oem data
-            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
-            nlohmann::json& oemOpenbmc = oem["OpenBmc"];
-            oem["@odata.type"] = "#OemManager.Oem";
-            oem["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem";
-            oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
-            oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem/OpenBmc";
-            oemOpenbmc["Certificates"] = {
-                {"@odata.id",
-                 "/redfish/v1/Managers/bmc/Truststore/Certificates"}};
-
-            // Manager.Reset (an action) can be many values, OpenBMC only
-            // supports BMC reboot.
-            nlohmann::json& managerReset =
-                asyncResp->res.jsonValue["Actions"]["#Manager.Reset"];
-            managerReset["target"] =
-                "/redfish/v1/Managers/bmc/Actions/Manager.Reset";
-            managerReset["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/bmc/ResetActionInfo";
-
-            // ResetToDefaults (Factory Reset) has values like
-            // PreserveNetworkAndUsers and PreserveNetwork that aren't supported
-            // on OpenBMC
-            nlohmann::json& resetToDefaults =
-                asyncResp->res.jsonValue["Actions"]["#Manager.ResetToDefaults"];
-            resetToDefaults["target"] =
-                "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
-            resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
-
-            asyncResp->res.jsonValue["DateTime"] = crow::utility::dateTimeNow();
-
-            // Fill in SerialConsole info
-            asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
-            asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
-                15;
-            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
-                {"IPMI", "SSH"};
-=======
-            // default oem data
-            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
-            nlohmann::json& oemOpenbmc = oem["OpenBmc"];
-            oem["@odata.type"] = "#OemManager.Oem";
-            oem["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem";
-            oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
-            oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem/OpenBmc";
-            oemOpenbmc["Certificates"] = {
-                {"@odata.id",
-                 "/redfish/v1/Managers/bmc/Truststore/Certificates"}};
-
-            // Manager.Reset (an action) can be many values, OpenBMC only
-            // supports BMC reboot.
-            nlohmann::json& managerReset =
-                asyncResp->res.jsonValue["Actions"]["#Manager.Reset"];
-            managerReset["target"] =
-                "/redfish/v1/Managers/bmc/Actions/Manager.Reset";
-            managerReset["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/bmc/ResetActionInfo";
-
-            // ResetToDefaults (Factory Reset) has values like
-            // PreserveNetworkAndUsers and PreserveNetwork that aren't supported
-            // on OpenBMC
-            nlohmann::json& resetToDefaults =
-                asyncResp->res.jsonValue["Actions"]["#Manager.ResetToDefaults"];
-            resetToDefaults["target"] =
-                "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
-            resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
-
-            std::pair<std::string, std::string> redfishDateTimeOffset =
-                crow::utility::getDateTimeOffsetNow();
-
-            asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
-            asyncResp->res.jsonValue["DateTimeLocalOffset"] =
-                redfishDateTimeOffset.second;
-
-            // TODO (Gunnar): Remove these one day since moved to ComputerSystem
-            // Still used by OCP profiles
-            // https://github.com/opencomputeproject/OCP-Profiles/issues/23
-            // Fill in SerialConsole info
-            asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
-            asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
-                15;
-            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
-                {"IPMI", "SSH"};
->>>>>>> origin/master
-#ifdef BMCWEB_ENABLE_KVM
-                // Fill in GraphicalConsole info
-                asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
-                    true;
-                asyncResp->res
-                    .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
-                asyncResp->res.jsonValue["GraphicalConsole"]
-                                        ["ConnectTypesSupported"] = {"KVMIP"};
-#endif // BMCWEB_ENABLE_KVM
-
-                asyncResp->res
-                    .jsonValue["Links"]["ManagerForServers@odata.count"] = 1;
-                asyncResp->res.jsonValue["Links"]["ManagerForServers"] = {
-                    {{"@odata.id", "/redfish/v1/Systems/system"}}};
-
-                auto health = std::make_shared<HealthPopulate>(asyncResp);
-                health->isManagersHealth = true;
-                health->populate();
-
-                fw_util::populateFirmwareInformation(
-                    asyncResp, fw_util::bmcPurpose, "FirmwareVersion", true);
-
-                managerGetLastResetTime(asyncResp);
-
-                auto pids = std::make_shared<GetPIDValues>(asyncResp);
-                pids->run();
-
-                getMainChassisId(
-                    asyncResp,
-                    [](const std::string& chassisId,
-                       const std::shared_ptr<bmcweb::AsyncResp>& aRsp) {
-                        aRsp->res.jsonValue["Links"]
-                                           ["ManagerForChassis@odata.count"] =
-                            1;
-                        aRsp->res.jsonValue["Links"]["ManagerForChassis"] = {
-                            {{"@odata.id",
-                              "/redfish/v1/Chassis/" + chassisId}}};
-                        aRsp->res.jsonValue["Links"]["ManagerInChassis"] = {
-                            {"@odata.id", "/redfish/v1/Chassis/" + chassisId}};
-                    });
-
-                static bool started = false;
-
-                if (!started)
-                {
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp](const boost::system::error_code ec,
-                                    const std::variant<double>& resp) {
-                            if (ec)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "Error while getting progress";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            const double* val = std::get_if<double>(&resp);
-                            if (val == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR << "Invalid response while "
-                                                    "getting progress";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            if (*val < 1.0)
-                            {
-                                asyncResp->res.jsonValue["Status"]["State"] =
-                                    "Starting";
-                                started = true;
-                            }
-                        },
-                        "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-                        "org.freedesktop.DBus.Properties", "Get",
-                        "org.freedesktop.systemd1.Manager", "Progress");
-                }
-
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp](
-                        const boost::system::error_code ec,
-                        const std::vector<std::pair<
-                            std::string,
-                            std::vector<std::pair<std::string,
-                                                  std::vector<std::string>>>>>&
-                            subtree) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_DEBUG
-                                << "D-Bus response error on GetSubTree " << ec;
-                            return;
-                        }
-                        if (subtree.size() == 0)
-                        {
-                            BMCWEB_LOG_DEBUG << "Can't find bmc D-Bus object!";
-                            return;
-                        }
-                        // Assume only 1 bmc D-Bus object
-                        // Throw an error if there is more than 1
-                        if (subtree.size() > 1)
-                        {
-                            BMCWEB_LOG_DEBUG
-                                << "Found more than 1 bmc D-Bus object!";
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        if (subtree[0].first.empty() ||
-                            subtree[0].second.size() != 1)
-                        {
-                            BMCWEB_LOG_DEBUG
-                                << "Error getting bmc D-Bus object!";
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        const std::string& path = subtree[0].first;
-                        const std::string& connectionName =
-                            subtree[0].second[0].first;
-
-                        for (const auto& interfaceName :
-                             subtree[0].second[0].second)
-                        {
-                            if (interfaceName ==
-                                "xyz.openbmc_project.Inventory.Decorator.Asset")
-                            {
-                                getBMCAssetData(asyncResp, connectionName,
-                                                path);
-                            }
-                            else if (interfaceName ==
-                                     "xyz.openbmc_project.Inventory."
-                                     "Decorator.LocationCode")
-                            {
-                                getLocation(asyncResp, connectionName, path);
-                            }
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                    "/xyz/openbmc_project/inventory", int32_t(0),
-                    std::array<const char*, 1>{
-                        "xyz.openbmc_project.Inventory.Item.Bmc"});
-            }
-            else
+            // Process non bmc service manager
+            if (bmcId != "bmc")
             {
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, bmcId](
@@ -2533,7 +2166,219 @@ inline void requestRoutesManager(App& app)
                     "/xyz/openbmc_project/inventory", int32_t(0),
                     std::array<const char*, 1>{"xyz.openbmc_project.Inventory."
                                                "Item.ManagementService"});
+                return;
             }
+            // Process BMC manager
+            asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers/bmc";
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#Manager.v1_11_0.Manager";
+            asyncResp->res.jsonValue["Id"] = "bmc";
+            asyncResp->res.jsonValue["Name"] = "OpenBmc Manager";
+            asyncResp->res.jsonValue["Description"] =
+                "Baseboard Management Controller";
+            asyncResp->res.jsonValue["PowerState"] = "On";
+            asyncResp->res.jsonValue["Status"] = {{"State", "Enabled"},
+                                                  {"Health", "OK"}};
+            asyncResp->res.jsonValue["ManagerType"] = "BMC";
+            asyncResp->res.jsonValue["UUID"] = systemd_utils::getUuid();
+            asyncResp->res.jsonValue["ServiceEntryPointUUID"] = uuid;
+            asyncResp->res.jsonValue["Model"] =
+                "OpenBmc"; // TODO(ed), get model
+
+            asyncResp->res.jsonValue["LogServices"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/LogServices"}};
+
+            asyncResp->res.jsonValue["NetworkProtocol"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol"}};
+
+            asyncResp->res.jsonValue["EthernetInterfaces"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/EthernetInterfaces"}};
+
+#ifdef BMCWEB_ENABLE_VM_NBDPROXY
+            asyncResp->res.jsonValue["VirtualMedia"] = {
+                {"@odata.id", "/redfish/v1/Managers/bmc/VirtualMedia"}};
+#endif // BMCWEB_ENABLE_VM_NBDPROXY
+
+            // default oem data
+            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
+            nlohmann::json& oemOpenbmc = oem["OpenBmc"];
+            oem["@odata.type"] = "#OemManager.Oem";
+            oem["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem";
+            oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
+            oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem/OpenBmc";
+            oemOpenbmc["Certificates"] = {
+                {"@odata.id",
+                 "/redfish/v1/Managers/bmc/Truststore/Certificates"}};
+
+            // Manager.Reset (an action) can be many values, OpenBMC only
+            // supports BMC reboot.
+            nlohmann::json& managerReset =
+                asyncResp->res.jsonValue["Actions"]["#Manager.Reset"];
+            managerReset["target"] =
+                "/redfish/v1/Managers/bmc/Actions/Manager.Reset";
+            managerReset["@Redfish.ActionInfo"] =
+                "/redfish/v1/Managers/bmc/ResetActionInfo";
+
+            // ResetToDefaults (Factory Reset) has values like
+            // PreserveNetworkAndUsers and PreserveNetwork that aren't supported
+            // on OpenBMC
+            nlohmann::json& resetToDefaults =
+                asyncResp->res.jsonValue["Actions"]["#Manager.ResetToDefaults"];
+            resetToDefaults["target"] =
+                "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
+            resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
+
+            std::pair<std::string, std::string> redfishDateTimeOffset =
+                crow::utility::getDateTimeOffsetNow();
+
+            asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
+            asyncResp->res.jsonValue["DateTimeLocalOffset"] =
+                redfishDateTimeOffset.second;
+
+            // TODO (Gunnar): Remove these one day since moved to ComputerSystem
+            // Still used by OCP profiles
+            // https://github.com/opencomputeproject/OCP-Profiles/issues/23
+            // Fill in SerialConsole info
+            asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
+            asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
+                15;
+            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
+                {"IPMI", "SSH"};
+#ifdef BMCWEB_ENABLE_KVM
+            // Fill in GraphicalConsole info
+            asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
+                true;
+            asyncResp->res
+                .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
+            asyncResp->res.jsonValue["GraphicalConsole"]
+                                    ["ConnectTypesSupported"] = {"KVMIP"};
+#endif // BMCWEB_ENABLE_KVM
+
+            asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] =
+                1;
+            asyncResp->res.jsonValue["Links"]["ManagerForServers"] = {
+                {{"@odata.id", "/redfish/v1/Systems/system"}}};
+
+            auto health = std::make_shared<HealthPopulate>(asyncResp);
+            health->isManagersHealth = true;
+            health->populate();
+
+            fw_util::populateFirmwareInformation(asyncResp, fw_util::bmcPurpose,
+                                                 "FirmwareVersion", true);
+
+            managerGetLastResetTime(asyncResp);
+
+            auto pids = std::make_shared<GetPIDValues>(asyncResp);
+            pids->run();
+
+            getMainChassisId(
+                asyncResp, [](const std::string& chassisId,
+                              const std::shared_ptr<bmcweb::AsyncResp>& aRsp) {
+                    aRsp->res
+                        .jsonValue["Links"]["ManagerForChassis@odata.count"] =
+                        1;
+                    aRsp->res.jsonValue["Links"]["ManagerForChassis"] = {
+                        {{"@odata.id", "/redfish/v1/Chassis/" + chassisId}}};
+                    aRsp->res.jsonValue["Links"]["ManagerInChassis"] = {
+                        {"@odata.id", "/redfish/v1/Chassis/" + chassisId}};
+                });
+
+            static bool started = false;
+
+            if (!started)
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code ec,
+                                const std::variant<double>& resp) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Error while getting progress";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        const double* val = std::get_if<double>(&resp);
+                        if (val == nullptr)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Invalid response while getting progress";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        if (*val < 1.0)
+                        {
+                            asyncResp->res.jsonValue["Status"]["State"] =
+                                "Starting";
+                            started = true;
+                        }
+                    },
+                    "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                    "org.freedesktop.DBus.Properties", "Get",
+                    "org.freedesktop.systemd1.Manager", "Progress");
+            }
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](
+                    const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string,
+                                  std::vector<std::pair<
+                                      std::string, std::vector<std::string>>>>>&
+                        subtree) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "D-Bus response error on GetSubTree " << ec;
+                        return;
+                    }
+                    if (subtree.size() == 0)
+                    {
+                        BMCWEB_LOG_DEBUG << "Can't find bmc D-Bus object!";
+                        return;
+                    }
+                    // Assume only 1 bmc D-Bus object
+                    // Throw an error if there is more than 1
+                    if (subtree.size() > 1)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "Found more than 1 bmc D-Bus object!";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    if (subtree[0].first.empty() ||
+                        subtree[0].second.size() != 1)
+                    {
+                        BMCWEB_LOG_DEBUG << "Error getting bmc D-Bus object!";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    const std::string& path = subtree[0].first;
+                    const std::string& connectionName =
+                        subtree[0].second[0].first;
+
+                    for (const auto& interfaceName :
+                         subtree[0].second[0].second)
+                    {
+                        if (interfaceName ==
+                            "xyz.openbmc_project.Inventory.Decorator.Asset")
+                        {
+                            getBMCAssetData(asyncResp, connectionName, path);
+                        }
+                        else if (interfaceName ==
+                                 "xyz.openbmc_project.Inventory."
+                                 "Decorator.LocationCode")
+                        {
+                            getLocation(asyncResp, connectionName, path);
+                        }
+                    }
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/inventory", int32_t(0),
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Inventory.Item.Bmc"});
         });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/")
@@ -2620,8 +2465,7 @@ inline void requestRoutesManager(App& app)
 inline void requestRoutesManagerCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/")
-<<<<<<< HEAD
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getManagerCollection)
         .methods(
             boost::beast::http::verb::
                 get)([](const crow::Request&,
@@ -2673,36 +2517,5 @@ inline void requestRoutesManagerCollection(App& app)
                 "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
                 "/xyz/openbmc_project/inventory", 0, interface);
         });
-||||||| 49e429c
-        .privileges({{"Login"}})
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                // Collections don't include the static data added by SubRoute
-                // because it has a duplicate entry for members
-                asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers";
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#ManagerCollection.ManagerCollection";
-                asyncResp->res.jsonValue["Name"] = "Manager Collection";
-                asyncResp->res.jsonValue["Members@odata.count"] = 1;
-                asyncResp->res.jsonValue["Members"] = {
-                    {{"@odata.id", "/redfish/v1/Managers/bmc"}}};
-            });
-=======
-        .privileges(redfish::privileges::getManagerCollection)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                // Collections don't include the static data added by SubRoute
-                // because it has a duplicate entry for members
-                asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers";
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#ManagerCollection.ManagerCollection";
-                asyncResp->res.jsonValue["Name"] = "Manager Collection";
-                asyncResp->res.jsonValue["Members@odata.count"] = 1;
-                asyncResp->res.jsonValue["Members"] = {
-                    {{"@odata.id", "/redfish/v1/Managers/bmc"}}};
-            });
->>>>>>> origin/master
 }
 } // namespace redfish

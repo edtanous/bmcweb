@@ -4,13 +4,7 @@
   "@odata.type": "#JsonSchemaFileCollection.JsonSchemaFileCollection",
   "Name": "JsonSchemaFile Collection",
   "Description": "Collection of JsonSchemaFiles",
-<<<<<<< HEAD
-  "Members@odata.count": 60,
-||||||| 49e429c
-  "Members@odata.count": 56,
-=======
-  "Members@odata.count": 57,
->>>>>>> origin/master
+  "Members@odata.count": 61,
   "Members": [
     {
       "@odata.id": "/redfish/v1/JsonSchemas/AccountService"
