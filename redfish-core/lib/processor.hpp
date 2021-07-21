@@ -1121,11 +1121,6 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
                 handler(resp, processorId, objectPath, serviceMap);
 
-                // Links association to underneath memory
-                getProcessorMemoryLinks(resp, objectPath);
-                // Link association to parent chassis
-                getProcessorChassisLink(resp, objectPath);
-
                 return;
             }
             messages::resourceNotFound(resp->res, "Processor", processorId);
@@ -1393,6 +1388,10 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             }
         }
     }
+    // Links association to underneath memory
+    getProcessorMemoryLinks(aResp, objectPath);
+    // Link association to parent chassis
+    getProcessorChassisLink(aResp, objectPath);
 }
 
 /**
