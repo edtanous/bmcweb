@@ -1405,6 +1405,9 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             }
         }
     }
+    aResp->res.jsonValue["EnvironmentMetrics"] =
+        {{"@odata.id", "/redfish/v1/Systems/system/Processors/"
+            + processorId + "/EnvironmentMetrics"}};
     // Links association to underneath memory
     getProcessorMemoryLinks(aResp, objectPath);
     // Link association to parent chassis

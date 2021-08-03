@@ -1013,9 +1013,13 @@ inline void requestRoutesMemory(App& app)
                 std::string memoryMetricsURI =
                     "/redfish/v1/Systems/system/Memory/";
                 memoryMetricsURI += dimmId;
+                std::string environmentMetricsURI = memoryMetricsURI;
                 memoryMetricsURI += "/MemoryMetrics";
                 asyncResp->res.jsonValue["Metrics"]["@odata.id"] =
                     memoryMetricsURI;
+                environmentMetricsURI += "/EnvironmentMetrics";
+                asyncResp->res.jsonValue["EnvironmentMetrics"]["@odata.id"] =
+                    environmentMetricsURI;
 
                 getDimmData(asyncResp, dimmId);
             });

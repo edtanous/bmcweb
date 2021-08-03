@@ -90,6 +90,8 @@ class RedfishService
         requestRoutesChassisResetAction(app);
         requestRoutesChassisResetActionInfo(app);
         requestRoutesEnvironmentMetrics(app);
+        requestRoutesProcessorEnvironmentMetrics(app);
+        requestRoutesMemoryEnvironmentMetrics(app);
         requestRoutesUpdateService(app);
         requestRoutesStorageCollection(app);
         requestRoutesStorage(app);
