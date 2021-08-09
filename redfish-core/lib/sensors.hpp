@@ -614,10 +614,10 @@ void getChassis(const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
                         sensorsAsyncResp->chassisSubNode ==
                                 sensors::node::thermal
                             ? "Temperatures"
-                        : sensorsAsyncResp->chassisSubNode ==
-                                sensors::node::power
-                            ? "Voltages"
-                            : "Sensors");
+                            : sensorsAsyncResp->chassisSubNode ==
+                                      sensors::node::power
+                                  ? "Voltages"
+                                  : "Sensors");
                     return;
                 }
                 const std::shared_ptr<boost::container::flat_set<std::string>>
@@ -3155,39 +3155,76 @@ void getThermalMetrics(
         sensorsAsyncResp->asyncResp->res
             .jsonValue["TemperatureReadingsCelsius"] = nlohmann::json::array();
 
-        // Get the list of all sensors for this Chassis element
-        std::string sensorPath = *chassisPath + "/all_sensors";
+        const std::string origChassisPath = *chassisPath;
+        // Get all sensors for this and underneath chassis
         crow::connections::systemBus->async_method_call(
-            [sensorsAsyncResp, callback{std::move(callback)}](
-                const boost::system::error_code& ec,
-                const std::variant<std::vector<std::string>>&
-                    variantEndpoints) {
-                if (ec)
+            [sensorsAsyncResp, origChassisPath, callback{std::move(callback)}](
+                const boost::system::error_code ec2,
+                std::variant<std::vector<std::string>>& chassisLinks) {
+                std::vector<std::string> chassisPaths;
+                if (ec2)
                 {
-                    if (ec.value() == EBADR)
+                    // no chassis links = no failures
+                    // processes parent chassis
+                    chassisPaths.emplace_back(origChassisPath);
+                }
+                // Add parent chassis to the list
+                chassisPaths.emplace_back(origChassisPath);
+                // Add underneath chassis paths
+                std::vector<std::string>* chassisData =
+                    std::get_if<std::vector<std::string>>(&chassisLinks);
+                if (chassisData != nullptr)
+                {
+                    for (const std::string& path : *chassisData)
                     {
-                        return;
+                        chassisPaths.emplace_back(path);
                     }
-                    messages::internalError(sensorsAsyncResp->asyncResp->res);
-                    return;
                 }
-                const std::vector<std::string>* nodeSensorList =
-                    std::get_if<std::vector<std::string>>(&(variantEndpoints));
-                if (nodeSensorList == nullptr)
+                // Processor all sensors to all chassis
+                for (const std::string& objectPath : chassisPaths)
                 {
-                    messages::resourceNotFound(sensorsAsyncResp->asyncResp->res,
-                                               sensorsAsyncResp->chassisSubNode,
-                                               "Temperatures");
-                    return;
+                    // Get the list of all sensors for this Chassis element
+                    std::string sensorPath = objectPath + "/all_sensors";
+                    crow::connections::systemBus->async_method_call(
+                        [sensorsAsyncResp,
+                         callback](const boost::system::error_code& ec,
+                                   const std::variant<std::vector<std::string>>&
+                                       variantEndpoints) {
+                            if (ec)
+                            {
+                                if (ec.value() == EBADR)
+                                {
+                                    return;
+                                }
+                                messages::internalError(
+                                    sensorsAsyncResp->asyncResp->res);
+                                return;
+                            }
+                            const std::vector<std::string>* nodeSensorList =
+                                std::get_if<std::vector<std::string>>(
+                                    &(variantEndpoints));
+                            if (nodeSensorList == nullptr)
+                            {
+                                messages::resourceNotFound(
+                                    sensorsAsyncResp->asyncResp->res,
+                                    sensorsAsyncResp->chassisSubNode,
+                                    "Temperatures");
+                                return;
+                            }
+                            const std::shared_ptr<
+                                boost::container::flat_set<std::string>>
+                                culledSensorList = std::make_shared<
+                                    boost::container::flat_set<std::string>>();
+                            reduceSensorList(sensorsAsyncResp, nodeSensorList,
+                                             culledSensorList);
+                            callback(culledSensorList);
+                        },
+                        "xyz.openbmc_project.ObjectMapper", sensorPath,
+                        "org.freedesktop.DBus.Properties", "Get",
+                        "xyz.openbmc_project.Association", "endpoints");
                 }
-                const std::shared_ptr<boost::container::flat_set<std::string>>
-                    culledSensorList = std::make_shared<
-                        boost::container::flat_set<std::string>>();
-                reduceSensorList(sensorsAsyncResp, nodeSensorList,
-                                 culledSensorList);
-                callback(culledSensorList);
             },
-            "xyz.openbmc_project.ObjectMapper", sensorPath,
+            "xyz.openbmc_project.ObjectMapper", *chassisPath + "/all_chassis",
             "org.freedesktop.DBus.Properties", "Get",
             "xyz.openbmc_project.Association", "endpoints");
     };
