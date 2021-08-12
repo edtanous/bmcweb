@@ -157,6 +157,77 @@ inline const char* toReadingUnits(const std::string& sensorType)
     }
     return "";
 }
+
+inline const char* toPhysicalContext(const std::string& physicalContext)
+{
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Back")
+    {
+        return "Back";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Backplane")
+    {
+        return "Backplane";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.CPU")
+    {
+        return "CPU";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Fan")
+    {
+        return "Fan";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Front")
+    {
+        return "Front";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.GPU")
+    {
+        return "GPU";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.GPUSubsystem")
+    {
+        return "GPUSubsystem";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Memory")
+    {
+        return "Memory";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.NetworkingDevice")
+    {
+        return "NetworkingDevice";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.PowerSupply")
+    {
+        return "PowerSupply";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.StorageDevice")
+    {
+        return "StorageDevice";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.SystemBoard")
+    {
+        return "SystemBoard";
+    }
+    if (physicalContext ==
+        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.VoltageRegulator")
+    {
+        return "VoltageRegulator";
+    }
+    return "";
+}
+
 } // namespace sensors
 
 /**
@@ -1076,6 +1147,9 @@ inline void objectInterfacesToJson(
                                 "/ReadingRangeMin"_json_pointer);
         properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxValue",
                                 "/ReadingRangeMax"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Area",
+                                "PhysicalContext",
+                                "/PhysicalContext"_json_pointer);
     }
     else if (sensorType == "temperature")
     {
@@ -1112,6 +1186,8 @@ inline void objectInterfacesToJson(
 
                 const double* doubleValue = std::get_if<double>(&valueVariant);
                 const uint32_t* uValue = std::get_if<uint32_t>(&valueVariant);
+                const std::string* stringValue =
+                    std::get_if<std::string>(&valueVariant);
                 double temp = 0.0;
                 if (int64Value != nullptr)
                 {
@@ -1124,6 +1200,18 @@ inline void objectInterfacesToJson(
                 else if (uValue != nullptr)
                 {
                     temp = *uValue;
+                }
+                else if (stringValue != nullptr)
+                {
+                    if (thisValueIt->first == "PhysicalContext")
+                    {
+                        std::string physicalContext =
+                            static_cast<std::string>(*stringValue);
+                        const std::string& value =
+                            sensors::toPhysicalContext(physicalContext);
+                        sensorJson[key] = value;
+                    }
+                    continue;
                 }
                 else
                 {
