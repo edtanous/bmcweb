@@ -19,6 +19,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/container/flat_map.hpp>
+#include <boost/format.hpp>
 #include <boost/range/algorithm/replace_copy_if.hpp>
 #include <dbus_singleton.hpp>
 #include <registries/privilege_registry.hpp>
@@ -1017,7 +1018,7 @@ inline void objectInterfacesToJson(
     nlohmann::json::json_pointer unit("/Reading");
     if (sensorsAsyncResp->chassisSubNode == sensors::node::sensors)
     {
-        sensorJson["@odata.type"] = "#Sensor.v1_0_0.Sensor";
+        sensorJson["@odata.type"] = "#Sensor.v1_2_0.Sensor";
 
         const std::string& readingType = sensors::toReadingType(sensorType);
         if (readingType.empty())
@@ -3569,6 +3570,103 @@ inline void requestRoutesSensorCollection(App& app)
         });
 }
 
+inline void
+    getRelatedItemData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Sensor get related item";
+    nlohmann::json& itemsArray = asyncResp->res.jsonValue["RelatedItem"];
+    itemsArray = nlohmann::json::array();
+    // Check fabrics switch link
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, objPath](const boost::system::error_code ec,
+                             std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                // Check processor link
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code ec,
+                                std::variant<std::vector<std::string>>& resp) {
+                        nlohmann::json& itemsArray =
+                            asyncResp->res.jsonValue["RelatedItem"];
+                        if (ec)
+                        {
+                            // Default is systems URI
+                            itemsArray.push_back(
+                                {{"@odata.id", "/redfish/v1/Systems/system"}});
+                            return;
+                        }
+                        std::vector<std::string>* data =
+                            std::get_if<std::vector<std::string>>(&resp);
+                        if (data == nullptr)
+                        {
+                            return;
+                        }
+                        for (const std::string& processorPath : *data)
+                        {
+                            sdbusplus::message::object_path objectPath(
+                                processorPath);
+                            std::string processorId = objectPath.filename();
+                            std::string processorURI =
+                                "/redfish/v1/Systems/system/Processors/" +
+                                processorId;
+                            itemsArray.push_back({{"@odata.id", processorURI}});
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper", objPath + "/processor",
+                    "org.freedesktop.DBus.Properties", "Get",
+                    "xyz.openbmc_project.Association", "endpoints");
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            for (const std::string& fabricPath : *data)
+            {
+                sdbusplus::message::object_path objectPath(fabricPath);
+                const std::string fabricId = objectPath.filename();
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp,
+                     fabricId](const boost::system::error_code ec,
+                               std::variant<std::vector<std::string>>& resp) {
+                        if (ec)
+                        {
+                            return; // no switch = no failures
+                        }
+                        std::vector<std::string>* data =
+                            std::get_if<std::vector<std::string>>(&resp);
+                        if (data == nullptr)
+                        {
+                            return;
+                        }
+                        nlohmann::json& itemsArray =
+                            asyncResp->res.jsonValue["RelatedItem"];
+                        for (const std::string& switchPath : *data)
+                        {
+                            sdbusplus::message::object_path objectPath(
+                                switchPath);
+                            std::string switchId = objectPath.filename();
+                            std::string switchURI =
+                                (boost::format(
+                                     "/redfish/v1/Fabrics/%s/Switches/%s") %
+                                 fabricId % switchId)
+                                    .str();
+                            itemsArray.push_back({{"@odata.id", switchURI}});
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper", objPath + "/switch",
+                    "org.freedesktop.DBus.Properties", "Get",
+                    "xyz.openbmc_project.Association", "endpoints");
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/fabric",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 inline void requestRoutesSensor(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Sensors/<str>/")
@@ -3642,6 +3740,10 @@ inline void requestRoutesSensor(App& app)
 
                     sensorList->emplace(sensorPath);
                     processSensorList(asyncResp, sensorList);
+                    // Add related item data
+                    getRelatedItemData(asyncResp->asyncResp,
+                                       std::string(sensorPath));
+
                     BMCWEB_LOG_DEBUG << "respHandler1 exit";
                 },
                 "xyz.openbmc_project.ObjectMapper",
