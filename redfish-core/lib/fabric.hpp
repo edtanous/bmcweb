@@ -948,6 +948,51 @@ inline void getSwitchChassisLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
 }
 
 /**
+ * @brief Fill out links association to parent chassis by
+ * requesting data from the given D-Bus association object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
+ * @param[in]       fabricId    Fabric Id.
+ */
+inline void getSwitchEndpointsLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                   const std::string& objPath,
+                                   const std::string& fabricId)
+{
+    BMCWEB_LOG_DEBUG << "Get endpoint links";
+    crow::connections::systemBus->async_method_call(
+        [aResp, fabricId](const boost::system::error_code ec,
+                          std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                return; // no endpoints = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            nlohmann::json& linksArray =
+                aResp->res.jsonValue["Links"]["Endpoints"];
+            linksArray = nlohmann::json::array();
+            for (const std::string& endpointPath : *data)
+            {
+                sdbusplus::message::object_path objPath(endpointPath);
+                const std::string& endpointId = objPath.filename();
+                std::string endpointURI = "/redfish/v1/Fabrics/";
+                endpointURI += fabricId;
+                endpointURI += "/Endpoints/";
+                endpointURI += endpointId;
+                linksArray.push_back({{"@odata.id", endpointURI}});
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/all_endpoints",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+/**
  * Switch override class for delivering Switch Schema
  */
 inline void requestRoutesSwitch(App& app)
@@ -1034,6 +1079,9 @@ inline void requestRoutesSwitch(App& app)
                                                      path);
                                     // Link association to parent chassis
                                     getSwitchChassisLink(asyncResp, path);
+                                    // Link association to endpoints
+                                    getSwitchEndpointsLink(asyncResp, path,
+                                                           fabricId);
                                 }
                             },
                             "xyz.openbmc_project.ObjectMapper",
