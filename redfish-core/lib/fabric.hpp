@@ -1347,6 +1347,64 @@ inline void getProcessorPCIeDeviceData(
         "xyz.openbmc_project.Inventory.Item.PCIeDevice");
 }
 
+inline void
+    getProcessorEndpointHealth(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                               const std::string& service,
+                               const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get endpoint health.";
+
+    // Set the default value of state
+    aResp->res.jsonValue["Status"]["State"] = "Enabled";
+    aResp->res.jsonValue["Status"]["Health"] = "OK";
+
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec,
+                const boost::container::flat_map<
+                    std::string, std::variant<std::string, uint32_t, uint16_t,
+                                              bool>>& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const auto& property : properties)
+            {
+                if (property.first == "Present")
+                {
+                    const bool* isPresent = std::get_if<bool>(&property.second);
+                    if (isPresent == nullptr)
+                    {
+                        // Important property not in desired type
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    if (*isPresent == false)
+                    {
+                        aResp->res.jsonValue["Status"]["State"] = "Absent";
+                    }
+                }
+                else if (property.first == "Functional")
+                {
+                    const bool* isFunctional =
+                        std::get_if<bool>(&property.second);
+                    if (isFunctional == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    if (*isFunctional == false)
+                    {
+                        aResp->res.jsonValue["Status"]["Health"] = "Critical";
+                    }
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
+    return;
+}
+
 /**
  * @brief Fill out links for parent chassis PCIeDevice by
  * requesting data from the given D-Bus association object.
@@ -1358,12 +1416,13 @@ inline void getProcessorPCIeDeviceData(
  */
 inline void getProcessorParentEndpointData(
     std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& objPath,
-    const std::string& chassisName, const std::string& entityLink)
+    const std::string& chassisName, const std::string& entityLink,
+    const std::string& processorPath)
 {
     crow::connections::systemBus->async_method_call(
-        [aResp, chassisName,
-         entityLink](const boost::system::error_code ec,
-                     std::variant<std::vector<std::string>>& resp) {
+        [aResp, chassisName, entityLink,
+         processorPath](const boost::system::error_code ec,
+                        std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
                 return; // no chassis = no failures
@@ -1384,7 +1443,8 @@ inline void getProcessorParentEndpointData(
                 return;
             }
             crow::connections::systemBus->async_method_call(
-                [aResp, chassisName, parentChassisName, entityLink](
+                [aResp, chassisName, parentChassisName, entityLink,
+                 processorPath](
                     const boost::system::error_code ec,
                     const crow::openbmc_mapper::GetSubTreeType& subtree) {
                     if (ec)
@@ -1410,6 +1470,9 @@ inline void getProcessorParentEndpointData(
                         // Get PCIeDevice Data
                         getProcessorPCIeDeviceData(aResp, serviceName,
                                                    objectPath, entityLink);
+                        // Update processor health
+                        getProcessorEndpointHealth(aResp, serviceName,
+                                                   processorPath);
                     }
                 },
                 "xyz.openbmc_project.ObjectMapper",
@@ -1429,17 +1492,17 @@ inline void getProcessorParentEndpointData(
  * from the given D-Bus object.
  *
  * @param[in,out]   aResp       Async HTTP response.
- * @param[in]       objPath     D-Bus service to query.
+ * @param[in]       processorPath     D-Bus service to query.
  * @param[in]       entityLink  redfish entity link.
  */
 inline void
     getProcessorEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                             const std::string& objPath,
+                             const std::string& processorPath,
                              const std::string& entityLink)
 {
     BMCWEB_LOG_DEBUG << "Get processor endpoint data";
     crow::connections::systemBus->async_method_call(
-        [aResp, objPath,
+        [aResp, processorPath,
          entityLink](const boost::system::error_code ec,
                      std::variant<std::vector<std::string>>& resp) {
             if (ec)
@@ -1463,7 +1526,7 @@ inline void
             }
             // Check if PCIeDevice on this chassis
             crow::connections::systemBus->async_method_call(
-                [aResp, chassisName, chassisPath, entityLink](
+                [aResp, chassisName, chassisPath, entityLink, processorPath](
                     const boost::system::error_code ec,
                     const crow::openbmc_mapper::GetSubTreeType& subtree) {
                     if (ec)
@@ -1476,7 +1539,8 @@ inline void
                     if (subtree.empty())
                     {
                         getProcessorParentEndpointData(aResp, chassisPath,
-                                                       chassisName, entityLink);
+                                                       chassisName, entityLink,
+                                                       processorPath);
                     }
                     else
                     {
@@ -1498,6 +1562,9 @@ inline void
                             // Get PCIeDevice Data
                             getProcessorPCIeDeviceData(aResp, serviceName,
                                                        objectPath, entityLink);
+                            // Update processor health
+                            getProcessorEndpointHealth(aResp, serviceName,
+                                                       processorPath);
                         }
                     }
                 },
@@ -1508,7 +1575,7 @@ inline void
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Inventory.Item.PCIeDevice"});
         },
-        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+        "xyz.openbmc_project.ObjectMapper", processorPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
