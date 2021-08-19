@@ -156,6 +156,81 @@ inline void getChassisProcessorLinks(std::shared_ptr<bmcweb::AsyncResp> aResp,
 }
 
 /**
+ * @brief Fill out fabric switches links association by
+ * requesting data from the given D-Bus association object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void
+    getChassisFabricSwitchesLinks(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                  const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get fabric switches links";
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec2,
+                         std::variant<std::vector<std::string>>& resp) {
+            if (ec2)
+            {
+                return; // no fabric = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr || data->size() > 1)
+            {
+                // There must be single fabric
+                return;
+            }
+            const std::string& fabricPath = data->front();
+            sdbusplus::message::object_path objectPath(fabricPath);
+            std::string fabricId = objectPath.filename();
+            if (fabricId.empty())
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            // Get the switches
+            crow::connections::systemBus->async_method_call(
+                [aResp,
+                 fabricId](const boost::system::error_code ec2,
+                           std::variant<std::vector<std::string>>& resp) {
+                    if (ec2)
+                    {
+                        return; // no switches = no failures
+                    }
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr)
+                    {
+                        return;
+                    }
+                    nlohmann::json& linksArray =
+                        aResp->res.jsonValue["Links"]["Switches"];
+                    linksArray = nlohmann::json::array();
+                    for (const std::string& switchPath : *data)
+                    {
+                        sdbusplus::message::object_path objectPath(switchPath);
+                        std::string switchId = objectPath.filename();
+                        if (switchId.empty())
+                        {
+                            messages::internalError(aResp->res);
+                            return;
+                        }
+                        linksArray.push_back(
+                            {{"@odata.id", "/redfish/v1/Fabrics/" + fabricId +
+                                               "/Switches/" + switchId}});
+                    }
+                },
+                "xyz.openbmc_project.ObjectMapper", objPath + "/all_switches",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/fabrics",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+/**
  * @brief Fill out links association to parent chassis by
  * requesting data from the given D-Bus association object.
  *
@@ -801,6 +876,8 @@ inline void requestRoutesChassis(App& app)
                         getChassisLinksContains(asyncResp, path);
                         // Links association to underneath processors
                         getChassisProcessorLinks(asyncResp, path);
+                        // Links association to connected fabric switches
+                        getChassisFabricSwitchesLinks(asyncResp, path);
                         // Link association to parent chassis
                         getChassisLinksContainedBy(asyncResp, path);
 
