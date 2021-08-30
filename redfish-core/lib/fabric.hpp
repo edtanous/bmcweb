@@ -437,7 +437,12 @@ inline void getPortObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const std::string& connectionName = connectionNames[0].first;
                 updatePortData(asyncResp, connectionName, path);
                 updatePortLinks(asyncResp, path, fabricId);
+                return;
             }
+            // Couldn't find an object with that name.
+            // Return an error
+            messages::resourceNotFound(asyncResp->res, "#Port.v1_4_0.Port",
+                                       portId);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -784,6 +789,10 @@ inline void requestRoutesSwitchCollection(App& app)
                                 object.c_str());
                             return;
                         }
+                        // Couldn't find an object with that name. Return an
+                        // error
+                        messages::resourceNotFound(
+                            asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
                     },
                     "xyz.openbmc_project.ObjectMapper",
                     "/xyz/openbmc_project/object_mapper",
@@ -1082,7 +1091,13 @@ inline void requestRoutesSwitch(App& app)
                                     // Link association to endpoints
                                     getSwitchEndpointsLink(asyncResp, path,
                                                            fabricId);
+                                    return;
                                 }
+                                // Couldn't find an object with that name.
+                                // Return an error
+                                messages::resourceNotFound(
+                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
@@ -1094,7 +1109,7 @@ inline void requestRoutesSwitch(App& app)
                     }
                     // Couldn't find an object with that name. Return an error
                     messages::resourceNotFound(
-                        asyncResp->res, "#Switch.v1_6_0.Switch", switchId);
+                        asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
@@ -1168,6 +1183,11 @@ inline void requestRoutesPortCollection(App& app)
                                         object.c_str());
                                     return;
                                 }
+                                // Couldn't find an object with that name.
+                                // Return an error
+                                messages::resourceNotFound(
+                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
@@ -1175,7 +1195,11 @@ inline void requestRoutesPortCollection(App& app)
                             "GetSubTreePaths", object.c_str(), 0,
                             std::array<const char*, 1>{
                                 "xyz.openbmc_project.Inventory.Item.Switch"});
+                        return;
                     }
+                    // Couldn't find an object with that name. Return an error
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
@@ -1240,9 +1264,9 @@ inline void requestRoutesPort(App& app)
                                 }
                                 // Couldn't find an object with that name.
                                 // Return an error
-                                messages::resourceNotFound(asyncResp->res,
-                                                           "#Port.v1_4_0.Port",
-                                                           portId);
+                                messages::resourceNotFound(
+                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
@@ -1250,7 +1274,11 @@ inline void requestRoutesPort(App& app)
                             "GetSubTreePaths", object, 0,
                             std::array<const char*, 1>{
                                 "xyz.openbmc_project.Inventory.Item.Switch"});
+                        return;
                     }
+                    // Couldn't find an object with that name. Return an error
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
@@ -1302,6 +1330,10 @@ inline void requestRoutesEndpointCollection(App& app)
                                 object.c_str());
                             return;
                         }
+                        // Couldn't find an object with that name. Return an
+                        // error
+                        messages::resourceNotFound(
+                            asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
                     },
                     "xyz.openbmc_project.ObjectMapper",
                     "/xyz/openbmc_project/object_mapper",
@@ -2027,7 +2059,14 @@ inline void requestRoutesEndpoint(App& app)
                                             nlohmann::json::array();
                                         updateEndpointData(asyncResp, path,
                                                            fabricId);
+                                        return;
                                     }
+                                    // Couldn't find an object with that name.
+                                    // Return an error
+                                    messages::resourceNotFound(
+                                        asyncResp->res,
+                                        "#Endpoint.v1_6_0.Endpoint",
+                                        endpointId);
                                 },
                                 "xyz.openbmc_project.ObjectMapper",
                                 "/xyz/openbmc_project/object_mapper",
@@ -2040,9 +2079,8 @@ inline void requestRoutesEndpoint(App& app)
                         }
                         // Couldn't find an object with that name. Return an
                         // error
-                        messages::resourceNotFound(asyncResp->res,
-                                                   "#Endpoint.v1_6_0.Endpoint",
-                                                   endpointId);
+                        messages::resourceNotFound(
+                            asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
                     },
                     "xyz.openbmc_project.ObjectMapper",
                     "/xyz/openbmc_project/object_mapper",
@@ -2143,7 +2181,11 @@ inline void
                     },
                     connectionName, objPath, "org.freedesktop.DBus.Properties",
                     "GetAll", "xyz.openbmc_project.Inventory.Item.Port");
+                return;
             }
+            // Couldn't find an object with that name. Return an error
+            messages::resourceNotFound(asyncResp->res, "#Port.v1_4_0.Port",
+                                       portId);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -2208,9 +2250,9 @@ inline void requestRoutesPortMetrics(App& app)
                                 }
                                 // Couldn't find an object with that name.
                                 // Return an error
-                                messages::resourceNotFound(asyncResp->res,
-                                                           "#Port.v1_4_0.Port",
-                                                           portId);
+                                messages::resourceNotFound(
+                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
@@ -2218,7 +2260,11 @@ inline void requestRoutesPortMetrics(App& app)
                             "GetSubTreePaths", object, 0,
                             std::array<const char*, 1>{
                                 "xyz.openbmc_project.Inventory.Item.Switch"});
+                        return;
                     }
+                    // Couldn't find an object with that name. Return an error
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
