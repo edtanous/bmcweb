@@ -1142,6 +1142,15 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 {
                     continue;
                 }
+                std::string memoryMetricsURI =
+                    "/redfish/v1/Systems/system/Memory/";
+                memoryMetricsURI += dimmId;
+                memoryMetricsURI += "/MemoryMetrics";
+                aResp->res.jsonValue["@odata.type"] =
+                    "#MemoryMetrics.v1_4_1.MemoryMetrics";
+                aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
+                aResp->res.jsonValue["Id"] = "MemoryMetrics";
+                aResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
                 for (const auto& [service, interfaces] : object)
                 {
                     if (std::find(interfaces.begin(), interfaces.end(),
@@ -1160,8 +1169,8 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 return;
             }
             // Object not found
-            messages::resourceNotFound(
-                aResp->res, "#MemoryMetrics.v1_4_1.MemoryMetrics", dimmId);
+            messages::resourceNotFound(aResp->res, "#Memory.v1_11_0.Memory",
+                                       dimmId);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1181,16 +1190,6 @@ inline void requestRoutesMemoryMetrics(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& dimmId) {
-                std::string memoryMetricsURI =
-                    "/redfish/v1/Systems/system/Memory/";
-                memoryMetricsURI += dimmId;
-                memoryMetricsURI += "/MemoryMetrics";
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#MemoryMetrics.v1_4_1.MemoryMetrics";
-                asyncResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
-                asyncResp->res.jsonValue["Id"] = "MemoryMetrics";
-                asyncResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
-
                 getMemoryMetricsData(asyncResp, dimmId);
             });
 }
