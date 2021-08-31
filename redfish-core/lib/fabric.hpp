@@ -1870,6 +1870,7 @@ inline void getEndpointPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     nlohmann::json& linksConnectedPortsArray =
                         aResp->res.jsonValue["Links"]["ConnectedPorts"];
                     linksConnectedPortsArray = nlohmann::json::array();
+                    std::sort(data->begin(), data->end());
                     for (const std::string& switchPath : *data)
                     {
                         getConnectedPortsLinks(aResp, portPaths, fabricId,
