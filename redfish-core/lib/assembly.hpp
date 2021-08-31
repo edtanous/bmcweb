@@ -220,7 +220,11 @@ inline void requestAssemblyRoutes(App& app)
                             "/xyz/openbmc_project/object_mapper",
                             "xyz.openbmc_project.ObjectMapper",
                             "GetSubTreePaths", path + "/", 0, assemblyIntf);
+                        return;
                     }
+                    // Couldn't find an object with that name. return an error
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Chassis.v1_15_0.Chassis", chassisId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
