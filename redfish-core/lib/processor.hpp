@@ -1405,9 +1405,9 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             }
         }
     }
-    aResp->res.jsonValue["EnvironmentMetrics"] =
-        {{"@odata.id", "/redfish/v1/Systems/system/Processors/"
-            + processorId + "/EnvironmentMetrics"}};
+    aResp->res.jsonValue["EnvironmentMetrics"] = {
+        {"@odata.id", "/redfish/v1/Systems/system/Processors/" + processorId +
+                          "/EnvironmentMetrics"}};
     // Links association to underneath memory
     getProcessorMemoryLinks(aResp, objectPath);
     // Link association to parent chassis
@@ -2056,6 +2056,16 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 {
                     continue;
                 }
+                std::string processorMetricsURI =
+                    "/redfish/v1/Systems/system/Processors/";
+                processorMetricsURI += processorId;
+                processorMetricsURI += "/ProcessorMetrics";
+                aResp->res.jsonValue["@odata.type"] =
+                    "#ProcessorMetrics.v1_2_0.ProcessorMetrics";
+                aResp->res.jsonValue["@odata.id"] = processorMetricsURI;
+                aResp->res.jsonValue["Id"] = "ProcessorMetrics";
+                aResp->res.jsonValue["Name"] =
+                    processorId + " Processor Metrics";
                 for (const auto& [service, interfaces] : object)
                 {
                     if (std::find(interfaces.begin(), interfaces.end(),
@@ -2075,8 +2085,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
             }
             // Object not found
             messages::resourceNotFound(
-                aResp->res, "#ProcessorMetrics.v1_2_0.ProcessorMetrics",
-                processorId);
+                aResp->res, "#Processor.v1_11_0.Processor", processorId);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -2098,17 +2107,6 @@ inline void requestRoutesProcessorMetrics(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
-                std::string processorMetricsURI =
-                    "/redfish/v1/Systems/system/Processors/";
-                processorMetricsURI += processorId;
-                processorMetricsURI += "/ProcessorMetrics";
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#ProcessorMetrics.v1_2_0.ProcessorMetrics";
-                asyncResp->res.jsonValue["@odata.id"] = processorMetricsURI;
-                asyncResp->res.jsonValue["Id"] = "ProcessorMetrics";
-                asyncResp->res.jsonValue["Name"] =
-                    processorId + " Processor Metrics";
-
                 getProcessorMetricsData(asyncResp, processorId);
             });
 }
@@ -2293,6 +2291,16 @@ inline void
                 {
                     continue;
                 }
+                std::string memoryMetricsURI =
+                    "/redfish/v1/Systems/system/Processors/";
+                memoryMetricsURI += processorId;
+                memoryMetricsURI += "/MemorySummary/MemoryMetrics";
+                aResp->res.jsonValue["@odata.type"] =
+                    "#MemoryMetrics.v1_4_1.MemoryMetrics";
+                aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
+                aResp->res.jsonValue["Id"] = "MemoryMetrics";
+                aResp->res.jsonValue["Name"] =
+                    processorId + " Memory Summary Metrics";
                 // Get processor cache memory ECC counts
                 for (const auto& [service, interfaces] : object)
                 {
@@ -2355,7 +2363,7 @@ inline void
             }
             // Object not found
             messages::resourceNotFound(
-                aResp->res, "#MemoryMetrics.v1_4_1.MemoryMetrics", processorId);
+                aResp->res, "#Processor.v1_11_0.Processor", processorId);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -2377,16 +2385,6 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
-                std::string memoryMetricsURI =
-                    "/redfish/v1/Systems/system/Processors/";
-                memoryMetricsURI += processorId;
-                memoryMetricsURI += "/MemorySummary/MemoryMetrics";
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#MemoryMetrics.v1_4_1.MemoryMetrics";
-                asyncResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
-                asyncResp->res.jsonValue["Id"] = "MemoryMetrics";
-                asyncResp->res.jsonValue["Name"] =
-                    processorId + " Memory Summary Metrics";
                 getProcessorMemoryMetricsData(asyncResp, processorId);
             });
 }
