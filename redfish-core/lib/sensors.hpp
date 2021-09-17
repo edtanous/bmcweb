@@ -3087,6 +3087,7 @@ inline void retrieveUriToDbusMap(const std::string& chassis,
 inline void metricsObjectInterfacesToJson(
     const std::string& sensorName, const std::string& sensorType,
     const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
+    const std::string& chassisId,
     const boost::container::flat_map<
         std::string, boost::container::flat_map<std::string, SensorVariant>>&
         interfacesDict,
@@ -3173,12 +3174,10 @@ inline void metricsObjectInterfacesToJson(
             }
         }
     }
-    sensorJson["DataSourceUri"] = "/redfish/v1/Chassis/" +
-                                  sensorsAsyncResp->chassisId + "/Sensors/" +
-                                  sensorName;
-    sensorJson["@odata.id"] = "/redfish/v1/Chassis/" +
-                              sensorsAsyncResp->chassisId + "/Sensors/" +
-                              sensorName;
+    sensorJson["DataSourceUri"] =
+        "/redfish/v1/Chassis/" + chassisId + "/Sensors/" + sensorName;
+    sensorJson["@odata.id"] =
+        "/redfish/v1/Chassis/" + chassisId + "/Sensors/" + sensorName;
 
     sensorsAsyncResp->addMetadata(sensorJson, unit.to_string(),
                                   "/xyz/openbmc_project/sensors/" + sensorType +
@@ -3272,13 +3271,18 @@ void getThermalMetrics(
                         chassisPaths.emplace_back(path);
                     }
                 }
+
                 // Processor all sensors to all chassis
                 for (const std::string& objectPath : chassisPaths)
                 {
                     // Get the list of all sensors for this Chassis element
                     std::string sensorPath = objectPath + "/all_sensors";
+                    // Get the chassis path for respective thermal sensors
+                    sdbusplus::message::object_path chassisPath(objectPath);
+                    const std::string chassisId = chassisPath.filename();
+
                     crow::connections::systemBus->async_method_call(
-                        [sensorsAsyncResp,
+                        [sensorsAsyncResp, chassisId,
                          callback](const boost::system::error_code& ec,
                                    const std::variant<std::vector<std::string>>&
                                        variantEndpoints) {
@@ -3309,7 +3313,7 @@ void getThermalMetrics(
                                     boost::container::flat_set<std::string>>();
                             reduceSensorList(sensorsAsyncResp, nodeSensorList,
                                              culledSensorList);
-                            callback(culledSensorList);
+                            callback(culledSensorList, chassisId);
                         },
                         "xyz.openbmc_project.ObjectMapper", sensorPath,
                         "org.freedesktop.DBus.Properties", "Get",
@@ -3361,6 +3365,7 @@ void getThermalMetrics(
 inline void getThermalSensorData(
     const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
     const std::shared_ptr<boost::container::flat_set<std::string>>& sensorNames,
+    const std::string& chassisId,
     const boost::container::flat_set<std::string>& connections,
     const std::shared_ptr<boost::container::flat_map<std::string, std::string>>&
         objectMgrPaths,
@@ -3370,7 +3375,7 @@ inline void getThermalSensorData(
     for (const std::string& connection : connections)
     {
         // Response handler to process managed objects
-        auto getManagedObjectsCb = [sensorsAsyncResp, sensorNames,
+        auto getManagedObjectsCb = [sensorsAsyncResp, sensorNames, chassisId,
                                     inventoryItems](
                                        const boost::system::error_code ec,
                                        ManagedObjectsVectorType& resp) {
@@ -3380,6 +3385,7 @@ inline void getThermalSensorData(
                 messages::internalError(sensorsAsyncResp->asyncResp->res);
                 return;
             }
+
             // Go through all objects and update response with sensor data
             for (const auto& objDictEntry : resp)
             {
@@ -3429,7 +3435,7 @@ inline void getThermalSensorData(
                 if (sensorJson)
                 {
                     metricsObjectInterfacesToJson(
-                        sensorName, sensorType, sensorsAsyncResp,
+                        sensorName, sensorType, sensorsAsyncResp, chassisId,
                         objDictEntry.second, *sensorJson);
                 }
             }
@@ -3459,24 +3465,25 @@ inline void getThermalSensorData(
 
 inline void processThermalSensorList(
     const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
-    const std::shared_ptr<boost::container::flat_set<std::string>>& sensorNames)
+    const std::shared_ptr<boost::container::flat_set<std::string>>& sensorNames,
+    const std::string& chassisId)
 {
     auto getConnectionCb =
-        [sensorsAsyncResp, sensorNames](
+        [sensorsAsyncResp, sensorNames, chassisId](
             const boost::container::flat_set<std::string>& connections) {
             auto getObjectManagerPathsCb =
-                [sensorsAsyncResp, sensorNames,
+                [sensorsAsyncResp, sensorNames, chassisId,
                  connections](const std::shared_ptr<boost::container::flat_map<
                                   std::string, std::string>>& objectMgrPaths) {
                     auto getInventoryItemsCb =
-                        [sensorsAsyncResp, sensorNames, connections,
+                        [sensorsAsyncResp, sensorNames, chassisId, connections,
                          objectMgrPaths](
                             const std::shared_ptr<std::vector<InventoryItem>>&
                                 inventoryItems) {
                             // Get sensor data and store results in JSON
-                            getThermalSensorData(sensorsAsyncResp, sensorNames,
-                                                 connections, objectMgrPaths,
-                                                 inventoryItems);
+                            getThermalSensorData(
+                                sensorsAsyncResp, sensorNames, chassisId,
+                                connections, objectMgrPaths, inventoryItems);
                         };
 
                     // Get inventory items associated with sensors
@@ -3506,8 +3513,9 @@ inline void
     auto getThermalCb =
         [sensorsAsyncResp](
             const std::shared_ptr<boost::container::flat_set<std::string>>&
-                sensorNames) {
-            processThermalSensorList(sensorsAsyncResp, sensorNames);
+                sensorNames,
+            const std::string& chassisId) {
+            processThermalSensorList(sensorsAsyncResp, sensorNames, chassisId);
         };
 
     // Get set of sensors in chassis
