@@ -640,27 +640,54 @@ inline void requestRoutesChassisPCIeDeviceCollection(App& app)
      */
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/PCIeDevices/")
         .privileges({{"Login"}})
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisId)
-
-            {
-                const std::string& chassisPCIePath =
-                    "/xyz/openbmc_project/inventory/system/chassis/" +
-                    chassisId + "/PCIeDevices";
-                asyncResp->res.jsonValue = {
-                    {"@odata.type",
-                     "#PCIeDeviceCollection.PCIeDeviceCollection"},
-                    {"@odata.id",
-                     "/redfish/v1/Chassis/" + chassisId + "/PCIeDevices"},
-                    {"Name", "PCIe Device Collection"},
-                    {"Description", "Collection of PCIe Devices"},
-                    {"Members", nlohmann::json::array()},
-                    {"Members@odata.count", 0}};
-                getPCIeDeviceList(asyncResp, "Members", chassisPCIePath,
-                                  chassisId);
-            });
+        .methods(
+            boost::beast::http::verb::get)([](const crow::Request&,
+                                              const std::shared_ptr<
+                                                  bmcweb::AsyncResp>& asyncResp,
+                                              const std::string& chassisId) {
+            crow::connections::systemBus->async_method_call(
+                [asyncResp,
+                 chassisId](const boost::system::error_code ec,
+                            const std::vector<std::string>& chassisPaths) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    for (const std::string& chassisPath : chassisPaths)
+                    {
+                        // Get the chassisId object
+                        sdbusplus::message::object_path objPath(chassisPath);
+                        if (objPath.filename() != chassisId)
+                        {
+                            continue;
+                        }
+                        const std::string& chassisPCIePath =
+                            "/xyz/openbmc_project/inventory/system/chassis/" +
+                            chassisId + "/PCIeDevices";
+                        asyncResp->res.jsonValue = {
+                            {"@odata.type",
+                             "#PCIeDeviceCollection.PCIeDeviceCollection"},
+                            {"@odata.id", "/redfish/v1/Chassis/" + chassisId +
+                                              "/PCIeDevices"},
+                            {"Name", "PCIe Device Collection"},
+                            {"Description", "Collection of PCIe Devices"},
+                            {"Members", nlohmann::json::array()},
+                            {"Members@odata.count", 0}};
+                        getPCIeDeviceList(asyncResp, "Members", chassisPCIePath,
+                                          chassisId);
+                        return;
+                    }
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Chassis.v1_15_0.Chassis", chassisId);
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                "/xyz/openbmc_project/inventory", 0,
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Inventory.Item.Chassis"});
+        });
 }
 
 inline void requestRoutesChassisPCIeDevice(App& app)
