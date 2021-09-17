@@ -953,69 +953,99 @@ inline void requestRoutesChassisPCIeFunction(App& app)
     BMCWEB_ROUTE(
         app, "/redfish/v1/Chassis/<str>/PCIeDevices/<str>/PCIeFunctions/<str>/")
         .privileges({{"Login"}})
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisId, const std::string& device,
-               const std::string& function) {
-                const std::string& chassisPCIePath =
-                    "/xyz/openbmc_project/inventory/system/chassis/" +
-                    chassisId + "/PCIeDevices";
-                const std::string& chassisPCIeDevicePath =
-                    chassisPCIePath + "/" + device;
-                const std::array<const char*, 1> interface = {
-                    "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
-                // Get Inventory Service
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, device, function, chassisPCIePath, interface,
-                     chassisId, chassisPCIeDevicePath](
-                        const boost::system::error_code ec,
-                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                        if (ec)
+        .methods(
+            boost::beast::http::verb::get)([](const crow::Request&,
+                                              const std::shared_ptr<
+                                                  bmcweb::AsyncResp>& asyncResp,
+                                              const std::string& chassisId,
+                                              const std::string& device,
+                                              const std::string& function) {
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, chassisId, device,
+                 function](const boost::system::error_code ec,
+                           const std::vector<std::string>& chassisPaths) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    for (const std::string& chassisPath : chassisPaths)
+                    {
+                        // Get the chassisId object
+                        sdbusplus::message::object_path objPath(chassisPath);
+                        if (objPath.filename() != chassisId)
                         {
-                            BMCWEB_LOG_DEBUG << "DBUS response error";
-                            messages::internalError(asyncResp->res);
-                            return;
+                            continue;
                         }
-                        // Iterate over all retrieved ObjectPaths.
-                        for (const std::pair<
-                                 std::string,
-                                 std::vector<std::pair<
-                                     std::string, std::vector<std::string>>>>&
-                                 object : subtree)
-                        {
-                            if (object.first != chassisPCIeDevicePath)
-                            {
-                                continue;
-                            }
-                            std::string pcieDeviceURI = "/redfish/v1/Chassis/";
-                            pcieDeviceURI += chassisId;
-                            pcieDeviceURI += "/PCIeDevices/";
-                            pcieDeviceURI += device;
-                            std::string pcieFunctionURI = pcieDeviceURI;
-                            pcieFunctionURI += "/PCIeFunctions/";
-                            pcieFunctionURI += function;
-
-                            const std::vector<std::pair<
-                                std::string, std::vector<std::string>>>&
-                                connectionNames = object.second;
-                            if (connectionNames.size() < 1)
-                            {
-                                BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                                continue;
-                            }
-                            const std::string& connectionName =
-                                connectionNames[0].first;
-                            getPCIeDeviceFunction(
-                                asyncResp, device, function, chassisPCIePath,
-                                connectionName, chassisId, interface[0]);
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                    "/xyz/openbmc_project/inventory", 0, interface);
-            });
+                        const std::string& chassisPCIePath =
+                            "/xyz/openbmc_project/inventory/system/chassis/" +
+                            chassisId + "/PCIeDevices";
+                        const std::string& chassisPCIeDevicePath =
+                            chassisPCIePath + "/" + device;
+                        const std::array<const char*, 1> interface = {
+                            "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
+                        // Get Inventory Service
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, device, function, chassisPCIePath,
+                             interface, chassisId, chassisPCIeDevicePath](
+                                const boost::system::error_code ec,
+                                const crow::openbmc_mapper::GetSubTreeType&
+                                    subtree) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_DEBUG << "DBUS response error";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                // Iterate over all retrieved ObjectPaths.
+                                for (const std::pair<
+                                         std::string,
+                                         std::vector<std::pair<
+                                             std::string,
+                                             std::vector<std::string>>>>&
+                                         object : subtree)
+                                {
+                                    if (object.first != chassisPCIeDevicePath)
+                                    {
+                                        continue;
+                                    }
+                                    const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>&
+                                        connectionNames = object.second;
+                                    if (connectionNames.size() < 1)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "Got 0 Connection names";
+                                        continue;
+                                    }
+                                    const std::string& connectionName =
+                                        connectionNames[0].first;
+                                    getPCIeDeviceFunction(
+                                        asyncResp, device, function,
+                                        chassisPCIePath, connectionName,
+                                        chassisId, interface[0]);
+                                    return;
+                                }
+                                messages::resourceNotFound(
+                                    asyncResp->res,
+                                    "#PCIeDevice.v1_5_0.PCIeDevice", device);
+                            },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                            "/xyz/openbmc_project/inventory", 0, interface);
+                        return;
+                    }
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Chassis.v1_15_0.Chassis", chassisId);
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                "/xyz/openbmc_project/inventory", 0,
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Inventory.Item.Chassis"});
+        });
 }
 
 } // namespace redfish
