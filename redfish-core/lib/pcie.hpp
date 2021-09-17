@@ -700,91 +700,138 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& chassisId,
                                               const std::string& device) {
-            const std::string& chassisPCIePath =
-                "/xyz/openbmc_project/inventory/system/chassis/" + chassisId +
-                "/PCIeDevices";
-            const std::string& chassisPCIeDevicePath =
-                chassisPCIePath + "/" + device;
-            const std::array<const char*, 1> interface = {
-                "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
-            // Get Inventory Service
             crow::connections::systemBus->async_method_call(
-                [asyncResp, device, chassisPCIePath, interface, chassisId,
-                 chassisPCIeDevicePath](
-                    const boost::system::error_code ec,
-                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                [asyncResp, chassisId,
+                 device](const boost::system::error_code ec,
+                         const std::vector<std::string>& chassisPaths) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    // Iterate over all retrieved ObjectPaths.
-                    for (const std::pair<
-                             std::string,
-                             std::vector<std::pair<std::string,
-                                                   std::vector<std::string>>>>&
-                             object : subtree)
+                    for (const std::string& chassisPath : chassisPaths)
                     {
-                        if (object.first != chassisPCIeDevicePath)
+                        // Get the chassisId object
+                        sdbusplus::message::object_path objPath(chassisPath);
+                        if (objPath.filename() != chassisId)
                         {
                             continue;
                         }
-                        const std::vector<
-                            std::pair<std::string, std::vector<std::string>>>&
-                            connectionNames = object.second;
-                        if (connectionNames.size() < 1)
-                        {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                            continue;
-                        }
-                        std::string pcieDeviceURI = "/redfish/v1/Chassis/";
-                        pcieDeviceURI += chassisId;
-                        pcieDeviceURI += "/PCIeDevices/";
-                        pcieDeviceURI += device;
-                        std::string pcieFunctionURI = pcieDeviceURI;
-                        pcieFunctionURI += "/PCIeFunctions";
-                        asyncResp->res.jsonValue = {
-                            {"@odata.type", "#PCIeDevice.v1_5_0.PCIeDevice"},
-                            {"@odata.id", pcieDeviceURI},
-                            {"Name", "PCIe Device"},
-                            {"Id", device},
-                            {"PCIeFunctions",
-                             {{"@odata.id", pcieFunctionURI}}}};
-                        const std::string& connectionName =
-                            connectionNames[0].first;
-                        const std::vector<std::string>& interfaces2 =
-                            connectionNames[0].second;
-                        getPCIeDevice(asyncResp, device, chassisPCIePath,
-                                      connectionName, interface[0]);
-                        // Get asset properties
-                        if (std::find(interfaces2.begin(), interfaces2.end(),
-                                      assetInterface) != interfaces2.end())
-                        {
-                            getPCIeDeviceAssetData(asyncResp, device,
-                                                   chassisPCIePath,
-                                                   connectionName);
-                        }
-                        // Get UUID
-                        if (std::find(interfaces2.begin(), interfaces2.end(),
-                                      uuidInterface) != interfaces2.end())
-                        {
-                            getPCIeDeviceUUID(asyncResp, device,
-                                              chassisPCIePath, connectionName);
-                        }
-                        // Device state
-                        if (std::find(interfaces2.begin(), interfaces2.end(),
-                                      stateInterface) != interfaces2.end())
-                        {
-                            getPCIeDeviceState(asyncResp, device,
-                                               chassisPCIePath, connectionName);
-                        }
+                        const std::string& chassisPCIePath =
+                            "/xyz/openbmc_project/inventory/system/chassis/" +
+                            chassisId + "/PCIeDevices";
+                        const std::string& chassisPCIeDevicePath =
+                            chassisPCIePath + "/" + device;
+                        const std::array<const char*, 1> interface = {
+                            "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
+                        // Get Inventory Service
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, device, chassisPCIePath, interface,
+                             chassisId, chassisPCIeDevicePath](
+                                const boost::system::error_code ec,
+                                const crow::openbmc_mapper::GetSubTreeType&
+                                    subtree) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_DEBUG << "DBUS response error";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                // Iterate over all retrieved ObjectPaths.
+                                for (const std::pair<
+                                         std::string,
+                                         std::vector<std::pair<
+                                             std::string,
+                                             std::vector<std::string>>>>&
+                                         object : subtree)
+                                {
+                                    if (object.first != chassisPCIeDevicePath)
+                                    {
+                                        continue;
+                                    }
+                                    const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>&
+                                        connectionNames = object.second;
+                                    if (connectionNames.size() < 1)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "Got 0 Connection names";
+                                        continue;
+                                    }
+                                    std::string pcieDeviceURI =
+                                        "/redfish/v1/Chassis/";
+                                    pcieDeviceURI += chassisId;
+                                    pcieDeviceURI += "/PCIeDevices/";
+                                    pcieDeviceURI += device;
+                                    std::string pcieFunctionURI = pcieDeviceURI;
+                                    pcieFunctionURI += "/PCIeFunctions";
+                                    asyncResp->res.jsonValue = {
+                                        {"@odata.type",
+                                         "#PCIeDevice.v1_5_0.PCIeDevice"},
+                                        {"@odata.id", pcieDeviceURI},
+                                        {"Name", "PCIe Device"},
+                                        {"Id", device},
+                                        {"PCIeFunctions",
+                                         {{"@odata.id", pcieFunctionURI}}}};
+                                    const std::string& connectionName =
+                                        connectionNames[0].first;
+                                    const std::vector<std::string>&
+                                        interfaces2 = connectionNames[0].second;
+                                    getPCIeDevice(asyncResp, device,
+                                                  chassisPCIePath,
+                                                  connectionName, interface[0]);
+                                    // Get asset properties
+                                    if (std::find(interfaces2.begin(),
+                                                  interfaces2.end(),
+                                                  assetInterface) !=
+                                        interfaces2.end())
+                                    {
+                                        getPCIeDeviceAssetData(
+                                            asyncResp, device, chassisPCIePath,
+                                            connectionName);
+                                    }
+                                    // Get UUID
+                                    if (std::find(interfaces2.begin(),
+                                                  interfaces2.end(),
+                                                  uuidInterface) !=
+                                        interfaces2.end())
+                                    {
+                                        getPCIeDeviceUUID(asyncResp, device,
+                                                          chassisPCIePath,
+                                                          connectionName);
+                                    }
+                                    // Device state
+                                    if (std::find(interfaces2.begin(),
+                                                  interfaces2.end(),
+                                                  stateInterface) !=
+                                        interfaces2.end())
+                                    {
+                                        getPCIeDeviceState(asyncResp, device,
+                                                           chassisPCIePath,
+                                                           connectionName);
+                                    }
+                                    return;
+                                }
+                                messages::resourceNotFound(
+                                    asyncResp->res,
+                                    "#PCIeDevice.v1_5_0.PCIeDevice", device);
+                            },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                            "/xyz/openbmc_project/inventory", 0, interface);
+
+                        return;
                     }
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Chassis.v1_15_0.Chassis", chassisId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                "/xyz/openbmc_project/inventory", 0, interface);
+                "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                "/xyz/openbmc_project/inventory", 0,
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Inventory.Item.Chassis"});
         });
 }
 
