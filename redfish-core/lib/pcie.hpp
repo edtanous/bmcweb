@@ -386,120 +386,159 @@ static inline void
                           const std::string& function,
                           const std::string& path = pciePath,
                           const std::string& service = pcieService,
+                          const std::string& chassisId = std::string(),
                           const std::string& deviceIntf = pcieDeviceInterface)
 {
-    auto getPCIeDeviceCallback =
-        [asyncResp{std::move(asyncResp)}, device, function](
-            const boost::system::error_code ec,
-            boost::container::flat_map<std::string, std::variant<std::string>>&
-                pcieDevProperties) {
-            if (ec)
+    auto getPCIeDeviceCallback = [asyncResp{std::move(asyncResp)}, device,
+                                  function,
+                                  chassisId](const boost::system::error_code ec,
+                                             boost::container::flat_map<
+                                                 std::string,
+                                                 std::variant<std::string>>&
+                                                 pcieDevProperties) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG
+                << "failed to get PCIe Device properties ec: " << ec.value()
+                << ": " << ec.message();
+            if (ec.value() ==
+                boost::system::linux_error::bad_request_descriptor)
             {
-                BMCWEB_LOG_DEBUG
-                    << "failed to get PCIe Device properties ec: " << ec.value()
-                    << ": " << ec.message();
-                if (ec.value() ==
-                    boost::system::linux_error::bad_request_descriptor)
-                {
-                    messages::resourceNotFound(asyncResp->res, "PCIeDevice",
-                                               device);
-                }
-                else
-                {
-                    messages::internalError(asyncResp->res);
-                }
-                return;
+                messages::resourceNotFound(asyncResp->res, "PCIeDevice",
+                                           device);
             }
+            else
+            {
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
 
-            // Check if this function exists by looking for a device ID
-            std::string devIDProperty = "Function" + function + "DeviceId";
-            if (std::string* property =
-                    std::get_if<std::string>(&pcieDevProperties[devIDProperty]);
-                property && property->empty())
-            {
-                messages::resourceNotFound(asyncResp->res, "PCIeFunction",
-                                           function);
-                return;
-            }
+        // Check if this function exists by looking for a device ID
+        std::string devIDProperty = "Function" + function + "DeviceId";
+        if (std::string* property =
+                std::get_if<std::string>(&pcieDevProperties[devIDProperty]);
+            property && property->empty())
+        {
+            messages::resourceNotFound(
+                asyncResp->res, "#PCIeFunction.v1_2_0.PCIeFunction", function);
+            return;
+        }
 
-            for (const auto& property : pcieDevProperties)
+        // Update pcieDeviceURI based on system or chassis path
+        std::string pcieDeviceURI;
+        std::string pcieFunctionURI;
+        if (chassisId.empty())
+        {
+            pcieDeviceURI =
+                (boost::format("/redfish/v1/Systems/system/PCIeDevices/%s") %
+                 device)
+                    .str();
+            pcieFunctionURI =
+                (boost::format("/redfish/v1/Systems/system/"
+                               "PCIeDevices/%s/PCIeFunctions/%s") %
+                 device % function)
+                    .str();
+        }
+        else
+        {
+            pcieDeviceURI =
+                (boost::format("/redfish/v1/Chassis/%s/PCIeDevices/%s") %
+                 chassisId % device)
+                    .str();
+            pcieFunctionURI =
+                (boost::format(
+                     "/redfish/v1/Chassis/%s/PCIeDevices/%s/PCIeFunctions/%s") %
+                 chassisId % device % function)
+                    .str();
+        }
+
+        asyncResp->res.jsonValue = {
+            {"@odata.type", "#PCIeFunction.v1_2_0.PCIeFunction"},
+            {"@odata.id", pcieFunctionURI},
+            {"Name", "PCIe Function"},
+            {"Id", function},
+            {"FunctionId", std::stoi(function)},
+            {"Links", {{"PCIeDevice", {{"@odata.id", pcieDeviceURI}}}}}};
+
+        for (const auto& property : pcieDevProperties)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "Function" + function + "DeviceId")
             {
-                const std::string& propertyName = property.first;
-                if (propertyName == "Function" + function + "DeviceId")
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
                 {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue["DeviceId"] = *value;
-                    }
-                }
-                else if (propertyName == "Function" + function + "VendorId")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue["VendorId"] = *value;
-                    }
-                }
-                else if (propertyName == "Function" + function + "FunctionType")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue["FunctionType"] = *value;
-                    }
-                }
-                else if (propertyName == "Function" + function + "DeviceClass")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue["DeviceClass"] = *value;
-                    }
-                }
-                else if (propertyName == "Function" + function + "ClassCode")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ClassCode"] = *value;
-                    }
-                }
-                else if (propertyName == "Function" + function + "RevisionId")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue["RevisionId"] = *value;
-                    }
-                }
-                else if (propertyName == "Function" + function + "SubsystemId")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue["SubsystemId"] = *value;
-                    }
-                }
-                else if (propertyName ==
-                         "Function" + function + "SubsystemVendorId")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue["SubsystemVendorId"] = *value;
-                    }
+                    asyncResp->res.jsonValue["DeviceId"] = *value;
                 }
             }
-        };
+            else if (propertyName == "Function" + function + "VendorId")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
+                {
+                    asyncResp->res.jsonValue["VendorId"] = *value;
+                }
+            }
+            else if (propertyName == "Function" + function + "FunctionType")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
+                {
+                    asyncResp->res.jsonValue["FunctionType"] = *value;
+                }
+            }
+            else if (propertyName == "Function" + function + "DeviceClass")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
+                {
+                    asyncResp->res.jsonValue["DeviceClass"] = *value;
+                }
+            }
+            else if (propertyName == "Function" + function + "ClassCode")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
+                {
+                    asyncResp->res.jsonValue["ClassCode"] = *value;
+                }
+            }
+            else if (propertyName == "Function" + function + "RevisionId")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
+                {
+                    asyncResp->res.jsonValue["RevisionId"] = *value;
+                }
+            }
+            else if (propertyName == "Function" + function + "SubsystemId")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
+                {
+                    asyncResp->res.jsonValue["SubsystemId"] = *value;
+                }
+            }
+            else if (propertyName ==
+                     "Function" + function + "SubsystemVendorId")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
+                {
+                    asyncResp->res.jsonValue["SubsystemVendorId"] = *value;
+                }
+            }
+        }
+    };
     std::string escapedPath = std::string(path) + "/" + device;
     dbus::utility::escapePathForDbus(escapedPath);
     crow::connections::systemBus->async_method_call(
@@ -590,18 +629,6 @@ inline void requestRoutesSystemPCIeFunction(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& device, const std::string& function) {
-                asyncResp->res.jsonValue = {
-                    {"@odata.type", "#PCIeFunction.v1_2_0.PCIeFunction"},
-                    {"@odata.id", "/redfish/v1/Systems/system/PCIeDevices/" +
-                                      device + "/PCIeFunctions/" + function},
-                    {"Name", "PCIe Function"},
-                    {"Id", function},
-                    {"FunctionId", std::stoi(function)},
-                    {"Links",
-                     {{"PCIeDevice",
-                       {{"@odata.id",
-                         "/redfish/v1/Systems/system/PCIeDevices/" +
-                             device}}}}}};
                 getPCIeDeviceFunction(asyncResp, device, function);
             });
 }
@@ -856,16 +883,6 @@ inline void requestRoutesChassisPCIeFunction(App& app)
                             pcieFunctionURI += "/PCIeFunctions/";
                             pcieFunctionURI += function;
 
-                            asyncResp->res.jsonValue = {
-                                {"@odata.type",
-                                 "#PCIeFunction.v1_2_0.PCIeFunction"},
-                                {"@odata.id", pcieFunctionURI},
-                                {"Name", "PCIe Function"},
-                                {"Id", function},
-                                {"FunctionId", std::stoi(function)},
-                                {"Links",
-                                 {{"PCIeDevice",
-                                   {{"@odata.id", pcieDeviceURI}}}}}};
                             const std::vector<std::pair<
                                 std::string, std::vector<std::string>>>&
                                 connectionNames = object.second;
@@ -876,9 +893,9 @@ inline void requestRoutesChassisPCIeFunction(App& app)
                             }
                             const std::string& connectionName =
                                 connectionNames[0].first;
-                            getPCIeDeviceFunction(asyncResp, device, function,
-                                                  chassisPCIePath,
-                                                  connectionName, interface[0]);
+                            getPCIeDeviceFunction(
+                                asyncResp, device, function, chassisPCIePath,
+                                connectionName, chassisId, interface[0]);
                         }
                     },
                     "xyz.openbmc_project.ObjectMapper",
