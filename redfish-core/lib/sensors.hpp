@@ -3271,6 +3271,8 @@ void getThermalMetrics(
                         chassisPaths.emplace_back(path);
                     }
                 }
+                // Sort the chassis for sensors paths
+                std::sort(chassisPaths.begin(), chassisPaths.end());
 
                 // Processor all sensors to all chassis
                 for (const std::string& objectPath : chassisPaths)
@@ -3385,6 +3387,8 @@ inline void getThermalSensorData(
                 messages::internalError(sensorsAsyncResp->asyncResp->res);
                 return;
             }
+            // Sort the sensors paths response
+            std::sort(resp.begin(), resp.end());
 
             // Go through all objects and update response with sensor data
             for (const auto& objDictEntry : resp)
