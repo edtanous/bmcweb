@@ -3256,8 +3256,6 @@ void getThermalMetrics(
                 if (ec2)
                 {
                     // no chassis links = no failures
-                    // processes parent chassis
-                    chassisPaths.emplace_back(origChassisPath);
                 }
                 // Add parent chassis to the list
                 chassisPaths.emplace_back(origChassisPath);
