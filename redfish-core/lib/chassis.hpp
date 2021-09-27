@@ -204,6 +204,8 @@ inline void
                     {
                         return;
                     }
+                    // Sort the switches links
+                    std::sort(data->begin(), data->end());
                     nlohmann::json& linksArray =
                         aResp->res.jsonValue["Links"]["Switches"];
                     linksArray = nlohmann::json::array();
