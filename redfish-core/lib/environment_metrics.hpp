@@ -121,7 +121,7 @@ inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::array<const char*, 1> totalPowerInterfaces = {
         "xyz.openbmc_project.Sensor.Value"};
     const std::string& totalPowerPath =
-        "/xyz/openbmc_project/sensors/power/total_power";
+        "/xyz/openbmc_project/sensors/power/Total_Power";
     crow::connections::systemBus->async_method_call(
         [asyncResp, chassisID, totalPowerPath](
             const boost::system::error_code ec,
@@ -158,8 +158,8 @@ inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             "/redfish/v1/Chassis/" + chassisID + "/Sensors/";
                         asyncResp->res.jsonValue["PowerWatts"] = {
                             {"Reading", *attributeValue},
-                            {"DataSourceUri", tempPath + "total_power"},
-                            {"@odata.id", tempPath + "total_power"}};
+                            {"DataSourceUri", tempPath + "Total_Power"},
+                            {"@odata.id", tempPath + "Total_Power"}};
                     },
                     connectionName, totalPowerPath,
                     "org.freedesktop.DBus.Properties", "Get",
