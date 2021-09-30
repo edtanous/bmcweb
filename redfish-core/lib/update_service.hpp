@@ -751,7 +751,11 @@ inline void requestRoutesSoftwareInventoryCollection(App& app)
                         "xyz.openbmc_project.Software.Version"});
             });
 }
-
+inline static bool validSubpath([[maybe_unused]] std::string objPath,
+                                [[maybe_unused]] std::string objectPath)
+{
+    return false;
+}
 inline static void
     getRelatedItemsDrive(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const sdbusplus::message::object_path& objPath)
