@@ -10,4 +10,8 @@ constexpr const int bmcwebInsecureDisableXssPrevention =
 constexpr const size_t bmcwebHttpReqBodyLimitMb = @BMCWEB_HTTP_REQ_BODY_LIMIT_MB@;
 
 constexpr const char* mesonInstallPrefix = "@MESON_INSTALL_PREFIX@";
+
+constexpr const int updateServiceTaskTimeout = @UPDATE_SERVICE_TASK_TIMEOUT@;
+
+constexpr const char* updateServiceImageLocation = "@UPDATE_SERVICE_IMAGE_LOCATION@";
 // clang-format on

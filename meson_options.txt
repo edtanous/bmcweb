@@ -43,3 +43,6 @@ option ('insecure-disable-auth', type : 'feature', value : 'disabled', descripti
 option ('insecure-disable-xss', type : 'feature', value : 'disabled', description : 'Disable XSS preventions')
 option ('insecure-tftp-update', type : 'feature', value : 'disabled', description : '''Enable TFTP based firmware update transactions through Redfish UpdateService.SimpleUpdate.''')
 option ('insecure-push-style-notification',type : 'feature', value : 'disabled', description : 'Enable HTTP push style eventing feature')
+
+option ('update-service-task-timeout', type : 'integer', min : 5, max : 300, value : 60, description : 'Update service task timeout')
+option ('update-service-image-location', type : 'string', value : '/tmp/images/', description : 'Update service image location')

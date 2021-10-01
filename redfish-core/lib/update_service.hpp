@@ -242,7 +242,8 @@ static void
                                 "Properties',"
                                 "member='PropertiesChanged',path='" +
                                     objPath.str + "'");
-                        task->startTimer(std::chrono::minutes(5));
+                        task->startTimer(
+                            std::chrono::minutes(updateServiceTaskTimeout));
                         task->populateResp(asyncResp->res);
                         task->payload.emplace(req);
                     }
@@ -673,7 +674,7 @@ inline void requestRoutesUpdateService(App& app)
                 monitorForSoftwareAvailable(asyncResp, req,
                                             "/redfish/v1/UpdateService");
 
-                std::string filepath("/tmp/images/" +
+                std::string filepath(updateServiceImageLocation +
                                      boost::uuids::to_string(
                                          boost::uuids::random_generator()()));
                 BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
@@ -905,6 +906,7 @@ inline static void getRelatedItemsPowerSupply(
                                    objPath.filename()}});
 
             relatedItemCount = relatedItem.size();
+            asyncResp->res.jsonValue["Description"] = "Power Supply image";
         },
         "xyz.openbmc_project.ObjectMapper", objPath.str + "/chassis",
         "org.freedesktop.DBus.Properties", "Get",
