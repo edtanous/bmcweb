@@ -49,37 +49,42 @@ endif
 
 # Include Directories
 
-incdir = include_directories('include','redfish-core/include',
-                             'redfish-core/lib','http')
+incdir = include_directories(
+  'include',
+  'redfish-core/include',
+  'redfish-core/lib',
+  'http'
+)
 
 # Get the options and enable the respective features
 ## create a MAP of  "options : feature_flag"
 
 feature_map = {
-'insecure-disable-auth'           : '-DBMCWEB_INSECURE_DISABLE_AUTHENTICATION',
-'insecure-disable-csrf'           : '-DBMCWEB_INSECURE_DISABLE_CSRF_PREVENTION',
-'insecure-disable-ssl'            : '-DBMCWEB_INSECURE_DISABLE_SSL',
-'host-serial-socket'              : '-DBMCWEB_ENABLE_HOST_SERIAL_WEBSOCKET',
-'ibm-management-console'          : '-DBMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE',
-'kvm'                             : '-DBMCWEB_ENABLE_KVM' ,
-'basic-auth'                      : '-DBMCWEB_ENABLE_BASIC_AUTHENTICATION',
-'session-auth'                    : '-DBMCWEB_ENABLE_SESSION_AUTHENTICATION',
-'xtoken-auth'                     : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
-'cookie-auth'                     : '-DBMCWEB_ENABLE_COOKIE_AUTHENTICATION',
-'mutual-tls-auth'                 : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
-'pam'                             : '-DWEBSERVER_ENABLE_PAM',
-'insecure-push-style-notification': '-DBMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING',
-'redfish'                         : '-DBMCWEB_ENABLE_REDFISH',
-'redfish-bmc-journal'             : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
-'redfish-cpu-log'                 : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
-'redfish-dbus-log'                : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
-'redfish-provisioning-feature'    : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
-'redfish-dump-log'                : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
-'rest'                            : '-DBMCWEB_ENABLE_DBUS_REST',
-'static-hosting'                  : '-DBMCWEB_ENABLE_STATIC_HOSTING',
-'insecure-tftp-update'            : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
-#'vm-nbdproxy'                     : '-DBMCWEB_ENABLE_VM_NBDPROXY',
-'vm-websocket'                    : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
+  'insecure-disable-auth'           : '-DBMCWEB_INSECURE_DISABLE_AUTHENTICATION',
+  'insecure-disable-csrf'           : '-DBMCWEB_INSECURE_DISABLE_CSRF_PREVENTION',
+  'insecure-disable-ssl'            : '-DBMCWEB_INSECURE_DISABLE_SSL',
+  'host-serial-socket'              : '-DBMCWEB_ENABLE_HOST_SERIAL_WEBSOCKET',
+  'ibm-management-console'          : '-DBMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE',
+  'google-api'                      : '-DBMCWEB_ENABLE_GOOGLE_API',
+  'kvm'                             : '-DBMCWEB_ENABLE_KVM' ,
+  'basic-auth'                      : '-DBMCWEB_ENABLE_BASIC_AUTHENTICATION',
+  'session-auth'                    : '-DBMCWEB_ENABLE_SESSION_AUTHENTICATION',
+  'xtoken-auth'                     : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
+  'cookie-auth'                     : '-DBMCWEB_ENABLE_COOKIE_AUTHENTICATION',
+  'mutual-tls-auth'                 : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
+  'pam'                             : '-DWEBSERVER_ENABLE_PAM',
+  'insecure-push-style-notification': '-DBMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING',
+  'redfish'                         : '-DBMCWEB_ENABLE_REDFISH',
+  'redfish-bmc-journal'             : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
+  'redfish-cpu-log'                 : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
+  'redfish-dbus-log'                : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
+  'redfish-provisioning-feature'    : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
+  'redfish-dump-log'                : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
+  'rest'                            : '-DBMCWEB_ENABLE_DBUS_REST',
+  'static-hosting'                  : '-DBMCWEB_ENABLE_STATIC_HOSTING',
+  'insecure-tftp-update'            : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
+  #'vm-nbdproxy'                     : '-DBMCWEB_ENABLE_VM_NBDPROXY',
+  'vm-websocket'                    : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
 }
 
 # Get the options status and build a project summary to show which flags are
@@ -146,6 +151,7 @@ add_project_arguments(
     '-Wswitch-enum',
     '-Wnull-dereference',
     '-Wdouble-promotion',
+    '-Wno-newline-eof',
     '-Wformat=2',
   ]),
   language:'cpp')
@@ -171,69 +177,69 @@ if (cxx.get_id() == 'gcc' and cxx.version().version_compare('>8.0'))
      '-Wformat=2',
      ]),
     language:'cpp')
+endif
 
-  if (get_option('buildtype') != 'plain')
-    if (get_option('b_lto') == true and get_option('optimization')!='0')
-      # Reduce the binary size by removing unnecessary
-      # dynamic symbol table entries
+if (get_option('buildtype') != 'plain')
+  if (get_option('b_lto') == true and get_option('optimization')!='0')
+    # Reduce the binary size by removing unnecessary
+    # dynamic symbol table entries
 
-      add_project_arguments(
-       cxx.get_supported_arguments([
-       '-fno-fat-lto-objects',
-       '-fvisibility=hidden',
-       '-fvisibility-inlines-hidden'
-       ]),
-       language: 'cpp')
+    add_project_arguments(
+     cxx.get_supported_arguments([
+     '-fno-fat-lto-objects',
+     '-fvisibility=hidden',
+     '-fvisibility-inlines-hidden'
+     ]),
+     language: 'cpp')
 
-      if cxx.has_link_argument('-Wl,--exclude-libs,ALL')
-        add_project_link_arguments('-Wl,--exclude-libs,ALL', language: 'cpp')
-      endif
-  endif
-
-    if( get_option('bmcweb-logging').enabled() or \
-        get_option('buildtype').startswith('debug'))
-     add_project_arguments([
-       '-DBMCWEB_ENABLE_LOGGING',
-       '-DBMCWEB_ENABLE_DEBUG'
-       ],
-      language : 'cpp')
-
-      summary({'debug' :'-DBMCWEB_ENABLE_DEBUG',
-               'logging' : '-DBMCWEB_ENABLE_LOGGING',
-              },section : 'Enabled Features')
-    endif
-
-    if( get_option('redfish-allow-deprecated-hostname-patch').enabled())
-     add_project_arguments([
-       '-DBMCWEB_ALLOW_DEPRECATED_HOSTNAME_PATCH'
-       ],
-      language : 'cpp')
-
-      summary({'hostname-patch' :'-DBMCWEB_ALLOW_DEPRECATED_HOSTNAME_PATCH'
-              },section : 'Enabled Features')
-    endif
-
-    if( get_option('redfish-allow-deprecated-power-thermal').enabled())
-     add_project_arguments([
-       '-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL'
-       ],
-      language : 'cpp')
-
-      summary({'power-thermal' :'-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL'
-              },section : 'Enabled Features')
+    if cxx.has_link_argument('-Wl,--exclude-libs,ALL')
+      add_project_link_arguments('-Wl,--exclude-libs,ALL', language: 'cpp')
     endif
   endif
+endif
+
+if( get_option('bmcweb-logging').enabled() or \
+    get_option('buildtype').startswith('debug'))
+ add_project_arguments([
+   '-DBMCWEB_ENABLE_LOGGING',
+   '-DBMCWEB_ENABLE_DEBUG'
+   ],
+  language : 'cpp')
+
+  summary({'debug' :'-DBMCWEB_ENABLE_DEBUG',
+     'logging' : '-DBMCWEB_ENABLE_LOGGING',
+    },section : 'Enabled Features')
+endif
+
+if( get_option('redfish-allow-deprecated-power-thermal').enabled())
+ add_project_arguments([
+   '-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL'
+   ],
+  language : 'cpp')
+
+  summary({'power-thermal' :'-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL'
+    },section : 'Enabled Features')
+endif
+
+if( get_option('redfish-new-powersubsystem-thermalsubsystem').enabled())
+ add_project_arguments([
+   '-DBMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM'
+   ],
+  language : 'cpp')
+
+  summary({'new-powersubsystem-thermalsubsystem' :'-DBMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM'
+    },section : 'Enabled Features')
 endif
 
 # Set Compiler Security flags
 
 security_flags = [
-'-fstack-protector-strong',
-'-fPIE',
-'-fPIC',
-'-D_FORTIFY_SOURCE=2',
-'-Wformat',
-'-Wformat-security'
+  '-fstack-protector-strong',
+  '-fPIE',
+  '-fPIC',
+  '-D_FORTIFY_SOURCE=2',
+  '-Wformat',
+  '-Wformat-security'
 ]
 
 ## Add security flags for builds of type 'release','debugoptimized' and 'minsize'
@@ -250,19 +256,20 @@ endif
 
 add_project_arguments(
 cxx.get_supported_arguments([
-'-DBOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT',
-'-DBOOST_ASIO_DISABLE_THREADS',
-'-DBOOST_BEAST_USE_STD_STRING_VIEW',
-'-DBOOST_ERROR_CODE_HEADER_ONLY',
-'-DBOOST_SYSTEM_NO_DEPRECATED',
-'-DBOOST_ASIO_NO_DEPRECATED',
-'-DBOOST_ALL_NO_LIB',
-'-DBOOST_NO_RTTI',
-'-DBOOST_NO_TYPEID',
-'-DBOOST_COROUTINES_NO_DEPRECATION_WARNING',
-'-DBOOST_URL_STANDALONE',
-'-DBOOST_URL_HEADER_ONLY',
-'-DBOOST_ALLOW_DEPRECATED_HEADERS'
+  '-DBOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT',
+  '-DBOOST_ASIO_DISABLE_THREADS',
+  '-DBOOST_BEAST_USE_STD_STRING_VIEW',
+  '-DBOOST_ERROR_CODE_HEADER_ONLY',
+  '-DBOOST_SYSTEM_NO_DEPRECATED',
+  '-DBOOST_ASIO_NO_DEPRECATED',
+  '-DBOOST_ALL_NO_LIB',
+  '-DBOOST_NO_RTTI',
+  '-DBOOST_NO_TYPEID',
+  '-DBOOST_COROUTINES_NO_DEPRECATION_WARNING',
+  '-DBOOST_URL_STANDALONE',
+  '-DBOOST_URL_HEADER_ONLY',
+  '-DBOOST_ALLOW_DEPRECATED_HEADERS',
+  '-DJSON_NOEXCEPTION'
 ]),
 language : 'cpp')
 
@@ -275,7 +282,7 @@ atomic =  cxx.find_library('atomic', required: true)
 openssl = dependency('openssl', required : true)
 bmcweb_dependencies += [pam, atomic, openssl]
 
-sdbusplus = dependency('sdbusplus',required : false)
+sdbusplus = dependency('sdbusplus', required : false, include_type: 'system')
 if not sdbusplus.found()
   sdbusplus_proj = subproject('sdbusplus', required: true)
   sdbusplus = sdbusplus_proj.get_variable('sdbusplus_dep')
@@ -300,18 +307,13 @@ bmcweb_dependencies += [systemd, zlib]
 if cxx.has_header('nlohmann/json.hpp')
     nlohmann_json = declare_dependency()
 else
-    subproject('nlohmann', required: false)
-    nlohmann_json = declare_dependency(
-        include_directories: [
-            'subprojects/nlohmann/single_include',
-            'subprojects/nlohmann/single_include/nlohmann',
-        ]
-    )
+    nlohmann_json_proj = subproject('nlohmann', required: true)
+    nlohmann_json = nlohmann_json_proj.get_variable('nlohmann_json_dep')
     nlohmann_json = nlohmann_json.as_system('system')
 endif
 bmcweb_dependencies += nlohmann_json
 
-boost = dependency('boost',version : '>=1.75.0', required : false)
+boost = dependency('boost',version : '>=1.75.0', required : false, include_type: 'system')
 if not boost.found()
   subproject('boost', required: false)
   boost_inc = include_directories('subprojects/boost_1_75_0/', is_system:true)
@@ -344,15 +346,23 @@ endif
 
 # Source files
 
-srcfiles_bmcweb = ['src/webserver_main.cpp','redfish-core/src/error_messages.cpp',
-                   'redfish-core/src/utils/json_utils.cpp']
+srcfiles_bmcweb = [
+  'src/webserver_main.cpp',
+  'redfish-core/src/error_messages.cpp',
+  'redfish-core/src/utils/json_utils.cpp',
+  'src/boost_url.cpp'
+]
 
-srcfiles_unittest = ['include/ut/dbus_utility_test.cpp',
-                     'redfish-core/ut/privileges_test.cpp',
-                     'redfish-core/ut/lock_test.cpp',
-                     'redfish-core/ut/configfile_test.cpp',
-                     'redfish-core/ut/time_utils_test.cpp',
-                     'http/ut/utility_test.cpp']
+srcfiles_unittest = [
+  'include/ut/dbus_utility_test.cpp',
+  'include/ut/http_utility_test.cpp',
+  'include/ut/human_sort_test.cpp',
+  'redfish-core/ut/privileges_test.cpp',
+  'redfish-core/ut/lock_test.cpp',
+  'redfish-core/ut/configfile_test.cpp',
+  'redfish-core/ut/time_utils_test.cpp',
+  'http/ut/utility_test.cpp'
+]
 
 # Gather the Configuration data
 
@@ -413,11 +423,20 @@ executable('bmcweb',srcfiles_bmcweb,
 if(get_option('tests').enabled())
   foreach src_test : srcfiles_unittest
     testname = src_test.split('/')[-1].split('.')[0]
-    test(testname,executable(testname,src_test,
+    test(testname,executable(testname, 
+        [src_test,
+        'src/boost_url.cpp'],
                 include_directories : incdir,
                 install_dir: bindir,
                 dependencies: [
-                                boost, boost_url, gtest,openssl,gmock,nlohmann_json,sdbusplus,pam
+                                boost,
+                                boost_url,
+                                gtest,
+                                openssl,
+                                gmock,
+                                nlohmann_json,
+                                sdbusplus,
+                                pam
                               ]))
   endforeach
 endif

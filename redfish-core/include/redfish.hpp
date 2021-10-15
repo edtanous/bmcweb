@@ -104,6 +104,7 @@ class RedfishService
 
         requestRoutesSystemLogServiceCollection(app);
         requestRoutesEventLogService(app);
+        requestRoutesPostCodesEntryAdditionalData(app);
 
         requestRoutesPostCodesLogService(app);
         requestRoutesPostCodesClear(app);

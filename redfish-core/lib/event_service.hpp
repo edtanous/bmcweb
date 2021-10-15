@@ -58,16 +58,18 @@ inline void requestRoutesEventService(App& app)
                                    "EventService.SubmitTestEvent"}}}}},
                     {"@odata.id", "/redfish/v1/EventService"}};
 
-                const auto& [enabled, retryAttempts, retryTimeoutInterval] =
-                    EventServiceManager::getInstance().getEventServiceConfig();
+                const persistent_data::EventServiceConfig eventServiceConfig =
+                    persistent_data::EventServiceStore::getInstance()
+                        .getEventServiceConfig();
 
                 asyncResp->res.jsonValue["Status"]["State"] =
-                    (enabled ? "Enabled" : "Disabled");
-                asyncResp->res.jsonValue["ServiceEnabled"] = enabled;
+                    (eventServiceConfig.enabled ? "Enabled" : "Disabled");
+                asyncResp->res.jsonValue["ServiceEnabled"] =
+                    eventServiceConfig.enabled;
                 asyncResp->res.jsonValue["DeliveryRetryAttempts"] =
-                    retryAttempts;
+                    eventServiceConfig.retryAttempts;
                 asyncResp->res.jsonValue["DeliveryRetryIntervalSeconds"] =
-                    retryTimeoutInterval;
+                    eventServiceConfig.retryTimeoutInterval;
                 asyncResp->res.jsonValue["EventFormatTypes"] =
                     supportedEvtFormatTypes;
                 asyncResp->res.jsonValue["RegistryPrefixes"] =
@@ -103,12 +105,13 @@ inline void requestRoutesEventService(App& app)
                     return;
                 }
 
-                auto [enabled, retryCount, retryTimeoutInterval] =
-                    EventServiceManager::getInstance().getEventServiceConfig();
+                persistent_data::EventServiceConfig eventServiceConfig =
+                    persistent_data::EventServiceStore::getInstance()
+                        .getEventServiceConfig();
 
                 if (serviceEnabled)
                 {
-                    enabled = *serviceEnabled;
+                    eventServiceConfig.enabled = *serviceEnabled;
                 }
 
                 if (retryAttemps)
@@ -122,7 +125,7 @@ inline void requestRoutesEventService(App& app)
                     }
                     else
                     {
-                        retryCount = *retryAttemps;
+                        eventServiceConfig.retryAttempts = *retryAttemps;
                     }
                 }
 
@@ -137,12 +140,13 @@ inline void requestRoutesEventService(App& app)
                     }
                     else
                     {
-                        retryTimeoutInterval = *retryInterval;
+                        eventServiceConfig.retryTimeoutInterval =
+                            *retryInterval;
                     }
                 }
 
                 EventServiceManager::getInstance().setEventServiceConfig(
-                    std::make_tuple(enabled, retryCount, retryTimeoutInterval));
+                    eventServiceConfig);
             });
 }
 
@@ -190,10 +194,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 }
             });
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/")
-        // The below privilege is wrong, it should be ConfigureManager OR
-        // ConfigureComponents
-        //.privileges(redfish::privileges::postEventDestinationCollection)
-        .privileges({{"ConfigureManager"}})
+        .privileges(redfish::privileges::postEventDestinationCollection)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
@@ -488,7 +489,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
 
 inline void requestRoutesEventDestination(App& app)
 {
-    BMCWEB_ROUTE(app, "redfish/v1/EventService/Subscriptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/<str>/")
         .privileges(redfish::privileges::getEventDestination)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -517,7 +518,8 @@ inline void requestRoutesEventDestination(App& app)
                 asyncResp->res.jsonValue["Context"] = subValue->customText;
                 asyncResp->res.jsonValue["SubscriptionType"] =
                     subValue->subscriptionType;
-                asyncResp->res.jsonValue["HttpHeaders"] = subValue->httpHeaders;
+                asyncResp->res.jsonValue["HttpHeaders"] =
+                    nlohmann::json::array();
                 asyncResp->res.jsonValue["EventFormatType"] =
                     subValue->eventFormatType;
                 asyncResp->res.jsonValue["RegistryPrefixes"] =
@@ -538,12 +540,10 @@ inline void requestRoutesEventDestination(App& app)
                 asyncResp->res.jsonValue["MetricReportDefinitions"] =
                     mrdJsonArray;
             });
-    /////redfish/v1/EventService/Subscriptions/
-    // ConfigureManager
-    BMCWEB_ROUTE(app, "redfish/v1/EventService/Subscriptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/<str>/")
         // The below privilege is wrong, it should be ConfigureManager OR
         // ConfigureSelf
-        // TODO(ed) follow up with DMTF spec and understand ConfigureSelf
+        // https://github.com/openbmc/bmcweb/issues/220
         //.privileges(redfish::privileges::patchEventDestination)
         .privileges({{"ConfigureManager"}})
         .methods(boost::beast::http::verb::patch)(
@@ -597,9 +597,10 @@ inline void requestRoutesEventDestination(App& app)
 
                 EventServiceManager::getInstance().updateSubscriptionData();
             });
-    BMCWEB_ROUTE(app, "redfish/v1/EventService/Subscriptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/<str>/")
         // The below privilege is wrong, it should be ConfigureManager OR
         // ConfigureSelf
+        // https://github.com/openbmc/bmcweb/issues/220
         //.privileges(redfish::privileges::deleteEventDestination)
         .privileges({{"ConfigureManager"}})
         .methods(boost::beast::http::verb::delete_)(
