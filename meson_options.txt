@@ -47,3 +47,5 @@ option ('insecure-push-style-notification',type : 'feature', value : 'disabled',
 
 option ('update-service-task-timeout', type : 'integer', min : 5, max : 300, value : 60, description : 'Update service task timeout')
 option ('update-service-image-location', type : 'string', value : '/tmp/images/', description : 'Update service image location')
+
+option('redfish-new-powersubsystem', type : 'feature', value : 'enabled', description : 'Enable/disable the new Power sub system.')
