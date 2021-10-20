@@ -6,12 +6,7 @@
 #include <cors_preflight.hpp>
 #include <dbus_monitor.hpp>
 #include <dbus_singleton.hpp>
-<<<<<<< HEAD
-#include <dump_offload.hpp>
-||||||| fe4b309
-=======
 #include <google/google_service_root.hpp>
->>>>>>> origin/master
 #include <hostname_monitor.hpp>
 #include <ibm/management_console_rest.hpp>
 #include <image_upload.hpp>

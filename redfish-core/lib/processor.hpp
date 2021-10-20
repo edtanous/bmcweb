@@ -828,23 +828,11 @@ using BaseSpeedPrioritySettingsProperty =
     std::vector<std::tuple<uint32_t, std::vector<uint32_t>>>;
 // uint32_t and size_t may or may not be the same type, requiring a dedup'd
 // variant
-<<<<<<< HEAD
 using OperatingConfigProperties = std::vector<
     std::pair<std::string,
-              sdbusplus::utility::dedup_variant<
+              sdbusplus::utility::dedup_variant_t<
                   double, int64_t, uint64_t, uint32_t, size_t, uint16_t, bool,
                   TurboProfileProperty, BaseSpeedPrioritySettingsProperty>>>;
-||||||| fe4b309
-using OperatingConfigProperties = std::vector<std::pair<
-    std::string,
-    sdbusplus::utility::dedup_variant<uint32_t, size_t, TurboProfileProperty,
-                                      BaseSpeedPrioritySettingsProperty>>>;
-=======
-using OperatingConfigProperties = std::vector<std::pair<
-    std::string,
-    sdbusplus::utility::dedup_variant_t<uint32_t, size_t, TurboProfileProperty,
-                                        BaseSpeedPrioritySettingsProperty>>>;
->>>>>>> origin/master
 
 /**
  * Fill out the HighSpeedCoreIDs in a Processor resource from the given
