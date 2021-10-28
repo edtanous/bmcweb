@@ -474,7 +474,7 @@ inline void
 inline void requestRoutesPowerSupplyCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/PowerSubsystem/PowerSupplies/")
-        .privileges(redfish::privileges::getPowerSupplyCollection)
+        .privileges(redfish::privileges::getPower)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -502,7 +502,7 @@ inline void requestRoutesPowerSupply(App& app)
 {
     BMCWEB_ROUTE(
         app, "/redfish/v1/Chassis/<str>/PowerSubsystem/PowerSupplies/<str>/")
-        .privileges(redfish::privileges::getPowerSupply)
+        .privileges(redfish::privileges::getPower)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,

@@ -29,7 +29,7 @@ inline void
 inline void requestRoutesPowerSubsystem(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/PowerSubsystem/")
-        .privileges(redfish::privileges::getPowerSubsystem)
+        .privileges(redfish::privileges::getPower)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
