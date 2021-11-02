@@ -915,6 +915,7 @@ inline void createDumpTaskCallback(
             BMCWEB_LOG_DEBUG << createdObjPath.str
                              << ": Dump creation task completed";
             taskData->state = "Completed";
+            taskData->percentComplete = 100;
             return task::completed;
         },
         "type='signal',interface='org.freedesktop.DBus.Properties',"
@@ -3258,6 +3259,7 @@ inline void requestRoutesCrashdumpCollect(App& app)
                                     messages::taskCompletedOK(
                                         std::to_string(taskData->index)));
                                 taskData->state = "Completed";
+                                taskData->percentComplete = 100;
                             }
                             return task::completed;
                         },
