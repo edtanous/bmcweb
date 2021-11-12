@@ -1,10 +1,10 @@
 project('bmcweb', 'cpp',
         version : '1.0',
-        meson_version: '>=0.53.2',
+        meson_version: '>=0.57.0',
         default_options: [
             'werror=true',
             'warning_level=3',
-            'cpp_std=c++17',
+            'cpp_std=c++20',
             'buildtype=debugoptimized',
             'b_ndebug=if-release',
             'b_lto=true',
@@ -22,8 +22,8 @@ summary('Issues',project_issues_url, section: 'Report Issues')
 
 # Validate the c++ Standard
 
-if get_option('cpp_std') != 'c++17'
-    error('This project requires c++17 support')
+if get_option('cpp_std') != 'c++20'
+    error('This project requires c++20 support')
 endif
 
 # Get compiler and default build type
@@ -60,31 +60,34 @@ incdir = include_directories(
 ## create a MAP of  "options : feature_flag"
 
 feature_map = {
-  'insecure-disable-auth'           : '-DBMCWEB_INSECURE_DISABLE_AUTHENTICATION',
-  'insecure-disable-csrf'           : '-DBMCWEB_INSECURE_DISABLE_CSRF_PREVENTION',
-  'insecure-disable-ssl'            : '-DBMCWEB_INSECURE_DISABLE_SSL',
-  'host-serial-socket'              : '-DBMCWEB_ENABLE_HOST_SERIAL_WEBSOCKET',
-  'ibm-management-console'          : '-DBMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE',
-  'google-api'                      : '-DBMCWEB_ENABLE_GOOGLE_API',
-  'kvm'                             : '-DBMCWEB_ENABLE_KVM' ,
-  'basic-auth'                      : '-DBMCWEB_ENABLE_BASIC_AUTHENTICATION',
-  'session-auth'                    : '-DBMCWEB_ENABLE_SESSION_AUTHENTICATION',
-  'xtoken-auth'                     : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
-  'cookie-auth'                     : '-DBMCWEB_ENABLE_COOKIE_AUTHENTICATION',
-  'mutual-tls-auth'                 : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
-  'pam'                             : '-DWEBSERVER_ENABLE_PAM',
-  'insecure-push-style-notification': '-DBMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING',
-  'redfish'                         : '-DBMCWEB_ENABLE_REDFISH',
-  'redfish-bmc-journal'             : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
-  'redfish-cpu-log'                 : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
-  'redfish-dbus-log'                : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
-  'redfish-provisioning-feature'    : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
-  'redfish-dump-log'                : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
-  'rest'                            : '-DBMCWEB_ENABLE_DBUS_REST',
-  'static-hosting'                  : '-DBMCWEB_ENABLE_STATIC_HOSTING',
-  'insecure-tftp-update'            : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
-  #'vm-nbdproxy'                     : '-DBMCWEB_ENABLE_VM_NBDPROXY',
-  'vm-websocket'                    : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
+  'basic-auth'                                  : '-DBMCWEB_ENABLE_BASIC_AUTHENTICATION',
+  'cookie-auth'                                 : '-DBMCWEB_ENABLE_COOKIE_AUTHENTICATION',
+  'google-api'                                  : '-DBMCWEB_ENABLE_GOOGLE_API',
+  'host-serial-socket'                          : '-DBMCWEB_ENABLE_HOST_SERIAL_WEBSOCKET',
+  'ibm-management-console'                      : '-DBMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE',
+  'insecure-disable-auth'                       : '-DBMCWEB_INSECURE_DISABLE_AUTHENTICATION',
+  'insecure-disable-csrf'                       : '-DBMCWEB_INSECURE_DISABLE_CSRF_PREVENTION',
+  'insecure-disable-ssl'                        : '-DBMCWEB_INSECURE_DISABLE_SSL',
+  'insecure-push-style-notification'            : '-DBMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING',
+  'insecure-tftp-update'                        : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
+  'kvm'                                         : '-DBMCWEB_ENABLE_KVM' ,
+  'mutual-tls-auth'                             : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
+  'pam'                                         : '-DWEBSERVER_ENABLE_PAM',
+  'redfish'                                     : '-DBMCWEB_ENABLE_REDFISH',
+  'redfish-bmc-journal'                         : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
+  'redfish-cpu-log'                             : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
+  'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
+  'redfish-host-logger'                         : '-DBMCWEB_ENABLE_REDFISH_HOST_LOGGER',
+  'redfish-dump-log'                            : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
+  'redfish-provisioning-feature'                : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
+  'rest'                                        : '-DBMCWEB_ENABLE_DBUS_REST',
+  'redfish-allow-deprecated-power-thermal'      : '-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL',
+  'redfish-new-powersubsystem-thermalsubsystem' : '-DBMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM',
+  'session-auth'                                : '-DBMCWEB_ENABLE_SESSION_AUTHENTICATION',
+  'static-hosting'                              : '-DBMCWEB_ENABLE_STATIC_HOSTING',
+  #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
+  'vm-websocket'                                : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
+  'xtoken-auth'                                 : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
 }
 
 # Get the options status and build a project summary to show which flags are
@@ -208,26 +211,7 @@ if( get_option('bmcweb-logging').enabled() or \
 
   summary({'debug' :'-DBMCWEB_ENABLE_DEBUG',
      'logging' : '-DBMCWEB_ENABLE_LOGGING',
-    },section : 'Enabled Features')
-endif
 
-if( get_option('redfish-allow-deprecated-power-thermal').enabled())
- add_project_arguments([
-   '-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL'
-   ],
-  language : 'cpp')
-
-  summary({'power-thermal' :'-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL'
-    },section : 'Enabled Features')
-endif
-
-if( get_option('redfish-new-powersubsystem-thermalsubsystem').enabled())
- add_project_arguments([
-   '-DBMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM'
-   ],
-  language : 'cpp')
-
-  summary({'new-powersubsystem-thermalsubsystem' :'-DBMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM'
     },section : 'Enabled Features')
 endif
 
@@ -259,6 +243,8 @@ cxx.get_supported_arguments([
   '-DBOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT',
   '-DBOOST_ASIO_DISABLE_THREADS',
   '-DBOOST_BEAST_USE_STD_STRING_VIEW',
+  '-DBOOST_BEAST_SEPARATE_COMPILATION',
+  '-DBOOST_ASIO_SEPARATE_COMPILATION',
   '-DBOOST_ERROR_CODE_HEADER_ONLY',
   '-DBOOST_SYSTEM_NO_DEPRECATED',
   '-DBOOST_ASIO_NO_DEPRECATED',
@@ -291,12 +277,10 @@ endif
 bmcweb_dependencies += sdbusplus
 
 if get_option('rest').enabled()
-  tinyxml = dependency('tinyxml2', required: false)
-  if not tinyxml.found()
-    tinyxml_proj = subproject('tinyxml2', required: true)
-    tinyxml = tinyxml_proj.get_variable('tinyxml2_dep')
-    tinyxml = tinyxml.as_system('system')
-  endif
+  tinyxml = dependency('tinyxml2',
+      default_options: ['tests=false'],
+      include_type: 'system',
+  )
   bmcweb_dependencies += tinyxml
 endif
 
@@ -313,10 +297,10 @@ else
 endif
 bmcweb_dependencies += nlohmann_json
 
-boost = dependency('boost',version : '>=1.75.0', required : false, include_type: 'system')
+boost = dependency('boost',version : '>=1.77.0', required : false, include_type: 'system')
 if not boost.found()
   subproject('boost', required: false)
-  boost_inc = include_directories('subprojects/boost_1_75_0/', is_system:true)
+  boost_inc = include_directories('subprojects/boost_1_77_0/', is_system:true)
   boost  = declare_dependency(include_directories : boost_inc)
   boost = boost.as_system('system')
 endif
@@ -344,26 +328,6 @@ if get_option('tests').enabled()
   gmock = gmock.as_system('system')
 endif
 
-# Source files
-
-srcfiles_bmcweb = [
-  'src/webserver_main.cpp',
-  'redfish-core/src/error_messages.cpp',
-  'redfish-core/src/utils/json_utils.cpp',
-  'src/boost_url.cpp'
-]
-
-srcfiles_unittest = [
-  'include/ut/dbus_utility_test.cpp',
-  'include/ut/http_utility_test.cpp',
-  'include/ut/human_sort_test.cpp',
-  'redfish-core/ut/privileges_test.cpp',
-  'redfish-core/ut/lock_test.cpp',
-  'redfish-core/ut/configfile_test.cpp',
-  'redfish-core/ut/time_utils_test.cpp',
-  'http/ut/utility_test.cpp'
-]
-
 # Gather the Configuration data
 
 conf_data = configuration_data()
@@ -380,7 +344,7 @@ configure_file(input: 'bmcweb_config.h.in',
 
 # Configure and install systemd unit files
 
-systemd_system_unit_dir = systemd.get_pkgconfig_variable('systemdsystemunitdir')
+systemd_system_unit_dir = systemd.get_variable(pkgconfig: 'systemdsystemunitdir')
 
 bindir = get_option('prefix') + '/' +get_option('bindir')
 
@@ -411,32 +375,52 @@ configure_file(input : 'pam-webserver',
 
 install_subdir('static', install_dir : 'share/www', strip_directory : true)
 
-# Generate the bmcweb executable and the test binary
+# Source files
 
-executable('bmcweb',srcfiles_bmcweb,
-            include_directories : incdir,
-            dependencies: bmcweb_dependencies,
-            link_args: '-Wl,--gc-sections',
-            install: true,
-            install_dir:bindir)
+srcfiles_bmcweb = [
+  'redfish-core/src/error_messages.cpp',
+  'redfish-core/src/utils/json_utils.cpp',
+  'src/boost_url.cpp',
+  'src/boost_beast.cpp',
+  'src/boost_asio.cpp',
+  'src/boost_asio_ssl.cpp',
+]
+
+# Generate the bmcweb executable
+executable(
+  'bmcweb',
+  srcfiles_bmcweb + ['src/webserver_main.cpp'],
+  include_directories : incdir,
+  dependencies: bmcweb_dependencies,
+  link_args: '-Wl,--gc-sections',
+  install: true,
+  install_dir:bindir
+)
+
+srcfiles_unittest = [
+  'include/ut/dbus_utility_test.cpp',
+  'include/ut/http_utility_test.cpp',
+  'include/ut/human_sort_test.cpp',
+  'redfish-core/ut/privileges_test.cpp',
+  'redfish-core/ut/lock_test.cpp',
+  'redfish-core/ut/configfile_test.cpp',
+  'redfish-core/ut/time_utils_test.cpp',
+  'redfish-core/ut/stl_utils_test.cpp',
+  'redfish-core/ut/hex_utils_test.cpp',
+  'http/ut/utility_test.cpp'
+]
 
 if(get_option('tests').enabled())
-  foreach src_test : srcfiles_unittest
-    testname = src_test.split('/')[-1].split('.')[0]
-    test(testname,executable(testname, 
-        [src_test,
-        'src/boost_url.cpp'],
-                include_directories : incdir,
-                install_dir: bindir,
-                dependencies: [
-                                boost,
-                                boost_url,
-                                gtest,
-                                openssl,
-                                gmock,
-                                nlohmann_json,
-                                sdbusplus,
-                                pam
-                              ]))
-  endforeach
+    # generate the test executable
+    ut_bin = executable(
+      'bmcweb_unit_test',
+      srcfiles_unittest + srcfiles_bmcweb,
+      include_directories : incdir,
+      install_dir: bindir,
+      dependencies: bmcweb_dependencies + [
+        gtest,
+        gmock,
+      ]
+    )
+    test('bmcweb_unit_test', ut_bin)
 endif

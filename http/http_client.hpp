@@ -68,19 +68,18 @@ class HttpClient : public std::enable_shared_from_this<HttpClient>
     std::optional<
         boost::beast::http::response_parser<boost::beast::http::string_body>>
         parser;
-    std::vector<std::pair<std::string, std::string>> headers;
     boost::circular_buffer_space_optimized<std::string> requestDataQueue{};
 
-    ConnState state;
+    ConnState state = ConnState::initialized;
+
     std::string subId;
     std::string host;
     std::string port;
-    std::string uri;
-    uint32_t retryCount;
-    uint32_t maxRetryAttempts;
-    uint32_t retryIntervalSecs;
-    std::string retryPolicyAction;
-    bool runningTimer;
+    uint32_t retryCount = 0;
+    uint32_t maxRetryAttempts = 5;
+    uint32_t retryIntervalSecs = 0;
+    std::string retryPolicyAction = "TerminateAfterRetries";
+    bool runningTimer = false;
 
     void doResolve()
     {
@@ -134,20 +133,6 @@ class HttpClient : public std::enable_shared_from_this<HttpClient>
     void sendMessage(const std::string& data)
     {
         state = ConnState::sendInProgress;
-
-        BMCWEB_LOG_DEBUG << __FUNCTION__ << "(): " << host << ":" << port;
-
-        req.version(static_cast<int>(11)); // HTTP 1.1
-        req.target(uri);
-        req.method(boost::beast::http::verb::post);
-
-        // Set headers
-        for (const auto& [key, value] : headers)
-        {
-            req.set(key, value);
-        }
-        req.set(boost::beast::http::field::host, host);
-        req.keep_alive(true);
 
         req.body() = data;
         req.prepare_payload();
@@ -388,21 +373,21 @@ class HttpClient : public std::enable_shared_from_this<HttpClient>
                 doClose();
                 break;
             }
-            default:
-                break;
         }
     }
 
   public:
     explicit HttpClient(boost::asio::io_context& ioc, const std::string& id,
                         const std::string& destIP, const std::string& destPort,
-                        const std::string& destUri) :
+                        const std::string& destUri,
+                        const boost::beast::http::fields& httpHeader) :
         conn(ioc),
-        timer(ioc), subId(id), host(destIP), port(destPort), uri(destUri),
-        retryCount(0), maxRetryAttempts(5), retryIntervalSecs(0),
-        retryPolicyAction("TerminateAfterRetries"), runningTimer(false)
+        timer(ioc),
+        req(boost::beast::http::verb::post, destUri, 11, "", httpHeader),
+        subId(id), host(destIP), port(destPort)
     {
-        state = ConnState::initialized;
+        req.set(boost::beast::http::field::host, host);
+        req.keep_alive(true);
     }
 
     void sendData(const std::string& data)
@@ -423,12 +408,6 @@ class HttpClient : public std::enable_shared_from_this<HttpClient>
         }
 
         return;
-    }
-
-    void setHeaders(
-        const std::vector<std::pair<std::string, std::string>>& httpHeaders)
-    {
-        headers = httpHeaders;
     }
 
     void setRetryConfig(const uint32_t retryAttempts,

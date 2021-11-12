@@ -538,7 +538,7 @@ inline void
                 {
                     aResp->res
                         .jsonValue["ProcessorId"]["IdentificationRegisters"] =
-                        boost::lexical_cast<std::string>(*value);
+                        "0x" + intToHexString(*value);
                 }
             }
         }

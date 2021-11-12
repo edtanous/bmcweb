@@ -314,8 +314,13 @@ class Connection :
     void handle()
     {
         cancelDeadlineTimer();
-
-        crow::Request& thisReq = req.emplace(parser->release());
+        std::error_code reqEc;
+        crow::Request& thisReq = req.emplace(parser->release(), reqEc);
+        if (reqEc)
+        {
+            BMCWEB_LOG_DEBUG << "Request failed to construct" << reqEc;
+            return;
+        }
         thisReq.session = userSession;
 
         // Fetch the client IP address
@@ -338,18 +343,6 @@ class Connection :
                         << thisReq.methodString() << " " << thisReq.target()
                         << " " << thisReq.ipAddress;
 
-        boost::urls::error_code ec;
-        req->urlView = boost::urls::parse_relative_ref(
-            boost::urls::string_view(req->target().data(),
-                                     req->target().size()),
-            ec);
-        if (ec)
-        {
-            return;
-        }
-        req->url = std::string_view(req->urlView.encoded_path().data(),
-                                    req->urlView.encoded_path().size());
-
         res.setCompleteRequestHandler(nullptr);
         res.isAliveHelper = [this]() -> bool { return isAlive(); };
 
@@ -362,7 +355,7 @@ class Connection :
             return;
         }
 
-        if (!crow::authorization::isOnWhitelist(req->url, req->method()) &&
+        if (!crow::authorization::isOnAllowlist(req->url, req->method()) &&
             thisReq.session == nullptr)
         {
             BMCWEB_LOG_WARNING << "[AuthMiddleware] authorization failed";
@@ -432,6 +425,10 @@ class Connection :
 
     void completeRequest()
     {
+        if (!req)
+        {
+            return;
+        }
         BMCWEB_LOG_INFO << "Response: " << this << ' ' << req->url << ' '
                         << res.resultInt() << " keepalive=" << req->keepAlive();
 
@@ -563,21 +560,6 @@ class Connection :
 
                 boost::beast::http::verb method = parser->get().method();
                 readClientIp();
-                boost::urls::error_code uriEc;
-                boost::urls::string_view uriStringView(
-                    parser->get().target().data(),
-                    parser->get().target().size());
-                BMCWEB_LOG_DEBUG << "Parsing URI: " << uriStringView;
-                req->urlView =
-                    boost::urls::parse_relative_ref(uriStringView, uriEc);
-                if (uriEc)
-                {
-                    BMCWEB_LOG_ERROR << "Failed to parse URI "
-                                     << uriEc.message();
-                    return;
-                }
-                req->url = std::string_view(req->urlView.encoded_path().data(),
-                                            req->urlView.encoded_path().size());
 
                 boost::asio::ip::address ip;
                 if (getClientIp(ip))
