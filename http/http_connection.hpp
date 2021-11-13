@@ -365,7 +365,7 @@ class Connection :
             completeRequest();
             return;
         }
-
+#endif // BMCWEB_INSECURE_DISABLE_AUTHENTICATION
         res.setCompleteRequestHandler([self(shared_from_this())] {
             boost::asio::post(self->adaptor.get_executor(),
                               [self] { self->completeRequest(); });
