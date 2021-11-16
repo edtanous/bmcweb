@@ -553,8 +553,7 @@ inline void
                     const std::variant<std::string>& property) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                    "Location";
+                BMCWEB_LOG_DEBUG << "DBUS response error for Location";
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -562,8 +561,7 @@ inline void
             const std::string* value = std::get_if<std::string>(&property);
             if (value == nullptr)
             {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for locaton code";
+                BMCWEB_LOG_DEBUG << "Null value returned for locaton code";
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -583,16 +581,14 @@ inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     const std::variant<std::string>& chassisUUID) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                    "UUID";
+                BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
                 messages::internalError(asyncResp->res);
                 return;
             }
             const std::string* value = std::get_if<std::string>(&chassisUUID);
             if (value == nullptr)
             {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for UUID";
+                BMCWEB_LOG_DEBUG << "Null value returned for UUID";
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -702,12 +698,10 @@ inline void requestRoutesChassis(App& app)
                             connectionNames[0].second;
                         const std::array<const char*, 2> hasIndicatorLed = {
                             "xyz.openbmc_project.Inventory.Item.Panel",
-                            "xyz.openbmc_project.Inventory.Item.Board."
-                            "Motherboard"};
+                            "xyz.openbmc_project.Inventory.Item.Board.Motherboard"};
 
                         const std::string assetTagInterface =
-                            "xyz.openbmc_project.Inventory.Decorator."
-                            "AssetTag";
+                            "xyz.openbmc_project.Inventory.Decorator.AssetTag";
                         if (std::find(interfaces2.begin(), interfaces2.end(),
                                       assetTagInterface) != interfaces2.end())
                         {
@@ -718,8 +712,7 @@ inline void requestRoutesChassis(App& app)
                                     if (ec)
                                     {
                                         BMCWEB_LOG_DEBUG
-                                            << "DBus response error for "
-                                               "AssetTag";
+                                            << "DBus response error for AssetTag";
                                         messages::internalError(asyncResp->res);
                                         return;
                                     }
@@ -729,8 +722,7 @@ inline void requestRoutesChassis(App& app)
                                     if (assetTag == nullptr)
                                     {
                                         BMCWEB_LOG_DEBUG
-                                            << "Null value returned "
-                                               "for Chassis AssetTag";
+                                            << "Null value returned for Chassis AssetTag";
                                         messages::internalError(asyncResp->res);
                                         return;
                                     }
@@ -845,9 +837,9 @@ inline void requestRoutesChassis(App& app)
                             {
                                 getChassisUUID(asyncResp, connectionName, path);
                             }
-                            else if (interface ==
-                                     "xyz.openbmc_project.Inventory."
-                                     "Decorator.LocationCode")
+                            else if (
+                                interface ==
+                                "xyz.openbmc_project.Inventory.Decorator.LocationCode")
                             {
                                 getChassisLocationCode(asyncResp,
                                                        connectionName, path);
@@ -976,8 +968,7 @@ inline void requestRoutesChassis(App& app)
             {
                 asyncResp->res.addHeader(
                     boost::beast::http::field::warning,
-                    "299 - \"IndicatorLED is deprecated. Use "
-                    "LocationIndicatorActive instead.\"");
+                    "299 - \"IndicatorLED is deprecated. Use LocationIndicatorActive instead.\"");
             }
 
             const std::array<const char*, 2> interfaces = {
@@ -1025,8 +1016,7 @@ inline void requestRoutesChassis(App& app)
 
                         const std::array<const char*, 2> hasIndicatorLed = {
                             "xyz.openbmc_project.Inventory.Item.Panel",
-                            "xyz.openbmc_project.Inventory.Item.Board."
-                            "Motherboard"};
+                            "xyz.openbmc_project.Inventory.Item.Board.Motherboard"};
                         bool indicatorChassis = false;
                         for (const char* interface : hasIndicatorLed)
                         {
