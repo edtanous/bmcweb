@@ -332,7 +332,7 @@ class Connection :
             if (thisReq.getHeaderValue(boost::beast::http::field::host).empty())
             {
                 res.result(boost::beast::http::status::bad_request);
-                completeRequest(res);
+                completeRequest();
                 return;
             }
         }
@@ -351,27 +351,25 @@ class Connection :
 
         if (res.completed)
         {
-            completeRequest(res);
+            completeRequest();
             return;
         }
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHENTICATION
         if (!crow::authorization::isOnAllowlist(req->url, req->method()) &&
             thisReq.session == nullptr)
         {
-            BMCWEB_LOG_WARNING << "Authentication failed";
+            BMCWEB_LOG_WARNING << "[AuthMiddleware] authorization failed";
             forward_unauthorized::sendUnauthorized(
                 req->url, req->getHeaderValue("User-Agent"),
                 req->getHeaderValue("Accept"), res);
-            completeRequest(res);
+            completeRequest();
             return;
         }
 
-        auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
-        BMCWEB_LOG_DEBUG << "Setting completion handler for connection";
-        asyncResp->res.setCompleteRequestHandler(
-            [self(shared_from_this())](crow::Response& res) {
-                self->completeRequest(res);
-            });
+        res.setCompleteRequestHandler([self(shared_from_this())] {
+            boost::asio::post(self->adaptor.get_executor(),
+                              [self] { self->completeRequest(); });
+        });
 
         if (thisReq.isUpgrade() &&
             boost::iequals(
@@ -381,7 +379,7 @@ class Connection :
             handler->handleUpgrade(thisReq, res, std::move(adaptor));
             // delete lambda with self shared_ptr
             // to enable connection destruction
-            asyncResp->res.setCompleteRequestHandler(nullptr);
+            res.setCompleteRequestHandler(nullptr);
             return;
         }
 
@@ -421,7 +419,8 @@ class Connection :
                                          boost::asio::ip::tcp::socket>>)
         {
             adaptor.next_layer().close();
-            if (sessionIsFromTransport && userSession != nullptr)
+#ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
+            if (userSession != nullptr)
             {
                 BMCWEB_LOG_DEBUG
                     << this
@@ -429,6 +428,7 @@ class Connection :
                 persistent_data::SessionStore::getInstance().removeSession(
                     userSession);
             }
+#endif // BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
         }
         else
         {
@@ -436,13 +436,12 @@ class Connection :
         }
     }
 
-    void completeRequest(crow::Response& thisRes)
+    void completeRequest()
     {
         if (!req)
         {
             return;
         }
-        res = std::move(thisRes);
         BMCWEB_LOG_INFO << "Response: " << this << ' ' << req->url << ' '
                         << res.resultInt() << " keepalive=" << req->keepAlive();
 
@@ -495,7 +494,7 @@ class Connection :
 
         res.keepAlive(req->keepAlive());
 
-        doWrite(res);
+        doWrite();
 
         // delete lambda with self shared_ptr
         // to enable connection destruction
@@ -679,7 +678,7 @@ class Connection :
             });
     }
 
-    void doWrite(crow::Response& thisRes)
+    void doWrite()
     {
         bool loggedIn = req && req->session;
         if (loggedIn)
@@ -691,8 +690,8 @@ class Connection :
             startDeadline(loggedOutAttempts);
         }
         BMCWEB_LOG_DEBUG << this << " doWrite";
-        thisRes.preparePayload();
-        serializer.emplace(*thisRes.stringResponse);
+        res.preparePayload();
+        serializer.emplace(*res.stringResponse);
         boost::beast::http::async_write(
             adaptor, *serializer,
             [this,
