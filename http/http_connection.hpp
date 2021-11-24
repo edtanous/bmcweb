@@ -382,6 +382,19 @@ class Connection :
             res.setCompleteRequestHandler(nullptr);
             return;
         }
+
+        std::string url(thisReq.target());
+        std::size_t pos = url.rfind("Dump/attachment");
+        if (pos != std::string::npos)
+        {
+            BMCWEB_LOG_DEBUG << "upgrade stream connection";
+            handler->handleUpgrade(thisReq, res, std::move(adaptor));
+            // delete lambda with self shared_ptr
+            // to enable connection destruction
+            res.completeRequestHandler = nullptr;
+            return;
+        }
+
         auto asyncResp = std::make_shared<bmcweb::AsyncResp>(res);
         handler->handle(thisReq, asyncResp);
     }
