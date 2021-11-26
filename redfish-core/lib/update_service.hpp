@@ -1042,8 +1042,7 @@ inline static void
 
                 crow::connections::systemBus->async_method_call(
                     [aResp](const boost::system::error_code ec,
-                            const std::variant<std::vector<
-                                sdbusplus::message::object_path>>& resp) {
+                            std::variant<std::vector<std::string>>& resp) {
                         if (ec)
                         {
                             BMCWEB_LOG_ERROR
@@ -1052,10 +1051,8 @@ inline static void
                             return;
                         }
 
-                        const std::vector<sdbusplus::message::object_path>*
-                            associations = std::get_if<
-                                std::vector<sdbusplus::message::object_path>>(
-                                &resp);
+                        std::vector<std::string>* associations =
+                            std::get_if<std::vector<std::string>>(&resp);
                         if ((associations == nullptr) ||
                             (associations->empty()))
                         {
@@ -1064,19 +1061,21 @@ inline static void
                             return;
                         }
 
-                        for (const auto& association : *associations)
+                        for (const std::string& association : *associations)
                         {
-                            if (association.filename().empty())
+                            if (association.empty())
                             {
                                 continue;
                             }
+                            sdbusplus::message::object_path associationPath(
+                                association);
 
-                            getRelatedItemsOther(aResp, association);
+                            getRelatedItemsOther(aResp, associationPath);
                         }
                     },
-                    obj.second[0].first, path.str,
+                    "xyz.openbmc_project.ObjectMapper", path.str + "/inventory",
                     "org.freedesktop.DBus.Properties", "Get",
-                    "xyz.openbmc_project.Association", "Endpoints");
+                    "xyz.openbmc_project.Association", "endpoints");
             }
         },
         "xyz.openbmc_project.ObjectMapper",
