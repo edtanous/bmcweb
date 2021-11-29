@@ -953,6 +953,47 @@ inline static void getRelatedItemsPCIeDevice(
 }
 
 inline static void
+    getRelatedItemsSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const sdbusplus::message::object_path& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, objPath](const boost::system::error_code& errorCode,
+                             std::variant<std::vector<std::string>>& resp) {
+            if (errorCode)
+            {
+                BMCWEB_LOG_DEBUG << "error_code = " << errorCode;
+                BMCWEB_LOG_DEBUG << "error msg = " << errorCode.message();
+                return;
+            }
+            std::string fabricName = "fabric";
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "Invalid Object ";
+                return;
+            }
+            for (const std::string& path : *data)
+            {
+                sdbusplus::message::object_path myLocalPath(path);
+                fabricName = myLocalPath.filename();
+            }
+            nlohmann::json& relatedItem =
+                asyncResp->res.jsonValue["RelatedItem"];
+            nlohmann::json& relatedItemCount =
+                asyncResp->res.jsonValue["RelatedItem@odata.count"];
+            relatedItem.push_back(
+                {{"@odata.id", "/redfish/v1/Fabrics/" + fabricName +
+                                   "/Switches/" + objPath.filename()}});
+
+            relatedItemCount = relatedItem.size();
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath.str + "/fabric",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline static void
     getRelatedItemsOther(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const sdbusplus::message::object_path& association)
 {
@@ -1027,6 +1068,12 @@ inline static void
                     {
                         getRelatedItemsPowerSupply(aResp, association);
                     }
+
+                    if (interfaces == "xyz.openbmc_project.Inventory."
+                                      "Item.Switch")
+                    {
+                        getRelatedItemsSwitch(aResp, association);
+                    }
                 }
             }
 
@@ -1035,10 +1082,11 @@ inline static void
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", association.str,
-        std::array<const char*, 8>{
+        std::array<const char*, 9>{
             "xyz.openbmc_project.Inventory.Item.PowerSupply",
             "xyz.openbmc_project.Inventory.Item.Accelerator",
             "xyz.openbmc_project.Inventory.Item.PCIeDevice",
+            "xyz.openbmc_project.Inventory.Item.Switch",
             "xyz.openbmc_project.Inventory.Item.Cpu",
             "xyz.openbmc_project.Inventory.Item.Drive",
             "xyz.openbmc_project.Inventory.Item.Board",
