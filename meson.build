@@ -382,10 +382,12 @@ srcfiles_unittest = [
   'include/ut/multipart_test.cpp',
   'include/ut/http_utility_test.cpp',
   'include/ut/human_sort_test.cpp',
+  'include/ut/ssl_key_handler_test.cpp',
+  'include/ut/file_watcher_test.cpp',
+  'redfish-core/ut/privileges_test.cpp',
+  'redfish-core/ut/lock_test.cpp',
   'redfish-core/ut/configfile_test.cpp',
   'redfish-core/ut/hex_utils_test.cpp',
-  'redfish-core/ut/lock_test.cpp',
-  'redfish-core/ut/privileges_test.cpp',
   'redfish-core/ut/stl_utils_test.cpp',
   'redfish-core/ut/time_utils_test.cpp',
   'redfish-core/ut/registry_utils_test.cpp',
@@ -394,11 +396,18 @@ srcfiles_unittest = [
 ]
 
 if(get_option('tests').enabled())
+    ut_incdir = include_directories(
+        'include',
+        'include/ut/',
+        'redfish-core/include',
+        'redfish-core/lib',
+        'http'
+    )
     # generate the test executable
     ut_bin = executable(
       'bmcweb_unit_test',
       srcfiles_unittest + srcfiles_bmcweb,
-      include_directories : incdir,
+      include_directories : ut_incdir,
       install_dir: bindir,
       dependencies: bmcweb_dependencies + [
         gtest,

@@ -9,9 +9,14 @@
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
 #include <openssl/ssl.h>
+#include <openssl/x509.h>
 
 #include <boost/asio/ssl/context.hpp>
+
+#include <logging.hpp>
 #include <random.hpp>
+#include <asn1.hpp>
+#include <lsp.hpp>
 
 #include <random>
 
@@ -96,7 +101,7 @@ inline bool validateCertificate(X509* const cert)
     return false;
 }
 
-inline bool verifyOpensslKeyCert(const std::string& filepath)
+inline bool verifyOpensslKeyCert(const std::string& filepath, pem_password_cb *pwdCb)
 {
     bool privateKeyValid = false;
     bool certValid = false;
@@ -106,7 +111,7 @@ inline bool verifyOpensslKeyCert(const std::string& filepath)
     FILE* file = fopen(filepath.c_str(), "r");
     if (file != nullptr)
     {
-        EVP_PKEY* pkey = PEM_read_PrivateKey(file, nullptr, nullptr, nullptr);
+        EVP_PKEY* pkey = PEM_read_PrivateKey(file, nullptr, pwdCb, nullptr);
         if (pkey != nullptr)
         {
 #if (OPENSSL_VERSION_NUMBER < 0x30000000L)
@@ -246,7 +251,8 @@ inline int addExt(X509* cert, int nid, const char* value)
 }
 
 inline void generateSslCertificate(const std::string& filepath,
-                                   const std::string& cn)
+                                   const std::string& cn,
+                                   std::vector<char> *pkeyPwd)
 {
     FILE* pFile = nullptr;
     std::cout << "Generating new keys\n";
@@ -316,9 +322,14 @@ inline void generateSslCertificate(const std::string& filepath,
 
             if (pFile != nullptr)
             {
-                PEM_write_PrivateKey(pFile, pPrivKey, nullptr, nullptr, 0,
-                                     nullptr, nullptr);
-
+                PEM_write_PrivateKey(
+                    pFile, pPrivKey,
+                    pkeyPwd != nullptr ? EVP_aes_256_cbc() : nullptr, 
+                    pkeyPwd != nullptr 
+                        ? static_cast<unsigned char*>(static_cast<void*>(pkeyPwd->data()))
+                        : nullptr, 
+                    pkeyPwd != nullptr ? static_cast<int>(pkeyPwd->size()) : 0, 
+                    nullptr, nullptr);
                 PEM_write_X509(pFile, x509);
                 fclose(pFile);
                 pFile = nullptr;
@@ -350,12 +361,13 @@ EVP_PKEY* createEcKey()
         pKey = EVP_PKEY_new();
         if (pKey != nullptr)
         {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
             if (EVP_PKEY_assign_EC_KEY(pKey, myecc))
             {
                 /* pKey owns myecc from now */
                 if (EC_KEY_check_key(myecc) <= 0)
                 {
-                    fprintf(stderr, "EC_check_key failed.\n");
+                    BMCWEB_LOG_ERROR << "EC_check_key failed.\n";
                 }
             }
         }
@@ -411,16 +423,68 @@ void initOpenssl()
 #endif
 }
 
-inline void ensureOpensslKeyPresentAndValid(const std::string& filepath)
+inline void encryptCredentials(const std::string &filename, std::vector<char> *pkeyPwd)
 {
-    bool pemFileValid = false;
+    auto fp = fopen(filename.c_str(), "r");
+    if (fp == nullptr) {
+        BMCWEB_LOG_ERROR << "Cannot open filename for reading: " << filename << "\n";
+        return;
+    }
+    auto pkey = PEM_read_PrivateKey(
+        fp, nullptr, lsp::emptyPasswordCallback, nullptr);
+    if (pkey == nullptr) {
+        BMCWEB_LOG_ERROR << "Could not read private key from file: " << filename << "\n";
+        return;
+    }
+    fseek(fp, 0, SEEK_SET);
+    auto x509 = PEM_read_X509(fp, nullptr, nullptr, nullptr);
+    fclose(fp);
 
-    pemFileValid = verifyOpensslKeyCert(filepath);
+    fp = fopen(filename.c_str(), "w");
+    if (fp == nullptr) {
+        BMCWEB_LOG_ERROR << "Cannot open filename for writing: " << filename << "\n";
+        return;
+    }
+    PEM_write_PrivateKey(
+        fp, pkey, EVP_aes_256_cbc(), 
+        pkeyPwd != nullptr 
+            ? static_cast<unsigned char *>(static_cast<void *>(pkeyPwd->data()))
+            : nullptr, 
+        pkeyPwd != nullptr ? static_cast<int>(pkeyPwd->size()) : 0, 
+        nullptr, nullptr);
+    if (x509 != nullptr) {
+        BMCWEB_LOG_INFO << "Writing x509 cert.\n";
+        PEM_write_X509(fp, x509);
+    }
+    fclose(fp);
 
-    if (!pemFileValid)
+    BMCWEB_LOG_INFO << "Encrypted " << filename << "\n";
+
+    EVP_PKEY_free(pkey);
+    X509_free(x509);
+}
+
+inline void ensureOpensslKeyPresentEncryptedAndValid(
+    const std::string& filepath, std::vector<char> *pwd, pem_password_cb *pwdCb)
+{
+    bool pkeyIsEncrypted = false;
+
+    auto ret = asn1::pemPkeyIsEncrypted(filepath.c_str(), &pkeyIsEncrypted);
+    if (ret == -1) {
+        BMCWEB_LOG_INFO << "No private key file available.\n";
+    } else if (ret < -1) {
+        BMCWEB_LOG_ERROR << "Error while determining if private key is encrypted.\n";
+    } else if (!pkeyIsEncrypted) {
+        BMCWEB_LOG_INFO << "Encrypting private key in file: " << filepath << "\n";
+        encryptCredentials(filepath, pwd);
+    } else if (pkeyIsEncrypted) {
+        BMCWEB_LOG_INFO << "TLS key is encrypted.\n";
+    }
+
+    if (!verifyOpensslKeyCert(filepath, pwdCb))
     {
-        std::cerr << "Error in verifying signature, regenerating\n";
-        generateSslCertificate(filepath, "testhost");
+        BMCWEB_LOG_ERROR << "Error in verifying signature, regenerating\n";
+        generateSslCertificate(filepath, "testhost", pwd);
     }
 }
 
@@ -442,6 +506,8 @@ inline std::shared_ptr<boost::asio::ssl::context>
     // mSslContext->set_verify_mode(boost::asio::ssl::verify_peer);
 
     SSL_CTX_set_options(mSslContext->native_handle(), SSL_OP_NO_RENEGOTIATION);
+    SSL_CTX_set_default_passwd_cb(
+            mSslContext->native_handle(), lsp::passwordCallback);
 
     BMCWEB_LOG_DEBUG << "Using default TrustStore location: " << trustStorePath;
     mSslContext->add_verify_path(trustStorePath);

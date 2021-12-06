@@ -114,8 +114,9 @@ inline int onPropertyUpdate(sd_bus_message* m, void* /* userdata */,
             BMCWEB_LOG_INFO << "Ready to generate new HTTPs "
                             << "certificate with subject cn: " << *hostname;
 
+            std::vector<char> &pwd = lsp::getLsp();
             ensuressl::generateSslCertificate("/tmp/hostname_cert.tmp",
-                                              *hostname);
+                                              *hostname, &pwd);
             installCertificate("/tmp/hostname_cert.tmp");
         }
         ASN1_STRING_free(asn1);

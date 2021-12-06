@@ -1,7 +1,10 @@
 #pragma once
 
 #include "http_connection.hpp"
+#include "file_watcher.hpp"
 #include "logging.hpp"
+#include "lsp.hpp"
+#include "ssl_key_handler.hpp"
 
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -10,7 +13,6 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <ssl_key_handler.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -35,7 +37,8 @@ class Server
                std::make_shared<boost::asio::io_context>()) :
         ioService(std::move(io)),
         acceptor(std::move(acceptorIn)),
-        signals(*ioService, SIGINT, SIGTERM, SIGHUP), handler(handlerIn),
+        signals(*ioService, SIGINT, SIGTERM, SIGHUP), timer(*ioService), 
+        fileWatcher(), handler(handlerIn), 
         adaptorCtx(std::move(adaptorCtx))
     {}
 
@@ -75,7 +78,9 @@ class Server
 
     void run()
     {
+        BMCWEB_LOG_INFO << "Server<Handler,Adaptor>::run()";
         loadCertificate();
+        watchCertificateChange();
         updateDateStr();
 
         getCachedDateStr = [this]() -> std::string {
@@ -117,7 +122,9 @@ class Server
         fs::path certFile = certPath / "server.pem";
         BMCWEB_LOG_INFO << "Building SSL Context file=" << certFile;
         std::string sslPemFile(certFile);
-        ensuressl::ensureOpensslKeyPresentAndValid(sslPemFile);
+        std::vector<char> &pwd = lsp::getLsp();
+        ensuressl::ensureOpensslKeyPresentEncryptedAndValid(
+            sslPemFile, &pwd, lsp::passwordCallback);
         std::shared_ptr<boost::asio::ssl::context> sslContext =
             ensuressl::getSslContext(sslPemFile);
         adaptorCtx = sslContext;
@@ -125,12 +132,51 @@ class Server
 #endif
     }
 
+    bool fileHasCredentials(const std::string &filename) 
+    {
+        FILE* fp = fopen(filename.c_str(), "r");
+        if (fp == nullptr) {
+            BMCWEB_LOG_ERROR << "Cannot open filename for reading: " << filename 
+                << "\n";
+            return false;
+        }
+        BMCWEB_LOG_INFO << "Opened " << filename << "\n";
+        return PEM_read_PrivateKey(fp, nullptr, lsp::passwordCallback, nullptr) 
+            != nullptr;
+    }
+
+    void ensureCredentialsAreEncrypted(const std::string &filename)
+    {
+        bool isEncrypted = false;
+        asn1::pemPkeyIsEncrypted(filename, &isEncrypted);
+        if (!isEncrypted) {
+            BMCWEB_LOG_INFO << "Credentials are not encrypted, encrypting.\n";
+            std::vector<char> &pwd = lsp::getLsp();
+            ensuressl::encryptCredentials(filename, &pwd);
+        }
+    }
+
+    void watchCertificateChange()
+    {
+        fileWatcher.setup(ioService);
+        fileWatcher.addPath("/etc/ssl/certs/https/", IN_CLOSE_WRITE);
+        fileWatcher.watch([&](const std::vector<FileWatcherEvent> &events) {
+            for (const auto &ev : events) {
+                std::string filename = ev.path + ev.name;
+                if (fileHasCredentials(filename)) {
+                    BMCWEB_LOG_INFO << "Written file has credentials.";
+                    ensureCredentialsAreEncrypted(filename);
+                }
+            }
+        });
+    }
+
     void startAsyncWaitForSignal()
     {
         signals.async_wait([this](const boost::system::error_code& ec,
                                   int signalNo) {
             if (ec)
-            {
+            { 
                 BMCWEB_LOG_INFO << "Error in signal handler" << ec.message();
             }
             else
@@ -197,6 +243,8 @@ class Server
     std::function<std::string()> getCachedDateStr;
     std::unique_ptr<boost::asio::ip::tcp::acceptor> acceptor;
     boost::asio::signal_set signals;
+    boost::asio::steady_timer timer;
+    InotifyFileWatcher fileWatcher;
 
     std::string dateStr;
 

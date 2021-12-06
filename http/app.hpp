@@ -1,6 +1,7 @@
 #pragma once
 
 #include "async_resp.hpp"
+#include "http_connection.hpp"
 #include "http_request.hpp"
 #include "http_server.hpp"
 #include "logging.hpp"
