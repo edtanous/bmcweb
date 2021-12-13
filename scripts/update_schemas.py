@@ -109,7 +109,6 @@ include_list = [
     'TelemetryService',
     'Thermal',
     'ThermalSubsystem',
-    'ThermalMetrics',
     'Triggers',
     'TriggersCollection',
     'UpdateService',
