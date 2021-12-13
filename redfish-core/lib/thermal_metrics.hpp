@@ -9,10 +9,9 @@ inline void
     processSensorsValue(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::vector<std::string>& sensorPaths,
                         const std::string& chassisId,
-                        const ManagedObjectsVectorType& managedObjectsResp)
+                        const ManagedObjectsVectorType& managedObjectsResp,
+                        const std::string& metricsType)
 {
-    nlohmann::json& resArray =
-        asyncResp->res.jsonValue["TemperatureReadingsCelsius"];
     // Get sensor reading from managed object
     for (const std::string& sensorPath : sensorPaths)
     {
@@ -48,7 +47,8 @@ inline void
         const std::string& sensorName = split[5];
         BMCWEB_LOG_DEBUG << "sensorName " << sensorName << " sensorType "
                          << sensorType;
-        if (sensorType != "temperature")
+
+        if ((metricsType == "thermal") && (sensorType != "temperature"))
         {
             BMCWEB_LOG_DEBUG << "Skip non thermal sensor type:" << sensorType;
             continue;
@@ -70,13 +70,27 @@ inline void
                 {
                     reading = *doubleValue;
                 }
-                resArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                       "/Sensors/" + sensorName},
-                     {"DataSourceUri", "/redfish/v1/Chassis/" + chassisId +
+                if (metricsType == "thermal")
+                {
+                    nlohmann::json& resArray =
+                        asyncResp->res.jsonValue["TemperatureReadingsCelsius"];
+                    resArray.push_back(
+                        {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
                                            "/Sensors/" + sensorName},
-                     {"DeviceName", sensorName},
-                     {"Reading", std::to_string(reading)}});
+                         {"DataSourceUri", "/redfish/v1/Chassis/" + chassisId +
+                                               "/Sensors/" + sensorName},
+                         {"DeviceName", sensorName},
+                         {"Reading", std::to_string(reading)}});
+                }
+                else
+                {
+                    nlohmann::json& resArray =
+                        asyncResp->res.jsonValue["MetricValues"];
+                    resArray.push_back(
+                        {{"MetricProperty", "/redfish/v1/Chassis/" + chassisId +
+                                                "/Sensors/" + sensorName},
+                         {"MetricValue", std::to_string(reading)}});
+                }
             }
         }
     }
@@ -85,12 +99,13 @@ inline void
 inline void
     processChassisSensors(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const ManagedObjectsVectorType& managedObjectsResp,
-                          const std::string& chassisPath)
+                          const std::string& chassisPath,
+                          const std::string& metricsType)
 {
     auto getAllChassisHandler =
-        [asyncResp, chassisPath, managedObjectsResp](
-            const boost::system::error_code ec,
-            std::variant<std::vector<std::string>>& chassisLinks) {
+        [asyncResp, chassisPath, managedObjectsResp,
+         metricsType](const boost::system::error_code ec,
+                      std::variant<std::vector<std::string>>& chassisLinks) {
             std::vector<std::string> chassisPaths;
             if (ec)
             {
@@ -119,10 +134,10 @@ inline void
                 const std::string& chassisId = path.filename();
 
                 auto getAllChassisSensors =
-                    [asyncResp, chassisId, managedObjectsResp](
-                        const boost::system::error_code ec,
-                        const std::variant<std::vector<std::string>>&
-                            variantEndpoints) {
+                    [asyncResp, chassisId, managedObjectsResp,
+                     metricsType](const boost::system::error_code ec,
+                                  const std::variant<std::vector<std::string>>&
+                                      variantEndpoints) {
                         if (ec)
                         {
                             BMCWEB_LOG_ERROR
@@ -143,7 +158,7 @@ inline void
                         }
                         // Process sensor readings
                         processSensorsValue(asyncResp, *sensorPaths, chassisId,
-                                            managedObjectsResp);
+                                            managedObjectsResp, metricsType);
                     };
                 crow::connections::systemBus->async_method_call(
                     getAllChassisSensors, "xyz.openbmc_project.ObjectMapper",
@@ -161,11 +176,13 @@ inline void
 
 inline void getServiceRootManagedObjects(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& connection, const std::string& chassisPath)
+    const std::string& connection, const std::string& chassisPath,
+    const std::string& metricsType)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp, connection, chassisPath](const boost::system::error_code ec,
-                                             ManagedObjectsVectorType& resp) {
+        [asyncResp, connection, chassisPath,
+         metricsType](const boost::system::error_code ec,
+                      ManagedObjectsVectorType& resp) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR
@@ -175,7 +192,7 @@ inline void getServiceRootManagedObjects(
                 return;
             }
             std::sort(resp.begin(), resp.end());
-            processChassisSensors(asyncResp, resp, chassisPath);
+            processChassisSensors(asyncResp, resp, chassisPath, metricsType);
         },
         connection, "/", "org.freedesktop.DBus.ObjectManager",
         "GetManagedObjects");
@@ -183,23 +200,25 @@ inline void getServiceRootManagedObjects(
 
 inline void getServiceManagedObjects(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& connection, const std::string& chassisPath)
+    const std::string& connection, const std::string& chassisPath,
+    const std::string& metricsType)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp, connection, chassisPath](const boost::system::error_code ec,
-                                             ManagedObjectsVectorType& resp) {
+        [asyncResp, connection, chassisPath,
+         metricsType](const boost::system::error_code ec,
+                      ManagedObjectsVectorType& resp) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG
                     << "GetManagedObjects is not at sensor path for connection:"
                     << connection << "\n";
                 // Check managed objects on service root
-                getServiceRootManagedObjects(asyncResp, connection,
-                                             chassisPath);
+                getServiceRootManagedObjects(asyncResp, connection, chassisPath,
+                                             metricsType);
                 return;
             }
             std::sort(resp.begin(), resp.end());
-            processChassisSensors(asyncResp, resp, chassisPath);
+            processChassisSensors(asyncResp, resp, chassisPath, metricsType);
         },
         connection, "/xyz/openbmc_project/sensors",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
@@ -207,7 +226,8 @@ inline void getServiceManagedObjects(
 
 inline void
     processSensorServices(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const std::string& chassisPath)
+                          const std::string& chassisPath,
+                          const std::string& metricsType)
 {
     // Sensor interface implemented by sensor services
     const std::array<const char*, 1> sensorInterface = {
@@ -215,8 +235,8 @@ inline void
 
     // Get all sensors on the system
     auto getAllSensors =
-        [asyncResp,
-         chassisPath](const boost::system::error_code ec,
+        [asyncResp, chassisPath,
+         metricsType](const boost::system::error_code ec,
                       const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)
             {
@@ -251,8 +271,8 @@ inline void
                 // Collect all GetManagedObjects for services
                 for (const std::string& connection : sensorServices)
                 {
-                    getServiceManagedObjects(asyncResp, connection,
-                                             chassisPath);
+                    getServiceManagedObjects(asyncResp, connection, chassisPath,
+                                             metricsType);
                 }
             }
         };
@@ -316,7 +336,8 @@ inline void requestRoutesThermalMetrics(App& app)
                             nlohmann::json::array();
 
                         // Identify sensor services for sensor readings
-                        processSensorServices(asyncResp, chassisPath);
+                        processSensorServices(asyncResp, chassisPath,
+                                              "thermal");
                         return;
                     }
                     messages::resourceNotFound(asyncResp->res, "Chassis",

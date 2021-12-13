@@ -60,6 +60,7 @@ incdir = include_directories(
 ## create a MAP of  "options : feature_flag"
 
 feature_map = {
+  'platform-metrics'                            : '-DBMCWEB_ENABLE_PLATFORM_METRICS',
   'basic-auth'                                  : '-DBMCWEB_ENABLE_BASIC_AUTHENTICATION',
   'cookie-auth'                                 : '-DBMCWEB_ENABLE_COOKIE_AUTHENTICATION',
   'google-api'                                  : '-DBMCWEB_ENABLE_GOOGLE_API',

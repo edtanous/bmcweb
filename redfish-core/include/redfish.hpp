@@ -231,8 +231,11 @@ class RedfishService
         requestRoutesMetricReportDefinitionCollection(app);
         requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReportCollection(app);
+#ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+        requestRoutesPlatformMetricReport(app);
+#else
         requestRoutesMetricReport(app);
-
+#endif
         requestRoutesFabricCollection(app);
         requestRoutesFabric(app);
         requestRoutesSwitchCollection(app);
