@@ -229,11 +229,12 @@ class RedfishService
 
         requestRoutesTelemetryService(app);
         requestRoutesMetricReportDefinitionCollection(app);
-        requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReportCollection(app);
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+        requestRoutesPlatformMetricReportDefinition(app);
         requestRoutesPlatformMetricReport(app);
 #else
+        requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReport(app);
 #endif
         requestRoutesFabricCollection(app);

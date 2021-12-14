@@ -351,22 +351,30 @@ inline void requestRoutesMetricReportDefinitionCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/TelemetryService/MetricReportDefinitions/")
         .privileges(redfish::privileges::getMetricReportDefinitionCollection)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#MetricReportDefinitionCollection."
-                    "MetricReportDefinitionCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/TelemetryService/MetricReportDefinitions";
-                asyncResp->res.jsonValue["Name"] =
-                    "Metric Definition Collection";
-                const std::vector<const char*> interfaces{
-                    telemetry::reportInterface};
-                collection_util::getCollectionMembers(
-                    asyncResp, telemetry::metricReportDefinitionUri, interfaces,
-                    "/xyz/openbmc_project/Telemetry/Reports/TelemetryService");
-            });
+        .methods(
+            boost::beast::http::verb::
+                get)([](const crow::Request&,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#MetricReportDefinitionCollection."
+                "MetricReportDefinitionCollection";
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/TelemetryService/MetricReportDefinitions";
+            asyncResp->res.jsonValue["Name"] = "Metric Definition Collection";
+#ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+            nlohmann::json& addMembers = asyncResp->res.jsonValue["Members"];
+            addMembers.push_back(
+                {{"@odata.id",
+                  "/redfish/v1/TelemetryService/MetricReportDefinitions/PlatformMetrics"}});
+            asyncResp->res.jsonValue["Members@odata.count"] = addMembers.size();
+            return;
+#endif
+            const std::vector<const char*> interfaces{
+                telemetry::reportInterface};
+            collection_util::getCollectionMembers(
+                asyncResp, telemetry::metricReportDefinitionUri, interfaces,
+                "/xyz/openbmc_project/Telemetry/Reports/TelemetryService");
+        });
 
     BMCWEB_ROUTE(app, "/redfish/v1/TelemetryService/MetricReportDefinitions/")
         .privileges(redfish::privileges::postMetricReportDefinitionCollection)
@@ -410,6 +418,40 @@ inline void requestRoutesMetricReportDefinitionCollection(App& app)
             }
         });
 }
+
+#ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+inline void getPlatformMetricReportDefinition(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+{
+    asyncResp->res.jsonValue["@odata.type"] =
+        "#MetricReportDefinition.v1_3_0.MetricReportDefinition";
+    asyncResp->res.jsonValue["@odata.id"] =
+        telemetry::metricReportDefinitionUri + std::string("/") + id;
+    asyncResp->res.jsonValue["Id"] = id;
+    asyncResp->res.jsonValue["Name"] = id;
+    asyncResp->res.jsonValue["MetricReport"]["@odata.id"] =
+        telemetry::metricReportUri + std::string("/") + id;
+    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+    asyncResp->res.jsonValue["ReportUpdates"] = "Overwrite";
+    asyncResp->res.jsonValue["MetricReportDefinitionType"] = "OnRequest";
+    std::vector<std::string> redfishReportActions;
+    redfishReportActions.emplace_back("LogToMetricReportsCollection");
+    asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
+}
+
+inline void requestRoutesPlatformMetricReportDefinition(App& app)
+{
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/TelemetryService/MetricReportDefinitions/PlatformMetrics/")
+        .privileges(redfish::privileges::getMetricReportDefinition)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                getPlatformMetricReportDefinition(asyncResp, "PlatformMetrics");
+            });
+}
+#endif
 
 inline void requestRoutesMetricReportDefinition(App& app)
 {
