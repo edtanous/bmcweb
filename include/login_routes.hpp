@@ -1,5 +1,7 @@
 #pragma once
 
+#include "multipart_parser.hpp"
+
 #include <app.hpp>
 #include <boost/container/flat_set.hpp>
 #include <common.hpp>
@@ -121,6 +123,50 @@ inline void requestRoutes(App& app)
                     }
                 }
             }
+            else if (boost::starts_with(contentType, "multipart/form-data"))
+            {
+                looksLikePhosphorRest = true;
+                MultipartParser parser;
+                ParserError ec = parser.parse(req);
+                if (ec != ParserError::PARSER_SUCCESS)
+                {
+                    // handle error
+                    BMCWEB_LOG_ERROR << "MIME parse failed, ec : "
+                                     << static_cast<int>(ec);
+                    asyncResp->res.result(
+                        boost::beast::http::status::bad_request);
+                    return;
+                }
+
+                for (const FormPart& formpart : parser.mime_fields)
+                {
+                    boost::beast::http::fields::const_iterator it =
+                        formpart.fields.find("Content-Disposition");
+                    if (it == formpart.fields.end())
+                    {
+                        BMCWEB_LOG_ERROR << "Couldn't find Content-Disposition";
+                        asyncResp->res.result(
+                            boost::beast::http::status::bad_request);
+                        continue;
+                    }
+
+                    BMCWEB_LOG_INFO << "Parsing value " << it->value();
+
+                    if (it->value() == "form-data; name=\"username\"")
+                    {
+                        username = formpart.content;
+                    }
+                    else if (it->value() == "form-data; name=\"password\"")
+                    {
+                        password = formpart.content;
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_INFO << "Extra format, ignore it."
+                                        << it->value();
+                    }
+                }
+            }
             else
             {
                 // check if auth was provided as a headers
@@ -143,8 +189,7 @@ inline void requestRoutes(App& app)
                     auto session =
                         persistent_data::SessionStore::getInstance()
                             .generateUserSession(
-                                username, req.ipAddress.to_string(),
-                                unsupportedClientId,
+                                username, req.ipAddress, unsupportedClientId,
                                 persistent_data::PersistenceType::TIMEOUT,
                                 isConfigureSelfOnly);
 

@@ -46,8 +46,13 @@
 #include "../lib/task.hpp"
 #include "../lib/telemetry_service.hpp"
 #include "../lib/thermal.hpp"
+<<<<<<< HEAD
 #include "../lib/thermal_metrics.hpp"
 #include "../lib/thermal_subsystem.hpp"
+||||||| accdbb2
+=======
+#include "../lib/trigger.hpp"
+>>>>>>> origin/master
 #include "../lib/update_service.hpp"
 #include "../lib/virtual_media.hpp"
 
@@ -232,6 +237,7 @@ class RedfishService
         requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReportCollection(app);
         requestRoutesMetricReport(app);
+<<<<<<< HEAD
 
         requestRoutesFabricCollection(app);
         requestRoutesFabric(app);
@@ -242,6 +248,11 @@ class RedfishService
         requestRoutesPortMetrics(app);
         requestRoutesEndpointCollection(app);
         requestRoutesEndpoint(app);
+||||||| accdbb2
+=======
+        requestRoutesTriggerCollection(app);
+        requestRoutesTrigger(app);
+>>>>>>> origin/master
     }
 };
 

@@ -2,15 +2,15 @@ project('bmcweb', 'cpp',
         version : '1.0',
         meson_version: '>=0.57.0',
         default_options: [
-            'werror=true',
-            'warning_level=3',
-            'cpp_std=c++20',
-            'buildtype=debugoptimized',
-            'b_ndebug=if-release',
-            'b_lto=true',
-            'cpp_rtti=false',
             'b_lto_mode=default',
-            'b_lto_threads=0'
+            'b_lto_threads=0',
+            'b_lto=true',
+            'b_ndebug=if-release',
+            'buildtype=debugoptimized',
+            'cpp_rtti=false',
+            'cpp_std=c++20',
+            'warning_level=3',
+            'werror=true',
            ])
 
 # Project related links
@@ -72,21 +72,28 @@ feature_map = {
   'insecure-tftp-update'                        : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
   'kvm'                                         : '-DBMCWEB_ENABLE_KVM' ,
   'mutual-tls-auth'                             : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
+<<<<<<< HEAD
   'redfish'                                     : '-DBMCWEB_ENABLE_REDFISH',
+||||||| accdbb2
+  'pam'                                         : '-DWEBSERVER_ENABLE_PAM',
+  'redfish'                                     : '-DBMCWEB_ENABLE_REDFISH',
+=======
+  'redfish-allow-deprecated-power-thermal'      : '-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL',
+>>>>>>> origin/master
   'redfish-bmc-journal'                         : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
   'redfish-cpu-log'                             : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
   'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
-  'redfish-host-logger'                         : '-DBMCWEB_ENABLE_REDFISH_HOST_LOGGER',
   'redfish-dump-log'                            : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
-  'redfish-provisioning-feature'                : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
-  'rest'                                        : '-DBMCWEB_ENABLE_DBUS_REST',
-  'redfish-allow-deprecated-power-thermal'      : '-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL',
+  'redfish-host-logger'                         : '-DBMCWEB_ENABLE_REDFISH_HOST_LOGGER',
   'redfish-new-powersubsystem-thermalsubsystem' : '-DBMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM',
+  'redfish-provisioning-feature'                : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
+  'redfish'                                     : '-DBMCWEB_ENABLE_REDFISH',
+  'rest'                                        : '-DBMCWEB_ENABLE_DBUS_REST',
   'session-auth'                                : '-DBMCWEB_ENABLE_SESSION_AUTHENTICATION',
   'static-hosting'                              : '-DBMCWEB_ENABLE_STATIC_HOSTING',
-  #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
   'vm-websocket'                                : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
   'xtoken-auth'                                 : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
+  #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
 }
 
 # Get the options status and build a project summary to show which flags are
@@ -120,12 +127,13 @@ endif
 # -Wpedantic, -Wextra comes by default with warning level
 add_project_arguments(
   cxx.get_supported_arguments([
-  '-Wold-style-cast',
   '-Wcast-align',
-  '-Wunused',
-  '-Woverloaded-virtual',
   '-Wconversion',
+  '-Wformat=2',
+  '-Wold-style-cast',
+  '-Woverloaded-virtual',
   '-Wsign-conversion',
+  '-Wunused',
   '-Wno-attributes',
   ]),
   language: 'cpp'
@@ -135,26 +143,17 @@ if (cxx.get_id() == 'clang' and cxx.version().version_compare('>9.0'))
 add_project_arguments(
   cxx.get_supported_arguments([
     '-Weverything',
-    '-Wno-c++98-compat',
     '-Wno-c++98-compat-pedantic',
-    '-Wno-global-constructors',
+    '-Wno-c++98-compat',
+    '-Wno-documentation-unknown-command',
+    '-Wno-documentation',
     '-Wno-exit-time-destructors',
+    '-Wno-global-constructors',
+    '-Wno-newline-eof',
+    '-Wno-padded',
     '-Wno-shadow',
     '-Wno-used-but-marked-unused',
-    '-Wno-documentation-unknown-command',
     '-Wno-weak-vtables',
-    '-Wno-documentation',
-    '-Wno-padded',
-    '-Wunused-parameter',
-    '-Wcovered-switch-default',
-    '-Wcomma',
-    '-Wextra-semi',
-    '-Wzero-as-null-pointer-constant',
-    '-Wswitch-enum',
-    '-Wnull-dereference',
-    '-Wdouble-promotion',
-    '-Wno-newline-eof',
-    '-Wformat=2',
   ]),
   language:'cpp')
 endif
@@ -163,11 +162,6 @@ endif
 # compiler arguments , we know that will pass
 
 if (cxx.get_id() == 'gcc' and cxx.version().version_compare('>8.0'))
-
-  ## remove once bmcweb/issues/147 is fixed
-  add_global_link_arguments('-Wno-stringop-overflow',language:['c','cpp'])
-  add_project_arguments('-Wno-stringop-overflow',language:['c','cpp'])
-
   add_project_arguments(
     cxx.get_supported_arguments([
      '-Wduplicated-cond',
@@ -176,7 +170,6 @@ if (cxx.get_id() == 'gcc' and cxx.version().version_compare('>8.0'))
      '-Wunused-parameter',
      '-Wnull-dereference',
      '-Wdouble-promotion',
-     '-Wformat=2',
      ]),
     language:'cpp')
 endif
@@ -239,14 +232,31 @@ endif
 
 add_project_arguments(
 cxx.get_supported_arguments([
+<<<<<<< HEAD
   '-DBOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT',
   '-DBOOST_ASIO_DISABLE_THREADS',
   '-DBOOST_BEAST_USE_STD_STRING_VIEW',
   '-DBOOST_BEAST_SEPARATE_COMPILATION',
   '-DBOOST_ASIO_SEPARATE_COMPILATION',
   '-DBOOST_ASIO_NO_DEPRECATED',
+||||||| accdbb2
+  '-DBOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT',
+  '-DBOOST_ASIO_DISABLE_THREADS',
+  '-DBOOST_BEAST_USE_STD_STRING_VIEW',
+  '-DBOOST_BEAST_SEPARATE_COMPILATION',
+  '-DBOOST_ASIO_SEPARATE_COMPILATION',
+  '-DBOOST_ERROR_CODE_HEADER_ONLY',
+  '-DBOOST_SYSTEM_NO_DEPRECATED',
+  '-DBOOST_ASIO_NO_DEPRECATED',
+=======
+>>>>>>> origin/master
   '-DBOOST_ALL_NO_LIB',
   '-DBOOST_ALLOW_DEPRECATED_HEADERS',
+  '-DBOOST_ASIO_DISABLE_THREADS',
+  '-DBOOST_ASIO_NO_DEPRECATED',
+  '-DBOOST_ASIO_SEPARATE_COMPILATION',
+  '-DBOOST_BEAST_SEPARATE_COMPILATION',
+  '-DBOOST_BEAST_USE_STD_STRING_VIEW',
   '-DJSON_NOEXCEPTION'
 ]),
 language : 'cpp')
@@ -372,10 +382,10 @@ install_subdir('static', install_dir : 'share/www', strip_directory : true)
 srcfiles_bmcweb = [
   'redfish-core/src/error_messages.cpp',
   'redfish-core/src/utils/json_utils.cpp',
-  'src/boost_url.cpp',
-  'src/boost_beast.cpp',
-  'src/boost_asio.cpp',
   'src/boost_asio_ssl.cpp',
+  'src/boost_asio.cpp',
+  'src/boost_beast.cpp',
+  'src/boost_url.cpp',
 ]
 
 # Generate the bmcweb executable
@@ -390,16 +400,17 @@ executable(
 )
 
 srcfiles_unittest = [
+  'http/ut/utility_test.cpp',
   'include/ut/dbus_utility_test.cpp',
+  'include/ut/multipart_test.cpp',
   'include/ut/http_utility_test.cpp',
   'include/ut/human_sort_test.cpp',
-  'redfish-core/ut/privileges_test.cpp',
-  'redfish-core/ut/lock_test.cpp',
   'redfish-core/ut/configfile_test.cpp',
-  'redfish-core/ut/time_utils_test.cpp',
-  'redfish-core/ut/stl_utils_test.cpp',
   'redfish-core/ut/hex_utils_test.cpp',
-  'http/ut/utility_test.cpp'
+  'redfish-core/ut/lock_test.cpp',
+  'redfish-core/ut/privileges_test.cpp',
+  'redfish-core/ut/stl_utils_test.cpp',
+  'redfish-core/ut/time_utils_test.cpp',
 ]
 
 if(get_option('tests').enabled())

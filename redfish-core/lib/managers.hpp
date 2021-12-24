@@ -1892,12 +1892,11 @@ inline void
             }
             // LastRebootTime is epoch time, in milliseconds
             // https://github.com/openbmc/phosphor-dbus-interfaces/blob/7f9a128eb9296e926422ddc312c148b625890bb6/xyz/openbmc_project/State/BMC.interface.yaml#L19
-            time_t lastResetTimeStamp =
-                static_cast<time_t>(*lastResetTimePtr / 1000);
+            uint64_t lastResetTimeStamp = *lastResetTimePtr / 1000;
 
             // Convert to ISO 8601 standard
             aResp->res.jsonValue["LastResetTime"] =
-                crow::utility::getDateTime(lastResetTimeStamp);
+                crow::utility::getDateTimeUint(lastResetTimeStamp);
         },
         "xyz.openbmc_project.State.BMC", "/xyz/openbmc_project/state/bmc0",
         "org.freedesktop.DBus.Properties", "Get",
@@ -2352,7 +2351,104 @@ inline void requestRoutesManager(App& app)
                         if (interfaceName ==
                             "xyz.openbmc_project.Inventory.Decorator.Asset")
                         {
+<<<<<<< HEAD
                             getBMCAssetData(asyncResp, connectionName, path);
+||||||| accdbb2
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp](
+                                    const boost::system::error_code ec,
+                                    const std::vector<
+                                        std::pair<std::string,
+                                                  std::variant<std::string>>>&
+                                        propertiesList) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "Can't get bmc asset!";
+                                        return;
+                                    }
+                                    for (const std::pair<
+                                             std::string,
+                                             std::variant<std::string>>&
+                                             property : propertiesList)
+                                    {
+                                        const std::string& propertyName =
+                                            property.first;
+
+                                        if ((propertyName == "PartNumber") ||
+                                            (propertyName == "SerialNumber") ||
+                                            (propertyName == "Manufacturer") ||
+                                            (propertyName == "Model") ||
+                                            (propertyName == "SparePartNumber"))
+                                        {
+                                            const std::string* value =
+                                                std::get_if<std::string>(
+                                                    &property.second);
+                                            if (value == nullptr)
+                                            {
+                                                // illegal property
+                                                messages::internalError(
+                                                    asyncResp->res);
+                                                return;
+                                            }
+                                            asyncResp->res
+                                                .jsonValue[propertyName] =
+                                                *value;
+                                        }
+                                    }
+                                },
+                                connectionName, path,
+                                "org.freedesktop.DBus.Properties", "GetAll",
+                                "xyz.openbmc_project.Inventory.Decorator."
+                                "Asset");
+=======
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp](
+                                    const boost::system::error_code ec,
+                                    const std::vector<
+                                        std::pair<std::string,
+                                                  std::variant<std::string>>>&
+                                        propertiesList) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "Can't get bmc asset!";
+                                        return;
+                                    }
+                                    for (const std::pair<
+                                             std::string,
+                                             std::variant<std::string>>&
+                                             property : propertiesList)
+                                    {
+                                        const std::string& propertyName =
+                                            property.first;
+
+                                        if ((propertyName == "PartNumber") ||
+                                            (propertyName == "SerialNumber") ||
+                                            (propertyName == "Manufacturer") ||
+                                            (propertyName == "Model") ||
+                                            (propertyName == "SparePartNumber"))
+                                        {
+                                            const std::string* value =
+                                                std::get_if<std::string>(
+                                                    &property.second);
+                                            if (value == nullptr)
+                                            {
+                                                // illegal property
+                                                messages::internalError(
+                                                    asyncResp->res);
+                                                return;
+                                            }
+                                            asyncResp->res
+                                                .jsonValue[propertyName] =
+                                                *value;
+                                        }
+                                    }
+                                },
+                                connectionName, path,
+                                "org.freedesktop.DBus.Properties", "GetAll",
+                                "xyz.openbmc_project.Inventory.Decorator.Asset");
+>>>>>>> origin/master
                         }
                         else if (
                             interfaceName ==

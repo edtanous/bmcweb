@@ -17,6 +17,7 @@
 #include "http_response.hpp"
 
 #include <nlohmann/json.hpp>
+#include <source_location.hpp>
 
 namespace redfish
 {
@@ -88,7 +89,8 @@ void actionParameterValueFormatError(crow::Response& res,
  * @returns Message InternalError formatted to JSON */
 nlohmann::json internalError();
 
-void internalError(crow::Response& res);
+void internalError(crow::Response& res, const bmcweb::source_location location =
+                                            bmcweb::source_location::current());
 
 /**
  * @brief Formats UnrecognizedRequestBody message into JSON
@@ -783,9 +785,9 @@ void actionNotSupported(crow::Response& res, const std::string& arg1);
  * @param[in] arg1 Parameter of message that will replace %1 in its body.
  *
  * @returns Message InvalidIndex formatted to JSON */
-nlohmann::json invalidIndex(const int& arg1);
+nlohmann::json invalidIndex(int64_t arg1);
 
-void invalidIndex(crow::Response& res, const int& arg1);
+void invalidIndex(crow::Response& res, int64_t arg1);
 
 /**
  * @brief Formats EmptyJSON message into JSON

@@ -31,7 +31,6 @@
 #include <app.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
-#include <boost/beast/core/span.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/system/linux_error.hpp>
@@ -41,7 +40,12 @@
 #include <charconv>
 #include <filesystem>
 #include <optional>
+<<<<<<< HEAD
 #include <string>
+||||||| accdbb2
+=======
+#include <span>
+>>>>>>> origin/master
 #include <string_view>
 #include <variant>
 #include <vector>
@@ -83,17 +87,16 @@ inline std::string translateSeverityDbusToRedfish(const std::string& s)
 
 namespace message_registries
 {
-static const Message* getMessageFromRegistry(
-    const std::string& messageKey,
-    const boost::beast::span<const MessageEntry> registry)
+static const Message*
+    getMessageFromRegistry(const std::string& messageKey,
+                           const std::span<const MessageEntry> registry)
 {
-    boost::beast::span<const MessageEntry>::const_iterator messageIt =
-        std::find_if(registry.cbegin(), registry.cend(),
-                     [&messageKey](const MessageEntry& messageEntry) {
-                         return !std::strcmp(messageEntry.first,
-                                             messageKey.c_str());
-                     });
-    if (messageIt != registry.cend())
+    std::span<const MessageEntry>::iterator messageIt = std::find_if(
+        registry.begin(), registry.end(),
+        [&messageKey](const MessageEntry& messageEntry) {
+            return !std::strcmp(messageEntry.first, messageKey.c_str());
+        });
+    if (messageIt != registry.end())
     {
         return &messageIt->second;
     }
@@ -116,13 +119,12 @@ static const Message* getMessage(const std::string_view& messageID)
     if (std::string(base::header.registryPrefix) == registryName)
     {
         return getMessageFromRegistry(
-            messageKey, boost::beast::span<const MessageEntry>(base::registry));
+            messageKey, std::span<const MessageEntry>(base::registry));
     }
     if (std::string(openbmc::header.registryPrefix) == registryName)
     {
         return getMessageFromRegistry(
-            messageKey,
-            boost::beast::span<const MessageEntry>(openbmc::registry));
+            messageKey, std::span<const MessageEntry>(openbmc::registry));
     }
     if (std::string(resource_event::header.registryPrefix) == registryName)
     {
@@ -271,8 +273,7 @@ inline static bool getEntryTimestamp(sd_journal* journal,
                          << strerror(-ret);
         return false;
     }
-    entryTimestamp = crow::utility::getDateTime(
-        static_cast<std::time_t>(timestamp / 1000 / 1000));
+    entryTimestamp = crow::utility::getDateTimeUint(timestamp / 1000 / 1000);
     return true;
 }
 
@@ -533,7 +534,7 @@ inline void
                 {
                     continue;
                 }
-                std::time_t timestamp;
+                uint64_t timestamp = 0;
                 uint64_t size = 0;
                 std::string dumpStatus;
                 nlohmann::json thisEntry;
@@ -599,8 +600,7 @@ inline void
                                     messages::internalError(asyncResp->res);
                                     break;
                                 }
-                                timestamp =
-                                    static_cast<std::time_t>(*usecsTimeStamp);
+                                timestamp = (*usecsTimeStamp / 1000 / 1000);
                                 break;
                             }
                         }
@@ -619,7 +619,8 @@ inline void
                 thisEntry["@odata.id"] = dumpPath + entryID;
                 thisEntry["Id"] = entryID;
                 thisEntry["EntryType"] = "Event";
-                thisEntry["Created"] = crow::utility::getDateTime(timestamp);
+                thisEntry["Created"] =
+                    crow::utility::getDateTimeUint(timestamp);
                 thisEntry["Name"] = dumpType + " Dump Entry";
 
                 thisEntry["AdditionalDataSizeBytes"] = size;
@@ -692,7 +693,7 @@ inline void
                 }
 
                 foundDumpEntry = true;
-                std::time_t timestamp;
+                uint64_t timestamp = 0;
                 uint64_t size = 0;
                 std::string dumpStatus;
 
@@ -749,8 +750,7 @@ inline void
                                     messages::internalError(asyncResp->res);
                                     break;
                                 }
-                                timestamp =
-                                    static_cast<std::time_t>(*usecsTimeStamp);
+                                timestamp = *usecsTimeStamp / 1000 / 1000;
                                 break;
                             }
                         }
@@ -774,7 +774,7 @@ inline void
                 asyncResp->res.jsonValue["Id"] = entryID;
                 asyncResp->res.jsonValue["EntryType"] = "Event";
                 asyncResp->res.jsonValue["Created"] =
-                    crow::utility::getDateTime(timestamp);
+                    crow::utility::getDateTimeUint(timestamp);
                 asyncResp->res.jsonValue["Name"] = dumpType + " Dump Entry";
 
                 asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
@@ -835,10 +835,24 @@ inline void deleteDumpEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 
+<<<<<<< HEAD
 inline void createDumpTaskCallback(
     const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const sdbusplus::message::object_path& createdObjPath)
+||||||| accdbb2
+inline void
+    createDumpTaskCallback(const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const uint32_t& dumpId, const std::string& dumpPath,
+                           const std::string& dumpType)
+=======
+inline void
+    createDumpTaskCallback(task::Payload&& payload,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const uint32_t& dumpId, const std::string& dumpPath,
+                           const std::string& dumpType)
+>>>>>>> origin/master
 {
     const std::string& dumpPath = createdObjPath.parent_path().str;
     const std::string& dumpId = createdObjPath.filename();
@@ -925,7 +939,7 @@ inline void createDumpTaskCallback(
 
     task->startTimer(std::chrono::minutes(3));
     task->populateResp(asyncResp->res);
-    task->payload.emplace(req);
+    task->payload.emplace(std::move(payload));
 }
 
 inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -987,16 +1001,36 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
 
     crow::connections::systemBus->async_method_call(
+<<<<<<< HEAD
         [asyncResp, req](const boost::system::error_code ec,
                          const sdbusplus::message::object_path& objPath) {
+||||||| accdbb2
+        [asyncResp, req, dumpPath, dumpType](const boost::system::error_code ec,
+                                             const uint32_t& dumpId) {
+=======
+        [asyncResp, payload(task::Payload(req)), dumpPath,
+         dumpType](const boost::system::error_code ec,
+                   const uint32_t& dumpId) mutable {
+>>>>>>> origin/master
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "CreateDump resp_handler got error " << ec;
                 messages::internalError(asyncResp->res);
                 return;
             }
+<<<<<<< HEAD
             BMCWEB_LOG_DEBUG << "Dump Created. Path: " << objPath.str;
             createDumpTaskCallback(req, asyncResp, objPath);
+||||||| accdbb2
+            BMCWEB_LOG_DEBUG << "Dump Created. Id: " << dumpId;
+
+            createDumpTaskCallback(req, asyncResp, dumpId, dumpPath, dumpType);
+=======
+            BMCWEB_LOG_DEBUG << "Dump Created. Id: " << dumpId;
+
+            createDumpTaskCallback(std::move(payload), asyncResp, dumpId,
+                                   dumpPath, dumpType);
+>>>>>>> origin/master
         },
         "xyz.openbmc_project.Dump.Manager",
         "/xyz/openbmc_project/dump/" +
@@ -1273,7 +1307,7 @@ static int fillEventLogEntryJson(const std::string& logEntryID,
     }
 
     // Get the MessageArgs from the log if there are any
-    boost::beast::span<std::string> messageArgs;
+    std::span<std::string> messageArgs;
     if (logEntryFields.size() > 1)
     {
         std::string& messageArgsStart = logEntryFields[1];
@@ -1688,6 +1722,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         }
                         entriesArray.push_back({});
                         nlohmann::json& thisEntry = entriesArray.back();
+<<<<<<< HEAD
 
                         // Determine if it's a message registry format or not.
                         bool isMessageRegistry = false;
@@ -1713,7 +1748,44 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         }
 
                         if (isMessageRegistry)
+||||||| accdbb2
+                        thisEntry["@odata.type"] = "#LogEntry.v1_8_0.LogEntry";
+                        thisEntry["@odata.id"] =
+                            "/redfish/v1/Systems/system/"
+                            "LogServices/EventLog/Entries/" +
+                            std::to_string(*id);
+                        thisEntry["Name"] = "System Event Log Entry";
+                        thisEntry["Id"] = std::to_string(*id);
+                        thisEntry["Message"] = *message;
+                        thisEntry["Resolved"] = resolved;
+                        thisEntry["EntryType"] = "Event";
+                        thisEntry["Severity"] =
+                            translateSeverityDbusToRedfish(*severity);
+                        thisEntry["Created"] =
+                            crow::utility::getDateTime(timestamp);
+                        thisEntry["Modified"] =
+                            crow::utility::getDateTime(updateTimestamp);
+                        if (filePath != nullptr)
+=======
+                        thisEntry["@odata.type"] = "#LogEntry.v1_8_0.LogEntry";
+                        thisEntry["@odata.id"] =
+                            "/redfish/v1/Systems/system/LogServices/EventLog/Entries/" +
+                            std::to_string(*id);
+                        thisEntry["Name"] = "System Event Log Entry";
+                        thisEntry["Id"] = std::to_string(*id);
+                        thisEntry["Message"] = *message;
+                        thisEntry["Resolved"] = resolved;
+                        thisEntry["EntryType"] = "Event";
+                        thisEntry["Severity"] =
+                            translateSeverityDbusToRedfish(*severity);
+                        thisEntry["Created"] =
+                            crow::utility::getDateTimeStdtime(timestamp);
+                        thisEntry["Modified"] =
+                            crow::utility::getDateTimeStdtime(updateTimestamp);
+                        if (filePath != nullptr)
+>>>>>>> origin/master
                         {
+<<<<<<< HEAD
                             message_registries::generateMessageRegistry(
                                 thisEntry,
                                 "/redfish/v1/Systems/system/LogServices/"
@@ -1754,6 +1826,17 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                     "Entries/" +
                                     std::to_string(*id) + "/attachment";
                             }
+||||||| accdbb2
+                            thisEntry["AdditionalDataURI"] =
+                                "/redfish/v1/Systems/system/LogServices/"
+                                "EventLog/"
+                                "Entries/" +
+                                std::to_string(*id) + "/attachment";
+=======
+                            thisEntry["AdditionalDataURI"] =
+                                "/redfish/v1/Systems/system/LogServices/EventLog/Entries/" +
+                                std::to_string(*id) + "/attachment";
+>>>>>>> origin/master
                         }
                     }
                     std::sort(entriesArray.begin(), entriesArray.end(),
@@ -1883,6 +1966,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             messages::internalError(asyncResp->res);
                             return;
                         }
+<<<<<<< HEAD
 
                         // Determine if it's a message registry format or not.
                         bool isMessageRegistry = false;
@@ -1923,7 +2007,48 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                         // the messageId can't be found in message registries.
                         // So check the entry 'Id' anyway to cover that case.
                         if (asyncResp->res.jsonValue["Id"].size() == 0)
+||||||| accdbb2
+                        asyncResp->res.jsonValue["@odata.type"] =
+                            "#LogEntry.v1_8_0.LogEntry";
+                        asyncResp->res.jsonValue["@odata.id"] =
+                            "/redfish/v1/Systems/system/LogServices/EventLog/"
+                            "Entries/" +
+                            std::to_string(*id);
+                        asyncResp->res.jsonValue["Name"] =
+                            "System Event Log Entry";
+                        asyncResp->res.jsonValue["Id"] = std::to_string(*id);
+                        asyncResp->res.jsonValue["Message"] = *message;
+                        asyncResp->res.jsonValue["Resolved"] = resolved;
+                        asyncResp->res.jsonValue["EntryType"] = "Event";
+                        asyncResp->res.jsonValue["Severity"] =
+                            translateSeverityDbusToRedfish(*severity);
+                        asyncResp->res.jsonValue["Created"] =
+                            crow::utility::getDateTime(timestamp);
+                        asyncResp->res.jsonValue["Modified"] =
+                            crow::utility::getDateTime(updateTimestamp);
+                        if (filePath != nullptr)
+=======
+                        asyncResp->res.jsonValue["@odata.type"] =
+                            "#LogEntry.v1_8_0.LogEntry";
+                        asyncResp->res.jsonValue["@odata.id"] =
+                            "/redfish/v1/Systems/system/LogServices/EventLog/Entries/" +
+                            std::to_string(*id);
+                        asyncResp->res.jsonValue["Name"] =
+                            "System Event Log Entry";
+                        asyncResp->res.jsonValue["Id"] = std::to_string(*id);
+                        asyncResp->res.jsonValue["Message"] = *message;
+                        asyncResp->res.jsonValue["Resolved"] = resolved;
+                        asyncResp->res.jsonValue["EntryType"] = "Event";
+                        asyncResp->res.jsonValue["Severity"] =
+                            translateSeverityDbusToRedfish(*severity);
+                        asyncResp->res.jsonValue["Created"] =
+                            crow::utility::getDateTimeStdtime(timestamp);
+                        asyncResp->res.jsonValue["Modified"] =
+                            crow::utility::getDateTimeStdtime(updateTimestamp);
+                        if (filePath != nullptr)
+>>>>>>> origin/master
                         {
+<<<<<<< HEAD
                             asyncResp->res.jsonValue["@odata.type"] =
                                 "#LogEntry.v1_8_0.LogEntry";
                             asyncResp->res.jsonValue["@odata.id"] =
@@ -1934,6 +2059,15 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             asyncResp->res.jsonValue["Name"] =
                                 "System Event Log Entry";
                             asyncResp->res.jsonValue["Id"] =
+||||||| accdbb2
+                            asyncResp->res.jsonValue["AdditionalDataURI"] =
+                                "/redfish/v1/Systems/system/LogServices/"
+                                "EventLog/"
+                                "attachment/" +
+=======
+                            asyncResp->res.jsonValue["AdditionalDataURI"] =
+                                "/redfish/v1/Systems/system/LogServices/EventLog/attachment/" +
+>>>>>>> origin/master
                                 std::to_string(*id);
                             asyncResp->res.jsonValue["Message"] = *message;
                             asyncResp->res.jsonValue["Resolved"] = resolved;
@@ -2567,11 +2701,58 @@ inline void requestRoutesBMCJournalLogEntryCollection(App& app)
                 {
                     firstEntry = false;
                 }
+<<<<<<< HEAD
 
                 logEntryArray.push_back({});
                 nlohmann::json& bmcJournalLogEntry = logEntryArray.back();
                 if (fillBMCJournalLogEntryJson(idStr, journal.get(),
                                                bmcJournalLogEntry) != 0)
+||||||| accdbb2
+                std::unique_ptr<sd_journal, decltype(&sd_journal_close)>
+                    journal(journalTmp, sd_journal_close);
+                journalTmp = nullptr;
+                uint64_t entryCount = 0;
+                // Reset the unique ID on the first entry
+                bool firstEntry = true;
+                SD_JOURNAL_FOREACH(journal.get())
+                {
+                    entryCount++;
+                    // Handle paging using skip (number of entries to skip from
+                    // the start) and top (number of entries to display)
+                    if (entryCount <= skip || entryCount > skip + top)
+                    {
+                        continue;
+                    }
+
+                    std::string idStr;
+                    if (!getUniqueEntryID(journal.get(), idStr, firstEntry))
+                    {
+                        continue;
+                    }
+
+                    if (firstEntry)
+                    {
+                        firstEntry = false;
+                    }
+
+                    logEntryArray.push_back({});
+                    nlohmann::json& bmcJournalLogEntry = logEntryArray.back();
+                    if (fillBMCJournalLogEntryJson(idStr, journal.get(),
+                                                   bmcJournalLogEntry) != 0)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                }
+                asyncResp->res.jsonValue["Members@odata.count"] = entryCount;
+                if (skip + top < entryCount)
+=======
+
+                logEntryArray.push_back({});
+                nlohmann::json& bmcJournalLogEntry = logEntryArray.back();
+                if (fillBMCJournalLogEntryJson(idStr, journal.get(),
+                                               bmcJournalLogEntry) != 0)
+>>>>>>> origin/master
                 {
                     messages::internalError(asyncResp->res);
                     return;
@@ -3224,10 +3405,11 @@ inline void requestRoutesCrashdumpCollect(App& app)
                 return;
             }
 
-            auto collectCrashdumpCallback = [asyncResp, req](
+            auto collectCrashdumpCallback = [asyncResp,
+                                             payload(task::Payload(req))](
                                                 const boost::system::error_code
                                                     ec,
-                                                const std::string&) {
+                                                const std::string&) mutable {
                 if (ec)
                 {
                     if (ec.value() ==
@@ -3265,7 +3447,7 @@ inline void requestRoutesCrashdumpCollect(App& app)
                     "member='PropertiesChanged',arg0namespace='com.intel.crashdump'");
                 task->startTimer(std::chrono::minutes(5));
                 task->populateResp(asyncResp->res);
-                task->payload.emplace(req);
+                task->payload.emplace(std::move(payload));
             };
 
             if (oemDiagnosticDataType == "OnDemand")
@@ -3469,8 +3651,8 @@ static void fillPostCodeEntry(
 
         // Get the Created time from the timestamp
         std::string entryTimeStr;
-        entryTimeStr = crow::utility::getDateTime(
-            static_cast<std::time_t>(usecSinceEpoch / 1000 / 1000));
+        entryTimeStr =
+            crow::utility::getDateTimeUint(usecSinceEpoch / 1000 / 1000);
 
         // assemble messageArgs: BootIndex, TimeOffset(100us), PostCode(hex)
         std::ostringstream hexCode;

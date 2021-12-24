@@ -108,8 +108,14 @@ include_list = [
     'TaskService',
     'TelemetryService',
     'Thermal',
+<<<<<<< HEAD
     'ThermalSubsystem',
     'ThermalMetrics',
+||||||| accdbb2
+=======
+    'Triggers',
+    'TriggersCollection',
+>>>>>>> origin/master
     'UpdateService',
     'VLanNetworkInterfaceCollection',
     'VLanNetworkInterface',
