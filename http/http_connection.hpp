@@ -582,21 +582,6 @@ class Connection :
                 boost::beast::http::verb method = parser->get().method();
                 userSession = crow::authorization::authenticate(
                     ip, res, method, parser->get().base(), userSession);
-<<<<<<< HEAD
-#endif // BMCWEB_INSECURE_DISABLE_AUTHENTICATION
-                bool loggedIn = userSession != nullptr;
-                if (loggedIn)
-                {
-                    startDeadline(loggedInAttempts);
-                    BMCWEB_LOG_DEBUG << "Starting slow deadline";
-||||||| accdbb2
-                bool loggedIn = userSession != nullptr;
-                if (loggedIn)
-                {
-                    startDeadline(loggedInAttempts);
-                    BMCWEB_LOG_DEBUG << "Starting slow deadline";
-=======
->>>>>>> origin/master
 
                 bool loggedIn = userSession != nullptr;
                 if (!loggedIn)

@@ -848,7 +848,6 @@ inline void requestRoutesChassis(App& app)
 
                         for (const auto& interface : interfaces2)
                         {
-<<<<<<< HEAD
                             if (interface == "xyz.openbmc_project.Common.UUID")
                             {
                                 getChassisUUID(asyncResp, connectionName, path);
@@ -927,47 +926,6 @@ inline void requestRoutesChassis(App& app)
                         {
                             getChassisPowerLimits(asyncResp, connectionName,
                                                   path);
-||||||| accdbb2
-                            crow::connections::systemBus->async_method_call(
-                                [asyncResp](const boost::system::error_code ec,
-                                            const std::variant<std::string>&
-                                                chassisUUID) {
-                                    if (ec)
-                                    {
-                                        BMCWEB_LOG_DEBUG
-                                            << "DBUS response error for "
-                                               "UUID";
-                                        messages::internalError(asyncResp->res);
-                                        return;
-                                    }
-                                    const std::string* value =
-                                        std::get_if<std::string>(&chassisUUID);
-                                    if (value == nullptr)
-                                    {
-                                        BMCWEB_LOG_DEBUG
-                                            << "Null value returned "
-                                               "for UUID";
-                                        messages::internalError(asyncResp->res);
-                                        return;
-                                    }
-                                    asyncResp->res.jsonValue["UUID"] = *value;
-                                },
-                                connectionName, path,
-                                "org.freedesktop.DBus.Properties", "Get",
-                                uuidInterface, "UUID");
-=======
-                            if (interface == "xyz.openbmc_project.Common.UUID")
-                            {
-                                getChassisUUID(asyncResp, connectionName, path);
-                            }
-                            else if (
-                                interface ==
-                                "xyz.openbmc_project.Inventory.Decorator.LocationCode")
-                            {
-                                getChassisLocationCode(asyncResp,
-                                                       connectionName, path);
-                            }
->>>>>>> origin/master
                         }
 
                         // Links association to underneath chassis

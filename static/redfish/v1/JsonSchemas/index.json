@@ -4,13 +4,7 @@
   "@odata.type": "#JsonSchemaFileCollection.JsonSchemaFileCollection",
   "Name": "JsonSchemaFile Collection",
   "Description": "Collection of JsonSchemaFiles",
-<<<<<<< HEAD
-  "Members@odata.count": 62,
-||||||| accdbb2
-  "Members@odata.count": 57,
-=======
-  "Members@odata.count": 58,
->>>>>>> origin/master
+  "Members@odata.count": 63,
   "Members": [
     {
       "@odata.id": "/redfish/v1/JsonSchemas/AccountService"
@@ -184,19 +178,15 @@
       "@odata.id": "/redfish/v1/JsonSchemas/Thermal"
     },
     {
-<<<<<<< HEAD
       "@odata.id": "/redfish/v1/JsonSchemas/ThermalMetrics"
     },
     {
       "@odata.id": "/redfish/v1/JsonSchemas/ThermalSubsystem"
     },
     {
-||||||| accdbb2
-=======
       "@odata.id": "/redfish/v1/JsonSchemas/Triggers"
     },
     {
->>>>>>> origin/master
       "@odata.id": "/redfish/v1/JsonSchemas/UpdateService"
     },
     {

@@ -1187,95 +1187,6 @@ inline void
                            const std::string& service,
                            const std::string& objPath)
 {
-<<<<<<< HEAD
-    crow::connections::systemBus->async_method_call(
-        [aResp](boost::system::error_code ec,
-                const OperatingConfigProperties& properties) {
-            if (ec)
-||||||| accdbb2
-    for (const auto& [serviceName, interfaceList] : serviceMap)
-    {
-        for (const auto& interface : interfaceList)
-        {
-            if (interface == "xyz.openbmc_project.Inventory.Decorator.Asset")
-            {
-                getCpuAssetData(aResp, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Inventory."
-                                  "Decorator.Revision")
-            {
-                getCpuRevisionData(aResp, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Inventory.Item.Cpu")
-=======
-    for (const auto& [serviceName, interfaceList] : serviceMap)
-    {
-        for (const auto& interface : interfaceList)
-        {
-            if (interface == "xyz.openbmc_project.Inventory.Decorator.Asset")
-            {
-                getCpuAssetData(aResp, serviceName, objectPath);
-            }
-            else if (interface ==
-                     "xyz.openbmc_project.Inventory.Decorator.Revision")
-            {
-                getCpuRevisionData(aResp, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Inventory.Item.Cpu")
->>>>>>> origin/master
-            {
-                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                   << ec.message();
-                messages::internalError(aResp->res);
-                return;
-            }
-<<<<<<< HEAD
-
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& [key, variant] : properties)
-||||||| accdbb2
-            else if (interface == "xyz.openbmc_project.Inventory."
-                                  "Item.Accelerator")
-            {
-                getAcceleratorDataByService(aResp, processorId, serviceName,
-                                            objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Control.Processor."
-                                  "CurrentOperatingConfig")
-            {
-                getCpuConfigData(aResp, processorId, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Inventory."
-                                  "Decorator.LocationCode")
-            {
-                getCpuLocationCode(aResp, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Common.UUID")
-            {
-                getProcessorUUID(aResp, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Inventory."
-                                  "Decorator.UniqueIdentifier")
-            {
-                getCpuUniqueId(aResp, serviceName, objectPath);
-            }
-        }
-    }
-}
-
-/**
- * Request all the properties for the given D-Bus object and fill out the
- * related entries in the Redfish OperatingConfig response.
- *
- * @param[in,out]   aResp       Async HTTP response.
- * @param[in]       service     D-Bus service name to query.
- * @param[in]       objPath     D-Bus object to query.
- */
-inline void
-    getOperatingConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& service,
-                           const std::string& objPath)
-{
     crow::connections::systemBus->async_method_call(
         [aResp](boost::system::error_code ec,
                 const OperatingConfigProperties& properties) {
@@ -1289,64 +1200,6 @@ inline void
 
             nlohmann::json& json = aResp->res.jsonValue;
             for (const auto& [key, variant] : properties)
-=======
-            else if (interface ==
-                     "xyz.openbmc_project.Inventory.Item.Accelerator")
-            {
-                getAcceleratorDataByService(aResp, processorId, serviceName,
-                                            objectPath);
-            }
-            else if (
-                interface ==
-                "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig")
-            {
-                getCpuConfigData(aResp, processorId, serviceName, objectPath);
-            }
-            else if (interface ==
-                     "xyz.openbmc_project.Inventory.Decorator.LocationCode")
-            {
-                getCpuLocationCode(aResp, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Common.UUID")
-            {
-                getProcessorUUID(aResp, serviceName, objectPath);
-            }
-            else if (interface ==
-                     "xyz.openbmc_project.Inventory.Decorator.UniqueIdentifier")
-            {
-                getCpuUniqueId(aResp, serviceName, objectPath);
-            }
-        }
-    }
-}
-
-/**
- * Request all the properties for the given D-Bus object and fill out the
- * related entries in the Redfish OperatingConfig response.
- *
- * @param[in,out]   aResp       Async HTTP response.
- * @param[in]       service     D-Bus service name to query.
- * @param[in]       objPath     D-Bus object to query.
- */
-inline void
-    getOperatingConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& service,
-                           const std::string& objPath)
-{
-    crow::connections::systemBus->async_method_call(
-        [aResp](boost::system::error_code ec,
-                const OperatingConfigProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                   << ec.message();
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& [key, variant] : properties)
->>>>>>> origin/master
             {
                 if (key == "AvailableCoreCount")
                 {
@@ -1879,7 +1732,6 @@ inline void requestRoutesOperatingConfigCollection(App& app)
     BMCWEB_ROUTE(
         app, "/redfish/v1/Systems/system/Processors/<str>/OperatingConfigs/")
         .privileges(redfish::privileges::getOperatingConfigCollection)
-<<<<<<< HEAD
         .methods(
             boost::beast::http::verb::get)([](const crow::Request& req,
                                               const std::shared_ptr<
@@ -1908,82 +1760,6 @@ inline void requestRoutesOperatingConfigCollection(App& app)
                         if (!boost::ends_with(object, cpuName))
                         {
                             continue;
-||||||| accdbb2
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& cpuName) {
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#OperatingConfigCollection.OperatingConfigCollection";
-                asyncResp->res.jsonValue["@odata.id"] = req.url;
-                asyncResp->res.jsonValue["Name"] =
-                    "Operating Config Collection";
-
-                // First find the matching CPU object so we know how to
-                // constrain our search for related Config objects.
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp,
-                     cpuName](const boost::system::error_code ec,
-                              const std::vector<std::string>& objects) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                               << ec.message();
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        for (const std::string& object : objects)
-                        {
-                            if (!boost::ends_with(object, cpuName))
-                            {
-                                continue;
-                            }
-
-                            // Not expected that there will be multiple matching
-                            // CPU objects, but if there are just use the first
-                            // one.
-
-                            // Use the common search routine to construct the
-                            // Collection of all Config objects under this CPU.
-                            collection_util::getCollectionMembers(
-                                asyncResp,
-                                "/redfish/v1/Systems/system/Processors/" +
-                                    cpuName + "/OperatingConfigs",
-                                {"xyz.openbmc_project.Inventory.Item.Cpu."
-                                 "OperatingConfig"},
-                                object.c_str());
-                            return;
-=======
-        .methods(
-            boost::beast::http::verb::get)([](const crow::Request& req,
-                                              const std::shared_ptr<
-                                                  bmcweb::AsyncResp>& asyncResp,
-                                              const std::string& cpuName) {
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#OperatingConfigCollection.OperatingConfigCollection";
-            asyncResp->res.jsonValue["@odata.id"] = req.url;
-            asyncResp->res.jsonValue["Name"] = "Operating Config Collection";
-
-            // First find the matching CPU object so we know how to
-            // constrain our search for related Config objects.
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, cpuName](const boost::system::error_code ec,
-                                     const std::vector<std::string>& objects) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                           << ec.message();
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    for (const std::string& object : objects)
-                    {
-                        if (!boost::ends_with(object, cpuName))
-                        {
-                            continue;
->>>>>>> origin/master
                         }
 
                         // Not expected that there will be multiple matching

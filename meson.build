@@ -72,14 +72,7 @@ feature_map = {
   'insecure-tftp-update'                        : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
   'kvm'                                         : '-DBMCWEB_ENABLE_KVM' ,
   'mutual-tls-auth'                             : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
-<<<<<<< HEAD
-  'redfish'                                     : '-DBMCWEB_ENABLE_REDFISH',
-||||||| accdbb2
-  'pam'                                         : '-DWEBSERVER_ENABLE_PAM',
-  'redfish'                                     : '-DBMCWEB_ENABLE_REDFISH',
-=======
   'redfish-allow-deprecated-power-thermal'      : '-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL',
->>>>>>> origin/master
   'redfish-bmc-journal'                         : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
   'redfish-cpu-log'                             : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
   'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
@@ -232,24 +225,6 @@ endif
 
 add_project_arguments(
 cxx.get_supported_arguments([
-<<<<<<< HEAD
-  '-DBOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT',
-  '-DBOOST_ASIO_DISABLE_THREADS',
-  '-DBOOST_BEAST_USE_STD_STRING_VIEW',
-  '-DBOOST_BEAST_SEPARATE_COMPILATION',
-  '-DBOOST_ASIO_SEPARATE_COMPILATION',
-  '-DBOOST_ASIO_NO_DEPRECATED',
-||||||| accdbb2
-  '-DBOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT',
-  '-DBOOST_ASIO_DISABLE_THREADS',
-  '-DBOOST_BEAST_USE_STD_STRING_VIEW',
-  '-DBOOST_BEAST_SEPARATE_COMPILATION',
-  '-DBOOST_ASIO_SEPARATE_COMPILATION',
-  '-DBOOST_ERROR_CODE_HEADER_ONLY',
-  '-DBOOST_SYSTEM_NO_DEPRECATED',
-  '-DBOOST_ASIO_NO_DEPRECATED',
-=======
->>>>>>> origin/master
   '-DBOOST_ALL_NO_LIB',
   '-DBOOST_ALLOW_DEPRECATED_HEADERS',
   '-DBOOST_ASIO_DISABLE_THREADS',
