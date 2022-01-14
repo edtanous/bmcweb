@@ -34,6 +34,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/system/linux_error.hpp>
+#include <dbus_utility.hpp>
 #include <error_messages.hpp>
 #include <registries/privilege_registry.hpp>
 
@@ -136,6 +137,7 @@ static const Message* getMessage(const std::string_view& messageID)
     return nullptr;
 }
 
+<<<<<<< HEAD
 static void generateMessageRegistry(
     nlohmann::json& logEntry,
     const std::string& odataId /* e.g. /redfish/v1/Systems/system/LogServices/"
@@ -155,6 +157,18 @@ static void generateMessageRegistry(
                          << messageId << "]";
         return;
     }
+||||||| d1a6481
+using GetManagedPropertyType = boost::container::flat_map<
+    std::string, std::variant<std::string, bool, uint8_t, int16_t, uint16_t,
+                              int32_t, uint32_t, int64_t, uint64_t, double>>;
+
+using GetManagedObjectsType = boost::container::flat_map<
+    sdbusplus::message::object_path,
+    boost::container::flat_map<std::string, GetManagedPropertyType>>;
+=======
+using GetManagedPropertyType =
+    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
+>>>>>>> origin/master
 
     // Severity can be overwritten by caller. Using the one defined in the
     // message registries by default.
@@ -228,8 +242,10 @@ inline static int getJournalMetadata(sd_journal* journal,
     size_t length = 0;
     int ret = 0;
     // Get the metadata from the requested field of the journal entry
-    ret = sd_journal_get_data(journal, field.data(),
-                              reinterpret_cast<const void**>(&data), &length);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    const void** dataVoid = reinterpret_cast<const void**>(&data);
+
+    ret = sd_journal_get_data(journal, field.data(), dataVoid, &length);
     if (ret < 0)
     {
         return ret;
@@ -507,8 +523,9 @@ inline void
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, dumpPath, dumpType](const boost::system::error_code ec,
-                                        GetManagedObjectsType& resp) {
+        [asyncResp, dumpPath,
+         dumpType](const boost::system::error_code ec,
+                   dbus::utility::ManagedObjectType& resp) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "DumpEntry resp_handler got error " << ec;
@@ -665,8 +682,9 @@ inline void
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, entryID, dumpPath, dumpType](
-            const boost::system::error_code ec, GetManagedObjectsType& resp) {
+        [asyncResp, entryID, dumpPath,
+         dumpType](const boost::system::error_code ec,
+                   dbus::utility::ManagedObjectType& resp) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "DumpEntry resp_handler got error " << ec;
@@ -874,6 +892,18 @@ inline void createDumpTaskCallback(
                 taskData->messages.emplace_back(messages::internalError());
                 return task::completed;
             }
+<<<<<<< HEAD
+||||||| d1a6481
+            std::vector<std::pair<
+                std::string,
+                std::vector<std::pair<std::string, std::variant<std::string>>>>>
+                interfacesList;
+=======
+            std::vector<std::pair<
+                std::string, std::vector<std::pair<
+                                 std::string, dbus::utility::DbusVariantType>>>>
+                interfacesList;
+>>>>>>> origin/master
 
             std::vector<std::pair<std::string, std::variant<std::string>>>
                 values;
@@ -1035,7 +1065,8 @@ inline void clearDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 }
 
 inline static void parseCrashdumpParameters(
-    const std::vector<std::pair<std::string, VariantType>>& params,
+    const std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>&
+        params,
     std::string& filename, std::string& timestamp, std::string& logfile)
 {
     for (auto property : params)
@@ -1557,7 +1588,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
             // Make call to Logging Service to find all log entry objects
             crow::connections::systemBus->async_method_call(
                 [asyncResp](const boost::system::error_code ec,
-                            GetManagedObjectsType& resp) {
+                            const dbus::utility::ManagedObjectType& resp) {
                     if (ec)
                     {
                         // TODO Handle for specific error code
@@ -1572,12 +1603,12 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     entriesArray = nlohmann::json::array();
                     for (auto& objectPath : resp)
                     {
-                        uint32_t* id = nullptr;
+                        const uint32_t* id = nullptr;
                         std::time_t timestamp{};
                         std::time_t updateTimestamp{};
-                        std::string* severity = nullptr;
-                        std::string* message = nullptr;
-                        std::string* filePath = nullptr;
+                        const std::string* severity = nullptr;
+                        const std::string* message = nullptr;
+                        const std::string* filePath = nullptr;
                         bool resolved = false;
                         std::string* resolution = nullptr;
                         std::vector<std::string>* additionalDataRaw = nullptr;
@@ -1630,8 +1661,9 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                     }
                                     else if (propertyMap.first == "Resolved")
                                     {
-                                        bool* resolveptr = std::get_if<bool>(
-                                            &propertyMap.second);
+                                        const bool* resolveptr =
+                                            std::get_if<bool>(
+                                                &propertyMap.second);
                                         if (resolveptr == nullptr)
                                         {
                                             messages::internalError(
@@ -1782,7 +1814,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 // Make call to Logging Service to find all log entry objects
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, entryID](const boost::system::error_code ec,
-                                         GetManagedPropertyType& resp) {
+                                         const GetManagedPropertyType& resp) {
                         if (ec.value() == EBADR)
                         {
                             messages::resourceNotFound(
@@ -1797,12 +1829,12 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             messages::internalError(asyncResp->res);
                             return;
                         }
-                        uint32_t* id = nullptr;
+                        const uint32_t* id = nullptr;
                         std::time_t timestamp{};
                         std::time_t updateTimestamp{};
-                        std::string* severity = nullptr;
-                        std::string* message = nullptr;
-                        std::string* filePath = nullptr;
+                        const std::string* severity = nullptr;
+                        const std::string* message = nullptr;
+                        const std::string* filePath = nullptr;
                         bool resolved = false;
                         std::string* resolution = nullptr;
                         std::vector<std::string>* additionalDataRaw = nullptr;
@@ -1846,7 +1878,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             }
                             else if (propertyMap.first == "Resolved")
                             {
-                                bool* resolveptr =
+                                const bool* resolveptr =
                                     std::get_if<bool>(&propertyMap.second);
                                 if (resolveptr == nullptr)
                                 {
@@ -1983,7 +2015,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     "/xyz/openbmc_project/logging/entry/" + entryId,
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.Logging.Entry", "Resolved",
-                    std::variant<bool>(*resolved));
+                    dbus::utility::DbusVariantType(*resolved));
             });
 
     BMCWEB_ROUTE(
@@ -2320,8 +2352,11 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
                 const std::string& targetID = param;
 
                 uint64_t idInt = 0;
-                auto [ptr, ec] = std::from_chars(
-                    targetID.data(), targetID.data() + targetID.size(), idInt);
+
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                const char* end = targetID.data() + targetID.size();
+
+                auto [ptr, ec] = std::from_chars(targetID.data(), end, idInt);
                 if (ec == std::errc::invalid_argument)
                 {
                     messages::resourceMissingAtURI(asyncResp->res, targetID);
@@ -2951,7 +2986,9 @@ static void
     auto getStoredLogCallback =
         [asyncResp, logID, &logEntryJson](
             const boost::system::error_code ec,
-            const std::vector<std::pair<std::string, VariantType>>& params) {
+            const std::vector<
+                std::pair<std::string, dbus::utility::DbusVariantType>>&
+                params) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "failed to get log ec: " << ec.message();
@@ -3112,7 +3149,8 @@ inline void requestRoutesCrashdumpFile(App& app)
                 auto getStoredLogCallback =
                     [asyncResp, logID, fileName](
                         const boost::system::error_code ec,
-                        const std::vector<std::pair<std::string, VariantType>>&
+                        const std::vector<std::pair<
+                            std::string, dbus::utility::DbusVariantType>>&
                             resp) {
                         if (ec)
                         {
@@ -3151,26 +3189,10 @@ inline void requestRoutesCrashdumpFile(App& app)
                                                            fileName);
                             return;
                         }
-                        std::ifstream ifs(dbusFilepath, std::ios::in |
-                                                            std::ios::binary |
-                                                            std::ios::ate);
-                        std::ifstream::pos_type fileSize = ifs.tellg();
-                        if (fileSize < 0)
-                        {
-                            messages::generalError(asyncResp->res);
-                            return;
-                        }
-                        ifs.seekg(0, std::ios::beg);
-
-                        auto crashData = std::make_unique<char[]>(
-                            static_cast<unsigned int>(fileSize));
-
-                        ifs.read(crashData.get(), static_cast<int>(fileSize));
-
-                        // The cast to std::string is intentional in order to
-                        // use the assign() that applies move mechanics
-                        asyncResp->res.body().assign(
-                            static_cast<std::string>(crashData.get()));
+                        std::ifstream ifs(dbusFilepath,
+                                          std::ios::in | std::ios::binary);
+                        asyncResp->res.body() = std::string(
+                            std::istreambuf_iterator<char>{ifs}, {});
 
                         // Configure this to be a file download when accessed
                         // from a browser
@@ -3628,30 +3650,21 @@ static void
                          const uint64_t skip, const uint64_t top)
 {
     uint64_t entryCount = 0;
-    crow::connections::systemBus->async_method_call(
-        [aResp, entryCount, skip,
-         top](const boost::system::error_code ec,
-              const std::variant<uint16_t>& bootCount) {
+    sdbusplus::asio::getProperty<uint16_t>(
+        *crow::connections::systemBus,
+        "xyz.openbmc_project.State.Boot.PostCode0",
+        "/xyz/openbmc_project/State/Boot/PostCode0",
+        "xyz.openbmc_project.State.Boot.PostCode", "CurrentBootCycleCount",
+        [aResp, entryCount, skip, top](const boost::system::error_code ec,
+                                       const uint16_t bootCount) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
                 messages::internalError(aResp->res);
                 return;
             }
-            auto pVal = std::get_if<uint16_t>(&bootCount);
-            if (pVal)
-            {
-                getPostCodeForBoot(aResp, 1, *pVal, entryCount, skip, top);
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Post code boot index failed.";
-            }
-        },
-        "xyz.openbmc_project.State.Boot.PostCode0",
-        "/xyz/openbmc_project/State/Boot/PostCode0",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.State.Boot.PostCode", "CurrentBootCycleCount");
+            getPostCodeForBoot(aResp, 1, bootCount, entryCount, skip, top);
+        });
 }
 
 inline void requestRoutesPostCodesEntryCollection(App& app)
@@ -3706,7 +3719,9 @@ inline static bool parsePostCode(const std::string& postCodeID,
         return false;
     }
 
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     const char* start = split[0].data() + 1;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     const char* end = split[0].data() + split[0].size();
     auto [ptrIndex, ecIndex] = std::from_chars(start, end, index);
 
@@ -3716,6 +3731,8 @@ inline static bool parsePostCode(const std::string& postCodeID,
     }
 
     start = split[1].data();
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     end = split[1].data() + split[1].size();
     auto [ptrValue, ecValue] = std::from_chars(start, end, currentValue);
     if (ptrValue != end || ecValue != std::errc())
@@ -3781,18 +3798,17 @@ inline void requestRoutesPostCodesEntryAdditionalData(App& app)
                             return;
                         }
 
-                        auto& [tID, code] = postcodes[value];
-                        if (code.empty())
+                        auto& [tID, c] = postcodes[value];
+                        if (c.empty())
                         {
                             BMCWEB_LOG_INFO << "No found post code data";
                             messages::resourceNotFound(asyncResp->res,
                                                        "LogEntry", postCodeID);
                             return;
                         }
-
-                        std::string_view strData(
-                            reinterpret_cast<const char*>(code.data()),
-                            code.size());
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                        const char* d = reinterpret_cast<const char*>(c.data());
+                        std::string_view strData(d, c.size());
 
                         asyncResp->res.addHeader("Content-Type",
                                                  "application/octet-stream");

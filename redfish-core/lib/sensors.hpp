@@ -22,7 +22,9 @@
 #include <boost/format.hpp>
 #include <boost/range/algorithm/replace_copy_if.hpp>
 #include <dbus_singleton.hpp>
+#include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
+#include <sdbusplus/asio/property.hpp>
 #include <utils/json_utils.hpp>
 
 #include <cmath>
@@ -36,13 +38,11 @@ using GetSubTreeType = std::vector<
     std::pair<std::string,
               std::vector<std::pair<std::string, std::vector<std::string>>>>>;
 
-using SensorVariant =
-    std::variant<int64_t, double, uint32_t, bool, std::string>;
-
 using ManagedObjectsVectorType = std::vector<std::pair<
     sdbusplus::message::object_path,
     boost::container::flat_map<
-        std::string, boost::container::flat_map<std::string, SensorVariant>>>>;
+        std::string, boost::container::flat_map<
+                         std::string, dbus::utility::DbusVariantType>>>>;
 
 namespace sensors
 {
@@ -300,6 +300,11 @@ class SensorsAsyncResp
         }
     }
 
+    SensorsAsyncResp(const SensorsAsyncResp&) = delete;
+    SensorsAsyncResp(SensorsAsyncResp&&) = delete;
+    SensorsAsyncResp& operator=(const SensorsAsyncResp&) = delete;
+    SensorsAsyncResp& operator=(SensorsAsyncResp&&) = delete;
+
     void addMetadata(const nlohmann::json& sensorObject,
                      const std::string& valueKey, const std::string& dbusPath)
     {
@@ -400,7 +405,8 @@ void getObjectsWithConnection(
         "xyz.openbmc_project.Sensor.Value"};
 
     // Response handler for parsing objects subtree
-    auto respHandler = [callback{std::move(callback)}, sensorsAsyncResp,
+    auto respHandler = [callback{std::forward<Callback>(callback)},
+                        sensorsAsyncResp,
                         sensorNames](const boost::system::error_code ec,
                                      const GetSubTreeType& subtree) {
         BMCWEB_LOG_DEBUG << "getObjectsWithConnection resp_handler enter";
@@ -539,7 +545,7 @@ void getValidChassisPath(const std::shared_ptr<SensorsAsyncResp>& asyncResp,
         "xyz.openbmc_project.Inventory.Item.Chassis"};
 
     auto respHandler =
-        [callback{std::move(callback)},
+        [callback{std::forward<Callback>(callback)},
          asyncResp](const boost::system::error_code ec,
                     const std::vector<std::string>& chassisPaths) mutable {
             BMCWEB_LOG_DEBUG << "getValidChassisPath respHandler enter";
@@ -593,7 +599,8 @@ void getChassis(const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
     const std::array<const char*, 2> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Board",
         "xyz.openbmc_project.Inventory.Item.Chassis"};
-    auto respHandler = [callback{std::move(callback)}, sensorsAsyncResp](
+    auto respHandler = [callback{std::forward<Callback>(callback)},
+                        sensorsAsyncResp](
                            const boost::system::error_code ec,
                            const std::vector<std::string>& chassisPaths) {
         BMCWEB_LOG_DEBUG << "getChassis respHandler enter";
@@ -666,11 +673,13 @@ void getChassis(const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
         sensorsAsyncResp->asyncResp->res.jsonValue["Name"] = chassisSubNode;
         // Get the list of all sensors for this Chassis element
         std::string sensorPath = *chassisPath + "/all_sensors";
-        crow::connections::systemBus->async_method_call(
-            [sensorsAsyncResp, callback{std::move(callback)}](
+        sdbusplus::asio::getProperty<std::vector<std::string>>(
+            *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
+            sensorPath, "xyz.openbmc_project.Association", "endpoints",
+            [sensorsAsyncResp,
+             callback{std::forward<const Callback>(callback)}](
                 const boost::system::error_code& e,
-                const std::variant<std::vector<std::string>>&
-                    variantEndpoints) {
+                const std::vector<std::string>& nodeSensorList) {
                 if (e)
                 {
                     if (e.value() != EBADR)
@@ -680,6 +689,7 @@ void getChassis(const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
                         return;
                     }
                 }
+<<<<<<< HEAD
                 const std::vector<std::string>* nodeSensorList =
                     std::get_if<std::vector<std::string>>(&(variantEndpoints));
                 if (nodeSensorList == nullptr)
@@ -696,16 +706,32 @@ void getChassis(const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
                                   : "Sensors");
                     return;
                 }
+||||||| d1a6481
+                const std::vector<std::string>* nodeSensorList =
+                    std::get_if<std::vector<std::string>>(&(variantEndpoints));
+                if (nodeSensorList == nullptr)
+                {
+                    messages::resourceNotFound(
+                        sensorsAsyncResp->asyncResp->res,
+                        sensorsAsyncResp->chassisSubNode,
+                        sensorsAsyncResp->chassisSubNode ==
+                                sensors::node::thermal
+                            ? "Temperatures"
+                        : sensorsAsyncResp->chassisSubNode ==
+                                sensors::node::power
+                            ? "Voltages"
+                            : "Sensors");
+                    return;
+                }
+=======
+>>>>>>> origin/master
                 const std::shared_ptr<boost::container::flat_set<std::string>>
                     culledSensorList = std::make_shared<
                         boost::container::flat_set<std::string>>();
-                reduceSensorList(sensorsAsyncResp, nodeSensorList,
+                reduceSensorList(sensorsAsyncResp, &nodeSensorList,
                                  culledSensorList);
                 callback(culledSensorList);
-            },
-            "xyz.openbmc_project.ObjectMapper", sensorPath,
-            "org.freedesktop.DBus.Properties", "Get",
-            "xyz.openbmc_project.Association", "endpoints");
+            });
     };
 
     // Get the Chassis Collection
@@ -744,7 +770,7 @@ void getObjectManagerPaths(
         "org.freedesktop.DBus.ObjectManager"};
 
     // Response handler for GetSubTree DBus method
-    auto respHandler = [callback{std::move(callback)},
+    auto respHandler = [callback{std::forward<Callback>(callback)},
                         sensorsAsyncResp](const boost::system::error_code ec,
                                           const GetSubTreeType& subtree) {
         BMCWEB_LOG_DEBUG << "getObjectManagerPaths respHandler enter";
@@ -812,12 +838,10 @@ inline std::string getState(const InventoryItem* inventoryItem)
  * be nullptr if no associated inventory item was found.
  * @return Health value for sensor.
  */
-inline std::string getHealth(
-    nlohmann::json& sensorJson,
-    const boost::container::flat_map<
-        std::string, boost::container::flat_map<std::string, SensorVariant>>&
-        interfacesDict,
-    const InventoryItem* inventoryItem)
+inline std::string
+    getHealth(nlohmann::json& sensorJson,
+              const dbus::utility::DBusInteracesMap& interfacesDict,
+              const InventoryItem* inventoryItem)
 {
     // Get current health value (if any) in the sensor JSON object.  Some JSON
     // objects contain multiple sensors (such as PowerSupplies).  We want to set
@@ -845,36 +869,26 @@ inline std::string getHealth(
     }
 
     // Check if sensor has critical threshold alarm
-    auto criticalThresholdIt =
-        interfacesDict.find("xyz.openbmc_project.Sensor.Threshold.Critical");
-    if (criticalThresholdIt != interfacesDict.end())
+
+    for (auto& [interface, values] : interfacesDict)
     {
-        auto thresholdHighIt =
-            criticalThresholdIt->second.find("CriticalAlarmHigh");
-        auto thresholdLowIt =
-            criticalThresholdIt->second.find("CriticalAlarmLow");
-        if (thresholdHighIt != criticalThresholdIt->second.end())
+        if (interface == "xyz.openbmc_project.Sensor.Threshold.Critical")
         {
-            const bool* asserted = std::get_if<bool>(&thresholdHighIt->second);
-            if (asserted == nullptr)
+            for (auto& [valueName, value] : values)
             {
-                BMCWEB_LOG_ERROR << "Illegal sensor threshold";
-            }
-            else if (*asserted)
-            {
-                return "Critical";
-            }
-        }
-        if (thresholdLowIt != criticalThresholdIt->second.end())
-        {
-            const bool* asserted = std::get_if<bool>(&thresholdLowIt->second);
-            if (asserted == nullptr)
-            {
-                BMCWEB_LOG_ERROR << "Illegal sensor threshold";
-            }
-            else if (*asserted)
-            {
-                return "Critical";
+                if (valueName == "CriticalAlarmHigh" ||
+                    valueName == "CriticalAlarmLow")
+                {
+                    const bool* asserted = std::get_if<bool>(&value);
+                    if (asserted == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "Illegal sensor threshold";
+                    }
+                    else if (*asserted)
+                    {
+                        return "Critical";
+                    }
+                }
             }
         }
     }
@@ -893,36 +907,25 @@ inline std::string getHealth(
     }
 
     // Check if sensor has warning threshold alarm
-    auto warningThresholdIt =
-        interfacesDict.find("xyz.openbmc_project.Sensor.Threshold.Warning");
-    if (warningThresholdIt != interfacesDict.end())
+    for (auto& [interface, values] : interfacesDict)
     {
-        auto thresholdHighIt =
-            warningThresholdIt->second.find("WarningAlarmHigh");
-        auto thresholdLowIt =
-            warningThresholdIt->second.find("WarningAlarmLow");
-        if (thresholdHighIt != warningThresholdIt->second.end())
+        if (interface == "xyz.openbmc_project.Sensor.Threshold.Warning")
         {
-            const bool* asserted = std::get_if<bool>(&thresholdHighIt->second);
-            if (asserted == nullptr)
+            for (auto& [valueName, value] : values)
             {
-                BMCWEB_LOG_ERROR << "Illegal sensor threshold";
-            }
-            else if (*asserted)
-            {
-                return "Warning";
-            }
-        }
-        if (thresholdLowIt != warningThresholdIt->second.end())
-        {
-            const bool* asserted = std::get_if<bool>(&thresholdLowIt->second);
-            if (asserted == nullptr)
-            {
-                BMCWEB_LOG_ERROR << "Illegal sensor threshold";
-            }
-            else if (*asserted)
-            {
-                return "Warning";
+                if (valueName == "WarningAlarmHigh" ||
+                    valueName == "WarningAlarmLow")
+                {
+                    const bool* asserted = std::get_if<bool>(&value);
+                    if (asserted == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "Illegal sensor threshold";
+                    }
+                    else if (*asserted)
+                    {
+                        return "Warning";
+                    }
+                }
             }
         }
     }
@@ -967,30 +970,26 @@ inline void setLedState(nlohmann::json& sensorJson,
 inline void objectInterfacesToJson(
     const std::string& sensorName, const std::string& sensorType,
     const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
-    const boost::container::flat_map<
-        std::string, boost::container::flat_map<std::string, SensorVariant>>&
-        interfacesDict,
+    const dbus::utility::DBusInteracesMap& interfacesDict,
     nlohmann::json& sensorJson, InventoryItem* inventoryItem)
 {
-    // We need a value interface before we can do anything with it
-    auto valueIt = interfacesDict.find("xyz.openbmc_project.Sensor.Value");
-    if (valueIt == interfacesDict.end())
-    {
-        BMCWEB_LOG_ERROR << "Sensor doesn't have a value interface";
-        return;
-    }
-
     // Assume values exist as is (10^0 == 1) if no scale exists
     int64_t scaleMultiplier = 0;
-
-    auto scaleIt = valueIt->second.find("Scale");
-    // If a scale exists, pull value as int64, and use the scaling.
-    if (scaleIt != valueIt->second.end())
+    for (auto& [interface, values] : interfacesDict)
     {
-        const int64_t* int64Value = std::get_if<int64_t>(&scaleIt->second);
-        if (int64Value != nullptr)
+        if (interface == "xyz.openbmc_project.Sensor.Value")
         {
-            scaleMultiplier = *int64Value;
+            for (auto& [valueName, value] : values)
+            {
+                if (valueName == "Scale")
+                {
+                    const int64_t* int64Value = std::get_if<int64_t>(&value);
+                    if (int64Value != nullptr)
+                    {
+                        scaleMultiplier = *int64Value;
+                    }
+                }
+            }
         }
     }
 
@@ -1174,13 +1173,18 @@ inline void objectInterfacesToJson(
     for (const std::tuple<const char*, const char*,
                           nlohmann::json::json_pointer>& p : properties)
     {
-        auto interfaceProperties = interfacesDict.find(std::get<0>(p));
-        if (interfaceProperties != interfacesDict.end())
+        for (auto& [interface, values] : interfacesDict)
         {
-            auto thisValueIt = interfaceProperties->second.find(std::get<1>(p));
-            if (thisValueIt != interfaceProperties->second.end())
+            if (interface != std::get<0>(p))
             {
-                const SensorVariant& valueVariant = thisValueIt->second;
+                continue;
+            }
+            for (auto& [valueName, valueVariant] : values)
+            {
+                if (valueName != std::get<1>(p))
+                {
+                    continue;
+                }
 
                 // The property we want to set may be nested json, so use
                 // a json_pointer for easy indexing into the json structure.
@@ -1269,37 +1273,27 @@ inline void populateFanRedundancy(
                 }
 
                 const std::string& owner = objDict.begin()->first;
-                crow::connections::systemBus->async_method_call(
-                    [path, owner,
-                     sensorsAsyncResp](const boost::system::error_code e,
-                                       std::variant<std::vector<std::string>>
-                                           variantEndpoints) {
+                sdbusplus::asio::getProperty<std::vector<std::string>>(
+                    *crow::connections::systemBus,
+                    "xyz.openbmc_project.ObjectMapper", path + "/chassis",
+                    "xyz.openbmc_project.Association", "endpoints",
+                    [path, owner, sensorsAsyncResp](
+                        const boost::system::error_code e,
+                        const std::vector<std::string>& endpoints) {
                         if (e)
                         {
                             return; // if they don't have an association we
                                     // can't tell what chassis is
                         }
-                        // verify part of the right chassis
-                        auto endpoints = std::get_if<std::vector<std::string>>(
-                            &variantEndpoints);
-
-                        if (endpoints == nullptr)
-                        {
-                            BMCWEB_LOG_ERROR << "Invalid association interface";
-                            messages::internalError(
-                                sensorsAsyncResp->asyncResp->res);
-                            return;
-                        }
-
                         auto found = std::find_if(
-                            endpoints->begin(), endpoints->end(),
+                            endpoints.begin(), endpoints.end(),
                             [sensorsAsyncResp](const std::string& entry) {
                                 return entry.find(
                                            sensorsAsyncResp->chassisId) !=
                                        std::string::npos;
                             });
 
-                        if (found == endpoints->end())
+                        if (found == endpoints.end())
                         {
                             return;
                         }
@@ -1308,9 +1302,7 @@ inline void populateFanRedundancy(
                                 const boost::system::error_code& err,
                                 const boost::container::flat_map<
                                     std::string,
-                                    std::variant<uint8_t,
-                                                 std::vector<std::string>,
-                                                 std::string>>& ret) {
+                                    dbus::utility::DbusVariantType>& ret) {
                                 if (err)
                                 {
                                     return; // don't have to have this
@@ -1441,10 +1433,7 @@ inline void populateFanRedundancy(
                             owner, path, "org.freedesktop.DBus.Properties",
                             "GetAll",
                             "xyz.openbmc_project.Control.FanRedundancy");
-                    },
-                    "xyz.openbmc_project.ObjectMapper", path + "/chassis",
-                    "org.freedesktop.DBus.Properties", "Get",
-                    "xyz.openbmc_project.Association", "endpoints");
+                    });
             }
         },
         "xyz.openbmc_project.ObjectMapper",
@@ -1603,96 +1592,90 @@ inline void addInventoryItem(
  */
 inline void storeInventoryItemData(
     InventoryItem& inventoryItem,
-    const boost::container::flat_map<
-        std::string, boost::container::flat_map<std::string, SensorVariant>>&
-        interfacesDict)
+    const dbus::utility::DBusInteracesMap& interfacesDict)
 {
     // Get properties from Inventory.Item interface
-    auto interfaceIt =
-        interfacesDict.find("xyz.openbmc_project.Inventory.Item");
-    if (interfaceIt != interfacesDict.end())
+
+    for (auto& [interface, values] : interfacesDict)
     {
-        auto propertyIt = interfaceIt->second.find("Present");
-        if (propertyIt != interfaceIt->second.end())
+        if (interface == "xyz.openbmc_project.Inventory.Item")
         {
-            const bool* value = std::get_if<bool>(&propertyIt->second);
-            if (value != nullptr)
+            for (auto& [name, dbusValue] : values)
             {
-                inventoryItem.isPresent = *value;
+                if (name == "Present")
+                {
+                    const bool* value = std::get_if<bool>(&dbusValue);
+                    if (value != nullptr)
+                    {
+                        inventoryItem.isPresent = *value;
+                    }
+                }
             }
         }
-    }
+        // Check if Inventory.Item.PowerSupply interface is present
 
-    // Check if Inventory.Item.PowerSupply interface is present
-    interfaceIt =
-        interfacesDict.find("xyz.openbmc_project.Inventory.Item.PowerSupply");
-    if (interfaceIt != interfacesDict.end())
-    {
-        inventoryItem.isPowerSupply = true;
-    }
-
-    // Get properties from Inventory.Decorator.Asset interface
-    interfaceIt =
-        interfacesDict.find("xyz.openbmc_project.Inventory.Decorator.Asset");
-    if (interfaceIt != interfacesDict.end())
-    {
-        auto propertyIt = interfaceIt->second.find("Manufacturer");
-        if (propertyIt != interfaceIt->second.end())
+        if (interface == "xyz.openbmc_project.Inventory.Item.PowerSupply")
         {
-            const std::string* value =
-                std::get_if<std::string>(&propertyIt->second);
-            if (value != nullptr)
+            inventoryItem.isPowerSupply = true;
+        }
+
+        // Get properties from Inventory.Decorator.Asset interface
+        if (interface == "xyz.openbmc_project.Inventory.Decorator.Asset")
+        {
+            for (auto& [name, dbusValue] : values)
             {
-                inventoryItem.manufacturer = *value;
+                if (name == "Manufacturer")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&dbusValue);
+                    if (value != nullptr)
+                    {
+                        inventoryItem.manufacturer = *value;
+                    }
+                }
+                if (name == "Model")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&dbusValue);
+                    if (value != nullptr)
+                    {
+                        inventoryItem.model = *value;
+                    }
+                }
+                if (name == "SerialNumber")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&dbusValue);
+                    if (value != nullptr)
+                    {
+                        inventoryItem.serialNumber = *value;
+                    }
+                }
+                if (name == "PartNumber")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&dbusValue);
+                    if (value != nullptr)
+                    {
+                        inventoryItem.partNumber = *value;
+                    }
+                }
             }
         }
 
-        propertyIt = interfaceIt->second.find("Model");
-        if (propertyIt != interfaceIt->second.end())
+        if (interface ==
+            "xyz.openbmc_project.State.Decorator.OperationalStatus")
         {
-            const std::string* value =
-                std::get_if<std::string>(&propertyIt->second);
-            if (value != nullptr)
+            for (auto& [name, dbusValue] : values)
             {
-                inventoryItem.model = *value;
-            }
-        }
-
-        propertyIt = interfaceIt->second.find("PartNumber");
-        if (propertyIt != interfaceIt->second.end())
-        {
-            const std::string* value =
-                std::get_if<std::string>(&propertyIt->second);
-            if (value != nullptr)
-            {
-                inventoryItem.partNumber = *value;
-            }
-        }
-
-        propertyIt = interfaceIt->second.find("SerialNumber");
-        if (propertyIt != interfaceIt->second.end())
-        {
-            const std::string* value =
-                std::get_if<std::string>(&propertyIt->second);
-            if (value != nullptr)
-            {
-                inventoryItem.serialNumber = *value;
-            }
-        }
-    }
-
-    // Get properties from State.Decorator.OperationalStatus interface
-    interfaceIt = interfacesDict.find(
-        "xyz.openbmc_project.State.Decorator.OperationalStatus");
-    if (interfaceIt != interfacesDict.end())
-    {
-        auto propertyIt = interfaceIt->second.find("Functional");
-        if (propertyIt != interfaceIt->second.end())
-        {
-            const bool* value = std::get_if<bool>(&propertyIt->second);
-            if (value != nullptr)
-            {
-                inventoryItem.isFunctional = *value;
+                if (name == "Functional")
+                {
+                    const bool* value = std::get_if<bool>(&dbusValue);
+                    if (value != nullptr)
+                    {
+                        inventoryItem.isFunctional = *value;
+                    }
+                }
             }
         }
     }
@@ -1756,10 +1739,11 @@ static void getInventoryItemsData(
 
         // Response handler for GetManagedObjects
         auto respHandler = [sensorsAsyncResp, inventoryItems, invConnections,
-                            objectMgrPaths, callback{std::move(callback)},
+                            objectMgrPaths,
+                            callback{std::forward<Callback>(callback)},
                             invConnectionsIndex](
                                const boost::system::error_code ec,
-                               ManagedObjectsVectorType& resp) {
+                               dbus::utility::ManagedObjectType& resp) {
             BMCWEB_LOG_DEBUG << "getInventoryItemsData respHandler enter";
             if (ec)
             {
@@ -1845,7 +1829,8 @@ static void getInventoryItemsConnections(
         "xyz.openbmc_project.State.Decorator.OperationalStatus"};
 
     // Response handler for parsing output from GetSubTree
-    auto respHandler = [callback{std::move(callback)}, sensorsAsyncResp,
+    auto respHandler = [callback{std::forward<Callback>(callback)},
+                        sensorsAsyncResp,
                         inventoryItems](const boost::system::error_code ec,
                                         const GetSubTreeType& subtree) {
         BMCWEB_LOG_DEBUG << "getInventoryItemsConnections respHandler enter";
@@ -1927,7 +1912,8 @@ static void getInventoryItemAssociations(
     BMCWEB_LOG_DEBUG << "getInventoryItemAssociations enter";
 
     // Response handler for GetManagedObjects
-    auto respHandler = [callback{std::move(callback)}, sensorsAsyncResp,
+    auto respHandler = [callback{std::forward<Callback>(callback)},
+                        sensorsAsyncResp,
                         sensorNames](const boost::system::error_code ec,
                                      dbus::utility::ManagedObjectType& resp) {
         BMCWEB_LOG_DEBUG << "getInventoryItemAssociations respHandler enter";
@@ -1950,10 +1936,6 @@ static void getInventoryItemAssociations(
         {
             const std::string& objPath =
                 static_cast<const std::string&>(objDictEntry.first);
-            const boost::container::flat_map<
-                std::string, boost::container::flat_map<
-                                 std::string, dbus::utility::DbusVariantType>>&
-                interfacesDict = objDictEntry.second;
 
             // If path is inventory association for one of the specified sensors
             for (const std::string& sensorName : *sensorNames)
@@ -1963,24 +1945,28 @@ static void getInventoryItemAssociations(
                 if (objPath == sensorAssocPath)
                 {
                     // Get Association interface for object path
-                    auto assocIt =
-                        interfacesDict.find("xyz.openbmc_project.Association");
-                    if (assocIt != interfacesDict.end())
+                    for (const auto& [interface, values] : objDictEntry.second)
                     {
-                        // Get inventory item from end point
-                        auto endpointsIt = assocIt->second.find("endpoints");
-                        if (endpointsIt != assocIt->second.end())
+                        if (interface == "xyz.openbmc_project.Association")
                         {
-                            const std::vector<std::string>* endpoints =
-                                std::get_if<std::vector<std::string>>(
-                                    &endpointsIt->second);
-                            if ((endpoints != nullptr) && !endpoints->empty())
+                            for (const auto& [valueName, value] : values)
                             {
-                                // Add inventory item to vector
-                                const std::string& invItemPath =
-                                    endpoints->front();
-                                addInventoryItem(inventoryItems, invItemPath,
-                                                 sensorName);
+                                if (valueName == "endpoints")
+                                {
+                                    const std::vector<std::string>* endpoints =
+                                        std::get_if<std::vector<std::string>>(
+                                            &value);
+                                    if ((endpoints != nullptr) &&
+                                        !endpoints->empty())
+                                    {
+                                        // Add inventory item to vector
+                                        const std::string& invItemPath =
+                                            endpoints->front();
+                                        addInventoryItem(inventoryItems,
+                                                         invItemPath,
+                                                         sensorName);
+                                    }
+                                }
                             }
                         }
                     }
@@ -1997,10 +1983,6 @@ static void getInventoryItemAssociations(
         {
             const std::string& objPath =
                 static_cast<const std::string&>(objDictEntry.first);
-            const boost::container::flat_map<
-                std::string, boost::container::flat_map<
-                                 std::string, dbus::utility::DbusVariantType>>&
-                interfacesDict = objDictEntry.second;
 
             for (InventoryItem& inventoryItem : *inventoryItems)
             {
@@ -2008,26 +1990,31 @@ static void getInventoryItemAssociations(
                 inventoryAssocPath += "/leds";
                 if (objPath == inventoryAssocPath)
                 {
-                    // Get Association interface for object path
-                    auto assocIt =
-                        interfacesDict.find("xyz.openbmc_project.Association");
-                    if (assocIt != interfacesDict.end())
+                    for (const auto& [interface, values] : objDictEntry.second)
                     {
-                        // Get inventory item from end point
-                        auto endpointsIt = assocIt->second.find("endpoints");
-                        if (endpointsIt != assocIt->second.end())
+                        if (interface == "xyz.openbmc_project.Association")
                         {
-                            const std::vector<std::string>* endpoints =
-                                std::get_if<std::vector<std::string>>(
-                                    &endpointsIt->second);
-                            if ((endpoints != nullptr) && !endpoints->empty())
+                            for (const auto& [valueName, value] : values)
                             {
-                                // Store LED path in inventory item
-                                const std::string& ledPath = endpoints->front();
-                                inventoryItem.ledObjectPath = ledPath;
+                                if (valueName == "endpoints")
+                                {
+                                    const std::vector<std::string>* endpoints =
+                                        std::get_if<std::vector<std::string>>(
+                                            &value);
+                                    if ((endpoints != nullptr) &&
+                                        !endpoints->empty())
+                                    {
+                                        // Add inventory item to vector
+                                        // Store LED path in inventory item
+                                        const std::string& ledPath =
+                                            endpoints->front();
+                                        inventoryItem.ledObjectPath = ledPath;
+                                    }
+                                }
                             }
                         }
                     }
+
                     break;
                 }
             }
@@ -2108,9 +2095,8 @@ void getInventoryLedData(
         // Response handler for Get State property
         auto respHandler =
             [sensorsAsyncResp, inventoryItems, ledConnections, ledPath,
-             callback{std::move(callback)},
-             ledConnectionsIndex](const boost::system::error_code ec,
-                                  const std::variant<std::string>& ledState) {
+             callback{std::forward<Callback>(callback)}, ledConnectionsIndex](
+                const boost::system::error_code ec, const std::string& state) {
                 BMCWEB_LOG_DEBUG << "getInventoryLedData respHandler enter";
                 if (ec)
                 {
@@ -2120,38 +2106,29 @@ void getInventoryLedData(
                     return;
                 }
 
-                const std::string* state = std::get_if<std::string>(&ledState);
-                if (state != nullptr)
+                BMCWEB_LOG_DEBUG << "Led state: " << state;
+                // Find inventory item with this LED object path
+                InventoryItem* inventoryItem =
+                    findInventoryItemForLed(*inventoryItems, ledPath);
+                if (inventoryItem != nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Led state: " << *state;
-                    // Find inventory item with this LED object path
-                    InventoryItem* inventoryItem =
-                        findInventoryItemForLed(*inventoryItems, ledPath);
-                    if (inventoryItem != nullptr)
+                    // Store LED state in InventoryItem
+                    if (boost::ends_with(state, "On"))
                     {
-                        // Store LED state in InventoryItem
-                        if (boost::ends_with(*state, "On"))
-                        {
-                            inventoryItem->ledState = LedState::ON;
-                        }
-                        else if (boost::ends_with(*state, "Blink"))
-                        {
-                            inventoryItem->ledState = LedState::BLINK;
-                        }
-                        else if (boost::ends_with(*state, "Off"))
-                        {
-                            inventoryItem->ledState = LedState::OFF;
-                        }
-                        else
-                        {
-                            inventoryItem->ledState = LedState::UNKNOWN;
-                        }
+                        inventoryItem->ledState = LedState::ON;
                     }
-                }
-                else
-                {
-                    BMCWEB_LOG_DEBUG << "Failed to find State data for LED: "
-                                     << ledPath;
+                    else if (boost::ends_with(state, "Blink"))
+                    {
+                        inventoryItem->ledState = LedState::BLINK;
+                    }
+                    else if (boost::ends_with(state, "Off"))
+                    {
+                        inventoryItem->ledState = LedState::OFF;
+                    }
+                    else
+                    {
+                        inventoryItem->ledState = LedState::UNKNOWN;
+                    }
                 }
 
                 // Recurse to get LED data from next connection
@@ -2163,10 +2140,10 @@ void getInventoryLedData(
             };
 
         // Get the State property for the current LED
-        crow::connections::systemBus->async_method_call(
-            std::move(respHandler), ledConnection, ledPath,
-            "org.freedesktop.DBus.Properties", "Get",
-            "xyz.openbmc_project.Led.Physical", "State");
+        sdbusplus::asio::getProperty<std::string>(
+            *crow::connections::systemBus, ledConnection, ledPath,
+            "xyz.openbmc_project.Led.Physical", "State",
+            std::move(respHandler));
     }
 
     BMCWEB_LOG_DEBUG << "getInventoryLedData exit";
@@ -2207,7 +2184,8 @@ void getInventoryLeds(
         "xyz.openbmc_project.Led.Physical"};
 
     // Response handler for parsing output from GetSubTree
-    auto respHandler = [callback{std::move(callback)}, sensorsAsyncResp,
+    auto respHandler = [callback{std::forward<Callback>(callback)},
+                        sensorsAsyncResp,
                         inventoryItems](const boost::system::error_code ec,
                                         const GetSubTreeType& subtree) {
         BMCWEB_LOG_DEBUG << "getInventoryLeds respHandler enter";
@@ -2304,9 +2282,9 @@ void getPowerSupplyAttributesData(
 
     // Response handler for Get DeratingFactor property
     auto respHandler = [sensorsAsyncResp, inventoryItems,
-                        callback{std::move(callback)}](
+                        callback{std::forward<Callback>(callback)}](
                            const boost::system::error_code ec,
-                           const std::variant<uint32_t>& deratingFactor) {
+                           const uint32_t value) {
         BMCWEB_LOG_DEBUG << "getPowerSupplyAttributesData respHandler enter";
         if (ec)
         {
@@ -2316,24 +2294,15 @@ void getPowerSupplyAttributesData(
             return;
         }
 
-        const uint32_t* value = std::get_if<uint32_t>(&deratingFactor);
-        if (value != nullptr)
+        BMCWEB_LOG_DEBUG << "PS EfficiencyPercent value: " << value;
+        // Store value in Power Supply Inventory Items
+        for (InventoryItem& inventoryItem : *inventoryItems)
         {
-            BMCWEB_LOG_DEBUG << "PS EfficiencyPercent value: " << *value;
-            // Store value in Power Supply Inventory Items
-            for (InventoryItem& inventoryItem : *inventoryItems)
+            if (inventoryItem.isPowerSupply == true)
             {
-                if (inventoryItem.isPowerSupply == true)
-                {
-                    inventoryItem.powerSupplyEfficiencyPercent =
-                        static_cast<int>(*value);
-                }
+                inventoryItem.powerSupplyEfficiencyPercent =
+                    static_cast<int>(value);
             }
-        }
-        else
-        {
-            BMCWEB_LOG_DEBUG
-                << "Failed to find EfficiencyPercent value for PowerSupplies";
         }
 
         BMCWEB_LOG_DEBUG << "getPowerSupplyAttributesData respHandler exit";
@@ -2342,10 +2311,10 @@ void getPowerSupplyAttributesData(
 
     // Get the DeratingFactor property for the PowerSupplyAttributes
     // Currently only property on the interface/only one we care about
-    crow::connections::systemBus->async_method_call(
-        std::move(respHandler), psAttributesConnection, psAttributesPath,
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Control.PowerSupplyAttributes", "DeratingFactor");
+    sdbusplus::asio::getProperty<uint32_t>(
+        *crow::connections::systemBus, psAttributesConnection, psAttributesPath,
+        "xyz.openbmc_project.Control.PowerSupplyAttributes", "DeratingFactor",
+        std::move(respHandler));
 
     BMCWEB_LOG_DEBUG << "getPowerSupplyAttributesData exit";
 }
@@ -2393,7 +2362,8 @@ void getPowerSupplyAttributes(
         "xyz.openbmc_project.Control.PowerSupplyAttributes"};
 
     // Response handler for parsing output from GetSubTree
-    auto respHandler = [callback{std::move(callback)}, sensorsAsyncResp,
+    auto respHandler = [callback{std::forward<Callback>(callback)},
+                        sensorsAsyncResp,
                         inventoryItems](const boost::system::error_code ec,
                                         const GetSubTreeType& subtree) {
         BMCWEB_LOG_DEBUG << "getPowerSupplyAttributes respHandler enter";
@@ -2485,12 +2455,13 @@ static void getInventoryItems(
 {
     BMCWEB_LOG_DEBUG << "getInventoryItems enter";
     auto getInventoryItemAssociationsCb =
-        [sensorsAsyncResp, objectMgrPaths, callback{std::move(callback)}](
+        [sensorsAsyncResp, objectMgrPaths,
+         callback{std::forward<Callback>(callback)}](
             std::shared_ptr<std::vector<InventoryItem>> inventoryItems) {
             BMCWEB_LOG_DEBUG << "getInventoryItemAssociationsCb enter";
             auto getInventoryItemsConnectionsCb =
                 [sensorsAsyncResp, inventoryItems, objectMgrPaths,
-                 callback{std::move(callback)}](
+                 callback{std::forward<const Callback>(callback)}](
                     std::shared_ptr<boost::container::flat_set<std::string>>
                         invConnections) {
                     BMCWEB_LOG_DEBUG << "getInventoryItemsConnectionsCb enter";
@@ -2637,7 +2608,7 @@ inline void getSensorData(
         auto getManagedObjectsCb = [sensorsAsyncResp, sensorNames,
                                     inventoryItems](
                                        const boost::system::error_code ec,
-                                       ManagedObjectsVectorType& resp) {
+                                       dbus::utility::ManagedObjectType& resp) {
             BMCWEB_LOG_DEBUG << "getManagedObjectsCb enter";
             if (ec)
             {
@@ -2921,10 +2892,10 @@ inline void setSensorsOverride(
     BMCWEB_LOG_INFO << "setSensorsOverride for subNode"
                     << sensorAsyncResp->chassisSubNode << "\n";
 
-    const char* propertyValueName;
+    const char* propertyValueName = nullptr;
     std::unordered_map<std::string, std::pair<double, std::string>> overrideMap;
     std::string memberId;
-    double value;
+    double value = 0.0;
     for (auto& collectionItems : allCollections)
     {
         if (collectionItems.first == "Temperatures")
@@ -3035,7 +3006,7 @@ inline void setSensorsOverride(
                     },
                     item.second, item.first, "org.freedesktop.DBus.Properties",
                     "Set", "xyz.openbmc_project.Sensor.Value", "Value",
-                    std::variant<double>(iterator->second.first));
+                    dbus::utility::DbusVariantType(iterator->second.first));
             }
         };
         // Get object with connection for the given sensor name

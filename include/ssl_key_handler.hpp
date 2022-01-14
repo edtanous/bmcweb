@@ -144,15 +144,15 @@ inline bool verifyOpensslKeyCert(const std::string& filepath)
                 }
             }
 #else
-            EVP_PKEY_CTX* pkey_ctx =
+            EVP_PKEY_CTX* pkeyCtx =
                 EVP_PKEY_CTX_new_from_pkey(nullptr, pkey, nullptr);
 
-            if (!pkey_ctx)
+            if (!pkeyCtx)
             {
-                std::cerr << "Unable to allocate pkey_ctx " << ERR_get_error()
+                std::cerr << "Unable to allocate pkeyCtx " << ERR_get_error()
                           << "\n";
             }
-            else if (EVP_PKEY_check(pkey_ctx) == 1)
+            else if (EVP_PKEY_check(pkeyCtx) == 1)
             {
                 privateKeyValid = true;
             }
@@ -186,7 +186,7 @@ inline bool verifyOpensslKeyCert(const std::string& filepath)
             }
 
 #if (OPENSSL_VERSION_NUMBER > 0x30000000L)
-            EVP_PKEY_CTX_free(pkey_ctx);
+            EVP_PKEY_CTX_free(pkeyCtx);
 #endif
             EVP_PKEY_free(pkey);
         }
@@ -232,6 +232,8 @@ inline int addExt(X509* cert, int nid, const char* value)
     X509_EXTENSION* ex = nullptr;
     X509V3_CTX ctx{};
     X509V3_set_ctx(&ctx, cert, cert, nullptr, nullptr, 0);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
     ex = X509V3_EXT_conf_nid(nullptr, &ctx, nid, const_cast<char*>(value));
     if (!ex)
     {
@@ -256,8 +258,7 @@ inline void generateSslCertificate(const std::string& filepath,
     {
         std::cerr << "Generating x509 Certificate\n";
         // Use this code to directly generate a certificate
-        X509* x509;
-        x509 = X509_new();
+        X509* x509 = X509_new();
         if (x509 != nullptr)
         {
             // get a random number from the RNG for the certificate serial
@@ -280,18 +281,22 @@ inline void generateSslCertificate(const std::string& filepath,
             X509_set_pubkey(x509, pPrivKey);
 
             // get the subject name
-            X509_NAME* name;
-            name = X509_get_subject_name(x509);
+            X509_NAME* name = X509_get_subject_name(x509);
 
-            X509_NAME_add_entry_by_txt(
-                name, "C", MBSTRING_ASC,
-                reinterpret_cast<const unsigned char*>("US"), -1, -1, 0);
-            X509_NAME_add_entry_by_txt(
-                name, "O", MBSTRING_ASC,
-                reinterpret_cast<const unsigned char*>("OpenBMC"), -1, -1, 0);
-            X509_NAME_add_entry_by_txt(
-                name, "CN", MBSTRING_ASC,
-                reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
+            using x509String = const unsigned char;
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+            x509String* country = reinterpret_cast<x509String*>("US");
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+            x509String* company = reinterpret_cast<x509String*>("OpenBMC");
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+            x509String* cnStr = reinterpret_cast<x509String*>(cn.c_str());
+
+            X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, country, -1, -1,
+                                       0);
+            X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, company, -1, -1,
+                                       0);
+            X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, cnStr, -1, -1,
+                                       0);
             // set the CSR options
             X509_set_issuer_name(x509, name);
 

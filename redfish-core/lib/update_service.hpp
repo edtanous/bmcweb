@@ -20,10 +20,10 @@
 #include <app.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/container/flat_map.hpp>
+#include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
+#include <sdbusplus/asio/property.hpp>
 #include <utils/fw_utils.hpp>
-
-#include <variant>
 
 namespace redfish
 {
@@ -56,7 +56,7 @@ inline static void activateImage(const std::string& objPath,
         },
         service, objPath, "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Software.Activation", "RequestedActivation",
-        std::variant<std::string>(
+        dbus::utility::DbusVariantType(
             "xyz.openbmc_project.Software.Activation.RequestedActivations.Active"));
 }
 
@@ -69,7 +69,7 @@ static void
 {
     std::vector<std::pair<
         std::string,
-        std::vector<std::pair<std::string, std::variant<std::string>>>>>
+        std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>>>
         interfacesProperties;
 
     sdbusplus::message::object_path objPath;
@@ -136,7 +136,7 @@ static void
                                     std::string iface;
                                     boost::container::flat_map<
                                         std::string,
-                                        std::variant<std::string, uint8_t>>
+                                        dbus::utility::DbusVariantType>
                                         values;
 
                                     std::string index =
@@ -318,69 +318,84 @@ static void monitorForSoftwareAvailable(
 
     fwUpdateErrorMatcher = std::make_unique<sdbusplus::bus::match::match>(
         *crow::connections::systemBus,
-        "type='signal',member='PropertiesChanged',path_namespace='/xyz/"
-        "openbmc_project/logging/entry',"
-        "arg0='xyz.openbmc_project.Logging.Entry'",
+        "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
+        "member='InterfacesAdded',"
+        "path='/xyz/openbmc_project/logging'",
         [asyncResp, url](sdbusplus::message::message& m) {
-            BMCWEB_LOG_DEBUG << "Error Match fired";
-            boost::container::flat_map<std::string, std::variant<std::string>>
-                values;
-            std::string objName;
-            m.read(objName, values);
-            auto find = values.find("Message");
-            if (find == values.end())
+            std::vector<
+                std::pair<std::string, dbus::utility::DBusPropertiesMap>>
+                interfacesProperties;
+            sdbusplus::message::object_path objPath;
+            m.read(objPath, interfacesProperties);
+            BMCWEB_LOG_DEBUG << "obj path = " << objPath.str;
+            for (const std::pair<std::string, dbus::utility::DBusPropertiesMap>&
+                     interface : interfacesProperties)
             {
-                return;
-            }
-            std::string* type = std::get_if<std::string>(&(find->second));
-            if (type == nullptr)
-            {
-                return; // if this was our message, timeout will cover it
-            }
-            if (!boost::starts_with(*type, "xyz.openbmc_project.Software"))
-            {
-                return;
-            }
-            if (*type ==
-                "xyz.openbmc_project.Software.Image.Error.UnTarFailure")
-            {
-                redfish::messages::invalidUpload(asyncResp->res, url,
-                                                 "Invalid archive");
-            }
-            else if (
-                *type ==
-                "xyz.openbmc_project.Software.Image.Error.ManifestFileFailure")
-            {
-                redfish::messages::invalidUpload(asyncResp->res, url,
-                                                 "Invalid manifest");
-            }
-            else if (*type ==
-                     "xyz.openbmc_project.Software.Image.Error.ImageFailure")
-            {
-                redfish::messages::invalidUpload(asyncResp->res, url,
-                                                 "Invalid image format");
-            }
-            else if (*type ==
-                     "xyz.openbmc_project.Software.Version.Error.AlreadyExists")
-            {
+                if (interface.first == "xyz.openbmc_project.Logging.Entry")
+                {
+                    for (const std::pair<std::string,
+                                         dbus::utility::DbusVariantType>&
+                             value : interface.second)
+                    {
+                        if (value.first != "Message")
+                        {
+                            continue;
+                        }
+                        const std::string* type =
+                            std::get_if<std::string>(&value.second);
+                        if (type == nullptr)
+                        {
+                            // if this was our message, timeout will cover it
+                            return;
+                        }
+                        fwAvailableTimer = nullptr;
+                        if (*type ==
+                            "xyz.openbmc_project.Software.Image.Error.UnTarFailure")
+                        {
+                            redfish::messages::invalidUpload(
+                                asyncResp->res, url, "Invalid archive");
+                        }
+                        else if (*type ==
+                                 "xyz.openbmc_project.Software.Image.Error."
+                                 "ManifestFileFailure")
+                        {
+                            redfish::messages::invalidUpload(
+                                asyncResp->res, url, "Invalid manifest");
+                        }
+                        else if (
+                            *type ==
+                            "xyz.openbmc_project.Software.Image.Error.ImageFailure")
+                        {
+                            redfish::messages::invalidUpload(
+                                asyncResp->res, url, "Invalid image format");
+                        }
+                        else if (
+                            *type ==
+                            "xyz.openbmc_project.Software.Version.Error.AlreadyExists")
+                        {
+                            redfish::messages::invalidUpload(
+                                asyncResp->res, url,
+                                "Image version already exists");
 
-                redfish::messages::invalidUpload(
-                    asyncResp->res, url, "Image version already exists");
-
-                redfish::messages::resourceAlreadyExists(
-                    asyncResp->res, "UpdateService.v1_5_0.UpdateService",
-                    "Version", "uploaded version");
+                            redfish::messages::resourceAlreadyExists(
+                                asyncResp->res,
+                                "UpdateService.v1_5_0.UpdateService", "Version",
+                                "uploaded version");
+                        }
+                        else if (
+                            *type ==
+                            "xyz.openbmc_project.Software.Image.Error.BusyFailure")
+                        {
+                            redfish::messages::resourceExhaustion(
+                                asyncResp->res, url);
+                        }
+                        else
+                        {
+                            redfish::messages::internalError(asyncResp->res);
+                        }
+                    }
+                }
             }
-            else if (*type ==
-                     "xyz.openbmc_project.Software.Image.Error.BusyFailure")
-            {
-                redfish::messages::resourceExhaustion(asyncResp->res, url);
-            }
-            else
-            {
-                redfish::messages::internalError(asyncResp->res);
-            }
-            fwAvailableTimer = nullptr;
         });
 }
 
@@ -544,9 +559,12 @@ inline void requestRoutesUpdateService(App& app)
                 {"TFTP"};
 #endif
             // Get the current ApplyTime value
-            crow::connections::systemBus->async_method_call(
+            sdbusplus::asio::getProperty<std::string>(
+                *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+                "/xyz/openbmc_project/software/apply_time",
+                "xyz.openbmc_project.Software.ApplyTime", "RequestedApplyTime",
                 [asyncResp](const boost::system::error_code ec,
-                            const std::variant<std::string>& applyTime) {
+                            const std::string& applyTime) {
                     if (ec)
                     {
                         BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
@@ -554,34 +572,25 @@ inline void requestRoutesUpdateService(App& app)
                         return;
                     }
 
-                    const std::string* s = std::get_if<std::string>(&applyTime);
-                    if (s == nullptr)
-                    {
-                        return;
-                    }
                     // Store the ApplyTime Value
-                    if (*s ==
-                        "xyz.openbmc_project.Software.ApplyTime.RequestedApplyTimes.Immediate")
+                    if (applyTime == "xyz.openbmc_project.Software.ApplyTime."
+                                     "RequestedApplyTimes.Immediate")
                     {
                         asyncResp->res
                             .jsonValue["HttpPushUriOptions"]
                                       ["HttpPushUriApplyTime"]["ApplyTime"] =
                             "Immediate";
                     }
-                    else if (
-                        *s ==
-                        "xyz.openbmc_project.Software.ApplyTime.RequestedApplyTimes.OnReset")
+                    else if (applyTime ==
+                             "xyz.openbmc_project.Software.ApplyTime."
+                             "RequestedApplyTimes.OnReset")
                     {
                         asyncResp->res
                             .jsonValue["HttpPushUriOptions"]
                                       ["HttpPushUriApplyTime"]["ApplyTime"] =
                             "OnReset";
                     }
-                },
-                "xyz.openbmc_project.Settings",
-                "/xyz/openbmc_project/software/apply_time",
-                "org.freedesktop.DBus.Properties", "Get",
-                "xyz.openbmc_project.Software.ApplyTime", "RequestedApplyTime");
+                });
         });
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/")
         .privileges(redfish::privileges::patchUpdateService)
@@ -656,7 +665,7 @@ inline void requestRoutesUpdateService(App& app)
                             "org.freedesktop.DBus.Properties", "Set",
                             "xyz.openbmc_project.Software.ApplyTime",
                             "RequestedApplyTime",
-                            std::variant<std::string>{applyTimeNewVal});
+                            dbus::utility::DbusVariantType{applyTimeNewVal});
                     }
                 }
             }
@@ -1262,18 +1271,22 @@ inline void requestRoutesSoftwareInventory(App& app)
                                              obj.second[0].first);
 
                         crow::connections::systemBus->async_method_call(
-                            [asyncResp, swId](
-                                const boost::system::error_code errorCode,
-                                const boost::container::flat_map<
-                                    std::string, VariantType>& propertiesList) {
+                            [asyncResp,
+                             swId](const boost::system::error_code errorCode,
+                                   const boost::container::flat_map<
+                                       std::string,
+                                       dbus::utility::DbusVariantType>&
+                                       propertiesList) {
                                 if (errorCode)
                                 {
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
                                 boost::container::flat_map<
-                                    std::string, VariantType>::const_iterator
-                                    it = propertiesList.find("Purpose");
+                                    std::string,
+                                    dbus::utility::DbusVariantType>::
+                                    const_iterator it =
+                                        propertiesList.find("Purpose");
                                 if (it == propertiesList.end())
                                 {
                                     BMCWEB_LOG_DEBUG

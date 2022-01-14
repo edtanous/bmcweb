@@ -227,8 +227,21 @@ struct InProgressEnumerateData
 
     ~InProgressEnumerateData()
     {
-        findRemainingObjectsForEnumerate(objectPath, subtree, asyncResp);
+        try
+        {
+            findRemainingObjectsForEnumerate(objectPath, subtree, asyncResp);
+        }
+        catch (...)
+        {
+            BMCWEB_LOG_CRITICAL
+                << "findRemainingObjectsForEnumerate threw exception";
+        }
     }
+
+    InProgressEnumerateData(const InProgressEnumerateData&) = delete;
+    InProgressEnumerateData(InProgressEnumerateData&&) = delete;
+    InProgressEnumerateData& operator=(const InProgressEnumerateData&) = delete;
+    InProgressEnumerateData& operator=(InProgressEnumerateData&&) = delete;
 
     const std::string objectPath;
     std::shared_ptr<GetSubTreeType> subtree;
@@ -476,6 +489,10 @@ struct InProgressActionData
 
         res.end();
     }
+    InProgressActionData(const InProgressActionData&) = delete;
+    InProgressActionData(InProgressActionData&&) = delete;
+    InProgressActionData& operator=(const InProgressActionData&) = delete;
+    InProgressActionData& operator=(InProgressActionData&&) = delete;
 
     void setErrorStatus(const std::string& desc)
     {
@@ -1096,7 +1113,7 @@ inline int readStructFromMessage(const std::string& typeCode,
 inline int readVariantFromMessage(sdbusplus::message::message& m,
                                   nlohmann::json& data)
 {
-    const char* containerType;
+    const char* containerType = nullptr;
     int r = sd_bus_message_peek_type(m.get(), nullptr, &containerType);
     if (r < 0)
     {
@@ -1611,7 +1628,7 @@ inline void handleList(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
-                    std::vector<std::string>& objectPaths) {
+                    const std::vector<std::string>& objectPaths) {
             if (ec)
             {
                 setErrorResponse(asyncResp->res,
@@ -1622,7 +1639,7 @@ inline void handleList(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             {
                 asyncResp->res.jsonValue = {{"status", "ok"},
                                             {"message", "200 OK"},
-                                            {"data", std::move(objectPaths)}};
+                                            {"data", objectPaths}};
             }
         },
         "xyz.openbmc_project.ObjectMapper",
@@ -1642,12 +1659,12 @@ inline void handleEnumerate(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
     crow::connections::systemBus->async_method_call(
         [objectPath, asyncResp](const boost::system::error_code ec,
-                                GetSubTreeType& objectNames) {
+                                const GetSubTreeType& objectNames) {
             auto transaction = std::make_shared<InProgressEnumerateData>(
                 objectPath, asyncResp);
 
             transaction->subtree =
-                std::make_shared<GetSubTreeType>(std::move(objectNames));
+                std::make_shared<GetSubTreeType>(objectNames);
 
             if (ec)
             {
@@ -1796,6 +1813,11 @@ struct AsyncPutRequest
                              forbiddenMsg, forbiddenPropDesc);
         }
     }
+
+    AsyncPutRequest(const AsyncPutRequest&) = delete;
+    AsyncPutRequest(AsyncPutRequest&&) = delete;
+    AsyncPutRequest& operator=(const AsyncPutRequest&) = delete;
+    AsyncPutRequest& operator=(AsyncPutRequest&&) = delete;
 
     void setErrorStatus(const std::string& desc)
     {

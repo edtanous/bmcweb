@@ -19,13 +19,13 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/container/flat_set.hpp>
 #include <dbus_singleton.hpp>
+#include <dbus_utility.hpp>
 #include <error_messages.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/json_utils.hpp>
 
 #include <optional>
 #include <regex>
-#include <variant>
 
 namespace redfish
 {
@@ -34,19 +34,8 @@ namespace redfish
  * DBus types primitives for several generic DBus interfaces
  * TODO(Pawel) consider move this to separate file into boost::dbus
  */
-using PropertiesMapType = boost::container::flat_map<
-    std::string, std::variant<std::string, bool, uint8_t, int16_t, uint16_t,
-                              int32_t, uint32_t, int64_t, uint64_t, double>>;
-
-using GetManagedObjects = std::vector<std::pair<
-    sdbusplus::message::object_path,
-    std::vector<std::pair<
-        std::string,
-        boost::container::flat_map<
-            std::string,
-            std::variant<std::string, bool, uint8_t, int16_t, uint16_t, int32_t,
-                         uint32_t, int64_t, uint64_t, double,
-                         std::vector<std::string>>>>>>>;
+using PropertiesMapType =
+    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
 
 enum class LinkType
 {
@@ -201,9 +190,10 @@ inline std::string
     return "";
 }
 
-inline bool extractEthernetInterfaceData(const std::string& ethifaceId,
-                                         GetManagedObjects& dbusData,
-                                         EthernetInterfaceData& ethData)
+inline bool
+    extractEthernetInterfaceData(const std::string& ethifaceId,
+                                 dbus::utility::ManagedObjectType& dbusData,
+                                 EthernetInterfaceData& ethData)
 {
     bool idFound = false;
     for (auto& objpath : dbusData)
@@ -437,7 +427,7 @@ inline bool extractEthernetInterfaceData(const std::string& ethifaceId,
 // Helper function that extracts data for single ethernet ipv6 address
 inline void
     extractIPV6Data(const std::string& ethifaceId,
-                    const GetManagedObjects& dbusData,
+                    const dbus::utility::ManagedObjectType& dbusData,
                     boost::container::flat_set<IPv6AddressData>& ipv6Config)
 {
     const std::string ipv6PathStart =
@@ -515,7 +505,7 @@ inline void
 // Helper function that extracts data for single ethernet ipv4 address
 inline void
     extractIPData(const std::string& ethifaceId,
-                  const GetManagedObjects& dbusData,
+                  const dbus::utility::ManagedObjectType& dbusData,
                   boost::container::flat_set<IPv4AddressData>& ipv4Config)
 {
     const std::string ipv4PathStart =
@@ -614,7 +604,7 @@ void changeVlanId(const std::string& ifaceId, const uint32_t& inputVlanId,
         std::string("/xyz/openbmc_project/network/") + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.VLAN", "Id",
-        std::variant<uint32_t>(inputVlanId));
+        dbus::utility::DbusVariantType(inputVlanId));
 }
 
 /**
@@ -645,9 +635,9 @@ inline bool ipv4VerifyIpAndGetBitcount(const std::string& ip,
         *bits = 0;
     }
 
-    char* endPtr;
+    char* endPtr = nullptr;
     long previousValue = 255;
-    bool firstZeroInByteHit;
+    bool firstZeroInByteHit = false;
     for (const std::string& byte : bytesInMask)
     {
         if (byte.empty())
@@ -748,7 +738,7 @@ inline void updateIPv4DefaultGateway(
         "/xyz/openbmc_project/network/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.EthernetInterface", "DefaultGateway",
-        std::variant<std::string>(gateway));
+        dbus::utility::DbusVariantType(gateway));
 }
 /**
  * @brief Creates a static IPv4 entry
@@ -941,9 +931,10 @@ void getEthernetIfaceData(const std::string& ethifaceId,
                           CallbackFunc&& callback)
 {
     crow::connections::systemBus->async_method_call(
-        [ethifaceId{std::string{ethifaceId}}, callback{std::move(callback)}](
+        [ethifaceId{std::string{ethifaceId}},
+         callback{std::forward<CallbackFunc>(callback)}](
             const boost::system::error_code errorCode,
-            GetManagedObjects& resp) {
+            dbus::utility::ManagedObjectType& resp) {
             EthernetInterfaceData ethData{};
             boost::container::flat_set<IPv4AddressData> ipv4Data;
             boost::container::flat_set<IPv6AddressData> ipv6Data;
@@ -992,9 +983,9 @@ template <typename CallbackFunc>
 void getEthernetIfaceList(CallbackFunc&& callback)
 {
     crow::connections::systemBus->async_method_call(
-        [callback{std::move(callback)}](
+        [callback{std::forward<CallbackFunc>(callback)}](
             const boost::system::error_code errorCode,
-            GetManagedObjects& resp) {
+            dbus::utility::ManagedObjectType& resp) {
             // Callback requires vector<string> to retrieve all available
             // ethernet interfaces
             boost::container::flat_set<std::string> ifaceList;
@@ -1055,7 +1046,7 @@ inline void
         "xyz.openbmc_project.Network", "/xyz/openbmc_project/network/config",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.SystemConfiguration", "HostName",
-        std::variant<std::string>(hostname));
+        dbus::utility::DbusVariantType(hostname));
 }
 
 inline void
@@ -1075,7 +1066,7 @@ inline void
         "/xyz/openbmc_project/network/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.EthernetInterface", "DomainName",
-        std::variant<std::vector<std::string>>(vectorDomainname));
+        dbus::utility::DbusVariantType(vectorDomainname));
 }
 
 inline bool isHostnameValid(const std::string& hostname)
@@ -1154,7 +1145,7 @@ inline void
         "/xyz/openbmc_project/network/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.MACAddress", "MACAddress",
-        std::variant<std::string>(macAddress));
+        dbus::utility::DbusVariantType(macAddress));
 }
 
 inline void setDHCPEnabled(const std::string& ifaceId,
@@ -1177,7 +1168,7 @@ inline void setDHCPEnabled(const std::string& ifaceId,
         "/xyz/openbmc_project/network/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.EthernetInterface", propertyName,
-        std::variant<std::string>{dhcp});
+        dbus::utility::DbusVariantType{dhcp});
 }
 
 inline void setEthernetInterfaceBoolProperty(
@@ -1197,7 +1188,7 @@ inline void setEthernetInterfaceBoolProperty(
         "/xyz/openbmc_project/network/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.EthernetInterface", propertyName,
-        std::variant<bool>{value});
+        dbus::utility::DbusVariantType{value});
 }
 
 inline void setDHCPv4Config(const std::string& propertyName, const bool& value,
@@ -1217,7 +1208,7 @@ inline void setDHCPv4Config(const std::string& propertyName, const bool& value,
         "/xyz/openbmc_project/network/config/dhcp",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.DHCPConfiguration", propertyName,
-        std::variant<bool>{value});
+        dbus::utility::DbusVariantType{value});
 }
 
 inline void handleDHCPPatch(const std::string& ifaceId,
@@ -1370,7 +1361,7 @@ inline void handleIPv4StaticPatch(
     // match it to the first JSON element in the IPv4StaticAddresses array.
     // Match each subsequent JSON element to the next static IP programmed
     // into the NIC.
-    boost::container::flat_set<IPv4AddressData>::const_iterator niciPentry =
+    boost::container::flat_set<IPv4AddressData>::const_iterator nicIpEntry =
         getNextStaticIpEntry(ipv4Data.cbegin(), ipv4Data.cend());
 
     for (nlohmann::json& thisJson : input)
@@ -1417,9 +1408,9 @@ inline void handleIPv4StaticPatch(
                     errorInEntry = true;
                 }
             }
-            else if (niciPentry != ipv4Data.cend())
+            else if (nicIpEntry != ipv4Data.cend())
             {
-                addr = &(niciPentry->address);
+                addr = &(nicIpEntry->address);
             }
             else
             {
@@ -1438,13 +1429,13 @@ inline void handleIPv4StaticPatch(
                     errorInEntry = true;
                 }
             }
-            else if (niciPentry != ipv4Data.cend())
+            else if (nicIpEntry != ipv4Data.cend())
             {
-                if (!ipv4VerifyIpAndGetBitcount(niciPentry->netmask,
+                if (!ipv4VerifyIpAndGetBitcount(nicIpEntry->netmask,
                                                 &prefixLength))
                 {
                     messages::propertyValueFormatError(
-                        asyncResp->res, niciPentry->netmask,
+                        asyncResp->res, nicIpEntry->netmask,
                         pathString + "/SubnetMask");
                     errorInEntry = true;
                 }
@@ -1469,9 +1460,9 @@ inline void handleIPv4StaticPatch(
                     errorInEntry = true;
                 }
             }
-            else if (niciPentry != ipv4Data.cend())
+            else if (nicIpEntry != ipv4Data.cend())
             {
-                gw = &niciPentry->gateway;
+                gw = &nicIpEntry->gateway;
             }
             else
             {
@@ -1485,12 +1476,12 @@ inline void handleIPv4StaticPatch(
                 return;
             }
 
-            if (niciPentry != ipv4Data.cend())
+            if (nicIpEntry != ipv4Data.cend())
             {
-                deleteAndCreateIPv4(ifaceId, niciPentry->id, prefixLength, *gw,
+                deleteAndCreateIPv4(ifaceId, nicIpEntry->id, prefixLength, *gw,
                                     *addr, asyncResp);
-                niciPentry =
-                    getNextStaticIpEntry(++niciPentry, ipv4Data.cend());
+                nicIpEntry =
+                    getNextStaticIpEntry(++nicIpEntry, ipv4Data.cend());
             }
             else
             {
@@ -1501,7 +1492,7 @@ inline void handleIPv4StaticPatch(
         }
         else
         {
-            if (niciPentry == ipv4Data.cend())
+            if (nicIpEntry == ipv4Data.cend())
             {
                 // Requesting a DELETE/DO NOT MODIFY action for an item
                 // that isn't present on the eth(n) interface. Input JSON is
@@ -1521,12 +1512,12 @@ inline void handleIPv4StaticPatch(
 
             if (thisJson.is_null())
             {
-                deleteIPv4(ifaceId, niciPentry->id, asyncResp);
+                deleteIPv4(ifaceId, nicIpEntry->id, asyncResp);
             }
-            if (niciPentry != ipv4Data.cend())
+            if (nicIpEntry != ipv4Data.cend())
             {
-                niciPentry =
-                    getNextStaticIpEntry(++niciPentry, ipv4Data.cend());
+                nicIpEntry =
+                    getNextStaticIpEntry(++nicIpEntry, ipv4Data.cend());
             }
             entryIdx++;
         }
@@ -1550,7 +1541,7 @@ inline void handleStaticNameServersPatch(
         "/xyz/openbmc_project/network/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.EthernetInterface", "StaticNameServers",
-        std::variant<std::vector<std::string>>{updatedStaticNameServers});
+        dbus::utility::DbusVariantType{updatedStaticNameServers});
 }
 
 inline void handleIPv6StaticAddressesPatch(
@@ -1567,7 +1558,7 @@ inline void handleIPv6StaticAddressesPatch(
         return;
     }
     size_t entryIdx = 1;
-    boost::container::flat_set<IPv6AddressData>::const_iterator niciPentry =
+    boost::container::flat_set<IPv6AddressData>::const_iterator nicIpEntry =
         getNextStaticIpEntry(ipv6Data.cbegin(), ipv6Data.cend());
     for (const nlohmann::json& thisJson : input)
     {
@@ -1590,8 +1581,8 @@ inline void handleIPv6StaticAddressesPatch(
                 return;
             }
 
-            const std::string* addr;
-            uint8_t prefix;
+            const std::string* addr = nullptr;
+            uint8_t prefix = 0;
 
             // Find the address and prefixLength values. Any values that are
             // not explicitly provided are assumed to be unmodified from the
@@ -1601,9 +1592,9 @@ inline void handleIPv6StaticAddressesPatch(
             {
                 addr = &(*address);
             }
-            else if (niciPentry != ipv6Data.end())
+            else if (nicIpEntry != ipv6Data.end())
             {
-                addr = &(niciPentry->address);
+                addr = &(nicIpEntry->address);
             }
             else
             {
@@ -1616,9 +1607,9 @@ inline void handleIPv6StaticAddressesPatch(
             {
                 prefix = *prefixLength;
             }
-            else if (niciPentry != ipv6Data.end())
+            else if (nicIpEntry != ipv6Data.end())
             {
-                prefix = niciPentry->prefixLength;
+                prefix = nicIpEntry->prefixLength;
             }
             else
             {
@@ -1627,12 +1618,12 @@ inline void handleIPv6StaticAddressesPatch(
                 return;
             }
 
-            if (niciPentry != ipv6Data.end())
+            if (nicIpEntry != ipv6Data.end())
             {
-                deleteAndCreateIPv6(ifaceId, niciPentry->id, prefix, *addr,
+                deleteAndCreateIPv6(ifaceId, nicIpEntry->id, prefix, *addr,
                                     asyncResp);
-                niciPentry =
-                    getNextStaticIpEntry(++niciPentry, ipv6Data.cend());
+                nicIpEntry =
+                    getNextStaticIpEntry(++nicIpEntry, ipv6Data.cend());
             }
             else
             {
@@ -1642,7 +1633,7 @@ inline void handleIPv6StaticAddressesPatch(
         }
         else
         {
-            if (niciPentry == ipv6Data.end())
+            if (nicIpEntry == ipv6Data.end())
             {
                 // Requesting a DELETE/DO NOT MODIFY action for an item
                 // that isn't present on the eth(n) interface. Input JSON is
@@ -1662,12 +1653,12 @@ inline void handleIPv6StaticAddressesPatch(
 
             if (thisJson.is_null())
             {
-                deleteIPv6(ifaceId, niciPentry->id, asyncResp);
+                deleteIPv6(ifaceId, nicIpEntry->id, asyncResp);
             }
-            if (niciPentry != ipv6Data.cend())
+            if (nicIpEntry != ipv6Data.cend())
             {
-                niciPentry =
-                    getNextStaticIpEntry(++niciPentry, ipv6Data.cend());
+                nicIpEntry =
+                    getNextStaticIpEntry(++nicIpEntry, ipv6Data.cend());
             }
             entryIdx++;
         }
@@ -1693,13 +1684,13 @@ inline void parseInterfaceData(
 
     crow::connections::systemBus->async_method_call(
         [health](const boost::system::error_code ec,
-                 std::vector<std::string>& resp) {
+                 const std::vector<std::string>& resp) {
             if (ec)
             {
                 return;
             }
 
-            health->inventory = std::move(resp);
+            health->inventory = resp;
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -2172,7 +2163,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
                                     "/xyz/openbmc_project/network/" + ifaceId,
                                     "org.freedesktop.DBus.Properties", "Set",
                                     "xyz.openbmc_project.Network.VLAN", "Id",
-                                    std::variant<uint32_t>(vlanId));
+                                    dbus::utility::DbusVariantType(vlanId));
                             }
                             else
                             {

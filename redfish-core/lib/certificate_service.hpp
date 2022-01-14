@@ -3,9 +3,9 @@
 #include <app.hpp>
 #include <boost/convert.hpp>
 #include <boost/convert/strtol.hpp>
+#include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
 
-#include <variant>
 namespace redfish
 {
 namespace certs
@@ -449,10 +449,10 @@ inline void requestRoutesCertificateActionGenerateCSR(App& app)
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    std::vector<
-                        std::pair<std::string,
-                                  std::vector<std::pair<
-                                      std::string, std::variant<std::string>>>>>
+                    std::vector<std::pair<
+                        std::string,
+                        std::vector<std::pair<std::string,
+                                              dbus::utility::DbusVariantType>>>>
                         interfacesProperties;
                     sdbusplus::message::object_path csrObjectPath;
                     m.read(csrObjectPath, interfacesProperties);
@@ -468,7 +468,7 @@ inline void requestRoutesCertificateActionGenerateCSR(App& app)
                     }
                 });
             crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code& ec,
+                [asyncResp](const boost::system::error_code ec,
                             const std::string&) {
                     if (ec)
                     {
@@ -569,9 +569,8 @@ static void getCertificateProperties(
     const std::string& objectPath, const std::string& service, long certId,
     const std::string& certURL, const std::string& name)
 {
-    using PropertyType =
-        std::variant<std::string, uint64_t, std::vector<std::string>>;
-    using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
+    using PropertiesMap =
+        boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
     BMCWEB_LOG_DEBUG << "getCertificateProperties Path=" << objectPath
                      << " certId=" << certId << " certURl=" << certURL;
     crow::connections::systemBus->async_method_call(
@@ -841,7 +840,7 @@ inline void requestRoutesHTTPSCertificateCollection(App& app)
 
             crow::connections::systemBus->async_method_call(
                 [asyncResp](const boost::system::error_code ec,
-                            const ManagedObjectType& certs) {
+                            const dbus::utility::ManagedObjectType& certs) {
                     if (ec)
                     {
                         BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
@@ -943,7 +942,7 @@ inline void
                      << " Path=" << path << " service= " << service;
     crow::connections::systemBus->async_method_call(
         [asyncResp, certURL](const boost::system::error_code ec,
-                             const ManagedObjectType& certs) {
+                             const dbus::utility::ManagedObjectType& certs) {
             if (ec)
             {
                 BMCWEB_LOG_WARNING
@@ -1027,7 +1026,7 @@ inline void requestRoutesLDAPCertificateCollection(App& app)
 
             crow::connections::systemBus->async_method_call(
                 [asyncResp](const boost::system::error_code ec,
-                            const ManagedObjectType& certs) {
+                            const dbus::utility::ManagedObjectType& certs) {
                     nlohmann::json& members =
                         asyncResp->res.jsonValue["Members"];
                     nlohmann::json& count =
@@ -1161,7 +1160,7 @@ inline void requestRoutesTrustStoreCertificateCollection(App& app)
 
             crow::connections::systemBus->async_method_call(
                 [asyncResp](const boost::system::error_code ec,
-                            const ManagedObjectType& certs) {
+                            const dbus::utility::ManagedObjectType& certs) {
                     if (ec)
                     {
                         BMCWEB_LOG_ERROR << "DBUS response error: " << ec;

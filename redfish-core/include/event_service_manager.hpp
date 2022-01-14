@@ -24,6 +24,7 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/container/flat_map.hpp>
+#include <dbus_utility.hpp>
 #include <error_messages.hpp>
 #include <event_service_store.hpp>
 #include <http_client.hpp>
@@ -37,7 +38,6 @@
 #include <fstream>
 #include <memory>
 #include <span>
-#include <variant>
 
 namespace redfish
 {
@@ -500,9 +500,8 @@ class Subscription : public persistent_data::UserSubscription
     }
 #endif
 
-    void filterAndSendReports(
-        const std::string& id,
-        const std::variant<telemetry::TimestampReadings>& var)
+    void filterAndSendReports(const std::string& reportId,
+                              const telemetry::TimestampReadings& var)
     {
         std::string mrdUri = telemetry::metricReportDefinitionUri + ("/" + id);
 
@@ -518,11 +517,11 @@ class Subscription : public persistent_data::UserSubscription
         }
 
         nlohmann::json msg;
-        if (!telemetry::fillReport(msg, id, var))
+        if (!telemetry::fillReport(msg, reportId, var))
         {
             BMCWEB_LOG_ERROR << "Failed to fill the MetricReport for DBus "
                                 "Report with id "
-                             << id;
+                             << reportId;
             return;
         }
 
@@ -565,9 +564,9 @@ class Subscription : public persistent_data::UserSubscription
 class EventServiceManager
 {
   private:
-    bool serviceEnabled;
-    uint32_t retryAttempts;
-    uint32_t retryTimeoutInterval;
+    bool serviceEnabled = false;
+    uint32_t retryAttempts = 0;
+    uint32_t retryTimeoutInterval = 0;
 
     EventServiceManager()
     {
@@ -589,6 +588,7 @@ class EventServiceManager
     EventServiceManager& operator=(const EventServiceManager&) = delete;
     EventServiceManager(EventServiceManager&&) = delete;
     EventServiceManager& operator=(EventServiceManager&&) = delete;
+    ~EventServiceManager() = default;
 
     static EventServiceManager& getInstance()
     {
@@ -1189,7 +1189,8 @@ class EventServiceManager
                 std::size_t index = 0;
                 while ((index + iEventSize) <= bytesTransferred)
                 {
-                    struct inotify_event event;
+                    struct inotify_event event
+                    {};
                     std::memcpy(&event, &readBuffer[index], iEventSize);
                     if (event.wd == dirWatchDesc)
                     {
@@ -1315,8 +1316,7 @@ class EventServiceManager
         }
 
         std::string interface;
-        std::vector<
-            std::pair<std::string, std::variant<telemetry::TimestampReadings>>>
+        std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>
             props;
         std::vector<std::string> invalidProps;
         msg.read(interface, props, invalidProps);
@@ -1330,15 +1330,21 @@ class EventServiceManager
             return;
         }
 
-        const std::variant<telemetry::TimestampReadings>& readings =
-            found->second;
+        const telemetry::TimestampReadings* readings =
+            std::get_if<telemetry::TimestampReadings>(&found->second);
+        if (!readings)
+        {
+            BMCWEB_LOG_INFO << "Failed to get Readings from Report properties";
+            return;
+        }
+
         for (const auto& it :
              EventServiceManager::getInstance().subscriptionsMap)
         {
             Subscription& entry = *it.second.get();
             if (entry.eventFormatType == metricReportFormatType)
             {
-                entry.filterAndSendReports(id, readings);
+                entry.filterAndSendReports(id, *readings);
             }
         }
     }

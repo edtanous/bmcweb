@@ -1,9 +1,10 @@
 #pragma once
 #include <async_resp.hpp>
+#include <dbus_utility.hpp>
+#include <sdbusplus/asio/property.hpp>
 
 #include <algorithm>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace redfish
@@ -42,10 +43,13 @@ inline void
                                 const bool populateLinkToImages)
 {
     // Used later to determine running (known on Redfish as active) FW images
-    crow::connections::systemBus->async_method_call(
-        [aResp, fwVersionPurpose, activeVersionPropName, populateLinkToImages](
-            const boost::system::error_code ec,
-            const std::variant<std::vector<std::string>>& resp) {
+    sdbusplus::asio::getProperty<std::vector<std::string>>(
+        *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/software/functional",
+        "xyz.openbmc_project.Association", "endpoints",
+        [aResp, fwVersionPurpose, activeVersionPropName,
+         populateLinkToImages](const boost::system::error_code ec,
+                               const std::vector<std::string>& functionalFw) {
             BMCWEB_LOG_DEBUG << "populateFirmwareInformation enter";
             if (ec)
             {
@@ -55,9 +59,7 @@ inline void
                 return;
             }
 
-            const std::vector<std::string>* functionalFw =
-                std::get_if<std::vector<std::string>>(&resp);
-            if ((functionalFw == nullptr) || (functionalFw->size() == 0))
+            if (functionalFw.size() == 0)
             {
                 // Could keep going and try to populate SoftwareImages but
                 // something is seriously wrong, so just fail
@@ -70,7 +72,7 @@ inline void
             // example functionalFw:
             // v as 2 "/xyz/openbmc_project/software/ace821ef"
             //        "/xyz/openbmc_project/software/230fb078"
-            for (auto& fw : *functionalFw)
+            for (auto& fw : functionalFw)
             {
                 sdbusplus::message::object_path path(fw);
                 std::string leaf = path.filename();
@@ -136,8 +138,8 @@ inline void
                                 const boost::system::error_code ec3,
                                 const boost::container::flat_map<
                                     std::string,
-                                    std::variant<bool, std::string, uint64_t,
-                                                 uint32_t>>& propertiesList) {
+                                    dbus::utility::DbusVariantType>&
+                                    propertiesList) {
                                 if (ec3)
                                 {
                                     BMCWEB_LOG_ERROR << "error_code = " << ec3;
@@ -154,9 +156,9 @@ inline void
 
                                 boost::container::flat_map<
                                     std::string,
-                                    std::variant<bool, std::string, uint64_t,
-                                                 uint32_t>>::const_iterator it =
-                                    propertiesList.find("Purpose");
+                                    dbus::utility::DbusVariantType>::
+                                    const_iterator it =
+                                        propertiesList.find("Purpose");
                                 if (it == propertiesList.end())
                                 {
                                     BMCWEB_LOG_ERROR
@@ -254,11 +256,7 @@ inline void
                 "/xyz/openbmc_project/software", static_cast<int32_t>(0),
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.Version"});
-        },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/software/functional",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
+        });
 
     return;
 }
@@ -335,11 +333,10 @@ inline void getFwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     BMCWEB_LOG_DEBUG << "getFwStatus: swId " << *swId << " svc " << dbusSvc;
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp,
-         swId](const boost::system::error_code errorCode,
-               const boost::container::flat_map<
-                   std::string, std::variant<bool, std::string, uint64_t,
-                                             uint32_t>>& propertiesList) {
+        [asyncResp, swId](
+            const boost::system::error_code errorCode,
+            const boost::container::flat_map<
+                std::string, dbus::utility::DbusVariantType>& propertiesList) {
             if (errorCode)
             {
                 // not all fwtypes are updateable, this is ok
@@ -347,9 +344,8 @@ inline void getFwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 return;
             }
             boost::container::flat_map<
-                std::string, std::variant<bool, std::string, uint64_t,
-                                          uint32_t>>::const_iterator it =
-                propertiesList.find("Activation");
+                std::string, dbus::utility::DbusVariantType>::const_iterator
+                it = propertiesList.find("Activation");
             if (it == propertiesList.end())
             {
                 BMCWEB_LOG_DEBUG << "Can't find property \"Activation\"!";
@@ -390,9 +386,12 @@ inline void
     getFwUpdateableStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::shared_ptr<std::string>& fwId)
 {
-    crow::connections::systemBus->async_method_call(
+    sdbusplus::asio::getProperty<std::vector<std::string>>(
+        *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/software/updateable",
+        "xyz.openbmc_project.Association", "endpoints",
         [asyncResp, fwId](const boost::system::error_code ec,
-                          const std::variant<std::vector<std::string>>& resp) {
+                          const std::vector<std::string>& objPaths) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << " error_code = " << ec
@@ -401,26 +400,15 @@ inline void
                 // so don't throw error here.
                 return;
             }
-            const std::vector<std::string>* objPaths =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (objPaths)
-            {
-                std::string reqFwObjPath =
-                    "/xyz/openbmc_project/software/" + *fwId;
+            std::string reqFwObjPath = "/xyz/openbmc_project/software/" + *fwId;
 
-                if (std::find((*objPaths).begin(), (*objPaths).end(),
-                              reqFwObjPath) != (*objPaths).end())
-                {
-                    asyncResp->res.jsonValue["Updateable"] = true;
-                    return;
-                }
+            if (std::find(objPaths.begin(), objPaths.end(), reqFwObjPath) !=
+                objPaths.end())
+            {
+                asyncResp->res.jsonValue["Updateable"] = true;
+                return;
             }
-            return;
-        },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/software/updateable",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
+        });
 
     return;
 }

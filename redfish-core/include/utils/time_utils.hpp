@@ -18,7 +18,8 @@ namespace time_utils
 namespace details
 {
 
-using Days = std::chrono::duration<long long, std::ratio<24 * 60 * 60>>;
+constexpr intmax_t dayDuration = static_cast<intmax_t>(24 * 60 * 60);
+using Days = std::chrono::duration<long long, std::ratio<dayDuration>>;
 
 inline void leftZeroPadding(std::string& str, const std::size_t padding)
 {
@@ -42,7 +43,7 @@ bool fromDurationItem(std::string_view& fmt, const char postfix,
         return false;
     }
 
-    const char* end;
+    const char* end = nullptr;
     std::chrono::milliseconds::rep ticks = 0;
     if constexpr (std::is_same_v<FromTime, std::chrono::milliseconds>)
     {

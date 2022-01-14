@@ -56,10 +56,8 @@ using DbusVariantType = sdbusplus::utility::dedup_variant_t<
  >;
 
 // clang-format on
-using DBusPropertiesMap =
-    boost::container::flat_map<std::string, DbusVariantType>;
-using DBusInteracesMap =
-    boost::container::flat_map<std::string, DBusPropertiesMap>;
+using DBusPropertiesMap = std::vector<std::pair<std::string, DbusVariantType>>;
+using DBusInteracesMap = std::vector<std::pair<std::string, DBusPropertiesMap>>;
 using ManagedObjectType =
     std::vector<std::pair<sdbusplus::message::object_path, DBusInteracesMap>>;
 
@@ -113,8 +111,9 @@ inline void checkDbusPathExists(const std::string& path, Callback&& callback)
         std::vector<std::pair<std::string, std::vector<std::string>>>;
 
     crow::connections::systemBus->async_method_call(
-        [callback{std::move(callback)}](const boost::system::error_code ec,
-                                        const GetObjectType& objectNames) {
+        [callback{std::forward<Callback>(callback)}](
+            const boost::system::error_code ec,
+            const GetObjectType& objectNames) {
             callback(!ec && objectNames.size() != 0);
         },
         "xyz.openbmc_project.ObjectMapper",

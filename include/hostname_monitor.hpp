@@ -2,6 +2,7 @@
 #ifdef BMCWEB_ENABLE_SSL
 #include <boost/container/flat_map.hpp>
 #include <dbus_singleton.hpp>
+#include <include/dbus_utility.hpp>
 #include <sdbusplus/bus/match.hpp>
 #include <sdbusplus/message/types.hpp>
 #include <ssl_key_handler.hpp>
@@ -15,7 +16,7 @@ static std::unique_ptr<sdbusplus::bus::match::match> hostnameSignalMonitor;
 inline void installCertificate(const std::filesystem::path& certPath)
 {
     crow::connections::systemBus->async_method_call(
-        [certPath](boost::system::error_code ec) {
+        [certPath](const boost::system::error_code ec) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "Replace Certificate Fail..";
@@ -42,7 +43,7 @@ inline int onPropertyUpdate(sd_bus_message* m, void* /* userdata */,
 
     sdbusplus::message::message message(m);
     std::string iface;
-    boost::container::flat_map<std::string, std::variant<std::string>>
+    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>
         changedProperties;
 
     message.read(iface, changedProperties);
@@ -102,6 +103,7 @@ inline int onPropertyUpdate(sd_bus_message* m, void* /* userdata */,
         X509_get_ext_d2i(cert, NID_netscape_comment, nullptr, nullptr));
     if (asn1)
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         std::string_view comment(reinterpret_cast<const char*>(asn1->data),
                                  static_cast<size_t>(asn1->length));
         BMCWEB_LOG_DEBUG << "x509Comment: " << comment;

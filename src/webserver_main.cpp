@@ -62,7 +62,7 @@ inline void setupSocket(crow::App& app)
     }
 }
 
-int main(int /*argc*/, char** /*argv*/)
+int run()
 {
     crow::Logger::setLogLevel(crow::LogLevel::Debug);
 
@@ -150,4 +150,17 @@ int main(int /*argc*/, char** /*argv*/)
 
     crow::connections::systemBus.reset();
     return 0;
+}
+
+int main(int /*argc*/, char** /*argv*/)
+{
+    try
+    {
+        return run();
+    }
+    catch (...)
+    {
+        return -1;
+        BMCWEB_LOG_CRITICAL << "Threw exception to main";
+    }
 }

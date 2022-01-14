@@ -6,6 +6,7 @@
 
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
+#include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
 
 #include <tuple>
@@ -23,9 +24,8 @@ using ReadingParameters =
 
 inline void fillReportDefinition(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id,
-    const std::vector<
-        std::pair<std::string, std::variant<std::string, bool, uint64_t,
-                                            ReadingParameters>>>& ret)
+    const std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>&
+        ret)
 {
     asyncResp->res.jsonValue["@odata.type"] =
         "#MetricReportDefinition.v1_3_0.MetricReportDefinition";
@@ -335,6 +335,11 @@ class AddReport
             args.interval, readingParams);
     }
 
+    AddReport(const AddReport&) = delete;
+    AddReport(AddReport&&) = delete;
+    AddReport& operator=(const AddReport&) = delete;
+    AddReport& operator=(AddReport&&) = delete;
+
     void insert(const boost::container::flat_map<std::string, std::string>& el)
     {
         uriToDbus.insert(el.begin(), el.end());
@@ -463,12 +468,11 @@ inline void requestRoutesMetricReportDefinition(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& id) {
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp, id](
-                        const boost::system::error_code ec,
-                        const std::vector<std::pair<
-                            std::string,
-                            std::variant<std::string, bool, uint64_t,
-                                         telemetry::ReadingParameters>>>& ret) {
+                    [asyncResp,
+                     id](const boost::system::error_code ec,
+                         const std::vector<std::pair<
+                             std::string, dbus::utility::DbusVariantType>>&
+                             ret) {
                         if (ec.value() == EBADR ||
                             ec == boost::system::errc::host_unreachable)
                         {

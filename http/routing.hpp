@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
@@ -33,6 +34,11 @@ class BaseRule
     {}
 
     virtual ~BaseRule() = default;
+
+    BaseRule(const BaseRule&) = delete;
+    BaseRule(BaseRule&&) = delete;
+    BaseRule& operator=(const BaseRule&) = delete;
+    BaseRule& operator=(const BaseRule&&) = delete;
 
     virtual void validate() = 0;
     std::unique_ptr<BaseRule> upgrade()
@@ -208,7 +214,7 @@ struct Wrapped
                 const Request&>::value,
             int>::type = 0)
     {
-        handler = [f = std::move(f)](
+        handler = [f = std::forward<Func>(f)](
                       const Request&,
                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       Args... args) { asyncResp->res.result(f(args...)); };
@@ -663,7 +669,7 @@ class TaggedRule :
             "types: "
             "string, int, crow::response, nlohmann::json");
 
-        handler = [f = std::move(f)](
+        handler = [f = std::forward<Func>(f)](
                       const Request&,
                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       Args... args) { asyncResp->res.result(f(args...)); };
@@ -689,7 +695,7 @@ class TaggedRule :
             "types: "
             "string, int, crow::response,nlohmann::json");
 
-        handler = [f = std::move(f)](
+        handler = [f = std::forward<Func>(f)](
                       const crow::Request& req,
                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       Args... args) { asyncResp->res.result(f(req, args...)); };
@@ -722,7 +728,7 @@ class TaggedRule :
             "return "
             "type");
 
-        handler = std::move(f);
+        handler = std::forward<Func>(f);
     }
 
     template <typename Func>
@@ -903,7 +909,7 @@ class Trie
             char c = reqUrl[pos];
             if ((c >= '0' && c <= '9') || c == '+' || c == '-')
             {
-                char* eptr;
+                char* eptr = nullptr;
                 errno = 0;
                 long long int value =
                     std::strtoll(reqUrl.data() + pos, &eptr, 10);
@@ -926,7 +932,7 @@ class Trie
             char c = reqUrl[pos];
             if ((c >= '0' && c <= '9') || c == '+')
             {
-                char* eptr;
+                char* eptr = nullptr;
                 errno = 0;
                 unsigned long long int value =
                     std::strtoull(reqUrl.data() + pos, &eptr, 10);
@@ -949,7 +955,7 @@ class Trie
             char c = reqUrl[pos];
             if ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.')
             {
-                char* eptr;
+                char* eptr = nullptr;
                 errno = 0;
                 double value = std::strtod(reqUrl.data() + pos, &eptr);
                 if (errno != ERANGE && eptr != reqUrl.data() + pos)
@@ -1299,7 +1305,8 @@ class Router
         // any uncaught exceptions become 500s
         try
         {
-            rules[ruleIndex]->handleUpgrade(req, res, std::move(adaptor));
+            rules[ruleIndex]->handleUpgrade(req, res,
+                                            std::forward<Adaptor>(adaptor));
         }
         catch (const std::exception& e)
         {
@@ -1405,12 +1412,10 @@ class Router
         }
 
         crow::connections::systemBus->async_method_call(
-            [&req, asyncResp, &rules, ruleIndex, found](
-                const boost::system::error_code ec,
-                const std::map<
-                    std::string,
-                    std::variant<bool, std::string, std::vector<std::string>>>&
-                    userInfo) {
+            [&req, asyncResp, &rules, ruleIndex,
+             found](const boost::system::error_code ec,
+                    const std::map<std::string, dbus::utility::DbusVariantType>&
+                        userInfo) {
                 if (ec)
                 {
                     BMCWEB_LOG_ERROR << "GetUserInfo failed...";

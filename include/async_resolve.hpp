@@ -20,6 +20,11 @@ class Resolver
 
     ~Resolver() = default;
 
+    Resolver(const Resolver&) = delete;
+    Resolver(Resolver&&) = delete;
+    Resolver& operator=(const Resolver&) = delete;
+    Resolver& operator=(Resolver&&) = delete;
+
     template <typename ResolveHandler>
     void asyncResolve(const std::string& host, const std::string& port,
                       ResolveHandler&& handler)
@@ -27,7 +32,7 @@ class Resolver
         BMCWEB_LOG_DEBUG << "Trying to resolve: " << host << ":" << port;
         uint64_t flag = 0;
         crow::connections::systemBus->async_method_call(
-            [host, port, handler{std::move(handler)}](
+            [host, port, handler{std::forward<ResolveHandler>(handler)}](
                 const boost::system::error_code ec,
                 const std::vector<
                     std::tuple<int32_t, int32_t, std::vector<uint8_t>>>& resp,
@@ -73,8 +78,9 @@ class Resolver
                         handler(ec, endpointList);
                         return;
                     }
-                    uint16_t portNum;
+                    uint16_t portNum = 0;
                     auto it = std::from_chars(
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                         port.data(), port.data() + port.size(), portNum);
                     if (it.ec != std::errc())
                     {
