@@ -20,8 +20,9 @@ inline void
             [sensorPath](const std::pair<
                          sdbusplus::message::object_path,
                          boost::container::flat_map<
-                             std::string, boost::container::flat_map<
-                                              std::string, SensorVariant>>>&
+                             std::string,
+                             boost::container::flat_map<
+                                 std::string, dbus::utility::DbusVariantType>>>&
                              element) { return element.first == sensorPath; });
         if (sensorElem == std::end(managedObjectsResp))
         {
@@ -63,7 +64,8 @@ inline void
             auto thisValueIt = interfaceProperties->second.find("Value");
             if (thisValueIt != interfaceProperties->second.end())
             {
-                const SensorVariant& valueVariant = thisValueIt->second;
+                const dbus::utility::DbusVariantType& valueVariant =
+                    thisValueIt->second;
                 const double* doubleValue = std::get_if<double>(&valueVariant);
                 double reading;
                 if (doubleValue != nullptr)

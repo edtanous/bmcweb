@@ -700,14 +700,17 @@ inline void requestRoutesFabric(App& app)
                             [asyncResp](
                                 const boost::system::error_code ec,
                                 const std::vector<
-                                    std::pair<std::string, VariantType>>&
+                                    std::pair<std::string,
+                                              dbus::utility::DbusVariantType>>&
                                     propertiesList) {
                                 if (ec)
                                 {
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
-                                for (const std::pair<std::string, VariantType>&
+                                for (const std::pair<
+                                         std::string,
+                                         dbus::utility::DbusVariantType>&
                                          property : propertiesList)
                                 {
                                     if (property.first == "Type")

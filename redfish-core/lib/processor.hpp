@@ -401,7 +401,6 @@ inline void getProcessorUUID(std::shared_ptr<bmcweb::AsyncResp> aResp,
         });
 }
 
-<<<<<<< HEAD
 /**
  * @brief Fill out firmware version info of a accelerator by
  * requesting data from the given D-Bus object.
@@ -439,18 +438,9 @@ inline void
         "xyz.openbmc_project.Software.Version", "Version");
 }
 
-inline void
-    getCpuDataByInterface(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                          const InterfacesProperties& cpuInterfacesProperties)
-||||||| d1a6481
-inline void
-    getCpuDataByInterface(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                          const InterfacesProperties& cpuInterfacesProperties)
-=======
 inline void getCpuDataByInterface(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     const dbus::utility::DBusInteracesMap& cpuInterfacesProperties)
->>>>>>> origin/master
 {
     BMCWEB_LOG_DEBUG << "Get CPU resources by interface.";
 
@@ -862,21 +852,8 @@ using BaseSpeedPrioritySettingsProperty =
     std::vector<std::tuple<uint32_t, std::vector<uint32_t>>>;
 // uint32_t and size_t may or may not be the same type, requiring a dedup'd
 // variant
-<<<<<<< HEAD
-using OperatingConfigProperties = std::vector<
-    std::pair<std::string,
-              sdbusplus::utility::dedup_variant_t<
-                  double, int64_t, uint64_t, uint32_t, size_t, uint16_t, bool,
-                  TurboProfileProperty, BaseSpeedPrioritySettingsProperty>>>;
-||||||| d1a6481
-using OperatingConfigProperties = std::vector<std::pair<
-    std::string,
-    sdbusplus::utility::dedup_variant_t<uint32_t, size_t, TurboProfileProperty,
-                                        BaseSpeedPrioritySettingsProperty>>>;
-=======
 using OperatingConfigProperties =
     std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>;
->>>>>>> origin/master
 
 /**
  * Fill out the HighSpeedCoreIDs in a Processor resource from the given
@@ -1163,7 +1140,6 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig",
             "xyz.openbmc_project.Inventory.Decorator.UniqueIdentifier"});
 }
-
 
 /**
  * Request all the properties for the given D-Bus object and fill out the

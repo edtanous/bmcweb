@@ -28,22 +28,8 @@
 namespace redfish
 {
 
-<<<<<<< HEAD
-using DimmProperty =
-    std::variant<std::string, std::vector<uint32_t>, std::vector<uint16_t>,
-                 uint64_t, uint32_t, uint16_t, uint8_t, bool, double, int64_t>;
-
-using DimmProperties = boost::container::flat_map<std::string, DimmProperty>;
-||||||| d1a6481
-using DimmProperty =
-    std::variant<std::string, std::vector<uint32_t>, std::vector<uint16_t>,
-                 uint64_t, uint32_t, uint16_t, uint8_t, bool>;
-
-using DimmProperties = boost::container::flat_map<std::string, DimmProperty>;
-=======
 using DimmProperties =
     boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
->>>>>>> origin/master
 
 inline std::string translateMemoryTypeToRedfish(const std::string& memoryType)
 {

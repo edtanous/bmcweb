@@ -137,7 +137,6 @@ static const Message* getMessage(const std::string_view& messageID)
     return nullptr;
 }
 
-<<<<<<< HEAD
 static void generateMessageRegistry(
     nlohmann::json& logEntry,
     const std::string& odataId /* e.g. /redfish/v1/Systems/system/LogServices/"
@@ -157,19 +156,6 @@ static void generateMessageRegistry(
                          << messageId << "]";
         return;
     }
-||||||| d1a6481
-using GetManagedPropertyType = boost::container::flat_map<
-    std::string, std::variant<std::string, bool, uint8_t, int16_t, uint16_t,
-                              int32_t, uint32_t, int64_t, uint64_t, double>>;
-
-using GetManagedObjectsType = boost::container::flat_map<
-    sdbusplus::message::object_path,
-    boost::container::flat_map<std::string, GetManagedPropertyType>>;
-=======
-using GetManagedPropertyType =
-    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
->>>>>>> origin/master
-
     // Severity can be overwritten by caller. Using the one defined in the
     // message registries by default.
     std::string sev;
@@ -225,10 +211,8 @@ using GetManagedPropertyType =
 
 namespace fs = std::filesystem;
 
-using GetManagedPropertyType = boost::container::flat_map<
-    std::string, std::variant<std::string, bool, uint8_t, int16_t, uint16_t,
-                              int32_t, uint32_t, int64_t, uint64_t, double,
-                              std::vector<std::string>>>;
+using GetManagedPropertyType =
+    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
 
 using GetManagedObjectsType = boost::container::flat_map<
     sdbusplus::message::object_path,
@@ -480,14 +464,15 @@ static bool
 }
 
 std::vector<std::pair<std::string, std::string>>
-    parseOEMAdditionalData(const std::string &oemData)
+    parseOEMAdditionalData(const std::string& oemData)
 {
     // Parse OEM data for encoded format string
     // oemDiagnosticDataType = "key1=value1;key2=value2;key3=value3"
     std::vector<std::pair<std::string, std::string>> additionalData;
     std::vector<std::string> tokens;
     boost::split(tokens, oemData, boost::is_any_of(";"));
-    if (!tokens.empty()){
+    if (!tokens.empty())
+    {
         std::vector<std::string> subTokens;
         for (unsigned int i = 0; i < tokens.size(); i++)
         {
@@ -495,7 +480,8 @@ std::vector<std::pair<std::string, std::string>>
             // Include only <key,value> pair with '=' delimiter
             if (subTokens.size() == 2)
             {
-                additionalData.emplace_back(std::make_pair(subTokens[0], subTokens[1]));
+                additionalData.emplace_back(
+                    std::make_pair(subTokens[0], subTokens[1]));
             }
         }
     }
@@ -892,18 +878,10 @@ inline void createDumpTaskCallback(
                 taskData->messages.emplace_back(messages::internalError());
                 return task::completed;
             }
-<<<<<<< HEAD
-||||||| d1a6481
-            std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::variant<std::string>>>>>
-                interfacesList;
-=======
             std::vector<std::pair<
                 std::string, std::vector<std::pair<
                                  std::string, dbus::utility::DbusVariantType>>>>
                 interfacesList;
->>>>>>> origin/master
 
             std::vector<std::pair<std::string, std::variant<std::string>>>
                 values;
@@ -1610,8 +1588,9 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         const std::string* message = nullptr;
                         const std::string* filePath = nullptr;
                         bool resolved = false;
-                        std::string* resolution = nullptr;
-                        std::vector<std::string>* additionalDataRaw = nullptr;
+                        const std::string* resolution = nullptr;
+                        const std::vector<std::string>* additionalDataRaw =
+                            nullptr;
                         for (auto& interfaceMap : objectPath.second)
                         {
                             if (interfaceMap.first ==
@@ -1772,7 +1751,8 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                             thisEntry["Created"] =
                                 crow::utility::getDateTimeStdtime(timestamp);
                             thisEntry["Modified"] =
-                                crow::utility::getDateTimeStdtime(updateTimestamp);
+                                crow::utility::getDateTimeStdtime(
+                                    updateTimestamp);
                             if (filePath != nullptr)
                             {
                                 thisEntry["AdditionalDataURI"] =
@@ -1836,8 +1816,9 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                         const std::string* message = nullptr;
                         const std::string* filePath = nullptr;
                         bool resolved = false;
-                        std::string* resolution = nullptr;
-                        std::vector<std::string>* additionalDataRaw = nullptr;
+                        const std::string* resolution = nullptr;
+                        const std::vector<std::string>* additionalDataRaw =
+                            nullptr;
 
                         for (auto& propertyMap : resp)
                         {
@@ -1970,7 +1951,8 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             asyncResp->res.jsonValue["Created"] =
                                 crow::utility::getDateTimeStdtime(timestamp);
                             asyncResp->res.jsonValue["Modified"] =
-                                crow::utility::getDateTimeStdtime(updateTimestamp);
+                                crow::utility::getDateTimeStdtime(
+                                    updateTimestamp);
                             if (filePath != nullptr)
                             {
                                 asyncResp->res.jsonValue["AdditionalDataURI"] =
@@ -2521,9 +2503,8 @@ static int fillBMCJournalLogEntryJson(const std::string& bmcJournalLogEntryID,
         {"Id", bmcJournalLogEntryID},
         {"Message", std::move(message)},
         {"EntryType", "Oem"},
-        {"Severity", severity <= 2   ? "Critical"
-                     : severity <= 4 ? "Warning"
-                                     : "OK"},
+        {"Severity",
+         severity <= 2 ? "Critical" : severity <= 4 ? "Warning" : "OK"},
         {"OemRecordFormat", "BMC Journal Entry"},
         {"Created", std::move(entryTimeStr)}};
     return 0;

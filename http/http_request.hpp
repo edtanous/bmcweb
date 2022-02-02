@@ -45,19 +45,8 @@ struct Request
         }
     }
 
-<<<<<<< HEAD
-||||||| d1a6481
-    Request(const Request&) = delete;
-    Request& operator=(const Request&) = delete;
-
-=======
-    Request(const Request&) = delete;
-    Request(const Request&&) = delete;
-    Request& operator=(const Request&) = delete;
-    Request& operator=(const Request&&) = delete;
     ~Request() = default;
 
->>>>>>> origin/master
     boost::beast::http::verb method() const
     {
         return req.method();

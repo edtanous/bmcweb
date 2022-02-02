@@ -365,18 +365,6 @@ inline void getChassisState(std::shared_ptr<bmcweb::AsyncResp> aResp)
  * DBus types primitives for several generic DBus interfaces
  * TODO(Pawel) consider move this to separate file into boost::dbus
  */
-<<<<<<< HEAD
-// Note, this is not a very useful Variant, but because it isn't used to get
-// values, it should be as simple as possible
-// TODO(ed) invent a nullvariant type
-using VariantType = std::variant<bool, std::string, uint64_t, uint32_t, double>;
-||||||| d1a6481
-// Note, this is not a very useful Variant, but because it isn't used to get
-// values, it should be as simple as possible
-// TODO(ed) invent a nullvariant type
-using VariantType = std::variant<bool, std::string, uint64_t, uint32_t>;
-=======
->>>>>>> origin/master
 using ManagedObjectsType = std::vector<std::pair<
     sdbusplus::message::object_path,
     std::vector<std::pair<
@@ -402,8 +390,8 @@ inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
-            const std::vector<std::pair<std::string, VariantType>>&
-                propertiesList) {
+            const std::vector<std::pair<
+                std::string, dbus::utility::DbusVariantType>>& propertiesList) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error for "
@@ -411,8 +399,8 @@ inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 messages::internalError(aResp->res);
                 return;
             }
-            for (const std::pair<std::string, VariantType>& property :
-                 propertiesList)
+            for (const std::pair<std::string, dbus::utility::DbusVariantType>&
+                     property : propertiesList)
             {
                 const std::string& propertyName = property.first;
                 if (propertyName == "Height")
@@ -653,13 +641,7 @@ inline void requestRoutesChassis(App& app)
                         }
 
                         asyncResp->res.jsonValue["@odata.type"] =
-<<<<<<< HEAD
-                            "#Chassis.v1_15_0.Chassis";
-||||||| d1a6481
-                            "#Chassis.v1_14_0.Chassis";
-=======
                             "#Chassis.v1_16_0.Chassis";
->>>>>>> origin/master
                         asyncResp->res.jsonValue["@odata.id"] =
                             "/redfish/v1/Chassis/" + chassisId;
                         asyncResp->res.jsonValue["Name"] = "Chassis Collection";
@@ -841,7 +823,8 @@ inline void requestRoutesChassis(App& app)
                             [asyncResp](
                                 const boost::system::error_code ec,
                                 const std::vector<
-                                    std::pair<std::string, VariantType>>&
+                                    std::pair<std::string,
+                                              dbus::utility::DbusVariantType>>&
                                     propertiesList) {
                                 if (ec)
                                 {
@@ -851,7 +834,9 @@ inline void requestRoutesChassis(App& app)
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
-                                for (const std::pair<std::string, VariantType>&
+                                for (const std::pair<
+                                         std::string,
+                                         dbus::utility::DbusVariantType>&
                                          property : propertiesList)
                                 {
                                     const std::string& propertyName =
@@ -917,13 +902,7 @@ inline void requestRoutesChassis(App& app)
 
                     // Couldn't find an object with that name.  return an error
                     messages::resourceNotFound(
-<<<<<<< HEAD
-                        asyncResp->res, "#Chassis.v1_15_0.Chassis", chassisId);
-||||||| d1a6481
-                        asyncResp->res, "#Chassis.v1_14_0.Chassis", chassisId);
-=======
                         asyncResp->res, "#Chassis.v1_16_0.Chassis", chassisId);
->>>>>>> origin/master
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",

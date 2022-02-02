@@ -689,42 +689,6 @@ void getChassis(const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
                         return;
                     }
                 }
-<<<<<<< HEAD
-                const std::vector<std::string>* nodeSensorList =
-                    std::get_if<std::vector<std::string>>(&(variantEndpoints));
-                if (nodeSensorList == nullptr)
-                {
-                    messages::resourceNotFound(
-                        sensorsAsyncResp->asyncResp->res,
-                        sensorsAsyncResp->chassisSubNode,
-                        sensorsAsyncResp->chassisSubNode ==
-                                sensors::node::thermal
-                            ? "Temperatures"
-                            : sensorsAsyncResp->chassisSubNode ==
-                                      sensors::node::power
-                                  ? "Voltages"
-                                  : "Sensors");
-                    return;
-                }
-||||||| d1a6481
-                const std::vector<std::string>* nodeSensorList =
-                    std::get_if<std::vector<std::string>>(&(variantEndpoints));
-                if (nodeSensorList == nullptr)
-                {
-                    messages::resourceNotFound(
-                        sensorsAsyncResp->asyncResp->res,
-                        sensorsAsyncResp->chassisSubNode,
-                        sensorsAsyncResp->chassisSubNode ==
-                                sensors::node::thermal
-                            ? "Temperatures"
-                        : sensorsAsyncResp->chassisSubNode ==
-                                sensors::node::power
-                            ? "Voltages"
-                            : "Sensors");
-                    return;
-                }
-=======
->>>>>>> origin/master
                 const std::shared_ptr<boost::container::flat_set<std::string>>
                     culledSensorList = std::make_shared<
                         boost::container::flat_set<std::string>>();
@@ -1212,7 +1176,7 @@ inline void objectInterfacesToJson(
                 }
                 else if (stringValue != nullptr)
                 {
-                    if (thisValueIt->first == "PhysicalContext")
+                    if (valueName == "PhysicalContext")
                     {
                         std::string physicalContext =
                             static_cast<std::string>(*stringValue);
