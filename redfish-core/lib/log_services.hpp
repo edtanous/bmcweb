@@ -18,11 +18,6 @@
 #include "gzfile.hpp"
 #include "http_utility.hpp"
 #include "human_sort.hpp"
-#include "registries.hpp"
-#include "registries/base_message_registry.hpp"
-#include "registries/openbmc_message_registry.hpp"
-#include "registries/resource_event_message_registry.hpp"
-#include "registries/task_event_message_registry.hpp"
 #include "task.hpp"
 
 #include <systemd/sd-journal.h>
@@ -37,6 +32,8 @@
 #include <dbus_utility.hpp>
 #include <error_messages.hpp>
 #include <registries/privilege_registry.hpp>
+#include <utils/dbus_log_utils.hpp>
+#include <utils/registry_utils.hpp>
 
 #include <charconv>
 #include <filesystem>
@@ -59,84 +56,8 @@ constexpr char const* crashdumpOnDemandInterface =
 constexpr char const* crashdumpTelemetryInterface =
     "com.intel.crashdump.Telemetry";
 
-inline std::string translateSeverityDbusToRedfish(const std::string& s)
-{
-    if ((s == "xyz.openbmc_project.Logging.Entry.Level.Alert") ||
-        (s == "xyz.openbmc_project.Logging.Entry.Level.Critical") ||
-        (s == "xyz.openbmc_project.Logging.Entry.Level.Emergency") ||
-        (s == "xyz.openbmc_project.Logging.Entry.Level.Error"))
-    {
-        return "Critical";
-    }
-    if ((s == "xyz.openbmc_project.Logging.Entry.Level.Debug") ||
-        (s == "xyz.openbmc_project.Logging.Entry.Level.Informational") ||
-        (s == "xyz.openbmc_project.Logging.Entry.Level.Notice"))
-    {
-        return "OK";
-    }
-    if (s == "xyz.openbmc_project.Logging.Entry.Level.Warning")
-    {
-        return "Warning";
-    }
-    return "";
-}
-
 namespace message_registries
 {
-static const Message*
-    getMessageFromRegistry(const std::string& messageKey,
-                           const std::span<const MessageEntry> registry)
-{
-    std::span<const MessageEntry>::iterator messageIt = std::find_if(
-        registry.begin(), registry.end(),
-        [&messageKey](const MessageEntry& messageEntry) {
-            return !std::strcmp(messageEntry.first, messageKey.c_str());
-        });
-    if (messageIt != registry.end())
-    {
-        return &messageIt->second;
-    }
-
-    return nullptr;
-}
-
-static const Message* getMessage(const std::string_view& messageID)
-{
-    // Redfish MessageIds are in the form
-    // RegistryName.MajorVersion.MinorVersion.MessageKey, so parse it to find
-    // the right Message
-    std::vector<std::string> fields;
-    fields.reserve(4);
-    boost::split(fields, messageID, boost::is_any_of("."));
-    std::string& registryName = fields[0];
-    std::string& messageKey = fields[3];
-
-    // Find the right registry and check it for the MessageKey
-    if (std::string(base::header.registryPrefix) == registryName)
-    {
-        return getMessageFromRegistry(
-            messageKey, std::span<const MessageEntry>(base::registry));
-    }
-    if (std::string(openbmc::header.registryPrefix) == registryName)
-    {
-        return getMessageFromRegistry(
-            messageKey, std::span<const MessageEntry>(openbmc::registry));
-    }
-    if (std::string(resource_event::header.registryPrefix) == registryName)
-    {
-        return getMessageFromRegistry(
-            messageKey,
-            boost::beast::span<const MessageEntry>(resource_event::registry));
-    }
-    if (std::string(task_event::header.registryPrefix) == registryName)
-    {
-        return getMessageFromRegistry(
-            messageKey,
-            boost::beast::span<const MessageEntry>(task_event::registry));
-    }
-    return nullptr;
-}
-
 static void generateMessageRegistry(
     nlohmann::json& logEntry,
     const std::string& odataId /* e.g. /redfish/v1/Systems/system/LogServices/"
@@ -156,6 +77,7 @@ static void generateMessageRegistry(
                          << messageId << "]";
         return;
     }
+
     // Severity can be overwritten by caller. Using the one defined in the
     // message registries by default.
     std::string sev;
@@ -178,7 +100,7 @@ static void generateMessageRegistry(
     {
         boost::trim(f);
     }
-    boost::beast::span<std::string> msgArgs;
+    std::span<std::string> msgArgs;
     msgArgs = {&fields[0], fields.size()};
 
     std::string message = msg->message;
@@ -1594,64 +1516,6 @@ inline void requestRoutesJournalEventLogEntry(App& app)
                 messages::resourceMissingAtURI(asyncResp->res, targetID);
             });
 }
-
-class AdditionalData
-{
-    enum SameKeyOp
-    {
-        overwrite = 0,
-        append = 1,
-    };
-
-  public:
-    // DBus Event Log additionalData format is like,
-    // "key1=val1" "key2=val2"...
-    AdditionalData(const std::vector<std::string>& additionalData,
-                   const SameKeyOp& op = overwrite)
-    {
-        convertion(additionalData, data, op);
-    }
-
-    void convertion(const std::vector<std::string>& additionalData,
-                    std::map<std::string, std::string>& data,
-                    const SameKeyOp& op)
-    {
-        for (auto& kv : additionalData)
-        {
-            std::vector<std::string> fields;
-            fields.reserve(2);
-            boost::split(fields, kv, boost::is_any_of("="));
-            if (data.count(fields[0]) <= 0)
-            {
-                data[fields[0]] = "";
-            }
-            if (op == overwrite)
-            {
-                data[fields[0]] = fields[1];
-            }
-            else if (op == append)
-            {
-                // In append mode, all values for the same key will be separated
-                // by ';', e.g., "key1=val1_1;val1_2;...;val1_n"
-                data[fields[0]] += (data[fields[0]].size()) ? ";" : "";
-                data[fields[0]] += fields[1];
-            }
-        }
-    }
-
-    std::string& operator[](const std::string& key)
-    {
-        return data[key];
-    }
-
-    std::size_t count(const std::string& key)
-    {
-        return data.count(key);
-    }
-
-  protected:
-    std::map<std::string, std::string> data;
-};
 
 inline void requestRoutesDBusEventLogEntryCollection(App& app)
 {
