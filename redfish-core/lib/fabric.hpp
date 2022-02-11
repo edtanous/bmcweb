@@ -37,7 +37,7 @@ inline std::string getLinkStates(const std::string& linkState)
         return "Disabled";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 inline std::string getLinkStatusType(const std::string& linkStatusType)
@@ -68,7 +68,7 @@ inline std::string getLinkStatusType(const std::string& linkStatusType)
         return "Training";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 inline std::string getPortProtocol(const std::string& portProtocol)
@@ -94,7 +94,7 @@ inline std::string getPortProtocol(const std::string& portProtocol)
         return "OEM";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 inline std::string getPortType(const std::string& portType)
@@ -130,7 +130,7 @@ inline std::string getPortType(const std::string& portType)
         return "UpstreamPort";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 inline std::string getSwitchType(const std::string& switchType)
@@ -155,7 +155,7 @@ inline std::string getSwitchType(const std::string& switchType)
         return "OEM";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 inline std::string getFabricType(const std::string& fabricType)
@@ -180,7 +180,7 @@ inline std::string getFabricType(const std::string& fabricType)
         return "OEM";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 /**
@@ -246,8 +246,8 @@ inline void updatePortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     // Get interface properties
     crow::connections::systemBus->async_method_call(
-        [asyncResp{std::move(asyncResp)}](const boost::system::error_code ec,
-                                          const PropertiesMap& properties) {
+        [asyncResp{asyncResp}](const boost::system::error_code ec,
+                               const PropertiesMap& properties) {
             if (ec)
             {
                 messages::internalError(asyncResp->res);
@@ -389,7 +389,7 @@ inline void getPortObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 {
     BMCWEB_LOG_DEBUG << "Access port Data";
     crow::connections::systemBus->async_method_call(
-        [asyncResp{std::move(asyncResp)}, fabricId, switchId,
+        [asyncResp{asyncResp}, fabricId, switchId,
          portId](const boost::system::error_code ec,
                  const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)
@@ -815,7 +815,7 @@ inline void requestRoutesSwitchCollection(App& app)
  * @param[in]       chassisName D-Bus object chassisName.
  */
 inline void getSwitchParentChassisPCIeDeviceLink(
-    std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& objPath,
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath,
     const std::string& chassisName)
 {
     crow::connections::systemBus->async_method_call(
@@ -883,8 +883,9 @@ inline void getSwitchParentChassisPCIeDeviceLink(
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getSwitchChassisLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                 const std::string& objPath)
+inline void
+    getSwitchChassisLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get parent chassis link";
     crow::connections::systemBus->async_method_call(
@@ -967,9 +968,10 @@ inline void getSwitchChassisLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
  * @param[in]       objPath     D-Bus object to query.
  * @param[in]       fabricId    Fabric Id.
  */
-inline void getSwitchEndpointsLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                   const std::string& objPath,
-                                   const std::string& fabricId)
+inline void
+    getSwitchEndpointsLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& objPath,
+                           const std::string& fabricId)
 {
     BMCWEB_LOG_DEBUG << "Get endpoint links";
     crow::connections::systemBus->async_method_call(
@@ -1498,7 +1500,7 @@ inline void
  * @param[in]       entityLink  redfish entity link.
  */
 inline void getProcessorParentEndpointData(
-    std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& objPath,
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath,
     const std::string& chassisName, const std::string& entityLink,
     const std::string& processorPath)
 {
@@ -2050,8 +2052,10 @@ inline void requestRoutesEndpoint(App& app)
                                             .jsonValue["@odata.type"] =
                                             "#Endpoint.v1_6_0.Endpoint";
                                         asyncResp->res.jsonValue["@odata.id"] =
-                                            "/redfish/v1/Fabrics/" + fabricId +
-                                            "/Endpoints/" + endpointId;
+                                            std::string("/redfish/v1/Fabrics/")
+                                                .append(fabricId)
+                                                .append("/Endpoints/")
+                                                .append(endpointId);
                                         asyncResp->res.jsonValue["Id"] =
                                             endpointId;
                                         asyncResp->res.jsonValue["Name"] =
@@ -2112,7 +2116,7 @@ inline void
 {
     BMCWEB_LOG_DEBUG << "Access port metrics data";
     crow::connections::systemBus->async_method_call(
-        [asyncResp{std::move(asyncResp)}, fabricId, switchId,
+        [asyncResp{asyncResp}, fabricId, switchId,
          portId](const boost::system::error_code ec,
                  const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)

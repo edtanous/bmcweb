@@ -759,8 +759,8 @@ inline void requestRoutesSoftwareInventoryCollection(App& app)
                     "xyz.openbmc_project.Software.Version"});
         });
 }
-inline static bool validSubpath([[maybe_unused]] std::string objPath,
-                                [[maybe_unused]] std::string objectPath)
+inline static bool validSubpath([[maybe_unused]] const std::string& objPath,
+                                [[maybe_unused]] const std::string& objectPath)
 {
     return false;
 }

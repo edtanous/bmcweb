@@ -64,7 +64,7 @@ inline void
     const std::string& assemblyId = match[1].first;
     // Get interface properties
     crow::connections::systemBus->async_method_call(
-        [asyncResp{std::move(asyncResp)}, chassisId, assemblyId](
+        [asyncResp{asyncResp}, chassisId, assemblyId](
             const boost::system::error_code ec,
             const std::vector<std::pair<
                 std::string, std::variant<std::string>>>& propertiesList) {

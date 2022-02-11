@@ -474,9 +474,9 @@ std::vector<std::pair<std::string, std::string>>
     if (!tokens.empty())
     {
         std::vector<std::string> subTokens;
-        for (unsigned int i = 0; i < tokens.size(); i++)
+        for (auto& token : tokens)
         {
-            boost::split(subTokens, tokens[i], boost::is_any_of("="));
+            boost::split(subTokens, token, boost::is_any_of("="));
             // Include only <key,value> pair with '=' delimiter
             if (subTokens.size() == 2)
             {
@@ -1033,7 +1033,8 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 "DiagnosticDataType & OEMDiagnosticDataType");
             return;
         }
-        else if (*diagnosticDataType != "OEM")
+
+        if (*diagnosticDataType != "OEM")
         {
             BMCWEB_LOG_ERROR << "Wrong parameter values passed";
             messages::invalidObject(asyncResp->res,
@@ -2955,8 +2956,9 @@ static int fillBMCJournalLogEntryJson(const std::string& bmcJournalLogEntryID,
         {"Id", bmcJournalLogEntryID},
         {"Message", std::move(message)},
         {"EntryType", "Oem"},
-        {"Severity",
-         severity <= 2 ? "Critical" : severity <= 4 ? "Warning" : "OK"},
+        {"Severity", severity <= 2   ? "Critical"
+                     : severity <= 4 ? "Warning"
+                                     : "OK"},
         {"OemRecordFormat", "BMC Journal Entry"},
         {"Created", std::move(entryTimeStr)}};
     return 0;

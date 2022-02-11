@@ -45,8 +45,6 @@ struct Request
         }
     }
 
-    ~Request() = default;
-
     boost::beast::http::verb method() const
     {
         return req.method();

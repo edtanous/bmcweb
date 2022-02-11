@@ -180,6 +180,10 @@ struct DynamicResponse
     DynamicResponse() : bufferResponse(response_type{})
     {}
 
+    DynamicResponse(const DynamicResponse&) = delete;
+
+    DynamicResponse(const DynamicResponse&&) = delete;
+
     DynamicResponse& operator=(const DynamicResponse& r) = delete;
 
     DynamicResponse& operator=(DynamicResponse&& r) noexcept
@@ -190,6 +194,8 @@ struct DynamicResponse
         completed = r.completed;
         return *this;
     }
+
+    ~DynamicResponse() = default;
 
     void result(boost::beast::http::status v)
     {

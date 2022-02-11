@@ -20,7 +20,8 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.Inventory.Item.Board",
         "xyz.openbmc_project.Inventory.Item.Chassis"};
 
-    auto respHandler = [callback{std::move(callback)}, asyncResp, chassisID](
+    auto respHandler = [callback{std::forward<Callback>(callback)}, asyncResp,
+                        chassisID](
                            const boost::system::error_code ec,
                            const std::vector<std::string>& chassisPaths) {
         BMCWEB_LOG_DEBUG << "getValidChassisID respHandler enter";

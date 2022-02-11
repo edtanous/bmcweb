@@ -349,7 +349,8 @@ inline void
     BMCWEB_LOG_DEBUG << "getValidPowerSupplyID enter";
 
     auto respHandler =
-        [callback{std::move(callback)}, asyncResp, chassisID, powerSupplyID](
+        [callback{std::forward<Callback>(callback)}, asyncResp, chassisID,
+         powerSupplyID](
             const boost::system::error_code ec,
             const std::vector<std::pair<
                 std::string,

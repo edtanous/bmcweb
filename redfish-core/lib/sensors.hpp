@@ -23,6 +23,7 @@
 #include <boost/range/algorithm/replace_copy_if.hpp>
 #include <dbus_singleton.hpp>
 #include <dbus_utility.hpp>
+#include <openbmc_dbus_rest.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <utils/json_utils.hpp>

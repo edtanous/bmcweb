@@ -67,7 +67,7 @@ inline void
                 const dbus::utility::DbusVariantType& valueVariant =
                     thisValueIt->second;
                 const double* doubleValue = std::get_if<double>(&valueVariant);
-                double reading;
+                double reading = NAN;
                 if (doubleValue != nullptr)
                 {
                     reading = *doubleValue;
@@ -77,10 +77,14 @@ inline void
                     nlohmann::json& resArray =
                         asyncResp->res.jsonValue["TemperatureReadingsCelsius"];
                     resArray.push_back(
-                        {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                           "/Sensors/" + sensorName},
-                         {"DataSourceUri", "/redfish/v1/Chassis/" + chassisId +
-                                               "/Sensors/" + sensorName},
+                        {{"@odata.id", std::string("/redfish/v1/Chassis/")
+                                           .append(chassisId)
+                                           .append("/Sensors/")
+                                           .append(sensorName)},
+                         {"DataSourceUri", std::string("/redfish/v1/Chassis/")
+                                               .append(chassisId)
+                                               .append("/Sensors/")
+                                               .append(sensorName)},
                          {"DeviceName", sensorName},
                          {"Reading", std::to_string(reading)}});
                 }
@@ -89,8 +93,10 @@ inline void
                     nlohmann::json& resArray =
                         asyncResp->res.jsonValue["MetricValues"];
                     resArray.push_back(
-                        {{"MetricProperty", "/redfish/v1/Chassis/" + chassisId +
-                                                "/Sensors/" + sensorName},
+                        {{"MetricProperty", std::string("/redfish/v1/Chassis/")
+                                                .append(chassisId)
+                                                .append("/Sensors/")
+                                                .append(sensorName)},
                          {"MetricValue", std::to_string(reading)}});
                 }
             }
@@ -255,27 +261,24 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-            else
+
+            // Identify unique services for GetManagedObjects
+            std::set<std::string> sensorServices;
+            for (const auto& [objectPath, serviceMap] : subtree)
             {
-                // Identify unique services for GetManagedObjects
-                std::set<std::string> sensorServices;
-                for (const auto& [objectPath, serviceMap] : subtree)
+                if (serviceMap.size() < 1)
                 {
-                    if (serviceMap.size() < 1)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Got 0 service names for sensorpath:"
-                            << objectPath;
-                        continue;
-                    }
-                    sensorServices.insert(serviceMap[0].first);
+                    BMCWEB_LOG_DEBUG << "Got 0 service names for sensorpath:"
+                                     << objectPath;
+                    continue;
                 }
-                // Collect all GetManagedObjects for services
-                for (const std::string& connection : sensorServices)
-                {
-                    getServiceManagedObjects(asyncResp, connection, chassisPath,
-                                             metricsType);
-                }
+                sensorServices.insert(serviceMap[0].first);
+            }
+            // Collect all GetManagedObjects for services
+            for (const std::string& connection : sensorServices)
+            {
+                getServiceManagedObjects(asyncResp, connection, chassisPath,
+                                         metricsType);
             }
         };
     crow::connections::systemBus->async_method_call(

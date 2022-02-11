@@ -61,7 +61,7 @@ inline std::string getChassisType(const std::string& chassisType)
         return "Zone";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 /**
@@ -71,8 +71,9 @@ inline std::string getChassisType(const std::string& chassisType)
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getChassisLinksContains(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                    const std::string& objPath)
+inline void
+    getChassisLinksContains(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get underneath chassis links";
     crow::connections::systemBus->async_method_call(
@@ -116,8 +117,9 @@ inline void getChassisLinksContains(std::shared_ptr<bmcweb::AsyncResp> aResp,
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getChassisProcessorLinks(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                     const std::string& objPath)
+inline void
+    getChassisProcessorLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get underneath processor links";
     crow::connections::systemBus->async_method_call(
@@ -162,9 +164,8 @@ inline void getChassisProcessorLinks(std::shared_ptr<bmcweb::AsyncResp> aResp,
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void
-    getChassisFabricSwitchesLinks(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                  const std::string& objPath)
+inline void getChassisFabricSwitchesLinks(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get fabric switches links";
     crow::connections::systemBus->async_method_call(
@@ -219,8 +220,10 @@ inline void
                             return;
                         }
                         linksArray.push_back(
-                            {{"@odata.id", "/redfish/v1/Fabrics/" + fabricId +
-                                               "/Switches/" + switchId}});
+                            {{"@odata.id", std::string("/redfish/v1/Fabrics/")
+                                               .append(fabricId)
+                                               .append("/Switches/")
+                                               .append(switchId)}});
                     }
                 },
                 "xyz.openbmc_project.ObjectMapper", objPath + "/all_switches",
@@ -239,8 +242,9 @@ inline void
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getChassisLinksContainedBy(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                       const std::string& objPath)
+inline void
+    getChassisLinksContainedBy(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                               const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get parent chassis link";
     crow::connections::systemBus->async_method_call(

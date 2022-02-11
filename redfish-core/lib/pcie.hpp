@@ -71,8 +71,7 @@ static inline void
                       const std::string& path = pciePath,
                       const std::string& chassisId = std::string())
 {
-    auto getPCIeMapCallback = [asyncResp{std::move(asyncResp)}, name,
-                               chassisId](
+    auto getPCIeMapCallback = [asyncResp{asyncResp}, name, chassisId](
                                   const boost::system::error_code ec,
                                   std::vector<std::string>& pcieDevicePaths) {
         if (ec)
@@ -100,8 +99,10 @@ static inline void
             if (!chassisId.empty())
             {
                 pcieDeviceList.push_back(
-                    {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                       "/PCIeDevices/" + devName}});
+                    {{"@odata.id", std::string("/redfish/v1/Chassis/")
+                                       .append(chassisId)
+                                       .append("/PCIeDevices/")
+                                       .append(devName)}});
             }
             else
             {
@@ -126,7 +127,7 @@ static inline void
                            const std::string& service)
 {
     auto getPCIeDeviceAssetCallback =
-        [asyncResp{std::move(asyncResp)}](
+        [asyncResp{asyncResp}](
             const boost::system::error_code ec,
             const std::vector<
                 std::pair<std::string, std::variant<std::string>>>&
@@ -169,9 +170,8 @@ static inline void
                       const std::string& service)
 {
     auto getPCIeDeviceUUIDCallback =
-        [asyncResp{std::move(asyncResp)}](
-            const boost::system::error_code ec,
-            const std::variant<std::string>& uuid) {
+        [asyncResp{asyncResp}](const boost::system::error_code ec,
+                               const std::variant<std::string>& uuid) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -198,9 +198,8 @@ static inline void
                        const std::string& service)
 {
     auto getPCIeDeviceStateCallback =
-        [asyncResp{std::move(asyncResp)}](
-            const boost::system::error_code ec,
-            const std::variant<std::string>& deviceState) {
+        [asyncResp{asyncResp}](const boost::system::error_code ec,
+                               const std::variant<std::string>& deviceState) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -374,7 +373,7 @@ static inline void getPCIeDeviceFunctionsList(
     const std::string& chassisId = std::string())
 {
     auto getPCIeDeviceCallback =
-        [asyncResp{std::move(asyncResp)}, device, chassisId](
+        [asyncResp{asyncResp}, device, chassisId](
             const boost::system::error_code ec,
             boost::container::flat_map<std::string, std::variant<std::string>>&
                 pcieDevProperties) {
@@ -414,10 +413,13 @@ static inline void getPCIeDeviceFunctionsList(
                     if (!chassisId.empty())
                     {
                         pcieFunctionList.push_back(
-                            {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                               "/PCIeDevices/" + device +
-                                               "/PCIeFunctions/" +
-                                               std::to_string(functionNum)}});
+                            {{"@odata.id",
+                              std::string("/redfish/v1/Chassis/")
+                                  .append(chassisId)
+                                  .append("/PCIeDevices/")
+                                  .append(device)
+                                  .append("/PCIeFunctions/")
+                                  .append(std::to_string(functionNum))}});
                     }
                     else
                     {
@@ -448,8 +450,7 @@ static inline void
                           const std::string& chassisId = std::string(),
                           const std::string& deviceIntf = pcieDeviceInterface)
 {
-    auto getPCIeDeviceCallback = [asyncResp{std::move(asyncResp)}, device,
-                                  function,
+    auto getPCIeDeviceCallback = [asyncResp{asyncResp}, device, function,
                                   chassisId](const boost::system::error_code ec,
                                              boost::container::flat_map<
                                                  std::string,
@@ -776,11 +777,15 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                         {
                             continue;
                         }
-                        const std::string& chassisPCIePath =
-                            "/xyz/openbmc_project/inventory/system/chassis/" +
-                            chassisId + "/PCIeDevices";
-                        const std::string& chassisPCIeDevicePath =
-                            chassisPCIePath + "/" + device;
+                        const std::string chassisPCIePath =
+                            std::string(
+                                "/xyz/openbmc_project/inventory/system/chassis/")
+                                .append(chassisId)
+                                .append("/PCIeDevices");
+                        const std::string chassisPCIeDevicePath =
+                            std::string(chassisPCIePath)
+                                .append("/")
+                                .append(device);
                         const std::array<const char*, 1> interface = {
                             "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
                         // Get Inventory Service
@@ -879,7 +884,6 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             "/xyz/openbmc_project/object_mapper",
                             "xyz.openbmc_project.ObjectMapper", "GetSubTree",
                             "/xyz/openbmc_project/inventory", 0, interface);
-
                         return;
                     }
                     messages::resourceNotFound(
@@ -922,11 +926,15 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
                         {
                             continue;
                         }
-                        const std::string& chassisPCIePath =
-                            "/xyz/openbmc_project/inventory/system/chassis/" +
-                            chassisId + "/PCIeDevices";
-                        const std::string& chassisPCIeDevicePath =
-                            chassisPCIePath + "/" + device;
+                        const std::string chassisPCIePath =
+                            std::string(
+                                "/xyz/openbmc_project/inventory/system/chassis/")
+                                .append(chassisId)
+                                .append("/PCIeDevices");
+                        const std::string chassisPCIeDevicePath =
+                            std::string(chassisPCIePath)
+                                .append("/")
+                                .append(device);
                         const std::array<const char*, 1> interface = {
                             "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
                         // Response
@@ -1036,11 +1044,15 @@ inline void requestRoutesChassisPCIeFunction(App& app)
                         {
                             continue;
                         }
-                        const std::string& chassisPCIePath =
-                            "/xyz/openbmc_project/inventory/system/chassis/" +
-                            chassisId + "/PCIeDevices";
-                        const std::string& chassisPCIeDevicePath =
-                            chassisPCIePath + "/" + device;
+                        const std::string chassisPCIePath =
+                            std::string(
+                                "/xyz/openbmc_project/inventory/system/chassis/")
+                                .append(chassisId)
+                                .append("/PCIeDevices");
+                        const std::string chassisPCIeDevicePath =
+                            std::string(chassisPCIePath)
+                                .append("/")
+                                .append(device);
                         const std::array<const char*, 1> interface = {
                             "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
                         // Get Inventory Service

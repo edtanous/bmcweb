@@ -67,7 +67,7 @@ inline std::string getProcessorType(const std::string& processorType)
         return "GPU";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 /**
@@ -77,8 +77,9 @@ inline std::string getProcessorType(const std::string& processorType)
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getProcessorMemoryLinks(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                    const std::string& objPath)
+inline void
+    getProcessorMemoryLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get underneath memory links";
     crow::connections::systemBus->async_method_call(
@@ -126,7 +127,7 @@ inline void getProcessorMemoryLinks(std::shared_ptr<bmcweb::AsyncResp> aResp,
  * @param[in]     pcieDeviceLink  D-Bus service to query.
  */
 inline void getProcessorPCIeFunctionsLinks(
-    std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& service,
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath, const std::string& pcieDeviceLink)
 {
     BMCWEB_LOG_DEBUG << "Get processor pcie functions links";
@@ -205,10 +206,9 @@ inline void getProcessorPCIeFunctionsLinks(
  * @param[in]       objPath     D-Bus object to query.
  * @param[in]       chassisName D-Bus object chassisName.
  */
-inline void
-    getParentChassisPCIeDeviceLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                   const std::string& objPath,
-                                   const std::string& chassisName)
+inline void getParentChassisPCIeDeviceLink(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath,
+    const std::string& chassisName)
 {
     crow::connections::systemBus->async_method_call(
         [aResp, chassisName](const boost::system::error_code ec,
@@ -286,8 +286,9 @@ inline void
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getProcessorChassisLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                    const std::string& objPath)
+inline void
+    getProcessorChassisLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get parent chassis link";
     crow::connections::systemBus->async_method_call(
@@ -574,7 +575,7 @@ inline void getCpuDataByInterface(
     return;
 }
 
-inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
+inline void getCpuDataByService(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 const std::string& cpuId,
                                 const std::string& service,
                                 const std::string& objPath)
@@ -582,9 +583,9 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
     BMCWEB_LOG_DEBUG << "Get available system cpu resources by service.";
 
     crow::connections::systemBus->async_method_call(
-        [cpuId, service, objPath, aResp{std::move(aResp)}](
-            const boost::system::error_code ec,
-            const dbus::utility::ManagedObjectType& dbusData) {
+        [cpuId, service, objPath,
+         aResp{aResp}](const boost::system::error_code ec,
+                       const dbus::utility::ManagedObjectType& dbusData) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -650,13 +651,13 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
 
-inline void getCpuAssetData(std::shared_ptr<bmcweb::AsyncResp> aResp,
+inline void getCpuAssetData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             const std::string& service,
                             const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get Cpu Asset Data";
     crow::connections::systemBus->async_method_call(
-        [objPath, aResp{std::move(aResp)}](
+        [objPath, aResp{aResp}](
             const boost::system::error_code ec,
             const boost::container::flat_map<
                 std::string, dbus::utility::DbusVariantType>& properties) {
@@ -1466,8 +1467,9 @@ inline void patchSpeedLocked(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 messages::internalError(resp->res);
                 return;
             }
-            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                             "Device.Error.WriteFailure") == 0)
+
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
             {
                 // Service failed to change the config
                 messages::operationFailed(resp->res);
@@ -2107,7 +2109,7 @@ inline void requestRoutesProcessorMetrics(App& app)
 }
 
 inline void getProcessorMemoryDataByService(
-    std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& objPath,
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath,
     const std::string& memoryPath, const int64_t& processorCECount,
     const int64_t& processorUECount)
 {
@@ -2142,8 +2144,7 @@ inline void getProcessorMemoryDataByService(
                 }
                 const std::string& connectionName = connectionNames[0].first;
                 crow::connections::systemBus->async_method_call(
-                    [aResp{std::move(aResp)}, processorCECount,
-                     processorUECount](
+                    [aResp{aResp}, processorCECount, processorUECount](
                         const boost::system::error_code ec,
                         const OperatingConfigProperties& properties) {
                         if (ec)
@@ -2219,10 +2220,9 @@ inline void getProcessorMemoryDataByService(
         std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item.Dimm"});
 }
 
-inline void getProcessorMemorySummary(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                      const std::string& objPath,
-                                      const int64_t& processorCECount,
-                                      const int64_t& processorUECount)
+inline void getProcessorMemorySummary(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath,
+    const int64_t& processorCECount, const int64_t& processorUECount)
 {
     BMCWEB_LOG_DEBUG << "Get available system processor resource";
     // Get processor memory
@@ -2261,13 +2261,13 @@ inline void getProcessorMemorySummary(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Association", "endpoints");
 }
 
-inline void
-    getProcessorMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                  const std::string& processorId)
+inline void getProcessorMemoryMetricsData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const std::string& processorId)
 {
     BMCWEB_LOG_DEBUG << "Get available system processor resource";
     crow::connections::systemBus->async_method_call(
-        [processorId, aResp{std::move(aResp)}](
+        [processorId, aResp{aResp}](
             const boost::system::error_code ec,
             const boost::container::flat_map<
                 std::string, boost::container::flat_map<
@@ -2305,7 +2305,7 @@ inline void
                                   memoryECCInterface) != interfaces.end())
                     {
                         crow::connections::systemBus->async_method_call(
-                            [path, aResp{std::move(aResp)}](
+                            [path = path, aResp{aResp}](
                                 const boost::system::error_code ec,
                                 const OperatingConfigProperties& properties) {
                                 if (ec)
@@ -2316,8 +2316,8 @@ inline void
                                 }
                                 // Get processor memory error counts to combine
                                 // to memory summary error counts
-                                int64_t processorCECount;
-                                int64_t processorUECount;
+                                int64_t processorCECount = 0;
+                                int64_t processorUECount = 0;
                                 for (const auto& property : properties)
                                 {
                                     if (property.first == "ceCount")

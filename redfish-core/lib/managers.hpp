@@ -1762,7 +1762,7 @@ inline std::string getStateType(const std::string& stateType)
         return "Updating";
     }
     // Unknown or others
-    return std::string();
+    return "";
 }
 
 /**
@@ -2494,7 +2494,7 @@ inline void requestRoutesManagerCollection(App& app)
             members.push_back({{"@odata.id", "/redfish/v1/Managers/bmc"}});
             // Collect additional management services
             crow::connections::systemBus->async_method_call(
-                [collectionPath, asyncResp{std::move(asyncResp)}](
+                [collectionPath, asyncResp{asyncResp}](
                     const boost::system::error_code ec,
                     const std::vector<std::string>& objects) {
                     if (ec)

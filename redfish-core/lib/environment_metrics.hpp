@@ -216,10 +216,9 @@ inline void requestRoutesEnvironmentMetrics(App& app)
             });
 }
 
-inline void getSensorDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                   const std::string& service,
-                                   const std::string& chassisId,
-                                   const std::string& objPath)
+inline void getSensorDataByService(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& chassisId, const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get sensor data.";
     crow::connections::systemBus->async_method_call(
@@ -289,10 +288,9 @@ inline void getSensorDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Sensor.Value", "Value");
 }
 
-inline void
-    getEnvironmentMetricsDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                       const std::string& service,
-                                       const std::string& objPath)
+inline void getEnvironmentMetricsDataByService(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get environment metrics data.";
     // Get parent chassis for sensors URI

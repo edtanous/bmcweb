@@ -25,6 +25,11 @@ struct Connection : std::enable_shared_from_this<Connection>
     virtual void sendStreamHeaders(const std::string& streamDataSize,
                                    const std::string& contentType) = 0;
     virtual void sendStreamErrorStatus(boost::beast::http::status status) = 0;
+
+    Connection(const Connection&) = delete;
+    Connection(const Connection&&) = delete;
+    Connection& operator=(const Connection&) = delete;
+    Connection& operator=(const Connection&&) = delete;
     virtual ~Connection() = default;
 
     boost::beast::http::request<boost::beast::http::string_body> req;

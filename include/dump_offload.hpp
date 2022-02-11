@@ -22,7 +22,7 @@ inline void handleDumpOffloadUrl(const crow::Request& req, crow::Response& res,
                                  const std::string& dumpEntryType);
 inline void resetHandler();
 
-static constexpr size_t socketBufferSize = 10 * 64 * 1024;
+static constexpr size_t socketBufferSize = static_cast<size_t>(10 * 64 * 1024);
 static constexpr uint8_t maxConnectRetryCount = 3;
 
 /** class Handler

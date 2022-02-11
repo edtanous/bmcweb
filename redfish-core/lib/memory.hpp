@@ -440,10 +440,10 @@ inline void getPersistentMemoryProperties(
     }
 }
 
-inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                 const std::string& dimmId,
-                                 const std::string& service,
-                                 const std::string& objPath)
+inline void
+    getDimmDataByService(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& dimmId, const std::string& service,
+                         const std::string& objPath)
 {
     auto health = std::make_shared<HealthPopulate>(aResp);
     health->selfPath = objPath;
@@ -451,8 +451,8 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
 
     BMCWEB_LOG_DEBUG << "Get available system components.";
     crow::connections::systemBus->async_method_call(
-        [dimmId, aResp{std::move(aResp)}](const boost::system::error_code ec,
-                                          const DimmProperties& properties) {
+        [dimmId, aResp{aResp}](const boost::system::error_code ec,
+                               const DimmProperties& properties) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -736,12 +736,12 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
-inline void getDimmPartitionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                 const std::string& service,
-                                 const std::string& path)
+inline void
+    getDimmPartitionData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& service, const std::string& path)
 {
     crow::connections::systemBus->async_method_call(
-        [aResp{std::move(aResp)}](
+        [aResp{aResp}](
             const boost::system::error_code ec,
             const boost::container::flat_map<
                 std::string, dbus::utility::DbusVariantType>& properties) {
@@ -826,8 +826,9 @@ inline void getDimmPartitionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getMemoryProcessorLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                   const std::string& objPath)
+inline void
+    getMemoryProcessorLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get parent processor link";
     crow::connections::systemBus->async_method_call(
@@ -872,8 +873,9 @@ inline void getMemoryProcessorLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getMemoryChassisLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                 const std::string& objPath)
+inline void
+    getMemoryChassisLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get parent chassis link";
     crow::connections::systemBus->async_method_call(
@@ -906,12 +908,12 @@ inline void getMemoryChassisLink(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Association", "endpoints");
 }
 
-inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> aResp,
+inline void getDimmData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         const std::string& dimmId)
 {
     BMCWEB_LOG_DEBUG << "Get available system dimm resources.";
     crow::connections::systemBus->async_method_call(
-        [dimmId, aResp{std::move(aResp)}](
+        [dimmId, aResp{aResp}](
             const boost::system::error_code ec,
             const boost::container::flat_map<
                 std::string, boost::container::flat_map<
