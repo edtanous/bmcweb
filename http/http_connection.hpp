@@ -385,8 +385,10 @@ class Connection :
         }
 
         std::string url(thisReq.target());
-        std::size_t pos = url.rfind("Dump/attachment");
-        if (pos != std::string::npos)
+        std::size_t dumpPos = url.rfind("Dump");
+        std::size_t attachmentPos = url.rfind("attachment");
+        if ((dumpPos != std::string::npos) &&
+            (attachmentPos != std::string::npos))
         {
             BMCWEB_LOG_DEBUG << "upgrade stream connection";
             handler->handleUpgrade(thisReq, res, std::move(adaptor));

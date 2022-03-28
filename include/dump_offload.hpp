@@ -234,19 +234,15 @@ static boost::container::flat_map<crow::streaming_response::Connection*,
 
 inline void requestRoutes(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/bmc/LogServices/Dump/attachment/<str>/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
             std::string url(conn.req.target());
-            std::size_t pos = url.rfind('/');
-            std::string dumpId;
-            if (pos != std::string::npos)
-            {
-                dumpId = url.substr(pos + 1);
-            }
-
+            std::filesystem::path dumpIdPath(url.substr(0, url.find("/attachment")));
+            std::string dumpId = dumpIdPath.filename();
             std::string dumpType = "bmc";
             boost::asio::io_context* ioCon = conn.getIoContext();
 
@@ -270,18 +266,14 @@ inline void requestRoutes(App& app)
         });
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/system/LogServices/Dump/attachment/<str>/")
+        app,
+        "/redfish/v1/Systems/system/LogServices/Dump/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
             std::string url(conn.req.target());
-            std::size_t pos = url.rfind('/');
-            std::string dumpId;
-            if (pos != std::string::npos)
-            {
-                dumpId = url.substr(pos + 1);
-            }
-
+            std::filesystem::path dumpIdPath(url.substr(0, url.find("/attachment")));
+            std::string dumpId = dumpIdPath.filename();
             std::string dumpType = "system";
             boost::asio::io_context* ioCon = conn.getIoContext();
 
