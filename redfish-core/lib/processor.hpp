@@ -1500,6 +1500,12 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     aResp->res.jsonValue["@Redfish.Settings"]["SettingsObject"] = {
         {"@odata.id",
          "/redfish/v1/Systems/system/Processors/" + processorId + "/Settings"}};
+
+    aResp->res.jsonValue["Actions"]["#Processor.Reset"] = {
+        {"target", "/redfish/v1/Systems/system/Processors/" + processorId +
+                       "/Actions/Processor.Reset"},
+        {"ResetType@Redfish.AllowableValues", {"GracefulRestart"}}};
+
     // Links association to underneath memory
     getProcessorMemoryLinks(aResp, objectPath);
     // Link association to parent chassis
@@ -2815,6 +2821,97 @@ inline void requestRoutesProcessorSettings(App& app)
                             });
                     }
                 }
+            });
+}
+
+inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                          const std::string& processorId,
+                          const std::string& cpuObjectPath,
+                          const MapperServiceMap& serviceMap)
+{
+    // Check that the property even exists by checking for the interface
+    const std::string* inventoryService = nullptr;
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        if (std::find(interfaceList.begin(), interfaceList.end(),
+                      "xyz.openbmc_project.Control.Processor.Reset") !=
+            interfaceList.end())
+        {
+            inventoryService = &serviceName;
+            break;
+        }
+    }
+    if (inventoryService == nullptr)
+    {
+        messages::internalError(resp->res);
+        return;
+    }
+    // Set the property, with handler to check error responses
+    crow::connections::systemBus->async_method_call(
+        [resp, processorId](boost::system::error_code ec,
+                            sdbusplus::message::message& msg) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                                 << " Reset failed: " << ec;
+                messages::internalError(resp->res);
+                return;
+            }
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InternalFailure") == 0)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+            messages::success(resp->res);
+        },
+        *inventoryService, cpuObjectPath,
+        "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+}
+
+inline void requestRoutesProcessorReset(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Processors/<str>/"
+                      "Actions/Processor.Reset")
+        .privileges({{"Login"}})
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& processorId) {
+                std::string resetType;
+                if (!json_util::readJson(req, asyncResp->res, "ResetType",
+                                         resetType))
+                {
+                    return;
+                }
+                if (resetType != "GracefulRestart")
+                {
+                    BMCWEB_LOG_DEBUG << "Invalid property value for ResetType: "
+                                     << resetType;
+                    messages::actionParameterNotSupported(
+                        asyncResp->res, resetType, "ResetType");
+                    return;
+                }
+                getProcessorObject(
+                    asyncResp, processorId,
+                    [resetType](
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& processorId,
+                        const std::string& objectPath,
+                        const MapperServiceMap& serviceMap) {
+                        postResetType(asyncResp, processorId, objectPath,
+                                      serviceMap);
+                    });
             });
 }
 

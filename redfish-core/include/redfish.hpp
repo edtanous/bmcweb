@@ -162,6 +162,7 @@ class RedfishService
         requestRoutesProcessorMetrics(app);
         requestRoutesProcessorMemoryMetrics(app);
         requestRoutesProcessorSettings(app);
+        requestRoutesProcessorReset(app);
         requestRoutesMemoryCollection(app);
         requestRoutesMemory(app);
         requestRoutesMemoryMetrics(app);
