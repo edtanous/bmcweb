@@ -118,6 +118,19 @@ inline void
                             *writeProtectedValue;
                     }
                 }
+                if (property == "User")
+                {
+                    const std::string* userName =
+                        std::get_if<std::string>(&value);
+                    if (!userName->empty())
+                    {
+                        aResp->res.jsonValue["UserName"] = *userName;
+                    }
+                    else
+                    {
+                        aResp->res.jsonValue["UserName"] = "";
+                    }
+                }
             }
         }
         if (interface == "xyz.openbmc_project.VirtualMedia.Process")

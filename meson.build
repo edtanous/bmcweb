@@ -90,6 +90,7 @@ feature_map = {
   'xtoken-auth'                                 : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
   'health-rollup-alternative'                   : '-DBMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE',
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
+  'rmedia'                	                : '-DBMCWEB_ENABLE_RMEDIA',
 }
 
 # Get the options status and build a project summary to show which flags are
