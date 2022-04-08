@@ -246,11 +246,14 @@ class RedfishService
         requestRoutesFabric(app);
         requestRoutesSwitchCollection(app);
         requestRoutesSwitch(app);
+        requestRoutesSwitchMetrics(app);
         requestRoutesPortCollection(app);
         requestRoutesPort(app);
         requestRoutesPortMetrics(app);
         requestRoutesEndpointCollection(app);
         requestRoutesEndpoint(app);
+        requestRoutesZoneCollection(app);
+        requestRoutesZone(app);
 
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);
