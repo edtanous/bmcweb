@@ -1340,6 +1340,51 @@ inline void
         "xyz.openbmc_project.Inventory.Item.PersistentMemory");
 }
 
+inline void getEccModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& cpuId, const std::string& service,
+                           const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, cpuId](const boost::system::error_code ec,
+                       const OperatingConfigProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            nlohmann::json& json = aResp->res.jsonValue;
+            for (const auto& property : properties)
+            {
+                if (property.first == "ECCModeEnabled")
+                {
+                    const bool* eccModeEnabled =
+                        std::get_if<bool>(&property.second);
+                    if (eccModeEnabled == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    json["MemorySummary"]["ECCModeEnabled"] = *eccModeEnabled;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Memory.MemoryECC");
+}
+
+inline void getProcessorEccModeData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
+    const std::string& service, const std::string& objPath)
+{
+    nlohmann::json& json = aResp->res.jsonValue;
+    std::string metricsURI = "/redfish/v1/Systems/system/Processors/";
+    metricsURI += cpuId;
+    metricsURI += "/MemorySummary/MemoryMetrics";
+    json["MemorySummary"]["Metrics"]["@odata.id"] = metricsURI;
+    getEccModeData(aResp, cpuId, service, objPath);
+}
+
 inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& processorId,
                              const std::string& objectPath,
@@ -1403,11 +1448,21 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 getProcessorMemoryData(aResp, processorId, serviceName,
                                        objectPath);
             }
+            else if (interface == "xyz.openbmc_project.Memory.MemoryECC")
+            {
+                getProcessorEccModeData(aResp, processorId, serviceName,
+                                        objectPath);
+            }
         }
     }
     aResp->res.jsonValue["EnvironmentMetrics"] = {
         {"@odata.id", "/redfish/v1/Systems/system/Processors/" + processorId +
                           "/EnvironmentMetrics"}};
+    aResp->res.jsonValue["@Redfish.Settings"]["@odata.type"] =
+        "#Settings.v1_3_3.Settings";
+    aResp->res.jsonValue["@Redfish.Settings"]["SettingsObject"] = {
+        {"@odata.id",
+         "/redfish/v1/Systems/system/Processors/" + processorId + "/Settings"}};
     // Links association to underneath memory
     getProcessorMemoryLinks(aResp, objectPath);
     // Link association to parent chassis
@@ -1853,7 +1908,7 @@ inline void requestRoutesProcessor(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#Processor.v1_11_0.Processor";
+                    "#Processor.v1_13_0.Processor";
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Systems/system/Processors/" + processorId;
                 std::string processorMetricsURI =
@@ -2058,7 +2113,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 processorMetricsURI += processorId;
                 processorMetricsURI += "/ProcessorMetrics";
                 aResp->res.jsonValue["@odata.type"] =
-                    "#ProcessorMetrics.v1_2_0.ProcessorMetrics";
+                    "#ProcessorMetrics.v1_4_0.ProcessorMetrics";
                 aResp->res.jsonValue["@odata.id"] = processorMetricsURI;
                 aResp->res.jsonValue["Id"] = "ProcessorMetrics";
                 aResp->res.jsonValue["Name"] =
@@ -2082,7 +2137,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
             }
             // Object not found
             messages::resourceNotFound(
-                aResp->res, "#Processor.v1_11_0.Processor", processorId);
+                aResp->res, "#Processor.v1_13_0.Processor", processorId);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -2358,7 +2413,7 @@ inline void getProcessorMemoryMetricsData(
             }
             // Object not found
             messages::resourceNotFound(
-                aResp->res, "#Processor.v1_11_0.Processor", processorId);
+                aResp->res, "#Processor.v1_13_0.Processor", processorId);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -2381,6 +2436,220 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
                 getProcessorMemoryMetricsData(asyncResp, processorId);
+            });
+}
+
+inline std::string toRequestedApplyTime(const std::string& applyTime)
+{
+    if (applyTime ==
+        "xyz.openbmc_project.Software.ApplyTime.RequestedApplyTimes.Immediate")
+    {
+        return "Immediate";
+    }
+    if (applyTime ==
+        "xyz.openbmc_project.Software.ApplyTime.RequestedApplyTimes.OnReset")
+    {
+        return "OnReset";
+    }
+    // Unknown or others
+    return "";
+}
+
+inline void
+    getProcessorSettingsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& processorId)
+{
+    BMCWEB_LOG_DEBUG << "Get available system processor resource";
+    crow::connections::systemBus->async_method_call(
+        [aResp, processorId](boost::system::error_code ec,
+                             const MapperGetSubTreeResponse& subtree) mutable {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const auto& [path, object] : subtree)
+            {
+                if (!boost::ends_with(path, processorId))
+                {
+                    continue;
+                }
+                for (const auto& [service, interfaces] : object)
+                {
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "xyz.openbmc_project.Memory.MemoryECC") !=
+                        interfaces.end())
+                    {
+                        nlohmann::json& json = aResp->res.jsonValue;
+                        json["@odata.id"] =
+                            "/redfish/v1/Systems/system/Processors/" +
+                            processorId + "/Settings";
+                        json["@odata.type"] = "#Processor.v1_13_0.Processor";
+                        json["Id"] = "Settings";
+                        json["Name"] = processorId + "PendingSettings";
+                        getEccModeData(aResp, processorId, service, path);
+                    }
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "xyz.openbmc_project.Software.ApplyTime") !=
+                        interfaces.end())
+                    {
+                        crow::connections::systemBus->async_method_call(
+                            [aResp](
+                                const boost::system::error_code ec,
+                                const OperatingConfigProperties& properties) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_DEBUG << "DBUS response error";
+                                    messages::internalError(aResp->res);
+                                    return;
+                                }
+                                nlohmann::json& json = aResp->res.jsonValue;
+                                for (const auto& property : properties)
+                                {
+                                    if (property.first == "RequestedApplyTime")
+                                    {
+                                        const std::string* applyTime =
+                                            std::get_if<std::string>(
+                                                &property.second);
+                                        if (applyTime == nullptr)
+                                        {
+                                            messages::internalError(aResp->res);
+                                            return;
+                                        }
+                                        json["@Redfish.SettingsApplyTime"]
+                                            ["@odata.type"] =
+                                                "#Settings.v1_3_3.PreferredApplyTime";
+                                        json["@Redfish.SettingsApplyTime"]
+                                            ["ApplyTime"] =
+                                                toRequestedApplyTime(
+                                                    *applyTime);
+                                    }
+                                }
+                            },
+                            service, path, "org.freedesktop.DBus.Properties",
+                            "GetAll", "xyz.openbmc_project.Software.ApplyTime");
+                    }
+                }
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 2>{
+            "xyz.openbmc_project.Inventory.Item.Cpu",
+            "xyz.openbmc_project.Inventory.Item.Accelerator"});
+}
+
+inline void patchEccMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                         const std::string& processorId,
+                         const bool eccModeEnabled,
+                         const std::string& cpuObjectPath,
+                         const MapperServiceMap& serviceMap)
+{
+    // Check that the property even exists by checking for the interface
+    const std::string* inventoryService = nullptr;
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        if (std::find(interfaceList.begin(), interfaceList.end(),
+                      "xyz.openbmc_project.Memory.MemoryECC") !=
+            interfaceList.end())
+        {
+            inventoryService = &serviceName;
+            break;
+        }
+    }
+    if (inventoryService == nullptr)
+    {
+        messages::internalError(resp->res);
+        return;
+    }
+    // Set the property, with handler to check error responses
+    crow::connections::systemBus->async_method_call(
+        [resp, processorId, eccModeEnabled](boost::system::error_code ec,
+                                            sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set eccModeEnabled succeeded";
+                messages::success(resp->res);
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                             << " set eccModeEnabled property failed: " << ec;
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
+        "Set", "xyz.openbmc_project.Memory.MemoryECC", "ECCModeEnabled",
+        std::variant<bool>(eccModeEnabled));
+}
+
+inline void requestRoutesProcessorSettings(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Processors/<str>/"
+                      "Settings")
+        .privileges(redfish::privileges::getProcessor)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& processorId) {
+                getProcessorSettingsData(asyncResp, processorId);
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Processors/<str>/"
+                      "Settings")
+        .privileges(redfish::privileges::patchProcessor)
+        .methods(boost::beast::http::verb::patch)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& processorId) {
+                std::optional<nlohmann::json> memSummary;
+                if (!json_util::readJson(req, asyncResp->res, "MemorySummary",
+                                         memSummary))
+                {
+                    return;
+                }
+                std::optional<bool> eccModeEnabled;
+                if (memSummary)
+                {
+                    if (json_util::readJson(*memSummary, asyncResp->res,
+                                            "ECCModeEnabled", eccModeEnabled))
+                    {
+                        getProcessorObject(
+                            asyncResp, processorId,
+                            [eccModeEnabled](
+                                const std::shared_ptr<bmcweb::AsyncResp>&
+                                    asyncResp,
+                                const std::string& processorId,
+                                const std::string& objectPath,
+                                const MapperServiceMap& serviceMap) {
+                                patchEccMode(asyncResp, processorId,
+                                             *eccModeEnabled, objectPath,
+                                             serviceMap);
+                            });
+                    }
+                }
             });
 }
 
