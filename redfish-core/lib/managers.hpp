@@ -2089,6 +2089,64 @@ inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> aResp,
     }
 }
 
+inline void getLinkManagerForSwitches(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec,
+                    const std::vector<std::string>& objects) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+            }
+            asyncResp->res.jsonValue["Links"]["ManagerForSwitches"] =
+                nlohmann::json::array();
+            for (const std::string& fabric : objects)
+            {
+                sdbusplus::message::object_path path(fabric);
+                std::string fabricId = path.filename();
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, fabric, fabricId](
+                        const boost::system::error_code ec,
+                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                        if (ec)
+                        {
+                            messages::internalError(asyncResp->res);
+                        }
+                        nlohmann::json& tempArray =
+                            asyncResp->res
+                                .jsonValue["Links"]["ManagerForSwitches"];
+                        for (const std::pair<
+                                 std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                                 object : subtree)
+                        {
+                            const std::string& path = object.first;
+                            sdbusplus::message::object_path objPath(path);
+                            std::string switchId = objPath.filename();
+                            std::string managerUri = "/redfish/v1/Fabrics/";
+                            managerUri += fabricId + "/Switches/";
+                            managerUri += switchId;
+
+                            tempArray.push_back({{"@odata.id", managerUri}});
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree", fabric, 0,
+                    std::array<const char*, 1>{
+                        "xyz.openbmc_project.Inventory.Item.Switch"});
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Inventory.Item.Fabric"});
+}
+
 inline void requestRoutesManager(App& app)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
@@ -2149,7 +2207,7 @@ inline void requestRoutesManager(App& app)
                             asyncResp->res.jsonValue["Description"] =
                                 "Software Service for Baseboard Management "
                                 "Functions";
-
+                            asyncResp->res.jsonValue["ManagerType"] = "Service";
                             const std::string& connectionName =
                                 connectionNames[0].first;
                             const std::vector<std::string>& interfaces =
@@ -2172,6 +2230,7 @@ inline void requestRoutesManager(App& app)
                                                     path);
                                 }
                             }
+                            getLinkManagerForSwitches(asyncResp);
                             return;
                         }
                         messages::resourceNotFound(
