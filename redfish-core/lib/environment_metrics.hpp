@@ -208,6 +208,215 @@ inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.Association", "endpoints");
 }
 
+inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& connectionName,
+                        const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, connectionName, objPath](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::variant<uint32_t>>>&
+                propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Chassis properties";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            for (const std::pair<std::string, std::variant<uint32_t>>&
+                     property : propertiesList)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "SetPoint")
+                {
+                    const uint32_t* value =
+                        std::get_if<uint32_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for type";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["PowerLimitWatts"]["SetPoint"] =
+                        *value;
+                }
+            }
+        },
+        connectionName, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Control.Power.Cap");
+}
+
+inline void getPowerLimits(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, connectionName, objPath](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::variant<uint32_t>>>&
+                propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Chassis properties";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            for (const std::pair<std::string, std::variant<uint32_t>>&
+                     property : propertiesList)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "MaxPowerWatts")
+                {
+                    const uint32_t* value =
+                        std::get_if<uint32_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for type";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["PowerLimitWatts"]["AllowableMax"] = *value;
+                }
+                if (propertyName == "MinPowerWatts")
+                {
+                    const uint32_t* value =
+                        std::get_if<uint32_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for type";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["PowerLimitWatts"]["AllowableMin"] = *value;
+                }
+            }
+        },
+        connectionName, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Decorator.PowerLimit");
+}
+
+inline void getControlMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, connectionName,
+         objPath](const boost::system::error_code ec,
+                  const std::vector<std::pair<std::string, std::variant<bool>>>&
+                      propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Chassis properties";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            for (const std::pair<std::string, std::variant<bool>>& property :
+                 propertiesList)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "Manual")
+                {
+                    const bool* value = std::get_if<bool>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for type";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    std::string controlMode = "Automatic";
+                    if (*value == true)
+                    {
+                        controlMode = "Manual";
+                    }
+                    asyncResp->res.jsonValue["PowerLimitWatts"]["ControlMode"] =
+                        controlMode;
+                }
+            }
+        },
+        connectionName, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Control.Mode");
+}
+
+template <std::size_t SIZE>
+inline void
+    getPowerAndControlData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& resourceId,
+                           const std::array<const char*, SIZE>& interfaces)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp,
+         resourceId](const boost::system::error_code ec,
+                     const crow::openbmc_mapper::GetSubTreeType& subtree) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            // Iterate over all retrieved ObjectPaths.
+            for (const std::pair<std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                     object : subtree)
+            {
+                const std::string& path = object.first;
+                const std::vector<
+                    std::pair<std::string, std::vector<std::string>>>&
+                    connectionNames = object.second;
+
+                sdbusplus::message::object_path objPath(path);
+                if (objPath.filename() != resourceId)
+                {
+                    continue;
+                }
+
+                if (connectionNames.size() < 1)
+                {
+                    BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                    continue;
+                }
+
+                const std::string& connectionName = connectionNames[0].first;
+                const std::vector<std::string>& interfaces =
+                    connectionNames[0].second;
+
+                if (std::find(
+                        interfaces.begin(), interfaces.end(),
+                        "xyz.openbmc_project.Inventory.Decorator.PowerLimit") !=
+                    interfaces.end())
+                {
+                    // Chassis power limit properties
+                    getPowerLimits(asyncResp, connectionName, objPath);
+                }
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Control.Power.Cap") !=
+                    interfaces.end())
+                {
+                    // Chassis power setpoint properties
+                    getPowerCap(asyncResp, connectionName, objPath);
+                }
+
+                return;
+            }
+
+            messages::resourceNotFound(asyncResp->res,
+                                       "#Chassis.v1_15_0.Chassis", resourceId);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0, interfaces);
+}
+
 inline void
     getEnvironmentMetrics(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& chassisID)
@@ -216,13 +425,75 @@ inline void
         << "Get properties for EnvironmentMetrics associated to chassis = "
         << chassisID;
     asyncResp->res.jsonValue["@odata.type"] =
-        "#EnvironmentMetrics.v1_0_0.EnvironmentMetrics";
+        "#EnvironmentMetrics.v1_2_0.EnvironmentMetrics";
     asyncResp->res.jsonValue["Name"] = "Chassis Environment Metrics";
     asyncResp->res.jsonValue["Id"] = "EnvironmentMetrics";
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Chassis/" + chassisID + "/EnvironmentMetrics";
+    const std::array<const char*, 2> interfaces = {
+        "xyz.openbmc_project.Inventory.Item.Board",
+        "xyz.openbmc_project.Inventory.Item.Chassis"};
     getfanSpeedsPercent(asyncResp, chassisID);
     getPowerWatts(asyncResp, chassisID);
+    getPowerAndControlData(asyncResp, chassisID, interfaces);
+}
+
+/**
+ * Handle the PATCH operation of the power limit property. Do basic
+ * validation of the input data, and then set the D-Bus property.
+ *
+ * @param[in,out]   resp            Async HTTP response.
+ * @param[in]       resourceId       Resource Id.
+ * @param[in]       powerLimit      New property value to apply.
+ * @param[in]       objectPath      Path of resource object to modify.
+ * @param[in]       serviceName      Service for resource object.
+ */
+inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                            const std::string& resourceId, const int powerLimit,
+                            const std::string& objectPath,
+                            const std::string& serviceName,
+                            const std::string& resourceType)
+{
+    // Set the property, with handler to check error responses
+    crow::connections::systemBus->async_method_call(
+        [resp, resourceId, powerLimit, resourceType](
+            boost::system::error_code ec, sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set power limit property succeeded";
+                return;
+            }
+
+            BMCWEB_LOG_ERROR << resourceType << ": " << resourceId
+                             << " set power limit property failed: " << ec;
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+            {
+                // Invalid value
+                messages::propertyValueIncorrect(resp->res, "powerLimit",
+                                                 std::to_string(powerLimit));
+            }
+            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                             "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+        serviceName, objectPath, "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Control.Power.Cap", "SetPoint",
+        std::variant<uint32_t>(static_cast<uint32_t>(powerLimit)));
 }
 
 inline void requestRoutesEnvironmentMetrics(App& app)
@@ -250,6 +521,90 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                 redfish::chassis_utils::getValidChassisID(
                     asyncResp, chassisID, std::move(getChassisID));
             });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/EnvironmentMetrics/")
+        .privileges(redfish::privileges::patchChassis)
+        .methods(
+            boost::beast::http::verb::
+                patch)([](const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& chassisId) {
+            std::optional<int> powerLimit;
+            // Read json request
+            if (!json_util::readJson(req, asyncResp->res, "SetPoint",
+                                     powerLimit))
+            {
+                return;
+            }
+            // Update power limit
+            if (powerLimit)
+            {
+                const std::array<const char*, 1> interfaces = {
+                    "xyz.openbmc_project.Inventory.Item.Chassis"};
+
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, chassisId, powerLimit](
+                        const boost::system::error_code ec,
+                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                        if (ec)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+
+                        // Iterate over all retrieved ObjectPaths.
+                        for (const std::pair<
+                                 std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                                 object : subtree)
+                        {
+                            const std::string& path = object.first;
+                            const std::vector<std::pair<
+                                std::string, std::vector<std::string>>>&
+                                connectionNames = object.second;
+
+                            sdbusplus::message::object_path objPath(path);
+                            if (objPath.filename() != chassisId)
+                            {
+                                continue;
+                            }
+
+                            if (connectionNames.size() < 1)
+                            {
+                                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                                continue;
+                            }
+
+                            const std::string& connectionName =
+                                connectionNames[0].first;
+                            const std::vector<std::string>& interfaces =
+                                connectionNames[0].second;
+
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.Control.Power.Cap") !=
+                                interfaces.end())
+                            {
+                                std::string resourceType = "Chassis";
+                                patchPowerLimit(asyncResp, chassisId,
+                                                *powerLimit, objPath,
+                                                connectionName, resourceType);
+                            }
+
+                            return;
+                        }
+
+                        messages::resourceNotFound(asyncResp->res,
+                                                   "#Chassis.v1_15_0.Chassis",
+                                                   chassisId);
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                    "/xyz/openbmc_project/inventory", 0, interfaces);
+            }
+        });
 }
 
 inline void getSensorDataByService(
@@ -411,14 +766,32 @@ inline void
                 }
                 for (const auto& [service, interfaces] : object)
                 {
+                    if (std::find(
+                            interfaces.begin(), interfaces.end(),
+                            "xyz.openbmc_project.Inventory.Decorator.PowerLimit") !=
+                        interfaces.end())
+                    {
+                        getPowerLimits(aResp, service, path);
+                    }
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "xyz.openbmc_project.Control.Power.Cap") !=
+                        interfaces.end())
+                    {
+                        getPowerCap(aResp, service, path);
+                    }
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "xyz.openbmc_project.Control.Mode") !=
+                        interfaces.end())
+                    {
+                        getControlMode(aResp, service, path);
+                    }
                     getEnvironmentMetricsDataByService(aResp, service, path);
                 }
                 return;
             }
             // Object not found
             messages::resourceNotFound(
-                aResp->res, "#EnvironmentMetrics.v1_0_0.EnvironmentMetrics",
-                processorId);
+                aResp->res, "#Processor.v1_13_0.Processor", processorId);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -432,7 +805,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 {
     BMCWEB_ROUTE(
         app, "/redfish/v1/Systems/system/Processors/<str>/EnvironmentMetrics")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -442,13 +815,99 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                 envMetricsURI += processorId;
                 envMetricsURI += "/EnvironmentMetrics";
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#EnvironmentMetrics.v1_0_0.EnvironmentMetrics";
+                    "#EnvironmentMetrics.v1_2_0.EnvironmentMetrics";
                 asyncResp->res.jsonValue["@odata.id"] = envMetricsURI;
                 asyncResp->res.jsonValue["Id"] = "Environment Metrics";
                 asyncResp->res.jsonValue["Name"] =
                     processorId + " Environment Metrics";
                 getProcessorEnvironmentMetricsData(asyncResp, processorId);
             });
+
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/system/Processors/<str>/EnvironmentMetrics")
+        .privileges(redfish::privileges::patchProcessor)
+        .methods(
+            boost::beast::http::verb::
+                patch)([](const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& processorId) {
+            std::optional<int> powerLimit;
+            // Read json request
+            if (!json_util::readJson(req, asyncResp->res, "SetPoint",
+                                     powerLimit))
+            {
+                return;
+            }
+            // Update power limit
+            if (powerLimit)
+            {
+                const std::array<const char*, 2> interfaces = {
+                    "xyz.openbmc_project.Inventory.Item.Cpu",
+                    "xyz.openbmc_project.Inventory.Item.Accelerator"};
+
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, processorId, powerLimit](
+                        const boost::system::error_code ec,
+                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                        if (ec)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+
+                        // Iterate over all retrieved ObjectPaths.
+                        for (const std::pair<
+                                 std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                                 object : subtree)
+                        {
+                            const std::string& path = object.first;
+                            const std::vector<std::pair<
+                                std::string, std::vector<std::string>>>&
+                                connectionNames = object.second;
+
+                            sdbusplus::message::object_path objPath(path);
+                            if (objPath.filename() != processorId)
+                            {
+                                continue;
+                            }
+
+                            if (connectionNames.size() < 1)
+                            {
+                                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                                continue;
+                            }
+
+                            const std::string& connectionName =
+                                connectionNames[0].first;
+                            const std::vector<std::string>& interfaces =
+                                connectionNames[0].second;
+
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.Control.Power.Cap") !=
+                                interfaces.end())
+                            {
+                                std::string resourceType = "Processors";
+                                patchPowerLimit(asyncResp, processorId,
+                                                *powerLimit, objPath,
+                                                connectionName, resourceType);
+                            }
+
+                            return;
+                        }
+
+                        messages::resourceNotFound(
+                            asyncResp->res, "#Processor.v1_13_0.Processor",
+                            processorId);
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                    "/xyz/openbmc_project/inventory", 0, interfaces);
+            }
+        });
 }
 
 inline void
@@ -484,7 +943,7 @@ inline void
             }
             // Object not found
             messages::resourceNotFound(
-                aResp->res, "#EnvironmentMetrics.v1_0_0.EnvironmentMetrics",
+                aResp->res, "#EnvironmentMetrics.v1_2_0.EnvironmentMetrics",
                 dimmId);
         },
         "xyz.openbmc_project.ObjectMapper",
@@ -508,7 +967,7 @@ inline void requestRoutesMemoryEnvironmentMetrics(App& app)
                 envMetricsURI += dimmId;
                 envMetricsURI += "/EnvironmentMetrics";
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#EnvironmentMetrics.v1_0_0.EnvironmentMetrics";
+                    "#EnvironmentMetrics.v1_2_0.EnvironmentMetrics";
                 asyncResp->res.jsonValue["@odata.id"] = envMetricsURI;
                 asyncResp->res.jsonValue["Id"] = "EnvironmentMetrics";
                 asyncResp->res.jsonValue["Name"] =

@@ -2099,7 +2099,7 @@ inline void requestRoutesProcessorMetrics(App& app)
      */
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/system/Processors/<str>/ProcessorMetrics")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -2375,7 +2375,7 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
      */
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Processors/<str>/"
                       "MemorySummary/MemoryMetrics")
-        .privileges({{"Login"}})
+        .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
