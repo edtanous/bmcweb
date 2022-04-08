@@ -26,6 +26,7 @@
 #include <openbmc_dbus_rest.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
+#include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
 
 #include <cmath>
@@ -164,73 +165,24 @@ inline const char* toReadingUnits(const std::string& sensorType)
     return "";
 }
 
-inline const char* toPhysicalContext(const std::string& physicalContext)
+inline const char* toImplementation(const std::string& implementation)
 {
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Back")
+    if (implementation ==
+        "xyz.openbmc_project.Sensor.Type.ImplementationType.PhysicalSensor")
     {
-        return "Back";
+        return "PhysicalSensor";
     }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Backplane")
+    if (implementation ==
+        "xyz.openbmc_project.Sensor.Type.ImplementationType.Synthesized")
     {
-        return "Backplane";
+        return "Synthesized";
     }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.CPU")
+    if (implementation ==
+        "xyz.openbmc_project.Sensor.Type.ImplementationType.Reported")
     {
-        return "CPU";
+        return "Reported";
     }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Fan")
-    {
-        return "Fan";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Front")
-    {
-        return "Front";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.GPU")
-    {
-        return "GPU";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.GPUSubsystem")
-    {
-        return "GPUSubsystem";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.Memory")
-    {
-        return "Memory";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.NetworkingDevice")
-    {
-        return "NetworkingDevice";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.PowerSupply")
-    {
-        return "PowerSupply";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.StorageDevice")
-    {
-        return "StorageDevice";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.SystemBoard")
-    {
-        return "SystemBoard";
-    }
-    if (physicalContext ==
-        "xyz.openbmc_project.Sensor.Area.PhysicalContextType.VoltageRegulator")
-    {
-        return "VoltageRegulator";
-    }
+
     return "";
 }
 
@@ -1116,9 +1068,12 @@ inline void objectInterfacesToJson(
                                 "/ReadingRangeMin"_json_pointer);
         properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxValue",
                                 "/ReadingRangeMax"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Area",
+        properties.emplace_back("xyz.openbmc_project.Inventory.Decorator.Area",
                                 "PhysicalContext",
                                 "/PhysicalContext"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Type",
+                                "Implementation",
+                                "/Implementation"_json_pointer);
     }
     else if (sensorType == "temperature")
     {
@@ -1182,7 +1137,16 @@ inline void objectInterfacesToJson(
                         std::string physicalContext =
                             static_cast<std::string>(*stringValue);
                         const std::string& value =
-                            sensors::toPhysicalContext(physicalContext);
+                            redfish::dbus_utils::toPhysicalContext(
+                                physicalContext);
+                        sensorJson[key] = value;
+                    }
+                    if (valueName == "Implementation")
+                    {
+                        std::string implementation =
+                            static_cast<std::string>(*stringValue);
+                        const std::string& value =
+                            sensors::toImplementation(implementation);
                         sensorJson[key] = value;
                     }
                     continue;

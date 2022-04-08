@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sensors.hpp"
+#include "utils/dbus_utils.hpp"
 
 namespace redfish
 {
@@ -57,6 +58,20 @@ inline void
 
         // Process sensor reading
         auto interfacesDict = sensorElem->second;
+        auto sensorAreadProperties =
+            interfacesDict.find("xyz.openbmc_project.Inventory.Decorator.Area");
+        const std::string* physicalContext = nullptr;
+        if (sensorAreadProperties != interfacesDict.end())
+        {
+            auto sensorAreaValue =
+                sensorAreadProperties->second.find("PhysicalContext");
+            if (sensorAreaValue != sensorAreadProperties->second.end())
+            {
+                const dbus::utility::DbusVariantType& valueVariant =
+                    sensorAreaValue->second;
+                physicalContext = std::get_if<std::string>(&valueVariant);
+            }
+        }
         auto interfaceProperties =
             interfacesDict.find("xyz.openbmc_project.Sensor.Value");
         if (interfaceProperties != interfacesDict.end())
@@ -76,17 +91,26 @@ inline void
                 {
                     nlohmann::json& resArray =
                         asyncResp->res.jsonValue["TemperatureReadingsCelsius"];
-                    resArray.push_back(
-                        {{"@odata.id", std::string("/redfish/v1/Chassis/")
-                                           .append(chassisId)
-                                           .append("/Sensors/")
-                                           .append(sensorName)},
-                         {"DataSourceUri", std::string("/redfish/v1/Chassis/")
-                                               .append(chassisId)
-                                               .append("/Sensors/")
-                                               .append(sensorName)},
-                         {"DeviceName", sensorName},
-                         {"Reading", std::to_string(reading)}});
+                    nlohmann::json objectJson = nlohmann::json::object();
+                    objectJson["@odata.id"] =
+                        std::string("/redfish/v1/Chassis/")
+                            .append(chassisId)
+                            .append("/Sensors/")
+                            .append(sensorName);
+                    objectJson["DataSourceUri"] =
+                        std::string("/redfish/v1/Chassis/")
+                            .append(chassisId)
+                            .append("/Sensors/")
+                            .append(sensorName);
+                    objectJson["DeviceName"] = sensorName;
+                    objectJson["Reading"] = std::to_string(reading);
+                    if (physicalContext != nullptr)
+                    {
+                        objectJson["PhysicalContext"] =
+                            redfish::dbus_utils::toPhysicalContext(
+                                *physicalContext);
+                    }
+                    resArray.push_back(objectJson);
                 }
                 else
                 {

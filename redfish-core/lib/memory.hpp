@@ -22,6 +22,7 @@
 #include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/collection.hpp>
+#include <utils/dbus_utils.hpp>
 #include <utils/hex_utils.hpp>
 #include <utils/json_utils.hpp>
 
@@ -726,6 +727,19 @@ inline void
                     aResp->res
                         .jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
                         *value;
+                }
+                else if (property.first == "LocationType")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res
+                        .jsonValue["Location"]["PartLocation"]["LocationType"] =
+                        redfish::dbus_utils::toLocationType(*value);
                 }
                 else
                 {

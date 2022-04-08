@@ -17,6 +17,7 @@
 
 #include <app.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
 
 #include <iostream>
@@ -127,6 +128,34 @@ inline void
                         return;
                     }
                     assemblyRes["ProductionDate"] = *value;
+                }
+                else if (propertyName == "LocationType")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for LocationType";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    assemblyRes["Location"]["PartLocation"]["LocationType"] =
+                        redfish::dbus_utils::toLocationType(*value);
+                }
+                else if (propertyName == "PhysicalContext")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for PhysicalContext";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    assemblyRes["PhysicalContext"] =
+                        redfish::dbus_utils::toPhysicalContext(*value);
                 }
             }
             nlohmann::json& jResp = asyncResp->res.jsonValue["Assemblies"];

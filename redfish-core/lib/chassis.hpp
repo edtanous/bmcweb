@@ -24,7 +24,7 @@
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <utils/collection.hpp>
-
+#include <utils/dbus_utils.hpp>
 namespace redfish
 {
 
@@ -556,6 +556,29 @@ inline void
         });
 }
 
+inline void
+    getChassisLocationType(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.Location", "LocationType",
+        [asyncResp](const boost::system::error_code ec,
+                    const std::string& property) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for Location";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            asyncResp->res
+                .jsonValue["Location"]["PartLocation"]["LocationType"] =
+                redfish::dbus_utils::toLocationType(property);
+        });
+}
+
 inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
                            const std::string& path)
@@ -818,6 +841,13 @@ inline void requestRoutesChassis(App& app)
                                 "xyz.openbmc_project.Inventory.Decorator.LocationCode")
                             {
                                 getChassisLocationCode(asyncResp,
+                                                       connectionName, path);
+                            }
+                            else if (
+                                interface ==
+                                "xyz.openbmc_project.Inventory.Decorator.Location")
+                            {
+                                getChassisLocationType(asyncResp,
                                                        connectionName, path);
                             }
                         }
