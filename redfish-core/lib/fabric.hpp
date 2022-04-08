@@ -204,7 +204,7 @@ inline void getPortObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     {"@odata.id", portURI},
                     {"Name", portId + " Resource"},
                     {"Id", portId}};
-                std::string portMetricsURI = portURI + "/PortMetrics";
+                std::string portMetricsURI = portURI + "/Metrics";
                 asyncResp->res.jsonValue["Metrics"]["@odata.id"] =
                     portMetricsURI;
 
@@ -2369,7 +2369,7 @@ inline void
                 }
                 std::string portMetricsURI =
                     (boost::format("/redfish/v1/Fabrics/%s/Switches/%s/Ports/"
-                                   "%s/PortMetrics") %
+                                   "%s/Metrics") %
                      fabricId % switchId % portId)
                         .str();
                 asyncResp->res.jsonValue = {
@@ -2429,8 +2429,8 @@ inline void
  */
 inline void requestRoutesPortMetrics(App& app)
 {
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/PortMetrics")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Metrics")
         .privileges({{"Login"}})
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
