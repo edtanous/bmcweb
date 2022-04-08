@@ -29,6 +29,8 @@
 #include <utils/collection.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/processor_utils.hpp>
+
 namespace redfish
 {
 
@@ -2119,6 +2121,126 @@ inline void getProcessorMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Memory.MemoryECC");
 }
 
+inline void getVoltageData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& service,
+                           const std::string& chassisId,
+                           const std::string& sensorPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, chassisId, sensorPath](
+            const boost::system::error_code ec,
+            const std::vector<
+                std::pair<std::string, std::variant<std::string, double>>>&
+                propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "Can't get sensor reading";
+                return;
+            }
+            const double* attributeValue = nullptr;
+            for (const std::pair<std::string,
+                                 std::variant<std::string, double>>& property :
+                 propertiesList)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "Value")
+                {
+                    attributeValue = std::get_if<double>(&property.second);
+                }
+            }
+            if (attributeValue == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            sdbusplus::message::object_path objectPath(sensorPath);
+            const std::string& sensorName = objectPath.filename();
+            std::string sensorURI =
+                (boost::format("/redfish/v1/Chassis/%s/Sensors/%s") %
+                 chassisId % sensorName)
+                    .str();
+            aResp->res.jsonValue["CoreVoltage"] = {
+                {"Reading", *attributeValue}, {"DataSourceUri", sensorURI}};
+        },
+        service, sensorPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Sensor.Value");
+}
+
+inline void getSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& service,
+                            const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, service,
+         objPath](const boost::system::error_code ec,
+                  std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                return; // no chassis = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr && data->size() > 1)
+            {
+                // Object must have single parent chassis
+                return;
+            }
+            const std::string& chassisPath = data->front();
+            sdbusplus::message::object_path objectPath(chassisPath);
+            std::string chassisName = objectPath.filename();
+            if (chassisName.empty())
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            const std::string& chassisId = chassisName;
+            crow::connections::systemBus->async_method_call(
+                [aResp, service, objPath,
+                 chassisId](const boost::system::error_code& e,
+                            std::variant<std::vector<std::string>>& resp) {
+                    if (e)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr)
+                    {
+                        return;
+                    }
+                    for (const std::string& sensorPath : *data)
+                    {
+                        std::vector<std::string> split;
+                        // Reserve space for
+                        // /xyz/openbmc_project/sensors/<name>/<subname>
+                        split.reserve(6);
+                        boost::algorithm::split(split, sensorPath,
+                                                boost::is_any_of("/"));
+                        if (split.size() < 6)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Got path that isn't long enough "
+                                << objPath;
+                            continue;
+                        }
+                        const std::string& sensorType = split[4];
+                        if (sensorType == "voltage")
+                        {
+                            getVoltageData(aResp, service, chassisId,
+                                           sensorPath);
+                        }
+                    }
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                chassisPath + "/all_sensors", "org.freedesktop.DBus.Properties",
+                "Get", "xyz.openbmc_project.Association", "endpoints");
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                     const std::string& processorId)
 {
@@ -2167,6 +2289,14 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     {
                         getProcessorMemoryECCData(aResp, service, path);
                     }
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "xyz.openbmc_project.PCIe.PCIeECC") !=
+                        interfaces.end())
+                    {
+                        redfish::processor_utils::getPCIeErrorData(
+                            aResp, service, path);
+                    }
+                    getSensorMetric(aResp, service, path);
                 }
                 return;
             }
