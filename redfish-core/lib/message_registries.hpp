@@ -20,6 +20,7 @@
 #include "registries/openbmc_message_registry.hpp"
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
+#include "registries/update_event_message_registry.hpp"
 
 #include <app.hpp>
 #include <registries/privilege_registry.hpp>
@@ -44,6 +45,7 @@ inline void handleMessageRegistryFileCollectionGet(
          {{{"@odata.id", "/redfish/v1/Registries/Base"}},
           {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
           {{"@odata.id", "/redfish/v1/Registries/ResourceEvent"}},
+          {{"@odata.id", "/redfish/v1/Registries/UpdateEvent"}},
           {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}}}}};
 }
 
@@ -85,6 +87,11 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     {
         header = &message_registries::resource_event::header;
         url = message_registries::resource_event::url;
+    }
+    else if (registry == "UpdateEvent")
+    {
+        header = &message_registries::update_event::header;
+        url = message_registries::update_event::url;
     }
     else
     {
@@ -161,6 +168,15 @@ inline void handleMessageRegistryGet(
         header = &message_registries::resource_event::header;
         for (const message_registries::MessageEntry& entry :
              message_registries::resource_event::registry)
+        {
+            registryEntries.emplace_back(&entry);
+        }
+    }
+    else if (registry == "UpdateEvent")
+    {
+        header = &message_registries::update_event::header;
+        for (const message_registries::MessageEntry& entry :
+                message_registries::update_event::registry)
         {
             registryEntries.emplace_back(&entry);
         }

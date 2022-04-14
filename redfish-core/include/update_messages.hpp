@@ -1,0 +1,264 @@
+namespace redfish
+{
+namespace messages
+{
+
+inline nlohmann::json targetDetermined(const std::string& arg1,
+                                       const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.TargetDetermined"},
+        {"Message", "The target device '" + arg1 +
+                        "' will be updated with image '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json allTargetsDetermined()
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.AllTargetsDetermined"},
+        {"Message",
+         "All the target device to be updated have been determined."},
+        {"MessageArgs", {}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json updateInProgress()
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.UpdateInProgress"},
+        {"Message", "An update is in progress."},
+        {"MessageArgs", {}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json transferringToComponent(const std::string& arg1,
+                                              const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.TransferringToComponent"},
+        {"Message",
+         "Image '" + arg1 + "' is being transferred to '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json verifyingAtComponent(const std::string& arg1,
+                                           const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.VerifyingAtComponent"},
+        {"Message",
+         "Image '" + arg1 + "' is being verified at '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json installingOnComponent(const std::string& arg1,
+                                            const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.InstallingOnComponent"},
+        {"Message",
+         "Image '" + arg1 + "' is being installed on '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json applyingOnComponent(const std::string& arg1,
+                                          const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.ApplyingOnComponent"},
+        {"Message", "Image '" + arg1 + "' is being applied on '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json transferFailed(const std::string& arg1,
+                                     const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.TransferFailed"},
+        {"Message",
+         "Transfer of image '" + arg1 + "' to '" + arg2 + "' failed."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "Critical"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json verificationFailed(const std::string& arg1,
+                                         const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.VerificationFailed"},
+        {"Message",
+         "Verification of image '" + arg1 + "' at '" + arg2 + "' failed."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "Critical"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json applyFailed(const std::string& arg1,
+                                  const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.ApplyFailed"},
+        {"Message",
+         "Installation of image '" + arg1 + "' to '" + arg2 + "' failed."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "Critical"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json activateFailed(const std::string& arg1,
+                                     const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.ActivateFailed"},
+        {"Message",
+         "Activation of image '" + arg1 + "' on '" + arg2 + "' failed."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "Critical"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json awaitToUpdate(const std::string& arg1,
+                                    const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.AwaitToUpdate"},
+        {"Message",
+         "Awaiting for an action to proceed with installing image '" + arg1 +
+             "' on '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution",
+         "Perform the requested action to advance the update operation."}};
+}
+inline nlohmann::json awaitToActivate(const std::string& arg1,
+                                      const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.AwaitToActivate"},
+        {"Message",
+         "Awaiting for an action to proceed with activating image '" + arg1 +
+             "' on '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution",
+         "Perform the requested action to advance the update operation."}};
+}
+inline nlohmann::json updateSuccessful(const std::string& arg1,
+                                       const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.UpdateSuccessful"},
+        {"Message", "Device '" + arg1 + "' successfully updated with image '" +
+                        arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+inline nlohmann::json operationTransitionedToJob(const std::string& arg1)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "Update.1.0.OperationTransitionedToJob"},
+        {"Message",
+         "The update operation has transitioned to the job at URI '" + arg1 +
+             "'."},
+        {"MessageArgs", {arg1}},
+        {"Severity", "OK"},
+        {"Resolution",
+         "Follow the referenced job and monitor the job for further updates."}};
+}
+
+inline nlohmann::json getUpdateMessage(const std::string& msgId,
+                                       std::vector<std::string>& args)
+{
+    std::string arg0 = "";
+    std::string arg1 = "";
+    if (args.size() >= 1) {
+        arg0 = args[0];
+    }
+    if (args.size() >= 2) {
+        arg1 = args[1];
+    }
+
+    if (msgId == "Update.1.0.TargetDetermined")
+    {
+        return targetDetermined(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.AllTargetsDetermined")
+    {
+        return allTargetsDetermined();
+    }
+    if (msgId == "Update.1.0.UpdateInProgress")
+    {
+        return updateInProgress();
+    }
+    if (msgId == "Update.1.0.TransferringToComponent")
+    {
+        return transferringToComponent(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.VerifyingAtComponent")
+    {
+        return verifyingAtComponent(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.InstallingOnComponent")
+    {
+        return installingOnComponent(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.ApplyingOnComponent")
+    {
+        return applyingOnComponent(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.TransferFailed")
+    {
+        return transferFailed(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.VerificationFailed")
+    {
+        return verificationFailed(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.ApplyFailed")
+    {
+        return applyFailed(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.ActivateFailed")
+    {
+        return activateFailed(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.AwaitToUpdate")
+    {
+        return awaitToUpdate(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.AwaitToActivate")
+    {
+        return awaitToActivate(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.UpdateSuccessful")
+    {
+        return updateSuccessful(arg0, arg1);
+    }
+    if (msgId == "Update.1.0.OperationTransitionedToJob")
+    {
+        return operationTransitionedToJob(arg0);
+    }
+
+    return {};
+}
+} // namespace messages
+} // namespace redfish

@@ -80,13 +80,33 @@ struct Payload
     nlohmann::json jsonBody;
 };
 
+static nlohmann::json getMessage(const std::string_view state, size_t index)
+{
+    if (state == "Started")
+    {
+        return messages::taskStarted(std::to_string(index));
+    }
+    if (state == "Aborted")
+    {
+        return messages::taskAborted(std::to_string(index));
+    }
+    BMCWEB_LOG_INFO << "get msg status not found";
+    return nlohmann::json{
+        {"@odata.type", "Unknown"}, {"MessageId", "Unknown"},
+        {"Message", "Unknown"},     {"MessageArgs", {}},
+        {"Severity", "Unknown"},    {"Resolution", "Unknown"}};
+}
+
 struct TaskData : std::enable_shared_from_this<TaskData>
 {
   private:
     TaskData(std::function<bool(boost::system::error_code,
                                 sdbusplus::message::message&,
                                 const std::shared_ptr<TaskData>&)>&& handler,
-             const std::string& matchIn, size_t idx) :
+             const std::string& matchIn, size_t idx,
+             std::function<nlohmann::json(std::string_view, size_t)>&&
+                 getMsgHandler) :
+        getMsgCallback(getMsgHandler),
         callback(std::move(handler)),
         matchStr(matchIn), index(idx),
         startTime(std::chrono::system_clock::to_time_t(
@@ -98,12 +118,13 @@ struct TaskData : std::enable_shared_from_this<TaskData>
 
   public:
     TaskData() = delete;
-
     static std::shared_ptr<TaskData>& createTask(
         std::function<bool(boost::system::error_code,
                            sdbusplus::message::message&,
                            const std::shared_ptr<TaskData>&)>&& handler,
-        const std::string& match)
+        const std::string& match,
+        std::function<nlohmann::json(std::string_view, size_t)>&&
+            getMsgHandler = &getMessage)
     {
         static size_t lastTask = 0;
         struct MakeSharedHelper : public TaskData
@@ -112,8 +133,11 @@ struct TaskData : std::enable_shared_from_this<TaskData>
                 std::function<bool(boost::system::error_code,
                                    sdbusplus::message::message&,
                                    const std::shared_ptr<TaskData>&)>&& handler,
-                const std::string& match2, size_t idx) :
-                TaskData(std::move(handler), match2, idx)
+                const std::string& match2, size_t idx,
+                std::function<nlohmann::json(const std::string_view, size_t)>
+                    getMsgHandler) :
+                TaskData(std::move(handler), match2, idx,
+                         std::move(getMsgHandler))
             {}
         };
 
@@ -128,7 +152,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
         }
 
         return tasks.emplace_back(std::make_shared<MakeSharedHelper>(
-            std::move(handler), match, lastTask++));
+            std::move(handler), match, lastTask++, getMsgHandler));
     }
 
     void populateResp(crow::Response& res, size_t retryAfterSeconds = 30)
@@ -181,7 +205,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
                 self->state = "Cancelled";
                 self->status = "Warning";
                 self->messages.emplace_back(
-                    messages::taskAborted(std::to_string(self->index)));
+                    self->getMsgCallback("Aborted", self->index));
                 // Send event :TaskAborted
                 self->sendTaskEvent(self->state, self->index);
                 self->callback(ec, msg, self);
@@ -290,10 +314,13 @@ struct TaskData : std::enable_shared_from_this<TaskData>
             });
 
         extendTimer(timeout);
-        messages.emplace_back(messages::taskStarted(std::to_string(index)));
+        messages.emplace_back(getMsgCallback("Started", index));
         // Send event : TaskStarted
         sendTaskEvent(state, index);
     }
+
+    std::function<nlohmann::json(const std::string_view, size_t)>
+        getMsgCallback;
 
     std::function<bool(boost::system::error_code, sdbusplus::message::message&,
                        const std::shared_ptr<TaskData>&)>
@@ -310,6 +337,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
     std::optional<Payload> payload;
     bool gave204 = false;
     int percentComplete = 0;
+    std::unique_ptr<sdbusplus::bus::match::match> loggingMatch;
 };
 
 } // namespace task

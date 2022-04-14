@@ -23,6 +23,7 @@
 #include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
+#include <update_messages.hpp>
 #include <utils/fw_utils.hpp>
 
 namespace redfish
@@ -35,6 +36,8 @@ static std::unique_ptr<sdbusplus::bus::match::match> fwUpdateErrorMatcher;
 static bool fwUpdateInProgress = false;
 // Timer for software available
 static std::unique_ptr<boost::asio::steady_timer> fwAvailableTimer;
+// match for logging
+static std::unique_ptr<sdbusplus::bus::match::match> loggingMatch = nullptr;
 
 inline static void cleanUp()
 {
@@ -58,6 +61,100 @@ inline static void activateImage(const std::string& objPath,
         "xyz.openbmc_project.Software.Activation", "RequestedActivation",
         dbus::utility::DbusVariantType(
             "xyz.openbmc_project.Software.Activation.RequestedActivations.Active"));
+}
+
+static void handleLogMatchCallback(sdbusplus::message::message& m,
+                                   nlohmann::json& messages)
+{
+    std::vector<std::pair<std::string, dbus::utility::DBusPropertiesMap>>
+        interfacesProperties;
+    sdbusplus::message::object_path objPath;
+    m.read(objPath, interfacesProperties);
+    for (auto interface : interfacesProperties)
+    {
+        if (interface.first == "xyz.openbmc_project.Logging.Entry")
+        {
+            std::string rfMessage = "";
+            std::string resolution = "";
+            std::vector<std::string> rfArgs;
+            const std::vector<std::string>* vData = nullptr;
+            for (auto& propertyMap : interface.second)
+            {
+                if (propertyMap.first == "AdditionalData")
+                {
+                    vData = std::get_if<std::vector<std::string>>(
+                        &propertyMap.second);
+
+                    for (auto& kv : *vData)
+                    {
+                        std::vector<std::string> fields;
+                        boost::split(fields, kv, boost::is_any_of("="));
+                        if (fields[0] == "REDFISH_MESSAGE_ID")
+                        {
+                            rfMessage = fields[1];
+                        }
+                        else if (fields[0] == "REDFISH_MESSAGE_ARGS")
+                        {
+                            boost::split(rfArgs, fields[1],
+                                         boost::is_any_of(","));
+                        }
+                    }
+                }
+                if (propertyMap.first == "Resolution")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&propertyMap.second);
+                    if(value != nullptr)
+                    {
+                        resolution = *value;
+                    }
+                }
+            }
+            /* we need to have found the id, data, this image needs to
+               correspond to the image we are working with right now and the
+               message should be update related */
+            if (vData == nullptr ||
+                !boost::algorithm::starts_with(rfMessage, "Update.1.0"))
+            {
+                // something is invalid
+                BMCWEB_LOG_DEBUG << "Got invalid log message";
+            }
+            else
+            {
+                auto message =
+                    redfish::messages::getUpdateMessage(rfMessage, rfArgs);
+                if (message.find("Message") != message.end())
+                {
+
+                    if (resolution != "")
+                    {
+                        message["Resolution"] = resolution;
+                    }
+                    messages.emplace_back(message);
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR << "Unknown message ID: " << rfMessage;
+                }
+            }
+        }
+    }
+}
+
+static void loggingMatchCallback(const std::shared_ptr<task::TaskData>& task,
+                                 sdbusplus::message::message& m)
+{
+    if (task == nullptr)
+    {
+        return;
+    }
+    handleLogMatchCallback(m, task->messages);
+}
+
+static nlohmann::json preTaskMessages = {};
+static void preTaskLoggingHandler(sdbusplus::message::message& m)
+{
+    handleLogMatchCallback(m, preTaskMessages);
 }
 
 // Note that asyncResp can be either a valid pointer or nullptr. If nullptr
@@ -118,10 +215,43 @@ static void
                     // xyz.openbmc_project.Software.Activation interface
                     // is added
                     fwAvailableTimer = nullptr;
+                    sdbusplus::message::object_path objectPath(objPath.str);
+                    std::string swID = objectPath.filename();
+                    if (swID.empty())
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
 
                     activateImage(objPath.str, objInfo[0].first);
+
                     if (asyncResp)
                     {
+                        auto messageCallback =
+                            [swID, objPath](const std::string_view state,
+                                            [[maybe_unused]] size_t index) {
+                                nlohmann::json message{};
+                                if (state == "Started")
+                                {
+                                    message = messages::taskStarted(
+                                        std::to_string(index));
+                                }
+                                else if (state == "Aborted")
+                                {
+                                    message =
+                                        messages::applyFailed(swID, objPath);
+                                }
+                                else if (state == "Completed")
+                                {
+                                    message = messages::taskCompletedOK(
+                                        std::to_string(index));
+                                }
+                                else
+                                {
+                                    BMCWEB_LOG_INFO << "State not good";
+                                }
+                                return message;
+                            };
                         std::shared_ptr<task::TaskData> task =
                             task::TaskData::createTask(
                                 [](boost::system::error_code ec,
@@ -179,7 +309,6 @@ static void
                                             taskData->state = "Stopping";
                                             taskData->messages.emplace_back(
                                                 messages::taskPaused(index));
-
                                             // its staged, set a long timer to
                                             // allow them time to complete the
                                             // update (probably cycle the
@@ -192,10 +321,10 @@ static void
 
                                         if (boost::ends_with(*state, "Active"))
                                         {
+                                            taskData->state = "Completed";
                                             taskData->messages.emplace_back(
                                                 messages::taskCompletedOK(
                                                     index));
-                                            taskData->state = "Completed";
                                             return task::completed;
                                         }
                                     }
@@ -221,6 +350,7 @@ static void
                                         }
                                         taskData->percentComplete =
                                             static_cast<int>(*progress);
+
                                         taskData->messages.emplace_back(
                                             messages::taskProgressChanged(
                                                 index, static_cast<size_t>(
@@ -229,7 +359,7 @@ static void
                                         // if we're getting status updates it's
                                         // still alive, update timer
                                         taskData->extendTimer(
-                                            std::chrono::minutes(5));
+                                            std::chrono::minutes(updateServiceTaskTimeout));
                                     }
 
                                     // as firmware update often results in a
@@ -240,11 +370,26 @@ static void
                                 },
                                 "type='signal',interface='org.freedesktop.DBus.Properties',"
                                 "member='PropertiesChanged',path='" +
-                                    objPath.str + "'");
+                                    objPath.str + "'",
+                                messageCallback);
                         task->startTimer(
                             std::chrono::minutes(updateServiceTaskTimeout));
                         task->populateResp(asyncResp->res);
                         task->payload.emplace(std::move(payload));
+                        loggingMatch = std::make_unique<
+                            sdbusplus::bus::match::match>(
+                            *crow::connections::systemBus,
+                            "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
+                            "member='InterfacesAdded',"
+                            "path='/xyz/openbmc_project/logging'",
+                            [task](sdbusplus::message::message& m) {
+                                loggingMatchCallback(task, m);
+                            });
+                        if (preTaskMessages.size() > 0)
+                        {
+                            task->messages.emplace_back(preTaskMessages);
+                        }
+                        preTaskMessages = {};
                     }
                     fwUpdateInProgress = false;
                 },
@@ -301,6 +446,7 @@ static void monitorForSoftwareAvailable(
                 redfish::messages::internalError(asyncResp->res);
             }
         });
+
     task::Payload payload(req);
     auto callback = [asyncResp,
                      payload](sdbusplus::message::message& m) mutable {
@@ -397,6 +543,13 @@ static void monitorForSoftwareAvailable(
                 }
             }
         });
+
+    loggingMatch = std::make_unique<sdbusplus::bus::match::match>(
+        *crow::connections::systemBus,
+        "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
+        "member='InterfacesAdded',"
+        "path='/xyz/openbmc_project/logging'",
+        preTaskLoggingHandler);
 }
 
 /**

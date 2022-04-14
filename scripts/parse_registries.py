@@ -63,7 +63,9 @@ files.append(make_getter('TaskEvent.1.0.3.json',
 files.append(make_getter('ResourceEvent.1.0.3.json',
                          'resource_event_message_registry.hpp',
                          'resource_event'))
-
+files.append(make_getter('Update.1.0.0.json',
+                         'update_event_message_registry.hpp',
+                         'update_event'))
 # Remove the old files
 for file, json_dict, namespace, url in files:
     try:
