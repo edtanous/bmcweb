@@ -217,6 +217,7 @@ add_project_arguments(
     '-Wno-attributes',
     '-Wno-error=deprecated-declarations',    
     '-Wno-comment',
+    '-Wno-disabled-macro-expansion',
   language:'cpp')
 endif
 
@@ -310,6 +311,7 @@ cxx.get_supported_arguments([
   '-DBOOST_EXCEPTION_DISABLE',
   '-DBOOST_NO_EXCEPTIONS',
   '-DBOOST_URL_NO_SOURCE_LOCATION',
+  '-DBOOST_SPIRIT_X3_NO_RTTI',
   '-DJSON_NOEXCEPTION',
   '-DOPENSSL_NO_FILENAMES',
   '-DSDBUSPLUS_DISABLE_BOOST_COROUTINES',
@@ -402,7 +404,7 @@ else
   cmake = import('cmake')
   opt = cmake.subproject_options()
   opt.add_cmake_defines({
-    'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;headers;process;type_index;url;uuid',
+    'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;headers;process;type_index;url;uuid;spirit',
     'BUILD_SHARED_LIBS': 'OFF',
   })
 
@@ -415,6 +417,7 @@ else
   boost_type_index = boost.dependency('boost_type_index').as_system()
   boost_url = boost.dependency('boost_url').as_system()
   boost_uuid = boost.dependency('boost_uuid').as_system()
+  boost_spirit = boost.dependency('boost_spirit').as_system()
   bmcweb_dependencies += [
     boost_asio,
     boost_beast,
@@ -423,7 +426,8 @@ else
     boost_process,
     boost_type_index,
     boost_url,
-    boost_uuid
+    boost_uuid,
+    boost_spirit,
   ]
 endif
 
@@ -460,6 +464,7 @@ bmcweb_dependencies += conf_h_dep
 fs = import('fs')
 
 srcfiles_bmcweb = files(
+  'redfish-core/src/filter_expr_printer.cpp',
   'redfish-core/src/error_messages.cpp',
   'redfish-core/src/registries.cpp',
   'redfish-core/src/utils/dbus_utils.cpp',
@@ -519,6 +524,7 @@ srcfiles_unittest = files(
   'test/include/str_utility_test.cpp',
   'test/include/ossl_random.cpp',
   'test/redfish-core/include/privileges_test.cpp',
+  'test/redfish-core/include/filter_expr_parser_test.cpp',
   'test/redfish-core/include/redfish_aggregator_test.cpp',
   'test/redfish-core/include/registries_test.cpp',
   'test/redfish-core/include/utils/hex_utils_test.cpp',
