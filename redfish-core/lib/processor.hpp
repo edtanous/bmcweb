@@ -2650,19 +2650,18 @@ inline void
                 {
                     continue;
                 }
+                nlohmann::json& json = aResp->res.jsonValue;
+                json["@odata.id"] = "/redfish/v1/Systems/system/Processors/" +
+                                    processorId + "/Settings";
+                json["@odata.type"] = "#Processor.v1_13_0.Processor";
+                json["Id"] = "Settings";
+                json["Name"] = processorId + "PendingSettings";
                 for (const auto& [service, interfaces] : object)
                 {
                     if (std::find(interfaces.begin(), interfaces.end(),
                                   "xyz.openbmc_project.Memory.MemoryECC") !=
                         interfaces.end())
                     {
-                        nlohmann::json& json = aResp->res.jsonValue;
-                        json["@odata.id"] =
-                            "/redfish/v1/Systems/system/Processors/" +
-                            processorId + "/Settings";
-                        json["@odata.type"] = "#Processor.v1_13_0.Processor";
-                        json["Id"] = "Settings";
-                        json["Name"] = processorId + "PendingSettings";
                         getEccModeData(aResp, processorId, service, path);
                     }
                     if (std::find(interfaces.begin(), interfaces.end(),
