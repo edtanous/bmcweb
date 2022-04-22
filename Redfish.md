@@ -723,6 +723,9 @@ the other.
 - FirmwareInventory
 - HttpPushUri
 - HttpPushUriOptions
+- HttpPushUriOptionsBusy
+- HttpPushUriTargets
+- HttpPushUriTargetsBusy
 - MaxImageSizeBytes
 - ServiceEnabled
 

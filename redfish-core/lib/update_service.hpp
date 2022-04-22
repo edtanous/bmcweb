@@ -104,7 +104,7 @@ static void handleLogMatchCallback(sdbusplus::message::message& m,
                 {
                     const std::string* value =
                         std::get_if<std::string>(&propertyMap.second);
-                    if(value != nullptr)
+                    if (value != nullptr)
                     {
                         resolution = *value;
                     }
@@ -306,6 +306,7 @@ static void
 
                                         if (boost::ends_with(*state, "Staged"))
                                         {
+
                                             taskData->state = "Stopping";
                                             taskData->messages.emplace_back(
                                                 messages::taskPaused(index));
@@ -359,7 +360,8 @@ static void
                                         // if we're getting status updates it's
                                         // still alive, update timer
                                         taskData->extendTimer(
-                                            std::chrono::minutes(updateServiceTaskTimeout));
+                                            std::chrono::minutes(
+                                                updateServiceTaskTimeout));
                                     }
 
                                     // as firmware update often results in a
@@ -744,6 +746,87 @@ inline void requestRoutesUpdateService(App& app)
                             "OnReset";
                     }
                 });
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](
+                    const boost::system::error_code errorCode,
+                    const std::vector<
+                        std::pair<std::string, std::vector<std::string>>>&
+                        objInfo) mutable {
+                    if (errorCode)
+                    {
+                        BMCWEB_LOG_ERROR << "error_code = " << errorCode;
+                        BMCWEB_LOG_ERROR << "error msg = "
+                                         << errorCode.message();
+                        if (asyncResp)
+                        {
+                            messages::internalError(asyncResp->res);
+                        }
+                        return;
+                    }
+                    // Ensure we only got one service back
+                    if (objInfo.size() != 1)
+                    {
+                        BMCWEB_LOG_ERROR << "Invalid Object Size "
+                                         << objInfo.size();
+                        if (asyncResp)
+                        {
+                            messages::internalError(asyncResp->res);
+                        }
+                        return;
+                    }
+
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp](const boost::system::error_code ec,
+                                    GetManagedPropertyType& resp) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_ERROR << "error_code = " << ec;
+                                BMCWEB_LOG_ERROR << "error msg = "
+                                                 << ec.message();
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+
+                            for (auto& propertyMap : resp)
+                            {
+                                if (propertyMap.first == "Targets")
+                                {
+                                    auto targets = std::get_if<std::vector<
+                                        sdbusplus::message::object_path>>(
+                                        &propertyMap.second);
+                                    if (targets)
+                                    {
+                                        asyncResp->res
+                                            .jsonValue["HttpPushUriTargets"] =
+                                            *targets;
+                                    }
+                                }
+                                else if (propertyMap.first == "ForceUpdate")
+                                {
+                                    auto forceUpdate =
+                                        std::get_if<bool>(&propertyMap.second);
+                                    if (forceUpdate)
+                                    {
+                                        asyncResp->res
+                                            .jsonValue["HttpPushUriOptions"]
+                                                      ["ForceUpdate"] =
+                                            *forceUpdate;
+                                    }
+                                }
+                            }
+                            return;
+                        },
+                        objInfo[0].first, "/xyz/openbmc_project/software",
+                        "org.freedesktop.DBus.Properties", "GetAll",
+                        "xyz.openbmc_project.Software.UpdatePolicy");
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject",
+                "/xyz/openbmc_project/software",
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Software.UpdatePolicy"});
         });
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/")
         .privileges(redfish::privileges::patchUpdateService)
@@ -754,18 +837,23 @@ inline void requestRoutesUpdateService(App& app)
             BMCWEB_LOG_DEBUG << "doPatch...";
 
             std::optional<nlohmann::json> pushUriOptions;
+            std::optional<std::vector<std::string>> imgTargets;
             if (!json_util::readJson(req, asyncResp->res, "HttpPushUriOptions",
-                                     pushUriOptions))
+                                     pushUriOptions, "HttpPushUriTargets",
+                                     imgTargets))
             {
+                BMCWEB_LOG_ERROR
+                    << "UpdateService doPatch: Invalid request body";
                 return;
             }
 
             if (pushUriOptions)
             {
+                std::optional<bool> forceUpdate = false;
                 std::optional<nlohmann::json> pushUriApplyTime;
-                if (!json_util::readJson(*pushUriOptions, asyncResp->res,
-                                         "HttpPushUriApplyTime",
-                                         pushUriApplyTime))
+                if (!json_util::readJson(
+                        *pushUriOptions, asyncResp->res, "HttpPushUriApplyTime",
+                        pushUriApplyTime, "ForceUpdate", forceUpdate))
                 {
                     return;
                 }
@@ -821,8 +909,188 @@ inline void requestRoutesUpdateService(App& app)
                             dbus::utility::DbusVariantType{applyTimeNewVal});
                     }
                 }
+                if (forceUpdate)
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, forceUpdate](
+                            const boost::system::error_code errorCode,
+                            const std::vector<std::pair<
+                                std::string, std::vector<std::string>>>&
+                                objInfo) mutable {
+                            if (errorCode)
+                            {
+                                BMCWEB_LOG_ERROR << "error_code = "
+                                                 << errorCode;
+                                BMCWEB_LOG_ERROR << "error msg = "
+                                                 << errorCode.message();
+                                if (asyncResp)
+                                {
+                                    messages::internalError(asyncResp->res);
+                                }
+                                return;
+                            }
+                            // Ensure we only got one service back
+                            if (objInfo.size() != 1)
+                            {
+                                BMCWEB_LOG_ERROR << "Invalid Object Size "
+                                                 << objInfo.size();
+                                if (asyncResp)
+                                {
+                                    messages::internalError(asyncResp->res);
+                                }
+                                return;
+                            }
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp](
+                                    const boost::system::error_code errorCode) {
+                                    if (errorCode)
+                                    {
+                                        BMCWEB_LOG_ERROR << "error_code = "
+                                                         << errorCode;
+                                        messages::internalError(asyncResp->res);
+                                    }
+                                },
+                                objInfo[0].first,
+                                "/xyz/openbmc_project/software",
+                                "org.freedesktop.DBus.Properties", "Set",
+                                "xyz.openbmc_project.Software.UpdatePolicy",
+                                "ForceUpdate",
+                                dbus::utility::DbusVariantType(*forceUpdate));
+                        },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetObject",
+                        "/xyz/openbmc_project/software",
+                        std::array<const char*, 1>{
+                            "xyz.openbmc_project.Software.UpdatePolicy"});
+                }
             }
-        });
+
+            if (imgTargets)
+            {
+                if (imgTargets->size() != 0)
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, uriTargets{*imgTargets}](
+                            const boost::system::error_code ec,
+                            const std::vector<std::string>& swInvPaths) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_ERROR << "D-Bus responses error: "
+                                                 << ec;
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+
+                            std::vector<sdbusplus::message::object_path>
+                                httpPushUriTargets = {};
+                            bool swInvObjFound = false;
+                            for (const std::string& target : uriTargets)
+                            {
+                                std::string compName =
+                                    fs::path(target).filename();
+                                std::string objPath = "software/" + compName;
+                                for (const std::string& path : swInvPaths)
+                                {
+                                    std::size_t idPos = path.rfind(objPath);
+                                    if ((idPos == std::string::npos))
+                                    {
+                                        continue;
+                                    }
+                                    std::string swId = path.substr(idPos);
+                                    if (swId == objPath)
+                                    {
+                                        sdbusplus::message::object_path objpath(
+                                            path);
+                                        httpPushUriTargets.emplace_back(
+                                            objpath);
+                                        swInvObjFound = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!swInvObjFound)
+                            {
+                                BMCWEB_LOG_ERROR
+                                    << "Targetted Device not Found!!";
+                                messages::invalidObject(asyncResp->res,
+                                                        "HttpPushUriTargets");
+                                return;
+                            }
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp, httpPushUriTargets](
+                                    const boost::system::error_code errorCode,
+                                    const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>&
+                                        objInfo) mutable {
+                                    if (errorCode)
+                                    {
+                                        BMCWEB_LOG_ERROR << "error_code = "
+                                                         << errorCode;
+                                        BMCWEB_LOG_ERROR << "error msg = "
+                                                         << errorCode.message();
+                                        if (asyncResp)
+                                        {
+                                            messages::internalError(
+                                                asyncResp->res);
+                                        }
+                                        return;
+                                    }
+                                    // Ensure we only got one service back
+                                    if (objInfo.size() != 1)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "Invalid Object Size "
+                                            << objInfo.size();
+                                        if (asyncResp)
+                                        {
+                                            messages::internalError(
+                                                asyncResp->res);
+                                        }
+                                        return;
+                                    }
+
+                                    crow::connections::systemBus->async_method_call(
+                                        [asyncResp](
+                                            const boost::system::error_code
+                                                errorCode) {
+                                            if (errorCode)
+                                            {
+                                                BMCWEB_LOG_ERROR
+                                                    << "error_code = "
+                                                    << errorCode;
+                                                messages::internalError(
+                                                    asyncResp->res);
+                                            }
+                                            messages::success(asyncResp->res);
+                                        },
+                                        objInfo[0].first,
+                                        "/xyz/openbmc_project/software",
+                                        "org.freedesktop.DBus.Properties",
+                                        "Set",
+                                        "xyz.openbmc_project.Software.UpdatePolicy",
+                                        "Targets",
+                                        dbus::utility::DbusVariantType(
+                                            httpPushUriTargets));
+                                },
+                                "xyz.openbmc_project.ObjectMapper",
+                                "/xyz/openbmc_project/object_mapper",
+                                "xyz.openbmc_project.ObjectMapper", "GetObject",
+                                "/xyz/openbmc_project/software",
+                                std::array<const char*, 1>{
+                                    "xyz.openbmc_project.Software.UpdatePolicy"});
+                        },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                        "/xyz/openbmc_project/software/",
+                        static_cast<int32_t>(0),
+                        std::array<std::string, 1>{
+                            "xyz.openbmc_project.Software.Version"});
+                }
+            }
+        } // namespace redfish
+        );
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
@@ -1159,7 +1427,6 @@ inline static void
     getRelatedItemsOther(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const sdbusplus::message::object_path& association)
 {
-
     // Find supported device types.
     crow::connections::systemBus->async_method_call(
         [aResp, association](
@@ -1401,7 +1668,8 @@ inline void requestRoutesSoftwareInventory(App& app)
                         return;
                     }
 
-                    // Ensure we find our input swId, otherwise return an error
+                    // Ensure we find our input swId, otherwise return an
+                    // error
                     bool found = false;
                     for (const std::pair<
                              std::string,
