@@ -174,7 +174,6 @@ inline void
                         {
                             BMCWEB_LOG_ERROR
                                 << "getAllChassisSensors DBUS error: " << ec;
-                            messages::internalError(asyncResp->res);
                             return;
                         }
                         const std::vector<std::string>* sensorPaths =
