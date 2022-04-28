@@ -173,6 +173,7 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                 BMCWEB_LOG_DEBUG << "Post ResetToDefaults.";
 
                 std::string resetType;
+                std::string ifnameFactoryReset = "xyz.openbmc_project.Common.FactoryReset";
 
                 if (!json_util::readJson(req, asyncResp->res,
                                          "ResetToDefaultsType", resetType))
@@ -196,21 +197,46 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                 }
 
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec) {
-                        if (ec)
+                    [asyncResp, ifnameFactoryReset](
+                        const boost::system::error_code ec,
+                        const std::vector<
+                            std::pair<std::string, std::vector<std::string>>>&
+                            interfaceNames) {
+                        if (ec || interfaceNames.size() <= 0)
                         {
-                            BMCWEB_LOG_DEBUG << "Failed to ResetToDefaults: "
-                                             << ec;
+                            BMCWEB_LOG_ERROR << "Can't find object";
                             messages::internalError(asyncResp->res);
                             return;
                         }
-                        // Factory Reset doesn't actually happen until a reboot
-                        // Can't erase what the BMC is running on
-                        doBMCGracefulRestart(asyncResp);
+
+                        for (const std::pair<std::string,
+                                             std::vector<std::string>>& object :
+                             interfaceNames)
+                        {
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp, object](const boost::system::error_code ec) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "Failed to ResetToDefaults: "
+                                            << ec;
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    // Factory Reset doesn't actually happen
+                                    // until a reboot Can't erase what the BMC
+                                    // is running on
+                                    doBMCGracefulRestart(asyncResp);
+                                },
+                                object.first, "/xyz/openbmc_project/software",
+                                ifnameFactoryReset, "Reset");
+                        }
                     },
-                    "xyz.openbmc_project.Software.BMC.Updater",
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject",
                     "/xyz/openbmc_project/software",
-                    "xyz.openbmc_project.Common.FactoryReset", "Reset");
+                    std::array<const char*, 1>{ifnameFactoryReset.c_str()});
             });
 }
 
