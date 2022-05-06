@@ -2147,6 +2147,13 @@ inline void getVoltageData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 BMCWEB_LOG_DEBUG << "Can't get sensor reading";
                 return;
             }
+            sdbusplus::message::object_path objectPath(sensorPath);
+            const std::string& sensorName = objectPath.filename();
+            std::string sensorURI =
+                (boost::format("/redfish/v1/Chassis/%s/Sensors/%s") %
+                 chassisId % sensorName)
+                    .str();
+            aResp->res.jsonValue["CoreVoltage"]["DataSourceUri"] = sensorURI;
             const double* attributeValue = nullptr;
             for (const std::pair<std::string,
                                  std::variant<std::string, double>>& property :
@@ -2156,21 +2163,13 @@ inline void getVoltageData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 if (propertyName == "Value")
                 {
                     attributeValue = std::get_if<double>(&property.second);
+                    if (attributeValue != nullptr)
+                    {
+                        aResp->res.jsonValue["CoreVoltage"]["Reading"] =
+                            *attributeValue;
+                    }
                 }
             }
-            if (attributeValue == nullptr)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-            sdbusplus::message::object_path objectPath(sensorPath);
-            const std::string& sensorName = objectPath.filename();
-            std::string sensorURI =
-                (boost::format("/redfish/v1/Chassis/%s/Sensors/%s") %
-                 chassisId % sensorName)
-                    .str();
-            aResp->res.jsonValue["CoreVoltage"] = {
-                {"Reading", *attributeValue}, {"DataSourceUri", sensorURI}};
         },
         service, sensorPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Sensor.Value");
