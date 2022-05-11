@@ -797,9 +797,25 @@ inline void requestRoutesUpdateService(App& app)
                                         &propertyMap.second);
                                     if (targets)
                                     {
+                                        std::vector<std::string> pushURITargets;
+                                        for (auto& target : *targets)
+                                        {
+                                            std::string firmwareId = target.filename();
+                                            if (firmwareId.empty())
+                                            {
+                                                BMCWEB_LOG_ERROR <<
+                                                    "Unable to parse firmware ID";
+                                                messages::internalError(asyncResp->res);
+                                                return;
+                                            }
+                                            pushURITargets.push_back(
+                                                "/redfish/v1/UpdateService/FirmwareInventory/"
+                                                + firmwareId
+                                            );
+                                        }
                                         asyncResp->res
                                             .jsonValue["HttpPushUriTargets"] =
-                                            *targets;
+                                            pushURITargets;
                                     }
                                 }
                                 else if (propertyMap.first == "ForceUpdate")
@@ -968,22 +984,23 @@ inline void requestRoutesUpdateService(App& app)
 
             if (imgTargets)
             {
-                if (imgTargets->size() != 0)
-                {
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp, uriTargets{*imgTargets}](
-                            const boost::system::error_code ec,
-                            const std::vector<std::string>& swInvPaths) {
-                            if (ec)
-                            {
-                                BMCWEB_LOG_ERROR << "D-Bus responses error: "
-                                                 << ec;
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, uriTargets{*imgTargets}](
+                        const boost::system::error_code ec,
+                        const std::vector<std::string>& swInvPaths) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "D-Bus responses error: "
+                                                << ec;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
 
-                            std::vector<sdbusplus::message::object_path>
-                                httpPushUriTargets = {};
+                        std::vector<sdbusplus::message::object_path>
+                            httpPushUriTargets = {};
+                        // validate TargetUris if entries are present
+                        if (uriTargets.size() != 0)
+                        {
                             bool swInvObjFound = false;
                             for (const std::string& target : uriTargets)
                             {
@@ -1017,77 +1034,77 @@ inline void requestRoutesUpdateService(App& app)
                                                         "HttpPushUriTargets");
                                 return;
                             }
-                            crow::connections::systemBus->async_method_call(
-                                [asyncResp, httpPushUriTargets](
-                                    const boost::system::error_code errorCode,
-                                    const std::vector<std::pair<
-                                        std::string, std::vector<std::string>>>&
-                                        objInfo) mutable {
-                                    if (errorCode)
+                        }
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, httpPushUriTargets](
+                                const boost::system::error_code errorCode,
+                                const std::vector<std::pair<
+                                    std::string, std::vector<std::string>>>&
+                                    objInfo) mutable {
+                                if (errorCode)
+                                {
+                                    BMCWEB_LOG_ERROR << "error_code = "
+                                                        << errorCode;
+                                    BMCWEB_LOG_ERROR << "error msg = "
+                                                        << errorCode.message();
+                                    if (asyncResp)
                                     {
-                                        BMCWEB_LOG_ERROR << "error_code = "
-                                                         << errorCode;
-                                        BMCWEB_LOG_ERROR << "error msg = "
-                                                         << errorCode.message();
-                                        if (asyncResp)
-                                        {
-                                            messages::internalError(
-                                                asyncResp->res);
-                                        }
-                                        return;
+                                        messages::internalError(
+                                            asyncResp->res);
                                     }
-                                    // Ensure we only got one service back
-                                    if (objInfo.size() != 1)
+                                    return;
+                                }
+                                // Ensure we only got one service back
+                                if (objInfo.size() != 1)
+                                {
+                                    BMCWEB_LOG_ERROR
+                                        << "Invalid Object Size "
+                                        << objInfo.size();
+                                    if (asyncResp)
                                     {
-                                        BMCWEB_LOG_ERROR
-                                            << "Invalid Object Size "
-                                            << objInfo.size();
-                                        if (asyncResp)
-                                        {
-                                            messages::internalError(
-                                                asyncResp->res);
-                                        }
-                                        return;
+                                        messages::internalError(
+                                            asyncResp->res);
                                     }
+                                    return;
+                                }
 
-                                    crow::connections::systemBus->async_method_call(
-                                        [asyncResp](
-                                            const boost::system::error_code
-                                                errorCode) {
-                                            if (errorCode)
-                                            {
-                                                BMCWEB_LOG_ERROR
-                                                    << "error_code = "
-                                                    << errorCode;
-                                                messages::internalError(
-                                                    asyncResp->res);
-                                            }
-                                            messages::success(asyncResp->res);
-                                        },
-                                        objInfo[0].first,
-                                        "/xyz/openbmc_project/software",
-                                        "org.freedesktop.DBus.Properties",
-                                        "Set",
-                                        "xyz.openbmc_project.Software.UpdatePolicy",
-                                        "Targets",
-                                        dbus::utility::DbusVariantType(
-                                            httpPushUriTargets));
-                                },
-                                "xyz.openbmc_project.ObjectMapper",
-                                "/xyz/openbmc_project/object_mapper",
-                                "xyz.openbmc_project.ObjectMapper", "GetObject",
-                                "/xyz/openbmc_project/software",
-                                std::array<const char*, 1>{
-                                    "xyz.openbmc_project.Software.UpdatePolicy"});
-                        },
-                        "xyz.openbmc_project.ObjectMapper",
-                        "/xyz/openbmc_project/object_mapper",
-                        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-                        "/xyz/openbmc_project/software/",
-                        static_cast<int32_t>(0),
-                        std::array<std::string, 1>{
-                            "xyz.openbmc_project.Software.Version"});
-                }
+                                crow::connections::systemBus->async_method_call(
+                                    [asyncResp](
+                                        const boost::system::error_code
+                                            errorCode) {
+                                        if (errorCode)
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "error_code = "
+                                                << errorCode;
+                                            messages::internalError(
+                                                asyncResp->res);
+                                        }
+                                        messages::success(asyncResp->res);
+                                    },
+                                    objInfo[0].first,
+                                    "/xyz/openbmc_project/software",
+                                    "org.freedesktop.DBus.Properties",
+                                    "Set",
+                                    "xyz.openbmc_project.Software.UpdatePolicy",
+                                    "Targets",
+                                    dbus::utility::DbusVariantType(
+                                        httpPushUriTargets));
+                            },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetObject",
+                            "/xyz/openbmc_project/software",
+                            std::array<const char*, 1>{
+                                "xyz.openbmc_project.Software.UpdatePolicy"});
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                    "/xyz/openbmc_project/software/",
+                    static_cast<int32_t>(0),
+                    std::array<std::string, 1>{
+                        "xyz.openbmc_project.Software.Version"});
             }
         } // namespace redfish
         );

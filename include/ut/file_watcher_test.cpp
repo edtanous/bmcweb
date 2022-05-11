@@ -96,7 +96,7 @@ TEST(FileWatcher, GivenNoSetupAndPathWithAllEventsParameter_Watch_DoesntInvokeCa
 TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreated_Watch_InvokesCallback)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(100));
 
     auto name = randomFilename();
 
@@ -109,7 +109,7 @@ TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCr
 
     tim.async_wait([&](const boost::system::error_code &) { 
         ioCtx->stop();
-        FAIL() << "50ms timeout hit";
+        FAIL() << "100ms timeout hit";
     });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
