@@ -792,7 +792,8 @@ inline void
             if (foundDumpEntry == false)
             {
                 BMCWEB_LOG_ERROR << "Can't find Dump Entry";
-                messages::internalError(asyncResp->res);
+                messages::resourceNotFound(asyncResp->res, "DumpEntry",
+                                           entryID);
                 return;
             }
         },
@@ -920,7 +921,7 @@ inline void createDumpTaskCallback(
             createdObjPath.str +
             "',arg0='xyz.openbmc_project.Common.Progress'");
 
-    task->startTimer(std::chrono::minutes(3));
+    task->startTimer(std::chrono::minutes(10));
     task->populateResp(asyncResp->res);
     task->payload.emplace(req);
 }
