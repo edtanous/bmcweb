@@ -6,12 +6,12 @@
 namespace redfish
 {
 
-inline void
-    processSensorsValue(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::vector<std::string>& sensorPaths,
-                        const std::string& chassisId,
-                        const ManagedObjectsVectorType& managedObjectsResp,
-                        const std::string& metricsType)
+inline void processSensorsValue(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::vector<std::string>& sensorPaths, const std::string& chassisId,
+    const ManagedObjectsVectorType& managedObjectsResp,
+    const std::string& metricsType, const uint64_t& sensingInterval = 0,
+    const uint64_t& requestTimestamp = 0)
 {
     // Get sensor reading from managed object
     for (const std::string& sensorPath : sensorPaths)
@@ -116,26 +116,83 @@ inline void
                 {
                     nlohmann::json& resArray =
                         asyncResp->res.jsonValue["MetricValues"];
-                    resArray.push_back(
-                        {{"MetricProperty", std::string("/redfish/v1/Chassis/")
-                                                .append(chassisId)
-                                                .append("/Sensors/")
-                                                .append(sensorName)},
-                         {"MetricValue", std::to_string(reading)}});
+                    std::string sensorUri = "/redfish/v1/Chassis/";
+                    sensorUri += chassisId;
+                    sensorUri += "/Sensors/";
+                    sensorUri += sensorName;
+
+                    nlohmann::json thisMetric = nlohmann::json::object();
+                    thisMetric["MetricProperty"] = sensorUri;
+                    thisMetric["MetricValue"] = std::to_string(reading);
+                    BMCWEB_LOG_DEBUG << "Reading:" << reading;
+                    auto interfaceProperties = interfacesDict.find(
+                        "xyz.openbmc_project.Time.EpochTime");
+                    if (interfaceProperties != interfacesDict.end())
+                    {
+                        auto thisElapsedIt =
+                            interfaceProperties->second.find("Elapsed");
+                        if (thisElapsedIt != interfaceProperties->second.end())
+                        {
+                            const dbus::utility::DbusVariantType& valueVariant =
+                                thisElapsedIt->second;
+                            const uint64_t* metricUpdatetimestamp =
+                                std::get_if<uint64_t>(&valueVariant);
+
+                            if (metricUpdatetimestamp != nullptr)
+                            {
+                                // TODO: validate this timestamp
+                                thisMetric["Timestamp"] =
+                                    crow::utility::getDateTimeUintMs(
+                                        *metricUpdatetimestamp);
+                            }
+                            else
+                            {
+                                BMCWEB_LOG_DEBUG << "Unable to read Elapsed";
+                                thisMetric["Timestamp"] = "nan";
+                            }
+                            if (sensingInterval != 0)
+                            {
+                                thisMetric["Oem"]["Nvidia"]
+                                          ["SensingIntervalMilliseconds"] =
+                                              std::to_string(sensingInterval);
+                            }
+                            // assume stale by default
+                            thisMetric["Oem"]["Nvidia"]["MetricValueStale"] =
+                                true;
+                            // Compute stalenes only when sensingInterval
+                            // and metricUpdatetimestamp are not null
+                            if (sensingInterval != 0 &&
+                                metricUpdatetimestamp != nullptr &&
+                                !std::isnan(reading))
+                            {
+                                // difference between requestTimestamp and
+                                // lastUpdateTime stamp should be within
+                                // sensingInterval for fresh metric
+                                if (requestTimestamp - *metricUpdatetimestamp <=
+                                    sensingInterval)
+                                {
+                                    thisMetric["Oem"]["Nvidia"]
+                                              ["MetricValueStale"] = false;
+                                }
+                            }
+                        }
+                    }
+                    resArray.push_back(thisMetric);
                 }
             }
         }
     }
 }
 
-inline void
-    processChassisSensors(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const ManagedObjectsVectorType& managedObjectsResp,
-                          const std::string& chassisPath,
-                          const std::string& metricsType)
+inline void processChassisSensors(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const ManagedObjectsVectorType& managedObjectsResp,
+    const std::string& chassisPath, const std::string& metricsType,
+    const uint64_t& sensingInterval = 0, const uint64_t& requestTimestamp = 0)
 {
     auto getAllChassisHandler =
-        [asyncResp, chassisPath, managedObjectsResp,
+        [asyncResp, chassisPath, managedObjectsResp, sensingInterval,
+         requestTimestamp,
          metricsType](const boost::system::error_code ec,
                       std::variant<std::vector<std::string>>& chassisLinks) {
             std::vector<std::string> chassisPaths;
@@ -166,7 +223,8 @@ inline void
                 const std::string& chassisId = path.filename();
 
                 auto getAllChassisSensors =
-                    [asyncResp, chassisId, managedObjectsResp,
+                    [asyncResp, chassisId, managedObjectsResp, sensingInterval,
+                     requestTimestamp,
                      metricsType](const boost::system::error_code ec,
                                   const std::variant<std::vector<std::string>>&
                                       variantEndpoints) {
@@ -189,7 +247,8 @@ inline void
                         }
                         // Process sensor readings
                         processSensorsValue(asyncResp, *sensorPaths, chassisId,
-                                            managedObjectsResp, metricsType);
+                                            managedObjectsResp, metricsType,
+                                            sensingInterval, requestTimestamp);
                     };
                 crow::connections::systemBus->async_method_call(
                     getAllChassisSensors, "xyz.openbmc_project.ObjectMapper",
@@ -208,10 +267,11 @@ inline void
 inline void getServiceRootManagedObjects(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& connection, const std::string& chassisPath,
-    const std::string& metricsType)
+    const std::string& metricsType, const uint64_t& sensingInterval = 0,
+    const uint64_t& requestTimestamp = 0)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp, connection, chassisPath,
+        [asyncResp, connection, chassisPath, sensingInterval, requestTimestamp,
          metricsType](const boost::system::error_code ec,
                       ManagedObjectsVectorType& resp) {
             if (ec)
@@ -223,7 +283,8 @@ inline void getServiceRootManagedObjects(
                 return;
             }
             std::sort(resp.begin(), resp.end());
-            processChassisSensors(asyncResp, resp, chassisPath, metricsType);
+            processChassisSensors(asyncResp, resp, chassisPath, metricsType,
+                                  sensingInterval, requestTimestamp);
         },
         connection, "/", "org.freedesktop.DBus.ObjectManager",
         "GetManagedObjects");
@@ -232,10 +293,11 @@ inline void getServiceRootManagedObjects(
 inline void getServiceManagedObjects(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& connection, const std::string& chassisPath,
-    const std::string& metricsType)
+    const std::string& metricsType, const uint64_t& sensingInterval = 0,
+    const uint64_t& requestTimestamp = 0)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp, connection, chassisPath,
+        [asyncResp, connection, chassisPath, sensingInterval, requestTimestamp,
          metricsType](const boost::system::error_code ec,
                       ManagedObjectsVectorType& resp) {
             if (ec)
@@ -245,20 +307,22 @@ inline void getServiceManagedObjects(
                     << connection << "\n";
                 // Check managed objects on service root
                 getServiceRootManagedObjects(asyncResp, connection, chassisPath,
-                                             metricsType);
+                                             metricsType, sensingInterval,
+                                             requestTimestamp);
                 return;
             }
             std::sort(resp.begin(), resp.end());
-            processChassisSensors(asyncResp, resp, chassisPath, metricsType);
+            processChassisSensors(asyncResp, resp, chassisPath, metricsType,
+                                  sensingInterval, requestTimestamp);
         },
         connection, "/xyz/openbmc_project/sensors",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
 
-inline void
-    processSensorServices(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const std::string& chassisPath,
-                          const std::string& metricsType)
+inline void processSensorServices(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisPath, const std::string& metricsType,
+    const uint64_t& sensingInterval = 0, const uint64_t& requestTimestamp = 0)
 {
     // Sensor interface implemented by sensor services
     const std::array<const char*, 1> sensorInterface = {
@@ -266,7 +330,7 @@ inline void
 
     // Get all sensors on the system
     auto getAllSensors =
-        [asyncResp, chassisPath,
+        [asyncResp, chassisPath, sensingInterval, requestTimestamp,
          metricsType](const boost::system::error_code ec,
                       const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)
@@ -301,7 +365,8 @@ inline void
             for (const std::string& connection : sensorServices)
             {
                 getServiceManagedObjects(asyncResp, connection, chassisPath,
-                                         metricsType);
+                                         metricsType, sensingInterval,
+                                         requestTimestamp);
             }
         };
     crow::connections::systemBus->async_method_call(
