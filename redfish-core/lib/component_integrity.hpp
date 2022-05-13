@@ -36,8 +36,13 @@ using GetObjectType =
     std::vector<std::pair<std::string, std::vector<std::string>>>;
 using SPDMCertificates = std::vector<std::tuple<uint8_t, std::string>>;
 
-static std::unique_ptr<sdbusplus::bus::match::match> propMatcher;
-static const int timeOut = 10;
+static std::map<std::string,
+                std::pair<std::shared_ptr<boost::asio::steady_timer>,
+                          std::shared_ptr<sdbusplus::bus::match::match>>>
+    compIntegrityMatches;
+
+// static std::unique_ptr<sdbusplus::bus::match::match> propMatcher;
+static const int timeOut = 5;
 
 struct SPDMMeasurementData
 {
@@ -184,7 +189,7 @@ inline void getSPDMMeasurementData(const std::string& objectPath,
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
-                callback(std::move(config));
+                callback(std::move(config), false);
                 return;
             }
             const auto objIt = std::find_if(
@@ -198,7 +203,7 @@ inline void getSPDMMeasurementData(const std::string& objectPath,
             if (objIt == objects.end())
             {
                 BMCWEB_LOG_ERROR << "Dbus Object not found:" << objectPath;
-                callback(std::move(config));
+                callback(std::move(config), false);
                 return;
             }
 
@@ -262,7 +267,7 @@ inline void getSPDMMeasurementData(const std::string& objectPath,
                     }
                 }
             }
-            callback(std::move(config));
+            callback(std::move(config), true);
         },
 
         spdmBusName, rootSPDMDbusPath, dbus_utils::dbusObjManagerIntf,
@@ -278,12 +283,14 @@ inline void getAssociationEndpoint(const std::string& objPath,
                             std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
+                BMCWEB_LOG_ERROR << "D-Bus responses error:" << ec;
                 return; // should have associoated inventory object.
             }
             std::vector<std::string>* data =
                 std::get_if<std::vector<std::string>>(&resp);
             if (data == nullptr)
             {
+                BMCWEB_LOG_ERROR << "Data is null on object=" << objPath;
                 // Object must have associated inventory object.
                 return;
             }
@@ -293,6 +300,165 @@ inline void getAssociationEndpoint(const std::string& objPath,
         dbus_utils::mapperBusName, objPath, dbus_utils::propertyInterface,
         "Get", dbus_utils::associationInterface, "endpoints");
 }
+
+inline void handleSPDMGETSignedMeasurement(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+{
+    std::optional<std::vector<uint8_t>> nonce;
+    std::optional<uint8_t> slotID;
+    std::optional<std::vector<uint8_t>> indices;
+
+    // Not reading the JSON directly as if user gives the empty JSON
+    // readJSOn function returns the error, in this API it is expected
+    // that user may give empty JSON.
+
+    nlohmann::json reqJson = nlohmann::json::parse(req.body, nullptr, false);
+    if (!reqJson.empty())
+    {
+        json_util::readJson(req, asyncResp->res, "Nonce", nonce, "SlotId",
+                            slotID, "MeasurementIndices", indices);
+    }
+
+    // If nonce not provided by the client, the SPDM Requester shall
+    // generate the nonce. if slotid not provided by the client, the value
+    // shall be assumed to be `0` if "MeasurementIndices" not provided by
+    // the client, the value shall be assumed to be an array containing a
+    // single value of `255`
+    if (!nonce)
+    {
+        BMCWEB_LOG_DEBUG << "Nonce is not given, setting it to default value";
+        nonce = std::vector<uint8_t>{};
+    }
+    if (!slotID)
+    {
+        BMCWEB_LOG_DEBUG << "SlotID is not given, setting it to default value";
+        slotID = 0;
+    }
+    if (!indices)
+    {
+        BMCWEB_LOG_DEBUG
+            << "MeasurementIndices is not given, setting it to default value";
+        indices = std::vector<uint8_t>{};
+        indices.value().emplace_back(255);
+    }
+
+    const std::string objPath = std::string(rootSPDMDbusPath) + "/" + id;
+    if (compIntegrityMatches.find(objPath) != compIntegrityMatches.end())
+    {
+        messages::serviceTemporarilyUnavailable(asyncResp->res,
+                                                std::to_string(timeOut));
+        BMCWEB_LOG_DEBUG
+            << "Already measurement collection is going on this object"
+            << objPath;
+        return;
+    }
+
+    // TODO convert nonce from string into array of bytes
+    // slot id from int 64 into uint8
+    // array of int64 into array of uint8_t
+
+    // The below code is creating the timer and creating the match for the
+    // property changed signal for  the refesh async Dbus call.
+    // Need to handle the two cases
+    // - Either get the property changed signal in timeout sec with the value
+    //   of the status property which we are interested in or
+    // - Timer will time out and send the internal error.
+
+    auto timer = std::make_shared<boost::asio::steady_timer>(*(req.ioService));
+    timer->expires_after(std::chrono::seconds(timeOut));
+    timer->async_wait(
+        [asyncResp, objPath](const boost::system::error_code& ec) {
+            if (ec)
+            {
+                // operation_aborted is expected if timer is canceled
+                // before completion.
+                if (ec != boost::asio::error::operation_aborted)
+                {
+                    BMCWEB_LOG_ERROR << "Async_wait failed " << ec;
+                }
+                return;
+            }
+            BMCWEB_LOG_ERROR
+                << "Timed out waiting for Getting the SPDM Measurement Data";
+            messages::internalError(asyncResp->res);
+            compIntegrityMatches.erase(objPath);
+        });
+
+    // create a matcher to wait for the status property changed signal
+    BMCWEB_LOG_DEBUG << "create matcher with path " << objPath;
+    std::string match = "type='signal',member='PropertiesChanged',"
+                        "interface='org.freedesktop.DBus.Properties',"
+                        "path='" +
+                        objPath +
+                        "',"
+                        "arg0=xyz.openbmc_project.SPDM.Responder";
+
+    auto propMatcher = std::make_shared<sdbusplus::bus::match::match>(
+        *crow::connections::systemBus, match,
+        [asyncResp, objPath, id](sdbusplus::message::message& msg) {
+            if (msg.is_method_error())
+            {
+                BMCWEB_LOG_ERROR << "Dbus method error!!!";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            std::string interface;
+            std::map<std::string, dbus::utility::DbusVariantType> props;
+
+            msg.read(interface, props);
+            auto it = props.find("Status");
+            if (it == props.end())
+            {
+                BMCWEB_LOG_DEBUG << "Not interested in this property";
+                return;
+            }
+            auto value = std::get_if<std::string>(&(it->second));
+            if (!value ||
+                (*value) !=
+                    "xyz.openbmc_project.SPDM.Responder.SPDMStatus.GettingMeasurements")
+            {
+                BMCWEB_LOG_DEBUG << "Measurement Status is still not good";
+                return;
+            }
+
+            getSPDMMeasurementData(objPath, [asyncResp, id, objPath](
+                                                const SPDMMeasurementData& data,
+                                                bool gotData) {
+                if (!gotData)
+                {
+                    compIntegrityMatches.erase(objPath);
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["SignedMeasurements"] = "";
+                asyncResp->res.jsonValue["Version"] =
+                    getVersionStr(data.version);
+                asyncResp->res.jsonValue["HashingAlgorithm"] = getHashAlgoStr(
+                    static_cast<HashingAlgorithms>(data.hashAlgo));
+                asyncResp->res.jsonValue["SigningAlgorithm"] = getSignAlgoStr(
+                    static_cast<SigningAlgorithms>(data.signAlgo));
+                compIntegrityMatches.erase(objPath);
+                return;
+            });
+        });
+
+    compIntegrityMatches.emplace(
+        std::make_pair(objPath, std::make_pair(timer, propMatcher)));
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Failed to refresh the SPDM measurement "
+                                 << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+        },
+        spdmBusName, objPath, spdmResponderIntf, "Refresh", *slotID, *nonce,
+        *indices, static_cast<uint32_t>(0));
+} // namespace redfish
 
 inline void requestRoutesComponentIntegrity(App& app)
 {
@@ -306,8 +472,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                     {"@odata.id", "/redfish/v1/ComponentIntegrity"},
                     {"@odata.type", "#ComponentIntegrityCollection."
                                     "ComponentIntegrityCollection"},
-                    {"Name", "ComponentIntegrity Collection"},
-                    {"Description", "ComponentIntegrity Collection."}};
+                    {"Name", "ComponentIntegrity Collection"}};
 
                 const std::array<const char*, 1> interface = {
                     "xyz.openbmc_project.SPDM.Responder"};
@@ -356,32 +521,40 @@ inline void requestRoutesComponentIntegrity(App& app)
                                               const std::string& id) -> void {
             std::string objectPath = std::string(rootSPDMDbusPath) + "/" + id;
             getSPDMMeasurementData(
-                objectPath,
-                [asyncResp, id, objectPath](const SPDMMeasurementData& data) {
+                objectPath, [asyncResp, id, objectPath](
+                                const SPDMMeasurementData& data, bool gotData) {
+                    if (!gotData)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
                     asyncResp->res.jsonValue = {
                         {"@odata.type",
                          "#ComponentIntegrity.v1_0_0.ComponentIntegrity"},
                         {"@odata.id", "/redfish/v1/ComponentIntegrity/" + id},
                         {"Id", id},
-                        {"Name", "ComponentIntegrity"},
-                        {"Description", "Measurement data for device"},
+                        {"Name", "SPDM Integrity for " + id},
                         {"ComponentIntegrityType", "SPDM"},
                         {"ComponentIntegrityEnabled", true},
                         {"SPDM",
                          {{"Requester",
                            {{"@odata.id", "/redfish/v1/Managers/bmc"}}}}},
                         {"Actions",
-                         {{"#SPDMGetSignedMeasurements",
+                         {{"#ComponentIntegrity.SPDMGetSignedMeasurements",
                            {{"target",
-                             {{"target",
-                               "/redfish/v1/ComponentIntegrity/" + id +
-                                   "/Actions/SPDMGetSignedMeasurements"}}}}},
-                          {"ComponentIntegrityTypeVersion",
-                           getVersionStr(data.version)}}}};
+                             "/redfish/v1/ComponentIntegrity/" + id +
+                                 "/Actions/SPDMGetSignedMeasurements"},
+                            {"@Redfish.ActionInfo",
+                             "/redfish/v1/ComponentIntegrity/" + id +
+                                 "/SPDMGetSignedMeasurementsActionInfo"}}}}},
+                        {"ComponentIntegrityTypeVersion",
+                         getVersionStr(data.version)},
+                    };
 
                     getAssociationEndpoint(
                         objectPath + "/inventory_object",
-                        [asyncResp](const std::string endpoint) {
+                        [asyncResp](const std::string& endpoint) {
                             sdbusplus::message::object_path erotInvObjectPath(
                                 endpoint);
                             const std::string& objName =
@@ -402,6 +575,44 @@ inline void requestRoutesComponentIntegrity(App& app)
                         });
                 });
         });
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/ComponentIntegrity/<str>/Actions/SPDMGetSignedMeasurements")
+        .privileges(redfish::privileges::getManagerAccount)
+        .methods(boost::beast::http::verb::post)(
+            handleSPDMGETSignedMeasurement);
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/ComponentIntegrity/<str>/SPDMGetSignedMeasurementsActionInfo")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& compIntegrityID) {
+                asyncResp->res.jsonValue = {
+                    {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
+                    {"@odata.id", "/redfish/v1/ComponentIntegrity/" +
+                                      compIntegrityID +
+                                      "/SPDMGetSignedMeasurementsActionInfo"},
+                    {"Name", "SPDMGetSignedMeasurementsActionInfo"},
+                    {"Id", "SPDMGetSignedMeasurementsActionInfo"},
+                    {"Parameters",
+                     {{{"Name", "MeasurementIndices"},
+                       {"Required", false},
+                       {"DataType", "NumberArray"},
+                       {"MinimumValue", 0},
+                       {"MaximumValue", 255}},
+                      {{"Name", "Nonce"},
+                       {"Required", false},
+                       {"DataType", "String"}},
+                      {{"Name", "SlotId"},
+                       {"Required", false},
+                       {"DataType", "Number"},
+                       {"MinimumValue", 0},
+                       {"MaximumValue", 7}}}}};
+            });
 
 } // routes component integrity
 

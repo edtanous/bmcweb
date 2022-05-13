@@ -40,6 +40,8 @@ inline void
         {"@odata.id", "/redfish/v1/AccountService"}};
     asyncResp->res.jsonValue["Chassis"] = {
         {"@odata.id", "/redfish/v1/Chassis"}};
+    asyncResp->res.jsonValue["ComponentIntegrity"] = {
+        {"@odata.id", "/redfish/v1/ComponentIntegrity"}};
     asyncResp->res.jsonValue["Fabrics"] = {
         {"@odata.id", "/redfish/v1/Fabrics"}};
     asyncResp->res.jsonValue["JsonSchemas"] = {
@@ -52,7 +54,6 @@ inline void
         {"@odata.id", "/redfish/v1/Systems"}};
     asyncResp->res.jsonValue["Registries"] = {
         {"@odata.id", "/redfish/v1/Registries"}};
-
     asyncResp->res.jsonValue["UpdateService"] = {
         {"@odata.id", "/redfish/v1/UpdateService"}};
     asyncResp->res.jsonValue["UUID"] = uuid;
