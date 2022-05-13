@@ -6,6 +6,13 @@ namespace redfish
 namespace dbus_utils
 {
 
+constexpr const char* dbusObjManagerIntf = "org.freedesktop.DBus.ObjectManager";
+constexpr const char* propertyInterface = "org.freedesktop.DBus.Properties";
+constexpr const char* associationInterface = "xyz.openbmc_project.Association";
+constexpr const char* mapperBusName = "xyz.openbmc_project.ObjectMapper";
+constexpr const char* mapperObjectPath = "/xyz/openbmc_project/object_mapper";
+constexpr const char* mapperIntf = "xyz.openbmc_project.ObjectMapper";
+constexpr char const* objDeleteIntf = "xyz.openbmc_project.Object.Delete";
 inline const char* toPhysicalContext(const std::string& physicalContext)
 {
     if (physicalContext ==

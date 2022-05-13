@@ -20,6 +20,7 @@
 #include "../lib/bios.hpp"
 #include "../lib/certificate_service.hpp"
 #include "../lib/chassis.hpp"
+#include "../lib/component_integrity.hpp"
 #include "../lib/environment_metrics.hpp"
 #include "../lib/erot_chassis.hpp"
 #include "../lib/ethernet.hpp"
@@ -263,6 +264,7 @@ class RedfishService
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);
         requestRoutesEROTChassisCertificate(app);
+        requestRoutesComponentIntegrity(app);
     }
 };
 

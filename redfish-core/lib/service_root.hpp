@@ -29,7 +29,7 @@ inline void
 {
 
     std::string uuid = persistent_data::getConfig().systemUuid;
-    asyncResp->res.jsonValue["@odata.type"] = "#ServiceRoot.v1_5_0.ServiceRoot";
+    asyncResp->res.jsonValue["@odata.type"] = "#ServiceRoot.v1_13_0.ServiceRoot";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1";
     asyncResp->res.jsonValue["Id"] = "RootService";
     asyncResp->res.jsonValue["Name"] = "Root Service";
