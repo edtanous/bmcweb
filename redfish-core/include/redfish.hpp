@@ -21,6 +21,7 @@
 #include "../lib/certificate_service.hpp"
 #include "../lib/chassis.hpp"
 #include "../lib/environment_metrics.hpp"
+#include "../lib/erot_chassis.hpp"
 #include "../lib/ethernet.hpp"
 #include "../lib/event_service.hpp"
 #include "../lib/fabric.hpp"
@@ -261,6 +262,7 @@ class RedfishService
 
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);
+        requestRoutesEROTChassisCertificate(app);
     }
 };
 

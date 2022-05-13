@@ -201,5 +201,68 @@ inline void getChassisType(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         });
 }
 
+inline void
+    getChassisManufacturer(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.Asset", "Manufacturer",
+        [asyncResp](const boost::system::error_code ec,
+                    const std::string& manufacturer) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for Manufacturer";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.jsonValue["Manufacturer"] = manufacturer;
+        });
+}
+
+template <typename CallbackFunc>
+inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
+{
+    const std::array<const char*, 1> interfaces = {
+        "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
+
+    crow::connections::systemBus->async_method_call(
+        [chassisID,
+         callback](const boost::system::error_code ec,
+                   const crow::openbmc_mapper::GetSubTreeType& subtree) {
+            if (ec)
+            {
+                callback(false);
+                return;
+            }
+            const auto objIt = std::find_if(
+                subtree.begin(), subtree.end(),
+                [chassisID](
+                    const std::pair<
+                        std::string,
+                        std::vector<std::pair<
+                            std::string, std::vector<std::string>>>>& object) {
+                    return !chassisID.compare(
+                        sdbusplus::message::object_path(object.first)
+                            .filename());
+                });
+
+            if (objIt == subtree.end())
+            {
+                BMCWEB_LOG_DEBUG << "Dbus Object not found:" << chassisID;
+                callback(false);
+                return;
+            }
+            callback(true);
+            return;
+        },
+
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0, interfaces);
+}
+
 } // namespace chassis_utils
 } // namespace redfish
