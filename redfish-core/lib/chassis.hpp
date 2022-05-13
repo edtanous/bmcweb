@@ -23,46 +23,11 @@
 #include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
+#include <utils/chassis_utils.hpp>
 #include <utils/collection.hpp>
 #include <utils/dbus_utils.hpp>
 namespace redfish
 {
-
-inline std::string getChassisType(const std::string& chassisType)
-{
-    if (chassisType ==
-        "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.Component")
-    {
-        return "Component";
-    }
-    if (chassisType ==
-        "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.Enclosure")
-    {
-        return "Enclosure";
-    }
-    if (chassisType ==
-        "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.Module")
-    {
-        return "Module";
-    }
-    if (chassisType ==
-        "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.RackMount")
-    {
-        return "RackMount";
-    }
-    if (chassisType ==
-        "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.StandAlone")
-    {
-        return "StandAlone";
-    }
-    if (chassisType ==
-        "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.Zone")
-    {
-        return "Zone";
-    }
-    // Unknown or others
-    return "";
-}
 
 /**
  * @brief Fill out links association to underneath chassis by
@@ -231,48 +196,6 @@ inline void getChassisFabricSwitchesLinks(
                 "xyz.openbmc_project.Association", "endpoints");
         },
         "xyz.openbmc_project.ObjectMapper", objPath + "/fabrics",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
-}
-
-/**
- * @brief Fill out links association to parent chassis by
- * requesting data from the given D-Bus association object.
- *
- * @param[in,out]   aResp       Async HTTP response.
- * @param[in]       objPath     D-Bus object to query.
- */
-inline void
-    getChassisLinksContainedBy(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                               const std::string& objPath)
-{
-    BMCWEB_LOG_DEBUG << "Get parent chassis link";
-    crow::connections::systemBus->async_method_call(
-        [aResp](const boost::system::error_code ec2,
-                std::variant<std::vector<std::string>>& resp) {
-            if (ec2)
-            {
-                return; // no chassis = no failures
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr || data->size() > 1)
-            {
-                // There must be single parent chassis
-                return;
-            }
-            const std::string& chassisPath = data->front();
-            sdbusplus::message::object_path objectPath(chassisPath);
-            std::string chassisName = objectPath.filename();
-            if (chassisName.empty())
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-            aResp->res.jsonValue["Links"]["ContainedBy"] = {
-                {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
-        },
-        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
@@ -556,48 +479,6 @@ inline void
         });
 }
 
-inline void
-    getChassisLocationType(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& connectionName,
-                           const std::string& path)
-{
-    sdbusplus::asio::getProperty<std::string>(
-        *crow::connections::systemBus, connectionName, path,
-        "xyz.openbmc_project.Inventory.Decorator.Location", "LocationType",
-        [asyncResp](const boost::system::error_code ec,
-                    const std::string& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error for Location";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-
-            asyncResp->res
-                .jsonValue["Location"]["PartLocation"]["LocationType"] =
-                redfish::dbus_utils::toLocationType(property);
-        });
-}
-
-inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& connectionName,
-                           const std::string& path)
-{
-    sdbusplus::asio::getProperty<std::string>(
-        *crow::connections::systemBus, connectionName, path,
-        "xyz.openbmc_project.Common.UUID", "UUID",
-        [asyncResp](const boost::system::error_code ec,
-                    const std::string& chassisUUID) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            asyncResp->res.jsonValue["UUID"] = chassisUUID;
-        });
-}
-
 /**
  * Chassis override class for delivering Chassis Schema
  * Functions triggers appropriate requests on DBus
@@ -834,7 +715,8 @@ inline void requestRoutesChassis(App& app)
                         {
                             if (interface == "xyz.openbmc_project.Common.UUID")
                             {
-                                getChassisUUID(asyncResp, connectionName, path);
+                                redfish::chassis_utils::getChassisUUID(
+                                    asyncResp, connectionName, path);
                             }
                             else if (
                                 interface ==
@@ -847,8 +729,8 @@ inline void requestRoutesChassis(App& app)
                                 interface ==
                                 "xyz.openbmc_project.Inventory.Decorator.Location")
                             {
-                                getChassisLocationType(asyncResp,
-                                                       connectionName, path);
+                                redfish::chassis_utils::getChassisLocationType(
+                                    asyncResp, connectionName, path);
                             }
                         }
 
@@ -890,7 +772,8 @@ inline void requestRoutesChassis(App& app)
                                             return;
                                         }
                                         std::string chassisType =
-                                            getChassisType(*value);
+                                            redfish::chassis_utils::
+                                                getChassisType(*value);
                                         asyncResp->res
                                             .jsonValue["ChassisType"] =
                                             chassisType;
@@ -929,7 +812,8 @@ inline void requestRoutesChassis(App& app)
                         // Links association to connected fabric switches
                         getChassisFabricSwitchesLinks(asyncResp, path);
                         // Link association to parent chassis
-                        getChassisLinksContainedBy(asyncResp, path);
+                        redfish::chassis_utils::getChassisLinksContainedBy(
+                            asyncResp, path);
 
                         return;
                     }
