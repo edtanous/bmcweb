@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bmcweb_config.h"
+
 #include "thermal_metrics.hpp"
 #include "utils/collection.hpp"
 #include "utils/telemetry_utils.hpp"
@@ -92,10 +94,9 @@ inline void
 {
     const std::array<const char*, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Chassis"};
-    auto respHandler = [asyncResp, requestTimestamp,
-                        chassisId](const boost::system::error_code ec,
-                                   const crow::openbmc_mapper::GetSubTreeType&
-                                       subtree) {
+    auto respHandler = [asyncResp, requestTimestamp, chassisId](
+                           const boost::system::error_code ec,
+                           const std::vector<std::string>& chassisPaths) {
         if (ec)
         {
             BMCWEB_LOG_ERROR << "getPlatformMetrics respHandler DBUS error: "
@@ -103,17 +104,11 @@ inline void
             messages::internalError(asyncResp->res);
             return;
         }
-        // Iterate over all retrieved ObjectPaths.
-        for (const std::pair<
-                 std::string,
-                 std::vector<std::pair<std::string, std::vector<std::string>>>>&
-                 object : subtree)
+
+        for (const std::string& chassisPath : chassisPaths)
         {
-            const std::string& chassisPath = object.first;
-            const std::vector<std::pair<std::string, std::vector<std::string>>>&
-                connectionNames = object.second;
-            sdbusplus::message::object_path objPath(chassisPath);
-            const std::string& chassisName = objPath.filename();
+            sdbusplus::message::object_path path(chassisPath);
+            const std::string& chassisName = path.filename();
             if (chassisName.empty())
             {
                 BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassisPath;
@@ -121,11 +116,6 @@ inline void
             }
             if (chassisName != chassisId)
             {
-                continue;
-            }
-            if (connectionNames.size() < 1)
-            {
-                BMCWEB_LOG_ERROR << "Got 0 Connection names";
                 continue;
             }
             asyncResp->res.jsonValue["@odata.type"] =
@@ -138,45 +128,9 @@ inline void
                 telemetry::metricReportDefinitionUri +
                 std::string("/PlatformMetrics");
             asyncResp->res.jsonValue["MetricValues"] = nlohmann::json::array();
-
-            const std::string& connectionName = connectionNames[0].first;
-            const std::vector<std::string>& interfaces2 =
-                connectionNames[0].second;
-            const std::string sensingIntervalInterface =
-                "xyz.openbmc_project.Telemetry.Report";
-            if (std::find(interfaces2.begin(), interfaces2.end(),
-                          sensingIntervalInterface) != interfaces2.end())
-            {
-                sdbusplus::asio::getProperty<int>(
-                    *crow::connections::systemBus, connectionName, chassisPath,
-                    sensingIntervalInterface, "Interval",
-                    [asyncResp, requestTimestamp,
-                     chassisPath](const boost::system::error_code ec,
-                                  const int property) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_DEBUG
-                                << "DBus response error for SensingIntervalMilliseconds ";
-                            BMCWEB_LOG_DEBUG << ec.message();
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        const uint64_t sensingInterval =
-                            static_cast<uint64_t>(property);
-                        // const uint64_t& sensingInterval = sensingVal;
-                        // Identify sensor services for sensor readings
-                        BMCWEB_LOG_DEBUG << "sensingInterval: "
-                                         << sensingInterval;
-                        processSensorServices(asyncResp, chassisPath, "all",
-                                              sensingInterval,
-                                              requestTimestamp);
-                    });
-            }
-            else
-            {
-                processSensorServices(asyncResp, chassisPath, "all");
-            }
-
+            // Identify sensor services for sensor readings
+            processSensorServices(asyncResp, chassisPath, "all",
+                                  pmSensingInterval, requestTimestamp);
             return;
         }
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
@@ -185,7 +139,7 @@ inline void
     crow::connections::systemBus->async_method_call(
         respHandler, "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
         "/xyz/openbmc_project/inventory", 0, interfaces);
 }
 
@@ -202,7 +156,6 @@ inline void requestRoutesPlatformMetricReport(App& app)
                     std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::steady_clock::now().time_since_epoch())
                         .count());
-                // const uint64_t& requestTimestamp = ms;
                 BMCWEB_LOG_DEBUG << "Request submitted at" << requestTimestamp;
                 getPlatformMetrics(asyncResp, "Baseboard", requestTimestamp);
             });

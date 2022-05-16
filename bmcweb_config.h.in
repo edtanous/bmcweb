@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 // clang-format off
 constexpr const int bmcwebInsecureDisableXssPrevention =
@@ -14,4 +14,8 @@ constexpr const char* mesonInstallPrefix = "@MESON_INSTALL_PREFIX@";
 constexpr const int updateServiceTaskTimeout = @UPDATE_SERVICE_TASK_TIMEOUT@;
 
 constexpr const char* updateServiceImageLocation = "@UPDATE_SERVICE_IMAGE_LOCATION@";
+
+constexpr const uint64_t staleSensorUpperLimitms = @STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND@;
+
+constexpr const uint64_t pmSensingInterval = @PLATFORM_METRICS_SENSING_INTERVAL@;
 // clang-format on

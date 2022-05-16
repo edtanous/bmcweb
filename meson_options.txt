@@ -35,6 +35,8 @@ option('redfish-new-powersubsystem-thermalsubsystem', type : 'feature', value : 
 option('redfish-allow-deprecated-power-thermal', type : 'feature', value : 'enabled', description : 'Enable/disable the old Power / Thermal. The default condition is allowing the old Power / Thermal.')
 option ('https_port', type : 'integer', min : 1, max : 65535, value : 443, description : 'HTTPS Port number.')
 option('health-rollup-alternative', type : 'feature', value : 'disabled', description : 'Enable health rollup alternative with support of xyz.openbmc_project.State.Decorator.Health interface and health_rollup association.')
+option ('stalesensor-upper-limit-milisecond', type : 'integer', min : 1, max : 65535, value : 750, description : 'Upper limit in miliseconds to determine the staleness of sensor reading')
+option ('platform-metrics-sensing-interval', type : 'integer', min : 1, max : 65535, value : 250, description : 'Platform metrics telemetry sensor refresh interval in milliseconds')
 
 # Insecure options. Every option that starts with a `insecure` flag should
 # not be enabled by default for any platform, unless the author fully comprehends

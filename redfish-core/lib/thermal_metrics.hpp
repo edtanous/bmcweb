@@ -1,4 +1,5 @@
 #pragma once
+#include "bmcweb_config.h"
 
 #include "sensors.hpp"
 #include "utils/dbus_utils.hpp"
@@ -140,7 +141,6 @@ inline void processSensorsValue(
 
                             if (metricUpdatetimestamp != nullptr)
                             {
-                                // TODO: validate this timestamp
                                 thisMetric["Timestamp"] =
                                     crow::utility::getDateTimeUintMs(
                                         *metricUpdatetimestamp);
@@ -167,9 +167,12 @@ inline void processSensorsValue(
                             {
                                 // difference between requestTimestamp and
                                 // lastUpdateTime stamp should be within
-                                // sensingInterval for fresh metric
+                                // staleSensorUpperLimitms for fresh metric
+                                BMCWEB_LOG_DEBUG
+                                    << "Stalesensor upper limit is:"
+                                    << staleSensorUpperLimitms;
                                 if (requestTimestamp - *metricUpdatetimestamp <=
-                                    sensingInterval)
+                                    staleSensorUpperLimitms)
                                 {
                                     thisMetric["Oem"]["Nvidia"]
                                               ["MetricValueStale"] = false;
