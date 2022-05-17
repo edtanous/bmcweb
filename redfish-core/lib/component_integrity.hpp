@@ -564,7 +564,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                                  objName)
                                     .str();
                             std::string certificateURI =
-                                chassisURI + "Certificates/CertChain";
+                                chassisURI + "/Certificates/CertChain";
                             asyncResp->res.jsonValue["TargetComponentURI"] =
                                 chassisURI;
                             asyncResp->res
