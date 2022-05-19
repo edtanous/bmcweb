@@ -1077,6 +1077,10 @@ inline void objectInterfacesToJson(
         properties.emplace_back("xyz.openbmc_project.Sensor.Type",
                                 "Implementation",
                                 "/Implementation"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxAllowableValue",
+                                "/MaxAllowableOperatingValue"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MinAllowableValue",
+                                "/MinAllowableOperatingValue"_json_pointer);
     }
     else if (sensorType == "temperature")
     {
@@ -1084,6 +1088,10 @@ inline void objectInterfacesToJson(
                                 "/MinReadingRangeTemp"_json_pointer);
         properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxValue",
                                 "/MaxReadingRangeTemp"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxAllowableValue",
+                                "/MaxAllowableOperatingValue"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MinAllowableValue",
+                                "/MinAllowableOperatingValue"_json_pointer);
     }
     else if (sensorType != "power")
     {
@@ -1091,6 +1099,10 @@ inline void objectInterfacesToJson(
                                 "/MinReadingRange"_json_pointer);
         properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxValue",
                                 "/MaxReadingRange"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxAllowableValue",
+                                "/MaxAllowableOperatingValue"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MinAllowableValue",
+                                "/MinAllowableOperatingValue"_json_pointer);
     }
 
     for (const std::tuple<const char*, const char*,
