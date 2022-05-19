@@ -88,6 +88,7 @@ feature_map = {
   'static-hosting'                              : '-DBMCWEB_ENABLE_STATIC_HOSTING',
   'vm-websocket'                                : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
   'xtoken-auth'                                 : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
+  'health-rollup-alternative'                   : '-DBMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE',
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
 }
 
@@ -393,6 +394,7 @@ srcfiles_unittest = [
   'redfish-core/ut/registry_utils_test.cpp',
   'redfish-core/ut/dbus_log_utils_test.cpp',
   'redfish-core/ut/event_service_test.cpp',
+  'redfish-core/ut/health_rollup_test.cpp'
 ]
 
 if(get_option('tests').enabled())

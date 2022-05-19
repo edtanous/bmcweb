@@ -514,6 +514,19 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     continue;
                 }
 
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                std::shared_ptr<HealthRollup> health =
+                    std::make_shared<HealthRollup>(
+                        crow::connections::systemBus, path,
+                        [asyncResp](const std::string& rootHealth,
+                                    const std::string& healthRollup) {
+                            asyncResp->res.jsonValue["Status"]["Health"] =
+                                rootHealth;
+                            asyncResp->res.jsonValue["Status"]["HealthRollup"] =
+                                healthRollup;
+                        });
+                health->start();
+#else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 auto health = std::make_shared<HealthPopulate>(asyncResp);
 
                 sdbusplus::asio::getProperty<std::vector<std::string>>(
@@ -530,6 +543,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     });
 
                 health->populate();
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
                 if (connectionNames.size() < 1)
                 {

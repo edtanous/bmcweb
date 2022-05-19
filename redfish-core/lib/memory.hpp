@@ -446,9 +446,20 @@ inline void
                          const std::string& dimmId, const std::string& service,
                          const std::string& objPath)
 {
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        crow::connections::systemBus, objPath,
+        [aResp](const std::string& rootHealth,
+                const std::string& healthRollup) {
+            aResp->res.jsonValue["Status"]["Health"] = rootHealth;
+            aResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+        });
+    health->start();
+#else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     auto health = std::make_shared<HealthPopulate>(aResp);
     health->selfPath = objPath;
     health->populate();
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
     BMCWEB_LOG_DEBUG << "Get available system components.";
     crow::connections::systemBus->async_method_call(
@@ -478,8 +489,9 @@ inline void
                 aResp->res.jsonValue["CapacityMiB"] = (*memorySize >> 10);
             }
             aResp->res.jsonValue["Status"]["State"] = "Enabled";
+#ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
             aResp->res.jsonValue["Status"]["Health"] = "OK";
-
+#endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
             for (const auto& property : properties)
             {
                 if (property.first == "MemoryDataWidth")
