@@ -384,14 +384,20 @@ inline void getFwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
  */
 inline void
     getFwUpdateableStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const std::shared_ptr<std::string>& fwId)
+                          const std::shared_ptr<std::string>& fwId,
+                          std::string inventoryPath = "")
 {
+    if (inventoryPath.empty())
+    {
+        inventoryPath = "/xyz/openbmc_project/software/";
+    }
     sdbusplus::asio::getProperty<std::vector<std::string>>(
         *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/software/updateable",
         "xyz.openbmc_project.Association", "endpoints",
-        [asyncResp, fwId](const boost::system::error_code ec,
-                          const std::vector<std::string>& objPaths) {
+        [asyncResp, fwId,
+         inventoryPath](const boost::system::error_code ec,
+                        const std::vector<std::string>& objPaths) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << " error_code = " << ec
@@ -400,7 +406,7 @@ inline void
                 // so don't throw error here.
                 return;
             }
-            std::string reqFwObjPath = "/xyz/openbmc_project/software/" + *fwId;
+            std::string reqFwObjPath = inventoryPath + *fwId;
 
             if (std::find(objPaths.begin(), objPaths.end(), reqFwObjPath) !=
                 objPaths.end())

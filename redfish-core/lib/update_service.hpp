@@ -699,6 +699,8 @@ inline void requestRoutesUpdateService(App& app)
             asyncResp->res.jsonValue["ServiceEnabled"] = true;
             asyncResp->res.jsonValue["FirmwareInventory"] = {
                 {"@odata.id", "/redfish/v1/UpdateService/FirmwareInventory"}};
+            asyncResp->res.jsonValue["SoftwareInventory"] = {
+                {"@odata.id", "/redfish/v1/UpdateService/SoftwareInventory"}};
             // Get the MaxImageSizeBytes
             asyncResp->res.jsonValue["MaxImageSizeBytes"] =
                 bmcwebHttpReqBodyLimitMb * 1024 * 1024;
@@ -1197,6 +1199,74 @@ inline void requestRoutesSoftwareInventoryCollection(App& app)
                     "xyz.openbmc_project.Software.Version"});
         });
 }
+
+inline void requestRoutesInventorySoftwareCollection(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/SoftwareInventory/")
+        .privileges(redfish::privileges::getSoftwareInventoryCollection)
+        .methods(
+            boost::beast::http::verb::
+                get)([](const crow::Request&,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#SoftwareInventoryCollection.SoftwareInventoryCollection";
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/UpdateService/SoftwareInventory";
+            asyncResp->res.jsonValue["Name"] = "Software Inventory Collection";
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](
+                    const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string,
+                                  std::vector<std::pair<
+                                      std::string, std::vector<std::string>>>>>&
+                        subtree) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Members"] =
+                        nlohmann::json::array();
+                    asyncResp->res.jsonValue["Members@odata.count"] = 0;
+
+                    for (auto& obj : subtree)
+                    {
+                        sdbusplus::message::object_path path(obj.first);
+                        std::string swId = path.filename();
+                        if (swId.empty())
+                        {
+                            messages::internalError(asyncResp->res);
+                            BMCWEB_LOG_DEBUG << "Can't parse software ID!!";
+                            return;
+                        }
+
+                        nlohmann::json& members =
+                            asyncResp->res.jsonValue["Members"];
+                        members.push_back(
+                            {{"@odata.id",
+                              "/redfish/v1/UpdateService/SoftwareInventory/" +
+                                  swId}});
+                        asyncResp->res.jsonValue["Members@odata.count"] =
+                            members.size();
+                    }
+                },
+                // Note that only firmware levels associated with a device
+                // are stored under /xyz/openbmc_project/inventory_software
+                // therefore to ensure only real SoftwareInventory items are
+                // returned, this full object path must be used here as input to
+                // mapper
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/inventory_software",
+                static_cast<int32_t>(0),
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Software.Version"});
+        });
+}
+
 inline static bool validSubpath([[maybe_unused]] const std::string& objPath,
                                 [[maybe_unused]] const std::string& objectPath)
 {
@@ -1546,9 +1616,16 @@ inline static void
 */
 inline static void
     getRelatedItemsOthers(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                          const std::string& swId)
+                          const std::string& swId,
+                          std::string inventoryPath = "")
 {
+
     BMCWEB_LOG_DEBUG << "getRelatedItemsOthers enter";
+
+    if (inventoryPath.empty())
+    {
+        inventoryPath = "/xyz/openbmc_project/software/";
+    }
 
     aResp->res.jsonValue["RelatedItem"] = nlohmann::json::array();
     aResp->res.jsonValue["RelatedItem@odata.count"] = 0;
@@ -1622,8 +1699,7 @@ inline static void
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-        "/xyz/openbmc_project/software/", 0,
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree", inventoryPath, 0,
         std::array<const char*, 1>{"xyz.openbmc_project.Software.Version"});
 }
 
@@ -1821,6 +1897,173 @@ inline void requestRoutesSoftwareInventory(App& app)
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
                 "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/",
+                static_cast<int32_t>(0),
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Software.Version"});
+        });
+}
+
+inline void requestRoutesInventorySoftware(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/SoftwareInventory/<str>/")
+        .privileges(redfish::privileges::getSoftwareInventory)
+        .methods(
+            boost::beast::http::verb::get)([](const crow::Request&,
+                                              const std::shared_ptr<
+                                                  bmcweb::AsyncResp>& asyncResp,
+                                              const std::string& param) {
+
+            std::string searchPath = "/xyz/openbmc_project/inventory_software/";
+            std::shared_ptr<std::string> swId =
+                std::make_shared<std::string>(param);
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, swId, searchPath](
+                    const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string,
+                                  std::vector<std::pair<
+                                      std::string, std::vector<std::string>>>>>&
+                        subtree) {
+                    BMCWEB_LOG_DEBUG << "doGet callback...";
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+ 
+                    // Ensure we find our input swId, otherwise return an
+                    // error
+                    for (const std::pair<
+                             std::string,
+                             std::vector<std::pair<
+                                 std::string, std::vector<std::string>>>>& obj :
+                         subtree)
+                    {
+                        const std::string& path = obj.first;
+                        sdbusplus::message::object_path objPath(path);
+                        if (objPath.filename() != *swId)
+                        {
+                            continue;
+                        }
+
+                        if (obj.second.size() < 1)
+                        {
+                            continue;
+                        }
+
+                        asyncResp->res.jsonValue["Id"] = *swId;
+                        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+                        asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                        std::shared_ptr<HealthRollup> health =
+                            std::make_shared<HealthRollup>(
+                                crow::connections::systemBus, path,
+                                [asyncResp](const std::string& rootHealth,
+                                            const std::string& healthRollup) {
+                                    asyncResp->res
+                                        .jsonValue["Status"]["Health"] =
+                                        rootHealth;
+                                    asyncResp->res
+                                        .jsonValue["Status"]["HealthRollup"] =
+                                        healthRollup;
+                                });
+                        health->start();
+
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, swId,
+                             path, searchPath](const boost::system::error_code errorCode,
+                                   const boost::container::flat_map<
+                                       std::string,
+                                       dbus::utility::DbusVariantType>&
+                                       propertiesList) {
+                                if (errorCode)
+                                {
+                                    BMCWEB_LOG_DEBUG << "properties not found ";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+
+                                for (const auto& property : propertiesList)
+                                {
+                                    if (property.first == "Manufacturer")
+                                    {
+                                        const std::string* manufacturer =
+                                            std::get_if<std::string>(
+                                                &property.second);
+                                        if (manufacturer != nullptr)
+                                        {
+                                            asyncResp->res
+                                                .jsonValue["Manufacturer"] =
+                                                *manufacturer;
+                                        }
+                                    }
+                                    else if (property.first == "Version")
+                                    {
+                                        const std::string* version =
+                                            std::get_if<std::string>(
+                                                &property.second);
+                                        if (version != nullptr)
+                                        {
+                                            asyncResp->res
+                                                .jsonValue["version"] =
+                                                *version;
+                                        }
+                                    }
+                                    else if (property.first == "Functional")
+                                    {
+                                        const bool* swInvFunctional =
+                                            std::get_if<bool>(&property.second);
+                                        if (swInvFunctional != nullptr)
+                                        {
+                                            BMCWEB_LOG_DEBUG
+                                                << " Functinal "
+                                                << *swInvFunctional;
+                                            if (*swInvFunctional)
+                                            {
+                                                asyncResp->res
+                                                    .jsonValue["Status"]
+                                                              ["State"] =
+                                                    "Enabled";
+                                            }
+                                            else
+                                            {
+                                                asyncResp->res
+                                                    .jsonValue["Status"]
+                                                              ["State"] =
+                                                    "Disabled";
+                                            }
+                                        }
+                                    }
+                                }
+                                getRelatedItemsOthers(asyncResp, *swId,
+                                                      searchPath);
+                                fw_util::getFwUpdateableStatus(asyncResp, swId,
+                                                               searchPath);
+                            },
+                            obj.second[0].first, obj.first,
+                            "org.freedesktop.DBus.Properties", "GetAll", "");
+                        asyncResp->res.jsonValue["@odata.id"] =
+                            "/redfish/v1/UpdateService/SoftwareInventory/" +
+                            *swId;
+                        asyncResp->res.jsonValue["@odata.type"] =
+                            "#SoftwareInventory.v1_4_0.SoftwareInventory";
+                        asyncResp->res.jsonValue["Name"] = "Software Inventory";
+                        return;
+                    }
+                    // Couldn't find an object with that name.  return an error
+                    BMCWEB_LOG_DEBUG << "Input swID " + *swId + " not found!";
+                    messages::resourceNotFound(
+                        asyncResp->res, "SoftwareInventory.v1_4_0.SoftwareInventory", *swId);
+
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                searchPath,
                 static_cast<int32_t>(0),
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.Version"});

@@ -111,6 +111,9 @@ class RedfishService
         requestRoutesSoftwareInventoryCollection(app);
         requestRoutesSoftwareInventory(app);
 
+        requestRoutesInventorySoftwareCollection(app);
+        requestRoutesInventorySoftware(app);
+
         requestRoutesSystemLogServiceCollection(app);
         requestRoutesEventLogService(app);
         requestRoutesSELLogService(app);
