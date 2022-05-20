@@ -240,11 +240,13 @@ static void
                                 {
                                     message =
                                         messages::applyFailed(swID, objPath);
+                                    fwUpdateInProgress = false;
                                 }
                                 else if (state == "Completed")
                                 {
                                     message = messages::taskCompletedOK(
                                         std::to_string(index));
+                                    //fwupdate status is set in task callback
                                 }
                                 else
                                 {
@@ -290,6 +292,7 @@ static void
                                         {
                                             taskData->messages.emplace_back(
                                                 messages::internalError());
+                                            fwUpdateInProgress = false;
                                             return task::completed;
                                         }
 
@@ -301,6 +304,7 @@ static void
                                             taskData->status = "Warning";
                                             taskData->messages.emplace_back(
                                                 messages::taskAborted(index));
+                                            fwUpdateInProgress = false;
                                             return task::completed;
                                         }
 
@@ -317,6 +321,17 @@ static void
                                             // task will be cancelled
                                             taskData->extendTimer(
                                                 std::chrono::hours(5));
+                                            fwUpdateInProgress = true;
+                                            return !task::completed;
+                                        }
+
+                                        if (boost::ends_with(*state, "Activating"))
+                                        {
+                                            // set firmware inventory inprogress
+                                            // flag to true during activation.
+                                            // this will ensure no furthur updates
+                                            // allowed during this time from redfish
+                                            fwUpdateInProgress = true;
                                             return !task::completed;
                                         }
 
@@ -326,6 +341,7 @@ static void
                                             taskData->messages.emplace_back(
                                                 messages::taskCompletedOK(
                                                     index));
+                                            fwUpdateInProgress = false;
                                             return task::completed;
                                         }
                                     }
@@ -406,7 +422,7 @@ static void
 
 // Note that asyncResp can be either a valid pointer or nullptr. If nullptr
 // then no asyncResp updates will occur
-static void monitorForSoftwareAvailable(
+static bool monitorForSoftwareAvailable(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const crow::Request& req, const std::string& url,
     int timeoutTimeSeconds = 10)
@@ -418,7 +434,7 @@ static void monitorForSoftwareAvailable(
         {
             messages::serviceTemporarilyUnavailable(asyncResp->res, "30");
         }
-        return;
+        return true;
     }
 
     fwAvailableTimer =
@@ -552,6 +568,7 @@ static void monitorForSoftwareAvailable(
         "member='InterfacesAdded',"
         "path='/xyz/openbmc_project/logging'",
         preTaskLoggingHandler);
+        return false;
 }
 
 /**
@@ -643,7 +660,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
 
             // Setup callback for when new software detected
             // Give TFTP 10 minutes to complete
-            monitorForSoftwareAvailable(
+            (void)monitorForSoftwareAvailable(
                 asyncResp, req,
                 "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
                 600);
@@ -1118,19 +1135,25 @@ inline void requestRoutesUpdateService(App& app)
                 BMCWEB_LOG_DEBUG << "doPost...";
 
                 // Setup callback for when new software detected
-                monitorForSoftwareAvailable(asyncResp, req,
-                                            "/redfish/v1/UpdateService");
-
-                std::string filepath(updateServiceImageLocation +
-                                     boost::uuids::to_string(
-                                         boost::uuids::random_generator()()));
-                BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
-                std::ofstream out(filepath, std::ofstream::out |
-                                                std::ofstream::binary |
-                                                std::ofstream::trunc);
-                out << req.body;
-                out.close();
-                BMCWEB_LOG_DEBUG << "file upload complete!!";
+                if(monitorForSoftwareAvailable(asyncResp, req,
+                                            "/redfish/v1/UpdateService"))
+                {
+                    //don't copy the image, update already in progress.
+                    BMCWEB_LOG_ERROR << "Update already in progress.";
+                }
+                else
+                {
+                    std::string filepath(updateServiceImageLocation +
+                                        boost::uuids::to_string(
+                                            boost::uuids::random_generator()()));
+                    BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
+                    std::ofstream out(filepath, std::ofstream::out |
+                                                    std::ofstream::binary |
+                                                    std::ofstream::trunc);
+                    out << req.body;
+                    out.close();
+                    BMCWEB_LOG_DEBUG << "file upload complete!!";
+                }
             });
 }
 
