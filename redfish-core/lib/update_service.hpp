@@ -1435,7 +1435,7 @@ inline static void
 
             relatedItemCount = relatedItem.size();
         },
-        "xyz.openbmc_project.ObjectMapper", objPath.str + "/fabric",
+        "xyz.openbmc_project.ObjectMapper", objPath.str + "/fabrics",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
