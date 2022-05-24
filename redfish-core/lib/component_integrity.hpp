@@ -274,33 +274,6 @@ inline void getSPDMMeasurementData(const std::string& objectPath,
         "GetManagedObjects");
 }
 
-template <typename CallbackFunc>
-inline void getAssociationEndpoint(const std::string& objPath,
-                                   CallbackFunc&& callback)
-{
-    crow::connections::systemBus->async_method_call(
-        [callback, objPath](const boost::system::error_code ec,
-                            std::variant<std::vector<std::string>>& resp) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "D-Bus responses error:" << ec;
-                return; // should have associoated inventory object.
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                BMCWEB_LOG_ERROR << "Data is null on object=" << objPath;
-                // Object must have associated inventory object.
-                return;
-            }
-            std::string endpointPath(data->front());
-            callback(endpointPath);
-        },
-        dbus_utils::mapperBusName, objPath, dbus_utils::propertyInterface,
-        "Get", dbus_utils::associationInterface, "endpoints");
-}
-
 inline void handleSPDMGETSignedMeasurement(
     const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
@@ -520,60 +493,124 @@ inline void requestRoutesComponentIntegrity(App& app)
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& id) -> void {
             std::string objectPath = std::string(rootSPDMDbusPath) + "/" + id;
-            getSPDMMeasurementData(
-                objectPath, [asyncResp, id, objectPath](
-                                const SPDMMeasurementData& data, bool gotData) {
-                    if (!gotData)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+            getSPDMMeasurementData(objectPath, [asyncResp, id, objectPath](
+                                                   const SPDMMeasurementData&
+                                                       data,
+                                                   bool gotData) {
+                if (!gotData)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
 
-                    asyncResp->res.jsonValue = {
-                        {"@odata.type",
-                         "#ComponentIntegrity.v1_0_0.ComponentIntegrity"},
-                        {"@odata.id", "/redfish/v1/ComponentIntegrity/" + id},
-                        {"Id", id},
-                        {"Name", "SPDM Integrity for " + id},
-                        {"ComponentIntegrityType", "SPDM"},
-                        {"ComponentIntegrityEnabled", true},
-                        {"SPDM",
-                         {{"Requester",
-                           {{"@odata.id", "/redfish/v1/Managers/bmc"}}}}},
-                        {"Actions",
-                         {{"#ComponentIntegrity.SPDMGetSignedMeasurements",
-                           {{"target",
-                             "/redfish/v1/ComponentIntegrity/" + id +
-                                 "/Actions/SPDMGetSignedMeasurements"},
-                            {"@Redfish.ActionInfo",
-                             "/redfish/v1/ComponentIntegrity/" + id +
-                                 "/SPDMGetSignedMeasurementsActionInfo"}}}}},
-                        {"ComponentIntegrityTypeVersion",
-                         getVersionStr(data.version)},
-                    };
+                asyncResp->res.jsonValue = {
+                    {"@odata.type",
+                     "#ComponentIntegrity.v1_0_0.ComponentIntegrity"},
+                    {"@odata.id", "/redfish/v1/ComponentIntegrity/" + id},
+                    {"Id", id},
+                    {"Name", "SPDM Integrity for " + id},
+                    {"ComponentIntegrityType", "SPDM"},
+                    {"ComponentIntegrityEnabled", true},
+                    {"SPDM",
+                     {{"Requester",
+                       {{"@odata.id", "/redfish/v1/Managers/bmc"}}}}},
+                    {"Actions",
+                     {{"#ComponentIntegrity.SPDMGetSignedMeasurements",
+                       {{"target", "/redfish/v1/ComponentIntegrity/" + id +
+                                       "/Actions/SPDMGetSignedMeasurements"},
+                        {"@Redfish.ActionInfo",
+                         "/redfish/v1/ComponentIntegrity/" + id +
+                             "/SPDMGetSignedMeasurementsActionInfo"}}}}},
+                    {"ComponentIntegrityTypeVersion",
+                     getVersionStr(data.version)},
+                };
 
-                    getAssociationEndpoint(
-                        objectPath + "/inventory_object",
-                        [asyncResp](const std::string& endpoint) {
-                            sdbusplus::message::object_path erotInvObjectPath(
-                                endpoint);
-                            const std::string& objName =
-                                erotInvObjectPath.filename();
-                            std::string chassisURI =
-                                (boost::format("/redfish/v1/Chassis/%s") %
-                                 objName)
-                                    .str();
-                            std::string certificateURI =
-                                chassisURI + "/Certificates/CertChain";
-                            asyncResp->res.jsonValue["TargetComponentURI"] =
-                                chassisURI;
-                            asyncResp->res
-                                .jsonValue["SPDM"]["IdentityAuthentication"] = {
-                                {"ResponderAuthentication",
-                                 {{"ComponentCertificate",
-                                   {{"@odata.id", certificateURI}}}}}};
-                        });
-                });
+                chassis_utils::getAssociationEndpoint(
+                    objectPath + "/inventory_object",
+                    [asyncResp](const bool& status,
+                                const std::string& endpoint) {
+                        if (!status)
+                        {
+                            BMCWEB_LOG_DEBUG
+                                << "Unable to get the association endpoint";
+                        }
+                        sdbusplus::message::object_path erotInvObjectPath(
+                            endpoint);
+                        const std::string& objName =
+                            erotInvObjectPath.filename();
+                        std::string chassisURI =
+                            (boost::format("/redfish/v1/Chassis/%s") % objName)
+                                .str();
+                        std::string certificateURI =
+                            chassisURI + "/Certificates/CertChain";
+                        asyncResp->res.jsonValue["TargetComponentURI"] =
+                            chassisURI;
+                        asyncResp->res
+                            .jsonValue["SPDM"]["IdentityAuthentication"] = {
+                            {"ResponderAuthentication",
+                             {{"ComponentCertificate",
+                               {{"@odata.id", certificateURI}}}}}};
+                        std::string objPath = endpoint + "/inventory";
+                        chassis_utils::getAssociationEndpoint(
+                            objPath,
+                            [objPath, asyncResp](const bool& status,
+                                                 const std::string& ep) {
+                                if (!status)
+                                {
+                                    BMCWEB_LOG_DEBUG
+                                        << "Unable to get the association endpoint for "
+                                        << objPath;
+                                    // inventory association is not created for
+                                    // HMC and PcieSwitch
+                                    // if we don't get the association
+                                    // assumption is, it is hmc.
+                                    nlohmann::json& componentsProtectedArray =
+                                        asyncResp->res
+                                            .jsonValue["Links"]
+                                                      ["ComponentsProtected"];
+                                    componentsProtectedArray =
+                                        nlohmann::json::array();
+                                    componentsProtectedArray.push_back(
+                                        {nlohmann::json::array(
+                                            {"@odata.id",
+                                             "/redfish/v1/managers/bmc"})});
+                                    return;
+                                }
+
+                                chassis_utils::getRedfishURL(
+                                    ep,
+                                    [ep, asyncResp](const bool& status,
+                                                    const std::string& url) {
+                                        std::string redfishURL = url;
+                                        if (!status)
+                                        {
+                                            BMCWEB_LOG_DEBUG
+                                                << "Unable to get the Redfish URL for object="
+                                                << ep;
+                                        }
+                                        else
+                                        {
+                                            if (url.empty())
+                                            {
+                                                redfishURL = std::string(
+                                                    "/redfish/v1/managers/bmc");
+                                            }
+                                        }
+
+                                        nlohmann::json&
+                                            componentsProtectedArray =
+                                                asyncResp->res.jsonValue
+                                                    ["Links"]
+                                                    ["ComponentsProtected"];
+                                        componentsProtectedArray =
+                                            nlohmann::json::array();
+                                        componentsProtectedArray.push_back(
+                                            {nlohmann::json::array(
+                                                {"@odata.id", redfishURL})});
+                                    });
+                            });
+                    });
+            });
         });
 
     BMCWEB_ROUTE(

@@ -6,6 +6,11 @@ namespace redfish
 namespace chassis_utils
 {
 
+constexpr const char* acceleratorInvIntf =
+    "xyz.openbmc_project.Inventory.Item.Accelerator";
+constexpr const char* switchInvIntf =
+    "xyz.openbmc_project.Inventory.Item.Switch";
+
 /**
  * @brief Retrieves valid chassis ID
  * @param asyncResp   Pointer to object holding response data
@@ -262,6 +267,109 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", 0, interfaces);
+}
+
+template <typename CallbackFunc>
+inline void getAssociationEndpoint(const std::string& objPath,
+                                   CallbackFunc&& callback)
+{
+    crow::connections::systemBus->async_method_call(
+        [callback, objPath](const boost::system::error_code ec,
+                            std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "D-Bus responses error:" << ec;
+                callback(false, std::string(""));
+                return; // should have associoated inventory object.
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "Data is null on object=" << objPath;
+                callback(false, std::string(""));
+                // Object must have associated inventory object.
+                return;
+            }
+
+            std::string endpointPath;
+            if (data->size() > 0)
+            {
+                endpointPath = data->front();
+            }
+            callback(true, endpointPath);
+        },
+        dbus_utils::mapperBusName, objPath, dbus_utils::propertyInterface,
+        "Get", dbus_utils::associationInterface, "endpoints");
+}
+
+template <typename CallbackFunc>
+inline void getRedfishURL(const std::filesystem::path& invObjPath,
+                          CallbackFunc&& callback)
+{
+    crow::connections::systemBus->async_method_call(
+        [invObjPath, callback](const boost::system::error_code ec,
+                               const GetObjectType& resp) {
+            std::string url;
+            if (ec || resp.empty())
+            {
+                BMCWEB_LOG_ERROR
+                    << "DBUS response error during getting of service name: "
+                    << ec;
+                callback(false, url);
+                return;
+            }
+            std::string service = resp.begin()->first;
+            auto interfaces = resp.begin()->second;
+            // if accelarator interface then the object would be
+            // of type fpga or GPU.
+            // If switch interface then it could be Nvswitch or
+            // PcieSwitch else it is BMC
+            for (const auto& interface : interfaces)
+            {
+                if (interface == acceleratorInvIntf)
+                {
+                    url = std::string("/redfish/v1/Processors/") +
+                          invObjPath.filename().string();
+                    callback(true, url);
+                    return;
+                }
+                else if (interface == switchInvIntf)
+                {
+                    // This is NVSwitch
+                    std::string switchID = invObjPath.filename();
+                    // Now get the fabric ID
+                    getAssociationEndpoint(
+                        invObjPath.string() + "/fabrics",
+                        [switchID, callback](const bool& status,
+                                             const std::string& ep) {
+                            std::string url;
+                            if (!status)
+                            {
+                                BMCWEB_LOG_DEBUG
+                                    << "Unable to get the association endpoint";
+                                url = "";
+                            }
+                            else
+                            {
+                                sdbusplus::message::object_path invObjectPath(
+                                    ep);
+                                const std::string& fabricID =
+                                    invObjectPath.filename();
+                                url = std::string("/redfish/v1/Fabrics/") +
+                                      fabricID + std::string("/Switches/") +
+                                      switchID;
+                            }
+                            callback(true, url);
+
+                            return;
+                        });
+                }
+            }
+        },
+        dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,
+        dbus_utils::mapperIntf, "GetObject", invObjPath.string(),
+        std::array<const char*, 0>());
 }
 
 } // namespace chassis_utils
