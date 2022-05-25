@@ -1728,14 +1728,14 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                             thisEntry["Modified"] =
                                 crow::utility::getDateTimeStdtime(
                                     updateTimestamp);
-                            if (filePath != nullptr)
-                            {
-                                thisEntry["AdditionalDataURI"] =
-                                    "/redfish/v1/Systems/system/LogServices/"
-                                    "EventLog/"
-                                    "Entries/" +
-                                    std::to_string(*id) + "/attachment";
-                            }
+                        }
+                        if (filePath != nullptr)
+                        {
+                            thisEntry["AdditionalDataURI"] =
+                                "/redfish/v1/Systems/system/LogServices/"
+                                "EventLog/"
+                                "Entries/" +
+                                std::to_string(*id) + "/attachment";
                         }
                     }
                     std::sort(entriesArray.begin(), entriesArray.end(),
@@ -1928,14 +1928,14 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             asyncResp->res.jsonValue["Modified"] =
                                 crow::utility::getDateTimeStdtime(
                                     updateTimestamp);
-                            if (filePath != nullptr)
-                            {
-                                asyncResp->res.jsonValue["AdditionalDataURI"] =
-                                    "/redfish/v1/Systems/system/LogServices/"
-                                    "EventLog/"
-                                    "attachment/" +
-                                    std::to_string(*id);
-                            }
+                        }
+                        if (filePath != nullptr)
+                        {
+                            asyncResp->res.jsonValue["AdditionalDataURI"] =
+                                "/redfish/v1/Systems/system/LogServices/"
+                                "EventLog/"
+                                "attachment/" +
+                                std::to_string(*id);
                         }
                     },
                     "xyz.openbmc_project.Logging",
