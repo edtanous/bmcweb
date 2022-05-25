@@ -327,6 +327,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
             // PcieSwitch else it is BMC
             for (const auto& interface : interfaces)
             {
+                BMCWEB_LOG_DEBUG << interface;
                 if (interface == acceleratorInvIntf)
                 {
                     url = std::string("/redfish/v1/Processors/") +
