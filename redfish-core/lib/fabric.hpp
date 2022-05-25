@@ -850,6 +850,47 @@ inline void
 }
 
 /**
+ * @brief Fill out managed by links association to manager service by
+ * requesting data from the given D-Bus association object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getManagerLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get managed_by links";
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec,
+                std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                return; // no managed_by association = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            nlohmann::json& linksArray =
+                aResp->res.jsonValue["Links"]["ManagedBy"];
+            linksArray = nlohmann::json::array();
+            for (const std::string& endpointPath : *data)
+            {
+                sdbusplus::message::object_path objPath(endpointPath);
+                const std::string& endpointId = objPath.filename();
+                std::string endpointURI = "/redfish/v1/Managers/";
+                endpointURI += endpointId;
+                linksArray.push_back({{"@odata.id", endpointURI}});
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/managed_by",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+/**
  * @brief Fill out links association to parent chassis by
  * requesting data from the given D-Bus association object.
  *
@@ -988,6 +1029,8 @@ inline void requestRoutesSwitch(App& app)
                                     // Link association to endpoints
                                     getSwitchEndpointsLink(asyncResp, path,
                                                            fabricId);
+                                    // Link association to manager
+                                    getManagerLink(asyncResp, path);
                                     return;
                                 }
                                 // Couldn't find an object with that name.
