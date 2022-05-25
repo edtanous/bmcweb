@@ -384,6 +384,19 @@ inline void
                             "Critical";
                     }
                 }
+                else if (propertyName == "UUID")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "Null value returned "
+                                            "for UUID";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["UUID"] = *value;
+                }
             }
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
