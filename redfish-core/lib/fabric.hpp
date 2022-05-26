@@ -2432,7 +2432,7 @@ inline void
                     {"@odata.type", "#PortMetrics.v1_2_0.PortMetrics"},
                     {"@odata.id", portMetricsURI},
                     {"Name", portId + " Port Metrics"},
-                    {"Id", "PortMetrics"}};
+                    {"Id", "Metrics"}};
 
                 const std::string& connectionName = connectionNames[0].first;
                 crow::connections::systemBus->async_method_call(

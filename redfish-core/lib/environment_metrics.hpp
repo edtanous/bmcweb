@@ -607,6 +607,12 @@ inline void requestRoutesEnvironmentMetrics(App& app)
         });
 }
 
+inline double joulesToKwh(const double& joules)
+{
+    const double jtoKwhFactor = 2.77777778e-7;
+    return jtoKwhFactor * joules;
+}
+
 inline void getSensorDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& chassisId, const std::string& objPath)
@@ -658,21 +664,24 @@ inline void getSensorDataByService(
                 aResp->res.jsonValue["TemperatureCelsius"] = {
                     {"Reading", *attributeValue},
                     {"DataSourceUri", sensorURI},
-                    {"@odata.id", sensorURI}};
+                };
             }
             else if (sensorType == "power")
             {
                 aResp->res.jsonValue["PowerWatts"] = {
                     {"Reading", *attributeValue},
                     {"DataSourceUri", sensorURI},
-                    {"@odata.id", sensorURI}};
+                };
             }
             else if (sensorType == "energy")
             {
                 aResp->res.jsonValue["EnergykWh"] = {
+                    {"Reading", joulesToKwh(*attributeValue)},
+                };
+                aResp->res.jsonValue["EnergyJoules"] = {
                     {"Reading", *attributeValue},
                     {"DataSourceUri", sensorURI},
-                    {"@odata.id", sensorURI}};
+                };
             }
         },
         service, objPath, "org.freedesktop.DBus.Properties", "Get",

@@ -73,6 +73,37 @@ inline std::string getProcessorType(const std::string& processorType)
     return "";
 }
 
+inline std::string getProcessorResetType(const std::string& processorType)
+{
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.ForceOff")
+    {
+        return "ForceOff";
+    }
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.ForceOn")
+    {
+        return "ForceOn";
+    }
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.ForceRestart")
+    {
+        return "ForceRestart";
+    }
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.GracefulRestart")
+    {
+        return "GracefulRestart";
+    }
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.GracefulShutdown")
+    {
+        return "GracefulShutdown";
+    }
+    // Unknown or others
+    return "";
+}
+
 /**
  * @brief Fill out memory links association by
  * requesting data from the given D-Bus association object.
@@ -2847,6 +2878,7 @@ inline void requestRoutesProcessorSettings(App& app)
 inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                           const std::string& processorId,
                           const std::string& cpuObjectPath,
+                          const std::string& resetType,
                           const MapperServiceMap& serviceMap)
 {
     // Check that the property even exists by checking for the interface
@@ -2866,34 +2898,53 @@ inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         messages::internalError(resp->res);
         return;
     }
-    // Set the property, with handler to check error responses
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId](boost::system::error_code ec,
-                            sdbusplus::message::message& msg) {
+    const std::string conName = *inventoryService;
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, conName, cpuObjectPath,
+        "xyz.openbmc_project.Control.Processor.Reset", "ResetType",
+        [resp, resetType, processorId, conName, cpuObjectPath](
+            const boost::system::error_code ec, const std::string& property) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                                 << " Reset failed: " << ec;
+                BMCWEB_LOG_ERROR << "DBus response, error for ResetType ";
+                BMCWEB_LOG_ERROR << ec.message();
                 messages::internalError(resp->res);
                 return;
             }
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
+
+            const std::string processorResetType =
+                getProcessorResetType(property);
+            if (processorResetType != resetType)
             {
-                messages::internalError(resp->res);
+                BMCWEB_LOG_DEBUG << "Property Value Incorrect";
+                messages::actionParameterNotSupported(resp->res, "ResetType",
+                                                      resetType);
                 return;
             }
-            if (strcmp(dbusError->name,
-                       "xyz.openbmc_project.Common.Error.InternalFailure") == 0)
-            {
-                messages::internalError(resp->res);
-                return;
-            }
-            messages::success(resp->res);
-        },
-        *inventoryService, cpuObjectPath,
-        "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+            // Set the property, with handler to check error responses
+            crow::connections::systemBus->async_method_call(
+                [resp, processorId](boost::system::error_code ec,
+                                    const int retValue) {
+                    if (!ec)
+                    {
+
+                        if (retValue != 0)
+                        {
+                            BMCWEB_LOG_ERROR << retValue;
+                            messages::internalError(resp->res);
+                        }
+                        BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                                         << " Reset Succeded";
+                        messages::success(resp->res);
+                        return;
+                    }
+                    BMCWEB_LOG_DEBUG << ec;
+                    messages::internalError(resp->res);
+                    return;
+                },
+                conName, cpuObjectPath,
+                "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+        });
 }
 
 inline void requestRoutesProcessorReset(App& app)
@@ -2908,30 +2959,25 @@ inline void requestRoutesProcessorReset(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
-                std::string resetType;
+                std::optional<std::string> resetType;
                 if (!json_util::readJson(req, asyncResp->res, "ResetType",
                                          resetType))
                 {
                     return;
                 }
-                if (resetType != "GracefulRestart")
+                if (resetType)
                 {
-                    BMCWEB_LOG_DEBUG << "Invalid property value for ResetType: "
-                                     << resetType;
-                    messages::actionParameterNotSupported(
-                        asyncResp->res, resetType, "ResetType");
-                    return;
+                    getProcessorObject(
+                        asyncResp, processorId,
+                        [resetType](
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId,
+                            const std::string& objectPath,
+                            const MapperServiceMap& serviceMap) {
+                            postResetType(asyncResp, processorId, objectPath,
+                                          *resetType, serviceMap);
+                        });
                 }
-                getProcessorObject(
-                    asyncResp, processorId,
-                    [resetType](
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::string& processorId,
-                        const std::string& objectPath,
-                        const MapperServiceMap& serviceMap) {
-                        postResetType(asyncResp, processorId, objectPath,
-                                      serviceMap);
-                    });
             });
 }
 
@@ -3355,8 +3401,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                     portMetricUri += port + "/Metrics";
                                     asyncResp->res.jsonValue["@odata.id"] =
                                         portMetricUri;
-                                    asyncResp->res.jsonValue["Id"] =
-                                        "PortMetrics";
+                                    asyncResp->res.jsonValue["Id"] = "Metrics";
                                     asyncResp->res.jsonValue["Name"] =
                                         port + " Port Metrics";
                                     for (const auto& [service, interfaces] :
