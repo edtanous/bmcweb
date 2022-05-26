@@ -291,7 +291,8 @@ inline void getAssociationEndpoint(const std::string& objPath,
                 // Object must have associated inventory object.
                 return;
             }
-
+            // Getting only the first endpoint as we have 1*1 relationship
+            // with ERoT and the inventory backed by it.
             std::string endpointPath;
             if (data->size() > 0)
             {
@@ -335,7 +336,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                     callback(true, url);
                     return;
                 }
-                else if (interface == switchInvIntf)
+                if (interface == switchInvIntf)
                 {
                     // This is NVSwitch
                     std::string switchID = invObjPath.filename();
@@ -357,9 +358,10 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                                     ep);
                                 const std::string& fabricID =
                                     invObjectPath.filename();
-                                url = std::string("/redfish/v1/Fabrics/") +
-                                      fabricID + std::string("/Switches/") +
-                                      switchID;
+                                url = std::string("/redfish/v1/Fabrics/");
+                                url += fabricID;
+                                url += "/Switches/";
+                                url += switchID;
                             }
                             callback(true, url);
 

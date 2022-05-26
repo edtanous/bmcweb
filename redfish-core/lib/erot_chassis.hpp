@@ -44,35 +44,66 @@ using SPDMCertificates = std::vector<std::tuple<uint8_t, std::string>>;
 static std::string getERoTSerialNumber(const std::string& chassisID)
 {
     if (chassisID == "ERoT_GPU0")
+    {
         return "XTYHMP-12114";
+    }
     if (chassisID == "ERoT_GPU1")
+    {
         return "XTYHMP-12115";
+    }
     if (chassisID == "ERoT_GPU2")
+    {
         return "XTYHMP-12116";
+    }
     if (chassisID == "ERoT_GPU3")
+    {
         return "XTYHMP-12117";
+    }
     if (chassisID == "ERoT_GPU4")
+    {
+
         return "XTYHMP-12118";
+    }
     if (chassisID == "ERoT_GPU5")
+    {
         return "XTYHMP-12119";
+    }
     if (chassisID == "ERoT_GPU6")
+    {
         return "XTYHMP-12120";
+    }
     if (chassisID == "ERoT_GPU7")
+    {
         return "XTYHMP-12121";
+    }
     if (chassisID == "ERoT_HMC")
+    {
         return "XTYHMP-12100";
+    }
     if (chassisID == "ERoT_NVSwitch0")
+    {
         return "XTYHMP-12120";
+    }
     if (chassisID == "ERoT_NVSwitch1")
+    {
         return "XTYHMP-12121";
+    }
     if (chassisID == "ERoT_NVSwitch2")
+    {
         return "XTYHMP-12122";
+    }
     if (chassisID == "ERoT_NVSwitch3")
+    {
         return "XTYHMP-12123";
+    }
     if (chassisID == "ERoT_PCIeSwitch")
+    {
         return "XTYHMP-12124";
+    }
     if (chassisID == "ERoT_FPGA")
+    {
         return "XTYHMP-12102";
+    }
     return "";
 }
 
@@ -207,6 +238,69 @@ static void
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
 
+/* This function implements the OEM property under
+ * chassis schema.
+ * It first gets the associated ErotInventoryObject then
+ * it gets the inventory backed by the Erot and finally converts
+ * the Dbus inventory path to the Redfish URL.
+ * path: Dbus object path
+ * */
+
+inline void getChassisOEMComponentProtected(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& path)
+{
+
+    std::string objPath = path + "/inventory";
+    chassis_utils::getAssociationEndpoint(objPath, [objPath, asyncResp](
+                                                       const bool& status,
+                                                       const std::string& ep) {
+        if (!status)
+        {
+            BMCWEB_LOG_DEBUG << "Unable to get the association endpoint for "
+                             << objPath;
+            // inventory association is not created for
+            // HMC and PcieSwitch
+            // if we don't get the association
+            // assumption is, it is hmc.
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaChassis.v1_0_0.NvidiaChassis";
+            nlohmann::json& componentsProtectedArray =
+                asyncResp->res
+                    .jsonValue["Oem"]["Nvidia"]["ComponentsProtected"];
+            componentsProtectedArray = nlohmann::json::array();
+            componentsProtectedArray.push_back({nlohmann::json::array(
+                {"@odata.id", "/redfish/v1/managers/bmc"})});
+
+            return;
+        }
+        chassis_utils::getRedfishURL(
+            ep, [ep, asyncResp](const bool& status, const std::string& url) {
+                std::string redfishURL = url;
+                if (!status)
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "Unable to get the Redfish URL for object=" << ep;
+                }
+                else
+                {
+                    if (url.empty())
+                    {
+                        redfishURL = std::string("/redfish/v1/managers/bmc");
+                    }
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaChassis.v1_0_0.NvidiaChassis";
+                nlohmann::json& componentsProtectedArray =
+                    asyncResp->res
+                        .jsonValue["Oem"]["Nvidia"]["ComponentsProtected"];
+                componentsProtectedArray = nlohmann::json::array();
+                componentsProtectedArray.push_back(
+                    {nlohmann::json::array({"@odata.id", redfishURL})});
+            });
+    });
+}
+
 inline void getEROTChassis(const crow::Request&,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& chassisId)
@@ -289,6 +383,8 @@ inline void getEROTChassis(const crow::Request&,
 
                 redfish::chassis_utils::getChassisManufacturer(
                     asyncResp, connectionNames[0].first, path);
+
+                getChassisOEMComponentProtected(asyncResp, path);
 
                 // Link association to parent chassis
                 redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
