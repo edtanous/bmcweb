@@ -1770,7 +1770,8 @@ inline void requestRoutesSoftwareInventory(App& app)
                                  std::string, std::vector<std::string>>>>& obj :
                          subtree)
                     {
-                        if (boost::ends_with(obj.first, *swId) != true)
+                        sdbusplus::message::object_path objPath(obj.first);
+                        if (boost::equals(objPath.filename(), *swId) != true)
                         {
                             continue;
                         }
