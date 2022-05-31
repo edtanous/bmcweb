@@ -24,6 +24,8 @@ include_list = [
     'CertificateService',
     'Chassis',
     'ChassisCollection',
+    'ComponentIntegrity',
+    'ComponentIntegrityCollection',
     'ComputerSystem',
     'ComputerSystemCollection',
     'Drive',

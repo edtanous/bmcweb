@@ -4,7 +4,7 @@
   "@odata.type": "#JsonSchemaFileCollection.JsonSchemaFileCollection",
   "Name": "JsonSchemaFile Collection",
   "Description": "Collection of JsonSchemaFiles",
-  "Members@odata.count": 63,
+  "Members@odata.count": 64,
   "Members": [
     {
       "@odata.id": "/redfish/v1/JsonSchemas/AccountService"
@@ -32,6 +32,9 @@
     },
     {
       "@odata.id": "/redfish/v1/JsonSchemas/Chassis"
+    },
+    {
+      "@odata.id": "/redfish/v1/JsonSchemas/ComponentIntegrity"
     },
     {
       "@odata.id": "/redfish/v1/JsonSchemas/ComputerSystem"
