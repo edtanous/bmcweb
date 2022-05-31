@@ -211,9 +211,8 @@ class Handler : public std::enable_shared_from_this<Handler>
                     this->outputBuffer.consume(bytesRead);
                     this->doReadStream();
                 };
-                this->connection->sendMessage(
-                    static_cast<char*>(outputBuffer.data().data()),
-                    streamHandler, bytesRead);
+                this->connection->sendMessage(outputBuffer.data(),
+                                              streamHandler);
             });
     }
 

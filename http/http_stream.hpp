@@ -6,6 +6,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/beast/core/ostream.hpp>
+#include <boost/beast/http/basic_dynamic_body.hpp>
 
 namespace crow
 {
@@ -18,8 +19,8 @@ struct Connection : std::enable_shared_from_this<Connection>
   public:
     explicit Connection(const crow::Request& reqIn) : req(reqIn.req)
     {}
-    virtual void sendMessage(char* data, std::function<void()> handler,
-                             size_t size) = 0;
+    virtual void sendMessage(const boost::asio::mutable_buffer& buffer,
+                             std::function<void()> handler) = 0;
     virtual void close() = 0;
     virtual boost::asio::io_context* getIoContext() = 0;
     virtual void sendStreamHeaders(const std::string& streamDataSize,
@@ -33,7 +34,6 @@ struct Connection : std::enable_shared_from_this<Connection>
     virtual ~Connection() = default;
 
     boost::beast::http::request<boost::beast::http::string_body> req;
-
     crow::DynamicResponse streamres;
 };
 
@@ -89,20 +89,31 @@ class ConnectionImpl : public Connection
     void sendStreamHeaders(const std::string& streamDataSize,
                            const std::string& contentType) override
     {
+
         streamres.addHeader("Content-Length", streamDataSize);
         streamres.addHeader("Content-Type", contentType);
-        streamres.bufferResponse->chunked(false);
+        boost::beast::http::async_write(
+            adaptor, *streamres.bufferResponse,
+            [this, self(shared_from_this())](
+                const boost::system::error_code& ec2, std::size_t) {
+                if (ec2)
+                {
+                    BMCWEB_LOG_DEBUG << "Error while writing on socket" << ec2;
+                    close();
+                    return;
+                }
+            });
     }
-
-    void sendMessage(char* data, std::function<void()> handler,
-                     size_t size) override
+    void sendMessage(const boost::asio::mutable_buffer& buffer,
+                     std::function<void()> handler) override
     {
-        if (size)
+        if (buffer.size())
         {
             this->handlerFunc = handler;
-            streamres.bufferResponse->body().more = true;
-            streamres.bufferResponse->body().data = data;
-            streamres.bufferResponse->body().size = size;
+            auto bytes = boost::asio::buffer_copy(
+                streamres.bufferResponse->body().prepare(buffer.size()),
+                buffer);
+            streamres.bufferResponse->body().commit(bytes);
             doWrite();
         }
     }
@@ -116,11 +127,11 @@ class ConnectionImpl : public Connection
 
     void doWrite()
     {
-        boost::beast::http::async_write(
-            adaptor, *streamres.bufferResponse,
+        boost::asio::async_write(
+            adaptor, streamres.bufferResponse->body().data(),
             [this, self(shared_from_this())](boost::beast::error_code ec,
                                              std::size_t bytesWritten) {
-                BMCWEB_LOG_DEBUG << "async_write wrote " << bytesWritten << ec;
+                streamres.bufferResponse->body().consume(bytesWritten);
 
                 if (ec)
                 {

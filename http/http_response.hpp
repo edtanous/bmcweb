@@ -1,16 +1,15 @@
 #pragma once
+#include "http_request.hpp"
 #include "logging.hpp"
 #include "nlohmann/json.hpp"
 
 #include <boost/asio/buffer.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
-#include <boost/beast/http/buffer_body.hpp>
+#include <boost/beast/http/basic_dynamic_body.hpp>
 #include <boost/beast/http/message.hpp>
-#include <boost/beast/http/string_body.hpp>
 
 #include <optional>
 #include <string>
-#include <string_view>
 
 namespace crow
 {
@@ -163,7 +162,8 @@ struct Response
 struct DynamicResponse
 {
     using response_type =
-        boost::beast::http::response<boost::beast::http::buffer_body>;
+        boost::beast::http::response<boost::beast::http::basic_dynamic_body<
+            boost::beast::flat_static_buffer<static_cast<std::size_t>(1024 * 1024)>>>;
 
     std::optional<response_type> bufferResponse;
 
