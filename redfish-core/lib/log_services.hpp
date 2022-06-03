@@ -736,14 +736,14 @@ inline void
                         {
                             if (propertyMap.first == "Elapsed")
                             {
-                                const uint64_t* usecsTimeStamp =
+                                const uint64_t* epochTimeStamp =
                                     std::get_if<uint64_t>(&propertyMap.second);
-                                if (usecsTimeStamp == nullptr)
+                                if (epochTimeStamp == nullptr)
                                 {
                                     messages::internalError(asyncResp->res);
                                     break;
                                 }
-                                timestamp = *usecsTimeStamp / 1000 / 1000;
+                                timestamp = *epochTimeStamp;
                                 break;
                             }
                         }
