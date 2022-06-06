@@ -238,9 +238,9 @@ static void
                                 }
                                 else if (state == "Aborted")
                                 {
-                                    message =
-                                        messages::applyFailed(swID, objPath);
                                     fwUpdateInProgress = false;
+                                    message = messages::taskAborted(
+                                        std::to_string(index));
                                 }
                                 else if (state == "Completed")
                                 {
