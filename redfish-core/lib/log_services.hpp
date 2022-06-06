@@ -33,6 +33,7 @@
 #include <error_messages.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/dbus_log_utils.hpp>
+#include <utils/origin_utils.hpp>
 #include <utils/registry_utils.hpp>
 
 #include <charconv>
@@ -60,9 +61,8 @@ namespace message_registries
 {
 static void generateMessageRegistry(
     nlohmann::json& logEntry,
-    const std::string& odataId /* e.g. /redfish/v1/Systems/system/LogServices/"
-                                 "EventLog/Entries/ */
-    ,
+    const std::string& odataId, /* e.g. /redfish/v1/Systems/system/LogServices/"
+                                  "EventLog/Entries/ */
     const std::string& odataTypeVer /* e.g. v1_8_0 */, const std::string& id,
     const std::string& name, const std::string& timestamp,
     const std::string& messageId, const std::string& messageArgs,
@@ -1674,6 +1674,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         bool isMessageRegistry = false;
                         std::string messageId;
                         std::string messageArgs;
+                        std::string originOfCondition;
                         if (additionalDataRaw != nullptr)
                         {
                             AdditionalData additional(*additionalDataRaw);
@@ -1691,6 +1692,12 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                         additional["REDFISH_MESSAGE_ARGS"];
                                 }
                             }
+                            if (additional.count(
+                                    "REDFISH_ORIGIN_OF_CONDITION") > 0)
+                            {
+                                originOfCondition =
+                                    additional["REDFISH_ORIGIN_OF_CONDITION"];
+                            }
                         }
 
                         if (isMessageRegistry)
@@ -1703,6 +1710,10 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                 "System Event Log Entry",
                                 crow::utility::getDateTimeStdtime(timestamp),
                                 messageId, messageArgs, *resolution, *severity);
+
+                            origin_utils::convertDbusObjectToOriginOfCondition(
+                                originOfCondition, asyncResp,
+                                std::to_string(*id));
                         }
 
                         // generateMessageRegistry will not create the entry if
@@ -1784,6 +1795,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             messages::internalError(asyncResp->res);
                             return;
                         }
+
                         const uint32_t* id = nullptr;
                         std::time_t timestamp{};
                         std::time_t updateTimestamp{};
@@ -1871,6 +1883,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                         bool isMessageRegistry = false;
                         std::string messageId;
                         std::string messageArgs;
+                        std::string originOfCondition;
                         if (additionalDataRaw != nullptr)
                         {
                             AdditionalData additional(*additionalDataRaw);
@@ -1888,6 +1901,12 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                                         additional["REDFISH_MESSAGE_ARGS"];
                                 }
                             }
+                            if (additional.count(
+                                    "REDFISH_ORIGIN_OF_CONDITION") > 0)
+                            {
+                                originOfCondition =
+                                    additional["REDFISH_ORIGIN_OF_CONDITION"];
+                            }
                         }
 
                         if (isMessageRegistry)
@@ -1900,6 +1919,10 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                                 "System Event Log Entry",
                                 crow::utility::getDateTimeStdtime(timestamp),
                                 messageId, messageArgs, *resolution, *severity);
+
+                            origin_utils::convertDbusObjectToOriginOfCondition(
+                                originOfCondition, asyncResp,
+                                std::to_string(*id));
                         }
 
                         // generateMessageRegistry will not create the entry if
@@ -2821,9 +2844,8 @@ static int fillBMCJournalLogEntryJson(const std::string& bmcJournalLogEntryID,
         {"Id", bmcJournalLogEntryID},
         {"Message", std::move(message)},
         {"EntryType", "Oem"},
-        {"Severity", severity <= 2   ? "Critical"
-                     : severity <= 4 ? "Warning"
-                                     : "OK"},
+        {"Severity",
+         severity <= 2 ? "Critical" : severity <= 4 ? "Warning" : "OK"},
         {"OemRecordFormat", "BMC Journal Entry"},
         {"Created", std::move(entryTimeStr)}};
     return 0;
@@ -4162,3 +4184,4 @@ inline void requestRoutesPostCodesEntry(App& app)
 }
 
 } // namespace redfish
+

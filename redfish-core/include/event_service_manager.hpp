@@ -34,6 +34,7 @@
 #include <server_sent_events.hpp>
 #include <utils/dbus_log_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/origin_utils.hpp>
 #include <utils/registry_utils.hpp>
 
 #include <cstdlib>
@@ -439,7 +440,8 @@ class Event
         }
         if (!originOfCondition.empty() && includeOriginOfCondition)
         {
-            eventLogEntry["OriginOfCondition"] = originOfCondition;
+            eventLogEntry["OriginOfCondition"] = nlohmann::json::object();
+            eventLogEntry["OriginOfCondition"]["@odata.id"] = originOfCondition;
         }
         if (specificEventExistsInGroup != redfishBoolNa)
         {
@@ -1727,6 +1729,7 @@ class EventServiceManager
             std::string eventId = "";
             std::string severity = "";
             std::string timestamp = "";
+            std::string originOfCondition = "";
             std::string message;
             std::vector<std::string> messageArgs = {};
 
@@ -1786,6 +1789,21 @@ class EventServiceManager
                                        ".";
                             return;
                         }
+
+                        if (additional.count("REDFISH_ORIGIN_OF_CONDITION") ==
+                            1)
+                        {
+                            originOfCondition = origin_utils::
+                                convertDbusObjectToOriginOfCondition(
+                                    additional["REDFISH_ORIGIN_OF_CONDITION"]);
+                            if (originOfCondition.empty())
+                            {
+                                BMCWEB_LOG_ERROR
+                                    << "Invalid OriginOfCondition "
+                                    << "in AdditionalData property";
+                                return;
+                            }
+                        }
                     }
                     else
                     {
@@ -1794,18 +1812,18 @@ class EventServiceManager
                         return;
                     }
                 }
-                else if (key == "Id")
+                else if (key == "EventId")
                 {
-                    const uint32_t* idPtr;
+                    const std::string* eventIdPtr;
 
-                    idPtr = std::get_if<uint32_t>(&val);
-                    if (idPtr != nullptr)
+                    eventIdPtr = std::get_if<std::string>(&val);
+                    if (eventIdPtr != nullptr)
                     {
-                        eventId = std::to_string(*idPtr);
+                        eventId = *eventIdPtr;
                     }
                     else
                     {
-                        BMCWEB_LOG_ERROR << "Invalid type of ID property.";
+                        BMCWEB_LOG_ERROR << "Invalid type of EventId property.";
                         return;
                     }
                 }
@@ -1865,6 +1883,7 @@ class EventServiceManager
                 event.messageSeverity =
                     translateSeverityDbusToRedfish(severity);
                 event.eventTimestamp = timestamp;
+                event.originOfCondition = originOfCondition;
                 event.setRegistryMsg(messageArgs);
                 event.messageArgs = messageArgs;
                 sendEvent(event);
