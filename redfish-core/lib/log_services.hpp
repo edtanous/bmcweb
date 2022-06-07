@@ -1957,8 +1957,8 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             asyncResp->res.jsonValue["AdditionalDataURI"] =
                                 "/redfish/v1/Systems/system/LogServices/"
                                 "EventLog/"
-                                "attachment/" +
-                                std::to_string(*id);
+                                "Entries/" +
+                                std::to_string(*id) + "/attachment";
                         }
                     },
                     "xyz.openbmc_project.Logging",
