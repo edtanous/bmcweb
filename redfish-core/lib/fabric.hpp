@@ -47,6 +47,12 @@ inline std::string getSwitchType(const std::string& switchType)
     {
         return "OEM";
     }
+    if (switchType ==
+        "xyz.openbmc_project.Inventory.Item.Switch.SwitchType.PCIe")
+    {
+        return "PCIe";
+    }
+
     // Unknown or others
     return "";
 }
@@ -72,6 +78,12 @@ inline std::string getFabricType(const std::string& fabricType)
     {
         return "OEM";
     }
+    if (fabricType ==
+        "xyz.openbmc_project.Inventory.Item.Fabric.FabricType.PCIe")
+    {
+        return "PCIe";
+    }
+
     // Unknown or others
     return "";
 }
@@ -424,15 +436,12 @@ inline void
                         "xyz.openbmc_project.State.Chassis.PowerState.On")
                     {
                         asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-                        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                     }
                     else if (*state ==
                              "xyz.openbmc_project.State.Chassis.PowerState.Off")
                     {
                         asyncResp->res.jsonValue["Status"]["State"] =
                             "StandbyOffline";
-                        asyncResp->res.jsonValue["Status"]["Health"] =
-                            "Critical";
                     }
                 }
                 else if (propertyName == "UUID")
@@ -451,6 +460,28 @@ inline void
             }
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
+
+        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+        asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+
+        // update switch health
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                        std::shared_ptr<HealthRollup> health =
+                            std::make_shared<HealthRollup>(
+                                crow::connections::systemBus, objPath,
+                                [asyncResp](const std::string& rootHealth,
+                                            const std::string& healthRollup) {
+                                    asyncResp->res
+                                        .jsonValue["Status"]["Health"] =
+                                        rootHealth;
+                                    asyncResp->res
+                                        .jsonValue["Status"]["HealthRollup"] =
+                                        healthRollup;
+                                });
+                        health->start();
+
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+
 }
 
 inline void updateZoneData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -2097,6 +2128,55 @@ inline void
 }
 
 /**
+ * @brief Get all endpoint zone info by requesting data
+ * from the given D-Bus object.
+ *
+ * @param[in,out]   aResp           Async HTTP response.
+ * @param[in]       endpointPath    D-Bus object to query.
+ * @param[in]       fabricId        Fabric Id
+ */
+inline void getEndpointZoneData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                const std::string& endpointPath,
+                                const std::string& fabricId)
+{
+    BMCWEB_LOG_DEBUG << "Get endpoint zone data";
+    // Get connected zone link
+    crow::connections::systemBus->async_method_call(
+            [aResp, fabricId](const boost::system::error_code ec,
+                std::variant<std::vector<std::string>>& resp) {
+                if (ec)
+                {
+                    return; // no zones = no failures
+                }
+                std::vector<std::string>* data = std::get_if<std::vector<std::string>>(&resp);
+                if (data == nullptr)
+                {
+                    return;
+                }
+                nlohmann::json& linksZonesArray =
+                    aResp->res.jsonValue["Links"]["Zones"];
+                linksZonesArray = nlohmann::json::array();
+                std::string zoneURI;
+                for (const std::string& zonePath : *data)
+                {
+                    // Get subtree for switchPath link path
+                    sdbusplus::message::object_path dbusObjPath(zonePath);
+                    const std::string& zoneId = dbusObjPath.filename();
+                    if(zonePath.find(fabricId) != std::string::npos)
+                    {
+                        zoneURI = "/redfish/v1/Fabrics/" + fabricId + "/Zones/";
+                    }
+                    zoneURI += zoneId;
+                    linksZonesArray.push_back({{"@odata.id", zoneURI}});
+                }
+            },
+            "xyz.openbmc_project.ObjectMapper",
+            endpointPath + "/zone",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+}
+
+/**
  * @brief Get all endpoint port info by requesting data
  * from the given D-Bus object.
  *
@@ -2309,6 +2389,8 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 // Get port endpoint data
                                 getEndpointPortData(aResp, objPath, entityPath,
                                                     fabricId);
+                                // Get zone links
+                                getEndpointZoneData(aResp, objPath,fabricId);
                             }
                         }
                     },
