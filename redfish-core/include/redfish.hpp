@@ -17,6 +17,7 @@
 
 #include "../lib/account_service.hpp"
 #include "../lib/assembly.hpp"
+#include "../lib/pcieslots.hpp"
 #include "../lib/bios.hpp"
 #include "../lib/certificate_service.hpp"
 #include "../lib/chassis.hpp"
@@ -72,6 +73,7 @@ class RedfishService
     {
         requestAccountServiceRoutes(app);
         requestAssemblyRoutes(app);
+	requestPcieSlotsRoutes(app);
         requestRoutesRoles(app);
         requestRoutesRoleCollection(app);
         requestRoutesServiceRoot(app);
