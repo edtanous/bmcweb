@@ -22,6 +22,7 @@
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/stl_utils.hpp>
 
 namespace redfish
 {
@@ -278,7 +279,8 @@ inline void handleSPDMGETSignedMeasurement(
     const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
 {
-    std::optional<std::vector<uint8_t>> nonce;
+    std::optional<std::string> nonce;
+    std::vector<uint8_t> nonceVec;
     std::optional<uint8_t> slotID;
     std::optional<std::vector<uint8_t>> indices;
 
@@ -301,7 +303,7 @@ inline void handleSPDMGETSignedMeasurement(
     if (!nonce)
     {
         BMCWEB_LOG_DEBUG << "Nonce is not given, setting it to default value";
-        nonce = std::vector<uint8_t>{};
+        nonce = "";
     }
     if (!slotID)
     {
@@ -315,6 +317,7 @@ inline void handleSPDMGETSignedMeasurement(
         indices = std::vector<uint8_t>{};
         indices.value().emplace_back(255);
     }
+    nonceVec = redfish::stl_utils::getBytes(*nonce);
 
     const std::string objPath = std::string(rootSPDMDbusPath) + "/" + id;
     if (compIntegrityMatches.find(objPath) != compIntegrityMatches.end())
@@ -429,7 +432,7 @@ inline void handleSPDMGETSignedMeasurement(
                 return;
             }
         },
-        spdmBusName, objPath, spdmResponderIntf, "Refresh", *slotID, *nonce,
+        spdmBusName, objPath, spdmResponderIntf, "Refresh", *slotID, nonceVec,
         *indices, static_cast<uint32_t>(0));
 } // namespace redfish
 
