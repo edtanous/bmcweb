@@ -105,6 +105,269 @@ inline std::string getProcessorResetType(const std::string& processorType)
 }
 
 /**
+ * @brief Fill out pcie interface properties by
+ * requesting data from the given D-Bus association object.
+ *
+ * @param[in,out] asyncResp       Async HTTP response.
+ * @param[in]     objPath         D-Bus object to query.
+ */
+inline void getSystemPCIeInterfaceProperties(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get processor system pcie interface properties";
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, objPath](
+            const boost::system::error_code errorCode,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) mutable {
+            if (errorCode)
+            {
+                BMCWEB_LOG_ERROR << "error_code = " << errorCode;
+                BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+                if (asyncResp)
+                {
+                    messages::internalError(asyncResp->res);
+                }
+                return;
+            }
+            if (objInfo.empty())
+            {
+                BMCWEB_LOG_ERROR << "Empty Object Size";
+                if (asyncResp)
+                {
+                    messages::internalError(asyncResp->res);
+                }
+                return;
+            }
+            // Get all properties
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec,
+                            GetManagedPropertyType& resp) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "error_code = " << ec;
+                        BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    asyncResp->res
+                        .jsonValue["SystemInterface"]["InterfaceType"] = "PCIe";
+                    for (auto& property : resp)
+                    {
+                        const std::string& propertyName = property.first;
+                        if (propertyName == "CurrentSpeed")
+                        {
+                            const size_t* value =
+                                std::get_if<size_t>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for CurrentSpeed";
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
+                                                    ["PCIeType"] =
+                                redfish::port_utils::getLinkSpeedGeneration(
+                                    *value);
+                        }
+                        else if (propertyName == "Width")
+                        {
+                            const size_t* value =
+                                std::get_if<size_t>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for Width";
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
+                                                    ["LanesInUse"] =
+                                redfish::port_utils::getLinkWidth(*value);
+                        }
+                    }
+                    return;
+                },
+                objInfo[0].first, objPath, "org.freedesktop.DBus.Properties",
+                "GetAll", "");
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
+        std::array<const char*, 0>());
+}
+
+/**
+ * @brief Fill out pcie interface properties by
+ * requesting data from the given D-Bus association object.
+ *
+ * @param[in,out] asyncResp       Async HTTP response.
+ * @param[in]     objPath         D-Bus object to query.
+ */
+inline void getFPGAPCIeInterfaceProperties(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get processor fpga pcie interface properties";
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, objPath](
+            const boost::system::error_code errorCode,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) mutable {
+            if (errorCode)
+            {
+                BMCWEB_LOG_ERROR << "error_code = " << errorCode;
+                BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+                if (asyncResp)
+                {
+                    messages::internalError(asyncResp->res);
+                }
+                return;
+            }
+            if (objInfo.empty())
+            {
+                BMCWEB_LOG_ERROR << "Empty Object Size";
+                if (asyncResp)
+                {
+                    messages::internalError(asyncResp->res);
+                }
+                return;
+            }
+            // Get all properties
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec,
+                            GetManagedPropertyType& resp) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "error_code = " << ec;
+                        BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    std::string speed;
+                    size_t width = 0;
+                    for (auto& property : resp)
+                    {
+                        const std::string& propertyName = property.first;
+                        if (propertyName == "CurrentSpeed")
+                        {
+                            const size_t* value =
+                                std::get_if<size_t>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for CurrentSpeed";
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            speed = redfish::port_utils::getLinkSpeedGeneration(
+                                *value);
+                        }
+                        else if (propertyName == "Width")
+                        {
+                            const size_t* value =
+                                std::get_if<size_t>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for Width";
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            width = redfish::port_utils::getLinkWidth(*value);
+                        }
+                    }
+                    nlohmann::json& fpgaIfaceArray =
+                        asyncResp->res.jsonValue["FPGA"]["ExternalInterfaces"];
+                    fpgaIfaceArray = nlohmann::json::array();
+                    fpgaIfaceArray.push_back(
+                        {{"InterfaceType", "PCIe"},
+                         {"PCIe",
+                          {{"PCIeType", speed}, {"LanesInUse", width}}}});
+                    return;
+                },
+                objInfo[0].first, objPath, "org.freedesktop.DBus.Properties",
+                "GetAll", "");
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
+        std::array<const char*, 0>());
+}
+
+/**
+ * @brief Fill out system PCIe interface properties by
+ * requesting data from the given D-Bus association object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getProcessorSystemPCIeInterface(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get underneath system interface pcie link";
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec2,
+                std::variant<std::vector<std::string>>& resp) {
+            if (ec2)
+            {
+                return; // no system interface = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            for (const std::string& linkPath : *data)
+            {
+                getSystemPCIeInterfaceProperties(aResp, linkPath);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/system_interface",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+/**
+ * @brief Fill out fpga PCIe interface properties by
+ * requesting data from the given D-Bus association object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getProcessorFPGAPCIeInterface(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get underneath fpga interface pcie link";
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec2,
+                std::variant<std::vector<std::string>>& resp) {
+            if (ec2)
+            {
+                return; // no fpga interface = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            for (const std::string& linkPath : *data)
+            {
+                getFPGAPCIeInterfaceProperties(aResp, linkPath);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/fpga_interface",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+/**
  * @brief Fill out memory links association by
  * requesting data from the given D-Bus association object.
  *
@@ -1563,6 +1826,9 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     getProcessorMemoryLinks(aResp, objectPath);
     // Link association to parent chassis
     getProcessorChassisLink(aResp, objectPath);
+    // Get system and fpga interfaces properties
+    getProcessorSystemPCIeInterface(aResp, objectPath);
+    getProcessorFPGAPCIeInterface(aResp, objectPath);
 }
 
 /**
