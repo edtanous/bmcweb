@@ -36,6 +36,7 @@ constexpr const char* spdmBusName = "xyz.openbmc_project.SPDM";
 using GetObjectType =
     std::vector<std::pair<std::string, std::vector<std::string>>>;
 using SPDMCertificates = std::vector<std::tuple<uint8_t, std::string>>;
+using SignedMeasurementData = std::vector<uint8_t>;
 
 static std::map<std::string,
                 std::pair<std::shared_ptr<boost::asio::steady_timer>,
@@ -52,6 +53,7 @@ struct SPDMMeasurementData
     uint8_t hashAlgo{};
     uint8_t signAlgo{};
     uint8_t version{};
+    SignedMeasurementData measurement;
 };
 
 inline std::string getVersionStr(const uint8_t version)
@@ -265,6 +267,17 @@ inline void getSPDMMeasurementData(const std::string& objectPath,
                             }
                             config.certs = *certs;
                         }
+                        else if (property.first == "SignedMeasurements")
+                        {
+                            const SignedMeasurementData* data =
+                                std::get_if<SignedMeasurementData>(
+                                    &property.second);
+                            if (data == nullptr)
+                            {
+                                continue;
+                            }
+                            config.measurement = *data;
+                        }
                     }
                 }
             }
@@ -392,7 +405,7 @@ inline void handleSPDMGETSignedMeasurement(
             auto value = std::get_if<std::string>(&(it->second));
             if (!value ||
                 (*value) !=
-                    "xyz.openbmc_project.SPDM.Responder.SPDMStatus.GettingMeasurements")
+                    "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Success")
             {
                 BMCWEB_LOG_DEBUG << "Measurement Status is still not good";
                 return;
@@ -407,7 +420,9 @@ inline void handleSPDMGETSignedMeasurement(
                     messages::internalError(asyncResp->res);
                     return;
                 }
-                asyncResp->res.jsonValue["SignedMeasurements"] = "";
+                std::string measurementStr(data.measurement.begin(),
+                                           data.measurement.end());
+                asyncResp->res.jsonValue["SignedMeasurements"] = measurementStr;
                 asyncResp->res.jsonValue["Version"] =
                     getVersionStr(data.version);
                 asyncResp->res.jsonValue["HashingAlgorithm"] = getHashAlgoStr(
