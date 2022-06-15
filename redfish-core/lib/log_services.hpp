@@ -1722,7 +1722,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         if (thisEntry["Id"].size() == 0)
                         {
                             thisEntry["@odata.type"] =
-                                "#LogEntry.v1_8_0.LogEntry";
+                                "#LogEntry.v1_9_0.LogEntry";
                             thisEntry["@odata.id"] =
                                 "/redfish/v1/Systems/system/"
                                 "LogServices/EventLog/Entries/" +
@@ -1931,7 +1931,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                         if (asyncResp->res.jsonValue["Id"].size() == 0)
                         {
                             asyncResp->res.jsonValue["@odata.type"] =
-                                "#LogEntry.v1_8_0.LogEntry";
+                                "#LogEntry.v1_9_0.LogEntry";
                             asyncResp->res.jsonValue["@odata.id"] =
                                 "/redfish/v1/Systems/system/LogServices/"
                                 "EventLog/"
