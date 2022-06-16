@@ -119,6 +119,9 @@ inline void
                 "/redfish/v1/TelemetryService/MetricReports/PlatformMetrics";
             asyncResp->res.jsonValue["Id"] = "PlatformMetrics";
             asyncResp->res.jsonValue["Name"] = "PlatformMetrics";
+            asyncResp->res.jsonValue["MetricReportDefinition"]["@odata.id"] =
+                telemetry::metricReportDefinitionUri +
+                std::string("/PlatformMetrics");
             asyncResp->res.jsonValue["MetricValues"] = nlohmann::json::array();
             // Identify sensor services for sensor readings
             processSensorServices(asyncResp, chassisPath, "all");

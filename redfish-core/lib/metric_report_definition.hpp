@@ -93,6 +93,7 @@ inline void fillReportDefinition(
             {"MetricProperties", {metadata}},
         });
     }
+
     asyncResp->res.jsonValue["Metrics"] = metrics;
     asyncResp->res.jsonValue["MetricReportDefinitionType"] = *reportingType;
     asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
@@ -425,6 +426,211 @@ inline void requestRoutesMetricReportDefinitionCollection(App& app)
 }
 
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+inline void
+    processMetricProperties(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::vector<std::string>& sensorPaths,
+                            const std::string& chassisId)
+{
+    // Get sensor reading from managed object
+    for (const std::string& sensorPath : sensorPaths)
+    {
+        sdbusplus::message::object_path objectPath(sensorPath);
+        std::string sensorName = objectPath.filename();
+
+        nlohmann::json& metricProperties =
+            asyncResp->res.jsonValue["MetricProperties"];
+        nlohmann::json& wildCards = asyncResp->res.jsonValue["Wildcards"];
+
+        std::string tmpPath = std::string("/redfish/v1/Chassis/");
+        std::string dupSensorName = sensorName;
+        std::string chassisName = "Baseboard";
+        if (chassisId == chassisName)
+        {
+            for (auto& item : wildCards.items())
+            {
+                nlohmann::json& itemObj = item.value();
+                if (itemObj["Name"] == "BSWild")
+                {
+                    if (std::find(itemObj["Values"].begin(),
+                                  itemObj["Values"].end(),
+                                  sensorName) == itemObj["Values"].end())
+                    {
+                        itemObj["Values"].push_back(sensorName);
+                    }
+                }
+            }
+            tmpPath += chassisId;
+            tmpPath += "/Sensors/";
+            tmpPath += "{BSWild}";
+        }
+        else if (chassisId.find("GPU") != std::string::npos)
+        {
+            boost::replace_all(dupSensorName, chassisId, "GPU{GWild}");
+            tmpPath += "GPU{GWild}";
+            tmpPath += "/Sensors/";
+            tmpPath += dupSensorName;
+        }
+        else if (chassisId.find("NVSwitch") != std::string::npos)
+        {
+            std::string dupChassisId = chassisId;
+            boost::replace_all(dupChassisId, "NVSwitch", "");
+            std::string tmpChassisId = "NVS";
+            tmpChassisId += dupChassisId;
+            boost::replace_all(dupSensorName, tmpChassisId, "NVS{NWild}");
+            tmpPath += "NVSwitch{NWild}";
+            tmpPath += "/Sensors/";
+            tmpPath += dupSensorName;
+        }
+        if (std::find(metricProperties.begin(), metricProperties.end(),
+                      tmpPath) == metricProperties.end())
+        {
+            asyncResp->res.jsonValue["MetricProperties"].push_back(tmpPath);
+        }
+    }
+}
+
+inline void processChassisSensorsMetric(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisPath)
+{
+    auto getAllChassisHandler =
+        [asyncResp,
+         chassisPath](const boost::system::error_code ec,
+                      std::variant<std::vector<std::string>>& chassisLinks) {
+            std::vector<std::string> chassisPaths;
+            if (ec)
+            {
+                // no chassis links = no failures
+                BMCWEB_LOG_ERROR << "getAllChassisSensors DBUS error: " << ec;
+            }
+            // Add parent chassis to the list
+            chassisPaths.emplace_back(chassisPath);
+            // Add underneath chassis paths
+            std::vector<std::string>* chassisData =
+                std::get_if<std::vector<std::string>>(&chassisLinks);
+            if (chassisData != nullptr)
+            {
+                for (const std::string& path : *chassisData)
+                {
+                    chassisPaths.emplace_back(path);
+                }
+            }
+            // Sort the chassis for sensors paths
+            std::sort(chassisPaths.begin(), chassisPaths.end());
+            // Process all sensors to all chassis
+            for (const std::string& objectPath : chassisPaths)
+            {
+                // Get the chassis path for respective sensors
+                sdbusplus::message::object_path path(objectPath);
+                const std::string& chassisId = path.filename();
+                auto getAllChassisSensors =
+                    [asyncResp,
+                     chassisId](const boost::system::error_code ec,
+                                const std::variant<std::vector<std::string>>&
+                                    variantEndpoints) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "getAllChassisSensors DBUS error: " << ec;
+                            return;
+                        }
+                        const std::vector<std::string>* sensorPaths =
+                            std::get_if<std::vector<std::string>>(
+                                &(variantEndpoints));
+                        if (sensorPaths == nullptr)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "getAllChassisSensors empty sensors list"
+                                << "\n";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+
+                        // Process sensor readings
+
+                        nlohmann::json& wildCards =
+                            asyncResp->res.jsonValue["Wildcards"];
+
+                        for (auto& item : wildCards.items())
+                        {
+                            nlohmann::json& itemObj = item.value();
+                            if (itemObj["Name"] == "GWild" &&
+                                chassisId.find("GPU") != std::string::npos)
+                            {
+                                size_t v = itemObj["Values"].size();
+                                itemObj["Values"].push_back(std::to_string(v));
+                            }
+                            if (itemObj["Name"] == "NWild" &&
+                                chassisId.find("NVSwitch") != std::string::npos)
+                            {
+                                size_t v = itemObj["Values"].size();
+                                itemObj["Values"].push_back(std::to_string(v));
+                            }
+                        }
+
+                        processMetricProperties(asyncResp, *sensorPaths,
+                                                chassisId);
+                    };
+                crow::connections::systemBus->async_method_call(
+                    getAllChassisSensors, "xyz.openbmc_project.ObjectMapper",
+                    objectPath + "/all_sensors",
+                    "org.freedesktop.DBus.Properties", "Get",
+                    "xyz.openbmc_project.Association", "endpoints");
+            }
+        };
+    // Get all chassis
+    crow::connections::systemBus->async_method_call(
+        getAllChassisHandler, "xyz.openbmc_project.ObjectMapper",
+        chassisPath + "/all_chassis", "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void getPlatformMetricsProperties(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId)
+{
+    const std::array<const char*, 1> interfaces = {
+        "xyz.openbmc_project.Inventory.Item.Chassis"};
+    auto respHandler =
+        [asyncResp, chassisId](const boost::system::error_code ec,
+                               const std::vector<std::string>& chassisPaths) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "getPlatformMetricsProperties respHandler DBUS error: "
+                    << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            for (const std::string& chassisPath : chassisPaths)
+            {
+                sdbusplus::message::object_path path(chassisPath);
+                const std::string& chassisName = path.filename();
+                if (chassisName.empty())
+                {
+                    BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassisPath;
+                    continue;
+                }
+                if (chassisName != chassisId)
+                {
+                    continue;
+                }
+                // Identify sensor services for sensor readings
+                processChassisSensorsMetric(asyncResp, chassisPath);
+
+                return;
+            }
+            messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+        };
+    // Get the Chassis Collection
+    crow::connections::systemBus->async_method_call(
+        respHandler, "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+        "/xyz/openbmc_project/inventory", 0, interfaces);
+}
+
 inline void getPlatformMetricReportDefinition(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
 {
@@ -436,12 +642,37 @@ inline void getPlatformMetricReportDefinition(
     asyncResp->res.jsonValue["Name"] = id;
     asyncResp->res.jsonValue["MetricReport"]["@odata.id"] =
         telemetry::metricReportUri + std::string("/") + id;
+
+    nlohmann::json metricPropertiesAray = nlohmann::json::array();
+    nlohmann::json metricGpuCount = nlohmann::json::array();
+    nlohmann::json metricNVSwitchCount = nlohmann::json::array();
+    nlohmann::json metricBaseboarSensorArray = nlohmann::json::array();
+
+    nlohmann::json wildCards = nlohmann::json::array();
+    wildCards.push_back({
+        {"Name", "GWild"},
+        {"Values", metricGpuCount},
+    });
+
+    wildCards.push_back({
+        {"Name", "NWild"},
+        {"Values", metricNVSwitchCount},
+    });
+
+    wildCards.push_back({
+        {"Name", "BSWild"},
+        {"Values", metricBaseboarSensorArray},
+    });
+
+    asyncResp->res.jsonValue["MetricProperties"] = metricPropertiesAray;
+    asyncResp->res.jsonValue["Wildcards"] = wildCards;
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     asyncResp->res.jsonValue["ReportUpdates"] = "Overwrite";
     asyncResp->res.jsonValue["MetricReportDefinitionType"] = "OnRequest";
     std::vector<std::string> redfishReportActions;
     redfishReportActions.emplace_back("LogToMetricReportsCollection");
     asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
+    getPlatformMetricsProperties(asyncResp, "Baseboard");
 }
 
 inline void requestRoutesPlatformMetricReportDefinition(App& app)
