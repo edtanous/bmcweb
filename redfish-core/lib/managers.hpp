@@ -173,7 +173,8 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                 BMCWEB_LOG_DEBUG << "Post ResetToDefaults.";
 
                 std::string resetType;
-                std::string ifnameFactoryReset = "xyz.openbmc_project.Common.FactoryReset";
+                std::string ifnameFactoryReset =
+                    "xyz.openbmc_project.Common.FactoryReset";
 
                 if (!json_util::readJson(req, asyncResp->res,
                                          "ResetToDefaultsType", resetType))
@@ -214,7 +215,8 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                              interfaceNames)
                         {
                             crow::connections::systemBus->async_method_call(
-                                [asyncResp, object](const boost::system::error_code ec) {
+                                [asyncResp,
+                                 object](const boost::system::error_code ec) {
                                     if (ec)
                                     {
                                         BMCWEB_LOG_DEBUG
@@ -2257,6 +2259,22 @@ inline void requestRoutesManager(App& app)
                                 }
                             }
                             getLinkManagerForSwitches(asyncResp);
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                            auto health = std::make_shared<HealthRollup>(
+                                crow::connections::systemBus, path,
+                                [asyncResp](const std::string& rootHealth,
+                                            const std::string& healthRollup) {
+                                    asyncResp->res
+                                        .jsonValue["Status"]["Health"] =
+                                        rootHealth;
+                                    asyncResp->res
+                                        .jsonValue["Status"]["HealthRollup"] =
+                                        healthRollup;
+                                });
+                            health->start();
+#endif
+
                             return;
                         }
                         messages::resourceNotFound(
