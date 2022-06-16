@@ -107,6 +107,55 @@ inline std::string getZoneType(const std::string& zoneType)
  *
  * @param[in,out]   aResp   Async HTTP response.
  * @param[in]       objPath     D-Bus object to query.
+ * @param[in]       processorId    processor id for redfish URI.
+ */
+inline void
+    getConnectedPortLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          const std::string& objPath,
+                          const std::string& processorId)
+{
+    BMCWEB_LOG_DEBUG << "Get Connected Port Links";
+    BMCWEB_LOG_DEBUG << objPath;
+    crow::connections::systemBus->async_method_call(
+        [aResp, processorId](const boost::system::error_code ec,
+                             std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                return; // no endpoint = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            nlohmann::json& linksArray =
+                aResp->res.jsonValue["Links"]["ConnectedPorts"];
+            BMCWEB_LOG_DEBUG << "populating ConnectedPorts";
+            linksArray = nlohmann::json::array();
+            for (const std::string& portPath : *data)
+            {
+                sdbusplus::message::object_path objPath(portPath);
+                const std::string& endpointId = objPath.filename();
+                BMCWEB_LOG_DEBUG << endpointId;
+                std::string endpointURI =
+                    "/redfish/v1/Systems/system/Processors/";
+                endpointURI += processorId;
+                endpointURI += "/Ports/";
+                endpointURI += endpointId;
+                linksArray.push_back({{"@odata.id", endpointURI}});
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/processor_port",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+/**
+ * @brief Get all switch info by requesting data
+ * from the given D-Bus object.
+ *
+ * @param[in,out]   aResp   Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
  * @param[in]       fabricId    fabric id for redfish URI.
  */
 inline void updatePortLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
@@ -115,8 +164,9 @@ inline void updatePortLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 {
     BMCWEB_LOG_DEBUG << "Get Port Links";
     crow::connections::systemBus->async_method_call(
-        [aResp, fabricId](const boost::system::error_code ec,
-                          std::variant<std::vector<std::string>>& resp) {
+        [aResp, objPath,
+         fabricId](const boost::system::error_code ec,
+                   std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
                 return; // no endpoint = no failures
@@ -132,13 +182,14 @@ inline void updatePortLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             linksArray = nlohmann::json::array();
             for (const std::string& portPath : *data)
             {
-                sdbusplus::message::object_path objPath(portPath);
-                const std::string& endpointId = objPath.filename();
+                sdbusplus::message::object_path portObjPath(portPath);
+                const std::string& endpointId = portObjPath.filename();
                 std::string endpointURI = "/redfish/v1/Fabrics/";
                 endpointURI += fabricId;
                 endpointURI += "/Endpoints/";
                 endpointURI += endpointId;
                 linksArray.push_back({{"@odata.id", endpointURI}});
+                getConnectedPortLinks(aResp, objPath, endpointId);
             }
         },
         "xyz.openbmc_project.ObjectMapper", objPath + "/associated_endpoint",
