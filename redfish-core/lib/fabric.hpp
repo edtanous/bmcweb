@@ -1941,7 +1941,7 @@ inline void getProcessorParentEndpointData(
  * @param[in]       entityLink  redfish entity link.
  */
 inline void
-    getProcessorEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& processorPath,
                              const std::string& entityLink)
 {
@@ -2384,13 +2384,68 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                     "/redfish/v1/Systems/system/Processors/" +
                                     objectPath.filename();
                                 // Get processor PCIe device data
-                                getProcessorEndpointData(aResp, entityPath,
+                                getEndpointData(aResp, entityPath,
                                                          entityLink);
                                 // Get port endpoint data
                                 getEndpointPortData(aResp, objPath, entityPath,
                                                     fabricId);
                                 // Get zone links
                                 getEndpointZoneData(aResp, objPath,fabricId);
+                            }
+                            const std::string switchInterface =
+                                "xyz.openbmc_project.Inventory.Item.Switch";
+
+                            if (std::find(interfaces.begin(), interfaces.end(),
+                                          switchInterface) !=
+                                interfaces.end())
+                            {
+                                BMCWEB_LOG_DEBUG << "Item type switch ";
+                                sdbusplus::message::object_path objectPath(
+                                    entityPath);
+                                std::string entityName = objectPath.filename();
+                                // get switch type endpint
+                                crow::connections::systemBus->async_method_call(
+                                    [aResp, objPath, entityPath, entityName, fabricId ](const boost::system::error_code ec,
+                                        std::variant<std::vector<std::string>>& resp) {
+
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_ERROR << "fabric not found for switch entity";
+                                        return; // no processors identified for pcieslotpath
+                                    }
+
+                                    std::vector<std::string>* data =
+                                        std::get_if<std::vector<std::string>>(&resp);
+                                    if (data == nullptr)
+                                    {
+                                        BMCWEB_LOG_ERROR << "processor data null for pcieslot ";
+                                        return;
+                                    }
+
+                                    std::string fabricName;
+                                    for (const std::string& fabricPath : *data)
+                                    {
+                                        sdbusplus::message::object_path dbusObjPath(fabricPath);
+                                        fabricName = dbusObjPath.filename();
+                                    }
+                                    std::string entityLink =
+                                            "/redfish/v1/Fabrics/";
+                                    entityLink += fabricName;
+                                    entityLink += "/Switches/";
+                                    entityLink += entityName;
+                                    // Get processor/switch PCIe device data
+                                    getEndpointData(aResp, entityPath,
+                                                         entityLink);
+                                    // Get port endpoint data
+                                    getEndpointPortData(aResp, objPath, entityPath,
+                                                         fabricId);
+                                    // Get zone links
+                                    getEndpointZoneData(aResp, objPath,fabricId);
+
+                                },
+                                "xyz.openbmc_project.ObjectMapper", entityPath + "/fabrics",
+                                "org.freedesktop.DBus.Properties", "Get",
+                                "xyz.openbmc_project.Association", "endpoints");
                             }
                         }
                     },
