@@ -1020,11 +1020,12 @@ inline void requestRoutesUpdateService(App& app)
                         // validate TargetUris if entries are present
                         if (uriTargets.size() != 0)
                         {
-                            bool swInvObjFound = false;
+                            std::vector<std::string> invalidTargets;
                             for (const std::string& target : uriTargets)
                             {
                                 std::string compName =
                                     fs::path(target).filename();
+                                bool validTarget = false;
                                 std::string objPath = "software/" + compName;
                                 for (const std::string& path : swInvPaths)
                                 {
@@ -1040,12 +1041,18 @@ inline void requestRoutesUpdateService(App& app)
                                             path);
                                         httpPushUriTargets.emplace_back(
                                             objpath);
-                                        swInvObjFound = true;
+                                        validTarget = true;
                                         break;
                                     }
                                 }
+                                if (!validTarget)
+                                {
+                                    invalidTargets.emplace_back(target);
+                                }
                             }
-                            if (!swInvObjFound)
+                            // return HTTP400 - Bad request
+                            // when none of the target filters are valid
+                            if (invalidTargets.size() == uriTargets.size())
                             {
                                 BMCWEB_LOG_ERROR
                                     << "Targetted Device not Found!!";
@@ -1053,6 +1060,24 @@ inline void requestRoutesUpdateService(App& app)
                                                         "HttpPushUriTargets");
                                 return;
                             }
+                            // return HTTP200 - Success with errors
+                            // when there is partial valid targets
+                            if (invalidTargets.size() > 0)
+                            {
+                                for (const std::string& invalidTarget :
+                                     invalidTargets)
+                                {
+                                    BMCWEB_LOG_ERROR
+                                        << "Invalid HttpPushUriTarget: "
+                                        << invalidTarget << "\n";
+                                    messages::propertyValueFormatError(
+                                        asyncResp->res, invalidTarget,
+                                        "HttpPushUriTargets");
+                                }
+                                asyncResp->res.result(
+                                    boost::beast::http::status::ok);
+                            }
+                            // else all targets are valid
                         }
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, httpPushUriTargets](
