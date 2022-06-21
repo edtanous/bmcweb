@@ -1102,6 +1102,14 @@ inline void requestRoutesSwitch(App& app)
                                         {"@odata.id", portsURI}};
                                     asyncResp->res.jsonValue["Metrics"] = {
                                         {"@odata.id", switchMetricURI}};
+                                    std::string switchResetURI = "/redfish/v1/Fabrics/";
+                                    switchResetURI += fabricId;
+                                    switchResetURI += "/Switches/";
+                                    switchResetURI += switchId;
+                                    switchResetURI += "/Actions/Switch.Reset";
+                                    asyncResp->res.jsonValue["Actions"]["#Switch.Reset"] = {
+                                         {"target", switchResetURI},
+                                         {"ResetType@Redfish.AllowableValues", {"ForceRestart"}}};
                                     const std::string& connectionName =
                                         connectionNames[0].first;
                                     updateSwitchData(asyncResp, connectionName,
@@ -1319,6 +1327,217 @@ inline void requestRoutesSwitchMetrics(App& app)
                 "/xyz/openbmc_project/inventory", 0,
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Inventory.Item.Fabric"});
+        });
+}
+
+inline std::string getNVSwitchResetType(const std::string& processorType)
+{
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.ForceOff")
+    {
+        return "ForceOff";
+    }
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.ForceOn")
+    {
+        return "ForceOn";
+    }
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.ForceRestart")
+    {
+        return "ForceRestart";
+    }
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.GracefulRestart")
+    {
+        return "GracefulRestart";
+    }
+    if (processorType ==
+        "xyz.openbmc_project.Control.Processor.Reset.ResetTypes.GracefulShutdown")
+    {
+        return "GracefulShutdown";
+    }
+    // Unknown or others
+    return "";
+}
+
+inline void nvswitchPostResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                          const std::string& switchId,
+                          const std::string& cpuObjectPath,
+                          const std::string& resetType,
+                          const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>& serviceMap)
+{
+    // Check that the property even exists by checking for the interface
+    const std::string* inventoryService = nullptr;
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        if (std::find(interfaceList.begin(), interfaceList.end(),
+                      "xyz.openbmc_project.Control.Processor.Reset") !=
+            interfaceList.end())
+        {
+            inventoryService = &serviceName;
+            break;
+        }
+    }
+    if (inventoryService == nullptr)
+    {
+        messages::internalError(resp->res);
+        return;
+    }
+    const std::string conName = *inventoryService;
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, conName, cpuObjectPath,
+        "xyz.openbmc_project.Control.Processor.Reset", "ResetType",
+        [resp, resetType, switchId, conName, cpuObjectPath](
+
+            const boost::system::error_code ec, const std::string& property) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "DBus response, error for ResetType ";
+                BMCWEB_LOG_ERROR << ec.message();
+                messages::internalError(resp->res);
+                return;
+            }
+
+            const std::string processorResetType =
+                getNVSwitchResetType(property);
+            if (processorResetType != resetType)
+            {
+                BMCWEB_LOG_DEBUG << "Property Value Incorrect";
+                messages::actionParameterNotSupported(resp->res, "ResetType",
+                                                      resetType);
+                return;
+            }
+            // Set the property, with handler to check error responses
+            crow::connections::systemBus->async_method_call(
+                [resp, switchId](boost::system::error_code ec,
+                                    const int retValue) {
+                    if (!ec)
+                    {
+
+                        if (retValue != 0)
+                        {
+                            BMCWEB_LOG_ERROR << retValue;
+                            messages::internalError(resp->res);
+                        }
+                        BMCWEB_LOG_DEBUG << "Switch:" << switchId
+                                         << " Reset Succeded";
+                        messages::success(resp->res);
+                        return;
+                    }
+                    BMCWEB_LOG_DEBUG << ec;
+                    messages::internalError(resp->res);
+                    return;
+                },
+                conName, cpuObjectPath,
+                "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+        });
+}
+
+/**
+ * Functions triggers appropriate NVSwitch Reset requests on DBus
+ */
+inline void requestRoutesNVSwitchReset(App& app)
+{
+    BMCWEB_ROUTE(app,"/redfish/v1/Fabrics/<str>/Switches/<str>/"
+                 "Actions/Switch.Reset")
+        .privileges({{"Login"}})
+        .methods(
+            boost::beast::http::verb::post)([](const crow::Request& req,
+                                               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                                               const std::string& fabricId,
+                                               const std::string& switchId) {
+                 std::optional<std::string> resetType;
+                if (!json_util::readJson(req, asyncResp->res, "ResetType",
+                                         resetType))
+                {
+                    return;
+                }
+                if (resetType)
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, fabricId,
+                         switchId, resetType](const boost::system::error_code ec,
+                           const std::vector<std::string>& objects) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    for (const std::string& object : objects)
+                    {
+                        // Get the fabricId object
+                        if (!boost::ends_with(object, fabricId))
+                        {
+                            continue;
+                        }
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, fabricId, switchId, resetType](
+                                const boost::system::error_code ec,
+                                const crow::openbmc_mapper::GetSubTreeType&
+                                    subtree) {
+                                if (ec)
+                                {
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                // Iterate over all retrieved ObjectPaths.
+                                for (const std::pair<
+                                         std::string,
+                                         std::vector<std::pair<
+                                             std::string,
+                                             std::vector<std::string>>>>&
+                                         object : subtree)
+                                {
+                                    // Get the switchId object
+                                    const std::string& path = object.first;
+                                    const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>&
+                                        connectionNames = object.second;
+                                    sdbusplus::message::object_path objPath(
+                                        path);
+                                    if (objPath.filename() != switchId)
+                                    {
+                                        continue;
+                                    }
+                                    if (connectionNames.size() < 1)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "Got 0 Connection names";
+                                        continue;
+                                    }
+                                    nvswitchPostResetType(asyncResp, switchId, objPath,
+
+                                          *resetType, connectionNames);
+                                    return;
+                                }
+                                // Couldn't find an object with that name.
+                                // Return an error
+                                messages::resourceNotFound(
+                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    switchId);
+                            },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                            object, 0,
+                            std::array<const char*, 1>{
+                                "xyz.openbmc_project.Inventory.Item.Switch"});
+                        return;
+                    }
+                    // Couldn't find an object with that name. Return an error
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                "/xyz/openbmc_project/inventory", 0,
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Inventory.Item.Fabric"});
+                }
         });
 }
 

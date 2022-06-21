@@ -257,6 +257,7 @@ class RedfishService
         requestRoutesFabric(app);
         requestRoutesSwitchCollection(app);
         requestRoutesSwitch(app);
+        requestRoutesNVSwitchReset(app);
         requestRoutesSwitchMetrics(app);
         requestRoutesPortCollection(app);
         requestRoutesPort(app);
