@@ -50,8 +50,8 @@ struct SPDMMeasurementData
 {
     uint8_t slot{};
     SPDMCertificates certs;
-    uint8_t hashAlgo{};
-    uint8_t signAlgo{};
+    std::string hashAlgo{};
+    std::string signAlgo{};
     uint8_t version{};
     SignedMeasurementData measurement;
 };
@@ -71,109 +71,14 @@ inline std::string getVersionStr(const uint8_t version)
     }
 }
 
-enum class HashingAlgorithms
+inline std::string stripPrefix(const std::string& str,
+                               const std::string& prefix)
 {
-    SHA_256,
-    SHA_384,
-    SHA_512,
-    SHA3_256,
-    SHA3_384,
-    SHA3_512,
-    OEM,
-    None,
-};
-enum class SigningAlgorithms
-{
-    ffdhe2048,
-    ffdhe3072,
-    ffdhe4096,
-    secp256r1,
-    secp384r1,
-    secp521r1,
-    AES_128_GCM,
-    AES_256_GCM,
-    CHACHA20_POLY1305,
-    RSASSA_2048,
-    RSAPSS_2048,
-    RSASSA_3072,
-    RSAPSS_3072,
-    ECDSA_ECC_NIST_P256,
-    RSASSA_4096,
-    RSAPSS_4096,
-    ECDSA_ECC_NIST_P384,
-    ECDSA_ECC_NIST_P521,
-    OEM,
-    None,
-};
-
-inline std::string getHashAlgoStr(const HashingAlgorithms& algo)
-{
-    switch (algo)
+    if (str.starts_with(prefix))
     {
-        case HashingAlgorithms::SHA_256:
-            return "SHA_256";
-        case HashingAlgorithms::SHA_384:
-            return "SHA_384";
-        case HashingAlgorithms::SHA_512:
-            return "SHA_512";
-        case HashingAlgorithms::SHA3_256:
-            return "SHA3_256";
-        case HashingAlgorithms::SHA3_384:
-            return "SHA3_384";
-        case HashingAlgorithms::SHA3_512:
-            return "SHA3_512";
-        case HashingAlgorithms::OEM:
-            return "OEM";
-        default:
-            return "";
+        return str.substr(prefix.size());
     }
-}
-
-inline std::string getSignAlgoStr(const SigningAlgorithms& algo)
-{
-    switch (algo)
-    {
-        case SigningAlgorithms::ffdhe2048:
-            return "ffdhe2048";
-        case SigningAlgorithms::ffdhe3072:
-            return "ffdhe3072";
-        case SigningAlgorithms::ffdhe4096:
-            return "ffdhe4096";
-        case SigningAlgorithms::secp256r1:
-            return "secp256r1";
-        case SigningAlgorithms::secp384r1:
-            return "secp384r1";
-        case SigningAlgorithms::secp521r1:
-            return "secp521r1";
-        case SigningAlgorithms::AES_128_GCM:
-            return "AES_128_GCM";
-        case SigningAlgorithms::AES_256_GCM:
-            return "AES_256_GCM";
-        case SigningAlgorithms::CHACHA20_POLY1305:
-            return "CHACHA20_POLY1305";
-        case SigningAlgorithms::RSASSA_2048:
-            return "RSASSA_2048";
-        case SigningAlgorithms::RSAPSS_2048:
-            return "RSAPSS_2048";
-        case SigningAlgorithms::RSASSA_3072:
-            return "RSASSA_3072";
-        case SigningAlgorithms::RSAPSS_3072:
-            return "RSAPSS_3072";
-        case SigningAlgorithms::ECDSA_ECC_NIST_P256:
-            return "ECDSA_ECC_NIST_P256";
-        case SigningAlgorithms::RSASSA_4096:
-            return "RSASSA_4096";
-        case SigningAlgorithms::RSAPSS_4096:
-            return "RSAPSS_4096";
-        case SigningAlgorithms::ECDSA_ECC_NIST_P384:
-            return "ECDSA_ECC_NIST_P384";
-        case SigningAlgorithms::ECDSA_ECC_NIST_P521:
-            return "ECDSA_ECC_NIST_P521";
-        case SigningAlgorithms::OEM:
-            return "OEM";
-        default:
-            return "";
-    }
+    return str;
 }
 
 /**
@@ -239,23 +144,27 @@ inline void getSPDMMeasurementData(const std::string& objectPath,
                         }
                         else if (property.first == "HashingAlgorithm")
                         {
-                            const uint8_t* hashAlgo =
-                                std::get_if<uint8_t>(&property.second);
+                            const std::string* hashAlgo =
+                                std::get_if<std::string>(&property.second);
                             if (hashAlgo == nullptr)
                             {
                                 continue;
                             }
-                            config.hashAlgo = *hashAlgo;
+                            config.hashAlgo = stripPrefix(
+                                *hashAlgo,
+                                "xyz.openbmc_project.SPDM.Responder.HashingAlgorithms.");
                         }
                         else if (property.first == "SigningAlgorithm")
                         {
-                            const uint8_t* signAlgo =
-                                std::get_if<uint8_t>(&property.second);
+                            const std::string* signAlgo =
+                                std::get_if<std::string>(&property.second);
                             if (signAlgo == nullptr)
                             {
                                 continue;
                             }
-                            config.signAlgo = *signAlgo;
+                            config.signAlgo = stripPrefix(
+                                *signAlgo,
+                                "xyz.openbmc_project.SPDM.Responder.SigningAlgorithms.");
                         }
                         else if (property.first == "Certificate")
                         {
@@ -425,10 +334,8 @@ inline void handleSPDMGETSignedMeasurement(
                 asyncResp->res.jsonValue["SignedMeasurements"] = measurementStr;
                 asyncResp->res.jsonValue["Version"] =
                     getVersionStr(data.version);
-                asyncResp->res.jsonValue["HashingAlgorithm"] = getHashAlgoStr(
-                    static_cast<HashingAlgorithms>(data.hashAlgo));
-                asyncResp->res.jsonValue["SigningAlgorithm"] = getSignAlgoStr(
-                    static_cast<SigningAlgorithms>(data.signAlgo));
+                asyncResp->res.jsonValue["HashingAlgorithm"] = data.hashAlgo;
+                asyncResp->res.jsonValue["SigningAlgorithm"] = data.signAlgo;
                 compIntegrityMatches.erase(objPath);
                 return;
             });
