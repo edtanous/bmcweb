@@ -53,7 +53,7 @@ struct SPDMMeasurementData
     std::string hashAlgo{};
     std::string signAlgo{};
     uint8_t version{};
-    SignedMeasurementData measurement;
+    std::string measurement;
 };
 
 inline std::string getVersionStr(const uint8_t version)
@@ -185,7 +185,12 @@ inline void getSPDMMeasurementData(const std::string& objectPath,
                             {
                                 continue;
                             }
-                            config.measurement = *data;
+
+                            config.measurement.resize(data->size());
+                            std::copy(data->begin(), data->end(),
+                                      config.measurement.begin());
+                            config.measurement =
+                                crow::utility::base64encode(config.measurement);
                         }
                     }
                 }
@@ -329,9 +334,8 @@ inline void handleSPDMGETSignedMeasurement(
                     messages::internalError(asyncResp->res);
                     return;
                 }
-                std::string measurementStr(data.measurement.begin(),
-                                           data.measurement.end());
-                asyncResp->res.jsonValue["SignedMeasurements"] = measurementStr;
+                asyncResp->res.jsonValue["SignedMeasurements"] =
+                    data.measurement;
                 asyncResp->res.jsonValue["Version"] =
                     getVersionStr(data.version);
                 asyncResp->res.jsonValue["HashingAlgorithm"] = data.hashAlgo;
