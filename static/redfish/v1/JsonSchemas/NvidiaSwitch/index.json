@@ -1,0 +1,58 @@
+{
+    "$id": "/schemas/v1/JsonSchemas/NvidiaSwitch.v1_0_0.json",
+    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
+    "copyright": "Copyright 2021-2022 NVIDIA. For the full NVIDIA copyright policy, see LICENSE.md",
+    "definitions": {
+        "NvidiaSwitch": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "DeviceId": {
+                    "description": "The Device ID of this device.",
+                    "longDescription": "This property shall contain the Device ID of the device.",
+                    "pattern": "^0[xX](([a-fA-F]|[0-9]){2}){2}$",
+                    "readonly": true,
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "PCIeReferenceClockEnabled": {
+                    "description": "An indication whether the PCIe reference clock is enabled for this device.",
+                    "longDescription": "This property shall indicate whether the PCIe reference clock is enabled for this device.",
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "VendorId": {
+                    "description": "The Vendor ID of this device.",
+                    "longDescription": "This property shall contain the Vendor ID of the device.",
+                    "pattern": "^0[xX](([a-fA-F]|[0-9]){2}){2}$",
+                    "readonly": true,
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                }
+            },
+            "type": "object"
+        }
+    },
+    "owningEntity": "NVIDIA",
+    "title": "#NvidiaSwitch.v1_0_0"
+}
+

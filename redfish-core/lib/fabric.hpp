@@ -332,6 +332,50 @@ inline void
                     asyncResp->res.jsonValue["SwitchType"] =
                         getSwitchType(*value);
                 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                else if (propertyName == "DeviceId")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for DeviceId";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["DeviceId"] = *value;
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaSwitch.v1_0_0.NvidiaSwitch";
+                }
+                else if (propertyName == "VendorId")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for VendorId";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["VendorId"] = *value;
+                }
+                else if (propertyName == "PCIeReferenceClockEnabled")
+                {
+                    const bool* value =
+                        std::get_if<bool>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for PCIeReferenceClockEnabled";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockEnabled"] = *value;
+                }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
                 else if (propertyName == "SupportedProtocols")
                 {
                     nlohmann::json& protoArray =
