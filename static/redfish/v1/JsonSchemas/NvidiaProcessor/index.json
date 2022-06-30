@@ -1,0 +1,39 @@
+{
+    "$id": "/schemas/v1/JsonSchemas/NvidiaProcessor.v1_0_0.json",
+    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
+    "copyright": "Copyright 2021-2022 NVIDIA. For the full NVIDIA copyright policy, see LICENSE.md",
+    "definitions": {
+        "NvidiaProcessor": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "MIGModeEnabled": {
+                    "description": "An indication of whether multiple-Instance GPU (MIG) mode is enabled for this processor.",
+                    "longDescription": "The value of this property shall indicate if multiple-Instance GPU (MIG) mode is enabled for this processor.",
+                    "readonly": false,
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                }
+            },
+            "type": "object"
+        }
+    },
+    "owningEntity": "NVIDIA",
+    "title": "#NvidiaProcessor.v1_0_0"
+}
+

@@ -1730,6 +1730,51 @@ inline void getProcessorEccModeData(
     getEccModeData(aResp, cpuId, service, objPath);
 }
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+inline void getMigModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& cpuId, const std::string& service,
+                           const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, cpuId](const boost::system::error_code ec,
+                       const OperatingConfigProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            nlohmann::json& json = aResp->res.jsonValue;
+            for (const auto& property : properties)
+            {
+                if (property.first == "MIGModeEnabled")
+                {
+                    const bool* migModeEnabled =
+                        std::get_if<bool>(&property.second);
+                    if (migModeEnabled == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    json["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+                    json["Oem"]["Nvidia"]["MIGModeEnabled"] = *migModeEnabled;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "com.nvidia.MigMode");
+}
+
+inline void getProcessorMigModeData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
+    const std::string& service, const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << " get GpuMIGMode data";
+    getMigModeData(aResp, cpuId, service, objPath);
+}
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+
 inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& processorId,
                              const std::string& objectPath,
@@ -1803,6 +1848,15 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 getProcessorEccModeData(aResp, processorId, serviceName,
                                         objectPath);
             }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            else if (interface == "com.nvidia.MigMode")
+            {
+                getProcessorMigModeData(aResp, processorId, serviceName,
+                                        objectPath);
+            }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
         }
     }
     aResp->res.jsonValue["EnvironmentMetrics"] = {
@@ -1830,6 +1884,83 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     getProcessorSystemPCIeInterface(aResp, objectPath);
     getProcessorFPGAPCIeInterface(aResp, objectPath);
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+/**
+ * Handle the PATCH operation of the MIG Mode Property. Do basic
+ * validation of the input data, and then set the D-Bus property.
+ *
+ * @param[in,out]   resp            Async HTTP response.
+ * @param[in]       processorId     Processor's Id.
+ * @param[in]       migMode         New property value to apply.
+ * @param[in]       cpuObjectPath   Path of CPU object to modify.
+ * @param[in]       serviceMap      Service map for CPU object.
+ */
+inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                             const std::string& processorId,
+                             const bool migMode,
+                             const std::string& cpuObjectPath,
+                             const MapperServiceMap& serviceMap)
+{
+    // Check that the property even exists by checking for the interface
+    const std::string* inventoryService = nullptr;
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        if (std::find(
+                interfaceList.begin(), interfaceList.end(),
+                "com.nvidia.MigMode") !=
+            interfaceList.end())
+        {
+            inventoryService = &serviceName;
+            break;
+        }
+    }
+    if (inventoryService == nullptr)
+    {
+        BMCWEB_LOG_DEBUG << " GpuMIGMode interface not found ";
+        messages::internalError(resp->res);
+        return;
+    }
+
+    // Set the property, with handler to check error responses
+    crow::connections::systemBus->async_method_call(
+        [resp, processorId, migMode](boost::system::error_code ec,
+                                         sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set MIG Mode property succeeded";
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                             << " set MIG Mode  property failed: " << ec;
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
+        "Set", "com.nvidia.MigMode",
+        "MIGModeEnabled", std::variant<bool>(migMode));
+}
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+
 
 /**
  * Handle the PATCH operation of the speed locked property. Do basic
@@ -2291,12 +2422,13 @@ inline void requestRoutesProcessor(App& app)
                const std::string& processorId) {
                 std::optional<int> speedLimit;
                 std::optional<bool> speedLocked;
+                std::optional<nlohmann::json> oemObject;
                 std::optional<nlohmann::json> appliedConfigJson;
                 // Read json request
                 if (!json_util::readJson(req, asyncResp->res, "SpeedLimitMHz",
                                          speedLimit, "SpeedLocked", speedLocked,
                                          "AppliedOperatingConfig",
-                                         appliedConfigJson))
+                                         appliedConfigJson, "Oem", oemObject))
                 {
                     return;
                 }
@@ -2314,6 +2446,36 @@ inline void requestRoutesProcessor(App& app)
                                             objectPath, serviceMap);
                         });
                 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                // Update migMode
+                if (std::optional<nlohmann::json> oemNvidiaObject;
+                    oemObject &&
+                    json_util::readJson(*oemObject, asyncResp->res, "Nvidia",
+                                        oemNvidiaObject))
+                {
+                    std::optional<bool> migMode;
+                    if (oemNvidiaObject &&
+                        json_util::readJson(*oemNvidiaObject, asyncResp->res,
+                                        "MIGModeEnabled", migMode))
+                    {
+                        if (migMode)
+                        {
+                            getProcessorObject(
+                                    asyncResp, processorId,
+                                    [migMode](
+                                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                                        const std::string& processorId,
+                                        const std::string& objectPath,
+                                        const MapperServiceMap& serviceMap) {
+                                    patchMigMode(asyncResp, processorId, *migMode,
+                                            objectPath, serviceMap);
+                                    });
+                        }
+                    }
+                }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
                 // Update speed locked
                 if (speedLocked)
                 {
@@ -3575,7 +3737,8 @@ inline void
     crow::connections::systemBus->async_method_call(
         [asyncResp, service, path](
             const boost::system::error_code ec,
-            const boost::container::flat_map<std::string, std::variant<size_t>>&
+            //const boost::container::flat_map<std::string, std::variant<size_t,uint16_t,uint32_t,uint64_t>>&
+            const boost::container::flat_map<std::string, dbus::utility::DbusVariantType>&
                 properties) {
             if (ec)
             {
@@ -3598,6 +3761,107 @@ inline void
                     }
                     asyncResp->res.jsonValue[property.first] = *value;
                 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                else if (property.first == "RXNoProtocolBytes")
+                {
+                    const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                            "for RXNoProtocolBytes";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaPortMetrics.v1_0_0.NvidiaPortMetrics";
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXNoProtocolBytes"] = *value;
+                }
+                else if (property.first == "TXNoProtocolBytes")
+                {
+                    const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                            "for TXNoProtocolBytes";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["TXNoProtocolBytes"] = *value;
+                }
+                else if (property.first == "DataCRCCount")
+                {
+                        const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                        if (value == nullptr)
+                        {
+                            BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for DataCRCCount";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["DataCRCCount"] = *value;
+                }
+                else if (property.first == "FlitCRCCount")
+                {
+                    const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                            "for FlitCRCCount";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["FlitCRCCount"] = *value;
+                }
+                else if (property.first == "RecoveryCount")
+                {
+                    const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                            "for RecoveryCount";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RecoveryCount"] = *value;
+                }
+                else if (property.first == "ReplayCount")
+                {
+                    const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                            "for ReplayCount";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["ReplayCount"] = *value;
+                }
+                else if (property.first == "RuntimeError")
+                {
+                    const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                            "for RuntimeError";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RuntimeError"] = *value;
+                }
+                else if (property.first == "TrainingError")
+                {
+                    const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                            "for TrainingError";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["TrainingError"] = *value;
+                }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
             }
         },
         service, path, "org.freedesktop.DBus.Properties", "GetAll",

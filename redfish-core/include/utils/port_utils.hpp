@@ -192,7 +192,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 {
     BMCWEB_LOG_DEBUG << "Get Port Data";
     using PropertyType =
-        std::variant<std::string, bool, size_t, std::vector<std::string>>;
+        std::variant<std::string, bool, uint8_t, uint16_t, size_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     // Get interface properties
     crow::connections::systemBus->async_method_call(
@@ -220,6 +220,37 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     }
                     asyncResp->res.jsonValue["PortType"] = getPortType(*value);
                 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                else if (propertyName == "TXWidth")
+                {
+                    const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for TXWidth";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                                        "#NvidiaPort.v1_0_0.NvidiaPort";
+
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["TXWidth"] = *value;
+                }
+                else if (propertyName == "RXWidth")
+                {
+                    const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for RXWidth";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXWidth"] = *value;
+                }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
                 else if (propertyName == "Protocol")
                 {
                     const std::string* value =
