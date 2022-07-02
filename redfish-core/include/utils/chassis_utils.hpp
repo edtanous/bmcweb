@@ -225,6 +225,25 @@ inline void
             asyncResp->res.jsonValue["Manufacturer"] = manufacturer;
         });
 }
+inline void
+    getChassisSerialNumber(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.Asset", "SerialNumber",
+        [asyncResp](const boost::system::error_code ec,
+                    const std::string& serialNumber) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for SerialNumber";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.jsonValue["SerialNumber"] = serialNumber;
+        });
+}
 
 template <typename CallbackFunc>
 inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)

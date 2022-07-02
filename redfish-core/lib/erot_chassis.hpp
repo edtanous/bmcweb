@@ -36,77 +36,6 @@ using SPDMCertificates = std::vector<std::tuple<uint8_t, std::string>>;
 
 } // namespace erot
 
-/* This function is doing the hard coding and will be replaced
- * with the implementation which fetches the serial number from the
- * backend when we have the implmentation ready.
- */
-
-static std::string getERoTSerialNumber(const std::string& chassisID)
-{
-    if (chassisID == "ERoT_GPU0")
-    {
-        return "XTYHMP-12114";
-    }
-    if (chassisID == "ERoT_GPU1")
-    {
-        return "XTYHMP-12115";
-    }
-    if (chassisID == "ERoT_GPU2")
-    {
-        return "XTYHMP-12116";
-    }
-    if (chassisID == "ERoT_GPU3")
-    {
-        return "XTYHMP-12117";
-    }
-    if (chassisID == "ERoT_GPU4")
-    {
-
-        return "XTYHMP-12118";
-    }
-    if (chassisID == "ERoT_GPU5")
-    {
-        return "XTYHMP-12119";
-    }
-    if (chassisID == "ERoT_GPU6")
-    {
-        return "XTYHMP-12120";
-    }
-    if (chassisID == "ERoT_GPU7")
-    {
-        return "XTYHMP-12121";
-    }
-    if (chassisID == "ERoT_HMC")
-    {
-        return "XTYHMP-12100";
-    }
-    if (chassisID == "ERoT_NVSwitch0")
-    {
-        return "XTYHMP-12120";
-    }
-    if (chassisID == "ERoT_NVSwitch1")
-    {
-        return "XTYHMP-12121";
-    }
-    if (chassisID == "ERoT_NVSwitch2")
-    {
-        return "XTYHMP-12122";
-    }
-    if (chassisID == "ERoT_NVSwitch3")
-    {
-        return "XTYHMP-12123";
-    }
-    if (chassisID == "ERoT_PCIeSwitch")
-    {
-        return "XTYHMP-12124";
-    }
-    if (chassisID == "ERoT_FPGA")
-    {
-        return "XTYHMP-12102";
-    }
-    return "";
-}
-
 /**
  * @brief Retrieve the certificate and append to the response
  * message
@@ -367,8 +296,6 @@ inline void getEROTChassis(const crow::Request&,
                 asyncResp->res.jsonValue["Id"] = chassisId;
                 auto certsObject = std::string("/redfish/v1/Chassis/") +
                                    chassisId + "/Certificates";
-                asyncResp->res.jsonValue["SerialNumber"] =
-                    getERoTSerialNumber(chassisId);
 
                 asyncResp->res.jsonValue["Certificates"]["@odata.id"] =
                     certsObject;
@@ -383,6 +310,9 @@ inline void getEROTChassis(const crow::Request&,
                     asyncResp, connectionNames[0].first, path);
 
                 redfish::chassis_utils::getChassisManufacturer(
+                    asyncResp, connectionNames[0].first, path);
+
+                redfish::chassis_utils::getChassisSerialNumber(
                     asyncResp, connectionNames[0].first, path);
 
                 getChassisOEMComponentProtected(asyncResp, path);
