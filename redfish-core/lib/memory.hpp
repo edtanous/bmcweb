@@ -1148,6 +1148,57 @@ inline void getMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Memory.MemoryECC");
 }
 
+inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                             const std::string& service,
+                             const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get memory row remapping counts.";
+    crow::connections::systemBus->async_method_call(
+        [aResp{std::move(aResp)}](const boost::system::error_code ec,
+                                  const DimmProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const auto& property : properties)
+            {
+                if (property.first == "ceRowRemappingCount")
+                {
+                    const uint32_t* value =
+                        std::get_if<uint32_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res
+                        .jsonValue["Oem"]["Nvidia"]
+                                  ["RowRemapping"]["CorrectableRowRemappingCount"] =
+                        *value;
+                }
+                else if (property.first == "ueRowRemappingCount")
+                {
+                    const uint32_t* value =
+                        std::get_if<uint32_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res
+                        .jsonValue["Oem"]["Nvidia"]
+                                  ["RowRemapping"]["UncorrectableRowRemappingCount"] =
+                        *value;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "com.nvidia.MemoryRowRemapping");
+}
+
 inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                  const std::string& dimmId)
 {
@@ -1161,7 +1212,7 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 subtree) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
+                BMCWEB_LOG_ERROR << " DBUS response error";
                 messages::internalError(aResp->res);
 
                 return;
@@ -1181,6 +1232,8 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
                 aResp->res.jsonValue["Id"] = "MemoryMetrics";
                 aResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
+                aResp->res.jsonValue["Oem"]["Nvidia"]
+                                    ["@odata.id"] = "#NvidiaMemoryMetrics.v1_0_0.NvidiaMemoryMetrics";
                 for (const auto& [service, interfaces] : object)
                 {
                     if (std::find(interfaces.begin(), interfaces.end(),
@@ -1194,6 +1247,12 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         interfaces.end())
                     {
                         getMemoryECCData(aResp, service, path);
+                    }
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "com.nvidia.MemoryRowRemapping") !=
+                        interfaces.end())
+                    {
+                       getMemoryRowRemappings(aResp, service, path);
                     }
                 }
                 return;
