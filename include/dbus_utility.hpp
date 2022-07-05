@@ -56,7 +56,8 @@ using DbusVariantType = sdbusplus::utility::dedup_variant_t<
     std::vector<sdbusplus::message::object_path>,
     std::vector<uint8_t>,
     std::vector<std::tuple<uint8_t, std::string>>,
-    std::tuple<size_t, bool>
+    std::tuple<size_t, bool>,
+    std::tuple<bool, uint32_t>
  >;
 
 // clang-format on

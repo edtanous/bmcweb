@@ -1490,20 +1490,16 @@ inline void
                         json["TDPWatts"] = *tdp;
                     }
                 }
-                else if (key == "SpeedLimit")
+                else if (key == "SpeedConfig")
                 {
-                    const uint32_t* speed = std::get_if<uint32_t>(&variant);
-                    if (speed != nullptr)
+                    using SpeedConfigProperty = std::tuple<bool, uint32_t>;
+                    const auto* speedConfig =
+                        std::get_if<SpeedConfigProperty>(&variant);
+                    if (speedConfig != nullptr)
                     {
-                        json["SpeedLimitMHz"] = *speed;
-                    }
-                }
-                else if (key == "SpeedLocked")
-                {
-                    const bool* speedLock = std::get_if<bool>(&variant);
-                    if (speedLock != nullptr)
-                    {
-                        json["SpeedLocked"] = *speedLock;
+                        const auto& [speedLock, speed] = *speedConfig;
+                        json["SpeedLocked"] = speedLock;
+                        json["SpeedLimit"] = speed;
                     }
                 }
                 else if (key == "TurboProfile")
@@ -1929,6 +1925,87 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 /**
+ * Handle the PATCH operation of the speed config property. Do basic
+ * validation of the input data, and then set the D-Bus property.
+ *
+ * @param[in,out]   resp            Async HTTP response.
+ * @param[in]       processorId     Processor's Id.
+ * @param[in]       speedConfig     New property value to apply.
+ * @param[in]       cpuObjectPath   Path of CPU object to modify.
+ * @param[in]       serviceMap      Service map for CPU object.
+ */
+inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                             const std::string& processorId,
+                             const std::tuple<bool, uint32_t>& reqSpeedConfig,
+                             const std::string& cpuObjectPath,
+                             const MapperServiceMap& serviceMap)
+{
+    BMCWEB_LOG_DEBUG << "Setting SpeedConfig";
+    // Check that the property even exists by checking for the interface
+    const std::string* inventoryService = nullptr;
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        if (std::find(
+                interfaceList.begin(), interfaceList.end(),
+                "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig") !=
+            interfaceList.end())
+        {
+            inventoryService = &serviceName;
+            break;
+        }
+    }
+    if (inventoryService == nullptr)
+    {
+        messages::internalError(resp->res);
+        return;
+    }
+    BMCWEB_LOG_DEBUG << "patchSpeedConfig";
+    crow::connections::systemBus->async_method_call(
+        [resp, processorId, reqSpeedConfig](boost::system::error_code ec,
+                                            sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set speed config property succeeded";
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                             << " set speed config property failed: " << ec;
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+            {
+                // Invalid value
+                uint32_t speedLimit = std::get<1>(reqSpeedConfig);
+                messages::propertyValueIncorrect(resp->res, "SpeedLimit",
+                                                 std::to_string(speedLimit));
+                return;
+            }
+
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
+        "Set", "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
+        "SpeedConfig",
+        std::variant<std::tuple<bool, uint32_t>>(reqSpeedConfig));
+}
+
+/**
  * Handle the PATCH operation of the speed locked property. Do basic
  * validation of the input data, and then set the D-Bus property.
  *
@@ -1962,40 +2039,25 @@ inline void patchSpeedLocked(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         messages::internalError(resp->res);
         return;
     }
-    // Set the property, with handler to check error responses
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId, speedLocked](boost::system::error_code ec,
-                                         sdbusplus::message::message& msg) {
-            if (!ec)
+    const std::string conName = *inventoryService;
+    sdbusplus::asio::getProperty<std::tuple<bool, uint32_t>>(
+        *crow::connections::systemBus, conName, cpuObjectPath,
+        "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig", "SpeedConfig",
+        [resp, processorId, conName, cpuObjectPath, serviceMap,
+         speedLocked](const boost::system::error_code ec,
+                      const std::tuple<bool, uint32_t>& speedConfig) {
+            if (ec)
             {
-                BMCWEB_LOG_DEBUG << "Set speed locked property succeeded";
-                return;
-            }
-
-            BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                             << " set speed locked property failed: " << ec;
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for SpeedConfig";
                 messages::internalError(resp->res);
                 return;
             }
-
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(resp->res);
-            }
-            else
-            {
-                messages::internalError(resp->res);
-            }
-        },
-        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
-        "Set", "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
-        "SpeedLocked", std::variant<bool>(speedLocked));
+            std::tuple<bool, uint32_t> reqSpeedConfig;
+            uint32_t cachedSpeedLimit = std::get<1>(speedConfig);
+            reqSpeedConfig = std::make_tuple(speedLocked, cachedSpeedLimit);
+            patchSpeedConfig(resp, processorId, reqSpeedConfig, cpuObjectPath,
+                             serviceMap);
+        });
 }
 
 /**
@@ -2032,47 +2094,28 @@ inline void patchSpeedLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         messages::internalError(resp->res);
         return;
     }
+    const std::string conName = *inventoryService;
+    BMCWEB_LOG_DEBUG << "patchSpeedLimit";
     // Set the property, with handler to check error responses
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId, speedLimit](boost::system::error_code ec,
-                                        sdbusplus::message::message& msg) {
-            if (!ec)
+    sdbusplus::asio::getProperty<std::tuple<bool, uint32_t>>(
+        *crow::connections::systemBus, conName, cpuObjectPath,
+        "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig", "SpeedConfig",
+        [resp, processorId, conName, cpuObjectPath, serviceMap,
+         speedLimit](const boost::system::error_code ec,
+                     const std::tuple<bool, uint32_t>& speedConfig) {
+            if (ec)
             {
-                BMCWEB_LOG_DEBUG << "Set speed limit property succeeded";
-                return;
-            }
-
-            BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                             << " set speed limit property failed: " << ec;
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for SpeedConfig";
                 messages::internalError(resp->res);
                 return;
             }
-            if (strcmp(dbusError->name,
-                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
-            {
-                // Invalid value
-                messages::propertyValueIncorrect(resp->res, "SpeedLimit",
-                                                 std::to_string(speedLimit));
-            }
-            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                             "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(resp->res);
-            }
-            else
-            {
-                messages::internalError(resp->res);
-            }
-        },
-        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
-        "Set", "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
-        "SpeedLimit",
-        std::variant<uint32_t>(static_cast<uint32_t>(speedLimit)));
+            std::tuple<bool, uint32_t> reqSpeedConfig;
+            bool cachedSpeedLocked = std::get<0>(speedConfig);
+            reqSpeedConfig = std::make_tuple(cachedSpeedLocked,
+                                             static_cast<uint32_t>(speedLimit));
+            patchSpeedConfig(resp, processorId, reqSpeedConfig, cpuObjectPath,
+                             serviceMap);
+        });
 }
 
 /**
@@ -2407,7 +2450,24 @@ inline void requestRoutesProcessor(App& app)
                     return;
                 }
                 // Update speed limit
-                if (speedLimit)
+                if (speedLimit && speedLocked)
+                {
+                    std::tuple<bool, uint32_t> reqSpeedConfig;
+                    reqSpeedConfig = std::make_tuple(
+                        *speedLocked, static_cast<uint32_t>(*speedLimit));
+                    redfish::processor_utils::getProcessorObject(
+                        asyncResp, processorId,
+                        [reqSpeedConfig](
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId,
+                            const std::string& objectPath,
+                            const MapperServiceMap& serviceMap) {
+                            patchSpeedConfig(asyncResp, processorId,
+                                             reqSpeedConfig, objectPath,
+                                             serviceMap);
+                        });
+                }
+                else if (speedLimit)
                 {
                     redfish::processor_utils::getProcessorObject(
                         asyncResp, processorId,
@@ -2420,6 +2480,22 @@ inline void requestRoutesProcessor(App& app)
                                             objectPath, serviceMap);
                         });
                 }
+                else if (speedLocked)
+                {
+                    // Update speed locked
+                    redfish::processor_utils::getProcessorObject(
+                        asyncResp, processorId,
+                        [speedLocked](
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId,
+                            const std::string& objectPath,
+                            const MapperServiceMap& serviceMap) {
+                            patchSpeedLocked(asyncResp, processorId,
+                                             *speedLocked, objectPath,
+                                             serviceMap);
+                        });
+                }
+
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 // Update migMode
@@ -2450,22 +2526,6 @@ inline void requestRoutesProcessor(App& app)
                     }
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
-                // Update speed locked
-                if (speedLocked)
-                {
-                    redfish::processor_utils::getProcessorObject(
-                        asyncResp, processorId,
-                        [speedLocked](
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                            const std::string& processorId,
-                            const std::string& objectPath,
-                            const MapperServiceMap& serviceMap) {
-                            patchSpeedLocked(asyncResp, processorId,
-                                             *speedLocked, objectPath,
-                                             serviceMap);
-                        });
-                }
 
                 std::string appliedConfigUri;
                 if (appliedConfigJson)
