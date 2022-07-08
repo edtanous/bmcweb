@@ -10,6 +10,7 @@ import shutil
 import json
 
 import xml.etree.ElementTree as ET
+from generate_schema_collections import generate_top_collections
 
 VERSION = "DSP8010_2022.2"
 
@@ -432,3 +433,22 @@ with open(os.path.join(cpp_path, "schemas.hpp"), "w") as hpp_file:
     hpp_file.write("    };\n" "}\n")
 
 zip_ref.close()
+
+generate_schema_enums.main()
+generate_top_collections()
+
+# Now delete the xml schema files we aren't supporting
+if os.path.exists(schema_path):
+    files = [
+        os.path.join(schema_path, f)
+        for f in os.listdir(schema_path)
+        if not f.startswith(skip_prefixes)
+    ]
+    for filename in files:
+        # filename will include the absolute path
+        filenamesplit = filename.split("/")
+        name = filenamesplit.pop()
+        namesplit = name.split("_")
+        if namesplit[0] not in include_list:
+            print("excluding schema: " + filename)
+            os.remove(filename)
