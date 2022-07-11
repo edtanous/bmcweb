@@ -988,6 +988,22 @@ nlohmann::json actionParameterValueError(const std::string& arg1,
 void actionParameterValueError(crow::Response& res, const std::string& arg1,
                                const std::string& arg2);
 
+/**
+ * @brief Formats ResourceErrorsDetected message into JSON
+ * Message body: "The resource property <arg1> has detected errors of type
+ * '<arg2>'."
+ *
+ * @param[in] arg1 Parameter of message that will replace <arg1> in its body.
+ * @param[in] arg2 Parameter of message that will replace <arg2> in its body.
+ *
+ * @returns Message ResourceErrorsDetected formatted to JSON */
+nlohmann::json resourceErrorsDetectedFormatError(const std::string& arg1,
+                                                 const std::string& arg2);
+
+void resourceErrorsDetectedFormatError(crow::Response& res,
+                                       const std::string& arg1,
+                                       const std::string& arg2);
+
 } // namespace messages
 
 } // namespace redfish

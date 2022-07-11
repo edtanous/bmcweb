@@ -80,6 +80,14 @@ inline std::string stripPrefix(const std::string& str,
     }
     return str;
 }
+inline bool startsWithPrefix(const std::string& str, const std::string& prefix)
+{
+    if (str.rfind(prefix, 0) == 0)
+    {
+        return true;
+    }
+    return false;
+}
 
 /**
  * Function that retrieves all properties for SPDM Measurement object
@@ -284,7 +292,7 @@ inline void handleSPDMGETSignedMeasurement(
             }
             BMCWEB_LOG_ERROR
                 << "Timed out waiting for Getting the SPDM Measurement Data";
-            messages::internalError(asyncResp->res);
+            messages::operationTimeout(asyncResp->res);
             compIntegrityMatches.erase(objPath);
         });
 
@@ -313,36 +321,65 @@ inline void handleSPDMGETSignedMeasurement(
             auto it = props.find("Status");
             if (it == props.end())
             {
-                BMCWEB_LOG_DEBUG << "Not interested in this property";
+                BMCWEB_LOG_ERROR << "Did not receive an SPDM Status value";
                 return;
             }
             auto value = std::get_if<std::string>(&(it->second));
-            if (!value ||
-                (*value) !=
-                    "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Success")
+            if (!value)
             {
-                BMCWEB_LOG_DEBUG << "Measurement Status is still not good";
+                BMCWEB_LOG_ERROR << "Received SPDM Status is not a string";
                 return;
             }
 
-            getSPDMMeasurementData(objPath, [asyncResp, id, objPath](
-                                                const SPDMMeasurementData& data,
-                                                bool gotData) {
-                if (!gotData)
+            if (*value ==
+                "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Success")
+            {
+                getSPDMMeasurementData(
+                    objPath,
+                    [asyncResp, id, objPath](const SPDMMeasurementData& data,
+                                             bool gotData) {
+                        if (!gotData)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Did not receive SPDM Measurement data";
+                            messages::internalError(asyncResp->res);
+                            compIntegrityMatches.erase(objPath);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["SignedMeasurements"] =
+                            data.measurement;
+                        asyncResp->res.jsonValue["Version"] =
+                            getVersionStr(data.version);
+                        asyncResp->res.jsonValue["HashingAlgorithm"] =
+                            data.hashAlgo;
+                        asyncResp->res.jsonValue["SigningAlgorithm"] =
+                            data.signAlgo;
+                        compIntegrityMatches.erase(objPath);
+                    });
+            }
+            else if (
+                startsWithPrefix(
+                    *value,
+                    "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_"))
+            {
+                BMCWEB_LOG_ERROR << "Received SPDM Error: " << *value;
+                if (*value ==
+                    "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_ConnectionTimeout")
                 {
-                    compIntegrityMatches.erase(objPath);
-                    messages::internalError(asyncResp->res);
-                    return;
+                    messages::operationTimeout(asyncResp->res);
                 }
-                asyncResp->res.jsonValue["SignedMeasurements"] =
-                    data.measurement;
-                asyncResp->res.jsonValue["Version"] =
-                    getVersionStr(data.version);
-                asyncResp->res.jsonValue["HashingAlgorithm"] = data.hashAlgo;
-                asyncResp->res.jsonValue["SigningAlgorithm"] = data.signAlgo;
+                else
+                {
+                    messages::resourceErrorsDetectedFormatError(
+                        asyncResp->res, "Status", *value);
+                }
                 compIntegrityMatches.erase(objPath);
-                return;
-            });
+            }
+            else
+            {
+                //other intermediate states like GettingCertificates, GettingMeasurements, are ignored
+                BMCWEB_LOG_DEBUG << "Ignoring SPDM Status update: " << *value;
+            }
         });
 
     compIntegrityMatches.emplace(
