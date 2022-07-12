@@ -1793,7 +1793,9 @@ class EventServiceManager
                         if (additional.count("REDFISH_ORIGIN_OF_CONDITION") ==
                             1)
                         {
-                            originOfCondition = additional["REDFISH_ORIGIN_OF_CONDITION"];
+                            originOfCondition = origin_utils::
+                                convertDbusObjectToOriginOfCondition(
+                                    additional["REDFISH_ORIGIN_OF_CONDITION"]);
                             if (originOfCondition.empty())
                             {
                                 BMCWEB_LOG_ERROR
