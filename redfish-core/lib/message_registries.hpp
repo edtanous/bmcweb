@@ -40,7 +40,7 @@ inline void handleMessageRegistryFileCollectionGet(
         {"@odata.id", "/redfish/v1/Registries"},
         {"Name", "MessageRegistryFile Collection"},
         {"Description", "Collection of MessageRegistryFiles"},
-        {"Members@odata.count", 4},
+        {"Members@odata.count", 5},
         {"Members",
          {{{"@odata.id", "/redfish/v1/Registries/Base"}},
           {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
