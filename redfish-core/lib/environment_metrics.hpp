@@ -4,9 +4,20 @@
 #include <boost/format.hpp>
 #include <utils/chassis_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/processor_utils.hpp>
+#include <tuple>
 
 namespace redfish
 {
+
+using SetPointProperties =
+    std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>;
+
+// Map of service name to list of interfaces
+using MapperServiceMap =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
+
+
 inline void
     getfanSpeedsPercent(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& chassisID)
@@ -114,6 +125,93 @@ inline void
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/sensors", 0, sensorInterfaces);
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+/**
+ * Handle the PATCH operation of the Edpp Scale limit property. Do basic
+ * validation of the input data, and then set the D-Bus property.
+ *
+ * @param[in,out]   resp                Async HTTP response.
+ * @param[in]       processorId         prcoessor Id.
+ * @param[in]       setPoint            New property value to apply.
+ * @param[in]       patchEdppSetPoint   Path of CPU object to modify.
+ * @param[in]       serviceMap          Service map for CPU object.
+ */
+inline void patchEdppSetPoint(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                            const std::string& processorId,
+                            const size_t setPoint,
+                            const bool persistency,
+                            const std::string& cpuObjectPath,
+                            const MapperServiceMap& serviceMap)
+{
+
+    // Check that the property even exists by checking for the interface
+    const std::string* inventoryService = nullptr;
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        if (std::find(
+                interfaceList.begin(), interfaceList.end(),
+                "com.nvidia.Edpp") !=
+            interfaceList.end())
+        {
+            inventoryService = &serviceName;
+            break;
+        }
+    }
+    if (inventoryService == nullptr)
+    {
+        messages::internalError(resp->res);
+        return;
+    }
+
+    std::tuple<size_t, bool> reqSetPoint;
+    reqSetPoint = std::make_tuple(setPoint, persistency);
+
+    // Set the property, with handler to check error responses
+    crow::connections::systemBus->async_method_call(
+        [resp, processorId, setPoint](
+            boost::system::error_code ec, sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set point property succeeded";
+                return;
+            }
+
+            BMCWEB_LOG_ERROR << "Processor ID: " << processorId
+                             << " set point property failed: " << ec;
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+            {
+                // Invalid value
+                messages::propertyValueIncorrect(resp->res, "setPoint",
+                                                 std::to_string(setPoint));
+            }
+            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                             "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties", "Set",
+        "com.nvidia.Edpp", "SetPoint",
+        std::variant<std::tuple<size_t, bool>>(reqSetPoint));
+}
+
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
 
 inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& chassisID)
@@ -247,6 +345,74 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         connectionName, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Control.Power.Cap");
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline void getEDPpData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& connectionName,
+                        const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, connectionName, objPath](
+            const boost::system::error_code ec,
+            const SetPointProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "procesor EDPp scaling properties";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["EDPpPercent"]["@odata.type"] =
+                            "#NvidiaEnvironmentMetrics.v1_0_0.NvidiaEnvironmentMetrics";
+
+            for (const auto& [key, variant] : properties)
+            {
+                if (key  == "SetPoint")
+                {
+                    using SetPointProperty = std::tuple<size_t, bool>;
+                    const auto* setPoint = std::get_if<SetPointProperty>(&variant);
+                    if (setPoint != nullptr)
+                    {
+                        const auto& [limit, persistency] = *setPoint;
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["EDPpPercent"]["SetPoint"] = limit;
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["EDPpPercent"]["Persistency"] = {};
+                    }
+                }
+                else if (key  == "AllowableMax")
+                {
+                    const size_t* value = std::get_if<size_t>(&variant);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for type";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["EDPpPercent"]["AllowableMax"] =
+                        *value;
+
+                }
+                else if (key  == "AllowableMin")
+                {
+                    const size_t* value = std::get_if<size_t>(&variant);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for type";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["EDPpPercent"]["AllowableMin"] =
+                        *value;
+                }
+            }
+        },
+        connectionName, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "com.nvidia.Edpp");
+}
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
 
 inline void getPowerLimits(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
@@ -794,6 +960,16 @@ inline void
                     {
                         getControlMode(aResp, service, path);
                     }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "com.nvidia.Edpp") !=
+                        interfaces.end())
+                    {
+                        getEDPpData(aResp, service, path);
+                    }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
                     getEnvironmentMetricsDataByService(aResp, service, path);
                 }
                 return;
@@ -841,12 +1017,74 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& processorId) {
             std::optional<int> powerLimit;
+            std::optional<nlohmann::json> oemObject;
+
             // Read json request
             if (!json_util::readJson(req, asyncResp->res, "SetPoint",
-                                     powerLimit))
+                                     powerLimit, "Oem", oemObject))
             {
                 return;
             }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+            // update Edpp Setpoint
+            if (std::optional<nlohmann::json> oemNvidiaObject;
+                oemObject &&
+                json_util::readJson(*oemObject, asyncResp->res, "Nvidia",
+                                        oemNvidiaObject))
+            {
+                if (std::optional<nlohmann::json> EdppObject;
+                    oemNvidiaObject &&
+                    json_util::readJson(*oemNvidiaObject, asyncResp->res,
+                                        "EDPpPercent", EdppObject))
+                {
+                    if (EdppObject)
+                    {
+                        std::optional<size_t> setPoint;
+                        std::optional<bool> persistency;
+
+                        if (!json_util::readJson(*EdppObject, asyncResp->res, "SetPoint", setPoint, "Persistency", persistency))
+                        {
+                            BMCWEB_LOG_ERROR << "Cannot read values from Edpp tag";
+                            return;
+                        }
+
+                        if(setPoint && persistency)
+                        {
+                            redfish::processor_utils::getProcessorObject(
+                                    asyncResp, processorId,
+                                    [setPoint, persistency](
+                                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                                        const std::string& processorId,
+                                        const std::string& objectPath,
+                                        const MapperServiceMap& serviceMap) {
+                                    patchEdppSetPoint(asyncResp, processorId,
+                                            *setPoint, *persistency, objectPath,
+                                            serviceMap);
+                                    });
+                        }
+                        else if(setPoint)
+                        {
+                            redfish::processor_utils::getProcessorObject(
+                                    asyncResp, processorId,
+                                    [setPoint](
+                                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                                        const std::string& processorId,
+                                        const std::string& objectPath,
+                                        const MapperServiceMap& serviceMap) {
+                                    patchEdppSetPoint(asyncResp, processorId,
+                                            *setPoint, false, objectPath,
+                                            serviceMap);
+                                    });
+
+                        }
+                    }
+                }
+            }
+
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
             // Update power limit
             if (powerLimit)
             {
@@ -984,5 +1222,86 @@ inline void requestRoutesMemoryEnvironmentMetrics(App& app)
                 getMemoryEnvironmentMetricsData(asyncResp, dimmId);
             });
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline void postEdppReset(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                          const std::string& processorId,
+                          const std::string& cpuObjectPath,
+                          const MapperServiceMap& serviceMap)
+{
+
+    // Check that the property even exists by checking for the interface
+    const std::string* inventoryService = nullptr;
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        if (std::find(
+                interfaceList.begin(), interfaceList.end(),
+                "com.nvidia.Edpp") !=
+            interfaceList.end())
+        {
+            inventoryService = &serviceName;
+            break;
+        }
+    }
+    if (inventoryService == nullptr)
+    {
+        messages::internalError(resp->res);
+        return;
+    }
+
+    // Call Edpp Reset Method
+    crow::connections::systemBus->async_method_call(
+        [resp, processorId](boost::system::error_code ec,
+            const int retValue)
+        {
+            if (!ec)
+            {
+
+                if (retValue != 0)
+                {
+                    BMCWEB_LOG_ERROR << retValue;
+                    messages::operationFailed(resp->res);
+                }
+                BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                    << " Edpp Reset Succeded";
+                messages::success(resp->res);
+                return;
+            }
+            BMCWEB_LOG_DEBUG << ec;
+            messages::internalError(resp->res);
+            return;
+        },
+        *inventoryService, cpuObjectPath,
+        "com.nvidia.Edpp", "Reset");
+}
+
+inline void requestRoutesEdppReset(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Processors/<str>/"
+                      "EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp")
+        .privileges({{"Login"}})
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& processorId) {
+
+                   redfish::processor_utils::getProcessorObject(
+                      asyncResp, processorId,
+                      [](
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId,
+                            const std::string& objectPath,
+                            const MapperServiceMap& serviceMap) {
+                                postEdppReset(asyncResp, processorId,
+                                    objectPath, serviceMap);
+                                });
+                    });
+}
+
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace redfish
