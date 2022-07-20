@@ -334,6 +334,8 @@ conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-
 conf_data.set('UPDATE_SERVICE_TASK_TIMEOUT', get_option('update-service-task-timeout'))
 conf_data.set_quoted('PLATFORM_SYSTEM_ID', get_option('platform-system-id'))
 conf_data.set_quoted('PLATFORM_BMC_ID', get_option('platform-bmc-id'))
+conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
+conf_data.set('OTP_PROVISIONING_STATUS_FILE_PATH', get_option('otp-provisioning-status-file-path'))
 configure_file(input: 'bmcweb_config.h.in',
                output: 'bmcweb_config.h',
                configuration: conf_data)

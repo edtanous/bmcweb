@@ -368,25 +368,25 @@ inline void
                 asyncResp->res.jsonValue["Oem"]["OpenBmc"]["Fan"];
             nlohmann::json& fans = configRoot["FanControllers"];
             fans["@odata.type"] = "#OemManager.FanControllers";
-            fans["@odata.id"] =
-                "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/FanControllers";
+            fans["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Oem/OpenBmc/Fan/FanControllers";
 
             nlohmann::json& pids = configRoot["PidControllers"];
             pids["@odata.type"] = "#OemManager.PidControllers";
-            pids["@odata.id"] =
-                "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/PidControllers";
+            pids["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Oem/OpenBmc/Fan/PidControllers";
 
             nlohmann::json& stepwise = configRoot["StepwiseControllers"];
             stepwise["@odata.type"] = "#OemManager.StepwiseControllers";
-            stepwise["@odata.id"] =
-                "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/StepwiseControllers";
+            stepwise["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Oem/OpenBmc/Fan/StepwiseControllers";
 
             nlohmann::json& zones = configRoot["FanZones"];
-            zones["@odata.id"] =
-                "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/FanZones";
+            zones["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Oem/OpenBmc/Fan/FanZones";
             zones["@odata.type"] = "#OemManager.FanZones";
-            configRoot["@odata.id"] =
-                "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan";
+            configRoot["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Oem/OpenBmc/Fan";
             configRoot["@odata.type"] = "#OemManager.Fan";
             configRoot["Profile@Redfish.AllowableValues"] = supportedProfiles;
 
@@ -473,9 +473,9 @@ inline void
                         nlohmann::json& zone = zones[name];
                         zone["Chassis"] = {
                             {"@odata.id", "/redfish/v1/Chassis/" + chassis}};
-                        zone["@odata.id"] =
-                            "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/FanZones/" +
-                            name;
+                        zone["@odata.id"] = "/redfish/v1/Managers/"
+                            PLATFORMBMCID
+                            "/Oem/OpenBmc/Fan/FanZones/" + name;
                         zone["@odata.type"] = "#OemManager.FanZone";
                         config = &zone;
                     }
@@ -492,9 +492,9 @@ inline void
                         nlohmann::json& controller = stepwise[name];
                         config = &controller;
 
-                        controller["@odata.id"] =
-                            "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/StepwiseControllers/" +
-                            name;
+                        controller["@odata.id"] = "/redfish/v1/Managers/"
+                            PLATFORMBMCID
+                            "/Oem/OpenBmc/Fan/StepwiseControllers/" + name;
                         controller["@odata.type"] =
                             "#OemManager.StepwiseController";
 
@@ -517,17 +517,17 @@ inline void
                         config = &element;
                         if (isFan)
                         {
-                            element["@odata.id"] =
-                                "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/FanControllers/" +
-                                name;
+                            element["@odata.id"] = "/redfish/v1/Managers/"
+                                PLATFORMBMCID
+                                "/Oem/OpenBmc/Fan/FanControllers/" + name;
                             element["@odata.type"] =
                                 "#OemManager.FanController";
                         }
                         else
                         {
-                            element["@odata.id"] =
-                                "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/PidControllers/" +
-                                name;
+                            element["@odata.id"] = "/redfish/v1/Managers/"
+                                PLATFORMBMCID
+                                "/Oem/OpenBmc/Fan/PidControllers/" + name;
                             element["@odata.type"] =
                                 "#OemManager.PidController";
                         }
@@ -651,9 +651,10 @@ inline void
                                 {
                                     dbus::utility::escapePathForDbus(itemCopy);
                                     data.push_back(
-                                        {{"@odata.id",
-                                          "/redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/FanZones/" +
-                                              itemCopy}});
+                                        {{"@odata.id", "/redfish/v1/Managers/"
+                                            PLATFORMBMCID
+                                            "/Oem/OpenBmc/Fan/FanZones/"
+                                            + itemCopy}});
                                 }
                             }
                             // todo(james): may never happen, but this
@@ -789,7 +790,7 @@ inline bool
         std::string input;
 
         // 8 below comes from
-        // /redfish/v1/Managers/bmc#/Oem/OpenBmc/Fan/FanZones/Left
+        // /redfish/v1/Managers/PLATFORMBMCID/Oem/OpenBmc/Fan/FanZones/Left
         //     0    1     2      3    4    5      6     7      8
         if (!dbus::utility::getNthStringFromPath(path, 8, input))
         {
@@ -2392,12 +2393,85 @@ inline void requestRoutesManager(App& app)
             nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
             nlohmann::json& oemOpenbmc = oem["OpenBmc"];
             oem["@odata.type"] = "#OemManager.Oem";
-            oem["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem";
+            oem["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "/Oem";
             oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
-            oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem/OpenBmc";
+            oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Oem/OpenBmc";
             oemOpenbmc["Certificates"] = {{"@odata.id",
                                            "/redfish/v1/Managers/" PLATFORMBMCID
                                            "/Truststore/Certificates"}};
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            // NvidiaManager
+            nlohmann::json& oemNvidia = oem["Nvidia"];
+            oemNvidia["@odata.type"] = "#OemManager.Nvidia";
+            oemNvidia["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Oem/Nvidia";
+
+            // build type
+            nlohmann::json& buildType = oemNvidia["FirmwareBuildType"];
+            std::ifstream buildDescriptionFile(buildDescriptionFilePath);
+            if (buildDescriptionFile.good())
+            {
+                std::string line;
+                std::string const prefix = "BUILD_DESC=";
+                std::string descriptionContent;
+                while (getline(buildDescriptionFile, line) && descriptionContent.size() == 0)
+                {
+                    if (line.rfind(prefix, 0) == 0)
+                    {
+                        descriptionContent = line.substr(prefix.size());
+                        descriptionContent.erase(std::remove(descriptionContent.begin(), descriptionContent.end(), '"'),
+                                                    descriptionContent.end());
+                    }
+                }
+                if (descriptionContent.rfind("debug-prov", 0) == 0)
+                {
+                    buildType = "ProvisioningDebug";
+                }
+                if (descriptionContent.rfind("prod-prov", 0) == 0)
+                {
+                    buildType = "ProvisioningProduction";
+                }
+                if (descriptionContent.rfind("debug-platform", 0) == 0)
+                {
+                    buildType = "PlatformDebug";
+                }
+                if (descriptionContent.rfind("prod-platform", 0) == 0)
+                {
+                    buildType = "PlatformProduction";
+                }
+            }
+
+            // OTP provisioning status
+            nlohmann::json& otpProvisioned = oemNvidia["OTPProvisioned"];
+            std::ifstream otpStatusFile(otpProvisioningStatusFilePath);
+            if (otpStatusFile.good())
+            {
+                std::string statusLine;
+                if (getline(otpStatusFile, statusLine))
+                {
+                    if (statusLine != "0" && statusLine != "1")
+                    {
+                        BMCWEB_LOG_ERROR <<
+                            "Invalid OTP provisioning status - " <<
+                            statusLine << "\n";
+                    }
+                    otpProvisioned = (statusLine == "1");
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR <<
+                        "Failed to read OTP provisioning status\n";
+                    otpProvisioned = false;
+                }
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR <<
+                    "Failed to open OTP provisioning status file\n";
+                otpProvisioned = false;
+            }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             nlohmann::json& oemNvidia = oem["Nvidia"];
