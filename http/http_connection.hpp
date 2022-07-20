@@ -6,6 +6,7 @@
 #include "http_utility.hpp"
 #include "logging.hpp"
 #include "utility.hpp"
+#include "persistent_data.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -62,7 +63,12 @@ class Connection :
         parser->header_limit(httpHeaderLimit);
 
 #ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-        prepareMutualTls();
+        if constexpr (std::is_same<Adaptor,
+                                   boost::beast::ssl_stream<
+                                       boost::asio::ip::tcp::socket>>::value)
+        {
+            prepareMutualTls();
+        }
 #endif // BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
 
         connectionCount++;
@@ -356,15 +362,18 @@ class Connection :
             return;
         }
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHENTICATION
-        if (!crow::authorization::isOnAllowlist(req->url, req->method()) &&
-            thisReq.session == nullptr)
+        if (persistent_data::getConfig().isTLSAuthEnabled())
         {
-            BMCWEB_LOG_WARNING << "[AuthMiddleware] authorization failed";
-            forward_unauthorized::sendUnauthorized(
-                req->url, req->getHeaderValue("User-Agent"),
-                req->getHeaderValue("Accept"), res);
-            completeRequest();
-            return;
+            if (!crow::authorization::isOnAllowlist(req->url, req->method()) &&
+                thisReq.session == nullptr)
+            {
+                BMCWEB_LOG_WARNING << "[AuthMiddleware] authorization failed";
+                forward_unauthorized::sendUnauthorized(
+                    req->url, req->getHeaderValue("User-Agent"),
+                    req->getHeaderValue("Accept"), res);
+                completeRequest();
+                return;
+            }
         }
 #endif // BMCWEB_INSECURE_DISABLE_AUTHENTICATION
         res.setCompleteRequestHandler([self(shared_from_this())] {
@@ -423,7 +432,7 @@ class Connection :
         {
             adaptor.next_layer().close();
 #ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-            if (userSession != nullptr)
+            if (persistent_data::getConfig().isTLSAuthEnabled() && userSession != nullptr)
             {
                 BMCWEB_LOG_DEBUG
                     << this
@@ -591,25 +600,28 @@ class Connection :
                 }
                 sessionIsFromTransport = false;
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHENTICATION
-                boost::beast::http::verb method = parser->get().method();
-                userSession = crow::authorization::authenticate(
-                    ip, res, method, parser->get().base(), userSession);
-
-                bool loggedIn = userSession != nullptr;
-                if (!loggedIn)
+                if (persistent_data::getConfig().isTLSAuthEnabled())
                 {
-                    const boost::optional<uint64_t> contentLength =
-                        parser->content_length();
-                    if (contentLength &&
-                        *contentLength > loggedOutPostBodyLimit)
-                    {
-                        BMCWEB_LOG_DEBUG << "Content length greater than limit "
-                                         << *contentLength;
-                        close();
-                        return;
-                    }
+                    boost::beast::http::verb method = parser->get().method();
+                    userSession = crow::authorization::authenticate(
+                        ip, res, method, parser->get().base(), userSession);
 
-                    BMCWEB_LOG_DEBUG << "Starting quick deadline";
+                    bool loggedIn = userSession != nullptr;
+                    if (!loggedIn)
+                    {
+                        const boost::optional<uint64_t> contentLength =
+                            parser->content_length();
+                        if (contentLength &&
+                            *contentLength > loggedOutPostBodyLimit)
+                        {
+                            BMCWEB_LOG_DEBUG << "Content length greater than limit "
+                                            << *contentLength;
+                            close();
+                            return;
+                        }
+
+                        BMCWEB_LOG_DEBUG << "Starting quick deadline";
+                    }
                 }
 #endif // BMCWEB_INSECURE_DISABLE_AUTHENTICATION
 

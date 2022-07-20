@@ -137,8 +137,11 @@ int run()
 #endif
 
 #ifdef BMCWEB_ENABLE_SSL
-    BMCWEB_LOG_INFO << "Start Hostname Monitor Service...";
-    crow::hostname_monitor::registerHostnameSignal();
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        BMCWEB_LOG_INFO << "Start Hostname Monitor Service...";
+        crow::hostname_monitor::registerHostnameSignal();
+    }
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG

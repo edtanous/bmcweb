@@ -92,7 +92,17 @@ feature_map = {
   'health-rollup-alternative'                   : '-DBMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE',
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
   'rmedia'                	                : '-DBMCWEB_ENABLE_RMEDIA',
+  'tls-auth-opt-in'                             : '-DBMCWEB_ENABLE_TLS_AUTH_OPT_IN',
 }
+
+if(get_option('tls-auth-opt-in').enabled())
+  if(get_option('insecure-disable-auth').enabled())
+    error('Feature tls-auth-opt-in conflicts with insecure-disable-auth, only one can be enabled!')
+  endif
+  if(get_option('insecure-disable-ssl').enabled())
+    error('Feature tls-auth-opt-in conflicts with insecure-disable-ssl, only one can be enabled!')
+  endif
+endif
 
 # Get the options status and build a project summary to show which flags are
 # being enabled during the configuration time.

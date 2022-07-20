@@ -104,31 +104,34 @@ class Server
     void loadCertificate()
     {
 #ifdef BMCWEB_ENABLE_SSL
-        namespace fs = std::filesystem;
-        // Cleanup older certificate file existing in the system
-        fs::path oldCert = "/home/root/server.pem";
-        if (fs::exists(oldCert))
+        if constexpr (std::is_same<Adaptor, boost::beast::ssl_stream<boost::asio::ip::tcp::socket>>::value)
         {
-            fs::remove("/home/root/server.pem");
+            namespace fs = std::filesystem;
+            // Cleanup older certificate file existing in the system
+            fs::path oldCert = "/home/root/server.pem";
+            if (fs::exists(oldCert))
+            {
+                fs::remove("/home/root/server.pem");
+            }
+            fs::path certPath = "/etc/ssl/certs/https/";
+            // if path does not exist create the path so that
+            // self signed certificate can be created in the
+            // path
+            if (!fs::exists(certPath))
+            {
+                fs::create_directories(certPath);
+            }
+            fs::path certFile = certPath / "server.pem";
+            BMCWEB_LOG_INFO << "Building SSL Context file=" << certFile;
+            std::string sslPemFile(certFile);
+            std::vector<char> &pwd = lsp::getLsp();
+            ensuressl::ensureOpensslKeyPresentEncryptedAndValid(
+                sslPemFile, &pwd, lsp::passwordCallback);
+            std::shared_ptr<boost::asio::ssl::context> sslContext =
+                ensuressl::getSslContext(sslPemFile);
+            adaptorCtx = sslContext;
+            handler->ssl(std::move(sslContext));
         }
-        fs::path certPath = "/etc/ssl/certs/https/";
-        // if path does not exist create the path so that
-        // self signed certificate can be created in the
-        // path
-        if (!fs::exists(certPath))
-        {
-            fs::create_directories(certPath);
-        }
-        fs::path certFile = certPath / "server.pem";
-        BMCWEB_LOG_INFO << "Building SSL Context file=" << certFile;
-        std::string sslPemFile(certFile);
-        std::vector<char> &pwd = lsp::getLsp();
-        ensuressl::ensureOpensslKeyPresentEncryptedAndValid(
-            sslPemFile, &pwd, lsp::passwordCallback);
-        std::shared_ptr<boost::asio::ssl::context> sslContext =
-            ensuressl::getSslContext(sslPemFile);
-        adaptorCtx = sslContext;
-        handler->ssl(std::move(sslContext));
 #endif
     }
 

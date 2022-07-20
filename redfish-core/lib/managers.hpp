@@ -34,6 +34,68 @@
 namespace redfish
 {
 
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+
+/**
+ * Helper to enable the AuthenticationTLSRequired
+ */
+inline void enableTLSAuth()
+{
+    BMCWEB_LOG_DEBUG << "Processing AuthenticationTLSRequired Enable.";
+    
+    const char* socket_path = "/lib/systemd/system/bmcweb.socket";
+    const char* tmp_path = "/lib/systemd/system/bmcweb.tmp";
+    {
+        std::ifstream in(socket_path);
+        std::ofstream out(tmp_path);
+        std::string line;
+        while(getline(in, line))
+        {
+            if (line == "ListenStream=80")
+            {
+                out << "ListenStream=443" << std::endl;
+            }
+            else
+            {
+                out << line << std::endl;
+            }
+        }
+    }
+    std::filesystem::rename(tmp_path, socket_path);
+    persistent_data::getConfig().enableTLSAuth();
+
+    //restart procedure
+    //TODO find nicer and faster way?
+    try
+    {
+        dbus::utility::systemdReload();
+    }
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_ERROR << "TLSAuthEnable systemd Reload failed with: " << e.what();
+    }
+    
+    try
+    {
+        dbus::utility::systemdRestartUnit("bmcweb_2esocket", "replace");
+    }
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.socket Restart failed with: " << e.what();
+    }
+    
+    try
+    {
+        dbus::utility::systemdRestartUnit("bmcweb_2eservice", "replace");
+    }
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.service Restart failed with: " << e.what();
+    }
+}
+
+#endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+
 /**
  * Function reboots the BMC.
  *
@@ -2180,7 +2242,7 @@ inline void getLinkManagerForSwitches(
 inline void requestRoutesManager(App& app)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
-
+    
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/")
         .privileges(redfish::privileges::getManager)
         .methods(
@@ -2337,6 +2399,15 @@ inline void requestRoutesManager(App& app)
                                            "/redfish/v1/Managers/" PLATFORMBMCID
                                            "/Truststore/Certificates"}};
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            nlohmann::json& oemNvidia = oem["Nvidia"];
+            oemNvidia["@odata.type"] = "#OemManager.NvidiaManager";
+            oemNvidia["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "#/Oem/NvidiaManager";
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+            oemNvidia["AuthenticationTLSRequired"] = persistent_data::getConfig().isTLSAuthEnabled();
+#endif
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            
             // Manager.Reset (an action) can be many values, OpenBMC only
             // supports BMC reboot.
             nlohmann::json& managerReset =
@@ -2519,8 +2590,9 @@ inline void requestRoutesManager(App& app)
             if (oem)
             {
                 std::optional<nlohmann::json> openbmc;
+                std::optional<nlohmann::json> nvidia;
                 if (!redfish::json_util::readJson(*oem, asyncResp->res,
-                                                  "OpenBmc", openbmc))
+                                                  "OpenBmc", openbmc, "Nvidia", nvidia))
                 {
                     BMCWEB_LOG_ERROR
                         << "Illegal Property "
@@ -2547,6 +2619,39 @@ inline void requestRoutesManager(App& app)
                             std::make_shared<SetPIDValues>(asyncResp, *fan);
                         pid->run();
                     }
+                }
+                if (nvidia)
+                {
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+                    std::optional<bool> tlsAuth;
+                    if (!redfish::json_util::readJson(*nvidia, asyncResp->res,
+                                                      "AuthenticationTLSRequired", tlsAuth))
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "Illegal Property "
+                            << oem->dump(2, ' ', true,
+                                        nlohmann::json::error_handler_t::replace);
+                        return;
+                    }
+
+                    if (tlsAuth)
+                    {
+                        if (*tlsAuth == persistent_data::getConfig().isTLSAuthEnabled())
+                        {
+                            BMCWEB_LOG_DEBUG << "Ignoring redundant patch of AuthenticationTLSRequired.";
+                        }
+                        else if (!*tlsAuth)
+                        {
+                            BMCWEB_LOG_ERROR << "Disabling AuthenticationTLSRequired is not allowed.";
+                            messages::propertyValueIncorrect(asyncResp->res, "AuthenticationTLSRequired", "false");
+                            return;
+                        }
+                        else
+                        {
+                            enableTLSAuth();
+                        }
+                    }
+#endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
                 }
             }
             if (links)

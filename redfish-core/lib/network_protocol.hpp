@@ -121,13 +121,18 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // but from security perspective it is not recommended to use.
     // Hence using protocolEnabled as false to make it OCP and security-wise
     // compliant
-#ifndef BMCWEB_ENABLE_SSL
-    asyncResp->res.jsonValue["HTTP"]["Port"] = 80;
-    asyncResp->res.jsonValue["HTTP"]["ProtocolEnabled"] = true;
-#else
-    asyncResp->res.jsonValue["HTTP"]["Port"] = 0;
-    asyncResp->res.jsonValue["HTTP"]["ProtocolEnabled"] = false;
+#ifdef BMCWEB_ENABLE_SSL
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        asyncResp->res.jsonValue["HTTP"]["Port"] = 0;
+        asyncResp->res.jsonValue["HTTP"]["ProtocolEnabled"] = false;
+    }
+    else
 #endif
+    {
+        asyncResp->res.jsonValue["HTTP"]["Port"] = 80;
+        asyncResp->res.jsonValue["HTTP"]["ProtocolEnabled"] = true;
+    }
 
     std::string hostName = getHostName();
 
@@ -176,8 +181,12 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     {
         const std::string& protocolName = protocol.first;
         const std::string& serviceName = protocol.second;
-#ifndef BMCWEB_ENABLE_SSL
-
+#ifdef BMCWEB_ENABLE_SSL
+        if (protocolName == "HTTPS" && !persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            continue;
+        }
+#else
         if (protocolName == "HTTPS")
         {
             continue;

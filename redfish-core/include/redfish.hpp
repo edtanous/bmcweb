@@ -71,14 +71,21 @@ class RedfishService
      */
     RedfishService(App& app)
     {
-        requestAccountServiceRoutes(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled()) {
+                requestAccountServiceRoutes(app);
+        }
         requestAssemblyRoutes(app);
 	requestPcieSlotsRoutes(app);
-        requestRoutesRoles(app);
-        requestRoutesRoleCollection(app);
+
+        if (persistent_data::getConfig().isTLSAuthEnabled()) {
+                requestRoutesRoles(app);
+                requestRoutesRoleCollection(app);
+        }
         requestRoutesServiceRoot(app);
         requestRoutesNetworkProtocol(app);
-        requestRoutesSession(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled()) {
+                requestRoutesSession(app);
+        }
         requestEthernetInterfacesRoutes(app);
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
         requestRoutesThermal(app);
@@ -211,17 +218,18 @@ class RedfishService
         requestRoutesMessageRegistryFile(app);
         requestRoutesMessageRegistry(app);
 
-        requestRoutesCertificateService(app);
-        requestRoutesCertificateActionGenerateCSR(app);
-        requestRoutesCertificateActionsReplaceCertificate(app);
-        requestRoutesHTTPSCertificate(app);
-        requestRoutesHTTPSCertificateCollection(app);
-        requestRoutesCertificateLocations(app);
-        requestRoutesLDAPCertificateCollection(app);
-        requestRoutesLDAPCertificate(app);
-        requestRoutesTrustStoreCertificateCollection(app);
-        requestRoutesTrustStoreCertificate(app);
-
+        if (persistent_data::getConfig().isTLSAuthEnabled()) {
+                requestRoutesCertificateService(app);
+                requestRoutesCertificateActionGenerateCSR(app);
+                requestRoutesCertificateActionsReplaceCertificate(app);
+                requestRoutesHTTPSCertificate(app);
+                requestRoutesHTTPSCertificateCollection(app);
+                requestRoutesCertificateLocations(app);
+                requestRoutesLDAPCertificateCollection(app);
+                requestRoutesLDAPCertificate(app);
+                requestRoutesTrustStoreCertificateCollection(app);
+                requestRoutesTrustStoreCertificate(app);
+        }
         requestRoutesSystemPCIeFunctionCollection(app);
         requestRoutesSystemPCIeFunction(app);
         requestRoutesSystemPCIeDeviceCollection(app);

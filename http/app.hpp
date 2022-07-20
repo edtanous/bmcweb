@@ -32,15 +32,21 @@ class App
 #ifdef BMCWEB_ENABLE_SSL
     using ssl_socket_t = boost::beast::ssl_stream<boost::asio::ip::tcp::socket>;
     using ssl_server_t = Server<App, ssl_socket_t>;
-#else
+#endif
     using socket_t = boost::asio::ip::tcp::socket;
     using server_t = Server<App, socket_t>;
-#endif
 
     explicit App(std::shared_ptr<boost::asio::io_context> ioIn =
                      std::make_shared<boost::asio::io_context>()) :
         io(std::move(ioIn))
-    {}
+    {
+#ifdef BMCWEB_ENABLE_SSL
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            portUint = 443;
+        }
+#endif
+    }
     ~App()
     {
         this->stop();
@@ -101,33 +107,37 @@ class App
     {
         validate();
 #ifdef BMCWEB_ENABLE_SSL
-        if (-1 == socketFd)
+        if (persistent_data::getConfig().isTLSAuthEnabled())
         {
-            sslServer = std::make_unique<ssl_server_t>(
-                this, bindaddrStr, portUint, sslContext, io);
+            BMCWEB_LOG_DEBUG << "TLS RUN";
+            if (-1 == socketFd)
+            {
+                sslServer = std::make_unique<ssl_server_t>(
+                    this, bindaddrStr, portUint, sslContext, io);
+            }
+            else
+            {
+                sslServer =
+                    std::make_unique<ssl_server_t>(this, socketFd, sslContext, io);
+            }
+            sslServer->run();
         }
         else
-        {
-            sslServer =
-                std::make_unique<ssl_server_t>(this, socketFd, sslContext, io);
-        }
-        sslServer->run();
-
-#else
-
-        if (-1 == socketFd)
-        {
-            server = std::move(std::make_unique<server_t>(
-                this, bindaddrStr, portUint, nullptr, io));
-        }
-        else
-        {
-            server = std::move(
-                std::make_unique<server_t>(this, socketFd, nullptr, io));
-        }
-        server->run();
-
 #endif
+        {
+            BMCWEB_LOG_DEBUG << "HTTP RUN";
+            if (-1 == socketFd)
+            {
+                server = std::move(std::make_unique<server_t>(
+                    this, bindaddrStr, portUint, nullptr, io));
+            }
+            else
+            {
+                server = std::move(
+                    std::make_unique<server_t>(this, socketFd, nullptr, io));
+            }
+            server->run();
+        }
     }
 
     void stop()
@@ -219,20 +229,17 @@ class App
 
   private:
     std::shared_ptr<boost::asio::io_context> io;
-#ifdef BMCWEB_ENABLE_SSL
-    uint16_t portUint = 443;
-#else
     uint16_t portUint = 80;
-#endif
+
     std::string bindaddrStr = "0.0.0.0";
     int socketFd = -1;
     Router router;
 
 #ifdef BMCWEB_ENABLE_SSL
     std::unique_ptr<ssl_server_t> sslServer;
-#else
-    std::unique_ptr<server_t> server;
 #endif
+    std::unique_ptr<server_t> server;
+    
 };
 } // namespace crow
 using App = crow::App;

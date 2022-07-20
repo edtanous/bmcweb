@@ -126,5 +126,26 @@ inline void checkDbusPathExists(const std::string& path, Callback&& callback)
         std::array<std::string, 0>());
 }
 
+inline void systemdReload()
+{
+    auto method = crow::connections::systemBus->new_method_call("org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1",
+        "org.freedesktop.systemd1.Manager", "Reload");
+
+    crow::connections::systemBus->call_noreply(method);
+}
+
+inline void systemdRestartUnit(const std::string_view unit, const char* mode)
+{
+    std::string path("/org/freedesktop/systemd1/unit/");
+    path.append(unit);
+    auto method = crow::connections::systemBus->new_method_call("org.freedesktop.systemd1", path.c_str(),
+        "org.freedesktop.systemd1.Unit", "Restart");
+
+    method.append(mode);
+
+    crow::connections::systemBus->call_noreply(method);
+}
+
 } // namespace utility
 } // namespace dbus

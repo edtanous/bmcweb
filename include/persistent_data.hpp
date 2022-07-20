@@ -23,6 +23,8 @@ namespace persistent_data
 class ConfigFile
 {
     uint64_t jsonRevision = 1;
+    bool tlsAuth = false;
+    bool tlsAuthToWrite = false;
 
   public:
     // todo(ed) should read this from a fixed location somewhere, not CWD
@@ -47,6 +49,26 @@ class ConfigFile
     ConfigFile(ConfigFile&&) = delete;
     ConfigFile& operator=(const ConfigFile&) = delete;
     ConfigFile& operator=(ConfigFile&&) = delete;
+
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+    void enableTLSAuth()
+    {
+        tlsAuthToWrite = true;
+        writeData();
+    }
+    
+    bool isTLSAuthEnabled() const
+    {
+        return tlsAuth;
+    }
+#else
+    // If BMCWEB_ENABLE_TLS_AUTH_OPT_IN is not enabled then the runtime check is always true,
+    // and the enablement depends on the various #ifdef checks.
+    constexpr bool isTLSAuthEnabled()
+    {
+        return true;
+    }
+#endif
 
     // TODO(ed) this should really use protobuf, or some other serialization
     // library, but adding another dependency is somewhat outside the scope of
@@ -90,6 +112,15 @@ class ConfigFile
                         if (jSystemUuid != nullptr)
                         {
                             systemUuid = *jSystemUuid;
+                        }
+                    }
+                    else if (item.key() == "tls_auth_enabled")
+                    {
+                        const bool* ptr = item.value().get_ptr<const bool*>();
+                        if (ptr != nullptr)
+                        {
+                            tlsAuth = *ptr;
+                            tlsAuthToWrite = *ptr;
                         }
                     }
                     else if (item.key() == "auth_config")
@@ -178,6 +209,19 @@ class ConfigFile
         }
         bool needWrite = false;
 
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+        {
+            AuthConfigMethods& authMethodsConfig =
+                SessionStore::getInstance().getAuthMethodsConfig();
+            authMethodsConfig.basic = isTLSAuthEnabled();
+            authMethodsConfig.cookie = isTLSAuthEnabled();
+            authMethodsConfig.xtoken = isTLSAuthEnabled();
+            authMethodsConfig.sessionToken = isTLSAuthEnabled();
+            authMethodsConfig.tls = isTLSAuthEnabled();
+            needWrite = true;
+        }
+#endif
+
         if (systemUuid.empty())
         {
             systemUuid =
@@ -225,6 +269,7 @@ class ConfigFile
 
             },
             {"system_uuid", systemUuid},
+            {"tls_auth_enabled", tlsAuthToWrite},
             {"revision", jsonRevision},
             {"timeout", SessionStore::getInstance().getTimeoutInSeconds()}};
 
