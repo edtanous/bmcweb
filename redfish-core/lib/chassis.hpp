@@ -201,6 +201,162 @@ inline void getChassisFabricSwitchesLinks(
         "xyz.openbmc_project.Association", "endpoints");
 }
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+/**
+ * @brief Fill out chassis nvidia specific info by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getOemBaseboardChassisAssert(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                  const std::string& service,
+                                  const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get chassis OEM info";
+    crow::connections::systemBus->async_method_call(
+        [aResp{std::move(aResp)}](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::variant<std::string,bool,uint64_t>>>&
+                propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Chassis oem info";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const auto& property : propertiesList)
+            {
+                if (property.first == "PartNumber")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "Part number";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] = *value;
+                }
+                else if (property.first == "SerialNumber")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for serial number";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] = *value;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Decorator.Asset");
+}
+
+/**
+ * @brief Fill out chassis nvidia specific info by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                  const std::string& service,
+                                  const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get Baseboard Hardware write protect info";
+    crow::connections::systemBus->async_method_call(
+        [aResp{std::move(aResp)}](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::variant<std::string,bool,uint64_t>>>&
+                propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Baseboard Hardware write protect info";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const auto& property : propertiesList)
+            {
+                if (property.first == "WriteProtected")
+                {
+                    const bool* value =
+                        std::get_if<bool>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for hardware write protected";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res.jsonValue["Oem"]["Nvidia"]["HardwareWriteProtected"] = *value;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Software.Settings");
+}
+
+/**
+ * @brief Fill out chassis nvidia specific info by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getOemPCIeDeviceClockReferenceInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                  const std::string& service,
+                                  const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get Baseboard PCIeReference clock count";
+    crow::connections::systemBus->async_method_call(
+        [aResp{std::move(aResp)}](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::variant<std::string,bool,uint64_t>>>&
+                propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Baseboard PCIeReference clock count";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const auto& property : propertiesList)
+            {
+                if (property.first == "PCIeReferenceClockCount")
+                {
+                    const uint64_t* value =
+                        std::get_if<uint64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for pcie refernce clock count";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] = *value;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Decorator.PCIeRefClock");
+}
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
 /**
  * @brief Fill out chassis power limits info of a chassis by
  * requesting data from the given D-Bus object.
@@ -782,6 +938,40 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 {
                     getChassisPowerLimits(asyncResp, connectionName, path);
                 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                // default oem data
+                nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
+
+                // Baseboard Chassis OEM properties
+                const std::string oemChassisInterface = 
+                    "xyz.openbmc_project.Inventory.Decorator.Asset";
+                if (std::find(interfaces2.begin(), interfaces2.end(),
+                              oemChassisInterface) != interfaces2.end())
+                {
+                    getOemBaseboardChassisAssert(asyncResp, connectionName, path);
+                }
+
+                // Baseboard Chassis hardware write protect info
+                const std::string hdwWriteProtectInterface = 
+                    "xyz.openbmc_project.Software.Settings";
+                if (std::find(interfaces2.begin(), interfaces2.end(),
+                              hdwWriteProtectInterface) != interfaces2.end())
+                {
+                    getOemHdwWriteProtectInfo(asyncResp, connectionName, path);
+                }
+
+                // Baseboard Chassis PCIe reference clock count
+                const std::string PCIeDeviceclkRefInterface = 
+                    "xyz.openbmc_project.Inventory.Decorator.PCIeRefClock";
+                if (std::find(interfaces2.begin(), interfaces2.end(),
+                              PCIeDeviceclkRefInterface) != interfaces2.end())
+                {
+                    getOemPCIeDeviceClockReferenceInfo(asyncResp, connectionName,
+                                                       path);
+                }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
                 // Links association to underneath chassis
                 getChassisLinksContains(asyncResp, path);
