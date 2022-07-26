@@ -20,6 +20,7 @@
 #include <boost/system/linux_error.hpp>
 #include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace redfish
 {
@@ -33,6 +34,10 @@ static constexpr char const* assetInterface =
 static constexpr char const* uuidInterface = "xyz.openbmc_project.Common.UUID";
 static constexpr char const* stateInterface =
     "xyz.openbmc_project.State.Chassis";
+static constexpr char const* pcieClockReferenceIntf =
+    "xyz.openbmc_project.Inventory.Decorator.PCIeRefClock";
+static constexpr char const* nvlinkClockReferenceIntf =
+    "com.nvidia.NVLink.NVLinkRefClock";
 
 static inline std::string getPCIeType(const std::string& pcieType)
 {
@@ -190,6 +195,90 @@ static inline void
         std::move(getPCIeDeviceUUIDCallback), service, escapedPath,
         "org.freedesktop.DBus.Properties", "Get", uuidInterface, "UUID");
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+// PCIeDevice getPCIeDeviceClkRefOem
+static inline void
+    getPCIeDeviceClkRefOem(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                      const std::string& device, const std::string& path,
+                      const std::string& service)
+{
+    auto getPCIeDeviceOemCallback =
+        [asyncResp{asyncResp}](const boost::system::error_code ec,
+                               const std::vector<
+                std::pair<std::string, std::variant<bool>>>&
+                propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error on getting PCIeDevice"
+                       << "clock reference OEM properties";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            
+            for (const std::pair<std::string, std::variant<bool>>&
+                     property : propertiesList)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "PCIeReferenceClockEnabled")
+                {
+                    const bool* value =
+                    std::get_if<bool>(&property.second);
+                    if (value != nullptr)
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"][propertyName] = *value;
+                    }      
+                }             
+            }
+        };
+    std::string escapedPath = std::string(path) + "/" + device;
+    dbus::utility::escapePathForDbus(escapedPath);
+    crow::connections::systemBus->async_method_call(
+        std::move(getPCIeDeviceOemCallback), service, escapedPath,
+        "org.freedesktop.DBus.Properties", "GetAll", pcieClockReferenceIntf);
+}
+
+// PCIeDevice nvlink clock reference OEM
+static inline void
+    getPCIeDeviceNvLinkClkRefOem(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                      const std::string& device, const std::string& path,
+                      const std::string& service)
+{
+    auto getPCIeDeviceOemCallback =
+        [asyncResp{asyncResp}](const boost::system::error_code ec,
+                               const std::vector<
+                std::pair<std::string, std::variant<bool>>>&
+                propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error on getting PCIeDevice"
+                    << "NVLink Clock Reference OEM properties";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            
+            for (const std::pair<std::string, std::variant<bool>>&
+                     property : propertiesList)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "NVLinkReferenceClockEnabled")
+                {
+                    const bool* value =
+                    std::get_if<bool>(&property.second);
+                    if (value != nullptr)
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"][propertyName] = *value;
+                    }      
+                }               
+            }
+        };
+    std::string escapedPath = std::string(path) + "/" + device;
+    dbus::utility::escapePathForDbus(escapedPath);
+    crow::connections::systemBus->async_method_call(
+        std::move(getPCIeDeviceOemCallback), service, escapedPath,
+        "org.freedesktop.DBus.Properties", "GetAll", nvlinkClockReferenceIntf);
+}
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 // PCIeDevice State
 static inline void
@@ -874,6 +963,33 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                                                            chassisPCIePath,
                                                            connectionName);
                                     }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                                    nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                                    oem["@odata.type"] = "#NvidiaPCIeDevice.v1_0_0.NvidiaPCIeDevice";
+                                    // Baseboard PCIeDevices Oem properties
+                                    if (std::find(interfaces2.begin(),
+                                                  interfaces2.end(),
+                                                  pcieClockReferenceIntf) !=
+                                        interfaces2.end())
+                                    {
+                                        getPCIeDeviceClkRefOem(asyncResp, device,
+                                                           chassisPCIePath,
+                                                           connectionName);
+                                    }
+
+                                    // Baseboard PCIeDevices nvlink Oem properties
+                                    if (std::find(interfaces2.begin(),
+                                                  interfaces2.end(),
+                                                  nvlinkClockReferenceIntf) !=
+                                        interfaces2.end())
+                                    {
+                                        getPCIeDeviceNvLinkClkRefOem(asyncResp, device,
+                                                           chassisPCIePath,
+                                                           connectionName);
+                                    }
+                                    
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                                     return;
                                 }
                                 messages::resourceNotFound(
