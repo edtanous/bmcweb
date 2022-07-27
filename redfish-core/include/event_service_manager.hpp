@@ -1698,6 +1698,168 @@ class EventServiceManager
         }
     }
 
+    /**
+     * Populates event with origin of condition
+     * then sends the event for Redfish Event Listener
+     * to pick up
+     */
+    void sendEventWithOOC(const std::string& ooc, Event& event)
+    {
+        if (ooc.empty())
+        {
+            BMCWEB_LOG_ERROR << "Invalid OriginOfCondition "
+                             << "in AdditionalData property";
+            return;
+        }
+        event.originOfCondition = ooc;
+        sendEvent(event);
+    }
+
+    /**
+     * Looks up the chassis required in redfish URI
+     * for a particular dbus path so OOC can be
+     * populated correctly for an event
+     */
+    void chassisLookupOOC(const std::string& path,
+                          const std::string& redfishPrefix,
+                          const std::string& endpointType, Event& event)
+    {
+
+        sdbusplus::message::object_path objPath(path);
+        std::string name = objPath.filename();
+        if (name.empty())
+        {
+            BMCWEB_LOG_ERROR << "File name empty for dbus path: " << path
+                             << "\n";
+            return;
+        }
+
+        const std::string& deviceName = name;
+        crow::connections::systemBus->async_method_call(
+            [this, redfishPrefix, deviceName, path, endpointType,
+             event](const boost::system::error_code ec,
+                    std::variant<std::vector<std::string>>& resp) mutable {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR << "Failed: " << ec << "\n";
+                    return;
+                }
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&resp);
+                if (data == nullptr)
+                {
+                    return;
+                }
+                std::vector<std::string> paths = *data;
+                std::string chassisPath;
+                if (paths.size() > 0)
+                {
+                    chassisPath = paths[0];
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR << "Empty chassis paths for " << path
+                                     << "\n";
+                    return;
+                }
+                sdbusplus::message::object_path objPath(chassisPath);
+                std::string chassisName = objPath.filename();
+                std::string oocDevice = redfishPrefix;
+                oocDevice.append(chassisName);
+                oocDevice.append(endpointType);
+                oocDevice.append(deviceName);
+                sendEventWithOOC(oocDevice, event);
+            },
+            "xyz.openbmc_project.ObjectMapper", path + "/chassis",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    }
+
+    /**
+     * Calculates origin of condition redfish URI
+     * for a dbus path and populates an event of the
+     * event service manager with it
+     */
+    void eventServiceOOC(const std::string& path, Event& event)
+    {
+        sdbusplus::message::object_path objPath(path);
+        std::string name = objPath.filename();
+        if (name.empty())
+        {
+            BMCWEB_LOG_ERROR << "File name empty for dbus path: " << path
+                             << "\n";
+            return;
+        }
+        if (boost::starts_with(path, "/xyz/openbmc_project/sensors"))
+        {
+            chassisLookupOOC(path, "/redfish/v1/Chassis/", "/Sensors/", event);
+            return;
+        }
+        const std::string& deviceName = name;
+        crow::connections::systemBus->async_method_call(
+            [this, deviceName, path, event](
+                const boost::system::error_code ec,
+                const std::vector<std::pair<
+                    std::string, std::vector<std::string>>>& objects) mutable {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR << "Failed: " << ec << "\n";
+                    return;
+                }
+                if (objects.empty())
+                {
+                    BMCWEB_LOG_ERROR << "Objects empty!\n";
+                    return;
+                }
+
+                for (const auto& object : objects)
+                {
+                    for (const auto& interfaces : object.second)
+                    {
+                        if (interfaces ==
+                            "xyz.openbmc_project.Inventory.Item.PCIeDevice")
+                        {
+                            chassisLookupOOC(path, "/redfish/v1/Chassis/",
+                                             "/PCIeDevices/", event);
+                            return;
+                        }
+                        if (interfaces ==
+                                "xyz.openbmc_project.Inventory.Item.Accelerator" ||
+                            interfaces ==
+                                "xyz.openbmc_project.Inventory.Item.Cpu")
+                        {
+                            sendEventWithOOC(
+                                "/redfish/v1/Systems/system/Processors/" +
+                                    deviceName,
+                                event);
+                            return;
+                        }
+                        if (interfaces ==
+                            "xyz.openbmc_project.Inventory.Item.Dimm")
+                        {
+                            sendEventWithOOC(
+                                "/redfish/v1/Systems/system/Memory/" +
+                                    deviceName,
+                                event);
+                            return;
+                        }
+                        sendEventWithOOC("/redfish/v1/Chassis/" + deviceName,
+                                         event);
+                    }
+                }
+            },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetObject", path,
+            std::array<const char*, 6>{
+                "xyz.openbmc_project.Inventory.Item.Accelerator",
+                "xyz.openbmc_project.Inventory.Item.PCIeDevice",
+                "xyz.openbmc_project.Inventory.Item.Cpu",
+                "xyz.openbmc_project.Inventory.Item.Board",
+                "xyz.openbmc_project.Inventory.Item.Chassis",
+                "xyz.openbmc_project.Inventory.Item.Dimm"});
+    }
+
     void registerDbusLoggingSignal()
     {
         if (!serviceEnabled || matchDbusLogging)
@@ -1732,6 +1894,7 @@ class EventServiceManager
             std::string originOfCondition = "";
             std::string message;
             std::vector<std::string> messageArgs = {};
+            const std::vector<std::string>* additionalDataPtr;
 
             msg.read(objPath, properties);
             for (auto const& [key, val] :
@@ -1739,8 +1902,6 @@ class EventServiceManager
             {
                 if (key == "AdditionalData")
                 {
-                    const std::vector<std::string>* additionalDataPtr;
-
                     additionalDataPtr =
                         std::get_if<std::vector<std::string>>(&val);
                     if (additionalDataPtr != nullptr)
@@ -1788,21 +1949,6 @@ class EventServiceManager
                                            "REDFISH_MESSAGE_ID")) +
                                        ".";
                             return;
-                        }
-
-                        if (additional.count("REDFISH_ORIGIN_OF_CONDITION") ==
-                            1)
-                        {
-                            originOfCondition = origin_utils::
-                                convertDbusObjectToOriginOfCondition(
-                                    additional["REDFISH_ORIGIN_OF_CONDITION"]);
-                            if (originOfCondition.empty())
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "Invalid OriginOfCondition "
-                                    << "in AdditionalData property";
-                                return;
-                            }
                         }
                     }
                     else
@@ -1874,7 +2020,6 @@ class EventServiceManager
             else
             {
                 Event event(messageId);
-
                 if (!event.isValid())
                 {
                     return;
@@ -1883,10 +2028,14 @@ class EventServiceManager
                 event.messageSeverity =
                     translateSeverityDbusToRedfish(severity);
                 event.eventTimestamp = timestamp;
-                event.originOfCondition = originOfCondition;
                 event.setRegistryMsg(messageArgs);
                 event.messageArgs = messageArgs;
-                sendEvent(event);
+                AdditionalData additional(*additionalDataPtr);
+                if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
+                {
+                    eventServiceOOC(additional["REDFISH_ORIGIN_OF_CONDITION"],
+                                    event);
+                }
             }
         };
 
