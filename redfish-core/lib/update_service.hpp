@@ -246,7 +246,7 @@ static void
                                 {
                                     message = messages::taskCompletedOK(
                                         std::to_string(index));
-                                    //fwupdate status is set in task callback
+                                    // fwupdate status is set in task callback
                                 }
                                 else
                                 {
@@ -325,12 +325,14 @@ static void
                                             return !task::completed;
                                         }
 
-                                        if (boost::ends_with(*state, "Activating"))
+                                        if (boost::ends_with(*state,
+                                                             "Activating"))
                                         {
                                             // set firmware inventory inprogress
                                             // flag to true during activation.
-                                            // this will ensure no furthur updates
-                                            // allowed during this time from redfish
+                                            // this will ensure no furthur
+                                            // updates allowed during this time
+                                            // from redfish
                                             fwUpdateInProgress = true;
                                             return !task::completed;
                                         }
@@ -568,7 +570,7 @@ static bool monitorForSoftwareAvailable(
         "member='InterfacesAdded',"
         "path='/xyz/openbmc_project/logging'",
         preTaskLoggingHandler);
-        return false;
+    return false;
 }
 
 /**
@@ -819,18 +821,19 @@ inline void requestRoutesUpdateService(App& app)
                                         std::vector<std::string> pushURITargets;
                                         for (auto& target : *targets)
                                         {
-                                            std::string firmwareId = target.filename();
+                                            std::string firmwareId =
+                                                target.filename();
                                             if (firmwareId.empty())
                                             {
-                                                BMCWEB_LOG_ERROR <<
-                                                    "Unable to parse firmware ID";
-                                                messages::internalError(asyncResp->res);
+                                                BMCWEB_LOG_ERROR
+                                                    << "Unable to parse firmware ID";
+                                                messages::internalError(
+                                                    asyncResp->res);
                                                 return;
                                             }
                                             pushURITargets.push_back(
-                                                "/redfish/v1/UpdateService/FirmwareInventory/"
-                                                + firmwareId
-                                            );
+                                                "/redfish/v1/UpdateService/FirmwareInventory/" +
+                                                firmwareId);
                                         }
                                         asyncResp->res
                                             .jsonValue["HttpPushUriTargets"] =
@@ -1009,8 +1012,7 @@ inline void requestRoutesUpdateService(App& app)
                         const std::vector<std::string>& swInvPaths) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR << "D-Bus responses error: "
-                                                << ec;
+                            BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -1088,39 +1090,34 @@ inline void requestRoutesUpdateService(App& app)
                                 if (errorCode)
                                 {
                                     BMCWEB_LOG_ERROR << "error_code = "
-                                                        << errorCode;
+                                                     << errorCode;
                                     BMCWEB_LOG_ERROR << "error msg = "
-                                                        << errorCode.message();
+                                                     << errorCode.message();
                                     if (asyncResp)
                                     {
-                                        messages::internalError(
-                                            asyncResp->res);
+                                        messages::internalError(asyncResp->res);
                                     }
                                     return;
                                 }
                                 // Ensure we only got one service back
                                 if (objInfo.size() != 1)
                                 {
-                                    BMCWEB_LOG_ERROR
-                                        << "Invalid Object Size "
-                                        << objInfo.size();
+                                    BMCWEB_LOG_ERROR << "Invalid Object Size "
+                                                     << objInfo.size();
                                     if (asyncResp)
                                     {
-                                        messages::internalError(
-                                            asyncResp->res);
+                                        messages::internalError(asyncResp->res);
                                     }
                                     return;
                                 }
 
                                 crow::connections::systemBus->async_method_call(
-                                    [asyncResp](
-                                        const boost::system::error_code
-                                            errorCode) {
+                                    [asyncResp](const boost::system::error_code
+                                                    errorCode) {
                                         if (errorCode)
                                         {
-                                            BMCWEB_LOG_ERROR
-                                                << "error_code = "
-                                                << errorCode;
+                                            BMCWEB_LOG_ERROR << "error_code = "
+                                                             << errorCode;
                                             messages::internalError(
                                                 asyncResp->res);
                                         }
@@ -1128,8 +1125,7 @@ inline void requestRoutesUpdateService(App& app)
                                     },
                                     objInfo[0].first,
                                     "/xyz/openbmc_project/software",
-                                    "org.freedesktop.DBus.Properties",
-                                    "Set",
+                                    "org.freedesktop.DBus.Properties", "Set",
                                     "xyz.openbmc_project.Software.UpdatePolicy",
                                     "Targets",
                                     dbus::utility::DbusVariantType(
@@ -1145,8 +1141,7 @@ inline void requestRoutesUpdateService(App& app)
                     "xyz.openbmc_project.ObjectMapper",
                     "/xyz/openbmc_project/object_mapper",
                     "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-                    "/xyz/openbmc_project/software/",
-                    static_cast<int32_t>(0),
+                    "/xyz/openbmc_project/software/", static_cast<int32_t>(0),
                     std::array<std::string, 1>{
                         "xyz.openbmc_project.Software.Version"});
             }
@@ -1160,17 +1155,18 @@ inline void requestRoutesUpdateService(App& app)
                 BMCWEB_LOG_DEBUG << "doPost...";
 
                 // Setup callback for when new software detected
-                if(monitorForSoftwareAvailable(asyncResp, req,
-                                            "/redfish/v1/UpdateService"))
+                if (monitorForSoftwareAvailable(asyncResp, req,
+                                                "/redfish/v1/UpdateService"))
                 {
-                    //don't copy the image, update already in progress.
+                    // don't copy the image, update already in progress.
                     BMCWEB_LOG_ERROR << "Update already in progress.";
                 }
                 else
                 {
-                    std::string filepath(updateServiceImageLocation +
-                                        boost::uuids::to_string(
-                                            boost::uuids::random_generator()()));
+                    std::string filepath(
+                        updateServiceImageLocation +
+                        boost::uuids::to_string(
+                            boost::uuids::random_generator()()));
                     BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
                     std::ofstream out(filepath, std::ofstream::out |
                                                     std::ofstream::binary |
@@ -1348,7 +1344,7 @@ inline static void
                 sdbusplus::message::object_path path(object);
                 relatedItem.push_back(
                     {{"@odata.id", "/redfish/v1/"
-                                   "Systems/system/"
+                                   "Systems/" PLATFORMSYSTEMID "/"
                                    "Storage/" +
                                        path.filename() + "/Drives/" +
                                        objPath.filename()}});
@@ -1408,7 +1404,8 @@ inline static void getRelatedItemsStorageController(
 
                             relatedItem.push_back(
                                 {{"@odata.id",
-                                  "/redfish/v1/Systems/system/Storage/" +
+                                  "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/Storage/" +
                                       path.filename() +
                                       "#/StorageControllers/" +
                                       std::to_string(i)}});
@@ -1606,10 +1603,10 @@ inline static void
                                       "Inventory.Item.Cpu")
                     {
                         relatedItem.push_back(
-                            {{"@odata.id", "/redfish/v1/Systems/"
-                                           "system/"
-                                           "Processors/" +
-                                               association.filename()}});
+                            {{"@odata.id",
+                              "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                              "/Processors/" +
+                                  association.filename()}});
                     }
 
                     if (interfaces == "xyz.openbmc_project.Inventory."
@@ -1766,7 +1763,7 @@ inline static void
     {
         nlohmann::json& relatedItem = aResp->res.jsonValue["RelatedItem"];
         relatedItem.push_back(
-            {{"@odata.id", "/redfish/v1/Systems/system/Bios"}});
+            {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios"}});
         aResp->res.jsonValue["Members@odata.count"] = relatedItem.size();
     }
     else if (purpose == fw_util::otherPurpose)
@@ -1961,7 +1958,6 @@ inline void requestRoutesInventorySoftware(App& app)
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& param) {
-
             std::string searchPath = "/xyz/openbmc_project/inventory_software/";
             std::shared_ptr<std::string> swId =
                 std::make_shared<std::string>(param);
@@ -1980,7 +1976,7 @@ inline void requestRoutesInventorySoftware(App& app)
                         messages::internalError(asyncResp->res);
                         return;
                     }
- 
+
                     // Ensure we find our input swId, otherwise return an
                     // error
                     for (const std::pair<
@@ -2003,7 +1999,8 @@ inline void requestRoutesInventorySoftware(App& app)
 
                         asyncResp->res.jsonValue["Id"] = *swId;
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-                        asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+                        asyncResp->res.jsonValue["Status"]["HealthRollup"] =
+                            "OK";
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         std::shared_ptr<HealthRollup> health =
@@ -2023,12 +2020,12 @@ inline void requestRoutesInventorySoftware(App& app)
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
                         crow::connections::systemBus->async_method_call(
-                            [asyncResp, swId,
-                             path, searchPath](const boost::system::error_code errorCode,
-                                   const boost::container::flat_map<
-                                       std::string,
-                                       dbus::utility::DbusVariantType>&
-                                       propertiesList) {
+                            [asyncResp, swId, path, searchPath](
+                                const boost::system::error_code errorCode,
+                                const boost::container::flat_map<
+                                    std::string,
+                                    dbus::utility::DbusVariantType>&
+                                    propertiesList) {
                                 if (errorCode)
                                 {
                                     BMCWEB_LOG_DEBUG << "properties not found ";
@@ -2106,13 +2103,12 @@ inline void requestRoutesInventorySoftware(App& app)
                     // Couldn't find an object with that name.  return an error
                     BMCWEB_LOG_DEBUG << "Input swID " + *swId + " not found!";
                     messages::resourceNotFound(
-                        asyncResp->res, "SoftwareInventory.v1_4_0.SoftwareInventory", *swId);
-
+                        asyncResp->res,
+                        "SoftwareInventory.v1_4_0.SoftwareInventory", *swId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                searchPath,
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree", searchPath,
                 static_cast<int32_t>(0),
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.Version"});

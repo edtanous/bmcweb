@@ -17,10 +17,10 @@
 #pragma once
 
 #include <app.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/system/linux_error.hpp>
 #include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
-#include <boost/algorithm/string.hpp>
 
 namespace redfish
 {
@@ -112,8 +112,9 @@ static inline void
             else
             {
                 pcieDeviceList.push_back(
-                    {{"@odata.id",
-                      "/redfish/v1/Systems/system/PCIeDevices/" + devName}});
+                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                   "/PCIeDevices/" +
+                                       devName}});
             }
         }
         asyncResp->res.jsonValue[name + "@odata.count"] = pcieDeviceList.size();
@@ -200,35 +201,35 @@ static inline void
 // PCIeDevice getPCIeDeviceClkRefOem
 static inline void
     getPCIeDeviceClkRefOem(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                      const std::string& device, const std::string& path,
-                      const std::string& service)
+                           const std::string& device, const std::string& path,
+                           const std::string& service)
 {
     auto getPCIeDeviceOemCallback =
-        [asyncResp{asyncResp}](const boost::system::error_code ec,
-                               const std::vector<
-                std::pair<std::string, std::variant<bool>>>&
+        [asyncResp{asyncResp}](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::variant<bool>>>&
                 propertiesList) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error on getting PCIeDevice"
-                       << "clock reference OEM properties";
+                                 << "clock reference OEM properties";
                 messages::internalError(asyncResp->res);
                 return;
             }
-            
-            for (const std::pair<std::string, std::variant<bool>>&
-                     property : propertiesList)
+
+            for (const std::pair<std::string, std::variant<bool>>& property :
+                 propertiesList)
             {
                 const std::string& propertyName = property.first;
                 if (propertyName == "PCIeReferenceClockEnabled")
                 {
-                    const bool* value =
-                    std::get_if<bool>(&property.second);
+                    const bool* value = std::get_if<bool>(&property.second);
                     if (value != nullptr)
                     {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"][propertyName] = *value;
-                    }      
-                }             
+                        asyncResp->res
+                            .jsonValue["Oem"]["Nvidia"][propertyName] = *value;
+                    }
+                }
             }
         };
     std::string escapedPath = std::string(path) + "/" + device;
@@ -239,37 +240,37 @@ static inline void
 }
 
 // PCIeDevice nvlink clock reference OEM
-static inline void
-    getPCIeDeviceNvLinkClkRefOem(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                      const std::string& device, const std::string& path,
-                      const std::string& service)
+static inline void getPCIeDeviceNvLinkClkRefOem(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& device, const std::string& path,
+    const std::string& service)
 {
     auto getPCIeDeviceOemCallback =
-        [asyncResp{asyncResp}](const boost::system::error_code ec,
-                               const std::vector<
-                std::pair<std::string, std::variant<bool>>>&
+        [asyncResp{asyncResp}](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::variant<bool>>>&
                 propertiesList) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error on getting PCIeDevice"
-                    << "NVLink Clock Reference OEM properties";
+                                 << "NVLink Clock Reference OEM properties";
                 messages::internalError(asyncResp->res);
                 return;
             }
-            
-            for (const std::pair<std::string, std::variant<bool>>&
-                     property : propertiesList)
+
+            for (const std::pair<std::string, std::variant<bool>>& property :
+                 propertiesList)
             {
                 const std::string& propertyName = property.first;
                 if (propertyName == "NVLinkReferenceClockEnabled")
                 {
-                    const bool* value =
-                    std::get_if<bool>(&property.second);
+                    const bool* value = std::get_if<bool>(&property.second);
                     if (value != nullptr)
                     {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"][propertyName] = *value;
-                    }      
-                }               
+                        asyncResp->res
+                            .jsonValue["Oem"]["Nvidia"][propertyName] = *value;
+                    }
+                }
             }
         };
     std::string escapedPath = std::string(path) + "/" + device;
@@ -278,7 +279,7 @@ static inline void
         std::move(getPCIeDeviceOemCallback), service, escapedPath,
         "org.freedesktop.DBus.Properties", "GetAll", nvlinkClockReferenceIntf);
 }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 // PCIeDevice State
 static inline void
@@ -514,7 +515,8 @@ static inline void getPCIeDeviceFunctionsList(
                     {
                         pcieFunctionList.push_back(
                             {{"@odata.id",
-                              "/redfish/v1/Systems/system/PCIeDevices/" +
+                              "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                              "/PCIeDevices/" +
                                   device + "/PCIeFunctions/" +
                                   std::to_string(functionNum)}});
                     }
@@ -580,11 +582,12 @@ static inline void
         if (chassisId.empty())
         {
             pcieDeviceURI =
-                (boost::format("/redfish/v1/Systems/system/PCIeDevices/%s") %
+                (boost::format("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                               "/PCIeDevices/%s") %
                  device)
                     .str();
             pcieFunctionURI =
-                (boost::format("/redfish/v1/Systems/system/"
+                (boost::format("/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
                                "PCIeDevices/%s/PCIeFunctions/%s") %
                  device % function)
                     .str();
@@ -700,7 +703,7 @@ inline void requestRoutesSystemPCIeDeviceCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/PCIeDevices/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/")
         .privileges(redfish::privileges::getPCIeDeviceCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -710,7 +713,8 @@ inline void requestRoutesSystemPCIeDeviceCollection(App& app)
                 asyncResp->res.jsonValue = {
                     {"@odata.type",
                      "#PCIeDeviceCollection.PCIeDeviceCollection"},
-                    {"@odata.id", "/redfish/v1/Systems/system/PCIeDevices"},
+                    {"@odata.id",
+                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices"},
                     {"Name", "PCIe Device Collection"},
                     {"Description", "Collection of PCIe Devices"},
                     {"Members", nlohmann::json::array()},
@@ -721,7 +725,8 @@ inline void requestRoutesSystemPCIeDeviceCollection(App& app)
 
 inline void requestRoutesSystemPCIeDevice(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/PCIeDevices/<str>/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/<str>/")
         .privileges(redfish::privileges::getPCIeDevice)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -731,12 +736,14 @@ inline void requestRoutesSystemPCIeDevice(App& app)
             {
                 asyncResp->res.jsonValue = {
                     {"@odata.type", "#PCIeDevice.v1_4_0.PCIeDevice"},
-                    {"@odata.id",
-                     "/redfish/v1/Systems/system/PCIeDevices/" + device},
+                    {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/PCIeDevices/" +
+                                      device},
                     {"Name", "PCIe Device"},
                     {"Id", device},
                     {"PCIeFunctions",
-                     {{"@odata.id", "/redfish/v1/Systems/system/PCIeDevices/" +
+                     {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                    "/PCIeDevices/" +
                                         device + "/PCIeFunctions"}}}};
                 getPCIeDevice(asyncResp, device);
             });
@@ -747,8 +754,8 @@ inline void requestRoutesSystemPCIeFunctionCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/system/PCIeDevices/<str>/PCIeFunctions/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/PCIeDevices/<str>/PCIeFunctions/")
         .privileges(redfish::privileges::getPCIeFunctionCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -759,7 +766,8 @@ inline void requestRoutesSystemPCIeFunctionCollection(App& app)
                 asyncResp->res.jsonValue = {
                     {"@odata.type",
                      "#PCIeFunctionCollection.PCIeFunctionCollection"},
-                    {"@odata.id", "/redfish/v1/Systems/system/PCIeDevices/" +
+                    {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/PCIeDevices/" +
                                       device + "/PCIeFunctions"},
                     {"Name", "PCIe Function Collection"},
                     {"Description",
@@ -770,9 +778,8 @@ inline void requestRoutesSystemPCIeFunctionCollection(App& app)
 
 inline void requestRoutesSystemPCIeFunction(App& app)
 {
-    BMCWEB_ROUTE(
-        app,
-        "/redfish/v1/Systems/system/PCIeDevices/<str>/PCIeFunctions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/PCIeDevices/<str>/PCIeFunctions/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -965,31 +972,35 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                                     }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                                    nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
-                                    oem["@odata.type"] = "#NvidiaPCIeDevice.v1_0_0.NvidiaPCIeDevice";
+                                    nlohmann::json& oem =
+                                        asyncResp->res
+                                            .jsonValue["Oem"]["Nvidia"];
+                                    oem["@odata.type"] =
+                                        "#NvidiaPCIeDevice.v1_0_0.NvidiaPCIeDevice";
                                     // Baseboard PCIeDevices Oem properties
                                     if (std::find(interfaces2.begin(),
                                                   interfaces2.end(),
                                                   pcieClockReferenceIntf) !=
                                         interfaces2.end())
                                     {
-                                        getPCIeDeviceClkRefOem(asyncResp, device,
-                                                           chassisPCIePath,
-                                                           connectionName);
+                                        getPCIeDeviceClkRefOem(
+                                            asyncResp, device, chassisPCIePath,
+                                            connectionName);
                                     }
 
-                                    // Baseboard PCIeDevices nvlink Oem properties
+                                    // Baseboard PCIeDevices nvlink Oem
+                                    // properties
                                     if (std::find(interfaces2.begin(),
                                                   interfaces2.end(),
                                                   nvlinkClockReferenceIntf) !=
                                         interfaces2.end())
                                     {
-                                        getPCIeDeviceNvLinkClkRefOem(asyncResp, device,
-                                                           chassisPCIePath,
-                                                           connectionName);
+                                        getPCIeDeviceNvLinkClkRefOem(
+                                            asyncResp, device, chassisPCIePath,
+                                            connectionName);
                                     }
-                                    
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                                     return;
                                 }
                                 messages::resourceNotFound(

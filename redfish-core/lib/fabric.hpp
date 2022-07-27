@@ -151,7 +151,7 @@ inline void
                 const std::string& endpointId = objPath.filename();
                 BMCWEB_LOG_DEBUG << endpointId;
                 std::string endpointURI =
-                    "/redfish/v1/Systems/system/Processors/";
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
                 endpointURI += processorId;
                 endpointURI += "/Ports/";
                 endpointURI += endpointId;
@@ -345,8 +345,10 @@ inline void
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["DeviceId"] = *value;
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaSwitch.v1_0_0.NvidiaSwitch";
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["DeviceId"] =
+                        *value;
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                        "#NvidiaSwitch.v1_0_0.NvidiaSwitch";
                 }
                 else if (propertyName == "VendorId")
                 {
@@ -359,12 +361,12 @@ inline void
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["VendorId"] = *value;
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["VendorId"] =
+                        *value;
                 }
                 else if (propertyName == "PCIeReferenceClockEnabled")
                 {
-                    const bool* value =
-                        std::get_if<bool>(&property.second);
+                    const bool* value = std::get_if<bool>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
@@ -372,9 +374,11 @@ inline void
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockEnabled"] = *value;
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                            ["PCIeReferenceClockEnabled"] =
+                        *value;
                 }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
                 else if (propertyName == "SupportedProtocols")
                 {
@@ -505,27 +509,21 @@ inline void
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
-        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-        asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+    asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+    asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
 
-        // update switch health
+    // update switch health
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                        std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(
-                                crow::connections::systemBus, objPath,
-                                [asyncResp](const std::string& rootHealth,
-                                            const std::string& healthRollup) {
-                                    asyncResp->res
-                                        .jsonValue["Status"]["Health"] =
-                                        rootHealth;
-                                    asyncResp->res
-                                        .jsonValue["Status"]["HealthRollup"] =
-                                        healthRollup;
-                                });
-                        health->start();
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        crow::connections::systemBus, objPath,
+        [asyncResp](const std::string& rootHealth,
+                    const std::string& healthRollup) {
+            asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+            asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+        });
+    health->start();
 
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-
 }
 
 inline void updateZoneData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -1146,14 +1144,17 @@ inline void requestRoutesSwitch(App& app)
                                         {"@odata.id", portsURI}};
                                     asyncResp->res.jsonValue["Metrics"] = {
                                         {"@odata.id", switchMetricURI}};
-                                    std::string switchResetURI = "/redfish/v1/Fabrics/";
+                                    std::string switchResetURI =
+                                        "/redfish/v1/Fabrics/";
                                     switchResetURI += fabricId;
                                     switchResetURI += "/Switches/";
                                     switchResetURI += switchId;
                                     switchResetURI += "/Actions/Switch.Reset";
-                                    asyncResp->res.jsonValue["Actions"]["#Switch.Reset"] = {
-                                         {"target", switchResetURI},
-                                         {"ResetType@Redfish.AllowableValues", {"ForceRestart"}}};
+                                    asyncResp->res
+                                        .jsonValue["Actions"]["#Switch.Reset"] =
+                                        {{"target", switchResetURI},
+                                         {"ResetType@Redfish.AllowableValues",
+                                          {"ForceRestart"}}};
                                     const std::string& connectionName =
                                         connectionNames[0].first;
                                     updateSwitchData(asyncResp, connectionName,
@@ -1405,12 +1406,11 @@ inline std::string getNVSwitchResetType(const std::string& processorType)
     return "";
 }
 
-inline void nvswitchPostResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
-                          const std::string& switchId,
-                          const std::string& cpuObjectPath,
-                          const std::string& resetType,
-                          const std::vector<std::pair<
-                                        std::string, std::vector<std::string>>>& serviceMap)
+inline void nvswitchPostResetType(
+    const std::shared_ptr<bmcweb::AsyncResp>& resp, const std::string& switchId,
+    const std::string& cpuObjectPath, const std::string& resetType,
+    const std::vector<std::pair<std::string, std::vector<std::string>>>&
+        serviceMap)
 {
     // Check that the property even exists by checking for the interface
     const std::string* inventoryService = nullptr;
@@ -1456,7 +1456,7 @@ inline void nvswitchPostResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp
             // Set the property, with handler to check error responses
             crow::connections::systemBus->async_method_call(
                 [resp, switchId](boost::system::error_code ec,
-                                    const int retValue) {
+                                 const int retValue) {
                     if (!ec)
                     {
 
@@ -1484,104 +1484,108 @@ inline void nvswitchPostResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp
  */
 inline void requestRoutesNVSwitchReset(App& app)
 {
-    BMCWEB_ROUTE(app,"/redfish/v1/Fabrics/<str>/Switches/<str>/"
-                 "Actions/Switch.Reset")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/"
+                      "Actions/Switch.Reset")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::post)([](const crow::Request& req,
-                                               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                                               const std::string& fabricId,
-                                               const std::string& switchId) {
-                 std::optional<std::string> resetType;
-                if (!json_util::readJson(req, asyncResp->res, "ResetType",
-                                         resetType))
-                {
-                    return;
-                }
-                if (resetType)
-                {
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp, fabricId,
-                         switchId, resetType](const boost::system::error_code ec,
-                           const std::vector<std::string>& objects) {
-                    if (ec)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    for (const std::string& object : objects)
-                    {
-                        // Get the fabricId object
-                        if (!boost::ends_with(object, fabricId))
+            boost::beast::http::verb::
+                post)([](const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& fabricId,
+                         const std::string& switchId) {
+            std::optional<std::string> resetType;
+            if (!json_util::readJson(req, asyncResp->res, "ResetType",
+                                     resetType))
+            {
+                return;
+            }
+            if (resetType)
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, fabricId, switchId,
+                     resetType](const boost::system::error_code ec,
+                                const std::vector<std::string>& objects) {
+                        if (ec)
                         {
-                            continue;
+                            messages::internalError(asyncResp->res);
+                            return;
                         }
-                        crow::connections::systemBus->async_method_call(
-                            [asyncResp, fabricId, switchId, resetType](
-                                const boost::system::error_code ec,
-                                const crow::openbmc_mapper::GetSubTreeType&
-                                    subtree) {
-                                if (ec)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                // Iterate over all retrieved ObjectPaths.
-                                for (const std::pair<
-                                         std::string,
-                                         std::vector<std::pair<
-                                             std::string,
-                                             std::vector<std::string>>>>&
-                                         object : subtree)
-                                {
-                                    // Get the switchId object
-                                    const std::string& path = object.first;
-                                    const std::vector<std::pair<
-                                        std::string, std::vector<std::string>>>&
-                                        connectionNames = object.second;
-                                    sdbusplus::message::object_path objPath(
-                                        path);
-                                    if (objPath.filename() != switchId)
-                                    {
-                                        continue;
-                                    }
-                                    if (connectionNames.size() < 1)
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "Got 0 Connection names";
-                                        continue;
-                                    }
-                                    nvswitchPostResetType(asyncResp, switchId, objPath,
 
-                                          *resetType, connectionNames);
-                                    return;
-                                }
-                                // Couldn't find an object with that name.
-                                // Return an error
-                                messages::resourceNotFound(
-                                    asyncResp->res, "#Switch.v1_6_0.Switch",
-                                    switchId);
-                            },
-                            "xyz.openbmc_project.ObjectMapper",
-                            "/xyz/openbmc_project/object_mapper",
-                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                            object, 0,
-                            std::array<const char*, 1>{
-                                "xyz.openbmc_project.Inventory.Item.Switch"});
-                        return;
-                    }
-                    // Couldn't find an object with that name. Return an error
-                    messages::resourceNotFound(
-                        asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-                "/xyz/openbmc_project/inventory", 0,
-                std::array<const char*, 1>{
-                    "xyz.openbmc_project.Inventory.Item.Fabric"});
-                }
+                        for (const std::string& object : objects)
+                        {
+                            // Get the fabricId object
+                            if (!boost::ends_with(object, fabricId))
+                            {
+                                continue;
+                            }
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp, fabricId, switchId, resetType](
+                                    const boost::system::error_code ec,
+                                    const crow::openbmc_mapper::GetSubTreeType&
+                                        subtree) {
+                                    if (ec)
+                                    {
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    // Iterate over all retrieved ObjectPaths.
+                                    for (const std::pair<
+                                             std::string,
+                                             std::vector<std::pair<
+                                                 std::string,
+                                                 std::vector<std::string>>>>&
+                                             object : subtree)
+                                    {
+                                        // Get the switchId object
+                                        const std::string& path = object.first;
+                                        const std::vector<std::pair<
+                                            std::string,
+                                            std::vector<std::string>>>&
+                                            connectionNames = object.second;
+                                        sdbusplus::message::object_path objPath(
+                                            path);
+                                        if (objPath.filename() != switchId)
+                                        {
+                                            continue;
+                                        }
+                                        if (connectionNames.size() < 1)
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "Got 0 Connection names";
+                                            continue;
+                                        }
+                                        nvswitchPostResetType(
+                                            asyncResp, switchId, objPath,
+
+                                            *resetType, connectionNames);
+                                        return;
+                                    }
+                                    // Couldn't find an object with that name.
+                                    // Return an error
+                                    messages::resourceNotFound(
+                                        asyncResp->res, "#Switch.v1_6_0.Switch",
+                                        switchId);
+                                },
+                                "xyz.openbmc_project.ObjectMapper",
+                                "/xyz/openbmc_project/object_mapper",
+                                "xyz.openbmc_project.ObjectMapper",
+                                "GetSubTree", object, 0,
+                                std::array<const char*, 1>{
+                                    "xyz.openbmc_project.Inventory.Item.Switch"});
+                            return;
+                        }
+                        // Couldn't find an object with that name. Return an
+                        // error
+                        messages::resourceNotFound(
+                            asyncResp->res, "#Fabric.v1_2_0.Fabric", fabricId);
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                    "/xyz/openbmc_project/inventory", 0,
+                    std::array<const char*, 1>{
+                        "xyz.openbmc_project.Inventory.Item.Fabric"});
+            }
         });
 }
 
@@ -2203,10 +2207,9 @@ inline void getProcessorParentEndpointData(
  * @param[in]       processorPath     D-Bus service to query.
  * @param[in]       entityLink  redfish entity link.
  */
-inline void
-    getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                             const std::string& processorPath,
-                             const std::string& entityLink)
+inline void getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& processorPath,
+                            const std::string& entityLink)
 {
     BMCWEB_LOG_DEBUG << "Get processor endpoint data";
     crow::connections::systemBus->async_method_call(
@@ -2405,38 +2408,38 @@ inline void getEndpointZoneData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     BMCWEB_LOG_DEBUG << "Get endpoint zone data";
     // Get connected zone link
     crow::connections::systemBus->async_method_call(
-            [aResp, fabricId](const boost::system::error_code ec,
-                std::variant<std::vector<std::string>>& resp) {
-                if (ec)
+        [aResp, fabricId](const boost::system::error_code ec,
+                          std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                return; // no zones = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            nlohmann::json& linksZonesArray =
+                aResp->res.jsonValue["Links"]["Zones"];
+            linksZonesArray = nlohmann::json::array();
+            std::string zoneURI;
+            for (const std::string& zonePath : *data)
+            {
+                // Get subtree for switchPath link path
+                sdbusplus::message::object_path dbusObjPath(zonePath);
+                const std::string& zoneId = dbusObjPath.filename();
+                if (zonePath.find(fabricId) != std::string::npos)
                 {
-                    return; // no zones = no failures
+                    zoneURI = "/redfish/v1/Fabrics/" + fabricId + "/Zones/";
                 }
-                std::vector<std::string>* data = std::get_if<std::vector<std::string>>(&resp);
-                if (data == nullptr)
-                {
-                    return;
-                }
-                nlohmann::json& linksZonesArray =
-                    aResp->res.jsonValue["Links"]["Zones"];
-                linksZonesArray = nlohmann::json::array();
-                std::string zoneURI;
-                for (const std::string& zonePath : *data)
-                {
-                    // Get subtree for switchPath link path
-                    sdbusplus::message::object_path dbusObjPath(zonePath);
-                    const std::string& zoneId = dbusObjPath.filename();
-                    if(zonePath.find(fabricId) != std::string::npos)
-                    {
-                        zoneURI = "/redfish/v1/Fabrics/" + fabricId + "/Zones/";
-                    }
-                    zoneURI += zoneId;
-                    linksZonesArray.push_back({{"@odata.id", zoneURI}});
-                }
-            },
-            "xyz.openbmc_project.ObjectMapper",
-            endpointPath + "/zone",
-            "org.freedesktop.DBus.Properties", "Get",
-            "xyz.openbmc_project.Association", "endpoints");
+                zoneURI += zoneId;
+                linksZonesArray.push_back({{"@odata.id", zoneURI}});
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", endpointPath + "/zone",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
 }
 
 /**
@@ -2644,23 +2647,22 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 sdbusplus::message::object_path objectPath(
                                     entityPath);
                                 const std::string& entityLink =
-                                    "/redfish/v1/Systems/system/Processors/" +
+                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                    "/Processors/" +
                                     objectPath.filename();
                                 // Get processor PCIe device data
-                                getEndpointData(aResp, entityPath,
-                                                         entityLink);
+                                getEndpointData(aResp, entityPath, entityLink);
                                 // Get port endpoint data
                                 getEndpointPortData(aResp, objPath, entityPath,
                                                     fabricId);
                                 // Get zone links
-                                getEndpointZoneData(aResp, objPath,fabricId);
+                                getEndpointZoneData(aResp, objPath, fabricId);
                             }
                             const std::string switchInterface =
                                 "xyz.openbmc_project.Inventory.Item.Switch";
 
                             if (std::find(interfaces.begin(), interfaces.end(),
-                                          switchInterface) !=
-                                interfaces.end())
+                                          switchInterface) != interfaces.end())
                             {
                                 BMCWEB_LOG_DEBUG << "Item type switch ";
                                 sdbusplus::message::object_path objectPath(
@@ -2668,47 +2670,59 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 std::string entityName = objectPath.filename();
                                 // get switch type endpint
                                 crow::connections::systemBus->async_method_call(
-                                    [aResp, objPath, entityPath, entityName, fabricId ](const boost::system::error_code ec,
-                                        std::variant<std::vector<std::string>>& resp) {
+                                    [aResp, objPath, entityPath, entityName,
+                                     fabricId](
+                                        const boost::system::error_code ec,
+                                        std::variant<std::vector<std::string>>&
+                                            resp) {
+                                        if (ec)
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "fabric not found for switch entity";
+                                            return; // no processors identified
+                                                    // for pcieslotpath
+                                        }
 
-                                    if (ec)
-                                    {
-                                        BMCWEB_LOG_ERROR << "fabric not found for switch entity";
-                                        return; // no processors identified for pcieslotpath
-                                    }
+                                        std::vector<std::string>* data =
+                                            std::get_if<
+                                                std::vector<std::string>>(
+                                                &resp);
+                                        if (data == nullptr)
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "processor data null for pcieslot ";
+                                            return;
+                                        }
 
-                                    std::vector<std::string>* data =
-                                        std::get_if<std::vector<std::string>>(&resp);
-                                    if (data == nullptr)
-                                    {
-                                        BMCWEB_LOG_ERROR << "processor data null for pcieslot ";
-                                        return;
-                                    }
-
-                                    std::string fabricName;
-                                    for (const std::string& fabricPath : *data)
-                                    {
-                                        sdbusplus::message::object_path dbusObjPath(fabricPath);
-                                        fabricName = dbusObjPath.filename();
-                                    }
-                                    std::string entityLink =
+                                        std::string fabricName;
+                                        for (const std::string& fabricPath :
+                                             *data)
+                                        {
+                                            sdbusplus::message::object_path
+                                                dbusObjPath(fabricPath);
+                                            fabricName = dbusObjPath.filename();
+                                        }
+                                        std::string entityLink =
                                             "/redfish/v1/Fabrics/";
-                                    entityLink += fabricName;
-                                    entityLink += "/Switches/";
-                                    entityLink += entityName;
-                                    // Get processor/switch PCIe device data
-                                    getEndpointData(aResp, entityPath,
-                                                         entityLink);
-                                    // Get port endpoint data
-                                    getEndpointPortData(aResp, objPath, entityPath,
-                                                         fabricId);
-                                    // Get zone links
-                                    getEndpointZoneData(aResp, objPath,fabricId);
-
-                                },
-                                "xyz.openbmc_project.ObjectMapper", entityPath + "/fabrics",
-                                "org.freedesktop.DBus.Properties", "Get",
-                                "xyz.openbmc_project.Association", "endpoints");
+                                        entityLink += fabricName;
+                                        entityLink += "/Switches/";
+                                        entityLink += entityName;
+                                        // Get processor/switch PCIe device data
+                                        getEndpointData(aResp, entityPath,
+                                                        entityLink);
+                                        // Get port endpoint data
+                                        getEndpointPortData(aResp, objPath,
+                                                            entityPath,
+                                                            fabricId);
+                                        // Get zone links
+                                        getEndpointZoneData(aResp, objPath,
+                                                            fabricId);
+                                    },
+                                    "xyz.openbmc_project.ObjectMapper",
+                                    entityPath + "/fabrics",
+                                    "org.freedesktop.DBus.Properties", "Get",
+                                    "xyz.openbmc_project.Association",
+                                    "endpoints");
                             }
                         }
                     },

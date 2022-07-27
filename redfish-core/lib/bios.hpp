@@ -12,13 +12,15 @@ inline void
     handleBiosServiceGet(const crow::Request&,
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/system/Bios";
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios";
     asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_1_0.Bios";
     asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
     asyncResp->res.jsonValue["Description"] = "BIOS Configuration Service";
     asyncResp->res.jsonValue["Id"] = "BIOS";
     asyncResp->res.jsonValue["Actions"]["#Bios.ResetBios"] = {
-        {"target", "/redfish/v1/Systems/system/Bios/Actions/Bios.ResetBios"}};
+        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                   "/Bios/Actions/Bios.ResetBios"}};
 
     // Get the ActiveSoftwareImage and SoftwareImages
     fw_util::populateFirmwareInformation(asyncResp, fw_util::biosPurpose, "",
@@ -26,7 +28,7 @@ inline void
 }
 inline void requestRoutesBiosService(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Bios/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/")
         .privileges(redfish::privileges::getBios)
         .methods(boost::beast::http::verb::get)(handleBiosServiceGet);
 }
@@ -57,7 +59,8 @@ inline void
 
 inline void requestRoutesBiosReset(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Bios/Actions/Bios.ResetBios/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Bios/Actions/Bios.ResetBios/")
         .privileges(redfish::privileges::postBios)
         .methods(boost::beast::http::verb::post)(handleBiosResetPost);
 }

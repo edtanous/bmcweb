@@ -15,6 +15,8 @@
 */
 #pragma once
 
+#include "bmcweb_config.h"
+
 #include "dbus_singleton.hpp"
 #include "health.hpp"
 #include "led.hpp"
@@ -2701,7 +2703,8 @@ inline void requestRoutesSystemsCollection(App& app)
                         auto& count =
                             asyncResp->res.jsonValue["Members@odata.count"];
                         ifaceArray.push_back(
-                            {{"@odata.id", "/redfish/v1/Systems/system"}});
+                            {{"@odata.id",
+                              "/redfish/v1/Systems/" PLATFORMSYSTEMID}});
                         count = ifaceArray.size();
                         if (!ec)
                         {
@@ -2749,8 +2752,8 @@ inline void requestRoutesSystemActionsReset(App& app)
      * Function handles POST method request.
      * Analyzes POST body message before sends Reset request data to D-Bus.
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/system/Actions/ComputerSystem.Reset/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Actions/ComputerSystem.Reset/")
         .privileges(redfish::privileges::postComputerSystem)
         .methods(
             boost::beast::http::verb::
@@ -2877,7 +2880,7 @@ inline void requestRoutesSystems(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(
             boost::beast::http::verb::
@@ -2897,26 +2900,30 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.jsonValue["MemorySummary"]["Status"]["State"] =
                 "Disabled";
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/system";
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID;
 
             asyncResp->res.jsonValue["Processors"] = {
-                {"@odata.id", "/redfish/v1/Systems/system/Processors"}};
+                {"@odata.id",
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors"}};
             asyncResp->res.jsonValue["Memory"] = {
-                {"@odata.id", "/redfish/v1/Systems/system/Memory"}};
+                {"@odata.id",
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory"}};
             asyncResp->res.jsonValue["Storage"] = {
-                {"@odata.id", "/redfish/v1/Systems/system/Storage"}};
+                {"@odata.id",
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage"}};
 
             asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"] = {
-                {"target",
-                 "/redfish/v1/Systems/system/Actions/ComputerSystem.Reset"},
+                {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                           "/Actions/ComputerSystem.Reset"},
                 {"@Redfish.ActionInfo",
-                 "/redfish/v1/Systems/system/ResetActionInfo"}};
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo"}};
 
             asyncResp->res.jsonValue["LogServices"] = {
-                {"@odata.id", "/redfish/v1/Systems/system/LogServices"}};
+                {"@odata.id",
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices"}};
 
             asyncResp->res.jsonValue["Bios"] = {
-                {"@odata.id", "/redfish/v1/Systems/system/Bios"}};
+                {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios"}};
 
             asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
                 {{"@odata.id", "/redfish/v1/Managers/bmc"}}};
@@ -2999,7 +3006,7 @@ inline void requestRoutesSystems(App& app)
             getPowerMode(asyncResp);
             getIdlePowerSaver(asyncResp);
         });
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::patch)(
             [](const crow::Request& req,
@@ -3141,14 +3148,16 @@ inline void requestRoutesSystemResetActionInfo(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/ResetActionInfo/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
                 asyncResp->res.jsonValue = {
                     {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
-                    {"@odata.id", "/redfish/v1/Systems/system/ResetActionInfo"},
+                    {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/ResetActionInfo"},
                     {"Name", "Reset Action Info"},
                     {"Id", "ResetActionInfo"},
                     {"Parameters",

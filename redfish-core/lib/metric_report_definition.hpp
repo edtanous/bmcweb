@@ -443,7 +443,7 @@ inline void
 
         std::string tmpPath = std::string("/redfish/v1/Chassis/");
         std::string dupSensorName = sensorName;
-        std::string chassisName = "Baseboard";
+        std::string chassisName = "HGX_Baseboard_0";
         if (chassisId == chassisName)
         {
             for (auto& item : wildCards.items())
@@ -672,7 +672,7 @@ inline void getPlatformMetricReportDefinition(
     std::vector<std::string> redfishReportActions;
     redfishReportActions.emplace_back("LogToMetricReportsCollection");
     asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
-    getPlatformMetricsProperties(asyncResp, "Baseboard");
+    getPlatformMetricsProperties(asyncResp, "HGX_Baseboard_0");
 }
 
 inline void requestRoutesPlatformMetricReportDefinition(App& app)

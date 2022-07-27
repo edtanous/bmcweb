@@ -37,105 +37,35 @@ namespace redfish
  * @param[in]       objPath     D-Bus object to query.
  * @param[in]       chassisId   Chassis that contains the pcieslot.
  */
-inline void  updatePCIeSlotsSwitchLinks(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                std::map<std::string, std::variant<int,std::string>>& dbusProperties, const std::string& objPath)
+inline void updatePCIeSlotsSwitchLinks(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    std::map<std::string, std::variant<int, std::string>>& dbusProperties,
+    const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "updatePCIeSlotsSwitchLinks ";
 
     crow::connections::systemBus->async_method_call(
-                [asyncResp, objPath, dbusProperties](const boost::system::error_code ec,
-                    std::variant<std::vector<std::string>>& resp) {
-                    if (ec)
-                    {
-                        // no fabric = no switches , Get processor link
-                        crow::connections::systemBus->async_method_call(
-                            [asyncResp, objPath, dbusProperties](const boost::system::error_code ec,
-                                std::variant<std::vector<std::string>>& resp) {
-
-                            if (ec)
-                            {
-                                BMCWEB_LOG_ERROR << "processor not found for pcieslot ";
-                                return; // no processors identified for pcieslotpath
-                            }
-
-                            nlohmann::json pcieSlotRes;
-                            for (auto const& [key, val] : dbusProperties)
-                            {
-                                if( key == "Lanes")
-                                {
-                                    pcieSlotRes[key] = std::get<int>(val);
-                                }
-                                else
-                                {
-                                    pcieSlotRes[key] = std::get<std::string>(val);
-                                }
-                            }
-                            std::vector<std::string>* data =
-                            std::get_if<std::vector<std::string>>(&resp);
-                            if (data == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR << "processor data null for pcieslot ";
-                                return;
-                            }
-                            // declaring processors array
-                            nlohmann::json& prcoessorsLinkArray = pcieSlotRes["Links"]["Processors"];
-                            prcoessorsLinkArray = nlohmann::json::array();
-
-                            for (const std::string& processorPath : *data)
-                            {
-                                sdbusplus::message::object_path dbusObjPath(processorPath);
-                                const std::string& prcoessorId = dbusObjPath.filename();
-                                std::string processorURI = "/redfish/v1/Systems/system/Processors/";
-                                processorURI += prcoessorId;
-                                prcoessorsLinkArray.push_back({{"@odata.id", processorURI}});
-                            }
-                            nlohmann::json& jResp = asyncResp->res.jsonValue["Slots"];
-                            jResp.push_back(pcieSlotRes);
-                        },
-                        "xyz.openbmc_project.ObjectMapper", objPath + "/processor_link",
-                        "org.freedesktop.DBus.Properties", "Get",
-                        "xyz.openbmc_project.Association", "endpoints");
-
-                        return;
-                    }
-                    //fabric identified for pcieslot
-                    std::vector<std::string>* data =
-                        std::get_if<std::vector<std::string>>(&resp);
-                    if (data == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR << "fabric data null  for pcieslot ";
-                        return;
-                    }
-                    std::string fabricId; //pcieslot fabric id
-                    for (const std::string& fabricPath : *data)
-                    {
-                        sdbusplus::message::object_path dbusObjPath(fabricPath);
-                        fabricId = dbusObjPath.filename();
-                    }
-                    // Get Switch links using associtaions
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp, objPath, dbusProperties, fabricId](const boost::system::error_code ec,
-                            std::variant<std::vector<std::string>>& resp) {
-
+        [asyncResp, objPath,
+         dbusProperties](const boost::system::error_code ec,
+                         std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                // no fabric = no switches , Get processor link
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, objPath, dbusProperties](
+                        const boost::system::error_code ec,
+                        std::variant<std::vector<std::string>>& resp) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR << "switch not found for pcieslot ";
-                            return;
+                            BMCWEB_LOG_ERROR
+                                << "processor not found for pcieslot ";
+                            return; // no processors identified for pcieslotpath
                         }
 
-                        std::vector<std::string>* data =
-                            std::get_if<std::vector<std::string>>(&resp);
                         nlohmann::json pcieSlotRes;
-
-                        if (data == nullptr)
-                        {
-                            BMCWEB_LOG_ERROR << "switch data null for pcieslot ";
-                            return;
-                        }
-                        // update dbus properties to json object
                         for (auto const& [key, val] : dbusProperties)
                         {
-                            if( key == "Lanes")
+                            if (key == "Lanes")
                             {
                                 pcieSlotRes[key] = std::get<int>(val);
                             }
@@ -144,35 +74,119 @@ inline void  updatePCIeSlotsSwitchLinks(const std::shared_ptr<bmcweb::AsyncResp>
                                 pcieSlotRes[key] = std::get<std::string>(val);
                             }
                         }
-
-                        pcieSlotRes["Links"]["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaPCIeSlots.v1_0_0.NvidiaPCIeSlots";
-                        // declaring switches array
-                        nlohmann::json& switchesLinkArray = pcieSlotRes["Links"]["Oem"]["Nvidia"]["Switches"];
-                        switchesLinkArray = nlohmann::json::array();
-                        std::string switchURI;
-                        // parse switchlinks and append it to switches array
-                        for (const std::string& switchPath : *data)
+                        std::vector<std::string>* data =
+                            std::get_if<std::vector<std::string>>(&resp);
+                        if (data == nullptr)
                         {
-                            sdbusplus::message::object_path dbusObjPath(switchPath);
-                            const std::string& switchId = dbusObjPath.filename();
-                            switchURI = "/redfish/v1/Fabrics/" + fabricId +"/Switches/";
-                            switchURI += switchId;
-                            switchesLinkArray.push_back({{"@odata.id", switchURI}});
+                            BMCWEB_LOG_ERROR
+                                << "processor data null for pcieslot ";
+                            return;
                         }
+                        // declaring processors array
+                        nlohmann::json& prcoessorsLinkArray =
+                            pcieSlotRes["Links"]["Processors"];
+                        prcoessorsLinkArray = nlohmann::json::array();
 
-                        // sending response
-                        nlohmann::json& jResp = asyncResp->res.jsonValue["Slots"];
+                        for (const std::string& processorPath : *data)
+                        {
+                            sdbusplus::message::object_path dbusObjPath(
+                                processorPath);
+                            const std::string& prcoessorId =
+                                dbusObjPath.filename();
+                            std::string processorURI =
+                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Processors/";
+                            processorURI += prcoessorId;
+                            prcoessorsLinkArray.push_back(
+                                {{"@odata.id", processorURI}});
+                        }
+                        nlohmann::json& jResp =
+                            asyncResp->res.jsonValue["Slots"];
                         jResp.push_back(pcieSlotRes);
-
-                     },
-                    "xyz.openbmc_project.ObjectMapper", objPath + "/switch_link",
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    objPath + "/processor_link",
                     "org.freedesktop.DBus.Properties", "Get",
                     "xyz.openbmc_project.Association", "endpoints");
 
-         },
-         "xyz.openbmc_project.ObjectMapper", objPath + "/fabric_link",
-         "org.freedesktop.DBus.Properties", "Get",
-         "xyz.openbmc_project.Association", "endpoints");
+                return;
+            }
+            // fabric identified for pcieslot
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "fabric data null  for pcieslot ";
+                return;
+            }
+            std::string fabricId; // pcieslot fabric id
+            for (const std::string& fabricPath : *data)
+            {
+                sdbusplus::message::object_path dbusObjPath(fabricPath);
+                fabricId = dbusObjPath.filename();
+            }
+            // Get Switch links using associtaions
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, objPath, dbusProperties,
+                 fabricId](const boost::system::error_code ec,
+                           std::variant<std::vector<std::string>>& resp) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "switch not found for pcieslot ";
+                        return;
+                    }
+
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    nlohmann::json pcieSlotRes;
+
+                    if (data == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "switch data null for pcieslot ";
+                        return;
+                    }
+                    // update dbus properties to json object
+                    for (auto const& [key, val] : dbusProperties)
+                    {
+                        if (key == "Lanes")
+                        {
+                            pcieSlotRes[key] = std::get<int>(val);
+                        }
+                        else
+                        {
+                            pcieSlotRes[key] = std::get<std::string>(val);
+                        }
+                    }
+
+                    pcieSlotRes["Links"]["Oem"]["Nvidia"]["@odata.type"] =
+                        "#NvidiaPCIeSlots.v1_0_0.NvidiaPCIeSlots";
+                    // declaring switches array
+                    nlohmann::json& switchesLinkArray =
+                        pcieSlotRes["Links"]["Oem"]["Nvidia"]["Switches"];
+                    switchesLinkArray = nlohmann::json::array();
+                    std::string switchURI;
+                    // parse switchlinks and append it to switches array
+                    for (const std::string& switchPath : *data)
+                    {
+                        sdbusplus::message::object_path dbusObjPath(switchPath);
+                        const std::string& switchId = dbusObjPath.filename();
+                        switchURI =
+                            "/redfish/v1/Fabrics/" + fabricId + "/Switches/";
+                        switchURI += switchId;
+                        switchesLinkArray.push_back({{"@odata.id", switchURI}});
+                    }
+
+                    // sending response
+                    nlohmann::json& jResp = asyncResp->res.jsonValue["Slots"];
+                    jResp.push_back(pcieSlotRes);
+                },
+                "xyz.openbmc_project.ObjectMapper", objPath + "/switch_link",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/fabric_link",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
 }
 
 /**
@@ -184,9 +198,10 @@ inline void  updatePCIeSlotsSwitchLinks(const std::shared_ptr<bmcweb::AsyncResp>
  * @param[in]       objPath     D-Bus object to query.
  * @param[in]       chassisId   Chassis that contains the pcieslot.
  */
-inline void  updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                     const std::string& service, const std::string& objPath,
-                     const std::string& chassisId)
+inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& service,
+                            const std::string& objPath,
+                            const std::string& chassisId)
 {
     BMCWEB_LOG_DEBUG << "updatePCIeSlots ";
 
@@ -195,9 +210,7 @@ inline void  updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp
         [asyncResp{asyncResp}, chassisId, objPath](
             const boost::system::error_code ec,
             const std::vector<std::pair<
-                std::string, std::variant<std::string, int>>>& propertiesList)
-        {
-
+                std::string, std::variant<std::string, int>>>& propertiesList) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR
@@ -206,10 +219,11 @@ inline void  updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp
                 return;
             }
 
-            std::map<std::string, std::variant<int,std::string>> dbusProperties; //map of all pcislot dbus properties
+            std::map<std::string, std::variant<int, std::string>>
+                dbusProperties; // map of all pcislot dbus properties
             // pcieslots  data
             for (const std::pair<std::string, std::variant<std::string, int>>&
-                property : propertiesList)
+                     property : propertiesList)
             {
                 // Store DBus properties that are also Redfish
                 // properties with same name and a string value
@@ -221,11 +235,13 @@ inline void  updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
-                            "for Generation ";
+                                            "for Generation ";
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    dbusProperties.insert(std::pair<std::string, std::variant<int,std::string>>("PCIeType",*value));
+                    dbusProperties.insert(
+                        std::pair<std::string, std::variant<int, std::string>>(
+                            "PCIeType", *value));
                 }
                 else if (propertyName == "SlotType")
                 {
@@ -234,11 +250,13 @@ inline void  updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
-                            "for SlotType";
+                                            "for SlotType";
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    dbusProperties.insert(std::pair<std::string, std::variant<int,std::string>>(propertyName,*value));
+                    dbusProperties.insert(
+                        std::pair<std::string, std::variant<int, std::string>>(
+                            propertyName, *value));
                 }
                 else if (propertyName == "Lanes")
                 {
@@ -246,17 +264,18 @@ inline void  updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_ERROR << "Null value returned "
-                            "for Lanes";
+                                            "for Lanes";
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    dbusProperties.insert(std::pair<std::string, std::variant<int,std::string>>(propertyName,*value));
+                    dbusProperties.insert(
+                        std::pair<std::string, std::variant<int, std::string>>(
+                            propertyName, *value));
                 }
             }
 
             // Update switch links
             updatePCIeSlotsSwitchLinks(asyncResp, dbusProperties, objPath);
-
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
@@ -336,7 +355,7 @@ inline void requestPcieSlotsRoutes(App& app)
                                 for (const std::string& pcieslot : pcieSlotList)
                                 {
                                     updatePCIeSlots(asyncResp, connectionName,
-                                                     pcieslot, chassisId);
+                                                    pcieslot, chassisId);
                                 }
                             },
                             "xyz.openbmc_project.ObjectMapper",
@@ -357,4 +376,3 @@ inline void requestPcieSlotsRoutes(App& app)
 }
 
 } // namespace redfish
-

@@ -114,7 +114,8 @@ inline void
                     return;
                 }
                 linksArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/system/Processors/" +
+                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                   "/Processors/" +
                                        processorName}});
             }
         },
@@ -210,15 +211,17 @@ inline void getChassisFabricSwitchesLinks(
  * @param[in]       service     D-Bus service to query.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getOemBaseboardChassisAssert(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                  const std::string& service,
-                                  const std::string& objPath)
+inline void
+    getOemBaseboardChassisAssert(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                 const std::string& service,
+                                 const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get chassis OEM info";
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
-            const std::vector<std::pair<std::string, std::variant<std::string,bool,uint64_t>>>&
+            const std::vector<std::pair<
+                std::string, std::variant<std::string, bool, uint64_t>>>&
                 propertiesList) {
             if (ec)
             {
@@ -241,7 +244,8 @@ inline void getOemBaseboardChassisAssert(std::shared_ptr<bmcweb::AsyncResp> aRes
                         messages::internalError(aResp->res);
                         return;
                     }
-                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] = *value;
+                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] =
+                        *value;
                 }
                 else if (property.first == "SerialNumber")
                 {
@@ -254,7 +258,8 @@ inline void getOemBaseboardChassisAssert(std::shared_ptr<bmcweb::AsyncResp> aRes
                         messages::internalError(aResp->res);
                         return;
                     }
-                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] = *value;
+                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] =
+                        *value;
                 }
             }
         },
@@ -271,14 +276,15 @@ inline void getOemBaseboardChassisAssert(std::shared_ptr<bmcweb::AsyncResp> aRes
  * @param[in]       objPath     D-Bus object to query.
  */
 inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                  const std::string& service,
-                                  const std::string& objPath)
+                                      const std::string& service,
+                                      const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get Baseboard Hardware write protect info";
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
-            const std::vector<std::pair<std::string, std::variant<std::string,bool,uint64_t>>>&
+            const std::vector<std::pair<
+                std::string, std::variant<std::string, bool, uint64_t>>>&
                 propertiesList) {
             if (ec)
             {
@@ -292,8 +298,7 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
             {
                 if (property.first == "WriteProtected")
                 {
-                    const bool* value =
-                        std::get_if<bool>(&property.second);
+                    const bool* value = std::get_if<bool>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
@@ -301,7 +306,9 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         messages::internalError(aResp->res);
                         return;
                     }
-                    aResp->res.jsonValue["Oem"]["Nvidia"]["HardwareWriteProtected"] = *value;
+                    aResp->res
+                        .jsonValue["Oem"]["Nvidia"]["HardwareWriteProtected"] =
+                        *value;
                 }
             }
         },
@@ -317,15 +324,17 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
  * @param[in]       service     D-Bus service to query.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getOemPCIeDeviceClockReferenceInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                                  const std::string& service,
-                                  const std::string& objPath)
+inline void
+    getOemPCIeDeviceClockReferenceInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                       const std::string& service,
+                                       const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get Baseboard PCIeReference clock count";
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
-            const std::vector<std::pair<std::string, std::variant<std::string,bool,uint64_t>>>&
+            const std::vector<std::pair<
+                std::string, std::variant<std::string, bool, uint64_t>>>&
                 propertiesList) {
             if (ec)
             {
@@ -348,14 +357,15 @@ inline void getOemPCIeDeviceClockReferenceInfo(std::shared_ptr<bmcweb::AsyncResp
                         messages::internalError(aResp->res);
                         return;
                     }
-                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] = *value;
+                    aResp->res.jsonValue["Oem"]["Nvidia"][property.first] =
+                        *value;
                 }
             }
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Decorator.PCIeRefClock");
 }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 /**
  * @brief Fill out chassis power limits info of a chassis by
@@ -844,13 +854,13 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             {"@odata.id",
                              "/redfish/v1/Chassis/" + chassisId + "/Assembly"}};
                         // PCIeSlots collection
-                                asyncResp->res.jsonValue["PCIeSlots"] = {
-                                    {"@odata.id", "/redfish/v1/Chassis/" +
-                                                      chassisId + "/PCIeSlots"}};
-
+                        asyncResp->res.jsonValue["PCIeSlots"] = {
+                            {"@odata.id", "/redfish/v1/Chassis/" + chassisId +
+                                              "/PCIeSlots"}};
 
                         asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
-                            {{"@odata.id", "/redfish/v1/Systems/system"}}};
+                            {{"@odata.id",
+                              "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
                         asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
                             {{"@odata.id", "/redfish/v1/Managers/bmc"}}};
                         getChassisState(asyncResp);
@@ -945,16 +955,17 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
 
                 // Baseboard Chassis OEM properties
-                const std::string oemChassisInterface = 
+                const std::string oemChassisInterface =
                     "xyz.openbmc_project.Inventory.Decorator.Asset";
                 if (std::find(interfaces2.begin(), interfaces2.end(),
                               oemChassisInterface) != interfaces2.end())
                 {
-                    getOemBaseboardChassisAssert(asyncResp, connectionName, path);
+                    getOemBaseboardChassisAssert(asyncResp, connectionName,
+                                                 path);
                 }
 
                 // Baseboard Chassis hardware write protect info
-                const std::string hdwWriteProtectInterface = 
+                const std::string hdwWriteProtectInterface =
                     "xyz.openbmc_project.Software.Settings";
                 if (std::find(interfaces2.begin(), interfaces2.end(),
                               hdwWriteProtectInterface) != interfaces2.end())
@@ -963,15 +974,15 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
 
                 // Baseboard Chassis PCIe reference clock count
-                const std::string PCIeDeviceclkRefInterface = 
+                const std::string PCIeDeviceclkRefInterface =
                     "xyz.openbmc_project.Inventory.Decorator.PCIeRefClock";
                 if (std::find(interfaces2.begin(), interfaces2.end(),
                               PCIeDeviceclkRefInterface) != interfaces2.end())
                 {
-                    getOemPCIeDeviceClockReferenceInfo(asyncResp, connectionName,
-                                                       path);
+                    getOemPCIeDeviceClockReferenceInfo(asyncResp,
+                                                       connectionName, path);
                 }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
                 // Links association to underneath chassis
                 getChassisLinksContains(asyncResp, path);

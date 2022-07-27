@@ -1077,9 +1077,11 @@ inline void objectInterfacesToJson(
         properties.emplace_back("xyz.openbmc_project.Sensor.Type",
                                 "Implementation",
                                 "/Implementation"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxAllowableValue",
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value",
+                                "MaxAllowableValue",
                                 "/MaxAllowableOperatingValue"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MinAllowableValue",
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value",
+                                "MinAllowableValue",
                                 "/MinAllowableOperatingValue"_json_pointer);
     }
     else if (sensorType == "temperature")
@@ -1088,9 +1090,11 @@ inline void objectInterfacesToJson(
                                 "/MinReadingRangeTemp"_json_pointer);
         properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxValue",
                                 "/MaxReadingRangeTemp"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxAllowableValue",
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value",
+                                "MaxAllowableValue",
                                 "/MaxAllowableOperatingValue"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MinAllowableValue",
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value",
+                                "MinAllowableValue",
                                 "/MinAllowableOperatingValue"_json_pointer);
     }
     else if (sensorType != "power")
@@ -1099,9 +1103,11 @@ inline void objectInterfacesToJson(
                                 "/MinReadingRange"_json_pointer);
         properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxValue",
                                 "/MaxReadingRange"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxAllowableValue",
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value",
+                                "MaxAllowableValue",
                                 "/MaxAllowableOperatingValue"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MinAllowableValue",
+        properties.emplace_back("xyz.openbmc_project.Sensor.Value",
+                                "MinAllowableValue",
                                 "/MinAllowableOperatingValue"_json_pointer);
     }
 
@@ -3081,7 +3087,8 @@ inline void
                         {
                             // Default is systems URI
                             itemsArray.push_back(
-                                {{"@odata.id", "/redfish/v1/Systems/system"}});
+                                {{"@odata.id",
+                                  "/redfish/v1/Systems/" PLATFORMSYSTEMID}});
                             return;
                         }
                         std::vector<std::string>* data =
@@ -3096,7 +3103,8 @@ inline void
                                 processorPath);
                             std::string processorId = objectPath.filename();
                             std::string processorURI =
-                                "/redfish/v1/Systems/system/Processors/" +
+                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Processors/" +
                                 processorId;
                             itemsArray.push_back({{"@odata.id", processorURI}});
                         }

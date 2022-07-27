@@ -812,15 +812,15 @@ inline void
 
 inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 {
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/system/Processors/<str>/EnvironmentMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
                 std::string envMetricsURI =
-                    "/redfish/v1/Systems/system/Processors/";
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
                 envMetricsURI += processorId;
                 envMetricsURI += "/EnvironmentMetrics";
                 asyncResp->res.jsonValue["@odata.type"] =
@@ -832,8 +832,8 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                 getProcessorEnvironmentMetricsData(asyncResp, processorId);
             });
 
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/system/Processors/<str>/EnvironmentMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::patchProcessor)
         .methods(
             boost::beast::http::verb::
@@ -964,15 +964,15 @@ inline void
 
 inline void requestRoutesMemoryEnvironmentMetrics(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/system/Memory/<str>/EnvironmentMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Memory/<str>/EnvironmentMetrics")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& dimmId) {
                 std::string envMetricsURI =
-                    "/redfish/v1/Systems/system/Memory/";
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
                 envMetricsURI += dimmId;
                 envMetricsURI += "/EnvironmentMetrics";
                 asyncResp->res.jsonValue["@odata.type"] =

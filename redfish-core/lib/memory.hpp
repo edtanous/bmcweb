@@ -883,7 +883,8 @@ inline void
                     return;
                 }
                 linksArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/system/Processors/" +
+                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                   "/Processors/" +
                                        processorName}});
             }
         },
@@ -1008,7 +1009,7 @@ inline void requestRoutesMemoryCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Memory/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/")
         .privileges(redfish::privileges::getMemoryCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -1017,10 +1018,11 @@ inline void requestRoutesMemoryCollection(App& app)
                     "#MemoryCollection.MemoryCollection";
                 asyncResp->res.jsonValue["Name"] = "Memory Module Collection";
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/system/Memory";
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
 
                 collection_util::getCollectionMembers(
-                    asyncResp, "/redfish/v1/Systems/system/Memory",
+                    asyncResp,
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory",
                     {"xyz.openbmc_project.Inventory.Item.Dimm"});
             });
 }
@@ -1030,7 +1032,7 @@ inline void requestRoutesMemory(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Memory/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/<str>/")
         .privileges(redfish::privileges::getMemory)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -1039,9 +1041,9 @@ inline void requestRoutesMemory(App& app)
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#Memory.v1_11_0.Memory";
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/system/Memory/" + dimmId;
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/" + dimmId;
                 std::string memoryMetricsURI =
-                    "/redfish/v1/Systems/system/Memory/";
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
                 memoryMetricsURI += dimmId;
                 std::string environmentMetricsURI = memoryMetricsURI;
                 memoryMetricsURI += "/MemoryMetrics";
@@ -1150,8 +1152,8 @@ inline void getMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                             const std::string& service,
-                             const std::string& objPath)
+                                   const std::string& service,
+                                   const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get memory row remapping counts.";
     crow::connections::systemBus->async_method_call(
@@ -1175,9 +1177,8 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         messages::internalError(aResp->res);
                         return;
                     }
-                    aResp->res
-                        .jsonValue["Oem"]["Nvidia"]
-                                  ["RowRemapping"]["CorrectableRowRemappingCount"] =
+                    aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                        ["CorrectableRowRemappingCount"] =
                         *value;
                 }
                 else if (property.first == "ueRowRemappingCount")
@@ -1189,9 +1190,8 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         messages::internalError(aResp->res);
                         return;
                     }
-                    aResp->res
-                        .jsonValue["Oem"]["Nvidia"]
-                                  ["RowRemapping"]["UncorrectableRowRemappingCount"] =
+                    aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                        ["UncorrectableRowRemappingCount"] =
                         *value;
                 }
             }
@@ -1226,7 +1226,7 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     continue;
                 }
                 std::string memoryMetricsURI =
-                    "/redfish/v1/Systems/system/Memory/";
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
                 memoryMetricsURI += dimmId;
                 memoryMetricsURI += "/MemoryMetrics";
                 aResp->res.jsonValue["@odata.type"] =
@@ -1257,7 +1257,7 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                   "com.nvidia.MemoryRowRemapping") !=
                         interfaces.end())
                     {
-                       getMemoryRowRemappings(aResp, service, path);
+                        getMemoryRowRemappings(aResp, service, path);
                     }
 #endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 }
@@ -1279,7 +1279,8 @@ inline void requestRoutesMemoryMetrics(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Memory/<str>/MemoryMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Memory/<str>/MemoryMetrics")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,

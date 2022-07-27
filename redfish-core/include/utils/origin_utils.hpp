@@ -16,8 +16,10 @@ namespace origin_utils
 
 const std::string inventorySubTree = "/xyz/openbmc_project/inventory";
 const std::string sensorSubTree = "/xyz/openbmc_project/sensors";
-const std::string processorPrefix = "/redfish/v1/Systems/system/Processors/";
-const std::string memoryPrefix = "/redfish/v1/Systems/system/Memory/";
+const std::string processorPrefix =
+    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+const std::string memoryPrefix =
+    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
 constexpr int searchDepth = 4;
 
 /**
@@ -169,7 +171,8 @@ inline void convertDbusObjectToOriginOfCondition(
                         interfaces == "xyz.openbmc_project.Inventory.Item.Cpu")
                     {
                         oocUtil(asyncResp,
-                                "/redfish/v1/Systems/system/Processors/" +
+                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Processors/" +
                                     deviceName,
                                 id);
                         return;
@@ -177,7 +180,8 @@ inline void convertDbusObjectToOriginOfCondition(
                     if (interfaces == "xyz.openbmc_project.Inventory.Item.Dimm")
                     {
                         oocUtil(asyncResp,
-                                "/redfish/v1/Systems/system/Memory/" +
+                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Memory/" +
                                     deviceName,
                                 id);
                         return;

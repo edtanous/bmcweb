@@ -27,7 +27,7 @@ namespace redfish
 {
 inline void requestRoutesStorageCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Storage/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/")
         .privileges(redfish::privileges::getStorageCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -35,17 +35,18 @@ inline void requestRoutesStorageCollection(App& app)
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#StorageCollection.StorageCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/system/Storage";
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
                 asyncResp->res.jsonValue["Name"] = "Storage Collection";
                 asyncResp->res.jsonValue["Members"] = {
-                    {{"@odata.id", "/redfish/v1/Systems/system/Storage/1"}}};
+                    {{"@odata.id",
+                      "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1"}}};
                 asyncResp->res.jsonValue["Members@odata.count"] = 1;
             });
 }
 
 inline void requestRoutesStorage(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Storage/1/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/")
         .privileges(redfish::privileges::getStorage)
         .methods(
             boost::beast::http::verb::
@@ -53,7 +54,7 @@ inline void requestRoutesStorage(App& app)
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
             asyncResp->res.jsonValue["@odata.type"] = "#Storage.v1_7_1.Storage";
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/system/Storage/1";
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1";
             asyncResp->res.jsonValue["Name"] = "Storage";
             asyncResp->res.jsonValue["Id"] = "1";
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -96,7 +97,8 @@ inline void requestRoutesStorage(App& app)
 
                         storageArray.push_back(
                             {{"@odata.id",
-                              "/redfish/v1/Systems/system/Storage/1/Drives/" +
+                              "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                              "/Storage/1/Drives/" +
                                   objpath.substr(lastPos + 1)}});
                     }
 
@@ -154,7 +156,8 @@ inline void requestRoutesStorage(App& app)
                         storageController["@odata.type"] =
                             "#Storage.v1_7_0.StorageController";
                         storageController["@odata.id"] =
-                            "/redfish/v1/Systems/system/Storage/1#/StorageControllers/" +
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/Storage/1#/StorageControllers/" +
                             std::to_string(index);
                         storageController["Name"] = id;
                         storageController["MemberId"] = id;
@@ -347,7 +350,8 @@ inline void getDriveState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
 inline void requestRoutesDrive(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/Storage/1/Drives/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Storage/1/Drives/<str>/")
         .privileges(redfish::privileges::getDrive)
         .methods(
             boost::beast::http::verb::get)([](const crow::Request&,
@@ -391,7 +395,8 @@ inline void requestRoutesDrive(App& app)
                     asyncResp->res.jsonValue["@odata.type"] =
                         "#Drive.v1_7_0.Drive";
                     asyncResp->res.jsonValue["@odata.id"] =
-                        "/redfish/v1/Systems/system/Storage/1/Drives/" +
+                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                        "/Storage/1/Drives/" +
                         driveId;
                     asyncResp->res.jsonValue["Name"] = driveId;
                     asyncResp->res.jsonValue["Id"] = driveId;

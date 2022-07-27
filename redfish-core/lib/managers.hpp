@@ -2317,7 +2317,7 @@ inline void requestRoutesManager(App& app)
 #ifdef BMCWEB_ENABLE_RMEDIA
             asyncResp->res.jsonValue["VirtualMedia"] = {
                 {"@odata.id", "/redfish/v1/Managers/bmc/VirtualMedia"}};
-#endif 
+#endif
 
             // default oem data
             nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
@@ -2377,7 +2377,7 @@ inline void requestRoutesManager(App& app)
             asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] =
                 1;
             asyncResp->res.jsonValue["Links"]["ManagerForServers"] = {
-                {{"@odata.id", "/redfish/v1/Systems/system"}}};
+                {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
 
             auto health = std::make_shared<HealthPopulate>(asyncResp);
             health->isManagersHealth = true;

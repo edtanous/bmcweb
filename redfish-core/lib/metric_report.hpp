@@ -157,7 +157,7 @@ inline void requestRoutesPlatformMetricReport(App& app)
                         std::chrono::steady_clock::now().time_since_epoch())
                         .count());
                 BMCWEB_LOG_DEBUG << "Request submitted at" << requestTimestamp;
-                getPlatformMetrics(asyncResp, "Baseboard", requestTimestamp);
+                getPlatformMetrics(asyncResp, "HGX_Baseboard_0", requestTimestamp);
             });
 }
 #endif
