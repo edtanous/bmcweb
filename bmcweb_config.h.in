@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #define PLATFORMSYSTEMID @PLATFORM_SYSTEM_ID@
+#define PLATFORMBMCID @PLATFORM_BMC_ID@
 
 // clang-format off
 constexpr const int bmcwebInsecureDisableXssPrevention =

@@ -109,7 +109,7 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["@odata.type"] =
         "#ManagerNetworkProtocol.v1_5_0.ManagerNetworkProtocol";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Managers/bmc/NetworkProtocol";
+        "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol";
     asyncResp->res.jsonValue["Id"] = "NetworkProtocol";
     asyncResp->res.jsonValue["Name"] = "Manager Network Protocol";
     asyncResp->res.jsonValue["Description"] = "Manager Network Service";
@@ -168,8 +168,8 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                          effectiveUserPrivileges))
     {
         asyncResp->res.jsonValue["HTTPS"]["Certificates"] = {
-            {"@odata.id",
-             "/redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates"}};
+            {"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                          "/NetworkProtocol/HTTPS/Certificates"}};
     }
 
     for (const auto& protocol : protocolToDBus)
@@ -408,7 +408,7 @@ inline void
 
 inline void requestRoutesNetworkProtocol(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/NetworkProtocol/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
         .privileges(redfish::privileges::patchManagerNetworkProtocol)
         .methods(
             boost::beast::http::verb::
@@ -492,7 +492,7 @@ inline void requestRoutesNetworkProtocol(App& app)
             }
         });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/NetworkProtocol/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
         .privileges(redfish::privileges::getManagerNetworkProtocol)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request& req,

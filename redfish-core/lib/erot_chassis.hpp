@@ -270,7 +270,7 @@ inline void getChassisOEMComponentProtected(
                     .jsonValue["Oem"]["Nvidia"]["ComponentsProtected"];
             componentsProtectedArray = nlohmann::json::array();
             componentsProtectedArray.push_back({nlohmann::json::array(
-                {"@odata.id", "/redfish/v1/managers/bmc"})});
+                {"@odata.id", "/redfish/v1/managers/" PLATFORMBMCID})});
 
             return;
         }
@@ -286,7 +286,8 @@ inline void getChassisOEMComponentProtected(
                 {
                     if (url.empty())
                     {
-                        redfishURL = std::string("/redfish/v1/managers/bmc");
+                        redfishURL =
+                            std::string("/redfish/v1/managers/" PLATFORMBMCID);
                     }
                 }
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =

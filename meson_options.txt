@@ -40,6 +40,7 @@ option('nvidia-oem-properties', type : 'feature', value : 'disabled', descriptio
 option ('stalesensor-upper-limit-milisecond', type : 'integer', min : 1, max : 65535, value : 750, description : 'Upper limit in miliseconds to determine the staleness of sensor reading')
 option ('platform-metrics-sensing-interval', type : 'integer', min : 1, max : 65535, value : 250, description : 'Platform metrics telemetry sensor refresh interval in milliseconds')
 option ('platform-system-id', type : 'string', value : 'system', description : 'Platform specific computer system id')
+option ('platform-bmc-id', type : 'string', value : 'bmc', description : 'Platform specific managers bmc id')
 
 # Insecure options. Every option that starts with a `insecure` flag should
 # not be enabled by default for any platform, unless the author fully comprehends

@@ -323,6 +323,7 @@ conf_data.set('PLATFORM_METRICS_SENSING_INTERVAL', get_option('platform-metrics-
 conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-location'))
 conf_data.set('UPDATE_SERVICE_TASK_TIMEOUT', get_option('update-service-task-timeout'))
 conf_data.set_quoted('PLATFORM_SYSTEM_ID', get_option('platform-system-id'))
+conf_data.set_quoted('PLATFORM_BMC_ID', get_option('platform-bmc-id'))
 configure_file(input: 'bmcweb_config.h.in',
                output: 'bmcweb_config.h',
                configuration: conf_data)

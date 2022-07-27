@@ -442,7 +442,8 @@ inline void requestRoutesComponentIntegrity(App& app)
                     {"ComponentIntegrityEnabled", true},
                     {"SPDM",
                      {{"Requester",
-                       {{"@odata.id", "/redfish/v1/Managers/bmc"}}}}},
+                       {{"@odata.id",
+                         "/redfish/v1/Managers/" PLATFORMBMCID}}}}},
                     {"Actions",
                      {{"#ComponentIntegrity.SPDMGetSignedMeasurements",
                        {{"target", "/redfish/v1/ComponentIntegrity/" + id +
@@ -502,41 +503,43 @@ inline void requestRoutesComponentIntegrity(App& app)
                                     componentsProtectedArray.push_back(
                                         {nlohmann::json::array(
                                             {"@odata.id",
-                                             "/redfish/v1/managers/bmc"})});
+                                             "/redfish/v1/managers/" PLATFORMBMCID})});
                                     return;
                                 }
 
-                                chassis_utils::getRedfishURL(
-                                    ep,
-                                    [ep, asyncResp](const bool& status,
-                                                    const std::string& url) {
-                                        std::string redfishURL = url;
-                                        if (!status)
+                                chassis_utils::getRedfishURL(ep, [ep,
+                                                                  asyncResp](
+                                                                     const bool&
+                                                                         status,
+                                                                     const std::
+                                                                         string&
+                                                                             url) {
+                                    std::string redfishURL = url;
+                                    if (!status)
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "Unable to get the Redfish URL for object="
+                                            << ep;
+                                    }
+                                    else
+                                    {
+                                        if (url.empty())
                                         {
-                                            BMCWEB_LOG_DEBUG
-                                                << "Unable to get the Redfish URL for object="
-                                                << ep;
+                                            redfishURL = std::string(
+                                                "/redfish/v1/managers/" PLATFORMBMCID);
                                         }
-                                        else
-                                        {
-                                            if (url.empty())
-                                            {
-                                                redfishURL = std::string(
-                                                    "/redfish/v1/managers/bmc");
-                                            }
-                                        }
+                                    }
 
-                                        nlohmann::json&
-                                            componentsProtectedArray =
-                                                asyncResp->res.jsonValue
-                                                    ["Links"]
-                                                    ["ComponentsProtected"];
-                                        componentsProtectedArray =
-                                            nlohmann::json::array();
-                                        componentsProtectedArray.push_back(
-                                            {nlohmann::json::array(
-                                                {"@odata.id", redfishURL})});
-                                    });
+                                    nlohmann::json& componentsProtectedArray =
+                                        asyncResp->res
+                                            .jsonValue["Links"]
+                                                      ["ComponentsProtected"];
+                                    componentsProtectedArray =
+                                        nlohmann::json::array();
+                                    componentsProtectedArray.push_back(
+                                        {nlohmann::json::array(
+                                            {"@odata.id", redfishURL})});
+                                });
                             });
                     });
             });

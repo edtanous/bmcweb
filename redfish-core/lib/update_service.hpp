@@ -1756,7 +1756,8 @@ inline static void
     if (purpose == fw_util::bmcPurpose)
     {
         nlohmann::json& relatedItem = aResp->res.jsonValue["RelatedItem"];
-        relatedItem.push_back({{"@odata.id", "/redfish/v1/Managers/bmc"}});
+        relatedItem.push_back(
+            {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}});
         aResp->res.jsonValue["RelatedItem@odata.count"] = relatedItem.size();
     }
     else if (purpose == fw_util::biosPurpose)

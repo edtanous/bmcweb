@@ -1677,7 +1677,7 @@ inline void parseInterfaceData(
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
     jsonResponse["Id"] = ifaceId;
     jsonResponse["@odata.id"] =
-        "/redfish/v1/Managers/bmc/EthernetInterfaces/" + ifaceId;
+        "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" + ifaceId;
     jsonResponse["InterfaceEnabled"] = ethData.nicEnabled;
 
     auto health = std::make_shared<HealthPopulate>(asyncResp);
@@ -1741,9 +1741,9 @@ inline void parseInterfaceData(
         jsonResponse["FQDN"] = fqdn;
     }
 
-    jsonResponse["VLANs"] = {
-        {"@odata.id",
-         "/redfish/v1/Managers/bmc/EthernetInterfaces/" + ifaceId + "/VLANs"}};
+    jsonResponse["VLANs"] = {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                                           "/EthernetInterfaces/" +
+                                               ifaceId + "/VLANs"}};
 
     jsonResponse["NameServers"] = ethData.nameServers;
     jsonResponse["StaticNameServers"] = ethData.staticNameServers;
@@ -1811,7 +1811,8 @@ inline void parseInterfaceData(nlohmann::json& jsonResponse,
 {
     // Fill out obvious data...
     jsonResponse["Id"] = ifaceId;
-    jsonResponse["@odata.id"] = "/redfish/v1/Managers/bmc/EthernetInterfaces/" +
+    jsonResponse["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                                "/EthernetInterfaces/" +
                                 parentIfaceId + "/VLANs/" + ifaceId;
 
     jsonResponse["VLANEnable"] = true;
@@ -1832,56 +1833,60 @@ inline bool verifyNames(const std::string& parent, const std::string& iface)
 
 inline void requestEthernetInterfacesRoutes(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/EthernetInterfaces/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/")
         .privileges(redfish::privileges::getEthernetInterfaceCollection)
-        .methods(
-            boost::beast::http::verb::
-                get)([](const crow::Request&,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#EthernetInterfaceCollection.EthernetInterfaceCollection";
-            asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Managers/bmc/EthernetInterfaces";
-            asyncResp->res.jsonValue["Name"] =
-                "Ethernet Network Interface Collection";
-            asyncResp->res.jsonValue["Description"] =
-                "Collection of EthernetInterfaces for this Manager";
-
-            // Get eth interface list, and call the below callback for JSON
-            // preparation
-            getEthernetIfaceList([asyncResp](const bool& success,
-                                             const boost::container::flat_set<
-                                                 std::string>& ifaceList) {
-                if (!success)
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-
-                nlohmann::json& ifaceArray =
-                    asyncResp->res.jsonValue["Members"];
-                ifaceArray = nlohmann::json::array();
-                std::string tag = "_";
-                for (const std::string& ifaceItem : ifaceList)
-                {
-                    std::size_t found = ifaceItem.find(tag);
-                    if (found == std::string::npos)
-                    {
-                        ifaceArray.push_back(
-                            {{"@odata.id",
-                              "/redfish/v1/Managers/bmc/EthernetInterfaces/" +
-                                  ifaceItem}});
-                    }
-                }
-
-                asyncResp->res.jsonValue["Members@odata.count"] =
-                    ifaceArray.size();
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#EthernetInterfaceCollection.EthernetInterfaceCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/bmc/EthernetInterfaces";
-            });
-        });
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces";
+                asyncResp->res.jsonValue["Name"] =
+                    "Ethernet Network Interface Collection";
+                asyncResp->res.jsonValue["Description"] =
+                    "Collection of EthernetInterfaces for this Manager";
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/EthernetInterfaces/<str>/")
+                // Get eth interface list, and call the below callback for JSON
+                // preparation
+                getEthernetIfaceList(
+                    [asyncResp](const bool& success,
+                                const boost::container::flat_set<std::string>&
+                                    ifaceList) {
+                        if (!success)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+
+                        nlohmann::json& ifaceArray =
+                            asyncResp->res.jsonValue["Members"];
+                        ifaceArray = nlohmann::json::array();
+                        std::string tag = "_";
+                        for (const std::string& ifaceItem : ifaceList)
+                        {
+                            std::size_t found = ifaceItem.find(tag);
+                            if (found == std::string::npos)
+                            {
+                                ifaceArray.push_back(
+                                    {{"@odata.id",
+                                      "/redfish/v1/Managers/" PLATFORMBMCID
+                                      "/EthernetInterfaces/" +
+                                          ifaceItem}});
+                            }
+                        }
+
+                        asyncResp->res.jsonValue["Members@odata.count"] =
+                            ifaceArray.size();
+                        asyncResp->res.jsonValue["@odata.id"] =
+                            "/redfish/v1/Managers/" PLATFORMBMCID
+                            "/EthernetInterfaces";
+                    });
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/EthernetInterfaces/<str>/")
         .privileges(redfish::privileges::getEthernetInterface)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -1917,7 +1922,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     });
             });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/EthernetInterfaces/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/EthernetInterfaces/<str>/")
         .privileges(redfish::privileges::patchEthernetInterface)
 
         .methods(boost::beast::http::verb::patch)(
@@ -2067,8 +2073,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     });
             });
 
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Managers/bmc/EthernetInterfaces/<str>/VLANs/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/EthernetInterfaces/<str>/VLANs/<str>/")
         .privileges(redfish::privileges::getVLanNetworkInterface)
 
         .methods(boost::beast::http::verb::get)(
@@ -2110,8 +2116,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     });
             });
 
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Managers/bmc/EthernetInterfaces/<str>/VLANs/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/EthernetInterfaces/<str>/VLANs/<str>/")
         // This privilege is incorrect, it should be ConfigureManager
         //.privileges(redfish::privileges::patchVLanNetworkInterface)
         .privileges({{"ConfigureComponents"}})
@@ -2192,8 +2198,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     });
             });
 
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Managers/bmc/EthernetInterfaces/<str>/VLANs/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/EthernetInterfaces/<str>/VLANs/<str>/")
         // This privilege is incorrect, it should be ConfigureManager
         //.privileges(redfish::privileges::deleteVLanNetworkInterface)
         .privileges({{"ConfigureComponents"}})
@@ -2246,8 +2252,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     });
             });
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/bmc/EthernetInterfaces/<str>/VLANs/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/EthernetInterfaces/<str>/VLANs/")
 
         .privileges(redfish::privileges::getVLanNetworkInterfaceCollection)
         .methods(
@@ -2287,8 +2293,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
                 {
                     if (boost::starts_with(ifaceItem, rootInterfaceName + "_"))
                     {
-                        std::string path =
-                            "/redfish/v1/Managers/bmc/EthernetInterfaces/";
+                        std::string path = "/redfish/v1/Managers/" PLATFORMBMCID
+                                           "/EthernetInterfaces/";
                         path += rootInterfaceName;
                         path += "/VLANs/";
                         path += ifaceItem;
@@ -2300,13 +2306,14 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     ifaceArray.size();
                 asyncResp->res.jsonValue["Members"] = std::move(ifaceArray);
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/bmc/EthernetInterfaces/" +
+                    "/redfish/v1/Managers/" PLATFORMBMCID
+                    "/EthernetInterfaces/" +
                     rootInterfaceName + "/VLANs";
             });
         });
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/bmc/EthernetInterfaces/<str>/VLANs/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/EthernetInterfaces/<str>/VLANs/")
         // This privilege is wrong, it should be ConfigureManager
         //.privileges(redfish::privileges::postVLanNetworkInterfaceCollection)
         .privileges({{"ConfigureComponents"}})

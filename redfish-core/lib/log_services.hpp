@@ -489,7 +489,8 @@ inline void
     std::string dumpPath;
     if (dumpType == "BMC")
     {
-        dumpPath = "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/";
+        dumpPath =
+            "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/Entries/";
     }
     else if (dumpType == "System")
     {
@@ -622,7 +623,8 @@ inline void
                 {
                     thisEntry["DiagnosticDataType"] = "Manager";
                     thisEntry["AdditionalDataURI"] =
-                        "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/" +
+                        "/redfish/v1/Managers/" PLATFORMBMCID
+                        "/LogServices/Dump/Entries/" +
                         entryID + "/attachment";
                 }
                 else if (dumpType == "System")
@@ -650,7 +652,8 @@ inline void
     std::string dumpPath;
     if (dumpType == "BMC")
     {
-        dumpPath = "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/";
+        dumpPath =
+            "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/Entries/";
     }
     else if (dumpType == "System")
     {
@@ -779,7 +782,8 @@ inline void
                 {
                     asyncResp->res.jsonValue["DiagnosticDataType"] = "Manager";
                     asyncResp->res.jsonValue["AdditionalDataURI"] =
-                        "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/" +
+                        "/redfish/v1/Managers/" PLATFORMBMCID
+                        "/LogServices/Dump/Entries/" +
                         entryID + "/attachment";
                 }
                 else if (dumpType == "System")
@@ -851,8 +855,9 @@ inline void createDumpTaskCallback(
     std::string dumpEntryPath;
     if (dumpPath == "/xyz/openbmc_project/dump/bmc/entry")
     {
-        dumpEntryPath =
-            "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/" + dumpId;
+        dumpEntryPath = "/redfish/v1/Managers/" PLATFORMBMCID
+                        "/LogServices/Dump/Entries/" +
+                        dumpId;
     }
     else if (dumpPath == "/xyz/openbmc_project/dump/system/entry")
     {
@@ -2749,7 +2754,7 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
 
 inline void requestRoutesBMCLogServiceCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/LogServices/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/")
         .privileges(redfish::privileges::getLogServiceCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -2759,7 +2764,7 @@ inline void requestRoutesBMCLogServiceCollection(App& app)
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#LogServiceCollection.LogServiceCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/bmc/LogServices";
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices";
                 asyncResp->res.jsonValue["Name"] =
                     "Open BMC Log Services Collection";
                 asyncResp->res.jsonValue["Description"] =
@@ -2769,13 +2774,13 @@ inline void requestRoutesBMCLogServiceCollection(App& app)
                 logServiceArray = nlohmann::json::array();
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
                 logServiceArray.push_back(
-                    {{"@odata.id",
-                      "/redfish/v1/Managers/bmc/LogServices/Dump"}});
+                    {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                                   "/LogServices/Dump"}});
 #endif
 #ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
                 logServiceArray.push_back(
-                    {{"@odata.id",
-                      "/redfish/v1/Managers/bmc/LogServices/Journal"}});
+                    {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                                   "/LogServices/Journal"}});
 #endif
                 asyncResp->res.jsonValue["Members@odata.count"] =
                     logServiceArray.size();
@@ -2784,7 +2789,8 @@ inline void requestRoutesBMCLogServiceCollection(App& app)
 
 inline void requestRoutesBMCJournalLogService(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/LogServices/Journal/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Journal/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -2794,7 +2800,8 @@ inline void requestRoutesBMCJournalLogService(App& app)
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#LogService.v1_1_0.LogService";
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/bmc/LogServices/Journal";
+                    "/redfish/v1/Managers/" PLATFORMBMCID
+                    "/LogServices/Journal";
                 asyncResp->res.jsonValue["Name"] =
                     "Open BMC Journal Log Service";
                 asyncResp->res.jsonValue["Description"] =
@@ -2810,8 +2817,8 @@ inline void requestRoutesBMCJournalLogService(App& app)
                     redfishDateTimeOffset.second;
 
                 asyncResp->res.jsonValue["Entries"] = {
-                    {"@odata.id",
-                     "/redfish/v1/Managers/bmc/LogServices/Journal/Entries"}};
+                    {"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                                  "/LogServices/Journal/Entries"}};
             });
 }
 
@@ -2862,7 +2869,8 @@ static int fillBMCJournalLogEntryJson(const std::string& bmcJournalLogEntryID,
     // Fill in the log entry with the gathered data
     bmcJournalLogEntryJson = {
         {"@odata.type", "#LogEntry.v1_8_0.LogEntry"},
-        {"@odata.id", "/redfish/v1/Managers/bmc/LogServices/Journal/Entries/" +
+        {"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/Journal/Entries/" +
                           bmcJournalLogEntryID},
         {"Name", "BMC Journal Entry"},
         {"Id", bmcJournalLogEntryID},
@@ -2877,96 +2885,99 @@ static int fillBMCJournalLogEntryJson(const std::string& bmcJournalLogEntryID,
 
 inline void requestRoutesBMCJournalLogEntryCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/LogServices/Journal/Entries/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/Journal/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
-        .methods(
-            boost::beast::http::verb::
-                get)([](const crow::Request& req,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-            static constexpr const long maxEntriesPerPage = 1000;
-            uint64_t skip = 0;
-            uint64_t top = maxEntriesPerPage; // Show max entries by default
-            if (!getSkipParam(asyncResp, req, skip))
-            {
-                return;
-            }
-            if (!getTopParam(asyncResp, req, top))
-            {
-                return;
-            }
-            // Collections don't include the static data added by SubRoute
-            // because it has a duplicate entry for members
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#LogEntryCollection.LogEntryCollection";
-            asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Managers/bmc/LogServices/Journal/Entries";
-            asyncResp->res.jsonValue["Name"] = "Open BMC Journal Entries";
-            asyncResp->res.jsonValue["Description"] =
-                "Collection of BMC Journal Entries";
-            nlohmann::json& logEntryArray = asyncResp->res.jsonValue["Members"];
-            logEntryArray = nlohmann::json::array();
-
-            // Go through the journal and use the timestamp to create a
-            // unique ID for each entry
-            sd_journal* journalTmp = nullptr;
-            int ret = sd_journal_open(&journalTmp, SD_JOURNAL_LOCAL_ONLY);
-            if (ret < 0)
-            {
-                BMCWEB_LOG_ERROR << "failed to open journal: "
-                                 << strerror(-ret);
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            std::unique_ptr<sd_journal, decltype(&sd_journal_close)> journal(
-                journalTmp, sd_journal_close);
-            journalTmp = nullptr;
-            uint64_t entryCount = 0;
-            // Reset the unique ID on the first entry
-            bool firstEntry = true;
-            SD_JOURNAL_FOREACH(journal.get())
-            {
-                entryCount++;
-                // Handle paging using skip (number of entries to skip from
-                // the start) and top (number of entries to display)
-                if (entryCount <= skip || entryCount > skip + top)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                static constexpr const long maxEntriesPerPage = 1000;
+                uint64_t skip = 0;
+                uint64_t top = maxEntriesPerPage; // Show max entries by default
+                if (!getSkipParam(asyncResp, req, skip))
                 {
-                    continue;
+                    return;
                 }
-
-                std::string idStr;
-                if (!getUniqueEntryID(journal.get(), idStr, firstEntry))
+                if (!getTopParam(asyncResp, req, top))
                 {
-                    continue;
+                    return;
                 }
+                // Collections don't include the static data added by SubRoute
+                // because it has a duplicate entry for members
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#LogEntryCollection.LogEntryCollection";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Managers/" PLATFORMBMCID
+                    "/LogServices/Journal/Entries";
+                asyncResp->res.jsonValue["Name"] = "Open BMC Journal Entries";
+                asyncResp->res.jsonValue["Description"] =
+                    "Collection of BMC Journal Entries";
+                nlohmann::json& logEntryArray =
+                    asyncResp->res.jsonValue["Members"];
+                logEntryArray = nlohmann::json::array();
 
-                if (firstEntry)
+                // Go through the journal and use the timestamp to create a
+                // unique ID for each entry
+                sd_journal* journalTmp = nullptr;
+                int ret = sd_journal_open(&journalTmp, SD_JOURNAL_LOCAL_ONLY);
+                if (ret < 0)
                 {
-                    firstEntry = false;
-                }
-
-                logEntryArray.push_back({});
-                nlohmann::json& bmcJournalLogEntry = logEntryArray.back();
-                if (fillBMCJournalLogEntryJson(idStr, journal.get(),
-                                               bmcJournalLogEntry) != 0)
-                {
+                    BMCWEB_LOG_ERROR << "failed to open journal: "
+                                     << strerror(-ret);
                     messages::internalError(asyncResp->res);
                     return;
                 }
-            }
-            asyncResp->res.jsonValue["Members@odata.count"] = entryCount;
-            if (skip + top < entryCount)
-            {
-                asyncResp->res.jsonValue["Members@odata.nextLink"] =
-                    "/redfish/v1/Managers/bmc/LogServices/Journal/Entries?$skip=" +
-                    std::to_string(skip + top);
-            }
-        });
+                std::unique_ptr<sd_journal, decltype(&sd_journal_close)>
+                    journal(journalTmp, sd_journal_close);
+                journalTmp = nullptr;
+                uint64_t entryCount = 0;
+                // Reset the unique ID on the first entry
+                bool firstEntry = true;
+                SD_JOURNAL_FOREACH(journal.get())
+                {
+                    entryCount++;
+                    // Handle paging using skip (number of entries to skip from
+                    // the start) and top (number of entries to display)
+                    if (entryCount <= skip || entryCount > skip + top)
+                    {
+                        continue;
+                    }
+
+                    std::string idStr;
+                    if (!getUniqueEntryID(journal.get(), idStr, firstEntry))
+                    {
+                        continue;
+                    }
+
+                    if (firstEntry)
+                    {
+                        firstEntry = false;
+                    }
+
+                    logEntryArray.push_back({});
+                    nlohmann::json& bmcJournalLogEntry = logEntryArray.back();
+                    if (fillBMCJournalLogEntryJson(idStr, journal.get(),
+                                                   bmcJournalLogEntry) != 0)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                }
+                asyncResp->res.jsonValue["Members@odata.count"] = entryCount;
+                if (skip + top < entryCount)
+                {
+                    asyncResp->res.jsonValue["Members@odata.nextLink"] =
+                        "/redfish/v1/Managers/" PLATFORMBMCID
+                        "/LogServices/Journal/Entries?$skip=" +
+                        std::to_string(skip + top);
+                }
+            });
 }
 
 inline void requestRoutesBMCJournalLogEntry(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/bmc/LogServices/Journal/Entries/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/Journal/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -3035,14 +3046,15 @@ inline void requestRoutesBMCJournalLogEntry(App& app)
 
 inline void requestRoutesBMCDumpService(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/LogServices/Dump/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/")
         .privileges(redfish::privileges::getLogService)
         .methods(
             boost::beast::http::verb::
                 get)([](const crow::Request&,
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Managers/bmc/LogServices/Dump";
+                "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump";
             asyncResp->res.jsonValue["@odata.type"] =
                 "#LogService.v1_2_0.LogService";
             asyncResp->res.jsonValue["Name"] = "Dump LogService";
@@ -3057,15 +3069,16 @@ inline void requestRoutesBMCDumpService(App& app)
                 redfishDateTimeOffset.second;
 
             asyncResp->res.jsonValue["Entries"] = {
-                {"@odata.id",
-                 "/redfish/v1/Managers/bmc/LogServices/Dump/Entries"}};
+                {"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                              "/LogServices/Dump/Entries"}};
             asyncResp->res.jsonValue["Actions"] = {
                 {"#LogService.ClearLog",
-                 {{"target",
-                   "/redfish/v1/Managers/bmc/LogServices/Dump/Actions/LogService.ClearLog"}}},
+                 {{"target", "/redfish/v1/Managers/" PLATFORMBMCID
+                             "/LogServices/Dump/Actions/LogService.ClearLog"}}},
                 {"#LogService.CollectDiagnosticData",
                  {{"target",
-                   "/redfish/v1/Managers/bmc/LogServices/Dump/Actions/LogService.CollectDiagnosticData"}}}};
+                   "/redfish/v1/Managers/" PLATFORMBMCID
+                   "/LogServices/Dump/Actions/LogService.CollectDiagnosticData"}}}};
         });
 }
 
@@ -3075,7 +3088,8 @@ inline void requestRoutesBMCDumpEntryCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/Dump/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -3083,7 +3097,8 @@ inline void requestRoutesBMCDumpEntryCollection(App& app)
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#LogEntryCollection.LogEntryCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/bmc/LogServices/Dump/Entries";
+                    "/redfish/v1/Managers/" PLATFORMBMCID
+                    "/LogServices/Dump/Entries";
                 asyncResp->res.jsonValue["Name"] = "BMC Dump Entries";
                 asyncResp->res.jsonValue["Description"] =
                     "Collection of BMC Dump Entries";
@@ -3094,8 +3109,8 @@ inline void requestRoutesBMCDumpEntryCollection(App& app)
 
 inline void requestRoutesBMCDumpEntry(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/Dump/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -3103,8 +3118,8 @@ inline void requestRoutesBMCDumpEntry(App& app)
                const std::string& param) {
                 getDumpEntryById(asyncResp, param, "BMC");
             });
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/Dump/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
         .methods(boost::beast::http::verb::delete_)(
             [](const crow::Request&,
@@ -3117,9 +3132,9 @@ inline void requestRoutesBMCDumpEntry(App& app)
 inline void requestRoutesBMCDumpCreate(App& app)
 {
 
-    BMCWEB_ROUTE(
-        app,
-        "/redfish/v1/Managers/bmc/LogServices/Dump/Actions/LogService.CollectDiagnosticData/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/" PLATFORMBMCID
+                 "/LogServices/Dump/Actions/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
@@ -3130,9 +3145,8 @@ inline void requestRoutesBMCDumpCreate(App& app)
 
 inline void requestRoutesBMCDumpClear(App& app)
 {
-    BMCWEB_ROUTE(
-        app,
-        "/redfish/v1/Managers/bmc/LogServices/Dump/Actions/LogService.ClearLog/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/Dump/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request&,

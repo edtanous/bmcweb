@@ -109,7 +109,8 @@ inline void requestRoutesManagerResetAction(App& app)
      * OpenBMC supports ResetType "GracefulRestart" and "ForceRestart".
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/Actions/Manager.Reset/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/Actions/Manager.Reset/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
@@ -164,8 +165,8 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
      * OpenBMC only supports ResetToDefaultsType "ResetAll".
      */
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/Actions/Manager.ResetToDefaults/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
@@ -252,14 +253,15 @@ inline void requestRoutesManagerResetActionInfo(App& app)
      * Functions triggers appropriate requests on DBus
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/ResetActionInfo/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/ResetActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
                 asyncResp->res.jsonValue = {
                     {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
-                    {"@odata.id", "/redfish/v1/Managers/bmc/ResetActionInfo"},
+                    {"@odata.id",
+                     "/redfish/v1/Managers/" PLATFORMBMCID "/ResetActionInfo"},
                     {"Name", "Reset Action Info"},
                     {"Id", "ResetActionInfo"},
                     {"Parameters",
@@ -2187,7 +2189,7 @@ inline void requestRoutesManager(App& app)
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& bmcId) {
             // Process non bmc service manager
-            if (bmcId != "bmc")
+            if (bmcId != PLATFORMBMCID)
             {
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, bmcId](
@@ -2289,7 +2291,8 @@ inline void requestRoutesManager(App& app)
                 return;
             }
             // Process BMC manager
-            asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Managers/bmc";
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID;
             asyncResp->res.jsonValue["@odata.type"] =
                 "#Manager.v1_11_0.Manager";
             asyncResp->res.jsonValue["Id"] = "bmc";
@@ -2306,17 +2309,21 @@ inline void requestRoutesManager(App& app)
                 "OpenBmc"; // TODO(ed), get model
 
             asyncResp->res.jsonValue["LogServices"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/LogServices"}};
+                {"@odata.id",
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices"}};
 
             asyncResp->res.jsonValue["NetworkProtocol"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/NetworkProtocol"}};
+                {"@odata.id",
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol"}};
 
             asyncResp->res.jsonValue["EthernetInterfaces"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/EthernetInterfaces"}};
+                {"@odata.id",
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces"}};
 
 #ifdef BMCWEB_ENABLE_RMEDIA
             asyncResp->res.jsonValue["VirtualMedia"] = {
-                {"@odata.id", "/redfish/v1/Managers/bmc/VirtualMedia"}};
+                {"@odata.id",
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
 #endif
 
             // default oem data
@@ -2326,26 +2333,26 @@ inline void requestRoutesManager(App& app)
             oem["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem";
             oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
             oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/bmc#/Oem/OpenBmc";
-            oemOpenbmc["Certificates"] = {
-                {"@odata.id",
-                 "/redfish/v1/Managers/bmc/Truststore/Certificates"}};
+            oemOpenbmc["Certificates"] = {{"@odata.id",
+                                           "/redfish/v1/Managers/" PLATFORMBMCID
+                                           "/Truststore/Certificates"}};
 
             // Manager.Reset (an action) can be many values, OpenBMC only
             // supports BMC reboot.
             nlohmann::json& managerReset =
                 asyncResp->res.jsonValue["Actions"]["#Manager.Reset"];
             managerReset["target"] =
-                "/redfish/v1/Managers/bmc/Actions/Manager.Reset";
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Manager.Reset";
             managerReset["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/bmc/ResetActionInfo";
+                "/redfish/v1/Managers/" PLATFORMBMCID "/ResetActionInfo";
 
             // ResetToDefaults (Factory Reset) has values like
             // PreserveNetworkAndUsers and PreserveNetwork that aren't supported
             // on OpenBMC
             nlohmann::json& resetToDefaults =
                 asyncResp->res.jsonValue["Actions"]["#Manager.ResetToDefaults"];
-            resetToDefaults["target"] =
-                "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
+            resetToDefaults["target"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                                        "/Actions/Manager.ResetToDefaults";
             resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
 
             std::pair<std::string, std::string> redfishDateTimeOffset =
@@ -2493,7 +2500,7 @@ inline void requestRoutesManager(App& app)
                     "xyz.openbmc_project.Inventory.Item.Bmc"});
         });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/")
         .privileges(redfish::privileges::patchManager)
         .methods(
             boost::beast::http::verb::
@@ -2594,7 +2601,8 @@ inline void requestRoutesManagerCollection(App& app)
             nlohmann::json& members = asyncResp->res.jsonValue["Members"];
             members = nlohmann::json::array();
             // Add bmc path
-            members.push_back({{"@odata.id", "/redfish/v1/Managers/bmc"}});
+            members.push_back(
+                {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}});
             // Collect additional management services
             crow::connections::systemBus->async_method_call(
                 [collectionPath, asyncResp{asyncResp}](

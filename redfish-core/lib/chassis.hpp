@@ -862,7 +862,8 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             {{"@odata.id",
                               "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
                         asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
-                            {{"@odata.id", "/redfish/v1/Managers/bmc"}}};
+                            {{"@odata.id",
+                              "/redfish/v1/Managers/" PLATFORMBMCID}}};
                         getChassisState(asyncResp);
                     },
                     connectionName, path, "org.freedesktop.DBus.Properties",

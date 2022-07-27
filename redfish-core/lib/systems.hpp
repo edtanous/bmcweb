@@ -2926,7 +2926,7 @@ inline void requestRoutesSystems(App& app)
                 {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios"}};
 
             asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
-                {{"@odata.id", "/redfish/v1/Managers/bmc"}}};
+                {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}};
 
             asyncResp->res.jsonValue["Status"] = {
                 {"Health", "OK"},
