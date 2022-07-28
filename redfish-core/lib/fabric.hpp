@@ -2890,13 +2890,16 @@ inline void
                     [asyncResp](
                         const boost::system::error_code ec,
                         const boost::container::flat_map<
-                            std::string, std::variant<size_t>>& properties) {
+                            std::string, std::variant<uint16_t, uint32_t, uint64_t>>& properties) {
                         if (ec)
                         {
                             BMCWEB_LOG_DEBUG << "DBUS response error";
                             messages::internalError(asyncResp->res);
                             return;
                         }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaPortMetrics.v1_0_0.NvidiaPortMetrics";
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                         for (const auto& property : properties)
                         {
                             if ((property.first == "TXBytes") ||
@@ -2914,10 +2917,125 @@ inline void
                                 asyncResp->res.jsonValue[property.first] =
                                     *value;
                             }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES                            
+                            else if (property.first == "RXNoProtocolBytes")
+                            {
+                                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for RXNoProtocolBytes";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXNoProtocolBytes"] = *value;
+                            }
+                            else if (property.first == "TXNoProtocolBytes")
+                            {
+                                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for TXNoProtocolBytes";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["TXNoProtocolBytes"] = *value;
+                            }
+                            else if (property.first == "DataCRCCount")
+                            {
+                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for DataCRCCount";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["DataCRCCount"] = *value;
+                            }
+                            else if (property.first == "FlitCRCCount")
+                            {
+                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for FlitCRCCount";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["FlitCRCCount"] = *value;
+                            }
+                            else if (property.first == "RecoveryCount")
+                            {
+                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for RecoveryCount";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RecoveryCount"] = *value;
+                            }
+                            else if (property.first == "ReplayCount")
+                            {
+                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for ReplayCount";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["ReplayCount"] = *value;
+                            }
+                            else if (property.first == "RuntimeError")
+                            {
+                                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                                if (value == nullptr)
+                               {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for RuntimeError";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+
+                                if (*value != 0)
+                                {
+                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RuntimeError"] = true;    
+                                }
+                                else 
+                                {
+                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RuntimeError"] = false;
+                                }
+                            }
+                            else if (property.first == "TrainingError")
+                            {
+                                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                    "for TrainingError";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+
+                                if (*value != 0)
+                                {
+                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["TrainingError"] = true;    
+                                }
+                                else 
+                                {
+                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["TrainingError"] = false;
+                                }
+                            }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                         }
                     },
                     connectionName, objPath, "org.freedesktop.DBus.Properties",
                     "GetAll", "xyz.openbmc_project.Inventory.Item.Port");
+
                 return;
             }
             // Couldn't find an object with that name. Return an error

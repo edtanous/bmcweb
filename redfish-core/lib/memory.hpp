@@ -1148,6 +1148,7 @@ inline void getMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Memory.MemoryECC");
 }
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
                              const std::string& service,
                              const std::string& objPath)
@@ -1198,6 +1199,7 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "com.nvidia.MemoryRowRemapping");
 }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                  const std::string& dimmId)
@@ -1232,8 +1234,10 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
                 aResp->res.jsonValue["Id"] = "MemoryMetrics";
                 aResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 aResp->res.jsonValue["Oem"]["Nvidia"]
                                     ["@odata.id"] = "#NvidiaMemoryMetrics.v1_0_0.NvidiaMemoryMetrics";
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 for (const auto& [service, interfaces] : object)
                 {
                     if (std::find(interfaces.begin(), interfaces.end(),
@@ -1248,12 +1252,14 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     {
                         getMemoryECCData(aResp, service, path);
                     }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     if (std::find(interfaces.begin(), interfaces.end(),
                                   "com.nvidia.MemoryRowRemapping") !=
                         interfaces.end())
                     {
                        getMemoryRowRemappings(aResp, service, path);
                     }
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 }
                 return;
             }

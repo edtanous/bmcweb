@@ -1,0 +1,74 @@
+{
+    "$id": "/schemas/v1/JsonSchemas/NvidiaMemoryMetrics.v1_0_0.json",
+    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
+    "copyright": "Copyright 2021-2022 NVIDIA. For the full NVIDIA copyright policy, see LICENSE.md",
+    "definitions": {
+        "NvidiaMemoryMetrics": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "RowRemapping": {
+                    "$ref": "#/definitions/RowRemapping",
+                    "description": "The row remapping statistics associated with this processor.",
+                    "longDescription": "This property shall contain properties that describe the row-remapping statistics associated with this processor."
+                }
+            },
+            "type": "object"
+        },
+        "RowRemapping": {
+            "additionalProperties": false,
+            "description": "The row remapping statistics associated with this processor.",
+            "longDescription": "This property shall contain properties that describe the row-remapping statistics associated with this processor.",
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "CorrectableRowRemappingCount": {
+                    "description": "The total number of row-remapping due to correctable errors for this device.",
+                    "longDescription": "This property shall contain the total number of row-remapping due to correctable errors for this device.",
+                    "readonly": true,
+                    "type": [
+                        "integer",
+                        "null"
+                    ]
+                },
+                "UncorrectableRowRemappingCount": {
+                    "description": "The total number of row-remapping due to uncorrectable errors for this device.",
+                    "longDescription": "This property shall contain the total number of row-remapping due to uncorrectable errors for this device.",
+                    "readonly": true,
+                    "type": [
+                        "integer",
+                        "null"
+                    ]
+                }
+            },
+            "type": "object"
+        }
+    },
+    "owningEntity": "NVIDIA",
+    "title": "#NvidiaMemoryMetrics.v1_0_0"
+}

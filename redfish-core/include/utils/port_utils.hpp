@@ -203,7 +203,10 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 messages::internalError(asyncResp->res);
                 return;
             }
-
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                                        "#NvidiaPort.v1_0_0.NvidiaPort";
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             for (const auto& property : properties)
             {
                 const std::string& propertyName = property.first;
@@ -232,8 +235,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                                        "#NvidiaPort.v1_0_0.NvidiaPort";
+
 
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["TXWidth"] = *value;
                 }
@@ -249,8 +251,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     }
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXWidth"] = *value;
                 }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES               
                 else if (propertyName == "Protocol")
                 {
                     const std::string* value =
