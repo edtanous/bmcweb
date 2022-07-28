@@ -1539,22 +1539,83 @@ inline void requestAccountServiceRoutes(App& app)
                                 return;
                             }
 
-                            // As clarified by Redfish here:
-                            // https://redfishforum.com/thread/281/manageraccountcollection-change-allows-account-enumeration
-                            // Users without ConfigureUsers, only see their own
-                            // account. Users with ConfigureUsers, see all
-                            // accounts.
-                            if (userCanSeeAllAccounts ||
-                                (thisUser == user && userCanSeeSelf))
-                            {
-                                memberArray.push_back(
-                                    {{"@odata.id",
-                                      "/redfish/v1/AccountService/Accounts/" +
-                                          user}});
-                            }
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp, thisUser, userCanSeeAllAccounts,
+                                 userCanSeeSelf, user, &memberArray](
+                                    const boost::system::error_code ec,
+                                    const std::map<
+                                        std::string,
+                                        dbus::utility::DbusVariantType>&
+                                        userInfo) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "GetUserInfo failed";
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+
+                                    const std::vector<std::string>*
+                                        userGroupPtr = nullptr;
+                                    auto userInfoIter =
+                                        userInfo.find("UserGroups");
+                                    if (userInfoIter != userInfo.end())
+                                    {
+                                        userGroupPtr = std::get_if<
+                                            std::vector<std::string>>(
+                                            &userInfoIter->second);
+                                    }
+
+                                    if (userGroupPtr == nullptr)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "User Group not found";
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+
+                                    // If the host interface user found, then
+                                    // skip that user and don't add in response.
+                                    auto found = std::find_if(
+                                        userGroupPtr->begin(),
+                                        userGroupPtr->end(),
+                                        [](const auto& group) {
+                                            return (group ==
+                                                    "redfish-hostiface")
+                                                       ? true
+                                                       : false;
+                                        });
+                                    if (found == userGroupPtr->end())
+                                    {
+                                        // As clarified by Redfish here:
+                                        // https://redfishforum.com/thread/281/manageraccountcollection-change-allows-account-enumeration
+                                        // Users without ConfigureUsers, only
+                                        // see their own account. Users with
+                                        // ConfigureUsers, see all accounts.
+                                        if (userCanSeeAllAccounts ||
+                                            (thisUser == user &&
+                                             userCanSeeSelf))
+                                        {
+                                            memberArray.push_back(
+                                                {{"@odata.id",
+                                                  "/redfish/v1/AccountService/Accounts/" +
+                                                      user}});
+                                        }
+                                    }
+                                    else
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "Skip the HostInterface User";
+                                    }
+                                    asyncResp->res
+                                        .jsonValue["Members@odata.count"] =
+                                        memberArray.size();
+                                },
+                                "xyz.openbmc_project.User.Manager",
+                                "/xyz/openbmc_project/user",
+                                "xyz.openbmc_project.User.Manager",
+                                "GetUserInfo", user);
                         }
-                        asyncResp->res.jsonValue["Members@odata.count"] =
-                            memberArray.size();
                     },
                     "xyz.openbmc_project.User.Manager",
                     "/xyz/openbmc_project/user",
