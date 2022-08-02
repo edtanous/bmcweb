@@ -373,6 +373,115 @@ inline void getFwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 }
 
 /**
+ * @brief Get status WriteProtected of input swId into json response
+ *
+ * This function will put the appropriate Redfish state of the input
+ * firmware id to ["WriteProtected"] within the json response
+ *
+ * @param[i,o] aResp    Async response object
+ * @param[i]   swId     The software ID to get status for
+ * @param[i]   dbusSvc  The dbus service implementing the software object
+ *
+ * @return void
+ */
+inline void getFwWriteProtectedStatus(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::shared_ptr<std::string>& swId, const std::string& dbusSvc)
+{
+    BMCWEB_LOG_DEBUG << "getFwWriteProtectedStatus: swId " << *swId << " serviceName "
+                     << dbusSvc;
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, swId](
+            const boost::system::error_code errorCode,
+            const boost::container::flat_map<
+                std::string, dbus::utility::DbusVariantType>& propertiesList) {
+            if (errorCode)
+            {
+                return;
+            }
+            boost::container::flat_map<
+                std::string, dbus::utility::DbusVariantType>::const_iterator
+                it = propertiesList.find("WriteProtected");
+            if (it == propertiesList.end())
+            {
+                BMCWEB_LOG_DEBUG << "Can't find property \"WriteProtected\"!";
+                return;
+            }
+            const bool* writeProtected = std::get_if<bool>(&it->second);
+            if (writeProtected == nullptr)
+            {
+                BMCWEB_LOG_DEBUG
+                    << "wrong types for property\"WriteProtected\"!";
+                messages::propertyValueTypeError(asyncResp->res, "",
+                                                 "WriteProtected");
+                return;
+            }
+            asyncResp->res.jsonValue["WriteProtected"] = *writeProtected;
+        },
+        dbusSvc, "/xyz/openbmc_project/software/" + *swId,
+        "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Software.Settings");
+}
+
+/**
+ * @brief Put status WriteProtected of input swId into json response
+ *
+ * This function will put the appropriate Redfish state of the input
+ * firmware id to ["WriteProtected"] within the json response
+ *
+ * @param[i,o] aResp    Async response object
+ * @param[i]   swId     The software ID to get status for
+ * @param[i]   dbusSvc  The dbus service implementing the software object
+ *
+ * @return void
+ */
+inline void patchFwWriteProtectedStatus(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::shared_ptr<std::string>& swId, const std::string& dbusSvc,
+    const bool writeProtected)
+{
+    BMCWEB_LOG_DEBUG << "patchFwWriteProtectedStatus: swId " << *swId << " serviceName "
+                     << dbusSvc;
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, swId](const boost::system::error_code ec,
+                                        sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set WriteProtect succeeded";
+                messages::success(asyncResp->res);
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "SWInventory:" << *swId
+                             << " set writeprotect property failed: " << ec;
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change writeproteect
+                messages::operationFailed(asyncResp->res);
+            }
+            else
+            {
+                messages::internalError(asyncResp->res);
+            }
+
+        },
+        dbusSvc, "/xyz/openbmc_project/software/" + *swId,
+        "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Software.Settings", "WriteProtected",
+        dbus::utility::DbusVariantType(writeProtected));
+}
+
+/**
  * @brief Updates programmable status of input swId into json response
  *
  * This function checks whether firmware inventory component

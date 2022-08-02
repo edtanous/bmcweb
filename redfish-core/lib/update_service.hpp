@@ -1830,7 +1830,8 @@ inline void requestRoutesSoftwareInventory(App& app)
                         found = true;
                         fw_util::getFwStatus(asyncResp, swId,
                                              obj.second[0].first);
-
+                        fw_util::getFwWriteProtectedStatus(asyncResp, swId,
+                                                           obj.second[0].first);
                         crow::connections::systemBus->async_method_call(
                             [asyncResp,
                              swId](const boost::system::error_code errorCode,
@@ -2113,6 +2114,76 @@ inline void requestRoutesInventorySoftware(App& app)
                 static_cast<int32_t>(0),
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.Version"});
+        });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/FirmwareInventory/<str>/")
+        .privileges(redfish::privileges::patchUpdateService)
+        .methods(
+            boost::beast::http::verb::
+                patch)([](const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& param) {
+            BMCWEB_LOG_DEBUG << "doPatch...";
+            std::shared_ptr<std::string> swId =
+                std::make_shared<std::string>(param);
+
+            std::optional<bool> writeProtected;
+            if (!json_util::readJson(req, asyncResp->res, "WriteProtected",
+                                     writeProtected))
+            {
+                return;
+            }
+
+            if (writeProtected)
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, swId, writeProtected](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string,
+                            std::vector<std::pair<std::string,
+                                                  std::vector<std::string>>>>>&
+                            subtree) {
+                        if (ec)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        for (const std::pair<
+                                 std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                                 obj : subtree)
+                        {
+                            const std::string& path = obj.first;
+                            sdbusplus::message::object_path objPath(path);
+                            if (objPath.filename() != *swId)
+                            {
+                                continue;
+                            }
+
+                            if (obj.second.size() < 1)
+                            {
+                                continue;
+                            }
+                            fw_util::patchFwWriteProtectedStatus(
+                                asyncResp, swId, obj.second[0].first,
+                                *writeProtected);
+
+                            return;
+                        }
+                        // Couldn't find an object with that name.  return an error
+                        BMCWEB_LOG_DEBUG << "Input swID " + *swId + " not found!";
+                        messages::resourceNotFound(
+                            asyncResp->res, "SoftwareInventory.v1_4_0.SoftwareInventory", *swId);
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/",
+                    static_cast<int32_t>(0),
+                    std::array<const char*, 1>{
+                        "xyz.openbmc_project.Software.Version"});
+            }
         });
 }
 
