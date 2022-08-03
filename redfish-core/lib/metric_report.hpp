@@ -85,8 +85,132 @@ inline void requestRoutesMetricReportCollection(App& app)
                 "/xyz/openbmc_project/Telemetry/Reports/TelemetryService");
         });
 }
-
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+inline void getSensorMap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& serviceName,
+                         const std::string& objectPath,
+                         const uint32_t& staleSensorUpperLimit,
+                         const uint64_t& requestTimestamp)
+{
+
+    using sensorMap = std::map<
+        std::string,
+        std::tuple<std::variant<std::string, int, int16_t, int64_t, uint16_t,
+                                uint32_t, uint64_t, double, bool>,
+                   uint64_t, sdbusplus::message::object_path>>;
+
+    sdbusplus::asio::getProperty<sensorMap>(
+        *crow::connections::systemBus, serviceName, objectPath,
+        "xyz.openbmc_project.Sensor.Aggregation", "SensorMetrics",
+        [asyncResp, staleSensorUpperLimit,
+         requestTimestamp](const boost::system::error_code ec,
+                           const sensorMap& sensorMetrics) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            nlohmann::json& resArray = asyncResp->res.jsonValue["MetricValues"];
+
+            for (const auto& i : sensorMetrics)
+            {
+                nlohmann::json thisMetric = nlohmann::json::object();
+                std::string sensorName = i.first;
+                auto data = i.second;
+                auto var = std::get<0>(data);
+                const double* reading = std::get_if<double>(&var);
+                thisMetric["MetricValue"] = std::to_string(*reading);
+                uint64_t sensorUpdatetimestamp = std::get<1>(data);
+                thisMetric["Timestamp"] =
+                    crow::utility::getDateTimeUintMs(sensorUpdatetimestamp);
+                sdbusplus::message::object_path chassisPath = std::get<2>(data);
+                std::string sensorUri = "/redfish/v1/Chassis/";
+                sensorUri += chassisPath.filename();
+                sensorUri += "/Sensors/";
+                sensorUri += sensorName;
+                thisMetric["MetricProperty"] = sensorUri;
+                thisMetric["Oem"]["Nvidia"]["SensingIntervalMilliseconds"] =
+                    std::to_string(pmSensingInterval);
+                thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = true;
+                if (requestTimestamp != 0 && thisMetric["MetricValue"] != "nan")
+                {
+                    if (requestTimestamp - sensorUpdatetimestamp <=
+                        staleSensorUpperLimit)
+                    {
+                        thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = false;
+                    }
+                }
+                resArray.push_back(thisMetric);
+            }
+        });
+}
+
+inline void getPlatforMetricsFromSensorMap(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const uint64_t& requestTimestamp = 0)
+{
+    using MapperServiceMap =
+        std::vector<std::pair<std::string, std::vector<std::string>>>;
+
+    // Map of object paths to MapperServiceMaps
+    using MapperGetSubTreeResponse =
+        std::vector<std::pair<std::string, MapperServiceMap>>;
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp,
+         requestTimestamp](boost::system::error_code ec,
+                           const MapperGetSubTreeResponse& subtree) mutable {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#MetricReport.v1_3_0.MetricReport";
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/TelemetryService/MetricReports/PlatformMetrics";
+            asyncResp->res.jsonValue["Id"] = "PlatformMetrics";
+            asyncResp->res.jsonValue["Name"] = "PlatformMetrics";
+            asyncResp->res.jsonValue["MetricReportDefinition"]["@odata.id"] =
+                telemetry::metricReportDefinitionUri +
+                std::string("/PlatformMetrics");
+            asyncResp->res.jsonValue["MetricValues"] = nlohmann::json::array();
+            for (const auto& [path, serviceMap] : subtree)
+            {
+                const std::string objectPath = path;
+                for (const auto& [conName, interfaceList] : serviceMap)
+                {
+                    const std::string serviceName = conName;
+                    sdbusplus::asio::getProperty<uint32_t>(
+                        *crow::connections::systemBus, serviceName, objectPath,
+                        "xyz.openbmc_project.Sensor.Aggregation",
+                        "StaleSensorUpperLimitms",
+                        [asyncResp, objectPath, serviceName, requestTimestamp](
+                            const boost::system::error_code ec,
+                            const uint32_t& staleSensorUpperLimit) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_DEBUG << "DBUS response error";
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            getSensorMap(asyncResp, serviceName, objectPath,
+                                         staleSensorUpperLimit,
+                                         requestTimestamp);
+                        });
+                }
+                return;
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 1>{"xyz.openbmc_project.Sensor.Aggregation"});
+}
+
 inline void
     getPlatformMetrics(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& chassisId,
@@ -157,7 +281,7 @@ inline void requestRoutesPlatformMetricReport(App& app)
                         std::chrono::steady_clock::now().time_since_epoch())
                         .count());
                 BMCWEB_LOG_DEBUG << "Request submitted at" << requestTimestamp;
-                getPlatformMetrics(asyncResp, "HGX_Baseboard_0", requestTimestamp);
+                getPlatforMetricsFromSensorMap(asyncResp, requestTimestamp);
             });
 }
 #endif
