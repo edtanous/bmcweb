@@ -3787,13 +3787,19 @@ inline void
                         std::get_if<uint16_t>(&property.second);
                     if (value == nullptr)
                     {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for RuntimeError";
+                        BMCWEB_LOG_DEBUG << "Null value returned for RuntimeError";
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                            ["RuntimeError"] = *value;
+                    if (*value != 0)
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RuntimeError"] = true;
+                    }
+                    else
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RuntimeError"] = false;
+                    }
+
                 }
                 else if (property.first == "TrainingError")
                 {
@@ -3801,13 +3807,19 @@ inline void
                         std::get_if<uint16_t>(&property.second);
                     if (value == nullptr)
                     {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for TrainingError";
+                        BMCWEB_LOG_DEBUG << "Null value returned for TrainingError";
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                            ["TrainingError"] = *value;
+                    if (*value != 0)
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["TrainingError"] = true;
+                    }
+                    else
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["TrainingError"] = false;
+                    }
+
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             }

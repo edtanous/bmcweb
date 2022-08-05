@@ -1005,6 +1005,13 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                 asyncResp->res.jsonValue["Id"] = "Environment Metrics";
                 asyncResp->res.jsonValue["Name"] =
                     processorId + " Environment Metrics";
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]["#NvidiaEnvironmentMetrics.ResetEDPp"] = {
+                    {"target",
+                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" + processorId +
+                     "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp"}};
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
                 getProcessorEnvironmentMetricsData(asyncResp, processorId);
             });
 
