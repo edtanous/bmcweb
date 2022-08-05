@@ -63,3 +63,6 @@ option('redfish-new-powersubsystem', type : 'feature', value : 'enabled', descri
 
 option ('build-description-file-path', type : 'string', value : '/etc/os-release', description : 'Path to file containing build description BUILD_DESC=... data.')
 option ('otp-provisioning-status-file-path', type : 'string', value : '/var/lib/otp-provisioning/status', description : 'Path to file containing OTP provisioning status.')
+
+option('manufacturing-test', type : 'feature', value : 'disabled', description : 'Enable manufacturing test API.')
+option('manufacturing-test-timeout', type : 'integer', min : 60, max : 3600, value : 300, description : 'Time limit in seconds for the manufacturing test execution')

@@ -125,6 +125,10 @@ class RedfishService
         requestRoutesInventorySoftware(app);
 
         requestRoutesSystemLogServiceCollection(app);
+#ifdef BMCWEB_ENABLE_MFG_TEST_API
+        requestRoutesEventLogDiagnosticDataCollect(app);
+        requestRoutesEventLogDiagnosticDataEntry(app);
+#endif
         requestRoutesEventLogService(app);
         requestRoutesSELLogService(app);
         requestRoutesPostCodesEntryAdditionalData(app);

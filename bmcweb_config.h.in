@@ -25,4 +25,7 @@ constexpr const char* otpProvisioningStatusFilePath = "@OTP_PROVISIONING_STATUS_
 constexpr const uint64_t staleSensorUpperLimitms = @STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND@;
 
 constexpr const uint64_t pmSensingInterval = @PLATFORM_METRICS_SENSING_INTERVAL@;
+
+constexpr const int mfgTestTimeout = @MFG_TEST_TIMEOUT@;
+
 // clang-format on

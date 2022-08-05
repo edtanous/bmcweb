@@ -93,6 +93,7 @@ feature_map = {
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
   'rmedia'                	                : '-DBMCWEB_ENABLE_RMEDIA',
   'tls-auth-opt-in'                             : '-DBMCWEB_ENABLE_TLS_AUTH_OPT_IN',
+  'manufacturing-test'                          : '-DBMCWEB_ENABLE_MFG_TEST_API',
 }
 
 if(get_option('tls-auth-opt-in').enabled())
@@ -332,6 +333,7 @@ conf_data.set('STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND', get_option('stalesensor-
 conf_data.set('PLATFORM_METRICS_SENSING_INTERVAL', get_option('platform-metrics-sensing-interval'))
 conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-location'))
 conf_data.set('UPDATE_SERVICE_TASK_TIMEOUT', get_option('update-service-task-timeout'))
+conf_data.set('MFG_TEST_TIMEOUT', get_option('manufacturing-test-timeout'))
 conf_data.set_quoted('PLATFORM_SYSTEM_ID', get_option('platform-system-id'))
 conf_data.set_quoted('PLATFORM_BMC_ID', get_option('platform-bmc-id'))
 conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
