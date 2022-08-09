@@ -1138,6 +1138,10 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                     {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                    "/LogServices/HostLogger"}});
 #endif
+                logServiceArray.push_back(
+                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                   "/LogServices/DebugTokenService"}});
+                
                 asyncResp->res.jsonValue["Members@odata.count"] =
                     logServiceArray.size();
 
@@ -4916,5 +4920,560 @@ inline void requestRoutesChassisXIDLogEntryCollection(App &app)
             });
 }
 #endif //BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+#pragma pack(1)
+
+struct ServerRequestHeader
+{
+    /* Versioning for token request structure (0x0001) */
+    uint16_t version;
+    /* Size of the token request structure */
+    uint16_t size;
+    /* Signed Transcript of the debug token measurement request */
+    std::array<uint8_t, 218> measurementTranscript;
+};
+
+struct FileHeader
+{
+    static constexpr uint8_t typeTokenRequest = 1;
+    static constexpr uint8_t typeDebugToken = 2;
+
+    /* CYA in case we need to version it and good practice. Set to 0x01 */
+    uint8_t version;
+    /* Either FILE_TYPE_TOKEN_REQUEST or FILE_TYPE_DEBUG_TOKEN */
+    uint8_t type;
+    /* Dont expect more than 64K token requests or debug tokens in a file */
+    uint16_t numberOfRecords;
+    /* Should be sizeof(struct FileHeader) for version 0x01. */
+    uint16_t offsetToListOfStructs;
+    /* Should be sum of sizes of a given structure type + sizeof(struct
+     * FileHeader) */
+    uint32_t fileSize;
+    /* Hope to never use it */
+    std::array<uint8_t, 6> reserved;
+};
+
+#pragma pack()
+
+struct TokenRequest
+{
+    static constexpr size_t invalidIndex = std::numeric_limits<size_t>::max();
+
+    enum class StateEnum : uint8_t
+    {
+        STATE_INIT,
+        STATE_REFRESHING,
+        STATE_SUCCESS,
+        STATE_ERROR,
+    };
+
+    struct Responder
+    {
+        /* @brief the path to the spdm responder object e.g.
+         * /xyz/openbmc_project/SPDM/HGX_FPGA_0 */
+        std::string path;
+        /* @brief the ServerRequestHeader along with all the data */
+        std::vector<uint8_t> data;
+        /* @brief the state of processing the spdm responder */
+        StateEnum state = StateEnum::STATE_INIT;
+
+        Responder(const std::string& p) : path(p)
+        {}
+    };
+    std::vector<Responder> responders;
+
+    Responder* getResponder(const std::string& path)
+    {
+        for (auto& resp : responders)
+        {
+            if (resp.path == path)
+            {
+                return &resp;
+            }
+        }
+        return nullptr;
+    }
+
+    void enumerate(const std::shared_ptr<task::TaskData>& taskData)
+    {
+        if (!isValid())
+        {
+            BMCWEB_LOG_WARNING << "TokenRequest: enumerate() hit !isValid()!";
+            return;
+        }
+
+        crow::connections::systemBus->async_method_call(
+            [this,
+             taskData](const boost::system::error_code ec,
+                       const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                if (!isValid())
+                {
+                    BMCWEB_LOG_WARNING
+                        << "TokenRequest: enumerate() callback hit !isValid()!";
+                    return;
+                }
+                if (ec)
+                {
+                    abort(taskData, "Enumerate",
+                          std::string("received ec: ") + ec.message());
+                    return;
+                }
+
+                responders.reserve(subtree.size());
+
+                for (const auto& object : subtree)
+                {
+                    responders.emplace_back(object.first);
+                }
+                for (auto& resp : responders)
+                {
+                    refresh(taskData, resp);
+                }
+            },
+            dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,
+            dbus_utils::mapperIntf, "GetSubTree", rootSPDMDbusPath, 0,
+            std::array{spdmResponderIntf});
+    }
+
+    void refresh(const std::shared_ptr<task::TaskData>& taskData,
+                 Responder& resp)
+    {
+        if (!isValid())
+        {
+            BMCWEB_LOG_WARNING << "TokenRequest: refresh() hit !isValid()!";
+            return;
+        }
+        std::vector<uint8_t> indices{50};
+
+        crow::connections::systemBus->async_method_call(
+            [this, taskData, &resp](const boost::system::error_code ec) {
+                if (!isValid())
+                {
+                    BMCWEB_LOG_WARNING
+                        << "TokenRequest: refresh() callback hit !isValid()!";
+                    return;
+                }
+                if (ec)
+                {
+                    setError(taskData, resp,
+                             std::string("Refresh received ec: ") +
+                                 ec.message());
+                    return;
+                }
+                resp.state = StateEnum::STATE_REFRESHING;
+            },
+            spdmBusName, resp.path, spdmResponderIntf, "Refresh",
+            static_cast<uint8_t>(1), std::vector<uint8_t>(), indices,
+            static_cast<uint32_t>(0));
+    }
+
+    void update(const std::shared_ptr<task::TaskData>& taskData,
+                const std::string& path, const std::string& status)
+    {
+        if (!isValid())
+        {
+            BMCWEB_LOG_WARNING << "TokenRequest: update() hit !isValid()!";
+            return;
+        }
+        auto resp = getResponder(path);
+        if (!resp)
+        {
+            BMCWEB_LOG_WARNING
+                << "TokenRequest: update() recived unrecognized path";
+            return;
+        }
+        if (resp->state != StateEnum::STATE_REFRESHING)
+        {
+            BMCWEB_LOG_WARNING
+                << "TokenRequest: Ignoring update because Refresh was not requested or was already finished!!";
+            return;
+        }
+        if (status == "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Success")
+        {
+            taskData->extendTimer(std::chrono::seconds(20));
+
+            crow::connections::systemBus->async_method_call(
+                [this, resp, taskData](
+                    const boost::system::error_code ec,
+                    const boost::container::flat_map<
+                        std::string, dbus::utility::DbusVariantType>& props) {
+                    if (!isValid())
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "TokenRequest: update() callback hit !isValid()!";
+                        return;
+                    }
+                    if (ec)
+                    {
+                        setError(taskData, *resp,
+                                 "GetAll received ec: " + ec.message());
+                        return;
+                    }
+                    auto itSign = props.find("SignedMeasurements");
+                    auto itCert = props.find("Certificate");
+                    if (itSign == props.end() || itCert == props.end())
+                    {
+                        setError(taskData, *resp, "Couldn't find property");
+                        return;
+                    }
+                    auto sign =
+                        std::get_if<std::vector<uint8_t>>(&itSign->second);
+                    auto cert = std::get_if<
+                        std::vector<std::tuple<uint8_t, std::string>>>(
+                        &itCert->second);
+                    if (!sign || !cert)
+                    {
+                        setError(taskData, *resp, "Couldn't decode property");
+                        return;
+                    }
+                    auto certSlot = std::find_if(
+                        cert->begin(), cert->end(),
+                        [](const auto& e) { return std::get<0>(e) == 0; });
+                    if (certSlot == cert->end())
+                    {
+                        setError(taskData, *resp,
+                                 "Couldn't find certificate for slot 0");
+                        return;
+                    }
+                    if (sign->size() !=
+                        sizeof(ServerRequestHeader::measurementTranscript))
+                    {
+                        BMCWEB_LOG_ERROR
+                            << " SignedMeasurements size: " << sign->size()
+                            << " expecting: "
+                            << sizeof(
+                                   ServerRequestHeader::measurementTranscript);
+                        setError(taskData, *resp,
+                                 "Wrong SignedMeasurements size");
+                        return;
+                    }
+                    const std::string& pem = std::get<1>(*certSlot);
+
+                    auto& d = resp->data;
+                    size_t size = sizeof(ServerRequestHeader) + pem.size();
+                    d.reserve(size);
+                    {
+                        d.resize(sizeof(ServerRequestHeader));
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                        auto head = reinterpret_cast<ServerRequestHeader*>(d.data());
+                        head->version = 0x0001;
+                        head->size = static_cast<uint16_t>(size);
+                        std::copy(sign->begin(), sign->end(),
+                                  head->measurementTranscript.begin());
+                    }
+                    d.insert(d.end(), pem.begin(), pem.end());
+
+                    resp->state = StateEnum::STATE_SUCCESS;
+                    finishIfPossible(taskData);
+                },
+                spdmBusName, path, "org.freedesktop.DBus.Properties", "GetAll",
+                spdmResponderIntf);
+        }
+        else if (startsWithPrefix(
+                     status,
+                     "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_"))
+        {
+            setError(taskData, *resp, status);
+        }
+    }
+
+    void finishIfPossible(const std::shared_ptr<task::TaskData>& taskData)
+    {
+        if (!isValid())
+        {
+            BMCWEB_LOG_WARNING
+                << "TokenRequest: finishIfPossible() hit !isValid()!";
+            return;
+        }
+        size_t size = 0;
+        size_t success = 0;
+        size_t done = 0;
+        for (auto& r : responders)
+        {
+            switch (r.state)
+            {
+                case StateEnum::STATE_SUCCESS:
+                    size += r.data.size();
+                    ++success;
+                    [[fallthrough]];
+                case StateEnum::STATE_ERROR:
+                    ++done;
+                    break;
+                default:
+                    break;
+            }
+        }
+        taskData->percentComplete =
+            static_cast<int>(100 * success / responders.size());
+        if (done < responders.size())
+        {
+            // if not done yet
+            taskData->extendTimer(std::chrono::seconds(20));
+            return;
+        }
+
+        if (success > 0)
+        {
+            fileID = std::string("debug_token_request_") +
+                     std::to_string(taskData->index);
+            file.clear();
+
+            size +=
+                sizeof(FileHeader); // at this point this is the total file size
+            file.reserve(size);
+
+            file.resize(sizeof(FileHeader));
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+            auto head = reinterpret_cast<FileHeader*>(file.data());
+            head->version = 0x01;
+            head->type = FileHeader::typeTokenRequest;
+            head->numberOfRecords = static_cast<uint16_t>(success);
+            head->offsetToListOfStructs = sizeof(FileHeader);
+            head->fileSize = static_cast<uint32_t>(size);
+
+            for (auto& r : responders)
+            {
+                if (r.state == StateEnum::STATE_SUCCESS)
+                {
+                    file.insert(file.end(), r.data.begin(), r.data.end());
+                }
+            }
+
+            taskData->payload->httpHeaders.emplace_back(
+                "Location: /redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/LogServices/DebugTokenService/attachment/" +
+                fileID);
+        }
+
+        // final state/status update
+        if (success == responders.size())
+        {
+            taskData->percentComplete = 100;
+            taskData->messages.emplace_back(messages::success());
+            finish(taskData, "Completed", "OK");
+        }
+        else if (success > 0)
+        {
+            taskData->percentComplete = 100;
+            finish(taskData, "Exception", "Warning");
+        }
+        else
+        {
+            taskData->percentComplete = 0;
+            abort(taskData);
+        }
+    }
+
+    void setError(const std::shared_ptr<task::TaskData>& taskData,
+                  Responder& resp, const std::string& str)
+    {
+        resp.state = StateEnum::STATE_ERROR;
+        taskData->messages.emplace_back(
+            messages::resourceErrorsDetectedFormatError(resp.path, str));
+        finishIfPossible(taskData);
+    }
+
+    void abort(const std::shared_ptr<task::TaskData>& taskData,
+               const std::string& arg1, const std::string& arg2)
+    {
+        taskData->messages.emplace_back(
+            messages::resourceErrorsDetectedFormatError(arg1, arg2));
+        finish(taskData, "Aborted", "Warning");
+    }
+
+    void abort(const std::shared_ptr<task::TaskData>& taskData)
+    {
+        finish(taskData, "Aborted", "Warning");
+    }
+
+    static std::string_view getFile(const std::string& id)
+    {
+        if (id == fileID)
+        {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+            return {reinterpret_cast<const char*>(file.data()),
+                                    file.size()};
+        }
+        return {};
+    }
+
+    static TokenRequest* create()
+    {
+        if (!singleton)
+        {
+            singleton = new TokenRequest;
+            return singleton;
+        }
+        return nullptr;
+    }
+
+    bool isValid() const
+    {
+        return this == singleton;
+    }
+
+  private:
+    static TokenRequest* singleton;
+
+    void finish(const std::shared_ptr<task::TaskData>& taskData,
+                std::string_view state, std::string_view status)
+    {
+        taskData->state = state;
+        taskData->status = status;
+        taskData->timer.cancel();
+        taskData->finishTask();
+        destroy();
+    }
+
+    static void destroy()
+    {
+        delete singleton;
+        singleton = nullptr;
+    }
+
+    static std::string fileID;
+    static std::vector<uint8_t> file;
+};
+
+TokenRequest* TokenRequest::singleton = nullptr;
+std::string TokenRequest::fileID;
+std::vector<uint8_t> TokenRequest::file;
+
+inline void requestRoutesDebugToken(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/DebugTokenService")
+        .privileges(redfish::privileges::getLogEntry)
+        .methods(
+            boost::beast::http::verb::
+                get)([](const crow::Request&,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/LogServices/DebugTokenService";
+            // TODO dunno what?!
+            // asyncResp->res.jsonValue["@odata.type"] =
+            // "#LogService.v1_2_0.LogService"; asyncResp->res.jsonValue["Name"]
+            // = "Dump LogService"; asyncResp->res.jsonValue["Description"] =
+            // "BMC Dump LogService"; asyncResp->res.jsonValue["Id"] = "Dump";
+            // asyncResp->res.jsonValue["OverWritePolicy"] = "WrapsWhenFull";
+
+            // TODO dunno what?!
+            asyncResp->res.jsonValue["Actions"] = {
+                {"#LogService.CollectDiagnosticData",
+                 {{"target",
+                   "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                   "/LogServices/DebugTokenService/CollectDiagnosticData"}}}};
+        });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/DebugTokenService/CollectDiagnosticData")
+        .privileges(redfish::privileges::postManager)
+        .methods(
+            boost::beast::http::verb::
+                post)([](const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            std::optional<std::string> diagnosticDataType;
+            std::optional<std::string> oemDiagnosticDataType;
+
+            if (!redfish::json_util::readJson(
+                    req, asyncResp->res, "DiagnosticDataType",
+                    diagnosticDataType, "OEMDiagnosticDataType",
+                    oemDiagnosticDataType))
+            {
+                return;
+            }
+            if (!diagnosticDataType || !oemDiagnosticDataType ||
+                *diagnosticDataType != "OEM" ||
+                *oemDiagnosticDataType != "GetDebugTokenRequest")
+            {
+                return;
+            }
+
+            auto state = TokenRequest::create();
+            if (!state)
+            {
+                messages::resourceInStandby(asyncResp->res);
+                return;
+            }
+
+            std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+                [state](boost::system::error_code ec,
+                        sdbusplus::message::message& msg,
+                        const std::shared_ptr<task::TaskData>& taskData) {
+                    if (!state->isValid())
+                    {
+                        BMCWEB_LOG_WARNING
+                            << "TokenRequest: Main hit !isValid()!";
+                        taskData->messages.emplace_back(
+                            messages::internalError());
+                        return task::completed;
+                    }
+                    if (ec)
+                    {
+                        BMCWEB_LOG_WARNING << "TokenRequest: Main received ec: "
+                                           << ec;
+                        state->abort(taskData);
+                        return task::completed;
+                    }
+
+                    std::string interface;
+                    std::map<std::string, dbus::utility::DbusVariantType> props;
+
+                    msg.read(interface, props);
+
+                    if (interface == spdmResponderIntf)
+                    {
+                        auto it = props.find("Status");
+                        if (it != props.end())
+                        {
+                            auto status =
+                                std::get_if<std::string>(&(it->second));
+                            if (status)
+                            {
+                                state->update(taskData, msg.get_path(),
+                                              *status);
+                            }
+                        }
+                    }
+                    return !task::completed;
+                },
+                "type='signal',interface='org.freedesktop.DBus.Properties',"
+                "member='PropertiesChanged',"
+                "path_namespace='/xyz/openbmc_project/SPDM'");
+
+            state->enumerate(task);
+
+            task->startTimer(std::chrono::minutes(1));
+            task->populateResp(asyncResp->res);
+            task->payload.emplace(req);
+        });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/DebugTokenService/attachment/<str>")
+        .privileges(redfish::privileges::getLogEntry)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& fileID) {
+                std::string_view accept = req.getHeaderValue("Accept");
+                if (!accept.empty() && !http_helpers::isOctetAccepted(accept))
+                {
+                    asyncResp->res.result(
+                        boost::beast::http::status::bad_request);
+                    return;
+                }
+                std::string_view strData = TokenRequest::getFile(fileID);
+                if (strData.empty())
+                {
+                    asyncResp->res.result(
+                        boost::beast::http::status::not_found);
+                    return;
+                }
+                asyncResp->res.addHeader("Content-Type",
+                                         "application/octet-stream");
+                asyncResp->res.addHeader("Content-Transfer-Encoding", "Base64");
+                asyncResp->res.body() = crow::utility::base64encode(strData);
+            });
+}
 
 } // namespace redfish
