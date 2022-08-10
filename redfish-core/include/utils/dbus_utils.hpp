@@ -83,6 +83,73 @@ inline const char* toPhysicalContext(const std::string& physicalContext)
     return "";
 }
 
+inline std::string toReasonType(const std::string& reason)
+{
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.Idle")
+    {
+        return "Idle";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.UserDefined")
+    {
+        return "UserDefined";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.AppClock")
+    {
+        return "AppClock";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.SWPowerCap")
+    {
+        return "SWPowerCap";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.HWSlowdown")
+    {
+        return "HWSlowdown";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.HWThermalSlowdown")
+    {
+        return "HWThermalSlowdown";
+    }
+
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.HWPowerBrakeSlowdown")
+    {
+        return "HWPowerBrakeSlowdown";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.SyncBoost")
+    {
+        return "SyncBoost";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.SWThermalSlowdownTavg")
+    {
+        return "SWThermalSlowdownTavg";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.SWThermalSlowdownTlimit")
+    {
+        return "SWThermalSlowdownTlimit";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.DisplayClock")
+    {
+        return "DisplayClock";
+    }
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.None")
+    {
+        return "NA";
+    }
+
+    return "";
+}
+
 inline std::string toLocationType(const std::string& location)
 {
     if (location ==

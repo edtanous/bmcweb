@@ -1653,6 +1653,56 @@ inline void getProcessorEccModeData(
 }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline void getProcessorThrottleData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& service, const std::string& objPath)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec,
+                       const OperatingConfigProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            nlohmann::json& json = aResp->res.jsonValue;
+            for (const auto& property : properties)
+            {
+                if (property.first == "ThrottleReason")
+                {
+                    std::string reason;
+                    const std::vector<std::string>* throttleReasons =
+                        std::get_if<std::vector<std::string>>(&property.second);
+                    std::vector<std::string> formattedThrottleReasons {};
+
+                    if (throttleReasons == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "Get Throttle reasons property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    for( auto val : *throttleReasons)
+                    {
+                        reason = redfish::dbus_utils::toReasonType(val);
+                        if(!reason.empty())
+                        {
+                            formattedThrottleReasons.push_back(reason);
+                        }
+                    }
+
+                    json["Oem"]["Nvidia"]["@odata.type"] =
+                        "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                    json["Oem"]["Nvidia"]["ThrottleReasons"] = formattedThrottleReasons;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.State.ProcessorPerformance");
+}
+
 inline void getMigModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                            const std::string& cpuId, const std::string& service,
                            const std::string& objPath)
@@ -2707,6 +2757,14 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         redfish::processor_utils::getPCIeErrorData(
                             aResp, service, path);
                     }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "xyz.openbmc_project.State.ProcessorPerformance") !=
+                        interfaces.end())
+                    {
+                        getProcessorThrottleData(aResp, service, path);
+                    }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getSensorMetric(aResp, service, path);
                 }
                 return;
