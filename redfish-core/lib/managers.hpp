@@ -42,7 +42,7 @@ namespace redfish
 inline void enableTLSAuth()
 {
     BMCWEB_LOG_DEBUG << "Processing AuthenticationTLSRequired Enable.";
-    
+
     const char* socket_path = "/lib/systemd/system/bmcweb.socket";
     const char* tmp_path = "/lib/systemd/system/bmcweb.tmp";
     {
@@ -74,7 +74,7 @@ inline void enableTLSAuth()
     {
         BMCWEB_LOG_ERROR << "TLSAuthEnable systemd Reload failed with: " << e.what();
     }
-    
+
     try
     {
         dbus::utility::systemdRestartUnit("bmcweb_2esocket", "replace");
@@ -83,7 +83,7 @@ inline void enableTLSAuth()
     {
         BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.socket Restart failed with: " << e.what();
     }
-    
+
     try
     {
         dbus::utility::systemdRestartUnit("bmcweb_2eservice", "replace");
@@ -2243,7 +2243,7 @@ inline void getLinkManagerForSwitches(
 inline void requestRoutesManager(App& app)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
-    
+
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/")
         .privileges(redfish::privileges::getManager)
         .methods(
@@ -2471,17 +2471,13 @@ inline void requestRoutesManager(App& app)
                     "Failed to open OTP provisioning status file\n";
                 otpProvisioned = false;
             }
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            nlohmann::json& oemNvidia = oem["Nvidia"];
-            oemNvidia["@odata.type"] = "#OemManager.NvidiaManager";
-            oemNvidia["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "#/Oem/NvidiaManager";
 #ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
-            oemNvidia["AuthenticationTLSRequired"] = persistent_data::getConfig().isTLSAuthEnabled();
+            oemNvidia["AuthenticationTLSRequired"] =
+                persistent_data::getConfig().isTLSAuthEnabled();
 #endif
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            
+
             // Manager.Reset (an action) can be many values, OpenBMC only
             // supports BMC reboot.
             nlohmann::json& managerReset =
