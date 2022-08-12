@@ -1708,8 +1708,7 @@ class EventServiceManager
         if (ooc.empty())
         {
             BMCWEB_LOG_ERROR << "Invalid OriginOfCondition "
-                             << "in AdditionalData property";
-            return;
+                             << "in AdditionalData property\n";
         }
         event.originOfCondition = ooc;
         sendEvent(event);
@@ -1782,6 +1781,10 @@ class EventServiceManager
      */
     void eventServiceOOC(const std::string& path, Event& event)
     {
+        if (path.empty())
+        {
+            sendEventWithOOC(path, event);
+        }
         sdbusplus::message::object_path objPath(path);
         std::string name = objPath.filename();
         if (name.empty())
@@ -2035,6 +2038,12 @@ class EventServiceManager
                 {
                     eventServiceOOC(additional["REDFISH_ORIGIN_OF_CONDITION"],
                                     event);
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR << "No OriginOfCondition provided"
+                             << "in AdditionalData property\n";
+                    eventServiceOOC(std::string(""), event);
                 }
             }
         };
