@@ -25,7 +25,9 @@
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <utils/chassis_utils.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/collection.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 namespace redfish
 {
@@ -849,6 +851,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         asyncResp->res.jsonValue["Status"] = {
                             {"State", "Enabled"},
                         };
+
                         // Assembly collection
                         asyncResp->res.jsonValue["Assembly"] = {
                             {"@odata.id",
@@ -865,6 +868,9 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             {{"@odata.id",
                               "/redfish/v1/Managers/" PLATFORMBMCID}}};
                         getChassisState(asyncResp);
+
+                        redfish::conditions_utils::populateServiceConditions(
+                            asyncResp, chassisId);
                     },
                     connectionName, path, "org.freedesktop.DBus.Properties",
                     "GetAll", "xyz.openbmc_project.Inventory.Decorator.Asset");

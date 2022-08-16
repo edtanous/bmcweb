@@ -20,15 +20,68 @@ const std::string processorPrefix =
     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
 const std::string memoryPrefix =
     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
-constexpr int searchDepth = 4;
+
+/**
+ * Utility function for populating async response with
+ * service conditions json containing origin of condition
+ * device
+ */
+
+static void oocUtilServiceConditions(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& ooc,
+    const std::string& severity)
+{
+    nlohmann::json j;
+    j["MessageId"] = "Base.1.9.ConditionInRelatedResource";
+    j["Message"] =
+        "One or more conditions exist in a related resource. See the OriginOfCondition property.";
+    j["Severity"] = severity;
+    j["OriginOfCondition"]["@odata.id"] = ooc;
+
+    BMCWEB_LOG_DEBUG << "Populating service conditions with ooc " << ooc
+                     << "\n";
+
+    if (asyncResp->res.jsonValue.contains("Conditions"))
+    {
+        for (auto& elem : asyncResp->res.jsonValue["Conditions"])
+        {
+            if (elem.contains("OriginOfCondition") &&
+                elem["OriginOfCondition"]["@odata.id"] == ooc)
+            {
+                return;
+            }
+        }
+        asyncResp->res.jsonValue["Conditions"].push_back(j);
+    }
+    else
+    {
+        for (auto& elem : asyncResp->res.jsonValue["Status"]["Conditions"])
+        {
+            if (elem.contains("OriginOfCondition") &&
+                elem["OriginOfCondition"]["@odata.id"] == ooc)
+            {
+                return;
+            }
+        }
+        asyncResp->res.jsonValue["Status"]["Conditions"].push_back(j);
+    }
+}
 
 /**
  * Utility function for populating async response with
  * origin of condition device for system events
  */
+
 static void oocUtil(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                    const std::string& ooc, const std::string& id)
+                    const std::string& ooc, const std::string& id,
+                    const std::string& severity = "")
 {
+    if (!severity.empty())
+    {
+        oocUtilServiceConditions(asyncResp, ooc, severity);
+        return;
+    }
+
     if (!asyncResp->res.jsonValue.contains("Members"))
     {
         asyncResp->res.jsonValue["Links"]["OriginOfCondition"]["@odata.id"] =
@@ -56,7 +109,7 @@ static void oocUtil(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 static void asyncPathConversionChassisAssoc(
     const std::string& path, const std::string& redfishPrefix,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id,
-    const std::string& endpointType)
+    const std::string& endpointType, const std::string& severity = "")
 {
     sdbusplus::message::object_path objPath(path);
     std::string name = objPath.filename();
@@ -69,8 +122,9 @@ static void asyncPathConversionChassisAssoc(
     const std::string& deviceName = name;
     crow::connections::systemBus->async_method_call(
         [redfishPrefix, id, deviceName, path, endpointType,
-         asyncResp{asyncResp}](const boost::system::error_code ec,
-                               std::variant<std::vector<std::string>>& resp) {
+         asyncResp{asyncResp},
+         severity](const boost::system::error_code ec,
+                   std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "Failed: " << ec << "\n";
@@ -105,7 +159,7 @@ static void asyncPathConversionChassisAssoc(
             oocDevice.append(deviceName);
 
             BMCWEB_LOG_DEBUG << "oocDevice " << oocDevice << "\n";
-            oocUtil(asyncResp, oocDevice, id);
+            oocUtil(asyncResp, oocDevice, id, severity);
         },
         "xyz.openbmc_project.ObjectMapper", path + "/chassis",
         "org.freedesktop.DBus.Properties", "Get",
@@ -119,7 +173,8 @@ static void asyncPathConversionChassisAssoc(
  */
 inline void convertDbusObjectToOriginOfCondition(
     const std::string& path,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id,
+    const std::string& severity = "")
 {
     sdbusplus::message::object_path objPath(path);
     std::string name = objPath.filename();
@@ -133,13 +188,13 @@ inline void convertDbusObjectToOriginOfCondition(
     if (boost::starts_with(path, sensorSubTree))
     {
         asyncPathConversionChassisAssoc(path, chassisPrefix, asyncResp, id,
-                                        "/Sensors/");
+                                        "/Sensors/", severity);
         return;
     }
 
     const std::string& deviceName = name;
     crow::connections::systemBus->async_method_call(
-        [asyncResp{asyncResp}, deviceName, id, chassisPrefix, path](
+        [asyncResp{asyncResp}, deviceName, id, chassisPrefix, path, severity](
             const boost::system::error_code ec,
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
                 objects) {
@@ -161,9 +216,9 @@ inline void convertDbusObjectToOriginOfCondition(
                     if (interfaces ==
                         "xyz.openbmc_project.Inventory.Item.PCIeDevice")
                     {
-                        asyncPathConversionChassisAssoc(path, chassisPrefix,
-                                                        asyncResp, id,
-                                                        "/PCIeDevices/");
+                        asyncPathConversionChassisAssoc(
+                            path, chassisPrefix, asyncResp, id, "/PCIeDevices/",
+                            severity);
                         return;
                     }
                     if (interfaces ==
@@ -174,7 +229,7 @@ inline void convertDbusObjectToOriginOfCondition(
                                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/Processors/" +
                                     deviceName,
-                                id);
+                                id, severity);
                         return;
                     }
                     if (interfaces == "xyz.openbmc_project.Inventory.Item.Dimm")
@@ -183,10 +238,11 @@ inline void convertDbusObjectToOriginOfCondition(
                                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/Memory/" +
                                     deviceName,
-                                id);
+                                id, severity);
                         return;
                     }
-                    oocUtil(asyncResp, "/redfish/v1/Chassis/" + deviceName, id);
+                    oocUtil(asyncResp, "/redfish/v1/Chassis/" + deviceName, id,
+                            severity);
                 }
             }
         },

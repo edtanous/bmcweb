@@ -71,6 +71,9 @@ inline void
         {"@odata.id", "/redfish/v1/EventService"}};
     asyncResp->res.jsonValue["TelemetryService"] = {
         {"@odata.id", "/redfish/v1/TelemetryService"}};
+    asyncResp->res.jsonValue["ServiceConditions"] = {
+        {"@odata.id", "/redfish/v1/ServiceConditions"}};
+
 }
 
 inline void requestRoutesServiceRoot(App& app)
@@ -79,5 +82,6 @@ inline void requestRoutesServiceRoot(App& app)
         .privileges(redfish::privileges::getServiceRoot)
         .methods(boost::beast::http::verb::get)(handleServiceRootGet);
 }
+
 
 } // namespace redfish

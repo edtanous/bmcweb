@@ -27,6 +27,7 @@
 #include <openbmc_dbus_rest.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
 
@@ -3270,6 +3271,9 @@ inline void
                 }
                 // Get chassis sensors
                 processSensorServices(asyncResp, sensorName);
+                redfish::conditions_utils::populateServiceConditions(
+                    asyncResp->asyncResp, sensorName);
+
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 std::shared_ptr<HealthRollup> health =
                     std::make_shared<HealthRollup>(

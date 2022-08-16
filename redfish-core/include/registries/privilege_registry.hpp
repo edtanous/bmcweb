@@ -1464,6 +1464,9 @@ const static auto& deleteSerialInterfaceCollection =
     privilegeSetConfigureManager;
 const static auto& postSerialInterfaceCollection = privilegeSetConfigureManager;
 
+// ServiceConditions
+const static auto& getServiceConditions = privilegeSetLogin;
+
 // ServiceRoot
 const static auto& getServiceRoot = privilegeSetLoginOrNoAuth;
 const static auto& headServiceRoot = privilegeSetLoginOrNoAuth;

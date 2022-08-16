@@ -27,7 +27,9 @@
 #include <sdbusplus/message/native_types.hpp>
 #include <sdbusplus/utility/dedup_variant.hpp>
 #include <utils/collection.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
@@ -2329,7 +2331,10 @@ inline void requestRoutesProcessor(App& app)
                 asyncResp->res.jsonValue["Metrics"]["@odata.id"] =
                     processorMetricsURI;
 
-                redfish::processor_utils::getProcessorObject(asyncResp, processorId, getProcessorData);
+                redfish::processor_utils::getProcessorObject(
+                    asyncResp, processorId, getProcessorData);
+                redfish::conditions_utils::populateServiceConditions(
+                    asyncResp, processorId);
             });
 
     BMCWEB_ROUTE(app,
@@ -2380,15 +2385,17 @@ inline void requestRoutesProcessor(App& app)
                         if (migMode)
                         {
                             redfish::processor_utils::getProcessorObject(
-                                    asyncResp, processorId,
-                                    [migMode](
-                                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                                        const std::string& processorId,
-                                        const std::string& objectPath,
-                                        const MapperServiceMap& serviceMap) {
-                                    patchMigMode(asyncResp, processorId, *migMode,
-                                            objectPath, serviceMap);
-                                    });
+                                asyncResp, processorId,
+                                [migMode](
+                                    const std::shared_ptr<bmcweb::AsyncResp>&
+                                        asyncResp,
+                                    const std::string& processorId,
+                                    const std::string& objectPath,
+                                    const MapperServiceMap& serviceMap) {
+                                    patchMigMode(asyncResp, processorId,
+                                                 *migMode, objectPath,
+                                                 serviceMap);
+                                });
                         }
                     }
                 }
@@ -3787,19 +3794,23 @@ inline void
                         std::get_if<uint16_t>(&property.second);
                     if (value == nullptr)
                     {
-                        BMCWEB_LOG_DEBUG << "Null value returned for RuntimeError";
+                        BMCWEB_LOG_DEBUG
+                            << "Null value returned for RuntimeError";
                         messages::internalError(asyncResp->res);
                         return;
                     }
                     if (*value != 0)
                     {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RuntimeError"] = true;
+                        asyncResp->res
+                            .jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
+                                      ["RuntimeError"] = true;
                     }
                     else
                     {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["RuntimeError"] = false;
+                        asyncResp->res
+                            .jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
+                                      ["RuntimeError"] = false;
                     }
-
                 }
                 else if (property.first == "TrainingError")
                 {
@@ -3807,19 +3818,23 @@ inline void
                         std::get_if<uint16_t>(&property.second);
                     if (value == nullptr)
                     {
-                        BMCWEB_LOG_DEBUG << "Null value returned for TrainingError";
+                        BMCWEB_LOG_DEBUG
+                            << "Null value returned for TrainingError";
                         messages::internalError(asyncResp->res);
                         return;
                     }
                     if (*value != 0)
                     {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["TrainingError"] = true;
+                        asyncResp->res
+                            .jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
+                                      ["TrainingError"] = true;
                     }
                     else
                     {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]["TrainingError"] = false;
+                        asyncResp->res
+                            .jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
+                                      ["TrainingError"] = false;
                     }
-
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             }

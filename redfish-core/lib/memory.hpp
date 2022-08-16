@@ -22,6 +22,7 @@
 #include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/collection.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/hex_utils.hpp>
 #include <utils/json_utils.hpp>
@@ -492,6 +493,9 @@ inline void
 #ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
             aResp->res.jsonValue["Status"]["Health"] = "OK";
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+
+            redfish::conditions_utils::populateServiceConditions(aResp, dimmId);
+
             for (const auto& property : properties)
             {
                 if (property.first == "MemoryDataWidth")
@@ -1199,7 +1203,7 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "com.nvidia.MemoryRowRemapping");
 }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                  const std::string& dimmId)
@@ -1235,9 +1239,9 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 aResp->res.jsonValue["Id"] = "MemoryMetrics";
                 aResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                aResp->res.jsonValue["Oem"]["Nvidia"]
-                                    ["@odata.id"] = "#NvidiaMemoryMetrics.v1_0_0.NvidiaMemoryMetrics";
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.id"] =
+                    "#NvidiaMemoryMetrics.v1_0_0.NvidiaMemoryMetrics";
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 for (const auto& [service, interfaces] : object)
                 {
                     if (std::find(interfaces.begin(), interfaces.end(),
@@ -1259,7 +1263,7 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     {
                         getMemoryRowRemappings(aResp, service, path);
                     }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 }
                 return;
             }

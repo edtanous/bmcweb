@@ -53,6 +53,7 @@
 #include "../lib/trigger.hpp"
 #include "../lib/update_service.hpp"
 #include "../lib/virtual_media.hpp"
+#include "../lib/service_conditions.hpp"
 
 namespace redfish
 {
@@ -282,6 +283,8 @@ class RedfishService
         requestRoutesTrigger(app);
         requestRoutesEROTChassisCertificate(app);
         requestRoutesComponentIntegrity(app);
+
+        requestRoutesServiceConditions(app);
     }
 };
 
