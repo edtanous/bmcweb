@@ -1905,6 +1905,22 @@ inline void requestRoutesSoftwareInventory(App& app)
                                         asyncResp->res, "", "Version");
                                     return;
                                 }
+
+                                it = propertiesList.find("SoftwareId");
+                                if (it != propertiesList.end())
+                                {
+                                    const std::string* softwareId =
+                                        std::get_if<std::string>(&it->second);
+
+                                    if (softwareId == nullptr)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "Can't find property \"softwareId\"!";
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    asyncResp->res.jsonValue["softwareId"] = *softwareId;
+                                }
                                 asyncResp->res.jsonValue["Version"] = *version;
                                 asyncResp->res.jsonValue["Id"] = *swId;
 
