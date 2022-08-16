@@ -168,6 +168,61 @@ inline void
         });
 }
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+/**
+ * @brief Translates PowerMode DBUS property value to redfish.
+ *
+ * @param[in] dbusAction    The powerMode action in D-BUS.
+ *
+ * @return Returns as a string, the powermode in Redfish terms. If
+ * translation cannot be done, returns an empty string.
+ */
+inline std::string getPowerModeType(const std::string& dbusAction)
+{
+    if (dbusAction == "xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance")
+    {
+        return "MaxP";
+    }
+    if (dbusAction == "xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving")
+    {
+        return "MaxQ";
+    }
+    if (dbusAction == "xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM")
+    {
+        return "Custom";
+    }
+    
+    return "";
+}
+
+/**
+ *@brief Translates PowerMode from Redfish to DBUS property value.
+ *
+ *@param[in] powerMode The powerMode value(MaxP, MaxQ, Custom) in Redfish.
+ *
+ *@return Returns as a string as expected by dbus.
+ *If translation cannot be done, returns an empty string.
+ */
+
+inline std::string convertToPowerModeType(const std::string& powerMode)
+{
+    if (powerMode == "MaxP")
+    {
+        return "xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance";
+    }
+    if (powerMode == "MaxQ")
+    {
+        return "xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving";
+    }
+    if (powerMode == "Custom")
+    {
+        return "xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM";
+    }
+
+    return "";
+}
+#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
 inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
                            const std::string& path)
