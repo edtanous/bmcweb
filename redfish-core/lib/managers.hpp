@@ -160,6 +160,40 @@ inline void
 }
 
 /**
+ * Function shutdowns the BMC.
+ *
+ * @param[in] asyncResp - Shared pointer for completing asynchronous calls
+ */
+inline void
+    doBMCGracefulShutdown(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    const char* processName = "xyz.openbmc_project.State.BMC";
+    const char* objectPath = "/xyz/openbmc_project/state/bmc0";
+    const char* interfaceName = "xyz.openbmc_project.State.BMC";
+    const std::string& propertyValue =
+        "xyz.openbmc_project.State.BMC.Transition.PowerOff";
+    const char* destProperty = "RequestedBMCTransition";
+
+    // Create the D-Bus variant for D-Bus call.
+    dbus::utility::DbusVariantType dbusPropertyValue(propertyValue);
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec) {
+            // Use "Set" method to set the property value.
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "[Set] Bad D-Bus request error: " << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            messages::success(asyncResp->res);
+        },
+        processName, objectPath, "org.freedesktop.DBus.Properties", "Set",
+        interfaceName, destProperty, dbusPropertyValue);
+}
+
+/**
  * ManagerResetAction class supports the POST method for the Reset (reboot)
  * action.
  */
@@ -199,6 +233,12 @@ inline void requestRoutesManagerResetAction(App& app)
                     doBMCForceRestart(asyncResp);
                     return;
                 }
+                if (resetType == "GracefulShutdown")
+                {
+                    BMCWEB_LOG_DEBUG << "Proceeding with " << resetType;
+                    doBMCGracefulShutdown(asyncResp);
+                    return;
+                }                
                 BMCWEB_LOG_DEBUG << "Invalid property value for ResetType: "
                                  << resetType;
                 messages::actionParameterNotSupported(asyncResp->res, resetType,
