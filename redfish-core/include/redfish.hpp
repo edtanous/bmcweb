@@ -21,6 +21,7 @@
 #include "../lib/certificate_service.hpp"
 #include "../lib/chassis.hpp"
 #include "../lib/component_integrity.hpp"
+#include "../lib/control.hpp"
 #include "../lib/environment_metrics.hpp"
 #include "../lib/erot_chassis.hpp"
 #include "../lib/ethernet.hpp"
@@ -307,6 +308,9 @@ class RedfishService
         requestRoutesComponentIntegrity(app);
 
         requestRoutesServiceConditions(app);
+
+        requestRoutesChassisControls(app);
+        requestRoutesChassisControlsCollection(app);
     }
 };
 
