@@ -193,6 +193,7 @@ class RedfishService
         requestRoutesSystemActionsReset(app);
         requestRoutesSystemResetActionInfo(app);
         requestRoutesBiosService(app);
+        requestRoutesBiosSettings(app);
         requestRoutesBiosReset(app);
 
 #ifdef BMCWEB_ENABLE_RMEDIA
