@@ -211,6 +211,7 @@ class RedfishService
         requestRoutesBiosService(app);
         requestRoutesBiosSettings(app);
         requestRoutesBiosReset(app);
+        requestRoutesBiosAttrRegistryService(app);
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE
         requestHostInterfacesRoutes(app);

@@ -46,7 +46,8 @@ inline void handleMessageRegistryFileCollectionGet(
           {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
           {{"@odata.id", "/redfish/v1/Registries/ResourceEvent"}},
           {{"@odata.id", "/redfish/v1/Registries/UpdateEvent"}},
-          {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}}}}};
+          {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}},
+          {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}}}}};
 }
 
 inline void requestRoutesMessageRegistryFileCollection(App& app)
@@ -92,6 +93,11 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     {
         header = &message_registries::update_event::header;
         url = message_registries::update_event::url;
+    }
+    else if (registry == "BiosAttributeRegistry")
+    {
+        header = &message_registries::bios::header;
+        dmtf.clear();
     }
     else
     {
@@ -177,6 +183,15 @@ inline void handleMessageRegistryGet(
         header = &message_registries::update_event::header;
         for (const message_registries::MessageEntry& entry :
                 message_registries::update_event::registry)
+        {
+            registryEntries.emplace_back(&entry);
+        }
+    }
+    else if (registry == "BiosAttributeRegistry")
+    {
+        header = &message_registries::bios::header;
+        for (const message_registries::MessageEntry& entry :
+             message_registries::bios::registry)
         {
             registryEntries.emplace_back(&entry);
         }
