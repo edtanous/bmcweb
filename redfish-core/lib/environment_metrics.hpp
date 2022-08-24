@@ -821,10 +821,10 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                 patch)([](const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& chassisId) {
-            std::optional<int> powerLimit;
+            std::optional<nlohmann::json> powerLimit;
             std::optional<nlohmann::json> oem;
             // Read json request
-            if (!json_util::readJson(req, asyncResp->res, "SetPoint",
+            if (!json_util::readJson(req, asyncResp->res, "PowerLimitWatts",
                                      powerLimit, "Oem", oem))
             {
                 return;
@@ -832,11 +832,15 @@ inline void requestRoutesEnvironmentMetrics(App& app)
             // Update power limit
             if (powerLimit)
             {
-                const std::array<const char*, 1> interfaces = {
-                    "xyz.openbmc_project.Inventory.Item.Chassis"};
+                std::optional<int> setPoint;
+                if (json_util::readJson(*powerLimit, asyncResp->res,
+                                                        "SetPoint", setPoint))
+                {
+                    const std::array<const char*, 1> interfaces = {
+                        "xyz.openbmc_project.Inventory.Item.Chassis"};
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, chassisId, powerLimit](
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, chassisId, setPoint](
                         const boost::system::error_code ec,
                         const crow::openbmc_mapper::GetSubTreeType& subtree) {
                         if (ec)
@@ -881,7 +885,7 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                             {
                                 std::string resourceType = "Chassis";
                                 patchPowerLimit(asyncResp, chassisId,
-                                                *powerLimit, objPath,
+                                                *setPoint, objPath,
                                                 connectionName, resourceType);
                             }
 
@@ -896,6 +900,8 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                     "/xyz/openbmc_project/object_mapper",
                     "xyz.openbmc_project.ObjectMapper", "GetSubTree",
                     "/xyz/openbmc_project/inventory", 0, interfaces);
+                 }
+
             }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             if (oem)
@@ -1255,11 +1261,11 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                 patch)([](const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& processorId) {
-            std::optional<int> powerLimit;
+            std::optional<nlohmann::json> powerLimit;
             std::optional<nlohmann::json> oemObject;
 
             // Read json request
-            if (!json_util::readJson(req, asyncResp->res, "SetPoint",
+            if (!json_util::readJson(req, asyncResp->res, "PowerLimitWatts",
                                      powerLimit, "Oem", oemObject))
             {
                 return;
@@ -1330,12 +1336,16 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
             // Update power limit
             if (powerLimit)
             {
-                const std::array<const char*, 2> interfaces = {
-                    "xyz.openbmc_project.Inventory.Item.Cpu",
-                    "xyz.openbmc_project.Inventory.Item.Accelerator"};
+                std::optional<int> setPoint;
+                if (json_util::readJson(*powerLimit, asyncResp->res,
+                                                        "SetPoint", setPoint))
+                {
+                    const std::array<const char*, 2> interfaces = {
+                        "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "xyz.openbmc_project.Inventory.Item.Accelerator"};
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, processorId, powerLimit](
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, processorId, setPoint](
                         const boost::system::error_code ec,
                         const crow::openbmc_mapper::GetSubTreeType& subtree) {
                         if (ec)
@@ -1380,7 +1390,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                             {
                                 std::string resourceType = "Processors";
                                 patchPowerLimit(asyncResp, processorId,
-                                                *powerLimit, objPath,
+                                                *setPoint, objPath,
                                                 connectionName, resourceType);
                             }
 
@@ -1395,6 +1405,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                     "/xyz/openbmc_project/object_mapper",
                     "xyz.openbmc_project.ObjectMapper", "GetSubTree",
                     "/xyz/openbmc_project/inventory", 0, interfaces);
+                }
             }
         });
 }
