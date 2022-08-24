@@ -269,6 +269,20 @@ inline void getEROTChassis(const crow::Request&,
                     BMCWEB_LOG_ERROR << "Got 0 Connection names";
                     continue;
                 }
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                auto health = std::make_shared<HealthRollup>(
+                    crow::connections::systemBus, path,
+                    [asyncResp](const std::string& rootHealth,
+                                const std::string& healthRollup) {
+                        asyncResp->res.jsonValue["Status"]["Health"] =
+                            rootHealth;
+                        asyncResp->res.jsonValue["Status"]["HealthRollup"] =
+                            healthRollup;
+                    },
+                    &health_state::ok);
+                health->start();
+#else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 auto health = std::make_shared<HealthPopulate>(asyncResp);
 
                 sdbusplus::asio::getProperty<std::vector<std::string>>(
@@ -285,6 +299,7 @@ inline void getEROTChassis(const crow::Request&,
                     });
 
                 health->populate();
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
                 asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
