@@ -325,6 +325,11 @@ endif
 
 conf_data = configuration_data()
 conf_data.set('BMCWEB_HTTP_REQ_BODY_LIMIT_MB', get_option('http-body-limit'))
+if get_option('firmware-image-limit') > get_option('http-body-limit')
+  error('Firmware image size limit should be lesser than http body limit.')
+else
+  conf_data.set('FIRMWARE_IMAGE_LIMIT_MB', get_option('firmware-image-limit'))
+endif
 xss_enabled = get_option('insecure-disable-xss')
 conf_data.set10('BMCWEB_INSECURE_DISABLE_XSS_PREVENTION', xss_enabled.enabled())
 conf_data.set('MESON_INSTALL_PREFIX', get_option('prefix'))

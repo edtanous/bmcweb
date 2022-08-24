@@ -722,7 +722,7 @@ inline void requestRoutesUpdateService(App& app)
                 {"@odata.id", "/redfish/v1/UpdateService/SoftwareInventory"}};
             // Get the MaxImageSizeBytes
             asyncResp->res.jsonValue["MaxImageSizeBytes"] =
-                bmcwebHttpReqBodyLimitMb * 1024 * 1024;
+                firmwareImageLimitBytes;
 
 #ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
             // Update Actions object.
@@ -1154,6 +1154,17 @@ inline void requestRoutesUpdateService(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
                 BMCWEB_LOG_DEBUG << "doPost...";
 
+                if (req.body.size() > firmwareImageLimitBytes)
+                {
+                    if (asyncResp)
+                    {
+                        BMCWEB_LOG_ERROR << "Large image size: "
+                                         << req.body.size();
+                        messages::resourceExhaustion(
+                            asyncResp->res, "/redfish/v1/UpdateService/");
+                    }
+                    return;
+                }
                 // Setup callback for when new software detected
                 if (monitorForSoftwareAvailable(asyncResp, req,
                                                 "/redfish/v1/UpdateService"))

@@ -12,6 +12,9 @@ constexpr const int bmcwebInsecureDisableXssPrevention =
 
 constexpr const size_t bmcwebHttpReqBodyLimitMb = @BMCWEB_HTTP_REQ_BODY_LIMIT_MB@;
 
+constexpr const size_t firmwareImageLimitBytes =
+    static_cast<size_t>(@FIRMWARE_IMAGE_LIMIT_MB@ * 1024 * 1024);
+
 constexpr const char* mesonInstallPrefix = "@MESON_INSTALL_PREFIX@";
 
 constexpr const int updateServiceTaskTimeout = @UPDATE_SERVICE_TASK_TIMEOUT@;
