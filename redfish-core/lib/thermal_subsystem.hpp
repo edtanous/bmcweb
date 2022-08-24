@@ -49,7 +49,9 @@ inline void requestRoutesThermalSubsystem(App& app)
                                  "/ThermalSubsystem/ThermalMetrics"}};
 
                         asyncResp->res.jsonValue["Status"] = {
-                            {"State", "Enabled"}, {"Health", "OK"}};
+                            {"State", "Enabled"},
+                            {"Health", "OK"},
+                            {"HealthRollup", "OK"}};
                     };
                 redfish::chassis_utils::getValidChassisID(
                     asyncResp, chassisId, std::move(getChassisPath));

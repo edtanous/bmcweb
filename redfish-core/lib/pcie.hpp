@@ -288,8 +288,11 @@ static inline void
                        const std::string& device, const std::string& path,
                        const std::string& service)
 {
+    std::string escapedPath = std::string(path) + "/" + device;
+    dbus::utility::escapePathForDbus(escapedPath);
     auto getPCIeDeviceStateCallback =
-        [asyncResp{asyncResp}](const boost::system::error_code ec,
+        [escapedPath,
+         asyncResp{asyncResp}](const boost::system::error_code ec,
                                const std::variant<std::string>& deviceState) {
             if (ec)
             {
@@ -298,24 +301,47 @@ static inline void
                 return;
             }
             const std::string* s = std::get_if<std::string>(&deviceState);
-            if (s != nullptr)
+            if (s == nullptr)
             {
-                if (*s == "xyz.openbmc_project.State.Chassis.PowerState.On")
-                {
-                    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-                    asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-                }
-                else if (*s ==
-                         "xyz.openbmc_project.State.Chassis.PowerState.Off")
-                {
-                    asyncResp->res.jsonValue["Status"]["State"] =
-                        "StandbyOffline";
-                    asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
-                }
+                BMCWEB_LOG_DEBUG << "Device state of illegal, non-strig type";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (*s == "xyz.openbmc_project.State.Chassis.PowerState.On")
+            {
+                asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                std::shared_ptr<HealthRollup> health =
+                    std::make_shared<HealthRollup>(
+                        crow::connections::systemBus, escapedPath,
+                        [asyncResp](const std::string& rootHealth,
+                                    const std::string& healthRollup) {
+                            asyncResp->res.jsonValue["Status"]["Health"] =
+                                rootHealth;
+                            asyncResp->res.jsonValue["Status"]["HealthRollup"] =
+                                healthRollup;
+                        });
+                health->start();
+#else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+                asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+            }
+            else if (*s == "xyz.openbmc_project.State.Chassis.PowerState.Off")
+            {
+                asyncResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
+                asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
+                asyncResp->res.jsonValue["Status"]["HealthRollup"] = "Critical";
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG
+                    << "Unrecognized 'CurrentPowerState' value: "
+                    << "'" << *s
+                    << "'. Omitting 'Status' entry in the response";
             }
         };
-    std::string escapedPath = std::string(path) + "/" + device;
-    dbus::utility::escapePathForDbus(escapedPath);
     crow::connections::systemBus->async_method_call(
         std::move(getPCIeDeviceStateCallback), service, escapedPath,
         "org.freedesktop.DBus.Properties", "Get", stateInterface,
