@@ -1520,7 +1520,7 @@ inline void requestRoutesEdppReset(App& app)
      */
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/system/Processors/<str>/"
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
         "EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(

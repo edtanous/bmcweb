@@ -1832,7 +1832,8 @@ class EventServiceManager
                                 "xyz.openbmc_project.Inventory.Item.Cpu")
                         {
                             sendEventWithOOC(
-                                "/redfish/v1/Systems/system/Processors/" +
+                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Processors/" +
                                     deviceName,
                                 event);
                             return;
@@ -1841,7 +1842,8 @@ class EventServiceManager
                             "xyz.openbmc_project.Inventory.Item.Dimm")
                         {
                             sendEventWithOOC(
-                                "/redfish/v1/Systems/system/Memory/" +
+                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Memory/" +
                                     deviceName,
                                 event);
                             return;
@@ -2042,7 +2044,7 @@ class EventServiceManager
                 else
                 {
                     BMCWEB_LOG_ERROR << "No OriginOfCondition provided"
-                             << "in AdditionalData property\n";
+                                     << "in AdditionalData property\n";
                     eventServiceOOC(std::string(""), event);
                 }
             }

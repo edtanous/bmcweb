@@ -1205,7 +1205,7 @@ inline void
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/system/Bios/Settings";
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/Settings";
     asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_1_0.Bios";
     asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
     asyncResp->res.jsonValue["Description"] = "BIOS Settings";
