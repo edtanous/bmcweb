@@ -47,5 +47,39 @@ std::vector<uint8_t> getBytes(std::string const& s)
     return bytes;
 }
 
+uint8_t hexCharToInt(char ch)
+{
+    if (ch >= '0' && ch <= '9')
+    {
+        return static_cast<uint8_t>(ch) - '0';
+    }
+    if (ch >= 'A' && ch <= 'F')
+    {
+        return static_cast<uint8_t>(ch) - 'A' + 10;
+    }
+    if (ch >= 'a' && ch <= 'f')
+    {
+        return static_cast<uint8_t>(ch) - 'a' + 10;
+    }
+    throw std::invalid_argument("Invalid character for hex");
+}
+
+std::vector<uint8_t> hexStringToVector(std::string_view str)
+{
+    if (str.size() % 2) {
+        throw std::invalid_argument("String not an even number of characters");
+    }
+    std::vector<uint8_t> ret;
+    ret.resize(str.size() / 2);
+    for (size_t i = 0; i < ret.size(); ++i)
+    {
+        auto bits = hexCharToInt(str[i * 2]) << 4;
+        bits |= hexCharToInt(str[ i *2 + 1]);
+        ret[i] |= static_cast<uint8_t>(bits);
+    }
+
+    return ret;
+}
+
 } // namespace stl_utils
 } // namespace redfish

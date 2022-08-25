@@ -235,10 +235,20 @@ inline void handleSPDMGETSignedMeasurement(
     // shall be assumed to be `0` if "MeasurementIndices" not provided by
     // the client, the value shall be assumed to be an array containing a
     // single value of `255`
-    if (!nonce)
+    if (nonce)
     {
-        BMCWEB_LOG_DEBUG << "Nonce is not given, setting it to default value";
-        nonce = "";
+        try
+        {
+            nonceVec = redfish::stl_utils::hexStringToVector(*nonce);
+        }
+        catch (const std::invalid_argument& e)
+        {
+            BMCWEB_LOG_ERROR << "Invalid character for nonce hex string in '"
+                             << *nonce << "'";
+            messages::actionParameterValueError(asyncResp->res, "Nonce",
+                                                "SPDMGetSignedMeasurements");
+            return;
+        }
     }
     if (!slotID)
     {
@@ -252,7 +262,6 @@ inline void handleSPDMGETSignedMeasurement(
         indices = std::vector<uint8_t>{};
         indices.value().emplace_back(255);
     }
-    nonceVec = redfish::stl_utils::getBytes(*nonce);
 
     const std::string objPath = std::string(rootSPDMDbusPath) + "/" + id;
     if (compIntegrityMatches.find(objPath) != compIntegrityMatches.end())
@@ -540,7 +549,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                                     componentsProtectedArray.push_back(
                                         {nlohmann::json::array(
                                             {"@odata.id",
-                                             "/redfish/v1/managers/" PLATFORMBMCID})});
+                                             "/redfish/v1/Managers/" PLATFORMBMCID})});
                                     return;
                                 }
 
@@ -563,7 +572,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                                         if (url.empty())
                                         {
                                             redfishURL = std::string(
-                                                "/redfish/v1/managers/" PLATFORMBMCID);
+                                                "/redfish/v1/Managers/" PLATFORMBMCID);
                                         }
                                     }
 
