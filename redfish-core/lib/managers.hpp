@@ -2810,6 +2810,152 @@ inline void getLinkManagerForSwitches(
         "xyz.openbmc_project.Association", "endpoints");
 }
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+inline void getFencingPrivilege(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    crow::connections::systemBus
+        ->async_method_call(
+            [asyncResp](const boost::system::error_code ec,
+                        const MapperGetSubTreeResponse& subtree) {
+                if (ec)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                for (const auto& [objectPath, serviceMap] : subtree)
+                {
+                    if (serviceMap.size() < 1)
+                    {
+                        BMCWEB_LOG_ERROR << "Got 0 service "
+                                            "names";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    const std::string& serviceName = serviceMap[0].first;
+                    // Get SMBPBI Fencing Privilege
+                    crow::connections::
+                        systemBus
+                            ->async_method_call(
+                                [asyncResp](
+                                    const boost::system::error_code ec,
+                                    const std::vector<std::pair<
+                                        std::string,
+                                        std::variant<std::string, uint8_t>>>&
+                                        propertiesList) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                        << "DBUS response error: Unable to get the smbpbi fencing privilege "
+                                        << ec;
+                                        messages::internalError(asyncResp->res);
+                                    }
+
+                                    for (const std::pair<
+                                             std::string,
+                                             std::variant<std::string,
+                                                          uint8_t>>& property :
+                                         propertiesList)
+                                    {
+
+                                        if (property.first ==
+                                            "SMBPBIFencingState")
+                                        {
+                                            const uint8_t* fencingPrivilege =
+                                                std::get_if<uint8_t>(
+                                                    &property.second);
+                                            if (fencingPrivilege == nullptr)
+                                            {
+                                                BMCWEB_LOG_DEBUG
+                                                    << "Null value returned "
+                                                       "for SMBPBI privilege";
+                                                messages::internalError(
+                                                    asyncResp->res);
+                                                return;
+                                            }
+
+                                            nlohmann::json& json =
+                                                asyncResp->res.jsonValue;
+                                            json["Oem"]["Nvidia"]["@odata.type"] =
+                                                "#NvidiaManager.v1_0_0.NvidiaManager";
+                                            json["Oem"]["Nvidia"]
+                                                ["SMBPBIFencingPrivilege"] =
+                                                    redfish::dbus_utils::
+                                                        toSMPBIPrivilegeString(
+                                                            *fencingPrivilege);
+                                        }
+                                    }
+                                },
+                                serviceName, objectPath,
+                                "org.freedesktop.DBus.Properties", "GetAll",
+                                "xyz.openbmc_project.GpuOobRecovery.Server");
+                }
+            },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", int32_t(0),
+            std::array<const char*, 1>{
+                "xyz.openbmc_project.GpuOobRecovery.Server"});
+}
+
+inline void
+    patchFencingPrivilege(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                          const std::string& privilegeType,
+                          const std::string& serviceName,
+                          const std::string& objPath)
+{
+    uint8_t privilege =
+        redfish::dbus_utils::toSMPBIPrivilegeType(privilegeType);
+
+    // Validate privilege type
+    if (privilege == 0)
+    {
+        messages::invalidObject(resp->res, privilegeType);
+        return;
+    }
+
+    // Set the property, with handler to check error responses
+    crow::connections::systemBus->async_method_call(
+        [resp, privilege, privilegeType](boost::system::error_code ec,
+                                         sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set SMBPBI privilege  property succeeded";
+                return;
+            }
+            BMCWEB_LOG_DEBUG << " set SMBPBI privilege  property failed: " << ec;
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+            {
+                // Invalid value
+                messages::propertyValueIncorrect(resp->res, "SMBPBIFencingPrivilege",
+                                                 privilegeType);
+            }
+
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+        serviceName, objPath, "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.GpuOobRecovery.Server", "SMBPBIFencingState",
+        std::variant<uint8_t>(privilege));
+}
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
 inline void requestRoutesManager(App& app)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
@@ -2984,6 +3130,7 @@ inline void requestRoutesManager(App& app)
                                            "/Truststore/Certificates"}};
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
             // NvidiaManager
             nlohmann::json& oemNvidia = oem["Nvidia"];
             oemNvidia["@odata.type"] = "#OemManager.Nvidia";
@@ -3062,6 +3209,7 @@ inline void requestRoutesManager(App& app)
                     << "Failed to open OTP provisioning status file\n";
                 otpProvisioned = false;
             }
+            getFencingPrivilege(asyncResp);
 
 #ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
             oemNvidia["AuthenticationTLSRequired"] =
@@ -3299,13 +3447,14 @@ inline void requestRoutesManager(App& app)
                         pid->run();
                     }
                 }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 if (nvidia)
                 {
-#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+                    std::optional<std::string> privilege;
                     std::optional<bool> tlsAuth;
-                    if (!redfish::json_util::readJson(
-                            *nvidia, asyncResp->res,
-                            "AuthenticationTLSRequired", tlsAuth))
+                    if (!redfish::json_util::readJson(*nvidia, asyncResp->res,
+                                                      "AuthenticationTLSRequired", tlsAuth,
+                                                       "SMBPBIFencingPrivilege", privilege))
                     {
                         BMCWEB_LOG_ERROR
                             << "Illegal Property "
@@ -3314,7 +3463,44 @@ inline void requestRoutesManager(App& app)
                                    nlohmann::json::error_handler_t::replace);
                         return;
                     }
+                    if(privilege)
+                    {
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, privilege](
+                                const boost::system::error_code ec,
+                                const MapperGetSubTreeResponse& subtree) {
+                                if (ec)
+                                {
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                for (const auto& [objectPath, serviceMap] :
+                                     subtree)
+                                {
+                                    if (serviceMap.size() < 1)
+                                    {
+                                        BMCWEB_LOG_ERROR << "Got 0 service "
+                                                            "names";
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    const std::string& serviceName =
+                                        serviceMap[0].first;
+                                    // Patch SMBPBI Fencing Privilege
+                                    patchFencingPrivilege(asyncResp, *privilege,
+                                                          serviceName,
+                                                          objectPath);
+                                }
+                            },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                            "/", int32_t(0),
+                            std::array<const char*, 1>{
+                                "xyz.openbmc_project.GpuOobRecovery.Server"});
+                    }
 
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
                     if (tlsAuth)
                     {
                         if (*tlsAuth ==
@@ -3339,6 +3525,7 @@ inline void requestRoutesManager(App& app)
                     }
 #endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
                 }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             }
             if (links)
             {

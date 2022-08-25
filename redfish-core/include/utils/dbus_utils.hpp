@@ -13,6 +13,7 @@ constexpr const char* mapperBusName = "xyz.openbmc_project.ObjectMapper";
 constexpr const char* mapperObjectPath = "/xyz/openbmc_project/object_mapper";
 constexpr const char* mapperIntf = "xyz.openbmc_project.ObjectMapper";
 constexpr char const* objDeleteIntf = "xyz.openbmc_project.Object.Delete";
+
 inline const char* toPhysicalContext(const std::string& physicalContext)
 {
     if (physicalContext ==
@@ -179,6 +180,42 @@ inline std::string toLocationType(const std::string& location)
     }
     return "";
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline std::string toSMPBIPrivilegeString(uint8_t privilege)
+{
+    if (privilege == 0x01)
+    {
+        return "HMC";
+    }
+    else if (privilege == 0x02)
+    {
+        return "HostBMC";
+    }
+    else
+    {
+        return "None";
+    }
+}
+
+inline uint8_t toSMPBIPrivilegeType(const std::string& privilegeType)
+{
+    if (privilegeType == "HMC")
+    {
+        return 0x01;
+    }
+    else if (privilegeType == "HostBMC")
+    {
+        return 0x02;
+    }
+    else
+    {
+        return 0x00;
+    }
+}
+
+#endif //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace dbus_utils
 } // namespace redfish
