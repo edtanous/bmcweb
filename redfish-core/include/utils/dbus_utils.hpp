@@ -29,6 +29,7 @@ constexpr const char* mapperBusName = "xyz.openbmc_project.ObjectMapper";
 constexpr const char* mapperObjectPath = "/xyz/openbmc_project/object_mapper";
 constexpr const char* mapperIntf = "xyz.openbmc_project.ObjectMapper";
 constexpr char const* objDeleteIntf = "xyz.openbmc_project.Object.Delete";
+
 inline const char* toPhysicalContext(const std::string& physicalContext)
 {
     if (physicalContext ==
