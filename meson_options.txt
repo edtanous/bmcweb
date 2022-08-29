@@ -70,3 +70,6 @@ option ('otp-provisioning-status-file-path', type : 'string', value : '/var/lib/
 
 option('manufacturing-test', type : 'feature', value : 'disabled', description : 'Enable manufacturing test API.')
 option('manufacturing-test-timeout', type : 'integer', min : 60, max : 3600, value : 300, description : 'Time limit in seconds for the manufacturing test execution')
+
+option('host-iface', type : 'feature', value : 'disabled', description : 'Enable Host Interface schema.')
+option ('host-iface-channel', type : 'string', value : 'usb0', description : 'Host interface channel name')

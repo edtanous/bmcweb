@@ -7,6 +7,8 @@
 #define PLATFORMBMCID @PLATFORM_BMC_ID@
 #define PLATFORMMETRICSID @PLATFORM_METRICS_ID@
 
+#define HOSTIFACECHANNEL @HOST_IFACE_CHANNEL@
+
 // clang-format off
 constexpr const int bmcwebInsecureDisableXssPrevention =
     @BMCWEB_INSECURE_DISABLE_XSS_PREVENTION@;

@@ -2491,6 +2491,12 @@ inline void requestRoutesManager(App& app)
                 {"@odata.id",
                  "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces"}};
 
+#ifdef BMCWEB_ENABLE_HOST_IFACE
+            asyncResp->res.jsonValue["HostInterfaces"] = {
+                {"@odata.id",
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/HostInterfaces"}};
+#endif
+
 #ifdef BMCWEB_ENABLE_RMEDIA
             asyncResp->res.jsonValue["VirtualMedia"] = {
                 {"@odata.id",

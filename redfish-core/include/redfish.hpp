@@ -17,7 +17,6 @@
 
 #include "../lib/account_service.hpp"
 #include "../lib/assembly.hpp"
-#include "../lib/pcieslots.hpp"
 #include "../lib/bios.hpp"
 #include "../lib/certificate_service.hpp"
 #include "../lib/chassis.hpp"
@@ -27,6 +26,7 @@
 #include "../lib/ethernet.hpp"
 #include "../lib/event_service.hpp"
 #include "../lib/fabric.hpp"
+#include "../lib/host_interface.hpp"
 #include "../lib/hypervisor_system.hpp"
 #include "../lib/log_services.hpp"
 #include "../lib/managers.hpp"
@@ -36,6 +36,7 @@
 #include "../lib/metric_report_definition.hpp"
 #include "../lib/network_protocol.hpp"
 #include "../lib/pcie.hpp"
+#include "../lib/pcieslots.hpp"
 #include "../lib/power.hpp"
 #include "../lib/power_subsystem.hpp"
 #include "../lib/power_supply.hpp"
@@ -43,6 +44,7 @@
 #include "../lib/redfish_sessions.hpp"
 #include "../lib/roles.hpp"
 #include "../lib/sensors.hpp"
+#include "../lib/service_conditions.hpp"
 #include "../lib/service_root.hpp"
 #include "../lib/storage.hpp"
 #include "../lib/systems.hpp"
@@ -53,7 +55,6 @@
 #include "../lib/trigger.hpp"
 #include "../lib/update_service.hpp"
 #include "../lib/virtual_media.hpp"
-#include "../lib/service_conditions.hpp"
 
 namespace redfish
 {
@@ -210,6 +211,10 @@ class RedfishService
         requestRoutesBiosService(app);
         requestRoutesBiosSettings(app);
         requestRoutesBiosReset(app);
+
+#ifdef BMCWEB_ENABLE_HOST_IFACE
+        requestHostInterfacesRoutes(app);
+#endif
 
 #ifdef BMCWEB_ENABLE_RMEDIA
         requestNBDVirtualMediaRoutes(app);
