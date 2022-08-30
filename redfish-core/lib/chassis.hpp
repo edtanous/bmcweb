@@ -816,6 +816,22 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                 }
                                 asyncResp->res.jsonValue[propertyName] = *value;
                             }
+
+                            // Populate SKU property
+                            if (propertyName == "SKU")
+                            {
+                                const std::string* value =
+                                    std::get_if<std::string>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR
+                                        << "Null value returned for "
+                                        << propertyName;
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                            }
                         }
                         asyncResp->res.jsonValue["Name"] = chassisId;
                         asyncResp->res.jsonValue["Id"] = chassisId;
