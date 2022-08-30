@@ -346,6 +346,74 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
 }
 
 /**
+ * NvidiaManagerResetToDefaultsAction class supports POST method for complete reset
+ * action.
+ */
+inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
+{
+
+    /**
+     * Function handles ResetToDefaults POST method request.
+     *
+     */
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/Actions/Oem/NvidiaManager.ResetToDefaults")
+        .privileges(redfish::privileges::postManager)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                BMCWEB_LOG_DEBUG << "Post ResetToDefaults.";
+                (void)req;
+                std::string ifnameCompleteReset =
+                    "com.nvidia.Common.CompleteReset";
+
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, ifnameCompleteReset](
+                        const boost::system::error_code ec,
+                        const std::vector<
+                            std::pair<std::string, std::vector<std::string>>>&
+                            interfaceNames) {
+                        if (ec || interfaceNames.size() <= 0)
+                        {
+                            BMCWEB_LOG_ERROR << "Can't find object";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+
+                        for (const std::pair<std::string,
+                                             std::vector<std::string>>& object :
+                             interfaceNames)
+                        {
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp,
+                                 object](const boost::system::error_code ec) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "Failed to ResetToDefaults: "
+                                            << ec;
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    // Factory Reset doesn't actually happen
+                                    // until a reboot Can't erase what the BMC
+                                    // is running on
+                                    doBMCGracefulRestart(asyncResp);
+                                },
+                                object.first, "/xyz/openbmc_project/software",
+                                ifnameCompleteReset, "CompleteReset");
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject",
+                    "/xyz/openbmc_project/software",
+                    std::array<const char*, 1>{ifnameCompleteReset.c_str()});
+            });
+}
+
+/**
  * ManagerResetActionInfo derived class for delivering Manager
  * ResetType AllowableValues using ResetInfo schema.
  */
@@ -2447,6 +2515,10 @@ inline void requestRoutesManager(App& app)
             oemNvidia["@odata.type"] = "#OemManager.Nvidia";
             oemNvidia["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
                 "/Oem/Nvidia";
+            nlohmann::json& oemResetToDefaults =
+                asyncResp->res.jsonValue["Actions"]["Oem"]["#NvidiaManager.ResetToDefaults"];
+            oemResetToDefaults["target"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                                           "/Actions/Oem/NvidiaManager.ResetToDefaults";
 
             // build type
             nlohmann::json& buildType = oemNvidia["FirmwareBuildType"];

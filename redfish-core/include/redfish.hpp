@@ -184,6 +184,7 @@ class RedfishService
         requestRoutesProcessorReset(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesEdppReset(app);
+        requestRoutesNvidiaManagerResetToDefaultsAction(app);
 #endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesProcessorPortCollection(app);
         requestRoutesProcessorPort(app);
