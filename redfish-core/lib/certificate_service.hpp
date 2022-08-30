@@ -245,7 +245,7 @@ inline void requestRoutesCertificateActionGenerateCSR(App& app)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                static const int rsaKeyBitLength = 2048;
+                static const int rsaKeyBitLength = 3072;
 
                 // Required parameters
                 std::string city;
@@ -339,10 +339,10 @@ inline void requestRoutesCertificateActionGenerateCSR(App& app)
                     return;
                 }
 
-                // supporting only 2048 key bit length for RSA algorithm due to
-                // time consumed in generating private key
+                // supporting only up to 3072 bits for key bit length for 
+                //   RSA algorithm due to time consumed in generating private key
                 if (*optKeyPairAlgorithm == "RSA" &&
-                    *optKeyBitLength != rsaKeyBitLength)
+                    *optKeyBitLength > rsaKeyBitLength)
                 {
                     messages::propertyValueNotInList(
                         asyncResp->res, std::to_string(*optKeyBitLength),
