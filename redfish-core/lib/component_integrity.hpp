@@ -44,7 +44,7 @@ static std::map<std::string,
     compIntegrityMatches;
 
 // static std::unique_ptr<sdbusplus::bus::match::match> propMatcher;
-static const int timeOut = 10;
+static const int timeOut = 20;
 
 struct SPDMMeasurementData
 {
