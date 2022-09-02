@@ -145,6 +145,8 @@ class RedfishService
         requestRoutesPostCodesEntryCollection(app);
 
         requestRoutesDebugToken(app);
+        requestRoutesDebugTokenServiceDiagnosticDataCollect(app);
+        requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(app);
 
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
         requestRoutesSystemDumpService(app);

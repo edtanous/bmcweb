@@ -1141,7 +1141,7 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                 logServiceArray.push_back(
                     {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                    "/LogServices/DebugTokenService"}});
-                
+
                 asyncResp->res.jsonValue["Members@odata.count"] =
                     logServiceArray.size();
 
@@ -4920,6 +4920,11 @@ inline void requestRoutesChassisXIDLogEntryCollection(App &app)
             });
 }
 #endif //BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+// vector containing debug token-related functionalities
+// (GetDebugTokenRequest, GetDebugTokenStatus) output data
+static std::vector<std::string> debugTokenData;
+
+/* Debug token request */
 #pragma pack(1)
 
 struct ServerRequestHeader
@@ -5213,9 +5218,7 @@ struct TokenRequest
 
         if (success > 0)
         {
-            fileID = std::string("debug_token_request_") +
-                     std::to_string(taskData->index);
-            file.clear();
+            std::vector<uint8_t> file;
 
             size +=
                 sizeof(FileHeader); // at this point this is the total file size
@@ -5237,11 +5240,11 @@ struct TokenRequest
                     file.insert(file.end(), r.data.begin(), r.data.end());
                 }
             }
-
+            debugTokenData.emplace_back(file.begin(), file.end());
             taskData->payload->httpHeaders.emplace_back(
                 "Location: /redfish/v1/Systems/" PLATFORMSYSTEMID
-                "/LogServices/DebugTokenService/attachment/" +
-                fileID);
+                "/LogServices/DebugTokenService/DiagnosticData/" +
+                std::to_string(debugTokenData.size() - 1) + "/attachment");
         }
 
         // final state/status update
@@ -5285,17 +5288,6 @@ struct TokenRequest
         finish(taskData, "Aborted", "Warning");
     }
 
-    static std::string_view getFile(const std::string& id)
-    {
-        if (id == fileID)
-        {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            return {reinterpret_cast<const char*>(file.data()),
-                                    file.size()};
-        }
-        return {};
-    }
-
     static TokenRequest* create()
     {
         if (!singleton)
@@ -5329,14 +5321,425 @@ struct TokenRequest
         delete singleton;
         singleton = nullptr;
     }
-
-    static std::string fileID;
-    static std::vector<uint8_t> file;
 };
 
 TokenRequest* TokenRequest::singleton = nullptr;
-std::string TokenRequest::fileID;
-std::vector<uint8_t> TokenRequest::file;
+
+/* Debug token status */
+enum class DebugTokenStatusQueryState
+{
+    START,
+    EID_ACQUISITION,
+    DEBUG_TOKEN_STATUS_ACQUISITION,
+    OUTPUT_PROCESSING,
+    END
+};
+
+// mctp-vdm-util's stdout output has 131 characters
+// rounded up to 256
+constexpr const size_t debugTokenStatusProcOutputSize = 256;
+
+static DebugTokenStatusQueryState debugTokenStatusState;
+static std::shared_ptr<task::TaskData> debugTokenStatusTask;
+static std::shared_ptr<boost::process::child> debugTokenStatusProc;
+static std::vector<char> debugTokenStatusProcOutput(
+    debugTokenStatusProcOutputSize, 0);
+static std::unique_ptr<boost::asio::steady_timer> debugTokenStatusProcTimer;
+
+static std::vector<std::pair<int, std::string>> debugTokenStatusEntries;
+static std::vector<std::pair<int, std::string>>::iterator currentEntry;
+
+static void debugTokenStatusContinue();
+
+static void debugTokenStatusSubTreeCallback(const boost::system::error_code ec,
+    const std::vector<std::string>& objectList)
+{
+    BMCWEB_LOG_DEBUG << "debugTokenStatusSubTreeCallback";
+    if (ec)
+    {
+        BMCWEB_LOG_ERROR << "Error finding DBus objects with"
+            "xyz.openbmc_project.MCTP.Endpoint interface: " << ec;
+        debugTokenStatusTask->messages.emplace_back(
+            messages::resourceErrorsDetectedFormatError(
+                "Searching for DBus objects with "
+                    "xyz.openbmc_project.MCTP.Endpoint interface",
+                ec.message()));
+        debugTokenStatusContinue();
+        return;
+    }
+    auto endpointCount = objectList.size();
+    BMCWEB_LOG_DEBUG << "Endpoint count: " << endpointCount;
+    if (endpointCount == 0)
+    {
+        BMCWEB_LOG_INFO << "No DBus objects with"
+            "xyz.openbmc_project.MCTP.Endpoint interface found";
+        debugTokenStatusTask->messages.emplace_back(
+            messages::resourceErrorsDetectedFormatError(
+                "Searching for DBus objects with "
+                    "xyz.openbmc_project.MCTP.Endpoint interface",
+                "No objects found"));
+        debugTokenStatusContinue();
+        return;
+    }
+    for (auto& object : objectList)
+    {
+        crow::connections::systemBus->async_method_call(
+            [endpointCount, object](
+            const boost::system::error_code,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                interfaceNames)
+            {
+                BMCWEB_LOG_DEBUG << object;
+                for (auto& i : interfaceNames)
+                {
+                    sdbusplus::asio::getProperty<uint32_t>(
+                        *crow::connections::systemBus,
+                        i.first, object,
+                        "xyz.openbmc_project.MCTP.Endpoint", "EID",
+                        [endpointCount, object](
+                        const boost::system::error_code ec, const uint32_t& eid)
+                        {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_ERROR << "Error getting EID";
+                                debugTokenStatusTask->messages.emplace_back(
+                                    messages::resourceErrorsDetectedFormatError(
+                                        "Getting EID for DBus object " + object,
+                                        ec.message()));
+                                // add -1 to mark the object as processed
+                                debugTokenStatusEntries.emplace_back(
+                                    std::make_pair(-1, ""));
+                            }
+                            else
+                            {
+                                BMCWEB_LOG_DEBUG << "EID: " << eid;
+                                debugTokenStatusEntries.emplace_back(
+                                    std::make_pair(eid, ""));
+                            }
+                            if (debugTokenStatusEntries.size() ==
+                                endpointCount)
+                            {
+                                debugTokenStatusContinue();
+                            }
+                        });
+                }
+            },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper",
+            "GetObject", object, std::array<const char*, 1>{
+                "xyz.openbmc_project.MCTP.Endpoint"});
+    }
+}
+
+static void debugTokenStatusEidsAcquire()
+{
+    debugTokenStatusEntries.clear();
+    crow::connections::systemBus->async_method_call(
+        debugTokenStatusSubTreeCallback,
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper",
+        "GetSubTreePaths", "/", 0, std::array<const char*, 1>{
+            "xyz.openbmc_project.MCTP.Endpoint"});
+}
+
+static void debugTokenStatusProcExitHandler(int exitCode,
+    const std::error_code& ec)
+{
+    BMCWEB_LOG_DEBUG << "debugTokenStatusProcExitHandler " <<
+        currentEntry->first;
+    if (ec)
+    {
+        currentEntry->second.clear();
+        BMCWEB_LOG_ERROR << "Error launching mctp-vdm-util: " << ec;
+        debugTokenStatusTask->messages.emplace_back(
+            messages::resourceErrorsDetectedFormatError(
+                "mctp-vdm-util execution for EID " +
+                    std::to_string(currentEntry->first),
+                ec.message()));
+    }
+    else if (exitCode == 0)
+    {
+        std::stringstream output;
+        output << debugTokenStatusProcOutput.data();
+        std::string line, rxLine, txLine;
+        while (std::getline(output, line))
+        {
+            if (line.rfind("RX: ", 0) == 0)
+            {
+                BMCWEB_LOG_DEBUG << "EID: " << currentEntry->first <<
+                    " " << line;
+                rxLine = line.substr(4);
+            }
+            else if (line.rfind("TX: ", 0) == 0)
+            {
+                BMCWEB_LOG_DEBUG << "EID: " << currentEntry->first <<
+                    " " << line;
+                txLine = line.substr(4);
+            }
+        }
+        if (rxLine.size() > txLine.size())
+        {
+            currentEntry->second = rxLine;
+        }
+        else
+        {
+            currentEntry->second.clear();
+            BMCWEB_LOG_INFO <<
+                "Invalid debug token status response for EID: " <<
+                currentEntry->first;
+            debugTokenStatusTask->messages.emplace_back(
+                messages::resourceErrorsDetectedFormatError(
+                    "mctp-vdm-util execution for EID " +
+                        std::to_string(currentEntry->first),
+                    "No RX data"));
+        }
+    }
+    else
+    {
+        currentEntry->second.clear();
+        BMCWEB_LOG_ERROR << "mctp-vdm-util exited with code: " << exitCode;
+        debugTokenStatusTask->messages.emplace_back(
+            messages::resourceErrorsDetectedFormatError(
+                "mctp-vdm-util execution for EID " +
+                    std::to_string(currentEntry->first),
+                "Exit code: " + std::to_string(exitCode)));
+    }
+    std::fill(debugTokenStatusProcOutput.begin(),
+        debugTokenStatusProcOutput.end(), 0);
+    debugTokenStatusProc = nullptr;
+    if (debugTokenStatusProcTimer)
+    {
+        debugTokenStatusProcTimer->cancel();
+        debugTokenStatusProcTimer.reset(nullptr);
+    }
+
+    // Continue only if there was no task timeout
+    if (debugTokenStatusTask)
+    {
+        // Trying to continue operation immediately after the subprocess exits
+        // often results in various problems (malloc errors, stdout errors etc.)
+        // ending with bmcweb crash.
+        // Applying a one second delay seems to alleviate the problem, three
+        // seconds are used to be on the safer side, as this procedure is not
+        // time critical.
+        auto timer = std::make_unique<boost::asio::steady_timer>(
+            crow::connections::systemBus->get_io_context());
+        timer->expires_after(std::chrono::seconds(3));
+        timer->async_wait(
+            [](const boost::system::error_code&) {
+                debugTokenStatusContinue();
+            });
+    }
+    else
+    {
+        BMCWEB_LOG_ERROR << "Process exit handler called after task timeout";
+    }
+}
+
+static void debugTokenStatusAcquire()
+{
+    int eid = currentEntry->first;
+    debugTokenStatusProcTimer = std::make_unique<boost::asio::steady_timer>(
+            crow::connections::systemBus->get_io_context());
+    debugTokenStatusProcTimer->expires_after(std::chrono::seconds(15));
+    debugTokenStatusProcTimer->async_wait(
+        [&](const boost::system::error_code& err) {
+            if (err != boost::asio::error::operation_aborted)
+            {
+                if (debugTokenStatusProc)
+                {
+                    BMCWEB_LOG_ERROR << "mctp-vdm-util timeout";
+                    debugTokenStatusTask->messages.emplace_back(
+                        messages::resourceErrorsDetectedFormatError(
+                            "mctp-vdm-util execution for EID " +
+                                std::to_string(currentEntry->first),
+                            "Timeout"));
+                    debugTokenStatusProc->terminate();
+                    debugTokenStatusProc->wait();
+                    debugTokenStatusProc = nullptr;
+                }
+                if (debugTokenStatusProcTimer)
+                {
+                    debugTokenStatusProcTimer->cancel();
+                    debugTokenStatusProcTimer.reset(nullptr);
+                }
+            }
+        });
+
+    BMCWEB_LOG_DEBUG << "mctp-vdm-util -c debug_token_query -t " << eid;
+    std::vector<std::string> args =
+    {
+        "-c", "debug_token_query",
+        "-t", std::to_string(eid)
+    };
+    try
+    {
+        debugTokenStatusProc = std::make_shared<boost::process::child>(
+            "/usr/bin/mctp-vdm-util", args,
+            boost::process::std_err > boost::process::null,
+            boost::process::std_out >
+                boost::asio::buffer(debugTokenStatusProcOutput),
+            crow::connections::systemBus->get_io_context(),
+            boost::process::on_exit = debugTokenStatusProcExitHandler);
+    }
+    catch (const std::runtime_error& e)
+    {
+        BMCWEB_LOG_ERROR << "Exception when starting mctp-vdm-util for EID " <<
+            eid << ": " << e.what();
+        debugTokenStatusTask->messages.emplace_back(
+            messages::resourceErrorsDetectedFormatError(
+                "mctp-vdm-util subprocess creation", e.what()));
+        debugTokenStatusProc = nullptr;
+        if (debugTokenStatusProcTimer)
+        {
+            debugTokenStatusProcTimer->cancel();
+            debugTokenStatusProcTimer.reset(nullptr);
+        }
+        debugTokenStatusContinue();
+    }
+}
+
+static void debugTokenOutputProcess()
+{
+    BMCWEB_LOG_DEBUG << "debugTokenStatusContinue: all EIDs finished";
+    auto& t = debugTokenStatusTask;
+    std::stringstream aggregateOutputStream;
+    std::vector<int> eidErrors;
+    for (auto &entry : debugTokenStatusEntries)
+    {
+        if (entry.second.size() != 0)
+        {
+            aggregateOutputStream << entry.second << std::endl;
+        }
+        else
+        {
+            eidErrors.push_back(entry.first);
+        }
+    }
+    auto aggregateOutput = aggregateOutputStream.str();
+    BMCWEB_LOG_DEBUG << "aggregateOutput.size: " << aggregateOutput.size();
+    if (aggregateOutput.size() != 0)
+    {
+        debugTokenData.push_back(aggregateOutput);
+        if (eidErrors.size() != 0)
+        {
+            std::stringstream ss;
+            ss << "Invalid response for EIDs:";
+            for (auto& eid : eidErrors)
+            {
+                ss << " " << eid;
+            }
+            t->state = "Exception";
+            t->status = ss.str();
+            t->messages.emplace_back(
+                messages::taskCompletedWarning(std::to_string(t->index)));
+        }
+        else
+        {
+            t->state = "Completed";
+            t->status = "OK";
+            t->messages.emplace_back(
+                messages::taskCompletedOK(std::to_string(t->index)));
+        }
+        size_t completedEntries =
+            debugTokenStatusEntries.size() - eidErrors.size();
+        int totalEntries = static_cast<int>(debugTokenStatusEntries.size());
+        t->percentComplete = 100 * static_cast<int>(completedEntries) /
+            totalEntries;
+
+        std::string path = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+            "/LogServices/DebugTokenService/DiagnosticData/" +
+            std::to_string(debugTokenData.size() - 1) +
+            "/attachment";
+        std::string location = "Location: " + path;
+        t->payload->httpHeaders.emplace_back(std::move(location));
+    }
+    else
+    {
+        t->state = "Stopping";
+        t->status = "No valid debug token query responses";
+        t->messages.emplace_back(
+            messages::taskAborted(std::to_string(t->index)));
+    }
+
+    debugTokenStatusProc = nullptr;
+    if (debugTokenStatusProcTimer)
+    {
+        debugTokenStatusProcTimer->cancel();
+        debugTokenStatusProcTimer.reset(nullptr);
+    }
+    debugTokenStatusTask = nullptr;
+}
+
+static void debugTokenStatusContinue()
+{
+    switch (debugTokenStatusState)
+    {
+        case DebugTokenStatusQueryState::START:
+            BMCWEB_LOG_DEBUG << "DebugTokenStatusQueryState::START";
+            debugTokenStatusState = DebugTokenStatusQueryState::EID_ACQUISITION;
+            debugTokenStatusEidsAcquire();
+            break;
+
+        case DebugTokenStatusQueryState::EID_ACQUISITION:
+            BMCWEB_LOG_DEBUG << "DebugTokenStatusQueryState::EID_ACQUISITION";
+            if (debugTokenStatusEntries.size() == 0)
+            {
+                debugTokenStatusTask->state = "Stopping";
+                debugTokenStatusTask->status = "No MCTP endpoints";
+                debugTokenStatusTask->messages.emplace_back(
+                    messages::taskAborted(
+                        std::to_string(debugTokenStatusTask->index)));
+                debugTokenStatusState =
+                    DebugTokenStatusQueryState::END;
+            }
+            else
+            {
+                // erase all invalid EID entries
+                debugTokenStatusEntries.erase(
+                    std::remove_if(
+                        debugTokenStatusEntries.begin(),
+                        debugTokenStatusEntries.end(),
+                        [](std::pair<int, std::string>& entry)
+                        {
+                            return entry.first == -1;
+                        }),
+                    debugTokenStatusEntries.end());
+                debugTokenStatusState =
+                    DebugTokenStatusQueryState::DEBUG_TOKEN_STATUS_ACQUISITION;
+                currentEntry = debugTokenStatusEntries.begin();
+                debugTokenStatusAcquire();
+            }
+            break;
+
+        case DebugTokenStatusQueryState::DEBUG_TOKEN_STATUS_ACQUISITION:
+            BMCWEB_LOG_DEBUG <<
+                "DebugTokenStatusQueryState::DEBUG_TOKEN_STATUS_ACQUISITION";
+            ++currentEntry;
+            if (currentEntry == debugTokenStatusEntries.end())
+            {
+                debugTokenStatusState =
+                    DebugTokenStatusQueryState::OUTPUT_PROCESSING;
+                debugTokenOutputProcess();
+            }
+            else
+            {
+                debugTokenStatusAcquire();
+            }
+            break;
+
+        case DebugTokenStatusQueryState::OUTPUT_PROCESSING:
+            BMCWEB_LOG_DEBUG << "DebugTokenStatusQueryState::OUTPUT_PROCESSING";
+            debugTokenStatusState = DebugTokenStatusQueryState::END;
+            break;
+
+        case DebugTokenStatusQueryState::END:
+            BMCWEB_LOG_DEBUG << "DebugTokenStatusQueryState::END";
+            break;
+    }
+}
 
 inline void requestRoutesDebugToken(App& app)
 {
@@ -5364,97 +5767,172 @@ inline void requestRoutesDebugToken(App& app)
                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
                    "/LogServices/DebugTokenService/CollectDiagnosticData"}}}};
         });
+}
 
+static inline void debugTokenRequest(const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    auto state = TokenRequest::create();
+    if (!state)
+    {
+        messages::resourceInStandby(asyncResp->res);
+        return;
+    }
+
+    std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+        [state](boost::system::error_code ec,
+                sdbusplus::message::message& msg,
+                const std::shared_ptr<task::TaskData>& taskData) {
+            if (!state->isValid())
+            {
+                BMCWEB_LOG_WARNING
+                    << "TokenRequest: Main hit !isValid()!";
+                taskData->messages.emplace_back(
+                    messages::internalError());
+                return task::completed;
+            }
+            if (ec)
+            {
+                BMCWEB_LOG_WARNING << "TokenRequest: Main received ec: "
+                                    << ec;
+                state->abort(taskData);
+                return task::completed;
+            }
+
+            std::string interface;
+            std::map<std::string, dbus::utility::DbusVariantType> props;
+
+            msg.read(interface, props);
+
+            if (interface == spdmResponderIntf)
+            {
+                auto it = props.find("Status");
+                if (it != props.end())
+                {
+                    auto status =
+                        std::get_if<std::string>(&(it->second));
+                    if (status)
+                    {
+                        state->update(taskData, msg.get_path(),
+                                        *status);
+                    }
+                }
+            }
+            return !task::completed;
+        },
+        "type='signal',interface='org.freedesktop.DBus.Properties',"
+        "member='PropertiesChanged',"
+        "path_namespace='/xyz/openbmc_project/SPDM'");
+
+    state->enumerate(task);
+
+    task->startTimer(std::chrono::minutes(1));
+    task->populateResp(asyncResp->res);
+    task->payload.emplace(req);
+}
+
+static inline void debugTokenStatus(const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!debugTokenStatusTask)
+    {
+        debugTokenStatusState = DebugTokenStatusQueryState::START;
+        debugTokenStatusTask = task::TaskData::createTask([](
+            boost::system::error_code, sdbusplus::message::message&,
+            const std::shared_ptr<task::TaskData>& task) {
+                debugTokenStatusTask = nullptr;
+                if (debugTokenStatusProc)
+                {
+                    BMCWEB_LOG_ERROR << "mctp-vdm-util timeout";
+                    task->messages.emplace_back(
+                        messages::resourceErrorsDetectedFormatError(
+                            "mctp-vdm-util execution for EID " +
+                                std::to_string(currentEntry->first),
+                            "Timeout"));
+                    debugTokenStatusProc->terminate();
+                    debugTokenStatusProc->wait();
+                    debugTokenStatusProc = nullptr;
+                    if (debugTokenStatusProcTimer)
+                    {
+                        debugTokenStatusProcTimer->cancel();
+                        debugTokenStatusProcTimer.reset(nullptr);
+                    }
+                }
+                return !task::completed;
+            },
+            "0");
+        debugTokenStatusTask->startTimer(std::chrono::minutes(3));
+        debugTokenStatusTask->payload.emplace(req);
+        debugTokenStatusTask->populateResp(asyncResp->res);
+        debugTokenStatusContinue();
+    }
+    else
+    {
+        messages::serviceTemporarilyUnavailable(asyncResp->res,
+            "60");
+    }
+}
+
+inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
+{
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/DebugTokenService/CollectDiagnosticData")
-        .privileges(redfish::privileges::postManager)
+        .privileges(redfish::privileges::getLogEntry)
         .methods(
             boost::beast::http::verb::
                 post)([](const crow::Request& req,
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-            std::optional<std::string> diagnosticDataType;
-            std::optional<std::string> oemDiagnosticDataType;
+                std::string diagnosticDataType;
+                std::string oemDiagnosticDataType;
+                if (!redfish::json_util::readJson(
+                        req, asyncResp->res,
+                        "DiagnosticDataType", diagnosticDataType,
+                        "OEMDiagnosticDataType", oemDiagnosticDataType
+                        ))
+                {
+                    return;
+                }
 
-            if (!redfish::json_util::readJson(
-                    req, asyncResp->res, "DiagnosticDataType",
-                    diagnosticDataType, "OEMDiagnosticDataType",
-                    oemDiagnosticDataType))
-            {
-                return;
-            }
-            if (!diagnosticDataType || !oemDiagnosticDataType ||
-                *diagnosticDataType != "OEM" ||
-                *oemDiagnosticDataType != "GetDebugTokenRequest")
-            {
-                return;
-            }
+                if (diagnosticDataType != "OEM")
+                {
+                    BMCWEB_LOG_ERROR <<
+                        "Only OEM DiagnosticDataType supported "
+                            "for DebugTokenService";
+                    messages::actionParameterValueFormatError(
+                        asyncResp->res, diagnosticDataType,
+                        "DiagnosticDataType", "CollectDiagnosticData");
+                    return;
+                }
 
-            auto state = TokenRequest::create();
-            if (!state)
-            {
-                messages::resourceInStandby(asyncResp->res);
-                return;
-            }
+                if (oemDiagnosticDataType == "GetDebugTokenRequest")
+                {
+                    debugTokenRequest(req, asyncResp);
+                }
+                else if (oemDiagnosticDataType == "DebugTokenStatus")
+                {
+                    debugTokenStatus(req, asyncResp);
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR << "Unsupported OEMDiagnosticDataType: "
+                                    << oemDiagnosticDataType;
+                    messages::actionParameterValueFormatError(
+                        asyncResp->res, oemDiagnosticDataType,
+                        "OEMDiagnosticDataType", "CollectDiagnosticData");
+                }
+            });
+}
 
-            std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-                [state](boost::system::error_code ec,
-                        sdbusplus::message::message& msg,
-                        const std::shared_ptr<task::TaskData>& taskData) {
-                    if (!state->isValid())
-                    {
-                        BMCWEB_LOG_WARNING
-                            << "TokenRequest: Main hit !isValid()!";
-                        taskData->messages.emplace_back(
-                            messages::internalError());
-                        return task::completed;
-                    }
-                    if (ec)
-                    {
-                        BMCWEB_LOG_WARNING << "TokenRequest: Main received ec: "
-                                           << ec;
-                        state->abort(taskData);
-                        return task::completed;
-                    }
-
-                    std::string interface;
-                    std::map<std::string, dbus::utility::DbusVariantType> props;
-
-                    msg.read(interface, props);
-
-                    if (interface == spdmResponderIntf)
-                    {
-                        auto it = props.find("Status");
-                        if (it != props.end())
-                        {
-                            auto status =
-                                std::get_if<std::string>(&(it->second));
-                            if (status)
-                            {
-                                state->update(taskData, msg.get_path(),
-                                              *status);
-                            }
-                        }
-                    }
-                    return !task::completed;
-                },
-                "type='signal',interface='org.freedesktop.DBus.Properties',"
-                "member='PropertiesChanged',"
-                "path_namespace='/xyz/openbmc_project/SPDM'");
-
-            state->enumerate(task);
-
-            task->startTimer(std::chrono::minutes(1));
-            task->populateResp(asyncResp->res);
-            task->payload.emplace(req);
-        });
-
+inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
+{
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/LogServices/DebugTokenService/attachment/<str>")
+                      "/LogServices/DebugTokenService"
+                      "/DiagnosticData/<uint>/attachment")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& fileID) {
+               const uint32_t& id) {
                 std::string_view accept = req.getHeaderValue("Accept");
                 if (!accept.empty() && !http_helpers::isOctetAccepted(accept))
                 {
@@ -5462,17 +5940,21 @@ inline void requestRoutesDebugToken(App& app)
                         boost::beast::http::status::bad_request);
                     return;
                 }
-                std::string_view strData = TokenRequest::getFile(fileID);
-                if (strData.empty())
+                auto dataCount = debugTokenData.size();
+                if (dataCount == 0 || id > dataCount - 1)
                 {
+                    messages::resourceMissingAtURI(asyncResp->res,
+                        std::to_string(id));
                     asyncResp->res.result(
                         boost::beast::http::status::not_found);
                     return;
                 }
+
                 asyncResp->res.addHeader("Content-Type",
-                                         "application/octet-stream");
-                asyncResp->res.addHeader("Content-Transfer-Encoding", "Base64");
-                asyncResp->res.body() = crow::utility::base64encode(strData);
+                                            "application/octet-stream");
+                asyncResp->res.addHeader("Content-Transfer-Encoding",
+                                            "Binary");
+                asyncResp->res.body() = debugTokenData[id];
             });
 }
 
