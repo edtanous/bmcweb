@@ -1020,74 +1020,77 @@ inline void getSensorDataByService(
     const std::string& chassisId, const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get sensor data.";
+    using PropertyType =
+        std::variant<std::string, double, uint64_t, std::vector<std::string>>;
+    using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     crow::connections::systemBus->async_method_call(
         [aResp, chassisId, objPath](const boost::system::error_code ec,
-                                    const std::variant<double>& value) {
+                                    const PropertiesMap& properties) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "Can't get sensor reading";
                 messages::internalError(aResp->res);
                 return;
             }
+            for (const auto& property : properties)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "Value")
+                {
+                    const double* attributeValue =
+                        std::get_if<double>(&property.second);
+                    // Take relevant code from sensors
+                    std::vector<std::string> split;
+                    // Reserve space for
+                    // /xyz/openbmc_project/sensors/<name>/<subname>
+                    split.reserve(6);
+                    boost::algorithm::split(split, objPath,
+                                            boost::is_any_of("/"));
+                    if (split.size() < 6)
+                    {
+                        BMCWEB_LOG_ERROR << "Got path that isn't long enough "
+                                         << objPath;
+                        return;
+                    }
+                    // These indexes aren't intuitive, as boost::split puts an
+                    // empty string at the beginning
+                    const std::string& sensorType = split[4];
+                    const std::string& sensorName = split[5];
+                    BMCWEB_LOG_DEBUG << "sensorName " << sensorName
+                                     << " sensorType " << sensorType;
 
-            const double* attributeValue = std::get_if<double>(&value);
-            if (attributeValue == nullptr)
-            {
-                // illegal property
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            // Take relevant code from sensors
-            std::vector<std::string> split;
-            // Reserve space for
-            // /xyz/openbmc_project/sensors/<name>/<subname>
-            split.reserve(6);
-            boost::algorithm::split(split, objPath, boost::is_any_of("/"));
-            if (split.size() < 6)
-            {
-                BMCWEB_LOG_ERROR << "Got path that isn't long enough "
-                                 << objPath;
-                return;
-            }
-            // These indexes aren't intuitive, as boost::split puts an empty
-            // string at the beginning
-            const std::string& sensorType = split[4];
-            const std::string& sensorName = split[5];
-            BMCWEB_LOG_DEBUG << "sensorName " << sensorName << " sensorType "
-                             << sensorType;
-
-            std::string sensorURI =
-                (boost::format("/redfish/v1/Chassis/%s/Sensors/%s") %
-                 chassisId % sensorName)
-                    .str();
-            if (sensorType == "temperature")
-            {
-                aResp->res.jsonValue["TemperatureCelsius"] = {
-                    {"Reading", *attributeValue},
-                    {"DataSourceUri", sensorURI},
-                };
-            }
-            else if (sensorType == "power")
-            {
-                aResp->res.jsonValue["PowerWatts"] = {
-                    {"Reading", *attributeValue},
-                    {"DataSourceUri", sensorURI},
-                };
-            }
-            else if (sensorType == "energy")
-            {
-                aResp->res.jsonValue["EnergykWh"] = {
-                    {"Reading", joulesToKwh(*attributeValue)},
-                };
-                aResp->res.jsonValue["EnergyJoules"] = {
-                    {"Reading", *attributeValue},
-                    {"DataSourceUri", sensorURI},
-                };
+                    std::string sensorURI =
+                        (boost::format("/redfish/v1/Chassis/%s/Sensors/%s") %
+                         chassisId % sensorName)
+                            .str();
+                    if (sensorType == "temperature")
+                    {
+                        aResp->res.jsonValue["TemperatureCelsius"] = {
+                            {"Reading", *attributeValue},
+                            {"DataSourceUri", sensorURI},
+                        };
+                    }
+                    else if (sensorType == "power")
+                    {
+                        aResp->res.jsonValue["PowerWatts"] = {
+                            {"Reading", *attributeValue},
+                            {"DataSourceUri", sensorURI},
+                        };
+                    }
+                    else if (sensorType == "energy")
+                    {
+                        aResp->res.jsonValue["EnergykWh"] = {
+                            {"Reading", joulesToKwh(*attributeValue)},
+                        };
+                        aResp->res.jsonValue["EnergyJoules"] = {
+                            {"Reading", *attributeValue},
+                            {"DataSourceUri", sensorURI},
+                        };
+                    }
+                }
             }
         },
-        service, objPath, "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Sensor.Value", "Value");
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
 inline void getEnvironmentMetricsDataByService(

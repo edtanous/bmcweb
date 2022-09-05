@@ -282,7 +282,6 @@ inline void getServiceRootManagedObjects(
                 BMCWEB_LOG_ERROR
                     << "getServiceRootManagedObjects for connection:"
                     << connection << " error: " << ec;
-                messages::internalError(asyncResp->res);
                 return;
             }
             std::sort(resp.begin(), resp.end());
