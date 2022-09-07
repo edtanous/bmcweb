@@ -217,10 +217,9 @@ struct TaskData : std::enable_shared_from_this<TaskData>
             res.addHeader(boost::beast::http::field::retry_after,
                           std::to_string(retryAfterSeconds));
         }
-        else if (!gave204)
+        else if (!taskComplete)
         {
-            res.result(boost::beast::http::status::no_content);
-            gave204 = true;
+            taskComplete = true;
         }
     }
 
@@ -380,7 +379,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
     std::unique_ptr<sdbusplus::bus::match_t> match;
     std::optional<time_t> endTime;
     std::optional<Payload> payload;
-    bool gave204 = false;
+    bool taskComplete = false;
     int percentComplete = 0;
     std::unique_ptr<sdbusplus::bus::match_t> loggingMatch;
 };
@@ -419,14 +418,14 @@ inline void requestRoutesTaskMonitor(App& app)
                     return;
                 }
                 std::shared_ptr<task::TaskData>& ptr = *find;
-                // monitor expires after 204
-                if (ptr->gave204)
+                ptr->populateResp(asyncResp->res);
+                // monitor expires after taskcomplete
+                if (ptr->taskComplete)
                 {
                     messages::resourceNotFound(asyncResp->res, "Monitor",
                                                strParam);
                     return;
                 }
-                ptr->populateResp(asyncResp->res);
 
                 // if payload http headers contain location entry, use it
                 if (ptr->payload)
@@ -502,7 +501,7 @@ inline void requestRoutesTask(App& app)
                 asyncResp->res.jsonValue["Messages"] = ptr->messages;
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/TaskService/Tasks/" + strParam;
-                if (!ptr->gave204)
+                if (!ptr->taskComplete)
                 {
                     asyncResp->res.jsonValue["TaskMonitor"] =
                         "/redfish/v1/TaskService/Tasks/" + strParam +
