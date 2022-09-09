@@ -733,6 +733,14 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 asyncResp->res.jsonValue["PCIeDevices"] = {
                     {"@odata.id",
                      "/redfish/v1/Chassis/" + chassisId + "/PCIeDevices"}};
+                
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+
+                asyncResp->res.jsonValue["LogServices"] = {
+                        {"@odata.id",
+                        "/redfish/v1/Chassis/" + chassisId + "/LogServices"}};
+                
+#endif //BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
 
                 const std::string& connectionName = connectionNames[0].first;
 

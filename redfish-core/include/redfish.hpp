@@ -133,6 +133,12 @@ class RedfishService
         requestRoutesSELLogService(app);
         requestRoutesPostCodesEntryAdditionalData(app);
 
+        requestRoutesChassisLogServiceCollection(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+        requestRoutesChassisXIDLogService(app);
+        requestRoutesChassisXIDLogEntryCollection(app);
+#endif //BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+
         requestRoutesPostCodesLogService(app);
         requestRoutesPostCodesClear(app);
         requestRoutesPostCodesEntry(app);

@@ -77,6 +77,7 @@ feature_map = {
   'redfish-bmc-journal'                         : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
   'redfish-cpu-log'                             : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
   'nvidia-oem-properties'                       : '-DBMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES',
+  'nvidia-oem-logservices'                      : '-DBMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES',
   'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
   'redfish-dump-log'                            : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
   'redfish-host-logger'                         : '-DBMCWEB_ENABLE_REDFISH_HOST_LOGGER',
