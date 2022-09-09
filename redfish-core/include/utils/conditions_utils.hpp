@@ -61,6 +61,7 @@ inline void populateServiceConditions(
                 "xyz.openbmc_project.Logging.Entry.Level.";
             const std::string criticalSev = prefix + "Critical";
             const std::string warningSev = prefix + "Warning";
+            bool resolved = false;
 
             for (auto& objectPath : resp)
             {
@@ -91,6 +92,17 @@ inline void populateServiceConditions(
                                     std::get_if<std::vector<std::string>>(
                                         &propertyMap.second);
                             }
+                            else if (propertyMap.first == "Resolved")
+                            {
+                                const bool* resolveptr =
+                                    std::get_if<bool>(&propertyMap.second);
+                                if (resolveptr == nullptr)
+                                {
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                resolved = *resolveptr;
+                            }
                         }
                         if (id == nullptr || message == nullptr ||
                             severity == nullptr)
@@ -106,7 +118,7 @@ inline void populateServiceConditions(
                 std::string originOfCondition;
                 std::string messageArgs;
 
-                if (additionalDataRaw != nullptr)
+                if (!resolved && additionalDataRaw != nullptr)
                 {
                     AdditionalData additional(*additionalDataRaw);
                     if (additional.count("REDFISH_ORIGIN_OF_CONDITION") > 0)
