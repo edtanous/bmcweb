@@ -167,6 +167,56 @@ inline std::string toReasonType(const std::string& reason)
     return "";
 }
 
+inline std::string toPowerSystemInputType(const std::string& state)
+{
+    if (state ==
+        "xyz.openbmc_project.State.Decorator.PowerSystemInputs.Status.Good")
+    {
+        return "Normal";
+    }
+    if (state ==
+        "xyz.openbmc_project.State.Decorator.PowerSystemInputs.Status.Fault")
+    {
+        return "Fault";
+    }
+    if (state ==
+        "xyz.openbmc_project.State.Decorator.PowerSystemInputs.Status.InputOutOfRange")
+    {
+        return "OutOfRange";
+    }
+    if (state ==
+        "xyz.openbmc_project.State.Decorator.PowerSystemInputs.Status.Unknown")
+    {
+        return "Unknown";
+    }
+    return "";
+}
+
+inline std::string toPerformanceStateType(const std::string& state)
+{
+    if (state ==
+        "xyz.openbmc_project.State.ProcessorPerformance.PerformanceStates.Normal")
+    {
+        return "Normal";
+    }
+    if (state ==
+        "xyz.openbmc_project.State.ProcessorPerformance.PerformanceStates.Throttled")
+    {
+        return "Throttled";
+    }
+    if (state ==
+        "xyz.openbmc_project.State.ProcessorPerformance.PerformanceStates.Degraded")
+    {
+        return "Degraded";
+    }
+    if (state ==
+        "xyz.openbmc_project.State.ProcessorPerformance.PerformanceStates.Unknown")
+    {
+        return "Unknown";
+    }
+    return "";
+}
+
 inline std::string toLocationType(const std::string& location)
 {
     if (location ==

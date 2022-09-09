@@ -1798,13 +1798,13 @@ inline void getProcessorResetTypeData(
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void
-    getProcessorThrottleData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    getProcessorPerformanceData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& service,
                              const std::string& objPath)
 {
 
     crow::connections::systemBus->async_method_call(
-        [aResp](const boost::system::error_code ec,
+        [aResp, objPath](const boost::system::error_code ec,
                 const OperatingConfigProperties& properties) {
             if (ec)
             {
@@ -1815,6 +1815,23 @@ inline void
             nlohmann::json& json = aResp->res.jsonValue;
             for (const auto& property : properties)
             {
+                json["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                if (property.first == "Value")
+                {
+                    const std::string* state =
+                        std::get_if<std::string>(&property.second);
+                    if (state == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "Get Performance Value property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    json["Oem"]["Nvidia"]["PerformanceState"] =
+                        redfish::dbus_utils::toPerformanceStateType(*state);
+                }
+
                 if (property.first == "ThrottleReason")
                 {
                     std::string reason;
@@ -1848,6 +1865,44 @@ inline void
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.State.ProcessorPerformance");
+}
+
+inline void getPowerSystemInputsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& service, const std::string& objPath)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec,
+                       const OperatingConfigProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            nlohmann::json& json = aResp->res.jsonValue;
+            for (const auto& property : properties)
+            {
+                json["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                if (property.first == "Status")
+                {
+                    const std::string* state =
+                        std::get_if<std::string>(&property.second);
+                    if (state == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "Get PowerSystemInputs Status property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    json["Oem"]["Nvidia"]["EDPViolationState"] =
+                        redfish::dbus_utils::toPowerSystemInputType(*state);
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.State.Decorator.PowerSystemInputs");
 }
 
 inline void getMigModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
@@ -3213,6 +3268,79 @@ inline void getSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         "xyz.openbmc_project.Association", "endpoints");
 }
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES 
+
+inline void
+    getStateSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& service, const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, service, objPath](const boost::system::error_code& e,
+                    std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                // No state sensors attached. 
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const std::string& sensorPath : *data)
+            {
+                BMCWEB_LOG_DEBUG << "State Sensor Object Path " << sensorPath;
+
+                const std::array<const char*, 2> sensorInterfaces = {
+                    "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
+                    "xyz.openbmc_project.State.ProcessorPerformance"};
+                // Process sensor reading
+                crow::connections::systemBus->async_method_call(
+                    [aResp, sensorPath](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                        if (ec)
+                        {
+                            // The path does not implement any state interfaces. 
+                            return;
+                        }
+                       
+                        for (const auto& [service, interfaces] : object)
+                        {
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.State.ProcessorPerformance") !=
+                                interfaces.end())
+                            {
+                                getProcessorPerformanceData(aResp, service,
+                                                         sensorPath);
+                            }
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.State.Decorator.PowerSystemInputs") !=
+                                interfaces.end())
+                            {
+                                getPowerSystemInputsData(aResp, service,
+                                                         sensorPath);
+                            }                            
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                    sensorInterfaces);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
 inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                     const std::string& processorId)
 {
@@ -3274,10 +3402,13 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                             "xyz.openbmc_project.State.ProcessorPerformance") !=
                         interfaces.end())
                     {
-                        getProcessorThrottleData(aResp, service, path);
+                        getProcessorPerformanceData(aResp, service, path);
                     }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getSensorMetric(aResp, service, path);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES                    
+                    getStateSensorMetric(aResp, service, path);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES                    
                 }
                 return;
             }
@@ -3289,8 +3420,9 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", 0,
-        std::array<const char*, 1>{
-            "xyz.openbmc_project.Inventory.Item.Accelerator"});
+        std::array<const char*, 2>{
+            "xyz.openbmc_project.Inventory.Item.Accelerator",
+            "xyz.openbmc_project.Inventory.Item.Cpu"});
 }
 
 inline void requestRoutesProcessorMetrics(App& app)
