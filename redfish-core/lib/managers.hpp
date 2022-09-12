@@ -25,7 +25,9 @@
 #include <registries/privilege_registry.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/fw_utils.hpp>
+#include <utils/dbus_utils.hpp>
 #include <utils/systemd_utils.hpp>
+#include <utils/hex_utils.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -34,6 +36,18 @@
 
 namespace redfish
 {
+
+// Map of service name to list of interfaces
+using MapperServiceMap =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
+
+// Map of object paths to MapperServiceMaps
+using MapperGetSubTreeResponse =
+    std::vector<std::pair<std::string, MapperServiceMap>>;
+
+const std::string hexPrefix = "0x";
+
+const int invalidDataOutSizeErr = 0x116;
 
 #ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
 
@@ -446,6 +460,442 @@ inline void requestRoutesManagerResetActionInfo(App& app)
                         {"GracefulRestart", "ForceRestart"}}}}}};
             });
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+// convert sync command input request data to raw datain
+inline uint32_t formatSyncDataIn(std::vector<std::string>& data)
+{
+      size_t found;
+      std::string dataStr;
+      uint32_t dataIn = 0;
+      for (auto it =  data.rbegin(); it != data.rend(); ++it)
+      {
+          found = (*it).find(hexPrefix);
+          if (found != std::string::npos)
+          {
+              (*it).erase(found, hexPrefix.length());
+          }
+          dataStr.append(*it);
+      }
+
+      try
+      {
+          dataIn = static_cast<uint32_t>(std::stoul(dataStr, nullptr, 16));
+      }
+      catch (const std::invalid_argument& ia)
+      {
+          BMCWEB_LOG_ERROR << "stoul conversion exception Invalid argument "
+                           << ia.what();
+          throw std::runtime_error("Invalid Argument");
+      }
+      catch (const std::out_of_range& oor)
+      {
+          BMCWEB_LOG_ERROR << "stoul conversion exception out fo range "
+                           << oor.what();
+          throw std::runtime_error("Invalid Argument");
+      }
+      catch (const std::exception& e)
+      {
+          BMCWEB_LOG_ERROR << "stoul conversion undefined exception"
+                           << e.what();
+          throw std::runtime_error("Invalid Argument");
+      }
+      return dataIn;
+}
+
+void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                          const std::string& serviceName,
+                          const std::string& objPath, const std::string& Type,
+                          uint8_t id, uint8_t opCode, uint8_t arg1,
+                          uint8_t arg2, uint32_t dataIn, uint32_t extDataIn)
+{
+    BMCWEB_LOG_DEBUG << "executeRawAsynCommand fn";
+    crow::connections::systemBus->async_method_call(
+        [resp, Type,
+         id](boost::system::error_code ec, sdbusplus::message::message& msg,
+             const std::tuple<int, uint32_t, uint32_t, uint32_t>& res) {
+            if (!ec)
+            {
+                int rc = get<0>(res);
+                if (rc != 0)
+                {
+                    BMCWEB_LOG_ERROR << "asynccommand failed with rc:" << rc;
+                    messages::operationFailed(resp->res);
+                    return;
+                }
+
+                resp->res.jsonValue["StatusRegister"] =
+                    intToHexByteArray(get<1>(res));
+                resp->res.jsonValue["DataOut"] = intToHexByteArray(get<2>(res));
+                resp->res.jsonValue["ExtDataOut"] =
+                    intToHexByteArray(get<3>(res));
+                return;
+            }
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                BMCWEB_LOG_DEBUG << "dbuserror nullptr error";
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+            {
+                BMCWEB_LOG_ERROR
+                    << "xyz.openbmc_project.Common.Error.InvalidArgument error";
+                messages::propertyValueIncorrect(resp->res, "TargetInstanceId",
+                                                 std::to_string(id));
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR
+                    << "form executeRawSynCommand failed with error \n";
+                BMCWEB_LOG_ERROR << ec;
+                messages::internalError(resp->res);
+            }
+            return;
+        },
+        serviceName, objPath, "com.nvidia.Protocol.SMBPBI.Raw", "SyncCommand",
+        Type, id, opCode, arg1, arg2, dataIn, extDataIn);
+}
+
+inline void requestRouteSyncRawOobCommand(App& app)
+{
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Managers/" PLATFORMBMCID
+        "/Actions/Oem/NvidiaManager.SyncOOBRawCommand")
+        .privileges(redfish::privileges::postManager)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+
+            uint8_t  targetId;
+            std::string targetType;
+            std::string opCode;
+            std::string arg1;
+            std::string arg2;
+            uint8_t opCodeRaw;
+            uint8_t arg1Raw;
+            uint8_t arg2Raw;
+            uint32_t dataInRaw = 0;
+            uint32_t extDataInRaw = 0;
+            std::optional<std::vector<std::string>> dataIn;
+            std::optional<std::vector<std::string>> extDataIn;
+
+            if (!json_util::readJson(req, asyncResp->res, "TargetType", targetType,
+                            "TargetInstanceId",targetId,"Opcode", opCode,
+                            "Arg1", arg1, "Arg2", arg2, "DataIn", dataIn,
+                            "ExtDataIn", extDataIn))
+            {
+                    BMCWEB_LOG_ERROR << "Missing property";
+                    return;
+            }
+
+            if((dataIn) && ((*dataIn).size()))
+            {
+                try
+                {
+                    dataInRaw = formatSyncDataIn(*dataIn);
+                }
+                catch (const std::runtime_error& e)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "formatSyncDataIn failed with runtime error ";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            }
+
+            if((extDataIn) && ((*extDataIn).size()))
+            {
+                try
+                {
+                    extDataInRaw = formatSyncDataIn(*extDataIn);
+                }
+                catch (const std::runtime_error& e)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "formatSyncDataIn failed with runtime error ";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            }
+
+            try
+            {
+                opCodeRaw =
+                    static_cast<uint8_t>(std::stoul(opCode, nullptr, 16));
+                arg1Raw = static_cast<uint8_t>(std::stoul(arg1, nullptr, 16));
+                arg2Raw = static_cast<uint8_t>(std::stoul(arg2, nullptr, 16));
+            }
+            catch (...)
+            {
+                BMCWEB_LOG_ERROR
+                    << "raw Sync command failed : stoul exception \n";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, targetType, targetId, opCodeRaw, arg1Raw, arg2Raw, dataInRaw, extDataInRaw](
+                                    const boost::system::error_code ec,
+                                    const MapperGetSubTreeResponse& subtree) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "unable to find SMBPBI raw interface";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    for (const auto& [objectPath, serviceMap] : subtree)
+                    {
+                        if (serviceMap.size() < 1)
+                        {
+                            BMCWEB_LOG_ERROR << "No service Present";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        const std::string& serviceName = serviceMap[0].first;
+                        executeRawSynCommand(asyncResp, serviceName, objectPath,
+                                             targetType, targetId, opCodeRaw,
+                                             arg1Raw, arg2Raw, dataInRaw,
+                                             extDataInRaw);
+                    }
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/inventory", int32_t(0),
+                std::array<const char*, 1>{"com.nvidia.Protocol.SMBPBI.Raw"});
+
+            });
+}
+
+// function to convert dataInbyte array to dataIn uint32 vector
+std::vector<std::uint32_t> formatAsyncDataIn(std::vector<std::string>& asynDataInBytes)
+{
+    size_t j;
+    size_t found;
+    std::string temp;
+    std::vector<std::uint32_t> asyncDataIn;
+    auto dataInSize = asynDataInBytes.size();
+    try
+    {
+        if (dataInSize)
+        {
+            for (size_t i = 0; i < dataInSize; i++)
+            {
+                j = i + 1;
+                // handle "0x" hex prefix
+                found = (asynDataInBytes[i]).find(hexPrefix);
+                if (found != std::string::npos)
+                {
+                    (asynDataInBytes[i]).erase(found, hexPrefix.length());
+                }
+                temp.insert(0, asynDataInBytes[i]);
+
+                if ((j == dataInSize) || ((j % 4) == 0))
+                {
+                    // covert string to unit32_t
+                    asyncDataIn.push_back(
+                        static_cast<uint32_t>(std::stoul(temp, nullptr, 16)));
+                    temp.erase();
+                }
+            }
+        }
+    }
+    catch (const std::invalid_argument& ia)
+    {
+        BMCWEB_LOG_ERROR
+            << "formatAsyncDataIn: stoul conversion exception Invalid argument "
+            << ia.what();
+        throw std::runtime_error("Invalid Argument");
+    }
+    catch (const std::out_of_range& oor)
+    {
+        BMCWEB_LOG_ERROR
+            << "formatAsyncDataIn: stoul conversion exception out fo range "
+            << oor.what();
+        throw std::runtime_error("Argument out of range");
+    }
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_ERROR
+            << "formatAsyncDataIn: stoul conversion undefined exception"
+            << e.what();
+        throw std::runtime_error("undefined exception");
+    }
+
+    return asyncDataIn;
+}
+
+void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                           const std::string& serviceName,
+                           const std::string& objPath, const std::string& Type,
+                           uint8_t id, uint8_t argRaw,
+                           const std::vector<uint32_t>& asyncDataInRaw,
+                           uint32_t requestedDataOutBytes)
+{
+    BMCWEB_LOG_DEBUG << "executeRawAsynCommand fn";
+    crow::connections::systemBus->async_method_call(
+        [resp, Type, requestedDataOutBytes,
+         id](boost::system::error_code ec, sdbusplus::message::message& msg,
+             const std::tuple<int, uint32_t, uint32_t, std::vector<uint32_t>>&
+                 res) {
+            if (!ec)
+            {
+                int rc = get<0>(res);
+
+                if (rc == invalidDataOutSizeErr)
+                {
+                    BMCWEB_LOG_ERROR << "asynccommand failed with rc:" << rc;
+                    messages::propertyValueIncorrect(resp->res, "RequestedDataOutBytes",
+                            std::to_string(requestedDataOutBytes));
+                    return;
+                }
+
+                if (rc != 0)
+                {
+                    BMCWEB_LOG_ERROR << "asynccommand failed with rc:" << rc;
+                    messages::operationFailed(resp->res);
+                    return;
+                }
+
+                resp->res.jsonValue["StatusRegister"] =
+                    intToHexByteArray(get<1>(res));
+                resp->res.jsonValue["DataOut"] = intToHexByteArray(get<2>(res));
+                std::vector<std::uint32_t> asyncDataOut = get<3>(res);
+                std::vector<std::string> asyncDataOutBytes;
+                for (auto val : asyncDataOut)
+                {
+                    auto dataOutHex = intToHexByteArray(val);
+                    asyncDataOutBytes.insert(asyncDataOutBytes.end(),
+                                             dataOutHex.begin(),
+                                             dataOutHex.end());
+                }
+                resp->res.jsonValue["AsyncDataOut"] = asyncDataOutBytes;
+
+                return;
+            }
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "dbus error nullptr error";
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+            {
+                BMCWEB_LOG_ERROR
+                    << "xyz.openbmc_project.Common.Error.InvalidArgument error";
+                messages::propertyValueIncorrect(resp->res, "TargetInstanceId",
+                                                 std::to_string(id));
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR
+                    << "form executeRawAsynCommand failed with error \n";
+                BMCWEB_LOG_ERROR << ec;
+                messages::internalError(resp->res);
+            }
+            return;
+        },
+        serviceName, objPath, "com.nvidia.Protocol.SMBPBI.Raw", "AsyncCommand",
+        Type, id, argRaw, asyncDataInRaw, requestedDataOutBytes);
+}
+
+inline void requestRouteAsyncRawOobCommand(App& app)
+{
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Managers/" PLATFORMBMCID
+        "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand")
+        .privileges(redfish::privileges::postManager)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+
+            uint8_t  targetId;
+            uint8_t  argRaw;
+            uint32_t requestedDataOutBytes;
+            std::string targetType;
+            std::string arg;
+            std::optional<std::vector<std::string>> asynDataIn;
+            std::vector<uint32_t> asyncDataInRaw;
+
+            if (!json_util::readJson(req, asyncResp->res, "TargetType",
+                                     targetType, "TargetInstanceId", targetId,
+                                     "AsyncArg1", arg, "RequestedDataOutBytes",
+                                     requestedDataOutBytes, "AsyncDataIn",
+                                     asynDataIn))
+            {
+                    BMCWEB_LOG_ERROR << "Missing property";
+                    return;
+            }
+
+            if ((asynDataIn) && ((*asynDataIn).size()))
+            {
+                try
+                {
+                    asyncDataInRaw = formatAsyncDataIn(*asynDataIn);
+                }
+                catch (const std::runtime_error& e)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "formatAsyncDataIn failed with runtime error ";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            }
+            try
+            {
+                argRaw = static_cast<uint8_t>(std::stoul(arg, nullptr, 16));
+            }
+            catch (...)
+            {
+                BMCWEB_LOG_ERROR
+                    << "raw Async command failed : stoul exception \n";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, targetType, targetId, argRaw, asyncDataInRaw,
+                 requestedDataOutBytes](
+                    const boost::system::error_code ec,
+                    const MapperGetSubTreeResponse& subtree) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "unable to find SMBPBI raw interface";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    for (const auto& [objectPath, serviceMap] : subtree)
+                    {
+                        if (serviceMap.size() < 1)
+                        {
+                            BMCWEB_LOG_ERROR << "No service Present";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        const std::string& serviceName = serviceMap[0].first;
+                        executeRawAsynCommand(asyncResp, serviceName,
+                                              objectPath, targetType, targetId,
+                                              argRaw, asyncDataInRaw,
+                                              requestedDataOutBytes);
+                    }
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/inventory", int32_t(0),
+                std::array<const char*, 1>{"com.nvidia.Protocol.SMBPBI.Raw"});
+
+            });
+}
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 static constexpr const char* objectManagerIface =
     "org.freedesktop.DBus.ObjectManager";
@@ -2636,6 +3086,23 @@ inline void requestRoutesManager(App& app)
             resetToDefaults["target"] = "/redfish/v1/Managers/" PLATFORMBMCID
                                         "/Actions/Manager.ResetToDefaults";
             resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+            nlohmann::json& oemActions = asyncResp->res.jsonValue["Actions"]["Oem"];
+            nlohmann::json& oemActionsNvidia = oemActions["Nvidia"];
+
+            oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["target"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Oem/NvidiaManager.SyncOOBRawCommand";
+            oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["@Redfish.ActionInfo"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID "/NvidiaSyncOOBRawCommandActionInfo";
+
+            oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]["target"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand";
+            oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]["@Redfish.ActionInfo"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID "/NvidiaAsyncOOBRawCommandActionInfo";
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
             std::pair<std::string, std::string> redfishDateTimeOffset =
                 crow::utility::getDateTimeOffsetNow();
