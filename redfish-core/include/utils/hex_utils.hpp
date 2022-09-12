@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <climits>
 #include <vector>
 
 static constexpr std::array<char, 16> digitsArray = {

@@ -29,6 +29,7 @@
 #include <registries/privilege_registry.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/fw_utils.hpp>
+#include <utils/dbus_utils.hpp>
 #include <utils/systemd_utils.hpp>
 #include <utils/hex_utils.hpp>
 #include <utils/json_utils.hpp>
