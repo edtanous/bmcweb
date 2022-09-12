@@ -135,8 +135,10 @@ inline void getSensorMap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = true;
                 if (requestTimestamp != 0 && thisMetric["MetricValue"] != "nan")
                 {
-                    if (requestTimestamp - sensorUpdatetimestamp <=
-                        staleSensorUpperLimit)
+                    int64_t freshness = static_cast<int64_t>(
+                        requestTimestamp - sensorUpdatetimestamp);
+
+                    if (freshness <= staleSensorUpperLimit)
                     {
                         thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = false;
                     }
