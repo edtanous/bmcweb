@@ -401,6 +401,14 @@ class Connection :
 
         std::string url(thisReq.target());
         std::size_t dumpPos = url.rfind("Dump");
+
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
+        if (dumpPos == std::string::npos)
+        {
+            dumpPos = url.rfind("FaultLog");
+        }
+#endif //BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
+
         std::size_t attachmentPos = url.rfind("attachment");
         if ((dumpPos != std::string::npos) &&
             (attachmentPos != std::string::npos))

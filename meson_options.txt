@@ -275,7 +275,7 @@ option ('platform-device-prefix', type : 'string', value : '', description : 'Pl
 
 option ('tls-auth-opt-in', type : 'feature', value : 'disabled', description : 'Enables feature to opt-in to TLS-Authentication at runtime.')
 option ('host-os-features', type : 'feature', value : 'enabled', description : 'Enables feature specific to host os.')
-
+option ('redfish-system-faultlog-dump-log', type : 'feature', value : 'disabled', description : 'Enable Redfish System faultlog dump log services.')
 
 # Insecure options. Every option that starts with a `insecure` flag should
 # not be enabled by default for any platform, unless the author fully comprehends

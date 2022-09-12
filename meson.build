@@ -109,6 +109,7 @@ feature_map = {
   'host-os-features'                            : '-DBMCWEB_ENABLE_HOST_OS_FEATURE',
   'nic-configuration-update'                    : '-DBMCWEB_NIC_CONFIGURATION_UPDATE',  
   'command-shell'                               : '-DBMCWEB_ENABLE_IPMI_SOL',
+  'redfish-system-faultlog-dump-log'            : '-DBMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG',
 }
 
 if(get_option('tls-auth-opt-in').enabled())
