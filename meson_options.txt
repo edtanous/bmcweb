@@ -43,6 +43,7 @@ option ('stalesensor-upper-limit-milisecond', type : 'integer', min : 1, max : 6
 option ('platform-metrics-sensing-interval', type : 'integer', min : 1, max : 65535, value : 250, description : 'Platform metrics telemetry sensor refresh interval in milliseconds')
 option ('platform-system-id', type : 'string', value : 'system', description : 'Platform specific computer system id')
 option ('platform-bmc-id', type : 'string', value : 'bmc', description : 'Platform specific managers bmc id')
+option ('platform-total-power-sensor-name', type : 'string', value : 'total_power', description : 'Platform specific total power sensor name, which has system power watts readings')
 
 option ('tls-auth-opt-in', type : 'feature', value : 'disabled', description : 'Enables feature to opt-in to TLS-Authentication at runtime.')
 

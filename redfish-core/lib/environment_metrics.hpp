@@ -260,11 +260,12 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& chassisID)
 {
+    const std::string& sensorName = platformTotalPowerSensorName;
     const std::string& totalPowerPath =
-        "/xyz/openbmc_project/sensors/power/Total_Power";
+        "/xyz/openbmc_project/sensors/power/" + sensorName;
     // Add total power sensor to associated chassis only
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisID,
+        [asyncResp, chassisID, sensorName,
          totalPowerPath](const boost::system::error_code ec,
                          std::variant<std::vector<std::string>>& resp) {
             if (ec)
@@ -290,7 +291,7 @@ inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     "xyz.openbmc_project.Sensor.Value"};
                 // Process sensor reading
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp, chassisID, totalPowerPath](
+                    [asyncResp, chassisID, sensorName, totalPowerPath](
                         const boost::system::error_code ec,
                         const std::vector<std::pair<
                             std::string, std::vector<std::string>>>& object) {
@@ -305,7 +306,7 @@ inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& connectionName =
                                 tempObject.first;
                             crow::connections::systemBus->async_method_call(
-                                [asyncResp,
+                                [asyncResp, sensorName,
                                  chassisID](const boost::system::error_code ec,
                                             const std::variant<double>& value) {
                                     if (ec)
@@ -330,9 +331,8 @@ inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                     asyncResp->res.jsonValue["PowerWatts"] = {
                                         {"Reading", *attributeValue},
                                         {"DataSourceUri",
-                                         tempPath + "Total_Power"},
-                                        {"@odata.id",
-                                         tempPath + "Total_Power"}};
+                                         tempPath + sensorName},
+                                        {"@odata.id", tempPath + sensorName}};
                                 },
                                 connectionName, totalPowerPath,
                                 "org.freedesktop.DBus.Properties", "Get",

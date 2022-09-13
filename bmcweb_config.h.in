@@ -31,4 +31,6 @@ constexpr const uint64_t pmSensingInterval = @PLATFORM_METRICS_SENSING_INTERVAL@
 
 constexpr const int mfgTestTimeout = @MFG_TEST_TIMEOUT@;
 
+constexpr const char* platformTotalPowerSensorName = @PLATFORM_TOTAL_POWER_SENSOR_NAME@;
+
 // clang-format on

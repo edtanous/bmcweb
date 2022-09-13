@@ -342,6 +342,7 @@ conf_data.set('UPDATE_SERVICE_TASK_TIMEOUT', get_option('update-service-task-tim
 conf_data.set('MFG_TEST_TIMEOUT', get_option('manufacturing-test-timeout'))
 conf_data.set_quoted('PLATFORM_SYSTEM_ID', get_option('platform-system-id'))
 conf_data.set_quoted('PLATFORM_BMC_ID', get_option('platform-bmc-id'))
+conf_data.set_quoted('PLATFORM_TOTAL_POWER_SENSOR_NAME', get_option('platform-total-power-sensor-name'))
 conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
 conf_data.set('OTP_PROVISIONING_STATUS_FILE_PATH', get_option('otp-provisioning-status-file-path'))
 configure_file(input: 'bmcweb_config.h.in',
