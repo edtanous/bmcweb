@@ -2071,7 +2071,6 @@ inline void
                                const std::string& service,
                                const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get endpoint health.";
 
     // Set the default value of state
     aResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -2216,11 +2215,11 @@ inline void getProcessorParentEndpointData(
  */
 inline void getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             const std::string& processorPath,
-                            const std::string& entityLink)
+                            const std::string& entityLink,
+                            const std::string& serviceName)
 {
-    BMCWEB_LOG_DEBUG << "Get processor endpoint data";
     crow::connections::systemBus->async_method_call(
-        [aResp, processorPath,
+        [aResp, processorPath, serviceName,
          entityLink](const boost::system::error_code ec,
                      std::variant<std::vector<std::string>>& resp) {
             if (ec)
@@ -2242,56 +2241,45 @@ inline void getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 messages::internalError(aResp->res);
                 return;
             }
-            // Check if PCIeDevice on this chassis
+
             crow::connections::systemBus->async_method_call(
-                [aResp, chassisName, chassisPath, entityLink, processorPath](
-                    const boost::system::error_code ec,
-                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                    if (ec)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    // If PCIeDevice doesn't exists on this chassis
-                    // Check PCIeDevice on its parent chassis
-                    if (subtree.empty())
-                    {
-                        getProcessorParentEndpointData(aResp, chassisPath,
-                                                       chassisName, entityLink,
-                                                       processorPath);
-                    }
-                    else
-                    {
-                        for (const auto& [objectPath, serviceMap] : subtree)
-                        {
-                            // Process same device
-                            if (!boost::ends_with(objectPath, chassisName))
-                            {
-                                continue;
-                            }
-                            if (serviceMap.size() < 1)
-                            {
-                                BMCWEB_LOG_ERROR << "Got 0 service names";
-                                messages::internalError(aResp->res);
-                                return;
-                            }
-                            const std::string& serviceName =
-                                serviceMap[0].first;
-                            // Get PCIeDevice Data
-                            getProcessorPCIeDeviceData(aResp, serviceName,
-                                                       objectPath, entityLink);
-                            // Update processor health
-                            getProcessorEndpointHealth(aResp, serviceName,
-                                                       processorPath);
-                        }
-                    }
+                [aResp, processorPath, serviceName,
+                entityLink](const boost::system::error_code ec,
+                        std::variant<std::vector<std::string>>& resp) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
+                    return; // no pciedevices = no failures
+                }
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&resp);
+                if (data == nullptr && data->size() > 1)
+                {
+                    // Chassis must have single pciedevice
+                    BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
+                    return;
+                 }
+                const std::string& pcieDevicePath = data->front();
+                sdbusplus::message::object_path objectPath(pcieDevicePath);
+                std::string pcieDeviceName = objectPath.filename();
+                if (pcieDeviceName.empty())
+                {
+                    BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                // Get PCIeDevice Data
+                getProcessorPCIeDeviceData(aResp, serviceName,
+                                    pcieDevicePath, entityLink);
+                // Update processor health
+                getProcessorEndpointHealth(aResp, serviceName,
+                                    processorPath);
+
                 },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree", chassisPath,
-                0,
-                std::array<const char*, 1>{
-                    "xyz.openbmc_project.Inventory.Item.PCIeDevice"});
+                "xyz.openbmc_project.ObjectMapper", chassisPath + "/pciedevice",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+
         },
         "xyz.openbmc_project.ObjectMapper", processorPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
@@ -2412,7 +2400,6 @@ inline void getEndpointZoneData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 const std::string& endpointPath,
                                 const std::string& fabricId)
 {
-    BMCWEB_LOG_DEBUG << "Get endpoint zone data";
     // Get connected zone link
     crow::connections::systemBus->async_method_call(
         [aResp, fabricId](const boost::system::error_code ec,
@@ -2463,7 +2450,6 @@ inline void getEndpointPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 const std::string& processorPath,
                                 const std::string& fabricId)
 {
-    BMCWEB_LOG_DEBUG << "Get endpoint port data";
     // Endpoint protocol
     crow::connections::systemBus->async_method_call(
         [aResp, processorPath,
@@ -2651,6 +2637,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                           acceleratorInterface) !=
                                 interfaces.end())
                             {
+                                std::string servName = connectionNames[0].first;
                                 sdbusplus::message::object_path objectPath(
                                     entityPath);
                                 const std::string& entityLink =
@@ -2658,7 +2645,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                     "/Processors/" +
                                     objectPath.filename();
                                 // Get processor PCIe device data
-                                getEndpointData(aResp, entityPath, entityLink);
+                                getEndpointData(aResp, entityPath, entityLink, servName);
                                 // Get port endpoint data
                                 getEndpointPortData(aResp, objPath, entityPath,
                                                     fabricId);
@@ -2672,12 +2659,14 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                           switchInterface) != interfaces.end())
                             {
                                 BMCWEB_LOG_DEBUG << "Item type switch ";
+                                std::string servName = connectionNames[0].first;
+
                                 sdbusplus::message::object_path objectPath(
                                     entityPath);
                                 std::string entityName = objectPath.filename();
                                 // get switch type endpint
                                 crow::connections::systemBus->async_method_call(
-                                    [aResp, objPath, entityPath, entityName,
+                                    [aResp, objPath, entityPath, entityName, servName,
                                      fabricId](
                                         const boost::system::error_code ec,
                                         std::variant<std::vector<std::string>>&
@@ -2716,7 +2705,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                         entityLink += entityName;
                                         // Get processor/switch PCIe device data
                                         getEndpointData(aResp, entityPath,
-                                                        entityLink);
+                                                        entityLink, servName);
                                         // Get port endpoint data
                                         getEndpointPortData(aResp, objPath,
                                                             entityPath,
