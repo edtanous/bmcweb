@@ -74,7 +74,7 @@ inline void requestRoutesMetricReportCollection(App& app)
             nlohmann::json& addMembers = asyncResp->res.jsonValue["Members"];
             addMembers.push_back(
                 {{"@odata.id",
-                  "/redfish/v1/TelemetryService/MetricReports/PlatformMetrics"}});
+                  "/redfish/v1/TelemetryService/MetricReports/" PLATFORMMETRICSID}});
             asyncResp->res.jsonValue["Members@odata.count"] = addMembers.size();
             return;
 #endif
@@ -172,12 +172,12 @@ inline void getPlatforMetricsFromSensorMap(
             asyncResp->res.jsonValue["@odata.type"] =
                 "#MetricReport.v1_3_0.MetricReport";
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/TelemetryService/MetricReports/PlatformMetrics";
-            asyncResp->res.jsonValue["Id"] = "PlatformMetrics";
-            asyncResp->res.jsonValue["Name"] = "PlatformMetrics";
+                "/redfish/v1/TelemetryService/MetricReports/" PLATFORMMETRICSID;
+            asyncResp->res.jsonValue["Id"] = PLATFORMMETRICSID;
+            asyncResp->res.jsonValue["Name"] = PLATFORMMETRICSID;
             asyncResp->res.jsonValue["MetricReportDefinition"]["@odata.id"] =
                 telemetry::metricReportDefinitionUri +
-                std::string("/PlatformMetrics");
+                std::string("/" PLATFORMMETRICSID);
             asyncResp->res.jsonValue["MetricValues"] = nlohmann::json::array();
             for (const auto& [path, serviceMap] : subtree)
             {
@@ -247,12 +247,12 @@ inline void
             asyncResp->res.jsonValue["@odata.type"] =
                 "#MetricReport.v1_3_0.MetricReport";
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/TelemetryService/MetricReports/PlatformMetrics";
-            asyncResp->res.jsonValue["Id"] = "PlatformMetrics";
-            asyncResp->res.jsonValue["Name"] = "PlatformMetrics";
+                "/redfish/v1/TelemetryService/MetricReports/" PLATFORMMETRICSID;
+            asyncResp->res.jsonValue["Id"] = PLATFORMMETRICSID;
+            asyncResp->res.jsonValue["Name"] = PLATFORMMETRICSID;
             asyncResp->res.jsonValue["MetricReportDefinition"]["@odata.id"] =
                 telemetry::metricReportDefinitionUri +
-                std::string("/PlatformMetrics");
+                std::string("/" PLATFORMMETRICSID);
             asyncResp->res.jsonValue["MetricValues"] = nlohmann::json::array();
             // Identify sensor services for sensor readings
             processSensorServices(asyncResp, chassisPath, "all",
@@ -272,7 +272,7 @@ inline void
 inline void requestRoutesPlatformMetricReport(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/TelemetryService/MetricReports/PlatformMetrics/")
+                 "/redfish/v1/TelemetryService/MetricReports/" PLATFORMMETRICSID "/")
         .privileges(redfish::privileges::getMetricReport)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,

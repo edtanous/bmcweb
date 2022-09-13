@@ -371,7 +371,7 @@ inline void requestRoutesMetricReportDefinitionCollection(App& app)
             nlohmann::json& addMembers = asyncResp->res.jsonValue["Members"];
             addMembers.push_back(
                 {{"@odata.id",
-                  "/redfish/v1/TelemetryService/MetricReportDefinitions/PlatformMetrics"}});
+                  "/redfish/v1/TelemetryService/MetricReportDefinitions/" PLATFORMMETRICSID}});
             asyncResp->res.jsonValue["Members@odata.count"] = addMembers.size();
             return;
 #endif
@@ -443,7 +443,7 @@ inline void
 
         std::string tmpPath = std::string("/redfish/v1/Chassis/");
         std::string dupSensorName = sensorName;
-        std::string chassisName = "HGX_Baseboard_0";
+        std::string chassisName = "HGX_Chassis_0";
         if (chassisId == chassisName)
         {
             for (auto& item : wildCards.items())
@@ -672,19 +672,19 @@ inline void getPlatformMetricReportDefinition(
     std::vector<std::string> redfishReportActions;
     redfishReportActions.emplace_back("LogToMetricReportsCollection");
     asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
-    getPlatformMetricsProperties(asyncResp, "HGX_Baseboard_0");
+    getPlatformMetricsProperties(asyncResp, "HGX_Chassis_0");
 }
 
 inline void requestRoutesPlatformMetricReportDefinition(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/TelemetryService/MetricReportDefinitions/PlatformMetrics/")
+        "/redfish/v1/TelemetryService/MetricReportDefinitions/" PLATFORMMETRICSID "/")
         .privileges(redfish::privileges::getMetricReportDefinition)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                getPlatformMetricReportDefinition(asyncResp, "PlatformMetrics");
+                getPlatformMetricReportDefinition(asyncResp, PLATFORMMETRICSID);
             });
 }
 #endif

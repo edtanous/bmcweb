@@ -5,6 +5,7 @@
 
 #define PLATFORMSYSTEMID @PLATFORM_SYSTEM_ID@
 #define PLATFORMBMCID @PLATFORM_BMC_ID@
+#define PLATFORMMETRICSID @PLATFORM_METRICS_ID@
 
 // clang-format off
 constexpr const int bmcwebInsecureDisableXssPrevention =
