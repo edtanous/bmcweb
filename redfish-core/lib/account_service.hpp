@@ -1208,7 +1208,8 @@ inline void updateUserProperties(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                     messages::resourceNotFound(asyncResp->res, "ManagerAccount",
                                                username);
                 }
-                else if (retval == PAM_AUTHTOK_ERR)
+                else if (retval == PAM_AUTHTOK_ERR ||
+                         retval == PAM_NEW_AUTHTOK_REQD)
                 {
                     // If password is invalid
                     messages::propertyValueFormatError(asyncResp->res,
