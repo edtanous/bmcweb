@@ -123,11 +123,14 @@ struct Response
             return;
         }
         completed = true;
-        BMCWEB_LOG_DEBUG << "calling completion handler";
         if (completeRequestHandler)
         {
-            BMCWEB_LOG_DEBUG << "completion handler was valid";
+            BMCWEB_LOG_DEBUG << "completion handler was valid, calling it";
             completeRequestHandler();
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "no completion handler, ";
         }
     }
 
@@ -252,11 +255,14 @@ struct DynamicResponse
             return;
         }
         completed = true;
-        BMCWEB_LOG_DEBUG << "calling completion handler";
         if (completeRequestHandler)
         {
-            BMCWEB_LOG_DEBUG << "completion handler was valid";
+            BMCWEB_LOG_DEBUG << "calling completion handler";
             completeRequestHandler();
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "completion was NULL, skipping";
         }
     }
 

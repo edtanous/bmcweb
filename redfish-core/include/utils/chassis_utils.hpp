@@ -8,8 +8,12 @@ namespace chassis_utils
 
 constexpr const char* acceleratorInvIntf =
     "xyz.openbmc_project.Inventory.Item.Accelerator";
+
 constexpr const char* switchInvIntf =
     "xyz.openbmc_project.Inventory.Item.Switch";
+
+constexpr const char* bmcInvInterf =
+    "xyz.openbmc_project.Inventory.Item.BMC";
 
 /**
  * @brief Retrieves valid chassis ID
@@ -393,26 +397,39 @@ inline void getAssociationEndpoint(const std::string& objPath,
                             std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "D-Bus responses error:" << ec;
+                BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec
+                    << " (busctl call " << dbus_utils::mapperBusName
+                    << " " << objPath << " " << dbus_utils::propertyInterface
+                    << " Get ss " << dbus_utils::associationInterface
+                    << " endpoints)";
                 callback(false, std::string(""));
-                return; // should have associoated inventory object.
+                return; // should have associated inventory object.
             }
             std::vector<std::string>* data =
                 std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
+            if (data == nullptr || data->size() == 0)
             {
-                BMCWEB_LOG_ERROR << "Data is null on object=" << objPath;
+                BMCWEB_LOG_ERROR << ((data == nullptr) ?
+                        "Data is null. " : "Data is empty")
+                    << "(busctl call " << dbus_utils::mapperBusName
+                    << " " << objPath << " " << dbus_utils::propertyInterface
+                    << " Get ss " <<dbus_utils::associationInterface
+                    << " endpoints)";
+/*
+                Object must have associated inventory object.
+                Exemplary test on hardware:
+                    busctl call xyz.openbmc_project.ObjectMapper \
+                    /xyz/openbmc_project/inventory/system/chassis/HGX_ERoT_FPGA_0/inventory \
+                    org.freedesktop.DBus.Properties \
+                    Get ss xyz.openbmc_project.Association endpoints
+                Response: v as 1 "/xyz/openbmc_project/inventory/system/processors/FPGA_0"
+*/
                 callback(false, std::string(""));
-                // Object must have associated inventory object.
                 return;
             }
             // Getting only the first endpoint as we have 1*1 relationship
             // with ERoT and the inventory backed by it.
-            std::string endpointPath;
-            if (data->size() > 0)
-            {
-                endpointPath = data->front();
-            }
+            std::string endpointPath = data->front();
             callback(true, endpointPath);
         },
         dbus_utils::mapperBusName, objPath, dbus_utils::propertyInterface,
@@ -423,6 +440,7 @@ template <typename CallbackFunc>
 inline void getRedfishURL(const std::filesystem::path& invObjPath,
                           CallbackFunc&& callback)
 {
+    BMCWEB_LOG_DEBUG << "getRedfishURL(" << invObjPath <<")";
     crow::connections::systemBus->async_method_call(
         [invObjPath, callback](const boost::system::error_code ec,
                                const GetObjectType& resp) {
@@ -435,55 +453,90 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                 callback(false, url);
                 return;
             }
-            std::string service = resp.begin()->first;
-            auto interfaces = resp.begin()->second;
-            // if accelarator interface then the object would be
+            // if accelerator interface then the object would be
             // of type fpga or GPU.
             // If switch interface then it could be Nvswitch or
             // PcieSwitch else it is BMC
-            for (const auto& interface : interfaces)
+            for (const auto& serObj: resp)
             {
-                BMCWEB_LOG_DEBUG << interface;
-                if (interface == acceleratorInvIntf)
+                std::string service = serObj.first;
+                auto interfaces = serObj.second;
+
+                for (const auto& interface : interfaces)
                 {
-                    url = std::string("/redfish/v1/Processors/") +
-                          invObjPath.filename().string();
-                    callback(true, url);
-                    return;
-                }
-                if (interface == switchInvIntf)
-                {
-                    // This is NVSwitch
-                    std::string switchID = invObjPath.filename();
-                    // Now get the fabric ID
-                    getAssociationEndpoint(
-                        invObjPath.string() + "/fabrics",
-                        [switchID, callback](const bool& status,
-                                             const std::string& ep) {
-                            std::string url;
-                            if (!status)
-                            {
-                                BMCWEB_LOG_DEBUG
-                                    << "Unable to get the association endpoint";
-                                url = "";
-                            }
-                            else
-                            {
-                                sdbusplus::message::object_path invObjectPath(
-                                    ep);
-                                const std::string& fabricID =
-                                    invObjectPath.filename();
+                    if (interface == acceleratorInvIntf)
+                    {
+/*
+busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetObject sas /xyz/openbmc_project/inventory/system/chassis/HGX_GPU_SXM_1 0
+ a{sas} 2
+ - "xyz.openbmc_project.GpuMgr" ...
+ - "xyz.openbmc_project.ObjectMapper" ...
+busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetObject sas /xyz/openbmc_project/inventory/system/chassis/HGX_FPGA_0 0
+  a{sas} 2
+   - "xyz.openbmc_project.GpuMgr" ...
+   - "xyz.openbmc_project.ObjectMapper" ...
+*/
+                        url = std::string("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/")
+                            + invObjPath.filename().string();
+                        BMCWEB_LOG_DEBUG << service << " " << interface
+                            << " => URL: " << url;
+                        callback(true, url);
+                        return;
+                    }
+
+                    if (interface == switchInvIntf)
+                    {
+/* busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetObject sas /xyz/openbmc_project/inventory/system/chassis/HGX_NVSwitch_0 0
+a{sas} 2
+ - "xyz.openbmc_project.GpuMgr" ...
+ - "xyz.openbmc_project.ObjectMapper" ...
+*/
+                        // This is NVSwitch or PCIeSwitch
+                        std::string switchID = invObjPath.filename();
+                        // Now get the fabric ID
+                        BMCWEB_LOG_DEBUG << "DBUS resp: " << service << " "
+                            << interface << " => getAssociationEndpoint("
+                            << invObjPath.string() << "/fabrics, CALLBACK)";
+                        getAssociationEndpoint(
+                            invObjPath.string() + "/fabrics",
+                            [switchID, callback](const bool& status,
+                                            const std::string& ep) {
+                                std::string url;
+                                if (!status)
+                                {
+                                    BMCWEB_LOG_DEBUG
+                                        << "Unable to get the association endpoint";
+
+                                    callback(false, url);
+                                    return;
+                                }
+                                sdbusplus::message::object_path invObjectPath(ep);
+                                const std::string& fabricID = invObjectPath.filename();
+
                                 url = std::string("/redfish/v1/Fabrics/");
                                 url += fabricID;
                                 url += "/Switches/";
                                 url += switchID;
-                            }
-                            callback(true, url);
 
-                            return;
-                        });
+                                callback(true, url);
+                                return;
+                            });
+                        return;
+                    }
+                    if (interface == bmcInvInterf)
+                    {
+                        url = std::string("/redfish/v1/Managers/" PLATFORMBMCID);
+                        BMCWEB_LOG_DEBUG << service << " " << interface
+                            << " => URL: " << url;
+                        callback(true, url);
+                        return;
+                    }
                 }
+                BMCWEB_LOG_DEBUG << "Not found proper interface for service " 
+                                 << service;
             }
+            BMCWEB_LOG_ERROR << "Failed to find proper URL";
+            callback(false, url);
         },
         dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,
         dbus_utils::mapperIntf, "GetObject", invObjPath.string(),

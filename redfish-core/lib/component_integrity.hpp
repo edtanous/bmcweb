@@ -533,20 +533,14 @@ inline void requestRoutesComponentIntegrity(App& app)
                                     BMCWEB_LOG_DEBUG
                                         << "Unable to get the association endpoint for "
                                         << objPath;
-                                    // inventory association is not created for
-                                    // HMC and PcieSwitch
-                                    // if we don't get the association
-                                    // assumption is, it is hmc.
+
                                     nlohmann::json& componentsProtectedArray =
                                         asyncResp->res
                                             .jsonValue["Links"]
                                                       ["ComponentsProtected"];
                                     componentsProtectedArray =
                                         nlohmann::json::array();
-                                    componentsProtectedArray.push_back(
-                                        {nlohmann::json::array(
-                                            {"@odata.id",
-                                             "/redfish/v1/Managers/" PLATFORMBMCID})});
+
                                     return;
                                 }
 
@@ -557,31 +551,25 @@ inline void requestRoutesComponentIntegrity(App& app)
                                                                      const std::
                                                                          string&
                                                                              url) {
-                                    std::string redfishURL = url;
-                                    if (!status)
-                                    {
-                                        BMCWEB_LOG_DEBUG
-                                            << "Unable to get the Redfish URL for object="
-                                            << ep;
-                                    }
-                                    else
-                                    {
-                                        if (url.empty())
-                                        {
-                                            redfishURL = std::string(
-                                                "/redfish/v1/Managers/" PLATFORMBMCID);
-                                        }
-                                    }
-
                                     nlohmann::json& componentsProtectedArray =
                                         asyncResp->res
                                             .jsonValue["Links"]
                                                       ["ComponentsProtected"];
                                     componentsProtectedArray =
                                         nlohmann::json::array();
+                                    
+                                    //if (!status || url.empty()) In curent implementation of getRedfishURL function never returns empty URL with status = true
+                                    if (!status)
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "Unable to get the Redfish URL for "
+                                            << ep;
+                                        return;
+                                    }
+
                                     componentsProtectedArray.push_back(
                                         {nlohmann::json::array(
-                                            {"@odata.id", redfishURL})});
+                                            {"@odata.id", url})});
                                 });
                             });
                     });

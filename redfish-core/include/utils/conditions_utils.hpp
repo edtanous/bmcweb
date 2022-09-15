@@ -46,9 +46,9 @@ inline void populateServiceConditions(
                    const dbus::utility::ManagedObjectType& resp) {
             if (ec)
             {
+                messages::internalError(asyncResp->res);
                 BMCWEB_LOG_ERROR
                     << "getLogEntriesIfaceData resp_handler got error " << ec;
-                messages::internalError(asyncResp->res);
                 return;
             }
 

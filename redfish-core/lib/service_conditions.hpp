@@ -14,7 +14,7 @@ inline void requestRoutesServiceConditions(App& app)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                BMCWEB_LOG_DEBUG << req.session;
+                BMCWEB_LOG_DEBUG << "session " << req.session;
                 asyncResp->res.jsonValue = {
                     {"@odata.type",
                      "#ServiceConditions.v1_0_0.ServiceConditions"},
