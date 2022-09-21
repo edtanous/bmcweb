@@ -104,6 +104,23 @@ inline void processSensorsValue(
                             .append("/Sensors/")
                             .append(sensorName);
                     objectJson["DeviceName"] = sensorName;
+
+                    auto sensorDeviceNamedProperties =
+                    interfacesDict.find("xyz.openbmc_project.Inventory.Item");
+                    const std::string* deviceName = nullptr;
+                    if (sensorDeviceNamedProperties != interfacesDict.end())
+                    {
+                        auto sensorDeviceName =
+                            sensorDeviceNamedProperties->second.find("PrettyName");
+                        if (sensorDeviceName != sensorDeviceNamedProperties->second.end())
+                        {
+                            const dbus::utility::DbusVariantType& valueVariant =
+                                sensorDeviceName->second;
+                            deviceName = std::get_if<std::string>(&valueVariant);
+                            objectJson["DeviceName"] = *deviceName;
+                        }
+                    }
+
                     objectJson["Reading"] = std::to_string(reading);
                     if (physicalContext != nullptr)
                     {

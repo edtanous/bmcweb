@@ -918,6 +918,12 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         redfish::chassis_utils::getChassisLocationType(
                             asyncResp, connectionName, path);
                     }
+                    else if (interface ==
+                             "xyz.openbmc_project.Inventory.Item")
+                    {
+                        redfish::chassis_utils::getChassisName(
+                            asyncResp, connectionName, path);
+                    }
                 }
 
                 // Chassis item properties

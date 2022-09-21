@@ -241,6 +241,26 @@ inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             asyncResp->res.jsonValue["UUID"] = chassisUUID;
         });
 }
+
+inline void getChassisName(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Item", "PrettyName",
+        [asyncResp](const boost::system::error_code ec,
+                    const std::string& chassisName) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for chassis name";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.jsonValue["Name"] = chassisName;
+        });
+}
+
 inline void getChassisType(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
                            const std::string& path)
