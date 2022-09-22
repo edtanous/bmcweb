@@ -888,7 +888,7 @@ inline void requestRoutesUpdateService(App& app)
 
             if (pushUriOptions)
             {
-                std::optional<bool> forceUpdate = false;
+                std::optional<bool> forceUpdate;
                 std::optional<nlohmann::json> pushUriApplyTime;
                 if (!json_util::readJson(
                         *pushUriOptions, asyncResp->res, "HttpPushUriApplyTime",
@@ -987,7 +987,9 @@ inline void requestRoutesUpdateService(App& app)
                                         BMCWEB_LOG_ERROR << "error_code = "
                                                          << errorCode;
                                         messages::internalError(asyncResp->res);
+                                        return;
                                     }
+                                    messages::success(asyncResp->res);
                                 },
                                 objInfo[0].first,
                                 "/xyz/openbmc_project/software",
