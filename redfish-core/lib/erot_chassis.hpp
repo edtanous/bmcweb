@@ -330,6 +330,9 @@ inline void getEROTChassis(const crow::Request&,
                 redfish::chassis_utils::getChassisSerialNumber(
                     asyncResp, connectionNames[0].first, path);
 
+                redfish::chassis_utils::getChassisSKU(
+                    asyncResp, connectionNames[0].first, path);
+
                 getChassisOEMComponentProtected(asyncResp, path);
 
                 // Link association to parent chassis

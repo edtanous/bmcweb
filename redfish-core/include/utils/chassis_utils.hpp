@@ -280,6 +280,27 @@ inline void
             asyncResp->res.jsonValue["Manufacturer"] = manufacturer;
         });
 }
+
+inline void
+    getChassisSKU(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.Asset", "SKU",
+        [asyncResp](const boost::system::error_code ec,
+                    const std::string& chassisSKU) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for chassisSKU";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.jsonValue["SKU"] = chassisSKU;
+        });
+}
+
 inline void
     getChassisSerialNumber(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
