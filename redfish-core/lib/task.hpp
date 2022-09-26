@@ -378,6 +378,28 @@ inline void requestRoutesTaskMonitor(App& app)
                     return;
                 }
                 ptr->populateResp(asyncResp->res);
+
+                // if payload http headers contain location entry, use it
+                if (ptr->payload)
+                {
+                    const auto& h = ptr->payload->httpHeaders;
+                    const auto location = std::find_if(h.begin(), h.end(),
+                        [](const nlohmann::json& element) {
+                            if (!element.is_string())
+                            {
+                                return false;
+                            }
+                            std::string str = element;
+                            return str.rfind("Location: ", 0) == 0;
+                        });
+                    if (location != h.end())
+                    {
+                        std::string str = *location;
+                        asyncResp->res.addHeader(
+                            boost::beast::http::field::location,
+                            str.substr(sizeof("Location: ") - 1));
+                    }
+                }
             });
 }
 
