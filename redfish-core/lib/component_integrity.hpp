@@ -19,6 +19,7 @@
 #include <dbus_utility.hpp>
 #include <error_messages.hpp>
 #include <openbmc_dbus_rest.hpp>
+#include <task.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <utils/json_utils.hpp>
@@ -38,14 +39,6 @@ using GetObjectType =
 using SPDMCertificates = std::vector<std::tuple<uint8_t, std::string>>;
 using SignedMeasurementData = std::vector<uint8_t>;
 
-static std::map<std::string,
-                std::pair<std::shared_ptr<boost::asio::steady_timer>,
-                          std::shared_ptr<sdbusplus::bus::match::match>>>
-    compIntegrityMatches;
-
-// static std::unique_ptr<sdbusplus::bus::match::match> propMatcher;
-static const int timeOut = 20;
-
 struct SPDMMeasurementData
 {
     uint8_t slot{};
@@ -55,6 +48,13 @@ struct SPDMMeasurementData
     uint8_t version{};
     std::string measurement;
 };
+
+static std::map<std::string, SPDMMeasurementData> spdmMeasurementData;
+// Measurements for index 11 and 12 take around 17 seconds each,
+// for other indices it is around 1 second.
+// In a worst case scenario measurements for 254 indices will take
+// 286 seconds - rounded up to 300 seconds.
+static const int spdmMeasurementTimeout = 300;
 
 inline std::string getVersionStr(const uint8_t version)
 {
@@ -237,6 +237,15 @@ inline void handleSPDMGETSignedMeasurement(
     // single value of `255`
     if (nonce)
     {
+        if (nonce->size() != 64)
+        {
+            BMCWEB_LOG_ERROR << "Invalid length for nonce hex string "
+                "(should be 64)";
+            messages::actionParameterValueError(asyncResp->res, "Nonce",
+                                                "SPDMGetSignedMeasurements");
+            return;
+        }
+
         try
         {
             nonceVec = redfish::stl_utils::hexStringToVector(*nonce);
@@ -264,65 +273,38 @@ inline void handleSPDMGETSignedMeasurement(
     }
 
     const std::string objPath = std::string(rootSPDMDbusPath) + "/" + id;
-    if (compIntegrityMatches.find(objPath) != compIntegrityMatches.end())
+    const auto meas = spdmMeasurementData.find(objPath);
+    if (meas != spdmMeasurementData.end() &&
+        meas->second.measurement.size() == 0)
     {
         messages::serviceTemporarilyUnavailable(asyncResp->res,
-                                                std::to_string(timeOut));
+            std::to_string(spdmMeasurementTimeout));
         BMCWEB_LOG_DEBUG
             << "Already measurement collection is going on this object"
             << objPath;
         return;
     }
+    spdmMeasurementData[objPath] = SPDMMeasurementData{};
 
-    // TODO convert nonce from string into array of bytes
-    // slot id from int 64 into uint8
-    // array of int64 into array of uint8_t
-
-    // The below code is creating the timer and creating the match for the
-    // property changed signal for  the refesh async Dbus call.
-    // Need to handle the two cases
-    // - Either get the property changed signal in timeout sec with the value
-    //   of the status property which we are interested in or
-    // - Timer will time out and send the internal error.
-
-    auto timer = std::make_shared<boost::asio::steady_timer>(*(req.ioService));
-    timer->expires_after(std::chrono::seconds(timeOut));
-    timer->async_wait(
-        [asyncResp, objPath](const boost::system::error_code& ec) {
+    // create a task to wait for the status property changed signal
+    std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+        [id, objPath](boost::system::error_code ec,
+                sdbusplus::message::message& msg,
+                const std::shared_ptr<task::TaskData>& taskData) {
             if (ec)
             {
-                // operation_aborted is expected if timer is canceled
-                // before completion.
                 if (ec != boost::asio::error::operation_aborted)
                 {
-                    BMCWEB_LOG_ERROR << "Async_wait failed " << ec;
+                    taskData->state = "Aborted";
+                    taskData->messages.emplace_back(
+                        messages::resourceErrorsDetectedFormatError(
+                            "GetSignedMeasurement task", ec.message()));
+                    taskData->finishTask();
                 }
-                return;
+                spdmMeasurementData.erase(objPath);
+                return task::completed;
             }
-            BMCWEB_LOG_ERROR
-                << "Timed out waiting for Getting the SPDM Measurement Data";
-            messages::operationTimeout(asyncResp->res);
-            compIntegrityMatches.erase(objPath);
-        });
 
-    // create a matcher to wait for the status property changed signal
-    BMCWEB_LOG_DEBUG << "create matcher with path " << objPath;
-    std::string match = "type='signal',member='PropertiesChanged',"
-                        "interface='org.freedesktop.DBus.Properties',"
-                        "path='" +
-                        objPath +
-                        "',"
-                        "arg0=xyz.openbmc_project.SPDM.Responder";
-
-    auto propMatcher = std::make_shared<sdbusplus::bus::match::match>(
-        *crow::connections::systemBus, match,
-        [asyncResp, objPath, id](sdbusplus::message::message& msg) {
-            if (msg.is_method_error())
-            {
-                BMCWEB_LOG_ERROR << "Dbus method error!!!";
-                messages::internalError(asyncResp->res);
-                return;
-            }
             std::string interface;
             std::map<std::string, dbus::utility::DbusVariantType> props;
 
@@ -331,13 +313,13 @@ inline void handleSPDMGETSignedMeasurement(
             if (it == props.end())
             {
                 BMCWEB_LOG_ERROR << "Did not receive an SPDM Status value";
-                return;
+                return !task::completed;
             }
             auto value = std::get_if<std::string>(&(it->second));
             if (!value)
             {
                 BMCWEB_LOG_ERROR << "Received SPDM Status is not a string";
-                return;
+                return !task::completed;
             }
 
             if (*value ==
@@ -345,25 +327,35 @@ inline void handleSPDMGETSignedMeasurement(
             {
                 getSPDMMeasurementData(
                     objPath,
-                    [asyncResp, id, objPath](const SPDMMeasurementData& data,
-                                             bool gotData) {
+                    [id, objPath, taskData](const SPDMMeasurementData& data,
+                        bool gotData)
+                    {
                         if (!gotData)
                         {
                             BMCWEB_LOG_ERROR
                                 << "Did not receive SPDM Measurement data";
-                            messages::internalError(asyncResp->res);
-                            compIntegrityMatches.erase(objPath);
-                            return;
+                            taskData->state = "Aborted";
+                            taskData->messages.emplace_back(
+                                messages::resourceErrorsDetectedFormatError(
+                                    "SPDM measurement data", "no data"));
+                            taskData->finishTask();
+                            spdmMeasurementData.erase(objPath);
                         }
-                        asyncResp->res.jsonValue["SignedMeasurements"] =
-                            data.measurement;
-                        asyncResp->res.jsonValue["Version"] =
-                            getVersionStr(data.version);
-                        asyncResp->res.jsonValue["HashingAlgorithm"] =
-                            data.hashAlgo;
-                        asyncResp->res.jsonValue["SigningAlgorithm"] =
-                            data.signAlgo;
-                        compIntegrityMatches.erase(objPath);
+                        else
+                        {
+                            spdmMeasurementData[objPath] = data;
+                            std::string location = "Location: /redfish/v1/"
+                                "ComponentIntegrity/" + id +
+                                "/Actions/SPDMGetSignedMeasurements/data";
+                            taskData->payload->httpHeaders.emplace_back(
+                                std::move(location));
+                            taskData->state = "Completed";
+                            taskData->percentComplete = 100;
+                            taskData->messages.emplace_back(
+                                messages::taskCompletedOK(
+                                    std::to_string(taskData->index)));
+                            taskData->finishTask();
+                        }
                     });
             }
             else if (
@@ -372,35 +364,40 @@ inline void handleSPDMGETSignedMeasurement(
                     "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_"))
             {
                 BMCWEB_LOG_ERROR << "Received SPDM Error: " << *value;
-                if (*value ==
-                    "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_ConnectionTimeout")
-                {
-                    messages::operationTimeout(asyncResp->res);
-                }
-                else
-                {
+                taskData->state = "Aborted";
+                taskData->messages.emplace_back(
                     messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, "Status", *value);
-                }
-                compIntegrityMatches.erase(objPath);
+                        "Status", *value));
+                taskData->finishTask();
+                spdmMeasurementData.erase(objPath);
             }
             else
             {
-                //other intermediate states like GettingCertificates, GettingMeasurements, are ignored
+                // other intermediate states are ignored
                 BMCWEB_LOG_DEBUG << "Ignoring SPDM Status update: " << *value;
             }
-        });
-
-    compIntegrityMatches.emplace(
-        std::make_pair(objPath, std::make_pair(timer, propMatcher)));
+            return !task::completed;
+        },
+        "type='signal',member='PropertiesChanged',"
+        "interface='org.freedesktop.DBus.Properties',"
+        "path='" + objPath + "',"
+        "arg0=xyz.openbmc_project.SPDM.Responder");
+    task->startTimer(std::chrono::seconds(spdmMeasurementTimeout));
+    task->populateResp(asyncResp->res);
+    task->payload.emplace(req);
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+        [objPath, task](const boost::system::error_code ec) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "Failed to refresh the SPDM measurement "
                                  << ec;
-                messages::internalError(asyncResp->res);
+                task->state = "Aborted";
+                task->messages.emplace_back(
+                    messages::resourceErrorsDetectedFormatError(
+                        "SPDM refresh", ec.message()));
+                task->finishTask();
+                spdmMeasurementData.erase(objPath);
                 return;
             }
         },
@@ -593,14 +590,46 @@ inline void requestRoutesComponentIntegrity(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/ComponentIntegrity/<str>/Actions/SPDMGetSignedMeasurements")
+        "/redfish/v1/ComponentIntegrity/<str>/"
+            "Actions/SPDMGetSignedMeasurements")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::post)(
             handleSPDMGETSignedMeasurement);
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/ComponentIntegrity/<str>/SPDMGetSignedMeasurementsActionInfo")
+        "/redfish/v1/ComponentIntegrity/<str>/"
+            "Actions/SPDMGetSignedMeasurements/data")
+        .privileges(redfish::privileges::getManagerAccount)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& id) {
+                const std::string objPath = std::string(rootSPDMDbusPath) + "/" + id;
+                const auto meas = spdmMeasurementData.find(objPath);
+                if (meas == spdmMeasurementData.end() ||
+                    meas->second.measurement.size() == 0)
+                {
+                    messages::resourceMissingAtURI(asyncResp->res, id);
+                    asyncResp->res.result(
+                        boost::beast::http::status::not_found);
+                    return;
+                }
+
+                asyncResp->res.jsonValue["SignedMeasurements"] =
+                    meas->second.measurement;
+                asyncResp->res.jsonValue["Version"] =
+                    getVersionStr(meas->second.version);
+                asyncResp->res.jsonValue["HashingAlgorithm"] =
+                    meas->second.hashAlgo;
+                asyncResp->res.jsonValue["SigningAlgorithm"] =
+                    meas->second.signAlgo;
+            });
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/ComponentIntegrity/<str>/"
+            "SPDMGetSignedMeasurementsActionInfo")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
