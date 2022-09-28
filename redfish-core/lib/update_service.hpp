@@ -1953,6 +1953,27 @@ inline void requestRoutesSoftwareInventory(App& app)
                             obj.second[0].first, obj.first,
                             "org.freedesktop.DBus.Properties", "GetAll",
                             "xyz.openbmc_project.Software.Version");
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                        std::shared_ptr<HealthRollup> health =
+                            std::make_shared<HealthRollup>(
+                                crow::connections::systemBus, objPath,
+                                [asyncResp](const std::string& rootHealth,
+                                            const std::string& healthRollup) {
+                                    asyncResp->res
+                                        .jsonValue["Status"]["Health"] =
+                                        rootHealth;
+                                    asyncResp->res
+                                        .jsonValue["Status"]["HealthRollup"] =
+                                        healthRollup;
+                                },
+                                &health_state::ok);
+                        health->start();
+#else  // BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+                        asyncResp->res.jsonValue["Status"]["HealthRollup"] =
+                            "OK";
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                     }
                     if (!found)
                     {
@@ -1967,7 +1988,6 @@ inline void requestRoutesSoftwareInventory(App& app)
                     asyncResp->res.jsonValue["@odata.type"] =
                         "#SoftwareInventory.v1_1_0.SoftwareInventory";
                     asyncResp->res.jsonValue["Name"] = "Software Inventory";
-                    asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
 
                     asyncResp->res.jsonValue["Updateable"] = false;
                     fw_util::getFwUpdateableStatus(asyncResp, swId);
