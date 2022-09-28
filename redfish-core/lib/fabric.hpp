@@ -1137,7 +1137,7 @@ inline void requestRoutesSwitch(App& app)
                                     std::string switchMetricURI = switchURI;
                                     switchMetricURI += "/SwitchMetrics";
                                     asyncResp->res.jsonValue["@odata.type"] =
-                                        "#Switch.v1_6_0.Switch";
+                                        "#Switch.v1_8_0.Switch";
                                     asyncResp->res.jsonValue["@odata.id"] =
                                         switchURI;
                                     asyncResp->res.jsonValue["Id"] = switchId;
@@ -1178,7 +1178,7 @@ inline void requestRoutesSwitch(App& app)
                                 // Couldn't find an object with that name.
                                 // Return an error
                                 messages::resourceNotFound(
-                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    asyncResp->res, "#Switch.v1_8_0.Switch",
                                     switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",
@@ -1358,7 +1358,7 @@ inline void requestRoutesSwitchMetrics(App& app)
                                 // Couldn't find an object with that name.
                                 // Return an error
                                 messages::resourceNotFound(
-                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    asyncResp->res, "#Switch.v1_8_0.Switch",
                                     switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",
@@ -1570,7 +1570,7 @@ inline void requestRoutesNVSwitchReset(App& app)
                                     // Couldn't find an object with that name.
                                     // Return an error
                                     messages::resourceNotFound(
-                                        asyncResp->res, "#Switch.v1_6_0.Switch",
+                                        asyncResp->res, "#Switch.v1_8_0.Switch",
                                         switchId);
                                 },
                                 "xyz.openbmc_project.ObjectMapper",
@@ -1662,7 +1662,7 @@ inline void requestRoutesPortCollection(App& app)
                                 // Couldn't find an object with that name.
                                 // Return an error
                                 messages::resourceNotFound(
-                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    asyncResp->res, "#Switch.v1_8_0.Switch",
                                     switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",
@@ -1741,7 +1741,7 @@ inline void requestRoutesPort(App& app)
                                 // Couldn't find an object with that name.
                                 // Return an error
                                 messages::resourceNotFound(
-                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    asyncResp->res, "#Switch.v1_8_0.Switch",
                                     switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",
@@ -3162,7 +3162,7 @@ inline void requestRoutesPortMetrics(App& app)
                                 // Couldn't find an object with that name.
                                 // Return an error
                                 messages::resourceNotFound(
-                                    asyncResp->res, "#Switch.v1_6_0.Switch",
+                                    asyncResp->res, "#Switch.v1_8_0.Switch",
                                     switchId);
                             },
                             "xyz.openbmc_project.ObjectMapper",

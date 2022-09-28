@@ -969,7 +969,7 @@ inline void objectInterfacesToJson(
     else if (sensorType == "temperature")
     {
         unit = "/ReadingCelsius"_json_pointer;
-        sensorJson["@odata.type"] = "#Thermal.v1_3_0.Temperature";
+        sensorJson["@odata.type"] = "#Thermal.v1_7_1.Temperature";
         // TODO(ed) Documentation says that path should be type fan_tach,
         // implementation seems to implement fan
     }
@@ -977,7 +977,7 @@ inline void objectInterfacesToJson(
     {
         unit = "/Reading"_json_pointer;
         sensorJson["ReadingUnits"] = "RPM";
-        sensorJson["@odata.type"] = "#Thermal.v1_3_0.Fan";
+        sensorJson["@odata.type"] = "#Thermal.v1_7_1.Fan";
         setLedState(sensorJson, inventoryItem);
         forceToInt = true;
     }
@@ -985,7 +985,7 @@ inline void objectInterfacesToJson(
     {
         unit = "/Reading"_json_pointer;
         sensorJson["ReadingUnits"] = "Percent";
-        sensorJson["@odata.type"] = "#Thermal.v1_3_0.Fan";
+        sensorJson["@odata.type"] = "#Thermal.v1_7_1.Fan";
         setLedState(sensorJson, inventoryItem);
         forceToInt = true;
     }

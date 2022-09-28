@@ -1922,8 +1922,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                                         messages::internalError(asyncResp->res);
                                         return;
                                     }
-                                    asyncResp->res.jsonValue["softwareId"] =
-                                        *softwareId;
+                                    asyncResp->res.jsonValue["SoftwareId"] = *softwareId;
                                 }
                                 asyncResp->res.jsonValue["Version"] = *version;
                                 asyncResp->res.jsonValue["Id"] = *swId;

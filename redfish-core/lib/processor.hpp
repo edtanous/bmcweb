@@ -1498,7 +1498,7 @@ inline void
                     {
                         const auto& [speedLock, speed] = *speedConfig;
                         json["SpeedLocked"] = speedLock;
-                        json["SpeedLimit"] = speed;
+                        json["SpeedLimitMHz"] = speed;
                     }
                 }
                 else if (key == "TurboProfile")
@@ -1986,7 +1986,7 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             {
                 // Invalid value
                 uint32_t speedLimit = std::get<1>(reqSpeedConfig);
-                messages::propertyValueIncorrect(resp->res, "SpeedLimit",
+                messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
                                                  std::to_string(speedLimit));
                 return;
             }

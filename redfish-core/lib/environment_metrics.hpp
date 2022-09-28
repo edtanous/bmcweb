@@ -1144,9 +1144,9 @@ inline void getEnvironmentMetricsDataByService(
                                                sensorPath);
                     }
                 },
-                "xyz.openbmc_project.ObjectMapper", objPath + "/all_sensors",
-                "org.freedesktop.DBus.Properties", "Get",
-                "xyz.openbmc_project.Association", "endpoints");
+                "xyz.openbmc_project.ObjectMapper",
+                chassisPath + "/all_sensors", "org.freedesktop.DBus.Properties",
+                "Get", "xyz.openbmc_project.Association", "endpoints");
         },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
