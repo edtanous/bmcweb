@@ -276,6 +276,8 @@ inline void getPortObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 redfish::port_utils::getPortData(asyncResp, connectionName,
                                                  path);
                 updatePortLinks(asyncResp, path, fabricId);
+                redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                                     portId);
                 return;
             }
             // Couldn't find an object with that name.

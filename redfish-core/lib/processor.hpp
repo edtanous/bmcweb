@@ -29,7 +29,6 @@
 #include <utils/collection.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
-#include <utils/conditions_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
@@ -1650,13 +1649,15 @@ inline void getProcessorEccModeData(
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-inline void getProcessorThrottleData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& service, const std::string& objPath)
+inline void
+    getProcessorThrottleData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& service,
+                             const std::string& objPath)
 {
 
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
-                       const OperatingConfigProperties& properties) {
+                const OperatingConfigProperties& properties) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -1671,19 +1672,20 @@ inline void getProcessorThrottleData(const std::shared_ptr<bmcweb::AsyncResp>& a
                     std::string reason;
                     const std::vector<std::string>* throttleReasons =
                         std::get_if<std::vector<std::string>>(&property.second);
-                    std::vector<std::string> formattedThrottleReasons {};
+                    std::vector<std::string> formattedThrottleReasons{};
 
                     if (throttleReasons == nullptr)
                     {
-                        BMCWEB_LOG_ERROR << "Get Throttle reasons property failed";
+                        BMCWEB_LOG_ERROR
+                            << "Get Throttle reasons property failed";
                         messages::internalError(aResp->res);
                         return;
                     }
 
-                    for( auto val : *throttleReasons)
+                    for (auto val : *throttleReasons)
                     {
                         reason = redfish::dbus_utils::toReasonType(val);
-                        if(!reason.empty())
+                        if (!reason.empty())
                         {
                             formattedThrottleReasons.push_back(reason);
                         }
@@ -1691,7 +1693,8 @@ inline void getProcessorThrottleData(const std::shared_ptr<bmcweb::AsyncResp>& a
 
                     json["Oem"]["Nvidia"]["@odata.type"] =
                         "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
-                    json["Oem"]["Nvidia"]["ThrottleReasons"] = formattedThrottleReasons;
+                    json["Oem"]["Nvidia"]["ThrottleReasons"] =
+                        formattedThrottleReasons;
                 }
             }
         },
@@ -2496,7 +2499,6 @@ inline void requestRoutesProcessor(App& app)
                         });
                 }
 
-
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 // Update migMode
                 if (std::optional<nlohmann::json> oemNvidiaObject;
@@ -2818,8 +2820,9 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                             aResp, service, path);
                     }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "xyz.openbmc_project.State.ProcessorPerformance") !=
+                    if (std::find(
+                            interfaces.begin(), interfaces.end(),
+                            "xyz.openbmc_project.State.ProcessorPerformance") !=
                         interfaces.end())
                     {
                         getProcessorThrottleData(aResp, service, path);
@@ -3755,6 +3758,9 @@ inline void requestRoutesProcessorPort(App& app)
                                             asyncResp, portPath, processorId,
                                             port);
                                     }
+                                    redfish::conditions_utils::
+                                        populateServiceConditions(asyncResp,
+                                                                  port);
                                     return;
                                 }
                                 // Object not found

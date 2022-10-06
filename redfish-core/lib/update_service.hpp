@@ -24,6 +24,7 @@
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <update_messages.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/fw_utils.hpp>
 
 namespace redfish
@@ -1919,7 +1920,8 @@ inline void requestRoutesSoftwareInventory(App& app)
                                         messages::internalError(asyncResp->res);
                                         return;
                                     }
-                                    asyncResp->res.jsonValue["softwareId"] = *softwareId;
+                                    asyncResp->res.jsonValue["softwareId"] =
+                                        *softwareId;
                                 }
                                 asyncResp->res.jsonValue["Version"] = *version;
                                 asyncResp->res.jsonValue["Id"] = *swId;
@@ -2127,6 +2129,8 @@ inline void requestRoutesInventorySoftware(App& app)
                         asyncResp->res.jsonValue["@odata.type"] =
                             "#SoftwareInventory.v1_4_0.SoftwareInventory";
                         asyncResp->res.jsonValue["Name"] = "Software Inventory";
+                        redfish::conditions_utils::populateServiceConditions(
+                            asyncResp, *swId);
                         return;
                     }
                     // Couldn't find an object with that name.  return an error
@@ -2199,10 +2203,14 @@ inline void requestRoutesInventorySoftware(App& app)
 
                             return;
                         }
-                        // Couldn't find an object with that name.  return an error
-                        BMCWEB_LOG_DEBUG << "Input swID " + *swId + " not found!";
+                        // Couldn't find an object with that name.  return an
+                        // error
+                        BMCWEB_LOG_DEBUG
+                            << "Input swID " + *swId + " not found!";
                         messages::resourceNotFound(
-                            asyncResp->res, "SoftwareInventory.v1_4_0.SoftwareInventory", *swId);
+                            asyncResp->res,
+                            "SoftwareInventory.v1_4_0.SoftwareInventory",
+                            *swId);
                     },
                     "xyz.openbmc_project.ObjectMapper",
                     "/xyz/openbmc_project/object_mapper",

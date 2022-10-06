@@ -23,6 +23,7 @@
 #include <boost/date_time.hpp>
 #include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/fw_utils.hpp>
 #include <utils/systemd_utils.hpp>
 
@@ -49,7 +50,7 @@ inline void enableTLSAuth()
         std::ifstream in(socket_path);
         std::ofstream out(tmp_path);
         std::string line;
-        while(getline(in, line))
+        while (getline(in, line))
         {
             if (line == "ListenStream=80")
             {
@@ -64,15 +65,16 @@ inline void enableTLSAuth()
     std::filesystem::rename(tmp_path, socket_path);
     persistent_data::getConfig().enableTLSAuth();
 
-    //restart procedure
-    //TODO find nicer and faster way?
+    // restart procedure
+    // TODO find nicer and faster way?
     try
     {
         dbus::utility::systemdReload();
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "TLSAuthEnable systemd Reload failed with: " << e.what();
+        BMCWEB_LOG_ERROR << "TLSAuthEnable systemd Reload failed with: "
+                         << e.what();
     }
 
     try
@@ -81,7 +83,8 @@ inline void enableTLSAuth()
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.socket Restart failed with: " << e.what();
+        BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.socket Restart failed with: "
+                         << e.what();
     }
 
     try
@@ -90,7 +93,8 @@ inline void enableTLSAuth()
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.service Restart failed with: " << e.what();
+        BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.service Restart failed with: "
+                         << e.what();
     }
 }
 
@@ -238,7 +242,7 @@ inline void requestRoutesManagerResetAction(App& app)
                     BMCWEB_LOG_DEBUG << "Proceeding with " << resetType;
                     doBMCGracefulShutdown(asyncResp);
                     return;
-                }                
+                }
                 BMCWEB_LOG_DEBUG << "Invalid property value for ResetType: "
                                  << resetType;
                 messages::actionParameterNotSupported(asyncResp->res, resetType,
@@ -346,8 +350,8 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
 }
 
 /**
- * NvidiaManagerResetToDefaultsAction class supports POST method for complete reset
- * action.
+ * NvidiaManagerResetToDefaultsAction class supports POST method for complete
+ * reset action.
  */
 inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
 {
@@ -477,24 +481,24 @@ inline void
             nlohmann::json& fans = configRoot["FanControllers"];
             fans["@odata.type"] = "#OemManager.FanControllers";
             fans["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                "/Oem/OpenBmc/Fan/FanControllers";
+                                "/Oem/OpenBmc/Fan/FanControllers";
 
             nlohmann::json& pids = configRoot["PidControllers"];
             pids["@odata.type"] = "#OemManager.PidControllers";
             pids["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                "/Oem/OpenBmc/Fan/PidControllers";
+                                "/Oem/OpenBmc/Fan/PidControllers";
 
             nlohmann::json& stepwise = configRoot["StepwiseControllers"];
             stepwise["@odata.type"] = "#OemManager.StepwiseControllers";
             stepwise["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                "/Oem/OpenBmc/Fan/StepwiseControllers";
+                                    "/Oem/OpenBmc/Fan/StepwiseControllers";
 
             nlohmann::json& zones = configRoot["FanZones"];
             zones["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                "/Oem/OpenBmc/Fan/FanZones";
+                                 "/Oem/OpenBmc/Fan/FanZones";
             zones["@odata.type"] = "#OemManager.FanZones";
-            configRoot["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                "/Oem/OpenBmc/Fan";
+            configRoot["@odata.id"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/OpenBmc/Fan";
             configRoot["@odata.type"] = "#OemManager.Fan";
             configRoot["Profile@Redfish.AllowableValues"] = supportedProfiles;
 
@@ -581,9 +585,10 @@ inline void
                         nlohmann::json& zone = zones[name];
                         zone["Chassis"] = {
                             {"@odata.id", "/redfish/v1/Chassis/" + chassis}};
-                        zone["@odata.id"] = "/redfish/v1/Managers/"
-                            PLATFORMBMCID
-                            "/Oem/OpenBmc/Fan/FanZones/" + name;
+                        zone["@odata.id"] =
+                            "/redfish/v1/Managers/" PLATFORMBMCID
+                            "/Oem/OpenBmc/Fan/FanZones/" +
+                            name;
                         zone["@odata.type"] = "#OemManager.FanZone";
                         config = &zone;
                     }
@@ -600,9 +605,10 @@ inline void
                         nlohmann::json& controller = stepwise[name];
                         config = &controller;
 
-                        controller["@odata.id"] = "/redfish/v1/Managers/"
-                            PLATFORMBMCID
-                            "/Oem/OpenBmc/Fan/StepwiseControllers/" + name;
+                        controller["@odata.id"] =
+                            "/redfish/v1/Managers/" PLATFORMBMCID
+                            "/Oem/OpenBmc/Fan/StepwiseControllers/" +
+                            name;
                         controller["@odata.type"] =
                             "#OemManager.StepwiseController";
 
@@ -625,17 +631,19 @@ inline void
                         config = &element;
                         if (isFan)
                         {
-                            element["@odata.id"] = "/redfish/v1/Managers/"
-                                PLATFORMBMCID
-                                "/Oem/OpenBmc/Fan/FanControllers/" + name;
+                            element["@odata.id"] =
+                                "/redfish/v1/Managers/" PLATFORMBMCID
+                                "/Oem/OpenBmc/Fan/FanControllers/" +
+                                name;
                             element["@odata.type"] =
                                 "#OemManager.FanController";
                         }
                         else
                         {
-                            element["@odata.id"] = "/redfish/v1/Managers/"
-                                PLATFORMBMCID
-                                "/Oem/OpenBmc/Fan/PidControllers/" + name;
+                            element["@odata.id"] =
+                                "/redfish/v1/Managers/" PLATFORMBMCID
+                                "/Oem/OpenBmc/Fan/PidControllers/" +
+                                name;
                             element["@odata.type"] =
                                 "#OemManager.PidController";
                         }
@@ -759,10 +767,10 @@ inline void
                                 {
                                     dbus::utility::escapePathForDbus(itemCopy);
                                     data.push_back(
-                                        {{"@odata.id", "/redfish/v1/Managers/"
-                                            PLATFORMBMCID
-                                            "/Oem/OpenBmc/Fan/FanZones/"
-                                            + itemCopy}});
+                                        {{"@odata.id",
+                                          "/redfish/v1/Managers/" PLATFORMBMCID
+                                          "/Oem/OpenBmc/Fan/FanZones/" +
+                                              itemCopy}});
                                 }
                             }
                             // todo(james): may never happen, but this
@@ -2433,6 +2441,9 @@ inline void requestRoutesManager(App& app)
                             }
                             getLinkManagerForSwitches(asyncResp);
 
+                            redfish::conditions_utils::
+                                populateServiceConditions(asyncResp, bmcId);
+
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                             auto health = std::make_shared<HealthRollup>(
                                 crow::connections::systemBus, path,
@@ -2491,6 +2502,9 @@ inline void requestRoutesManager(App& app)
                 {"@odata.id",
                  "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces"}};
 
+            redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                                 PLATFORMBMCID);
+
 #ifdef BMCWEB_ENABLE_HOST_IFACE
             asyncResp->res.jsonValue["HostInterfaces"] = {
                 {"@odata.id",
@@ -2509,8 +2523,8 @@ inline void requestRoutesManager(App& app)
             oem["@odata.type"] = "#OemManager.Oem";
             oem["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "/Oem";
             oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
-            oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                "/Oem/OpenBmc";
+            oemOpenbmc["@odata.id"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/OpenBmc";
             oemOpenbmc["Certificates"] = {{"@odata.id",
                                            "/redfish/v1/Managers/" PLATFORMBMCID
                                            "/Truststore/Certificates"}};
@@ -2519,12 +2533,14 @@ inline void requestRoutesManager(App& app)
             // NvidiaManager
             nlohmann::json& oemNvidia = oem["Nvidia"];
             oemNvidia["@odata.type"] = "#OemManager.Nvidia";
-            oemNvidia["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                "/Oem/Nvidia";
+            oemNvidia["@odata.id"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia";
             nlohmann::json& oemResetToDefaults =
-                asyncResp->res.jsonValue["Actions"]["Oem"]["#NvidiaManager.ResetToDefaults"];
-            oemResetToDefaults["target"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                                           "/Actions/Oem/NvidiaManager.ResetToDefaults";
+                asyncResp->res.jsonValue["Actions"]["Oem"]
+                                        ["#NvidiaManager.ResetToDefaults"];
+            oemResetToDefaults["target"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Actions/Oem/NvidiaManager.ResetToDefaults";
 
             // build type
             nlohmann::json& buildType = oemNvidia["FirmwareBuildType"];
@@ -2534,13 +2550,16 @@ inline void requestRoutesManager(App& app)
                 std::string line;
                 std::string const prefix = "BUILD_DESC=";
                 std::string descriptionContent;
-                while (getline(buildDescriptionFile, line) && descriptionContent.size() == 0)
+                while (getline(buildDescriptionFile, line) &&
+                       descriptionContent.size() == 0)
                 {
                     if (line.rfind(prefix, 0) == 0)
                     {
                         descriptionContent = line.substr(prefix.size());
-                        descriptionContent.erase(std::remove(descriptionContent.begin(), descriptionContent.end(), '"'),
-                                                    descriptionContent.end());
+                        descriptionContent.erase(
+                            std::remove(descriptionContent.begin(),
+                                        descriptionContent.end(), '"'),
+                            descriptionContent.end());
                     }
                 }
                 if (descriptionContent.rfind("debug-prov", 0) == 0)
@@ -2571,23 +2590,22 @@ inline void requestRoutesManager(App& app)
                 {
                     if (statusLine != "0" && statusLine != "1")
                     {
-                        BMCWEB_LOG_ERROR <<
-                            "Invalid OTP provisioning status - " <<
-                            statusLine << "\n";
+                        BMCWEB_LOG_ERROR << "Invalid OTP provisioning status - "
+                                         << statusLine << "\n";
                     }
                     otpProvisioned = (statusLine == "1");
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR <<
-                        "Failed to read OTP provisioning status\n";
+                    BMCWEB_LOG_ERROR
+                        << "Failed to read OTP provisioning status\n";
                     otpProvisioned = false;
                 }
             }
             else
             {
-                BMCWEB_LOG_ERROR <<
-                    "Failed to open OTP provisioning status file\n";
+                BMCWEB_LOG_ERROR
+                    << "Failed to open OTP provisioning status file\n";
                 otpProvisioned = false;
             }
 
@@ -2781,7 +2799,8 @@ inline void requestRoutesManager(App& app)
                 std::optional<nlohmann::json> openbmc;
                 std::optional<nlohmann::json> nvidia;
                 if (!redfish::json_util::readJson(*oem, asyncResp->res,
-                                                  "OpenBmc", openbmc, "Nvidia", nvidia))
+                                                  "OpenBmc", openbmc, "Nvidia",
+                                                  nvidia))
                 {
                     BMCWEB_LOG_ERROR
                         << "Illegal Property "
@@ -2813,26 +2832,33 @@ inline void requestRoutesManager(App& app)
                 {
 #ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
                     std::optional<bool> tlsAuth;
-                    if (!redfish::json_util::readJson(*nvidia, asyncResp->res,
-                                                      "AuthenticationTLSRequired", tlsAuth))
+                    if (!redfish::json_util::readJson(
+                            *nvidia, asyncResp->res,
+                            "AuthenticationTLSRequired", tlsAuth))
                     {
                         BMCWEB_LOG_ERROR
                             << "Illegal Property "
-                            << oem->dump(2, ' ', true,
-                                        nlohmann::json::error_handler_t::replace);
+                            << oem->dump(
+                                   2, ' ', true,
+                                   nlohmann::json::error_handler_t::replace);
                         return;
                     }
 
                     if (tlsAuth)
                     {
-                        if (*tlsAuth == persistent_data::getConfig().isTLSAuthEnabled())
+                        if (*tlsAuth ==
+                            persistent_data::getConfig().isTLSAuthEnabled())
                         {
-                            BMCWEB_LOG_DEBUG << "Ignoring redundant patch of AuthenticationTLSRequired.";
+                            BMCWEB_LOG_DEBUG
+                                << "Ignoring redundant patch of AuthenticationTLSRequired.";
                         }
                         else if (!*tlsAuth)
                         {
-                            BMCWEB_LOG_ERROR << "Disabling AuthenticationTLSRequired is not allowed.";
-                            messages::propertyValueIncorrect(asyncResp->res, "AuthenticationTLSRequired", "false");
+                            BMCWEB_LOG_ERROR
+                                << "Disabling AuthenticationTLSRequired is not allowed.";
+                            messages::propertyValueIncorrect(
+                                asyncResp->res, "AuthenticationTLSRequired",
+                                "false");
                             return;
                         }
                         else
