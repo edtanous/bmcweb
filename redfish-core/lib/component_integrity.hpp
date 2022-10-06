@@ -252,15 +252,16 @@ inline void handleSPDMGETSignedMeasurement(
     std::optional<uint8_t> slotID;
     std::optional<std::vector<uint8_t>> indices;
 
-    // Not reading the JSON directly as if user gives the empty JSON
-    // readJSOn function returns the error, in this API it is expected
-    // that user may give empty JSON.
-
-    nlohmann::json reqJson = nlohmann::json::parse(req.body, nullptr, false);
-    if (!reqJson.empty())
+    // the request body should either be empty (or pure whitespace),
+    // contain an empty json, or be fully valid
+    std::string body = req.body;
+    body.erase(std::remove_if(body.begin(), body.end(), isspace), body.end());
+    if (!body.empty() && body != "{}" &&
+            !json_util::readJson(req, asyncResp->res, "Nonce", nonce,
+                "SlotId", slotID, "MeasurementIndices", indices))
     {
-        json_util::readJson(req, asyncResp->res, "Nonce", nonce, "SlotId",
-                            slotID, "MeasurementIndices", indices);
+        messages::unrecognizedRequestBody(asyncResp->res);
+        return;
     }
 
     // If nonce not provided by the client, the SPDM Requester shall
@@ -274,8 +275,8 @@ inline void handleSPDMGETSignedMeasurement(
         {
             BMCWEB_LOG_ERROR << "Invalid length for nonce hex string "
                 "(should be 64)";
-            messages::actionParameterValueError(asyncResp->res, "Nonce",
-                                                "SPDMGetSignedMeasurements");
+            messages::actionParameterValueError(
+                asyncResp->res, "Nonce", "SPDMGetSignedMeasurements");
             return;
         }
 
@@ -285,10 +286,10 @@ inline void handleSPDMGETSignedMeasurement(
         }
         catch (const std::invalid_argument& e)
         {
-            BMCWEB_LOG_ERROR << "Invalid character for nonce hex string in '"
-                             << *nonce << "'";
-            messages::actionParameterValueError(asyncResp->res, "Nonce",
-                                                "SPDMGetSignedMeasurements");
+            BMCWEB_LOG_ERROR << "Invalid character for nonce hex string in '" <<
+                *nonce << "'";
+            messages::actionParameterValueError(
+                asyncResp->res, "Nonce", "SPDMGetSignedMeasurements");
             return;
         }
     }
@@ -299,10 +300,17 @@ inline void handleSPDMGETSignedMeasurement(
     }
     if (!indices)
     {
-        BMCWEB_LOG_DEBUG
-            << "MeasurementIndices is not given, setting it to default value";
+        BMCWEB_LOG_DEBUG <<
+            "MeasurementIndices is not given, setting it to default value";
         indices = std::vector<uint8_t>{};
         indices.value().emplace_back(255);
+    }
+    else if (indices->empty())
+    {
+        BMCWEB_LOG_ERROR << "Invalid measurement indices vector";
+        messages::actionParameterValueError(
+            asyncResp->res, "MeasurementIndices", "SPDMGetSignedMeasurements");
+        return;
     }
 
     const std::string objPath = std::string(rootSPDMDbusPath) + "/" + id;
