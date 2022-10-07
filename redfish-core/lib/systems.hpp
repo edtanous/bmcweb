@@ -714,7 +714,9 @@ inline std::string dbusToRfBootMode(const std::string& dbusMode)
  * @return Returns as a string, the boot progress in Redfish terms. If
  *         translation cannot be done, returns "None".
  */
-inline std::string dbusToRfBootProgress(const std::string& dbusBootProgress)
+inline std::string
+    dbusToRfBootProgress(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& dbusBootProgress)
 {
     // Now convert the D-Bus BootProgress to the appropriate Redfish
     // enum
@@ -777,6 +779,29 @@ inline std::string dbusToRfBootProgress(const std::string& dbusBootProgress)
              "OSRunning")
     {
         rfBpLastState = "OSRunning";
+    }
+    else if (dbusBootProgress ==
+             "xyz.openbmc_project.State.Boot.Progress.ProgressStages."
+             "OEM")
+    {
+        rfBpLastState = "OEM";
+        sdbusplus::asio::getProperty<std::string>(
+            *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
+            "/xyz/openbmc_project/state/host0",
+            "xyz.openbmc_project.State.Boot.Progress", "BootProgressOem",
+            [aResp](const boost::system::error_code ec,
+                    const std::string& bootProgressoem) {
+                if (ec)
+                {
+                    // BootProgressOem is an optional object so just do nothing
+                    // if not found
+		    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    return;
+                }
+
+                aResp->res.jsonValue["BootProgress"]["OemLastState"] =
+                    bootProgressoem;
+            });
     }
     else
     {
@@ -854,24 +879,47 @@ inline int assignBootParameters(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  */
 inline void getBootProgress(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 {
-    sdbusplus::asio::getProperty<std::string>(
-        *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
-        "/xyz/openbmc_project/state/host0",
-        "xyz.openbmc_project.State.Boot.Progress", "BootProgress",
+    crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
-                const std::string& bootProgressStr) {
+                const std::vector<
+                    std::pair<std::string, dbus::utility::DbusVariantType>>&
+                    propertiesList) {
             if (ec)
             {
-                // BootProgress is an optional object so just do nothing if
-                // not found
+                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
                 return;
             }
-
-            BMCWEB_LOG_DEBUG << "Boot Progress: " << bootProgressStr;
-
-            aResp->res.jsonValue["BootProgress"]["LastState"] =
-                dbusToRfBootProgress(bootProgressStr);
-        });
+            for (const std::pair<std::string, dbus::utility::DbusVariantType>&
+                     property : propertiesList)
+            {
+                if (property.first == "BootProgress")
+                {
+                    const std::string* bootProgressStr =
+                        std::get_if<std::string>(&property.second);
+                    BMCWEB_LOG_DEBUG << "Boot Progress: " << *bootProgressStr;
+                    if (bootProgressStr != nullptr)
+                    {
+                        aResp->res.jsonValue["BootProgress"]["LastState"] =
+                            dbusToRfBootProgress(aResp, *bootProgressStr);
+		    }
+                }
+                else if (property.first == "BootProgressLastUpdate")
+                {
+                    const uint64_t* lastResetTime =
+                        std::get_if<uint64_t>(&property.second);
+                    if (lastResetTime != nullptr)
+                    {
+                        uint64_t lastResetTimeStamp = *lastResetTime / 1000;
+                        aResp->res.jsonValue["BootProgress"]["LastStateTime"] =
+                            redfish::time_utils::getDateTimeUintMs(
+                                lastResetTimeStamp);
+		    }
+                }
+            }
+        },
+        "xyz.openbmc_project.State.Host", "/xyz/openbmc_project/state/host0",
+        "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.State.Boot.Progress");
 }
 
 /**

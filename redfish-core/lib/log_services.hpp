@@ -4665,8 +4665,17 @@ static void fillPostCodeEntry(
 
         // assemble messageArgs: BootIndex, TimeOffset(100us), PostCode(hex)
         std::ostringstream hexCode;
-        hexCode << "0x" << std::setfill('0') << std::setw(2) << std::hex
+        hexCode << "0x";
+#ifdef BMCWEB_ARRAY_BOOT_PROGRESS
+        for (auto itr : std::get<1>(code.second))
+        {
+            hexCode << std::setfill('0') << std::setw(2) << std::hex
+                    << static_cast<int>(itr);
+        }
+#else
+        hexCode << std::setfill('0') << std::setw(2) << std::hex
                 << std::get<0>(code.second);
+#endif
         std::ostringstream timeOffsetStr;
         // Set Fixed -Point Notation
         timeOffsetStr << std::fixed;

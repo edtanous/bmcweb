@@ -98,7 +98,6 @@ feature_map = {
   'manufacturing-test'                          : '-DBMCWEB_ENABLE_MFG_TEST_API',
   'host-iface'                          	: '-DBMCWEB_ENABLE_HOST_IFACE',
   'array-bootprogress'                          : '-DBMCWEB_ARRAY_BOOT_PROGRESS',
-
 }
 
 if(get_option('tls-auth-opt-in').enabled())
