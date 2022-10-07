@@ -3270,7 +3270,15 @@ inline void
                     continue;
                 }
                 // Get chassis sensors
-                processSensorServices(asyncResp, sensorName);
+                const std::shared_ptr<boost::container::flat_set<std::string>>
+                    sensorList = std::make_shared<
+                        boost::container::flat_set<std::string>>();
+
+                sensorList->emplace(sensorPath);
+                processSensorList(asyncResp, sensorList);
+                // Add related item data
+                getRelatedItemData(asyncResp->asyncResp,
+                                   std::string(sensorPath));
                 redfish::conditions_utils::populateServiceConditions(
                     asyncResp->asyncResp, sensorName);
 
