@@ -2008,7 +2008,8 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", int32_t(0),
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/control/power", int32_t(0),
         std::array<const char*, 1>{"xyz.openbmc_project.Control.Power.Mode"});
 }
 
