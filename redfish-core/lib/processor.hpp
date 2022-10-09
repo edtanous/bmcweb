@@ -3869,6 +3869,7 @@ inline void requestRoutesProcessorPort(App& app)
                                             asyncResp, portPath, processorId,
                                             port);
                                     }
+
                                     redfish::conditions_utils::
                                         populateServiceConditions(asyncResp,
                                                                   port);
@@ -4151,7 +4152,20 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                     {
                                         getPortMetricsData(asyncResp, service,
                                                            portPath);
+
+                                        
+                                        if (std::find(interfaces.begin(), 
+                                         interfaces.end(),
+                                         "xyz.openbmc_project.PCIe.PCIeECC") !=
+                                         interfaces.end())
+                                        {
+                                            redfish::processor_utils::
+                                                    getPCIeErrorData(
+                                                    asyncResp, service, 
+                                                     portPath);
+                                        }
                                     }
+
                                     return;
                                 }
                                 // Object not found

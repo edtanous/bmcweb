@@ -2898,6 +2898,15 @@ inline void
                     {"Id", "Metrics"}};
 
                 const std::string& connectionName = connectionNames[0].first;
+                const std::vector<std::string>& interfaces =
+                                        connectionNames[0].second;
+                if (std::find(interfaces.begin(), interfaces.end(),
+                                            "xyz.openbmc_project.PCIe.PCIeECC") 
+                                             != interfaces.end())
+                {
+                    redfish::processor_utils::
+                        getPCIeErrorData(asyncResp, connectionName, path);
+                }
                 crow::connections::systemBus->async_method_call(
                     [asyncResp](const boost::system::error_code ec,
                                 const boost::container::flat_map<
