@@ -2299,18 +2299,25 @@ inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> aResp,
 }
 
 inline void getLinkManagerForSwitches(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& objPath)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
-                    const std::vector<std::string>& objects) {
+                   std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
-                messages::internalError(asyncResp->res);
+                return; // no fabric = no failures
+            }
+            std::vector<std::string>* objects =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (objects == nullptr)
+            {
+                return;
             }
             asyncResp->res.jsonValue["Links"]["ManagerForSwitches"] =
                 nlohmann::json::array();
-            for (const std::string& fabric : objects)
+            for (const std::string& fabric : *objects)
             {
                 sdbusplus::message::object_path path(fabric);
                 std::string fabricId = path.filename();
@@ -2348,12 +2355,9 @@ inline void getLinkManagerForSwitches(
                         "xyz.openbmc_project.Inventory.Item.Switch"});
             }
         },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-        "/xyz/openbmc_project/inventory", 0,
-        std::array<const char*, 1>{
-            "xyz.openbmc_project.Inventory.Item.Fabric"});
+        "xyz.openbmc_project.ObjectMapper", objPath + "/fabric",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
 }
 
 inline void requestRoutesManager(App& app)
@@ -2439,7 +2443,7 @@ inline void requestRoutesManager(App& app)
                                                     path);
                                 }
                             }
-                            getLinkManagerForSwitches(asyncResp);
+                            getLinkManagerForSwitches(asyncResp, path);
 
                             redfish::conditions_utils::
                                 populateServiceConditions(asyncResp, bmcId);
