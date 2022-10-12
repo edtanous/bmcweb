@@ -188,7 +188,7 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 inline void getTotalPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& chassisID)
 {
-    const std::string& sensorName = platformTotalPowerSensorName;
+    const std::string& sensorName = platformPowerControlSensorName;
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, sensorName, chassisID](
@@ -331,8 +331,12 @@ inline void changemode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
+                                if (controlMode !=
+                                    "xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM")
+                                {
                                     messages::success(asyncResp->res);
-                                    return;
+                                }
+                                return;
                             },
                             element.first, path,
                             "org.freedesktop.DBus.Properties", "Set",
@@ -405,6 +409,7 @@ inline void changepowercap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         {
                             messages::internalError(asyncResp->res);
                         }
+                        
                     },
                     element.first, path, "org.freedesktop.DBus.Properties",
                     "Set", "xyz.openbmc_project.Control.Power.Cap", "PowerCap",
@@ -589,7 +594,7 @@ inline void requestRoutesChassisControls(App& app)
                                     if (objPath.filename() == controlID)
                                     {
                                         validendpoint = true;
-                                        std::optional<std::string> mode;
+                                        std::string mode;
                                         std::optional<uint32_t> setpoint;
                                         std::string controlMode;
                                         if (!json_util::readJsonAction(
@@ -602,7 +607,7 @@ inline void requestRoutesChassisControls(App& app)
 
                                         for (auto& itr : modes)
                                         {
-                                            if (itr.second == *mode)
+                                            if (itr.second == mode)
                                             {
                                                 controlMode = itr.first;
                                                 break;
@@ -616,27 +621,34 @@ inline void requestRoutesChassisControls(App& app)
                                         }
                                         else if (mode == "Override")
                                         {
-                                            changemode(asyncResp, object,
-                                                       controlMode);
                                             if (setpoint)
                                             {
+                                                changemode(asyncResp, object,
+                                                           controlMode);
+
                                                 changepowercap(asyncResp,
                                                                object,
                                                                *setpoint);
                                             }
-                                        }
-                                        else if (setpoint)
-                                        {
-                                            changepowercap(asyncResp, object,
-                                                           *setpoint);
+                                            else
+                                            {
+                                                BMCWEB_LOG_ERROR
+                                                    << "Invalid Set point ";
+                                                messages::
+                                                    actionParameterMissing(
+                                                        asyncResp->res,
+                                                        "Override mode",
+                                                        "SetPoint");
+                                                return;
+                                            }
                                         }
                                         else
                                         {
                                             BMCWEB_LOG_ERROR
                                                 << "invalid input";
-                                            messages::resourceNotFound(
-                                                asyncResp->res, "ControlID",
-                                                controlID);
+                                            messages::actionParameterUnknown(
+                                                asyncResp->res, "ControlMode",
+                                                mode);
                                         }
                                         break;
                                     }
