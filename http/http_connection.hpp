@@ -711,7 +711,7 @@ class Connection :
     {
         cancelDeadlineTimer();
 
-        std::chrono::seconds timeout(15);
+        std::chrono::seconds timeout(60);
         // allow slow uploads for logged in users
         bool loggedIn = userSession != nullptr;
         if (loggedIn)
