@@ -1924,6 +1924,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                                     }
                                     asyncResp->res.jsonValue["SoftwareId"] = *softwareId;
                                 }
+                                
                                 asyncResp->res.jsonValue["Version"] = *version;
                                 asyncResp->res.jsonValue["Id"] = *swId;
 
@@ -1953,6 +1954,50 @@ inline void requestRoutesSoftwareInventory(App& app)
                             obj.second[0].first, obj.first,
                             "org.freedesktop.DBus.Properties", "GetAll",
                             "xyz.openbmc_project.Software.Version");
+
+                        const std::vector<std::string>& interfaces2 =
+                              obj.second[0].second;
+                        const std::string assetInterface =
+                                "xyz.openbmc_project.Inventory.Decorator.Asset";
+                        if (std::find(interfaces2.begin(), interfaces2.end(),
+                              assetInterface) != interfaces2.end())
+                        {
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp,
+                                 swId](const boost::system::error_code errorCode,
+                                       const boost::container::flat_map<
+                                           std::string,
+                                           dbus::utility::DbusVariantType>&
+                                           propertiesList) {
+                                    if (errorCode)
+                                    {
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    boost::container::flat_map<
+                                        std::string,
+                                        dbus::utility::DbusVariantType>::
+                                        const_iterator it =
+                                            propertiesList.find("Manufacturer");
+                                    if (it != propertiesList.end())
+                                    {
+                                        const std::string* manufacturer =
+                                            std::get_if<std::string>(&it->second);
+    
+                                        if (manufacturer == nullptr)
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "Can't find property \"Manufacturer\"!";
+                                            messages::internalError(asyncResp->res);
+                                            return;
+                                        }
+                                        asyncResp->res.jsonValue["Manufacturer"] = *manufacturer;
+                                    }
+                                },
+                                obj.second[0].first, obj.first,
+                                "org.freedesktop.DBus.Properties", "GetAll",
+                                "xyz.openbmc_project.Inventory.Decorator.Asset");
+                        }
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         std::shared_ptr<HealthRollup> health =

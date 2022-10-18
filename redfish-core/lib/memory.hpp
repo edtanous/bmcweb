@@ -684,6 +684,7 @@ inline void
                                 memoryDeviceType;
                         }
                         if ((value->find("DDR") != std::string::npos) ||
+                            (boost::ends_with(*value, "HBM")) ||
                             (boost::ends_with(*value, "HBM2")))
                         {
                             aResp->res.jsonValue["MemoryType"] = "DRAM";
