@@ -224,7 +224,6 @@ static void
                         return;
                     }
 
-                    activateImage(objPath.str, objInfo[0].first);
 
                     if (asyncResp)
                     {
@@ -288,7 +287,6 @@ static void
                                         std::string* state =
                                             std::get_if<std::string>(
                                                 &(findActivation->second));
-
                                         if (state == nullptr)
                                         {
                                             taskData->messages.emplace_back(
@@ -413,6 +411,7 @@ static void
                         preTaskMessages = {};
                     }
                     fwUpdateInProgress = false;
+                    activateImage(objPath.str, objInfo[0].first);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
