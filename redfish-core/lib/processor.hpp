@@ -74,6 +74,22 @@ inline std::string getProcessorType(const std::string& processorType)
     return "";
 }
 
+inline std::string getProcessorFpgaType(const std::string& processorFpgaType)
+{
+    if (processorFpgaType ==
+        "xyz.openbmc_project.Inventory.Decorator.FpgaType.FPGAType.Discrete")
+    {
+        return "Discrete";
+    }
+    if (processorFpgaType ==
+        "xyz.openbmc_project.Inventory.Decorator.FpgaType.FPGAType.Integrated")
+    {
+        return "Integrated";
+    }
+    // Unknown or others
+    return "";
+}
+
 inline std::string getProcessorResetType(const std::string& processorType)
 {
     if (processorType ==
@@ -698,6 +714,35 @@ inline void getProcessorUUID(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 return;
             }
             aResp->res.jsonValue["UUID"] = property;
+        });
+}
+
+/**
+ * @brief Fill out fpgsType info of a processor by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getFpgaTypeData(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                             const std::string& service,
+                             const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get Processor fpgatype";
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, service, objPath,
+        "xyz.openbmc_project.Inventory.Decorator.FpgaType", "FpgaType",
+        [objPath, aResp{std::move(aResp)}](const boost::system::error_code ec,
+                                           const std::string& property) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            std::string fpgaType = getProcessorFpgaType(property);
+            aResp->res.jsonValue["FPGA"]["FpgaType"] = fpgaType;
         });
 }
 
@@ -1818,6 +1863,11 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getProcessorEccModeData(aResp, processorId, serviceName,
                                         objectPath);
+            }
+            else if (interface == "xyz.openbmc_project.Inventory."
+                                  "Decorator.FpgaType")
+            {
+                getFpgaTypeData(aResp, serviceName, objectPath);
             }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
