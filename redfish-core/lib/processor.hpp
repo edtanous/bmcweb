@@ -36,6 +36,8 @@
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
 
+#include <filesystem>
+
 namespace redfish
 {
 
@@ -1797,15 +1799,54 @@ inline void getProcessorResetTypeData(
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-inline void
-    getProcessorPerformanceData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                             const std::string& service,
-                             const std::string& objPath)
+inline void getPowerBreakThrottleData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath)
 {
 
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
-                const OperatingConfigProperties& properties) {
+                         const OperatingConfigProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            nlohmann::json& json = aResp->res.jsonValue;
+            for (const auto& property : properties)
+            {
+                json["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                if (property.first == "Value")
+                {
+                    const std::string* state =
+                        std::get_if<std::string>(&property.second);
+                    if (state == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "Get Power Break Value property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    json["Oem"]["Nvidia"]["PowerBreakPerformanceState"] =
+                        redfish::dbus_utils::toPerformanceStateType(*state);
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.State.ProcessorPerformance");
+}
+
+inline void
+    getProcessorPerformanceData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                const std::string& service,
+                                const std::string& objPath)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec,
+                         const OperatingConfigProperties& properties) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -3268,18 +3309,109 @@ inline void getSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         "xyz.openbmc_project.Association", "endpoints");
 }
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline void getPowerBreakThrottle(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get processor module link";
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath,
+         service](const boost::system::error_code ec,
+                  std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                return; // no chassis = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr && data->size() > 1)
+            {
+                // Processor must have single parent chassis
+                return;
+            }
+
+            const std::string& chassisPath = data->front();
+
+            BMCWEB_LOG_DEBUG << "Get processor module state sensors";
+            crow::connections::systemBus->async_method_call(
+                [aResp, service,
+                 chassisPath](const boost::system::error_code& e,
+                              std::variant<std::vector<std::string>>& resp) {
+                    if (e)
+                    {
+                        // no state sensors attached.
+                        return;
+                    }
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    for (const std::string& sensorpath : *data)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "proc module state sensor object path "
+                            << sensorpath;
+
+                        const std::array<const char*, 1> sensorinterfaces = {
+                            "xyz.openbmc_project.State.ProcessorPerformance"};
+                        // process sensor reading
+                        crow::connections::systemBus->async_method_call(
+                            [aResp, sensorpath](
+                                const boost::system::error_code ec,
+                                const std::vector<std::pair<
+                                    std::string, std::vector<std::string>>>&
+                                    object) {
+                                if (ec)
+                                {
+                                    // the path does not implement any state
+                                    // interfaces.
+                                    return;
+                                }
+
+                                for (const auto& [service, interfaces] : object)
+                                {
+                                    if (std::find(
+                                            interfaces.begin(),
+                                            interfaces.end(),
+                                            "xyz.openbmc_project.State.ProcessorPerformance") !=
+                                        interfaces.end())
+                                    {
+                                        getPowerBreakThrottleData(
+                                            aResp, service, sensorpath);
+                                    }
+                                }
+                            },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetObject",
+                            sensorpath, sensorinterfaces);
+                    }
+                },
+                "xyz.openbmc_project.ObjectMapper", chassisPath + "/all_states",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
 
 inline void
     getStateSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const std::string& service, const std::string& objPath)
 {
     crow::connections::systemBus->async_method_call(
-        [aResp, service, objPath](const boost::system::error_code& e,
-                    std::variant<std::vector<std::string>>& resp) {
+        [aResp, service,
+         objPath](const boost::system::error_code& e,
+                  std::variant<std::vector<std::string>>& resp) {
             if (e)
             {
-                // No state sensors attached. 
+                // No state sensors attached.
                 return;
             }
             std::vector<std::string>* data =
@@ -3304,10 +3436,10 @@ inline void
                             std::string, std::vector<std::string>>>& object) {
                         if (ec)
                         {
-                            // The path does not implement any state interfaces. 
+                            // The path does not implement any state interfaces.
                             return;
                         }
-                       
+
                         for (const auto& [service, interfaces] : object)
                         {
                             if (std::find(
@@ -3316,7 +3448,7 @@ inline void
                                 interfaces.end())
                             {
                                 getProcessorPerformanceData(aResp, service,
-                                                         sensorPath);
+                                                            sensorPath);
                             }
                             if (std::find(
                                     interfaces.begin(), interfaces.end(),
@@ -3325,7 +3457,7 @@ inline void
                             {
                                 getPowerSystemInputsData(aResp, service,
                                                          sensorPath);
-                            }                            
+                            }
                         }
                     },
                     "xyz.openbmc_project.ObjectMapper",
@@ -3333,6 +3465,8 @@ inline void
                     "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
                     sensorInterfaces);
             }
+
+            getPowerBreakThrottle(aResp, service, objPath);
         },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
         "org.freedesktop.DBus.Properties", "Get",
@@ -3406,9 +3540,9 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getSensorMetric(aResp, service, path);
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES                    
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getStateSensorMetric(aResp, service, path);
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES                    
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 }
                 return;
             }
