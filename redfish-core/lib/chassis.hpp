@@ -311,6 +311,21 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         .jsonValue["Oem"]["Nvidia"]["HardwareWriteProtected"] =
                         *value;
                 }
+
+                if (property.first == "WriteProtectedControl")
+                {
+                    const bool* value = std::get_if<bool>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for hardware write protected control";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res
+                        .jsonValue["Oem"]["Nvidia"]["HardwareWriteProtectedControl"] =
+                        *value;
+                }
             }
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
