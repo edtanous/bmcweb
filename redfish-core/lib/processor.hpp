@@ -1663,8 +1663,9 @@ inline void getEccModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 }
 
 inline void getEccPendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& cpuId, const std::string& service,
-                           const std::string& objPath)
+                              const std::string& cpuId,
+                              const std::string& service,
+                              const std::string& objPath)
 {
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](const boost::system::error_code ec,
@@ -1697,8 +1698,9 @@ inline void getEccPendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 inline void getMigPendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& cpuId, const std::string& service,
-                           const std::string& objPath)
+                              const std::string& cpuId,
+                              const std::string& service,
+                              const std::string& objPath)
 
 {
     crow::connections::systemBus->async_method_call(
@@ -1722,11 +1724,12 @@ inline void getMigPendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         messages::internalError(aResp->res);
                         return;
                     }
-                    if(*pendingMigState)
+                    if (*pendingMigState)
                     {
                         json["Oem"]["Nvidia"]["@odata.type"] =
                             "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
-                        json["Oem"]["Nvidia"]["MIGModeEnabled"]  = *pendingMigState;
+                        json["Oem"]["Nvidia"]["MIGModeEnabled"] =
+                            *pendingMigState;
                     }
                 }
             }
@@ -1889,6 +1892,105 @@ inline void getProcessorMigModeData(
     BMCWEB_LOG_DEBUG << " get GpuMIGMode data";
     getMigModeData(aResp, cpuId, service, objPath);
 }
+
+inline void getProcessorRemoteDebugState(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec,
+                         const OperatingConfigProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            nlohmann::json& json = aResp->res.jsonValue;
+            for (const auto& property : properties)
+            {
+                json["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+                if (property.first == "Enabled")
+                {
+                    const bool* state = std::get_if<bool>(&property.second);
+                    if (state == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "Get Performance Value property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    json["Oem"]["Nvidia"]["RemoteDebugEnabled"] = *state;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Control.Processor.RemoteDebug");
+}
+
+inline void getRemoteDebugState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                const std::string& service,
+                                const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, service,
+         objPath](const boost::system::error_code& e,
+                  std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                // No state effecter attached.
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const std::string& effecterPath : *data)
+            {
+                BMCWEB_LOG_DEBUG << "State Effecter Object Path "
+                                 << effecterPath;
+
+                const std::array<const char*, 1> effecterInterfaces = {
+                    "xyz.openbmc_project.Control.Processor.RemoteDebug"};
+                // Process sensor reading
+                crow::connections::systemBus->async_method_call(
+                    [aResp, effecterPath](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                        if (ec)
+                        {
+                            // The path does not implement any state interfaces.
+                            return;
+                        }
+
+                        for (const auto& [service, interfaces] : object)
+                        {
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.Control.Processor.RemoteDebug") !=
+                                interfaces.end())
+                            {
+                                getProcessorRemoteDebugState(aResp, service,
+                                                             effecterPath);
+                            }
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject",
+                    effecterPath, effecterInterfaces);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/all_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
@@ -1913,6 +2015,9 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getCpuDataByService(aResp, processorId, serviceName,
                                     objectPath);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                getRemoteDebugState(aResp, serviceName, objectPath);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             }
             else if (interface ==
                      "xyz.openbmc_project.Inventory.Item.Accelerator")
@@ -2078,6 +2183,137 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
         "Set", "com.nvidia.MigMode", "MIGModeEnabled",
         std::variant<bool>(migMode));
+}
+
+/**
+ * Do basic validation of the input data, and then set the D-Bus property.
+ *
+ * @param[in,out]   resp                Async HTTP response.
+ * @param[in]       service             Service for effecter object.
+ * @param[in]       objPath             Path of effecter object to modify.
+ * @param[in]       remoteDebugEnables  New property value to apply.
+ */
+inline void setProcessorRemoteDebugState(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath, const bool remoteDebugEnabled)
+{
+    // Set the property, with handler to check error responses
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath, remoteDebugEnabled](const boost::system::error_code ec,
+                                             sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set Processor Remote Debug successed";
+                messages::success(aResp->res);
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "Set Processor Remote Debug failed: " << ec;
+
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(aResp->res);
+            }
+            else
+            {
+                messages::internalError(aResp->res);
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Control.Processor.RemoteDebug", "Enabled",
+        std::variant<bool>(remoteDebugEnabled));
+}
+
+/**
+ * Handle the PATCH operation of the RemoteDebugEnabled Property.
+ *
+ * @param[in,out]   resp                Async HTTP response.
+ * @param[in]       processorId         Processor's Id.
+ * @param[in]       remoteDebugEnables  New property value to apply.
+ * @param[in]       cpuObjectPath       Path of CPU object to modify.
+ */
+inline void patchRemoteDebug(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& processorId,
+                             const bool remoteDebugEnabled,
+                             const std::string& cpuObjectPath)
+{
+    BMCWEB_LOG_DEBUG << "Set Remote Debug "
+                     << std::to_string(remoteDebugEnabled)
+                     << " on CPU: " << processorId;
+
+    // Find remote debug effecters from all effecters attached to "all_controls"
+    crow::connections::systemBus->async_method_call(
+        [aResp,
+         remoteDebugEnabled](const boost::system::error_code& e,
+                             std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                // No state effecter attached.
+                BMCWEB_LOG_DEBUG << " No state effecter attached. ";
+                messages::internalError(aResp->res);
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const std::string& effecterPath : *data)
+            {
+                BMCWEB_LOG_DEBUG << "State Effecter Object Path "
+                                 << effecterPath;
+
+                const std::array<const char*, 1> effecterInterfaces = {
+                    "xyz.openbmc_project.Control.Processor.RemoteDebug"};
+                // Process sensor reading
+                crow::connections::systemBus->async_method_call(
+                    [aResp, effecterPath, remoteDebugEnabled](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                        if (ec)
+                        {
+                            // The path does not implement any state interfaces.
+                            BMCWEB_LOG_DEBUG
+                                << " No any state effecter interface. ";
+                            messages::internalError(aResp->res);
+                            return;
+                        }
+
+                        for (const auto& [service, interfaces] : object)
+                        {
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.Control.Processor.RemoteDebug") !=
+                                interfaces.end())
+                            {
+                                setProcessorRemoteDebugState(
+                                    aResp, service, effecterPath,
+                                    remoteDebugEnabled);
+                            }
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject",
+                    effecterPath, effecterInterfaces);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", cpuObjectPath + "/all_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
@@ -2700,9 +2936,12 @@ inline void requestRoutesProcessor(App& app)
                                              "Nvidia", oemNvidiaObject))
             {
                 std::optional<bool> migMode;
-                if (oemNvidiaObject && redfish::json_util::readJson(
-                                           *oemNvidiaObject, asyncResp->res,
-                                           "MIGModeEnabled", migMode))
+                std::optional<bool> remoteDebugEnabled;
+
+                if (oemNvidiaObject &&
+                    redfish::json_util::readJson(
+                        *oemNvidiaObject, asyncResp->res, "MIGModeEnabled",
+                        migMode, "RemoteDebugEnabled", remoteDebugEnabled))
                 {
                     if (migMode)
                     {
@@ -2715,6 +2954,23 @@ inline void requestRoutesProcessor(App& app)
                                       const MapperServiceMap& serviceMap) {
                                 patchMigMode(asyncResp1, processorId1, *migMode,
                                              objectPath, serviceMap);
+                            });
+                    }
+
+                    if (remoteDebugEnabled)
+                    {
+                        redfish::processor_utils::getProcessorObject(
+                            asyncResp, processorId,
+                            [remoteDebugEnabled](
+                                const std::shared_ptr<bmcweb::AsyncResp>&
+                                    asyncResp,
+                                const std::string& processorId,
+                                const std::string& objectPath,
+                                [[maybe_unused]] const MapperServiceMap&
+                                    serviceMap) {
+                                patchRemoteDebug(asyncResp, processorId,
+                                                 *remoteDebugEnabled,
+                                                 objectPath);
                             });
                     }
                 }
@@ -3047,8 +3303,8 @@ inline void requestRoutesProcessorMetrics(App& app)
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& processorId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId) {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -3327,8 +3583,8 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& processorId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId) {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -3389,14 +3645,13 @@ inline void
                         getEccPendingData(aResp, processorId, service, path);
                     }
 
-		    #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     if (std::find(interfaces.begin(), interfaces.end(),
-                                  "com.nvidia.MigMode") !=
-                        interfaces.end())
+                                  "com.nvidia.MigMode") != interfaces.end())
                     {
                         getMigPendingData(aResp, processorId, service, path);
                     }
-		    #endif //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
                     if (std::find(interfaces.begin(), interfaces.end(),
                                   "xyz.openbmc_project.Software.ApplyTime") !=
@@ -3522,8 +3777,8 @@ inline void requestRoutesProcessorSettings(App& app)
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& processorId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId) {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -3687,8 +3942,8 @@ inline void requestRoutesProcessorPortCollection(App& app)
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& processorId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId) {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -3902,11 +4157,11 @@ inline void requestRoutesProcessorPort(App& app)
                  "Ports/<str>")
         .privileges(redfish::privileges::getProcessor)
         .methods(
-            boost::beast::http::verb::get)([&app](const crow::Request& req,
-                                              const std::shared_ptr<
-                                                  bmcweb::AsyncResp>& asyncResp,
-                                              const std::string& processorId,
-                                              const std::string& port) {
+            boost::beast::http::verb::
+                get)([&app](const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId,
+                            const std::string& port) {
             if (!redfish::setUpRedfishRoute(app, req, asyncResp))
             {
                 return;
@@ -4295,11 +4550,11 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                  "Ports/<str>/Metrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(
-            boost::beast::http::verb::get)([&app](const crow::Request& req,
-                                              const std::shared_ptr<
-                                                  bmcweb::AsyncResp>& asyncResp,
-                                              const std::string& processorId,
-                                              const std::string& port) {
+            boost::beast::http::verb::
+                get)([&app](const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId,
+                            const std::string& port) {
             if (!redfish::setUpRedfishRoute(app, req, asyncResp))
             {
                 return;
