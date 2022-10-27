@@ -185,6 +185,19 @@ inline nlohmann::json operationTransitionedToJob(const std::string& arg1)
          "Follow the referenced job and monitor the job for further updates."}};
 }
 
+inline nlohmann::json resourceErrorsDetected(const std::string& arg1,
+                                             const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "ResourceEvent.1.1.0.ResourceErrorsDetected"},
+        {"Message", "The resource property '" + arg1 +
+                        "' has detected errors of type '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "Critical"},
+        {"Resolution", "None."}};
+}
+
 inline nlohmann::json getUpdateMessage(const std::string& msgId,
                                        std::vector<std::string>& args)
 {
@@ -256,6 +269,10 @@ inline nlohmann::json getUpdateMessage(const std::string& msgId,
     if (msgId == "Update.1.0.OperationTransitionedToJob")
     {
         return operationTransitionedToJob(arg0);
+    }
+    if (msgId == "ResourceEvent.1.1.0.ResourceErrorsDetected")
+    {
+        return resourceErrorsDetected(arg0, arg1);
     }
 
     return {};

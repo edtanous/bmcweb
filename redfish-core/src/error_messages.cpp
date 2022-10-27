@@ -1686,10 +1686,16 @@ nlohmann::json resourceExhaustion(std::string_view arg1)
                   std::to_array({arg1}));
 }
 
-void resourceExhaustion(crow::Response& res, std::string_view arg1)
+void resourceExhaustion(crow::Response& res, const std::string& arg1,
+                        const std::string& resolution)
 {
     res.result(boost::beast::http::status::service_unavailable);
-    addMessageToErrorJson(res.jsonValue, resourceExhaustion(arg1));
+    nlohmann::json responseMessage = resourceExhaustion(arg1);
+    if (!resolution.empty())
+    {
+        responseMessage["Resolution"] = resolution;
+    }
+    addMessageToErrorJson(res.jsonValue, responseMessage);
 }
 
 /**
