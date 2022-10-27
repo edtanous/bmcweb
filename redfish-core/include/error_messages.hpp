@@ -907,7 +907,8 @@ void propertyMissing(crow::Response& res, const std::string& arg1);
  * @returns Message ResourceExhaustion formatted to JSON */
 nlohmann::json resourceExhaustion(const std::string& arg1);
 
-void resourceExhaustion(crow::Response& res, const std::string& arg1);
+void resourceExhaustion(crow::Response& res, const std::string& arg1,
+                        const std::string& resolution = {});
 
 /**
  * @brief Formats AccountModified message into JSON

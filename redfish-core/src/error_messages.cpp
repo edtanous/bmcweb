@@ -2062,10 +2062,16 @@ nlohmann::json resourceExhaustion(const std::string& arg1)
                        "resubmit the request."}};
 }
 
-void resourceExhaustion(crow::Response& res, const std::string& arg1)
+void resourceExhaustion(crow::Response& res, const std::string& arg1,
+                        const std::string& resolution)
 {
     res.result(boost::beast::http::status::service_unavailable);
-    addMessageToErrorJson(res.jsonValue, resourceExhaustion(arg1));
+    nlohmann::json responseMessage = resourceExhaustion(arg1);
+    if (!resolution.empty())
+    {
+        responseMessage["Resolution"] = resolution;
+    }
+    addMessageToErrorJson(res.jsonValue, responseMessage);
 }
 
 /**

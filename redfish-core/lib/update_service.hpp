@@ -77,6 +77,7 @@ static void handleLogMatchCallback(sdbusplus::message::message& m,
         {
             std::string rfMessage = "";
             std::string resolution = "";
+            std::string messageNamespace = "";
             std::vector<std::string> rfArgs;
             const std::vector<std::string>* vData = nullptr;
             for (auto& propertyMap : interface.second)
@@ -99,6 +100,10 @@ static void handleLogMatchCallback(sdbusplus::message::message& m,
                             boost::split(rfArgs, fields[1],
                                          boost::is_any_of(","));
                         }
+                        else if (fields[0] == "namespace")
+                        {
+                            messageNamespace = fields[1];
+                        }
                     }
                 }
                 if (propertyMap.first == "Resolution")
@@ -114,8 +119,7 @@ static void handleLogMatchCallback(sdbusplus::message::message& m,
             /* we need to have found the id, data, this image needs to
                correspond to the image we are working with right now and the
                message should be update related */
-            if (vData == nullptr ||
-                !boost::algorithm::starts_with(rfMessage, "Update.1.0"))
+            if (vData == nullptr || messageNamespace != "FWUpdate")
             {
                 // something is invalid
                 BMCWEB_LOG_DEBUG << "Got invalid log message";
@@ -434,7 +438,10 @@ static bool monitorForSoftwareAvailable(
     {
         if (asyncResp)
         {
-            messages::serviceTemporarilyUnavailable(asyncResp->res, "30");
+            std::string retryTimeSeconds =
+                std::to_string((updateServiceTaskTimeout * 60));
+            messages::serviceTemporarilyUnavailable(asyncResp->res,
+                                                    retryTimeSeconds);
         }
         return true;
     }
@@ -1162,8 +1169,13 @@ inline void requestRoutesUpdateService(App& app)
                     {
                         BMCWEB_LOG_ERROR << "Large image size: "
                                          << req.body.size();
+                        std::string resolution =
+                            "Firmware package size is greater than allowed "
+                            "size. Make sure package size is less than "
+                            "UpdateService.MaxImageSizeBytes property and "
+                            "retry the firmware update operation.";
                         messages::resourceExhaustion(
-                            asyncResp->res, "/redfish/v1/UpdateService/");
+                            asyncResp->res, "/redfish/v1/UpdateService/", resolution);
                     }
                     return;
                 }
