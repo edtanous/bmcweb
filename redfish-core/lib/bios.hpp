@@ -245,8 +245,7 @@ static void
             const boost::system::error_code ec, const GetObjectType& objType) {
             if (ec || objType.empty())
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
-                messages::internalError(asyncResp->res);
+                BMCWEB_LOG_DEBUG << "No object for path " << biosConfigObj;
                 return;
             }
 
@@ -303,8 +302,7 @@ static void
                     const GetObjectType& objType) {
             if (ec || objType.empty())
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
-                messages::internalError(asyncResp->res);
+                BMCWEB_LOG_DEBUG << "No object for path " << biosConfigObj;
                 return;
             }
 
@@ -378,8 +376,7 @@ static void
                     const GetObjectType& objType) {
             if (ec || objType.empty())
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
-                messages::internalError(asyncResp->res);
+                BMCWEB_LOG_DEBUG << "No object for path " << biosConfigObj;
                 return;
             }
 
@@ -698,8 +695,7 @@ static void
                     const GetObjectType& objType) {
             if (ec || objType.empty())
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
-                messages::internalError(asyncResp->res);
+                BMCWEB_LOG_DEBUG << "No object for path " << biosConfigObj;
                 return;
             }
 
@@ -827,8 +823,7 @@ static void
                                      const GetObjectType& objType) {
             if (ec || objType.empty())
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
-                messages::internalError(asyncResp->res);
+                BMCWEB_LOG_DEBUG << "No object for path " << biosConfigObj;
                 return;
             }
 
@@ -1062,7 +1057,7 @@ static void getBiosAttributeRegistry(
                     const GetObjectType& objType) {
             if (ec || objType.empty())
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
+                BMCWEB_LOG_DEBUG << "No object for path " << biosConfigObj;
                 return;
             }
 
