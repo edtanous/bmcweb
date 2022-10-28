@@ -1,5 +1,6 @@
 #pragma once
 
+<<<<<<< HEAD
 namespace redfish
 {
 
@@ -179,6 +180,29 @@ inline std::string toLocationType(const std::string& location)
     }
     return "";
 }
+=======
+#include "logging.hpp"
+
+#include <sdbusplus/unpack_properties.hpp>
+
+namespace redfish
+{
+namespace dbus_utils
+{
+
+struct UnpackErrorPrinter
+{
+    void operator()(const sdbusplus::UnpackErrorReason reason,
+                    const std::string& property) const noexcept
+    {
+        BMCWEB_LOG_DEBUG
+            << "DBUS property error in property: " << property << ", reason: "
+            << static_cast<
+                   std::underlying_type_t<sdbusplus::UnpackErrorReason>>(
+                   reason);
+    }
+};
+>>>>>>> origin/master
 
 } // namespace dbus_utils
 } // namespace redfish

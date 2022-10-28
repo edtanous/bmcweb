@@ -2,7 +2,6 @@
 
 #include <app.hpp>
 #include <boost/beast/http/fields.hpp>
-#include <boost/container/flat_map.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -10,7 +9,6 @@
 #include <http_request.hpp>
 #include <http_response.hpp>
 #include <nlohmann/json.hpp>
-#include <pam_authenticate.hpp>
 #include <sessions.hpp>
 
 #include <filesystem>
@@ -252,26 +250,33 @@ class ConfigFile
         const auto& c = SessionStore::getInstance().getAuthMethodsConfig();
         const auto& eventServiceConfig =
             EventServiceStore::getInstance().getEventServiceConfig();
-        nlohmann::json data{
-            {"auth_config",
-             {{"XToken", c.xtoken},
-              {"Cookie", c.cookie},
-              {"SessionToken", c.sessionToken},
-              {"BasicAuth", c.basic},
-              {"TLS", c.tls}}
+        nlohmann::json::object_t data;
+        nlohmann::json& authConfig = data["auth_config"];
 
-            },
-            {"eventservice_config",
-             {{"ServiceEnabled", eventServiceConfig.enabled},
-              {"DeliveryRetryAttempts", eventServiceConfig.retryAttempts},
-              {"DeliveryRetryIntervalSeconds",
-               eventServiceConfig.retryTimeoutInterval}}
+        authConfig["XToken"] = c.xtoken;
+        authConfig["Cookie"] = c.cookie;
+        authConfig["SessionToken"] = c.sessionToken;
+        authConfig["BasicAuth"] = c.basic;
+        authConfig["TLS"] = c.tls;
 
+<<<<<<< HEAD
             },
             {"system_uuid", systemUuid},
             {"tls_auth_enabled", tlsAuthToWrite},
             {"revision", jsonRevision},
             {"timeout", SessionStore::getInstance().getTimeoutInSeconds()}};
+=======
+        nlohmann::json& eventserviceConfig = data["eventservice_config"];
+        eventserviceConfig["ServiceEnabled"] = eventServiceConfig.enabled;
+        eventserviceConfig["DeliveryRetryAttempts"] =
+            eventServiceConfig.retryAttempts;
+        eventserviceConfig["DeliveryRetryIntervalSeconds"] =
+            eventServiceConfig.retryTimeoutInterval;
+
+        data["system_uuid"] = systemUuid;
+        data["revision"] = jsonRevision;
+        data["timeout"] = SessionStore::getInstance().getTimeoutInSeconds();
+>>>>>>> origin/master
 
         nlohmann::json& sessions = data["sessions"];
         sessions = nlohmann::json::array();
@@ -280,16 +285,17 @@ class ConfigFile
             if (p.second->persistence !=
                 persistent_data::PersistenceType::SINGLE_REQUEST)
             {
-                sessions.push_back({
-                    {"unique_id", p.second->uniqueId},
-                    {"session_token", p.second->sessionToken},
-                    {"username", p.second->username},
-                    {"csrf_token", p.second->csrfToken},
-                    {"client_ip", p.second->clientIp},
-#ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
-                    {"client_id", p.second->clientId},
-#endif
-                });
+                nlohmann::json::object_t session;
+                session["unique_id"] = p.second->uniqueId;
+                session["session_token"] = p.second->sessionToken;
+                session["username"] = p.second->username;
+                session["csrf_token"] = p.second->csrfToken;
+                session["client_ip"] = p.second->clientIp;
+                if (p.second->clientId)
+                {
+                    session["client_id"] = *p.second->clientId;
+                }
+                sessions.push_back(std::move(session));
             }
         }
         nlohmann::json& subscriptions = data["subscriptions"];
@@ -305,12 +311,32 @@ class ConfigFile
                 continue;
             }
 
+<<<<<<< HEAD
             subscriptions.push_back(std::move(subValue->toJson()));
+=======
+            nlohmann::json::object_t subscription;
+
+            subscription["Id"] = subValue->id;
+            subscription["Context"] = subValue->customText;
+            subscription["DeliveryRetryPolicy"] = subValue->retryPolicy;
+            subscription["Destination"] = subValue->destinationUrl;
+            subscription["EventFormatType"] = subValue->eventFormatType;
+            subscription["HttpHeaders"] = std::move(headers);
+            subscription["MessageIds"] = subValue->registryMsgIds;
+            subscription["Protocol"] = subValue->protocol;
+            subscription["RegistryPrefixes"] = subValue->registryPrefixes;
+            subscription["ResourceTypes"] = subValue->resourceTypes;
+            subscription["SubscriptionType"] = subValue->subscriptionType;
+            subscription["MetricReportDefinitions"] =
+                subValue->metricReportDefinitions;
+
+            subscriptions.push_back(std::move(subscription));
+>>>>>>> origin/master
         }
         persistentFile << data;
     }
 
-    std::string systemUuid{""};
+    std::string systemUuid;
 };
 
 inline ConfigFile& getConfig()

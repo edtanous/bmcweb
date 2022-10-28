@@ -72,6 +72,8 @@ Commonly used methods that fall into this pattern:
 - nlohmann::json::get
 - nlohmann::json::get\_ref
 - nlohmann::json::get\_to
+- nlohmann::json::operator\<\<
+- nlohmann::json::operator\>\>
 - std::filesystem::create\_directory
 - std::filesystem::rename
 - std::filesystem::file\_size
@@ -79,12 +81,18 @@ Commonly used methods that fall into this pattern:
 - std::stol
 - std::stoll
 
-#### special/strange case:
+#### Special note: JSON
 
-nlohmann::json::parse by default throws on failure, but also accepts a optional
-argument that causes it to not throw.  Please consult the other examples in the
-code for how to handle errors.
+`nlohmann::json::parse` by default
+[throws](https://json.nlohmann.me/api/basic_json/parse/) on failure, but
+also accepts an optional argument that causes it to not throw: set the 3rd
+argument to `false`.
 
+`nlohmann::json::dump` by default
+[throws](https://json.nlohmann.me/api/basic_json/dump/) on failure, but also
+accepts an optional argument that causes it to not throw: set the 4th
+argument to `replace`.  Although `ignore` preserves content 1:1, `replace`
+is preferred from a security point of view.
 
 #### Special note: Boost
 there is a whole class of boost asio functions that provide both a method that
@@ -271,3 +279,32 @@ especially when relying on user-driven data.
 The above methods tend to be misused to accept user data and parse various
 fields from it.  In practice, there tends to be better, purpose built methods
 for removing just the field you need.
+
+### 13. Complete replacement of the response object
+
+```
+void getMembers(crow::Response& res){
+  res.jsonValue = {{"Value", 2}};
+}
+```
+
+In many cases, bmcweb is doing multiple async actions in parallel, and
+orthogonal keys within the Response object might be filled in from another
+task.  Completely replacing the json object can lead to convoluted situations
+where the output of the response is dependent on the _order_ of the asynchronous
+actions completing, which cannot be guaranteed, and has many time caused bugs.
+
+```
+void getMembers(crow::Response& res){
+  res.jsonValue["Value"] = 2;
+}
+```
+
+As an added benefit, this code is also more efficient, as it avoids the
+intermediate object construction and the move, and as a result, produces smaller
+binaries.
+
+Note, another form of this error involves calling nlohmann::json::reset(), to
+clear an object that's already been filled in.  This has the potential to clear
+correct data that was already filled in from other sources.
+

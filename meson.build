@@ -66,13 +66,14 @@ feature_map = {
   'google-api'                                  : '-DBMCWEB_ENABLE_GOOGLE_API',
   'host-serial-socket'                          : '-DBMCWEB_ENABLE_HOST_SERIAL_WEBSOCKET',
   'ibm-management-console'                      : '-DBMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE',
-  'insecure-disable-auth'                       : '-DBMCWEB_INSECURE_DISABLE_AUTHENTICATION',
+  'insecure-disable-auth'                       : '-DBMCWEB_INSECURE_DISABLE_AUTHX',
   'insecure-disable-csrf'                       : '-DBMCWEB_INSECURE_DISABLE_CSRF_PREVENTION',
   'insecure-disable-ssl'                        : '-DBMCWEB_INSECURE_DISABLE_SSL',
   'insecure-push-style-notification'            : '-DBMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING',
   'insecure-tftp-update'                        : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
   'kvm'                                         : '-DBMCWEB_ENABLE_KVM' ,
   'mutual-tls-auth'                             : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
+  'redfish-aggregation'                         : '-DBMCWEB_ENABLE_REDFISH_AGGREGATION',
   'redfish-allow-deprecated-power-thermal'      : '-DBMCWEB_ALLOW_DEPRECATED_POWER_THERMAL',
   'redfish-bmc-journal'                         : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
   'redfish-cpu-log'                             : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
@@ -83,7 +84,9 @@ feature_map = {
   'redfish-host-logger'                         : '-DBMCWEB_ENABLE_REDFISH_HOST_LOGGER',
   'redfish-dbus-event'                          : '-DBMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH',
   'redfish-new-powersubsystem-thermalsubsystem' : '-DBMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM',
+  'redfish-oem-manager-fan-data'                : '-DBMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA',
   'redfish-provisioning-feature'                : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
+  'redfish-post-to-old-updateservice'           : '-DBMCWEB_ENABLE_REDFISH_UPDATESERVICE_OLD_POST_URL',
   'redfish'                                     : '-DBMCWEB_ENABLE_REDFISH',
   'rest'                                        : '-DBMCWEB_ENABLE_DBUS_REST',
   'session-auth'                                : '-DBMCWEB_ENABLE_SESSION_AUTHENTICATION',
@@ -115,6 +118,11 @@ foreach option_key,option_value : feature_map
     if(option_key == 'mutual-tls-auth' or option_key == 'insecure-disable-ssl')
       if(get_option('insecure-disable-ssl').disabled() or get_option('mutual-tls-auth').disabled())
         add_project_arguments(option_value,language:'cpp')
+        summary(option_key,option_value, section : 'Enabled Features')
+      endif
+    elif (option_key in ['basic-auth', 'cookie-auth', 'session-auth', 'xtoken-auth', 'mutual-tls-auth'])
+      if (get_option('insecure-disable-auth').disabled())
+        add_project_arguments(option_value, language:'cpp')
         summary(option_key,option_value, section : 'Enabled Features')
       endif
     else
@@ -181,6 +189,8 @@ if (cxx.get_id() == 'gcc' and cxx.version().version_compare('>8.0'))
      '-Wunused-parameter',
      '-Wnull-dereference',
      '-Wdouble-promotion',
+     '-Wshadow',
+     '-Wno-psabi',
      ]),
     language:'cpp')
 endif
@@ -250,7 +260,10 @@ cxx.get_supported_arguments([
   '-DBOOST_ASIO_SEPARATE_COMPILATION',
   '-DBOOST_BEAST_SEPARATE_COMPILATION',
   '-DBOOST_BEAST_USE_STD_STRING_VIEW',
-  '-DJSON_NOEXCEPTION'
+  '-DBOOST_EXCEPTION_DISABLE',
+  '-DBOOST_URL_NO_SOURCE_LOCATION',
+  '-DJSON_NOEXCEPTION',
+  '-DOPENSSL_NO_FILENAMES',
 ]),
 language : 'cpp')
 
@@ -271,13 +284,11 @@ if not sdbusplus.found()
 endif
 bmcweb_dependencies += sdbusplus
 
-if get_option('rest').enabled()
-  tinyxml = dependency('tinyxml2',
-      default_options: ['tests=false'],
-      include_type: 'system',
-  )
-  bmcweb_dependencies += tinyxml
-endif
+tinyxml = dependency('tinyxml2',
+    default_options: ['tests=false'],
+    include_type: 'system',
+)
+bmcweb_dependencies += tinyxml
 
 systemd = dependency('systemd')
 zlib = dependency('zlib')
@@ -292,10 +303,10 @@ else
 endif
 bmcweb_dependencies += nlohmann_json
 
-boost = dependency('boost',version : '>=1.77.0', required : false, include_type: 'system')
+boost = dependency('boost',version : '>=1.79.0', required : false, include_type: 'system')
 if not boost.found()
   subproject('boost', required: false)
-  boost_inc = include_directories('subprojects/boost_1_77_0/', is_system:true)
+  boost_inc = include_directories('subprojects/boost_1_80_0/', is_system:true)
   boost  = declare_dependency(include_directories : boost_inc)
   boost = boost.as_system('system')
 endif
@@ -323,6 +334,7 @@ if get_option('tests').enabled()
   gmock = gmock.as_system('system')
 endif
 
+<<<<<<< HEAD
 # Gather the Configuration data
 
 conf_data = configuration_data()
@@ -354,6 +366,8 @@ configure_file(input: 'bmcweb_config.h.in',
 
 # Configure and install systemd unit files
 
+=======
+>>>>>>> origin/master
 systemd_system_unit_dir = systemd.get_variable(pkgconfig: 'systemdsystemunitdir')
 
 bindir = get_option('prefix') + '/' +get_option('bindir')
@@ -364,37 +378,25 @@ summary({
           'systemd unit directory' : systemd_system_unit_dir
         }, section : 'Directories')
 
-configure_file(input : 'bmcweb.socket.in',
-               output : 'bmcweb.socket',
-               install_dir: systemd_system_unit_dir,
-               configuration: conf_data,
-               install : true)
-
-configure_file(input : 'bmcweb.service.in',
-               output : 'bmcweb.service',
-               install_dir: systemd_system_unit_dir,
-               configuration: conf_data,
-               install : true)
-
-# Copy pam-webserver to etc/pam.d
-configure_file(input : 'pam-webserver',
-               output : 'webserver',
-               copy : true,
-               install_dir: '/etc/pam.d',
-               install : true)
-
 install_subdir('static', install_dir : 'share/www', strip_directory : true)
 
-# Source files
+# Config subdirectory
 
-srcfiles_bmcweb = [
+subdir('config')
+bmcweb_dependencies += conf_h_dep
+
+# Source files
+fs = import('fs')
+
+srcfiles_bmcweb = files(
   'redfish-core/src/error_messages.cpp',
   'redfish-core/src/utils/json_utils.cpp',
   'src/boost_asio_ssl.cpp',
   'src/boost_asio.cpp',
   'src/boost_beast.cpp',
   'src/boost_url.cpp',
-]
+  'src/dbus_singleton.cpp',
+)
 
 # Generate the bmcweb executable
 executable(
@@ -407,6 +409,7 @@ executable(
   install_dir:bindir
 )
 
+<<<<<<< HEAD
 srcfiles_unittest = [
   'http/ut/utility_test.cpp',
   'include/ut/dbus_utility_test.cpp',
@@ -426,6 +429,34 @@ srcfiles_unittest = [
   'redfish-core/ut/event_service_test.cpp',
   'redfish-core/ut/health_rollup_test.cpp'
 ]
+=======
+srcfiles_unittest = files(
+  'test/http/crow_getroutes_test.cpp',
+  'test/http/router_test.cpp',
+  'test/http/utility_test.cpp',
+  'test/include/dbus_utility_test.cpp',
+  'test/include/google/google_service_root_test.cpp',
+  'test/include/http_utility_test.cpp',
+  'test/include/human_sort_test.cpp',
+  'test/include/ibm/configfile_test.cpp',
+  'test/include/ibm/lock_test.cpp',
+  'test/include/multipart_test.cpp',
+  'test/include/openbmc_dbus_rest_test.cpp',
+  'test/redfish-core/include/privileges_test.cpp',
+  'test/redfish-core/include/registries_test.cpp',
+  'test/redfish-core/include/utils/hex_utils_test.cpp',
+  'test/redfish-core/include/utils/ip_utils_test.cpp',
+  'test/redfish-core/include/utils/json_utils_test.cpp',
+  'test/redfish-core/include/utils/query_param_test.cpp',
+  'test/redfish-core/include/utils/stl_utils_test.cpp',
+  'test/redfish-core/include/utils/time_utils_test.cpp',
+  'test/redfish-core/lib/chassis_test.cpp',
+  'test/redfish-core/lib/log_services_dump_test.cpp',
+  'test/redfish-core/lib/service_root_test.cpp',
+  'test/redfish-core/lib/thermal_subsystem_test.cpp',
+  'test/redfish-core/lib/power_subsystem_test.cpp',
+)
+>>>>>>> origin/master
 
 if(get_option('tests').enabled())
     ut_incdir = include_directories(
@@ -436,6 +467,7 @@ if(get_option('tests').enabled())
         'http'
     )
     # generate the test executable
+<<<<<<< HEAD
     ut_bin = executable(
       'bmcweb_unit_test',
       srcfiles_unittest + srcfiles_bmcweb,
@@ -447,4 +479,19 @@ if(get_option('tests').enabled())
       ]
     )
     test('bmcweb_unit_test', ut_bin)
+=======
+    foreach test_src : srcfiles_unittest
+      test_bin = executable(
+        fs.stem(test_src),
+        srcfiles_bmcweb + test_src,
+        include_directories : incdir,
+        install_dir: bindir,
+        dependencies: bmcweb_dependencies + [
+          gtest,
+          gmock,
+        ]
+      )
+      test(fs.stem(test_src), test_bin)
+    endforeach
+>>>>>>> origin/master
 endif

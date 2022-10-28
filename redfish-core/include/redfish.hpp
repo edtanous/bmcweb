@@ -15,6 +15,7 @@
 */
 #pragma once
 
+<<<<<<< HEAD
 #include "../lib/account_service.hpp"
 #include "../lib/assembly.hpp"
 #include "../lib/bios.hpp"
@@ -56,6 +57,42 @@
 #include "../lib/trigger.hpp"
 #include "../lib/update_service.hpp"
 #include "../lib/virtual_media.hpp"
+=======
+#include "account_service.hpp"
+#include "bios.hpp"
+#include "cable.hpp"
+#include "certificate_service.hpp"
+#include "chassis.hpp"
+#include "ethernet.hpp"
+#include "event_service.hpp"
+#include "hypervisor_system.hpp"
+#include "log_services.hpp"
+#include "manager_diagnostic_data.hpp"
+#include "managers.hpp"
+#include "memory.hpp"
+#include "message_registries.hpp"
+#include "metric_report.hpp"
+#include "metric_report_definition.hpp"
+#include "network_protocol.hpp"
+#include "pcie.hpp"
+#include "power.hpp"
+#include "power_subsystem.hpp"
+#include "processor.hpp"
+#include "redfish_sessions.hpp"
+#include "redfish_v1.hpp"
+#include "roles.hpp"
+#include "sensors.hpp"
+#include "service_root.hpp"
+#include "storage.hpp"
+#include "systems.hpp"
+#include "task.hpp"
+#include "telemetry_service.hpp"
+#include "thermal.hpp"
+#include "thermal_subsystem.hpp"
+#include "trigger.hpp"
+#include "update_service.hpp"
+#include "virtual_media.hpp"
+>>>>>>> origin/master
 
 namespace redfish
 {
@@ -72,7 +109,7 @@ class RedfishService
      *
      * @param[in] app   Crow app on which Redfish will initialize
      */
-    RedfishService(App& app)
+    explicit RedfishService(App& app)
     {
         if (persistent_data::getConfig().isTLSAuthEnabled()) {
                 requestAccountServiceRoutes(app);
@@ -94,29 +131,43 @@ class RedfishService
         requestRoutesThermal(app);
         requestRoutesPower(app);
 #endif
+<<<<<<< HEAD
         requestRoutesThermalSubsystem(app);
         requestRoutesThermalMetrics(app);
 #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
         requestRoutesPowerSubsystem(app);
         requestRoutesPowerSupplyCollection(app);
         requestRoutesPowerSupply(app);
+=======
+#ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
+        requestRoutesPowerSubsystem(app);
+        requestRoutesThermalSubsystem(app);
+>>>>>>> origin/master
 #endif
         requestRoutesManagerCollection(app);
         requestRoutesManager(app);
         requestRoutesManagerResetAction(app);
         requestRoutesManagerResetActionInfo(app);
         requestRoutesManagerResetToDefaultsAction(app);
+        requestRoutesManagerDiagnosticData(app);
         requestRoutesChassisCollection(app);
         requestRoutesChassis(app);
         requestRoutesChassisResetAction(app);
         requestRoutesChassisResetActionInfo(app);
+<<<<<<< HEAD
         requestRoutesEnvironmentMetrics(app);
         requestRoutesProcessorEnvironmentMetrics(app);
         requestRoutesMemoryEnvironmentMetrics(app);
+=======
+        requestRoutesChassisDrive(app);
+        requestRoutesChassisDriveName(app);
+>>>>>>> origin/master
         requestRoutesUpdateService(app);
         requestRoutesStorageCollection(app);
         requestRoutesStorage(app);
         requestRoutesDrive(app);
+        requestRoutesCable(app);
+        requestRoutesCableCollection(app);
 #ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
         requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
@@ -162,6 +213,11 @@ class RedfishService
         requestRoutesBMCDumpEntry(app);
         requestRoutesBMCDumpCreate(app);
         requestRoutesBMCDumpClear(app);
+
+        requestRoutesFaultLogDumpService(app);
+        requestRoutesFaultLogDumpEntryCollection(app);
+        requestRoutesFaultLogDumpEntry(app);
+        requestRoutesFaultLogDumpClear(app);
 #endif
 
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
@@ -242,6 +298,7 @@ class RedfishService
         requestRoutesMessageRegistryFile(app);
         requestRoutesMessageRegistry(app);
 
+<<<<<<< HEAD
         if (persistent_data::getConfig().isTLSAuthEnabled()) {
                 requestRoutesCertificateService(app);
                 requestRoutesCertificateActionGenerateCSR(app);
@@ -254,6 +311,13 @@ class RedfishService
                 requestRoutesTrustStoreCertificateCollection(app);
                 requestRoutesTrustStoreCertificate(app);
         }
+=======
+        requestRoutesCertificateService(app);
+        requestRoutesHTTPSCertificate(app);
+        requestRoutesLDAPCertificate(app);
+        requestRoutesTrustStoreCertificate(app);
+
+>>>>>>> origin/master
         requestRoutesSystemPCIeFunctionCollection(app);
         requestRoutesSystemPCIeFunction(app);
         requestRoutesSystemPCIeDeviceCollection(app);
@@ -304,6 +368,7 @@ class RedfishService
 
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);
+<<<<<<< HEAD
         requestRoutesEROTChassisCertificate(app);
         requestRoutesComponentIntegrity(app);
 
@@ -311,6 +376,11 @@ class RedfishService
 
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
+=======
+
+        // Note, this must be the last route registered
+        requestRoutesRedfish(app);
+>>>>>>> origin/master
     }
 };
 

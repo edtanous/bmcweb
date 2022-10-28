@@ -1,7 +1,7 @@
 #pragma once
 #ifdef BMCWEB_ENABLE_SSL
-#include <boost/container/flat_map.hpp>
 #include <dbus_singleton.hpp>
+#include <dbus_utility.hpp>
 #include <include/dbus_utility.hpp>
 #include <sdbusplus/bus/match.hpp>
 #include <sdbusplus/message/types.hpp>
@@ -11,21 +11,21 @@ namespace crow
 {
 namespace hostname_monitor
 {
-static std::unique_ptr<sdbusplus::bus::match::match> hostnameSignalMonitor;
+static std::unique_ptr<sdbusplus::bus::match_t> hostnameSignalMonitor;
 
 inline void installCertificate(const std::filesystem::path& certPath)
 {
     crow::connections::systemBus->async_method_call(
         [certPath](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Replace Certificate Fail..";
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Replace Certificate Fail..";
+            return;
+        }
 
-            BMCWEB_LOG_INFO << "Replace HTTPs Certificate Success, "
-                               "remove temporary certificate file..";
-            remove(certPath.c_str());
+        BMCWEB_LOG_INFO << "Replace HTTPs Certificate Success, "
+                           "remove temporary certificate file..";
+        remove(certPath.c_str());
         },
         "xyz.openbmc_project.Certs.Manager.Server.Https",
         "/xyz/openbmc_project/certs/server/https/1",
@@ -35,28 +35,27 @@ inline void installCertificate(const std::filesystem::path& certPath)
 inline int onPropertyUpdate(sd_bus_message* m, void* /* userdata */,
                             sd_bus_error* retError)
 {
-    if (retError == nullptr || sd_bus_error_is_set(retError))
+    if (retError == nullptr || (sd_bus_error_is_set(retError) != 0))
     {
         BMCWEB_LOG_ERROR << "Got sdbus error on match";
         return 0;
     }
 
-    sdbusplus::message::message message(m);
+    sdbusplus::message_t message(m);
     std::string iface;
-    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>
-        changedProperties;
+    dbus::utility::DBusPropertiesMap changedProperties;
 
     message.read(iface, changedProperties);
-    auto it = changedProperties.find("HostName");
-    if (it == changedProperties.end())
+    const std::string* hostname = nullptr;
+    for (const auto& propertyPair : changedProperties)
     {
-        return 0;
+        if (propertyPair.first == "HostName")
+        {
+            hostname = std::get_if<std::string>(&propertyPair.second);
+        }
     }
-
-    std::string* hostname = std::get_if<std::string>(&it->second);
     if (hostname == nullptr)
     {
-        BMCWEB_LOG_ERROR << "Unable to read hostname";
         return 0;
     }
 
@@ -101,7 +100,7 @@ inline int onPropertyUpdate(sd_bus_message* m, void* /* userdata */,
 
     ASN1_IA5STRING* asn1 = static_cast<ASN1_IA5STRING*>(
         X509_get_ext_d2i(cert, NID_netscape_comment, nullptr, nullptr));
-    if (asn1)
+    if (asn1 != nullptr)
     {
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         std::string_view comment(reinterpret_cast<const char*>(asn1->data),
@@ -135,7 +134,7 @@ inline void registerHostnameSignal()
          "arg0='xyz.openbmc_project.Network.SystemConfiguration',"
          "member='PropertiesChanged'");
 
-    hostnameSignalMonitor = std::make_unique<sdbusplus::bus::match::match>(
+    hostnameSignalMonitor = std::make_unique<sdbusplus::bus::match_t>(
         *crow::connections::systemBus, propertiesMatchString, onPropertyUpdate,
         nullptr);
 }

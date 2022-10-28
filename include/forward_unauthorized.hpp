@@ -8,38 +8,45 @@ namespace forward_unauthorized
 
 static bool hasWebuiRoute = false;
 
-inline void sendUnauthorized(std::string_view url, std::string_view userAgent,
+inline void sendUnauthorized(std::string_view url,
+                             std::string_view xRequestedWith,
                              std::string_view accept, crow::Response& res)
 {
     // If it's a browser connecting, don't send the HTTP authenticate
     // header, to avoid possible CSRF attacks with basic auth
-    if (http_helpers::requestPrefersHtml(accept))
+    if (http_helpers::isContentTypeAllowed(
+            accept, http_helpers::ContentType::HTML, false /*allowWildcard*/))
     {
         // If we have a webui installed, redirect to that login page
         if (hasWebuiRoute)
         {
             res.result(boost::beast::http::status::temporary_redirect);
-            res.addHeader("Location",
+            res.addHeader(boost::beast::http::field::location,
                           "/#/login?next=" + http_helpers::urlEncode(url));
+            return;
         }
-        else
-        {
-            // If we don't have a webui installed, just return a lame
-            // unauthorized body
-            res.result(boost::beast::http::status::unauthorized);
-            res.body() = "Unauthorized";
-        }
-    }
-    else
-    {
+        // If we don't have a webui installed, just return an unauthorized
+        // body
         res.result(boost::beast::http::status::unauthorized);
-        // only send the WWW-authenticate header if this isn't a xhr
-        // from the browser.  Most scripts, tend to not set a user-agent header.
-        // So key off that to know whether or not we need to suggest basic auth
-        if (userAgent.empty())
-        {
-            res.addHeader("WWW-Authenticate", "Basic");
-        }
+        res.body() = "Unauthorized";
+        return;
     }
+
+    res.result(boost::beast::http::status::unauthorized);
+
+    // XHR requests from a browser will set the X-Requested-With header when
+    // doing their requests, even though they might not be requesting html.
+    if (!xRequestedWith.empty())
+    {
+        return;
+    }
+    // if basic auth is disabled, don't propose it.
+    if (!persistent_data::SessionStore::getInstance()
+             .getAuthMethodsConfig()
+             .basic)
+    {
+        return;
+    }
+    res.addHeader(boost::beast::http::field::www_authenticate, "Basic");
 }
 } // namespace forward_unauthorized

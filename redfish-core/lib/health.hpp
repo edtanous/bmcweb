@@ -18,13 +18,15 @@
 #include "async_resp.hpp"
 
 #include <app.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/container/flat_set.hpp>
 #include <dbus_singleton.hpp>
 #include <dbus_utility.hpp>
+<<<<<<< HEAD
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/message.hpp>
+=======
+#include <nlohmann/json.hpp>
+>>>>>>> origin/master
 
 #include <variant>
 
@@ -32,14 +34,20 @@ namespace redfish
 {
 struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
 {
-    HealthPopulate(const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        asyncResp(asyncRespIn), jsonStatus(asyncResp->res.jsonValue["Status"])
+    // By default populate status to "/Status" of |asyncResp->res.jsonValue|.
+    explicit HealthPopulate(
+        const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
+        asyncResp(asyncRespIn),
+        statusPtr("/Status")
     {}
 
+    // Takes a JSON pointer rather than a reference. This is pretty useful when
+    // the address of the status JSON might change, for example, elements in an
+    // array.
     HealthPopulate(const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn,
-                   nlohmann::json& status) :
+                   const nlohmann::json::json_pointer& ptr) :
         asyncResp(asyncRespIn),
-        jsonStatus(status)
+        statusPtr(ptr)
     {}
 
     HealthPopulate(const HealthPopulate&) = delete;
@@ -49,6 +57,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
 
     ~HealthPopulate()
     {
+        nlohmann::json& jsonStatus = asyncResp->res.jsonValue[statusPtr];
         nlohmann::json& health = jsonStatus["Health"];
         nlohmann::json& rollup = jsonStatus["HealthRollup"];
 
@@ -68,7 +77,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
             if (selfPath)
             {
                 if (boost::equals(path.str, *selfPath) ||
-                    boost::starts_with(path.str, *selfPath + "/"))
+                    path.str.starts_with(*selfPath + "/"))
                 {
                     isSelf = true;
                 }
@@ -84,7 +93,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
 
                 for (const std::string& child : inventory)
                 {
-                    if (boost::starts_with(path.str, child))
+                    if (path.str.starts_with(child))
                     {
                         isChild = true;
                         break;
@@ -133,15 +142,15 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                 }
             }
 
-            if (boost::starts_with(path.str, globalInventoryPath) &&
-                boost::ends_with(path.str, "critical"))
+            if (path.str.starts_with(globalInventoryPath) &&
+                path.str.ends_with("critical"))
             {
                 health = "Critical";
                 rollup = "Critical";
                 return;
             }
-            if (boost::starts_with(path.str, globalInventoryPath) &&
-                boost::ends_with(path.str, "warning"))
+            if (path.str.starts_with(globalInventoryPath) &&
+                path.str.ends_with("warning"))
             {
                 health = "Warning";
                 if (rollup != "Critical")
@@ -149,7 +158,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                     rollup = "Warning";
                 }
             }
-            else if (boost::ends_with(path.str, "critical"))
+            else if (path.str.ends_with("critical"))
             {
                 rollup = "Critical";
                 if (isSelf)
@@ -158,7 +167,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                     return;
                 }
             }
-            else if (boost::ends_with(path.str, "warning"))
+            else if (path.str.ends_with("warning"))
             {
                 if (rollup != "Critical")
                 {
@@ -191,13 +200,13 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
         std::shared_ptr<HealthPopulate> self = shared_from_this();
         crow::connections::systemBus->async_method_call(
             [self](const boost::system::error_code ec,
-                   const std::vector<std::string>& resp) {
-                if (ec || resp.size() != 1)
-                {
-                    // no global item, or too many
-                    return;
-                }
-                self->globalInventoryPath = resp[0];
+                   const dbus::utility::MapperGetSubTreePathsResponse& resp) {
+            if (ec || resp.size() != 1)
+            {
+                // no global item, or too many
+                return;
+            }
+            self->globalInventoryPath = resp[0];
             },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -212,29 +221,30 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
         crow::connections::systemBus->async_method_call(
             [self](const boost::system::error_code ec,
                    const dbus::utility::ManagedObjectType& resp) {
-                if (ec)
+            if (ec)
+            {
+                return;
+            }
+            self->statuses = resp;
+            for (auto it = self->statuses.begin(); it != self->statuses.end();)
+            {
+                if (it->first.str.ends_with("critical") ||
+                    it->first.str.ends_with("warning"))
                 {
-                    return;
+                    it++;
+                    continue;
                 }
-                self->statuses = resp;
-                for (auto it = self->statuses.begin();
-                     it != self->statuses.end();)
-                {
-                    if (boost::ends_with(it->first.str, "critical") ||
-                        boost::ends_with(it->first.str, "warning"))
-                    {
-                        it++;
-                        continue;
-                    }
-                    it = self->statuses.erase(it);
-                }
+                it = self->statuses.erase(it);
+            }
             },
             "xyz.openbmc_project.ObjectMapper", "/",
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     }
 
     std::shared_ptr<bmcweb::AsyncResp> asyncResp;
-    nlohmann::json& jsonStatus;
+
+    // Will populate the health status into |asyncResp_json[statusPtr]|
+    nlohmann::json::json_pointer statusPtr;
 
     // we store pointers to other HealthPopulate items so we can update their
     // members and reduce dbus calls. As we hold a shared_ptr to them, they get

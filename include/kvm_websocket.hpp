@@ -17,7 +17,7 @@ class KvmSession
 {
   public:
     explicit KvmSession(crow::websocket::Connection& connIn) :
-        conn(connIn), hostSocket(conn.getIoContext()), doingWrite(false)
+        conn(connIn), hostSocket(conn.getIoContext())
     {
         boost::asio::ip::tcp::endpoint endpoint(
             boost::asio::ip::make_address("127.0.0.1"), 5900);
@@ -72,30 +72,30 @@ class KvmSession
         hostSocket.async_read_some(
             outputBuffer.prepare(outputBuffer.capacity() - outputBuffer.size()),
             [this](const boost::system::error_code& ec, std::size_t bytesRead) {
-                BMCWEB_LOG_DEBUG << "conn:" << &conn << ", read done.  Read "
-                                 << bytesRead << " bytes";
-                if (ec)
+            BMCWEB_LOG_DEBUG << "conn:" << &conn << ", read done.  Read "
+                             << bytesRead << " bytes";
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "conn:" << &conn
+                    << ", Couldn't read from KVM socket port: " << ec;
+                if (ec != boost::asio::error::operation_aborted)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "conn:" << &conn
-                        << ", Couldn't read from KVM socket port: " << ec;
-                    if (ec != boost::asio::error::operation_aborted)
-                    {
-                        conn.close("Error in connecting to KVM port");
-                    }
-                    return;
+                    conn.close("Error in connecting to KVM port");
                 }
+                return;
+            }
 
-                outputBuffer.commit(bytesRead);
-                std::string_view payload(
-                    static_cast<const char*>(outputBuffer.data().data()),
-                    bytesRead);
-                BMCWEB_LOG_DEBUG << "conn:" << &conn
-                                 << ", Sending payload size " << payload.size();
-                conn.sendBinary(payload);
-                outputBuffer.consume(bytesRead);
+            outputBuffer.commit(bytesRead);
+            std::string_view payload(
+                static_cast<const char*>(outputBuffer.data().data()),
+                bytesRead);
+            BMCWEB_LOG_DEBUG << "conn:" << &conn << ", Sending payload size "
+                             << payload.size();
+            conn.sendBinary(payload);
+            outputBuffer.consume(bytesRead);
 
-                doRead();
+            doRead();
             });
     }
 
@@ -115,39 +115,39 @@ class KvmSession
         }
 
         doingWrite = true;
-        hostSocket.async_write_some(
-            inputBuffer.data(), [this](const boost::system::error_code& ec,
-                                       std::size_t bytesWritten) {
-                BMCWEB_LOG_DEBUG << "conn:" << &conn << ", Wrote "
-                                 << bytesWritten << "bytes";
-                doingWrite = false;
-                inputBuffer.consume(bytesWritten);
+        hostSocket.async_write_some(inputBuffer.data(),
+                                    [this](const boost::system::error_code& ec,
+                                           std::size_t bytesWritten) {
+            BMCWEB_LOG_DEBUG << "conn:" << &conn << ", Wrote " << bytesWritten
+                             << "bytes";
+            doingWrite = false;
+            inputBuffer.consume(bytesWritten);
 
-                if (ec == boost::asio::error::eof)
+            if (ec == boost::asio::error::eof)
+            {
+                conn.close("KVM socket port closed");
+                return;
+            }
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "conn:" << &conn
+                                 << ", Error in KVM socket write " << ec;
+                if (ec != boost::asio::error::operation_aborted)
                 {
-                    conn.close("KVM socket port closed");
-                    return;
+                    conn.close("Error in reading to host port");
                 }
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "conn:" << &conn
-                                     << ", Error in KVM socket write " << ec;
-                    if (ec != boost::asio::error::operation_aborted)
-                    {
-                        conn.close("Error in reading to host port");
-                    }
-                    return;
-                }
+                return;
+            }
 
-                doWrite();
-            });
+            doWrite();
+        });
     }
 
     crow::websocket::Connection& conn;
     boost::asio::ip::tcp::socket hostSocket;
     boost::beast::flat_static_buffer<1024UL * 50UL> outputBuffer;
     boost::beast::flat_static_buffer<1024UL> inputBuffer;
-    bool doingWrite;
+    bool doingWrite{false};
 };
 
 static boost::container::flat_map<crow::websocket::Connection*,
@@ -161,8 +161,7 @@ inline void requestRoutes(App& app)
     BMCWEB_ROUTE(app, "/kvm/0")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .websocket()
-        .onopen([](crow::websocket::Connection& conn,
-                   const std::shared_ptr<bmcweb::AsyncResp>&) {
+        .onopen([](crow::websocket::Connection& conn) {
             BMCWEB_LOG_DEBUG << "Connection " << &conn << " opened";
 
             if (sessions.size() == maxSessions)

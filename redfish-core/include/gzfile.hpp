@@ -9,11 +9,11 @@
 class GzFileReader
 {
   public:
-    bool gzGetLines(const std::string& filename, uint64_t& skip, uint64_t& top,
+    bool gzGetLines(const std::string& filename, uint64_t skip, uint64_t top,
                     std::vector<std::string>& logEntries, size_t& logCount)
     {
         gzFile logStream = gzopen(filename.c_str(), "r");
-        if (!logStream)
+        if (logStream == nullptr)
         {
             BMCWEB_LOG_ERROR << "Can't open gz file: " << filename << '\n';
             return false;
@@ -38,7 +38,7 @@ class GzFileReader
     std::string lastDelimiter;
     size_t totalFilesSize = 0;
 
-    void printErrorMessage(gzFile logStream)
+    static void printErrorMessage(gzFile logStream)
     {
         int errNum = 0;
         const char* errMsg = gzerror(logStream, &errNum);
@@ -48,7 +48,7 @@ class GzFileReader
                          << "Error Number: " << errNum;
     }
 
-    bool readFile(gzFile logStream, uint64_t& skip, uint64_t& top,
+    bool readFile(gzFile logStream, uint64_t skip, uint64_t top,
                   std::vector<std::string>& logEntries, size_t& logCount)
     {
         constexpr int bufferLimitSize = 1024;
@@ -71,13 +71,13 @@ class GzFileReader
                 BMCWEB_LOG_ERROR << "Error occurs during parsing host log.\n";
                 return false;
             }
-        } while (!gzeof(logStream));
+        } while (gzeof(logStream) != 1);
 
         return true;
     }
 
-    bool hostLogEntryParser(const std::string& bufferStr, uint64_t& skip,
-                            uint64_t& top, std::vector<std::string>& logEntries,
+    bool hostLogEntryParser(const std::string& bufferStr, uint64_t skip,
+                            uint64_t top, std::vector<std::string>& logEntries,
                             size_t& logCount)
     {
         // Assume we have 8 files, and the max size of each file is

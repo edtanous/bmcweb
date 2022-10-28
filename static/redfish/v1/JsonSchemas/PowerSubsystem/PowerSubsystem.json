@@ -1,8 +1,15 @@
 {
+<<<<<<< HEAD
     "$id": "http://redfish.dmtf.org/schemas/v1/PowerSubsystem.v1_0_0.json",
     "$ref": "#/definitions/PowerSubsystem",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2020 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
+=======
+    "$id": "http://redfish.dmtf.org/schemas/v1/PowerSubsystem.v1_1_0.json",
+    "$ref": "#/definitions/PowerSubsystem",
+    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
+    "copyright": "Copyright 2014-2021 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
+>>>>>>> origin/master
     "definitions": {
         "Actions": {
             "additionalProperties": false,
@@ -137,6 +144,16 @@
                     "description": "Power allocation for this subsystem.",
                     "longDescription": "This property shall contain the set of properties describing the allocation of power for this subsystem."
                 },
+<<<<<<< HEAD
+=======
+                "Batteries": {
+                    "$ref": "http://redfish.dmtf.org/schemas/v1/BatteryCollection.json#/definitions/BatteryCollection",
+                    "description": "The link to the collection of batteries within this subsystem.",
+                    "longDescription": "This property shall contain a link to a resource collection of type BatteryCollection.",
+                    "readonly": true,
+                    "versionAdded": "v1_1_0"
+                },
+>>>>>>> origin/master
                 "CapacityWatts": {
                     "description": "The total amount of power that can be allocated to this subsystem.  This value can be either the power supply capacity or the power budget that an upstream chassis assigns to this subsystem.",
                     "longDescription": "This property shall represent the total power capacity that can be allocated to this subsystem.",
@@ -202,6 +219,11 @@
         }
     },
     "owningEntity": "DMTF",
+<<<<<<< HEAD
     "release": "2020.4",
     "title": "#PowerSubsystem.v1_0_0.PowerSubsystem"
+=======
+    "release": "2021.2",
+    "title": "#PowerSubsystem.v1_1_0.PowerSubsystem"
+>>>>>>> origin/master
 }

@@ -4,20 +4,11 @@
 #include "random.hpp"
 #include "utility.hpp"
 
-#include <openssl/rand.h>
-
-#include <boost/container/flat_map.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <dbus_singleton.hpp>
 #include <nlohmann/json.hpp>
-#include <pam_authenticate.hpp>
-#include <random.hpp>
-#include <sdbusplus/bus/match.hpp>
 #include <utils/ip_utils.hpp>
 
 #include <csignal>
+#include <optional>
 #include <random>
 #ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
 #include <ibm/locks.hpp>
@@ -43,7 +34,7 @@ struct UserSession
     std::string sessionToken;
     std::string username;
     std::string csrfToken;
-    std::string clientId;
+    std::optional<std::string> clientId;
     std::string clientIp;
     std::chrono::time_point<std::chrono::steady_clock> lastUpdated;
     PersistenceType persistence{PersistenceType::TIMEOUT};
@@ -98,12 +89,10 @@ struct UserSession
             {
                 userSession->username = *thisValue;
             }
-#ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
             else if (element.key() == "client_id")
             {
                 userSession->clientId = *thisValue;
             }
-#endif
             else if (element.key() == "client_ip")
             {
                 userSession->clientIp = *thisValue;
@@ -214,7 +203,7 @@ class SessionStore
     std::shared_ptr<UserSession> generateUserSession(
         const std::string_view username,
         const boost::asio::ip::address& clientIp,
-        const std::string_view clientId,
+        const std::optional<std::string>& clientId,
         PersistenceType persistence = PersistenceType::TIMEOUT,
         bool isConfigureSelfOnly = false)
     {
@@ -265,11 +254,11 @@ class SessionStore
         }
 
         auto session = std::make_shared<UserSession>(UserSession{
-            uniqueId, sessionToken, std::string(username), csrfToken,
-            std::string(clientId), redfish::ip_util::toString(clientIp),
+            uniqueId, sessionToken, std::string(username), csrfToken, clientId,
+            redfish::ip_util::toString(clientIp),
             std::chrono::steady_clock::now(), persistence, false,
             isConfigureSelfOnly});
-        auto it = authTokens.emplace(std::make_pair(sessionToken, session));
+        auto it = authTokens.emplace(sessionToken, session);
         // Only need to write to disk if session isn't about to be destroyed.
         needWrite = persistence == PersistenceType::TIMEOUT;
         return it.first->second;
@@ -353,7 +342,7 @@ class SessionStore
         return authMethodsConfig;
     }
 
-    bool needsWrite()
+    bool needsWrite() const
     {
         return needWrite;
     }

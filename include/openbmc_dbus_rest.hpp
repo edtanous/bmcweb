@@ -13,30 +13,68 @@
 // limitations under the License.
 
 #pragma once
+#include "http_request.hpp"
+#include "http_response.hpp"
+#include "logging.hpp"
+#include "routing.hpp"
+
+#include <systemd/sd-bus-protocol.h>
+#include <systemd/sd-bus.h>
 #include <tinyxml2.h>
 
 #include <app.hpp>
 #include <async_resp.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/container/flat_set.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/beast/http/status.hpp>
+#include <boost/beast/http/verb.hpp>
+#include <boost/container/flat_map.hpp>
+#include <boost/container/vector.hpp>
+#include <boost/iterator/iterator_facade.hpp>
 #include <dbus_singleton.hpp>
 #include <dbus_utility.hpp>
-#include <sdbusplus/message/types.hpp>
+#include <nlohmann/json.hpp>
+#include <sdbusplus/asio/connection.hpp>
+#include <sdbusplus/asio/property.hpp>
+#include <sdbusplus/exception.hpp>
+#include <sdbusplus/message.hpp>
+#include <sdbusplus/message/native_types.hpp>
 
+#include <algorithm>
+#include <array>
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <initializer_list>
+#include <iterator>
+#include <limits>
+#include <map>
+#include <memory>
 #include <regex>
+#include <string>
+#include <string_view>
+#include <type_traits>
 #include <utility>
+#include <variant>
+#include <vector>
+
+// IWYU pragma: no_include <boost/algorithm/string/detail/classification.hpp>
+// IWYU pragma: no_include <boost/system/detail/error_code.hpp>
+// IWYU pragma: no_include <boost/system/detail/error_category.hpp>
+// IWYU pragma: no_include <errno.h>
+// IWYU pragma: no_include <string.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <exception>
+// IWYU pragma: no_include <boost/type_index/type_index_facade.hpp>
 
 namespace crow
 {
 namespace openbmc_mapper
 {
-
-using GetSubTreeType = std::vector<
-    std::pair<std::string,
-              std::vector<std::pair<std::string, std::vector<std::string>>>>>;
-
 const constexpr char* notFoundMsg = "404 Not Found";
 const constexpr char* badReqMsg = "400 Bad Request";
 const constexpr char* methodNotAllowedMsg = "405 Method Not Allowed";
@@ -56,15 +94,22 @@ const constexpr char* forbiddenPropDesc =
 const constexpr char* forbiddenResDesc =
     "The specified resource cannot be created";
 
+inline bool validateFilename(const std::string& filename)
+{
+    std::regex validFilename(R"(^[\w\- ]+(\.?[\w\- ]*)$)");
+
+    return std::regex_match(filename, validFilename);
+}
+
 inline void setErrorResponse(crow::Response& res,
                              boost::beast::http::status result,
                              const std::string& desc,
                              const std::string_view msg)
 {
     res.result(result);
-    res.jsonValue = {{"data", {{"description", desc}}},
-                     {"message", msg},
-                     {"status", "error"}};
+    res.jsonValue["data"]["description"] = desc;
+    res.jsonValue["message"] = msg;
+    res.jsonValue["status"] = "error";
 }
 
 inline void
@@ -74,9 +119,9 @@ inline void
 {
     if (transaction->res.jsonValue.is_null())
     {
-        transaction->res.jsonValue = {{"status", "ok"},
-                                      {"bus_name", processName},
-                                      {"objects", nlohmann::json::array()}};
+        transaction->res.jsonValue["status"] = "ok";
+        transaction->res.jsonValue["bus_name"] = processName;
+        transaction->res.jsonValue["objects"] = nlohmann::json::array();
     }
 
     crow::connections::systemBus->async_method_call(
@@ -84,47 +129,49 @@ inline void
          objectPath{std::string(objectPath)}](
             const boost::system::error_code ec,
             const std::string& introspectXml) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "Introspect call failed with error: " << ec.message()
-                    << " on process: " << processName << " path: " << objectPath
-                    << "\n";
-                return;
-            }
-            transaction->res.jsonValue["objects"].push_back(
-                {{"path", objectPath}});
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "Introspect call failed with error: " << ec.message()
+                << " on process: " << processName << " path: " << objectPath
+                << "\n";
+            return;
+        }
+        nlohmann::json::object_t object;
+        object["path"] = objectPath;
 
-            tinyxml2::XMLDocument doc;
+        transaction->res.jsonValue["objects"].push_back(std::move(object));
 
-            doc.Parse(introspectXml.c_str());
-            tinyxml2::XMLNode* pRoot = doc.FirstChildElement("node");
-            if (pRoot == nullptr)
+        tinyxml2::XMLDocument doc;
+
+        doc.Parse(introspectXml.c_str());
+        tinyxml2::XMLNode* pRoot = doc.FirstChildElement("node");
+        if (pRoot == nullptr)
+        {
+            BMCWEB_LOG_ERROR << "XML document failed to parse " << processName
+                             << " " << objectPath << "\n";
+        }
+        else
+        {
+            tinyxml2::XMLElement* node = pRoot->FirstChildElement("node");
+            while (node != nullptr)
             {
-                BMCWEB_LOG_ERROR << "XML document failed to parse "
-                                 << processName << " " << objectPath << "\n";
-            }
-            else
-            {
-                tinyxml2::XMLElement* node = pRoot->FirstChildElement("node");
-                while (node != nullptr)
+                const char* childPath = node->Attribute("name");
+                if (childPath != nullptr)
                 {
-                    const char* childPath = node->Attribute("name");
-                    if (childPath != nullptr)
+                    std::string newpath;
+                    if (objectPath != "/")
                     {
-                        std::string newpath;
-                        if (objectPath != "/")
-                        {
-                            newpath += objectPath;
-                        }
-                        newpath += std::string("/") + childPath;
-                        // introspect the subobjects as well
-                        introspectObjects(processName, newpath, transaction);
+                        newpath += objectPath;
                     }
-
-                    node = node->NextSiblingElement("node");
+                    newpath += std::string("/") + childPath;
+                    // introspect the subobjects as well
+                    introspectObjects(processName, newpath, transaction);
                 }
+
+                node = node->NextSiblingElement("node");
             }
+        }
         },
         processName, objectPath, "org.freedesktop.DBus.Introspectable",
         "Introspect");
@@ -138,55 +185,52 @@ inline void getPropertiesForEnumerate(
     BMCWEB_LOG_DEBUG << "getPropertiesForEnumerate " << objectPath << " "
                      << service << " " << interface;
 
-    crow::connections::systemBus->async_method_call(
-        [asyncResp, objectPath, service, interface](
-            const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string, dbus::utility::DbusVariantType>>& propertiesList) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "GetAll on path " << objectPath << " iface "
-                                 << interface << " service " << service
-                                 << " failed with code " << ec;
-                return;
-            }
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, service, objectPath, interface,
+        [asyncResp, objectPath, service,
+         interface](const boost::system::error_code ec,
+                    const dbus::utility::DBusPropertiesMap& propertiesList) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "GetAll on path " << objectPath << " iface "
+                             << interface << " service " << service
+                             << " failed with code " << ec;
+            return;
+        }
 
-            nlohmann::json& dataJson = asyncResp->res.jsonValue["data"];
-            nlohmann::json& objectJson = dataJson[objectPath];
-            if (objectJson.is_null())
-            {
-                objectJson = nlohmann::json::object();
-            }
+        nlohmann::json& dataJson = asyncResp->res.jsonValue["data"];
+        nlohmann::json& objectJson = dataJson[objectPath];
+        if (objectJson.is_null())
+        {
+            objectJson = nlohmann::json::object();
+        }
 
-            for (const auto& [name, value] : propertiesList)
-            {
-                nlohmann::json& propertyJson = objectJson[name];
-                std::visit(
-                    [&propertyJson](auto&& val) {
-                        if constexpr (std::is_same_v<
-                                          std::decay_t<decltype(val)>,
-                                          sdbusplus::message::unix_fd>)
-                        {
-                            propertyJson = val.fd;
-                        }
-                        else
-                        {
+        for (const auto& [name, value] : propertiesList)
+        {
+            nlohmann::json& propertyJson = objectJson[name];
+            std::visit(
+                [&propertyJson](auto&& val) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(val)>,
+                                             sdbusplus::message::unix_fd>)
+                {
+                    propertyJson = val.fd;
+                }
+                else
+                {
 
-                            propertyJson = val;
-                        }
-                    },
-                    value);
-            }
-        },
-        service, objectPath, "org.freedesktop.DBus.Properties", "GetAll",
-        interface);
+                    propertyJson = val;
+                }
+                },
+                value);
+        }
+        });
 }
 
 // Find any results that weren't picked up by ObjectManagers, to be
 // called after all ObjectManagers are searched for and called.
 inline void findRemainingObjectsForEnumerate(
     const std::string& objectPath,
-    const std::shared_ptr<GetSubTreeType>& subtree,
+    const std::shared_ptr<dbus::utility::MapperGetSubTreeResponse>& subtree,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     BMCWEB_LOG_DEBUG << "findRemainingObjectsForEnumerate";
@@ -205,7 +249,7 @@ inline void findRemainingObjectsForEnumerate(
             {
                 for (const auto& interface : interfaces)
                 {
-                    if (!boost::starts_with(interface, "org.freedesktop.DBus"))
+                    if (!interface.starts_with("org.freedesktop.DBus"))
                     {
                         getPropertiesForEnumerate(path, service, interface,
                                                   asyncResp);
@@ -242,9 +286,8 @@ struct InProgressEnumerateData
     InProgressEnumerateData(InProgressEnumerateData&&) = delete;
     InProgressEnumerateData& operator=(const InProgressEnumerateData&) = delete;
     InProgressEnumerateData& operator=(InProgressEnumerateData&&) = delete;
-
     const std::string objectPath;
-    std::shared_ptr<GetSubTreeType> subtree;
+    std::shared_ptr<dbus::utility::MapperGetSubTreeResponse> subtree;
     std::shared_ptr<bmcweb::AsyncResp> asyncResp;
 };
 
@@ -260,63 +303,61 @@ inline void getManagedObjectsForEnumerate(
         [transaction, objectName,
          connectionName](const boost::system::error_code ec,
                          const dbus::utility::ManagedObjectType& objects) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "GetManagedObjects on path " << objectName
-                                 << " on connection " << connectionName
-                                 << " failed with code " << ec;
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "GetManagedObjects on path " << objectName
+                             << " on connection " << connectionName
+                             << " failed with code " << ec;
+            return;
+        }
 
-            nlohmann::json& dataJson =
-                transaction->asyncResp->res.jsonValue["data"];
+        nlohmann::json& dataJson =
+            transaction->asyncResp->res.jsonValue["data"];
 
-            for (const auto& objectPath : objects)
+        for (const auto& objectPath : objects)
+        {
+            if (objectPath.first.str.starts_with(objectName))
             {
-                if (boost::starts_with(objectPath.first.str, objectName))
+                BMCWEB_LOG_DEBUG << "Reading object " << objectPath.first.str;
+                nlohmann::json& objectJson = dataJson[objectPath.first.str];
+                if (objectJson.is_null())
                 {
-                    BMCWEB_LOG_DEBUG << "Reading object "
-                                     << objectPath.first.str;
-                    nlohmann::json& objectJson = dataJson[objectPath.first.str];
-                    if (objectJson.is_null())
-                    {
-                        objectJson = nlohmann::json::object();
-                    }
-                    for (const auto& interface : objectPath.second)
-                    {
-                        for (const auto& property : interface.second)
-                        {
-                            nlohmann::json& propertyJson =
-                                objectJson[property.first];
-                            std::visit(
-                                [&propertyJson](auto&& val) {
-                                    if constexpr (
-                                        std::is_same_v<
-                                            std::decay_t<decltype(val)>,
-                                            sdbusplus::message::unix_fd>)
-                                    {
-                                        propertyJson = val.fd;
-                                    }
-                                    else
-                                    {
-
-                                        propertyJson = val;
-                                    }
-                                },
-                                property.second);
-                        }
-                    }
+                    objectJson = nlohmann::json::object();
                 }
                 for (const auto& interface : objectPath.second)
                 {
-                    if (interface.first == "org.freedesktop.DBus.ObjectManager")
+                    for (const auto& property : interface.second)
                     {
-                        getManagedObjectsForEnumerate(
-                            objectPath.first.str, objectPath.first.str,
-                            connectionName, transaction);
+                        nlohmann::json& propertyJson =
+                            objectJson[property.first];
+                        std::visit(
+                            [&propertyJson](auto&& val) {
+                            if constexpr (std::is_same_v<
+                                              std::decay_t<decltype(val)>,
+                                              sdbusplus::message::unix_fd>)
+                            {
+                                propertyJson = val.fd;
+                            }
+                            else
+                            {
+
+                                propertyJson = val;
+                            }
+                            },
+                            property.second);
                     }
                 }
             }
+            for (const auto& interface : objectPath.second)
+            {
+                if (interface.first == "org.freedesktop.DBus.ObjectManager")
+                {
+                    getManagedObjectsForEnumerate(objectPath.first.str,
+                                                  objectPath.first.str,
+                                                  connectionName, transaction);
+                }
+            }
+        }
         },
         connectionName, objectManagerPath, "org.freedesktop.DBus.ObjectManager",
         "GetManagedObjects");
@@ -331,31 +372,27 @@ inline void findObjectManagerPathForEnumerate(
     crow::connections::systemBus->async_method_call(
         [transaction, objectName, connectionName](
             const boost::system::error_code ec,
-            const boost::container::flat_map<
-                std::string, boost::container::flat_map<
-                                 std::string, std::vector<std::string>>>&
-                objects) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "GetAncestors on path " << objectName
-                                 << " failed with code " << ec;
-                return;
-            }
+            const dbus::utility::MapperGetAncestorsResponse& objects) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "GetAncestors on path " << objectName
+                             << " failed with code " << ec;
+            return;
+        }
 
-            for (const auto& pathGroup : objects)
+        for (const auto& pathGroup : objects)
+        {
+            for (const auto& connectionGroup : pathGroup.second)
             {
-                for (const auto& connectionGroup : pathGroup.second)
+                if (connectionGroup.first == connectionName)
                 {
-                    if (connectionGroup.first == connectionName)
-                    {
-                        // Found the object manager path for this resource.
-                        getManagedObjectsForEnumerate(
-                            objectName, pathGroup.first, connectionName,
-                            transaction);
-                        return;
-                    }
+                    // Found the object manager path for this resource.
+                    getManagedObjectsForEnumerate(objectName, pathGroup.first,
+                                                  connectionName, transaction);
+                    return;
                 }
             }
+        }
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -369,72 +406,67 @@ inline void findObjectManagerPathForEnumerate(
 inline void getObjectAndEnumerate(
     const std::shared_ptr<InProgressEnumerateData>& transaction)
 {
-    using GetObjectType =
-        std::vector<std::pair<std::string, std::vector<std::string>>>;
-
     crow::connections::systemBus->async_method_call(
         [transaction](const boost::system::error_code ec,
-                      const GetObjectType& objects) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "GetObject for path "
-                                 << transaction->objectPath
-                                 << " failed with code " << ec;
-                return;
-            }
+                      const dbus::utility::MapperGetObject& objects) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "GetObject for path " << transaction->objectPath
+                             << " failed with code " << ec;
+            return;
+        }
 
-            BMCWEB_LOG_DEBUG << "GetObject for " << transaction->objectPath
-                             << " has " << objects.size() << " entries";
-            if (!objects.empty())
-            {
-                transaction->subtree->emplace_back(transaction->objectPath,
-                                                   objects);
-            }
+        BMCWEB_LOG_DEBUG << "GetObject for " << transaction->objectPath
+                         << " has " << objects.size() << " entries";
+        if (!objects.empty())
+        {
+            transaction->subtree->emplace_back(transaction->objectPath,
+                                               objects);
+        }
 
-            // Map indicating connection name, and the path where the object
-            // manager exists
-            boost::container::flat_map<std::string, std::string> connections;
+        // Map indicating connection name, and the path where the object
+        // manager exists
+        boost::container::flat_map<std::string, std::string> connections;
 
-            for (const auto& object : *(transaction->subtree))
+        for (const auto& object : *(transaction->subtree))
+        {
+            for (const auto& connection : object.second)
             {
-                for (const auto& connection : object.second)
+                std::string& objectManagerPath = connections[connection.first];
+                for (const auto& interface : connection.second)
                 {
-                    std::string& objectManagerPath =
-                        connections[connection.first];
-                    for (const auto& interface : connection.second)
+                    BMCWEB_LOG_DEBUG << connection.first << " has interface "
+                                     << interface;
+                    if (interface == "org.freedesktop.DBus.ObjectManager")
                     {
-                        BMCWEB_LOG_DEBUG << connection.first
-                                         << " has interface " << interface;
-                        if (interface == "org.freedesktop.DBus.ObjectManager")
-                        {
-                            BMCWEB_LOG_DEBUG << "found object manager path "
-                                             << object.first;
-                            objectManagerPath = object.first;
-                        }
+                        BMCWEB_LOG_DEBUG << "found object manager path "
+                                         << object.first;
+                        objectManagerPath = object.first;
                     }
                 }
             }
-            BMCWEB_LOG_DEBUG << "Got " << connections.size() << " connections";
+        }
+        BMCWEB_LOG_DEBUG << "Got " << connections.size() << " connections";
 
-            for (const auto& connection : connections)
+        for (const auto& connection : connections)
+        {
+            // If we already know where the object manager is, we don't
+            // need to search for it, we can call directly in to
+            // getManagedObjects
+            if (!connection.second.empty())
             {
-                // If we already know where the object manager is, we don't
-                // need to search for it, we can call directly in to
-                // getManagedObjects
-                if (!connection.second.empty())
-                {
-                    getManagedObjectsForEnumerate(
-                        transaction->objectPath, connection.second,
-                        connection.first, transaction);
-                }
-                else
-                {
-                    // otherwise we need to find the object manager path
-                    // before we can continue
-                    findObjectManagerPathForEnumerate(
-                        transaction->objectPath, connection.first, transaction);
-                }
+                getManagedObjectsForEnumerate(transaction->objectPath,
+                                              connection.second,
+                                              connection.first, transaction);
             }
+            else
+            {
+                // otherwise we need to find the object manager path
+                // before we can continue
+                findObjectManagerPathForEnumerate(
+                    transaction->objectPath, connection.first, transaction);
+            }
+        }
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -445,7 +477,7 @@ inline void getObjectAndEnumerate(
 // Structure for storing data on an in progress action
 struct InProgressActionData
 {
-    InProgressActionData(crow::Response& resIn) : res(resIn)
+    explicit InProgressActionData(crow::Response& resIn) : res(resIn)
     {}
     ~InProgressActionData()
     {
@@ -480,9 +512,9 @@ struct InProgressActionData
                 }
                 else
                 {
-                    res.jsonValue = {{"status", "ok"},
-                                     {"message", "200 OK"},
-                                     {"data", methodResponse}};
+                    res.jsonValue["status"] = "ok";
+                    res.jsonValue["message"] = "200 OK";
+                    res.jsonValue["data"] = methodResponse;
                 }
             }
         }
@@ -656,16 +688,16 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
         else if (argCode == "b")
         {
             // lots of ways bool could be represented here.  Try them all
-            int boolInt = false;
+            int boolInt = 0;
             if (intValue != nullptr)
             {
                 if (*intValue == 1)
                 {
-                    boolInt = true;
+                    boolInt = 1;
                 }
                 else if (*intValue == 0)
                 {
-                    boolInt = false;
+                    boolInt = 0;
                 }
                 else
                 {
@@ -784,7 +816,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
             }
             sd_bus_message_append_basic(m, argCode[0], doubleValue);
         }
-        else if (boost::starts_with(argCode, "a"))
+        else if (argCode.starts_with("a"))
         {
             std::string containedType = argCode.substr(1);
             r = sd_bus_message_open_container(m, SD_BUS_TYPE_ARRAY,
@@ -804,7 +836,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
             }
             sd_bus_message_close_container(m);
         }
-        else if (boost::starts_with(argCode, "v"))
+        else if (argCode.starts_with("v"))
         {
             std::string containedType = argCode.substr(1);
             BMCWEB_LOG_DEBUG << "variant type: " << argCode
@@ -828,8 +860,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
                 return r;
             }
         }
-        else if (boost::starts_with(argCode, "(") &&
-                 boost::ends_with(argCode, ")"))
+        else if (argCode.starts_with("(") && argCode.ends_with(")"))
         {
             std::string containedType = argCode.substr(1, argCode.size() - 1);
             r = sd_bus_message_open_container(m, SD_BUS_TYPE_STRUCT,
@@ -855,8 +886,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
             }
             r = sd_bus_message_close_container(m);
         }
-        else if (boost::starts_with(argCode, "{") &&
-                 boost::ends_with(argCode, "}"))
+        else if (argCode.starts_with("{") && argCode.ends_with("}"))
         {
             std::string containedType = argCode.substr(1, argCode.size() - 1);
             r = sd_bus_message_open_container(m, SD_BUS_TYPE_DICT_ENTRY,
@@ -908,7 +938,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
 }
 
 template <typename T>
-int readMessageItem(const std::string& typeCode, sdbusplus::message::message& m,
+int readMessageItem(const std::string& typeCode, sdbusplus::message_t& m,
                     nlohmann::json& data)
 {
     T value;
@@ -925,11 +955,11 @@ int readMessageItem(const std::string& typeCode, sdbusplus::message::message& m,
     return 0;
 }
 
-int convertDBusToJSON(const std::string& returnType,
-                      sdbusplus::message::message& m, nlohmann::json& response);
+int convertDBusToJSON(const std::string& returnType, sdbusplus::message_t& m,
+                      nlohmann::json& response);
 
 inline int readDictEntryFromMessage(const std::string& typeCode,
-                                    sdbusplus::message::message& m,
+                                    sdbusplus::message_t& m,
                                     nlohmann::json& object)
 {
     std::vector<std::string> types = dbusArgSplit(typeCode);
@@ -988,8 +1018,7 @@ inline int readDictEntryFromMessage(const std::string& typeCode,
 }
 
 inline int readArrayFromMessage(const std::string& typeCode,
-                                sdbusplus::message::message& m,
-                                nlohmann::json& data)
+                                sdbusplus::message_t& m, nlohmann::json& data)
 {
     if (typeCode.size() < 2)
     {
@@ -1009,8 +1038,7 @@ inline int readArrayFromMessage(const std::string& typeCode,
         return r;
     }
 
-    bool dict = boost::starts_with(containedType, "{") &&
-                boost::ends_with(containedType, "}");
+    bool dict = containedType.starts_with("{") && containedType.ends_with("}");
 
     if (dict)
     {
@@ -1025,7 +1053,7 @@ inline int readArrayFromMessage(const std::string& typeCode,
 
     while (true)
     {
-        r = sd_bus_message_at_end(m.get(), false);
+        r = sd_bus_message_at_end(m.get(), 0);
         if (r < 0)
         {
             BMCWEB_LOG_ERROR << "sd_bus_message_at_end failed";
@@ -1069,8 +1097,7 @@ inline int readArrayFromMessage(const std::string& typeCode,
 }
 
 inline int readStructFromMessage(const std::string& typeCode,
-                                 sdbusplus::message::message& m,
-                                 nlohmann::json& data)
+                                 sdbusplus::message_t& m, nlohmann::json& data)
 {
     if (typeCode.size() < 3)
     {
@@ -1110,8 +1137,7 @@ inline int readStructFromMessage(const std::string& typeCode,
     return 0;
 }
 
-inline int readVariantFromMessage(sdbusplus::message::message& m,
-                                  nlohmann::json& data)
+inline int readVariantFromMessage(sdbusplus::message_t& m, nlohmann::json& data)
 {
     const char* containerType = nullptr;
     int r = sd_bus_message_peek_type(m.get(), nullptr, &containerType);
@@ -1147,8 +1173,7 @@ inline int readVariantFromMessage(sdbusplus::message::message& m,
 }
 
 inline int convertDBusToJSON(const std::string& returnType,
-                             sdbusplus::message::message& m,
-                             nlohmann::json& response)
+                             sdbusplus::message_t& m, nlohmann::json& response)
 {
     int r = 0;
     const std::vector<std::string> returnTypes = dbusArgSplit(returnType);
@@ -1252,7 +1277,7 @@ inline int convertDBusToJSON(const std::string& returnType,
                 return r;
             }
         }
-        else if (boost::starts_with(typeCode, "a"))
+        else if (typeCode.starts_with("a"))
         {
             r = readArrayFromMessage(typeCode, m, *thisElement);
             if (r < 0)
@@ -1260,8 +1285,7 @@ inline int convertDBusToJSON(const std::string& returnType,
                 return r;
             }
         }
-        else if (boost::starts_with(typeCode, "(") &&
-                 boost::ends_with(typeCode, ")"))
+        else if (typeCode.starts_with("(") && typeCode.ends_with(")"))
         {
             r = readStructFromMessage(typeCode, m, *thisElement);
             if (r < 0)
@@ -1269,7 +1293,7 @@ inline int convertDBusToJSON(const std::string& returnType,
                 return r;
             }
         }
-        else if (boost::starts_with(typeCode, "v"))
+        else if (typeCode.starts_with("v"))
         {
             r = readVariantFromMessage(m, *thisElement);
             if (r < 0)
@@ -1289,7 +1313,7 @@ inline int convertDBusToJSON(const std::string& returnType,
 
 inline void handleMethodResponse(
     const std::shared_ptr<InProgressActionData>& transaction,
-    sdbusplus::message::message& m, const std::string& returnType)
+    sdbusplus::message_t& m, const std::string& returnType)
 {
     nlohmann::json data;
 
@@ -1361,159 +1385,150 @@ inline void findActionOnInterface(
         [transaction, connectionName{std::string(connectionName)}](
             const boost::system::error_code ec,
             const std::string& introspectXml) {
-            BMCWEB_LOG_DEBUG << "got xml:\n " << introspectXml;
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "Introspect call failed with error: " << ec.message()
-                    << " on process: " << connectionName << "\n";
-                return;
-            }
-            tinyxml2::XMLDocument doc;
+        BMCWEB_LOG_DEBUG << "got xml:\n " << introspectXml;
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "Introspect call failed with error: " << ec.message()
+                << " on process: " << connectionName << "\n";
+            return;
+        }
+        tinyxml2::XMLDocument doc;
 
-            doc.Parse(introspectXml.data(), introspectXml.size());
-            tinyxml2::XMLNode* pRoot = doc.FirstChildElement("node");
-            if (pRoot == nullptr)
+        doc.Parse(introspectXml.data(), introspectXml.size());
+        tinyxml2::XMLNode* pRoot = doc.FirstChildElement("node");
+        if (pRoot == nullptr)
+        {
+            BMCWEB_LOG_ERROR << "XML document failed to parse "
+                             << connectionName << "\n";
+            return;
+        }
+        tinyxml2::XMLElement* interfaceNode =
+            pRoot->FirstChildElement("interface");
+        while (interfaceNode != nullptr)
+        {
+            const char* thisInterfaceName = interfaceNode->Attribute("name");
+            if (thisInterfaceName != nullptr)
             {
-                BMCWEB_LOG_ERROR << "XML document failed to parse "
-                                 << connectionName << "\n";
-                return;
-            }
-            tinyxml2::XMLElement* interfaceNode =
-                pRoot->FirstChildElement("interface");
-            while (interfaceNode != nullptr)
-            {
-                const char* thisInterfaceName =
-                    interfaceNode->Attribute("name");
-                if (thisInterfaceName != nullptr)
+                if (!transaction->interfaceName.empty() &&
+                    (transaction->interfaceName != thisInterfaceName))
                 {
-                    if (!transaction->interfaceName.empty() &&
-                        (transaction->interfaceName != thisInterfaceName))
-                    {
-                        interfaceNode =
-                            interfaceNode->NextSiblingElement("interface");
-                        continue;
-                    }
-
-                    tinyxml2::XMLElement* methodNode =
-                        interfaceNode->FirstChildElement("method");
-                    while (methodNode != nullptr)
-                    {
-                        const char* thisMethodName =
-                            methodNode->Attribute("name");
-                        BMCWEB_LOG_DEBUG << "Found method: " << thisMethodName;
-                        if (thisMethodName != nullptr &&
-                            thisMethodName == transaction->methodName)
-                        {
-                            BMCWEB_LOG_DEBUG
-                                << "Found method named " << thisMethodName
-                                << " on interface " << thisInterfaceName;
-                            sdbusplus::message::message m =
-                                crow::connections::systemBus->new_method_call(
-                                    connectionName.c_str(),
-                                    transaction->path.c_str(),
-                                    thisInterfaceName,
-                                    transaction->methodName.c_str());
-
-                            tinyxml2::XMLElement* argumentNode =
-                                methodNode->FirstChildElement("arg");
-
-                            std::string returnType;
-
-                            // Find the output type
-                            while (argumentNode != nullptr)
-                            {
-                                const char* argDirection =
-                                    argumentNode->Attribute("direction");
-                                const char* argType =
-                                    argumentNode->Attribute("type");
-                                if (argDirection != nullptr &&
-                                    argType != nullptr &&
-                                    std::string(argDirection) == "out")
-                                {
-                                    returnType = argType;
-                                    break;
-                                }
-                                argumentNode =
-                                    argumentNode->NextSiblingElement("arg");
-                            }
-
-                            nlohmann::json::const_iterator argIt =
-                                transaction->arguments.begin();
-
-                            argumentNode = methodNode->FirstChildElement("arg");
-
-                            while (argumentNode != nullptr)
-                            {
-                                const char* argDirection =
-                                    argumentNode->Attribute("direction");
-                                const char* argType =
-                                    argumentNode->Attribute("type");
-                                if (argDirection != nullptr &&
-                                    argType != nullptr &&
-                                    std::string(argDirection) == "in")
-                                {
-                                    if (argIt == transaction->arguments.end())
-                                    {
-                                        transaction->setErrorStatus(
-                                            "Invalid method args");
-                                        return;
-                                    }
-                                    if (convertJsonToDbus(m.get(),
-                                                          std::string(argType),
-                                                          *argIt) < 0)
-                                    {
-                                        transaction->setErrorStatus(
-                                            "Invalid method arg type");
-                                        return;
-                                    }
-
-                                    argIt++;
-                                }
-                                argumentNode =
-                                    argumentNode->NextSiblingElement("arg");
-                            }
-
-                            crow::connections::systemBus->async_send(
-                                m, [transaction, returnType](
-                                       boost::system::error_code ec2,
-                                       sdbusplus::message::message& m2) {
-                                    if (ec2)
-                                    {
-                                        transaction->methodFailed = true;
-                                        const sd_bus_error* e = m2.get_error();
-
-                                        if (e)
-                                        {
-                                            setErrorResponse(
-                                                transaction->res,
-                                                boost::beast::http::status::
-                                                    bad_request,
-                                                e->name, e->message);
-                                        }
-                                        else
-                                        {
-                                            setErrorResponse(
-                                                transaction->res,
-                                                boost::beast::http::status::
-                                                    bad_request,
-                                                "Method call failed",
-                                                methodFailedMsg);
-                                        }
-                                        return;
-                                    }
-                                    transaction->methodPassed = true;
-
-                                    handleMethodResponse(transaction, m2,
-                                                         returnType);
-                                });
-                            break;
-                        }
-                        methodNode = methodNode->NextSiblingElement("method");
-                    }
+                    interfaceNode =
+                        interfaceNode->NextSiblingElement("interface");
+                    continue;
                 }
-                interfaceNode = interfaceNode->NextSiblingElement("interface");
+
+                tinyxml2::XMLElement* methodNode =
+                    interfaceNode->FirstChildElement("method");
+                while (methodNode != nullptr)
+                {
+                    const char* thisMethodName = methodNode->Attribute("name");
+                    BMCWEB_LOG_DEBUG << "Found method: " << thisMethodName;
+                    if (thisMethodName != nullptr &&
+                        thisMethodName == transaction->methodName)
+                    {
+                        BMCWEB_LOG_DEBUG << "Found method named "
+                                         << thisMethodName << " on interface "
+                                         << thisInterfaceName;
+                        sdbusplus::message_t m =
+                            crow::connections::systemBus->new_method_call(
+                                connectionName.c_str(),
+                                transaction->path.c_str(), thisInterfaceName,
+                                transaction->methodName.c_str());
+
+                        tinyxml2::XMLElement* argumentNode =
+                            methodNode->FirstChildElement("arg");
+
+                        std::string returnType;
+
+                        // Find the output type
+                        while (argumentNode != nullptr)
+                        {
+                            const char* argDirection =
+                                argumentNode->Attribute("direction");
+                            const char* argType =
+                                argumentNode->Attribute("type");
+                            if (argDirection != nullptr && argType != nullptr &&
+                                std::string(argDirection) == "out")
+                            {
+                                returnType = argType;
+                                break;
+                            }
+                            argumentNode =
+                                argumentNode->NextSiblingElement("arg");
+                        }
+
+                        auto argIt = transaction->arguments.begin();
+
+                        argumentNode = methodNode->FirstChildElement("arg");
+
+                        while (argumentNode != nullptr)
+                        {
+                            const char* argDirection =
+                                argumentNode->Attribute("direction");
+                            const char* argType =
+                                argumentNode->Attribute("type");
+                            if (argDirection != nullptr && argType != nullptr &&
+                                std::string(argDirection) == "in")
+                            {
+                                if (argIt == transaction->arguments.end())
+                                {
+                                    transaction->setErrorStatus(
+                                        "Invalid method args");
+                                    return;
+                                }
+                                if (convertJsonToDbus(m.get(),
+                                                      std::string(argType),
+                                                      *argIt) < 0)
+                                {
+                                    transaction->setErrorStatus(
+                                        "Invalid method arg type");
+                                    return;
+                                }
+
+                                argIt++;
+                            }
+                            argumentNode =
+                                argumentNode->NextSiblingElement("arg");
+                        }
+
+                        crow::connections::systemBus->async_send(
+                            m,
+                            [transaction,
+                             returnType](boost::system::error_code ec2,
+                                         sdbusplus::message_t& m2) {
+                            if (ec2)
+                            {
+                                transaction->methodFailed = true;
+                                const sd_bus_error* e = m2.get_error();
+
+                                if (e != nullptr)
+                                {
+                                    setErrorResponse(
+                                        transaction->res,
+                                        boost::beast::http::status::bad_request,
+                                        e->name, e->message);
+                                }
+                                else
+                                {
+                                    setErrorResponse(
+                                        transaction->res,
+                                        boost::beast::http::status::bad_request,
+                                        "Method call failed", methodFailedMsg);
+                                }
+                                return;
+                            }
+                            transaction->methodPassed = true;
+
+                            handleMethodResponse(transaction, m2, returnType);
+                            });
+                        break;
+                    }
+                    methodNode = methodNode->NextSiblingElement("method");
+                }
             }
+            interfaceNode = interfaceNode->NextSiblingElement("interface");
+        }
         },
         connectionName, transaction->path,
         "org.freedesktop.DBus.Introspectable", "Introspect");
@@ -1562,23 +1577,23 @@ inline void handleAction(const crow::Request& req,
             const boost::system::error_code ec,
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
                 interfaceNames) {
-            if (ec || interfaceNames.size() <= 0)
-            {
-                BMCWEB_LOG_ERROR << "Can't find object";
-                setErrorResponse(transaction->res,
-                                 boost::beast::http::status::not_found,
-                                 notFoundDesc, notFoundMsg);
-                return;
-            }
+        if (ec || interfaceNames.empty())
+        {
+            BMCWEB_LOG_ERROR << "Can't find object";
+            setErrorResponse(transaction->res,
+                             boost::beast::http::status::not_found,
+                             notFoundDesc, notFoundMsg);
+            return;
+        }
 
-            BMCWEB_LOG_DEBUG << "GetObject returned " << interfaceNames.size()
-                             << " object(s)";
+        BMCWEB_LOG_DEBUG << "GetObject returned " << interfaceNames.size()
+                         << " object(s)";
 
-            for (const std::pair<std::string, std::vector<std::string>>&
-                     object : interfaceNames)
-            {
-                findActionOnInterface(transaction, object.first);
-            }
+        for (const std::pair<std::string, std::vector<std::string>>& object :
+             interfaceNames)
+        {
+            findActionOnInterface(transaction, object.first);
+        }
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1596,26 +1611,26 @@ inline void handleDelete(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             const boost::system::error_code ec,
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
                 interfaceNames) {
-            if (ec || interfaceNames.size() <= 0)
-            {
-                BMCWEB_LOG_ERROR << "Can't find object";
-                setErrorResponse(asyncResp->res,
-                                 boost::beast::http::status::method_not_allowed,
-                                 methodNotAllowedDesc, methodNotAllowedMsg);
-                return;
-            }
+        if (ec || interfaceNames.empty())
+        {
+            BMCWEB_LOG_ERROR << "Can't find object";
+            setErrorResponse(asyncResp->res,
+                             boost::beast::http::status::method_not_allowed,
+                             methodNotAllowedDesc, methodNotAllowedMsg);
+            return;
+        }
 
-            auto transaction =
-                std::make_shared<InProgressActionData>(asyncResp->res);
-            transaction->path = objectPath;
-            transaction->methodName = "Delete";
-            transaction->interfaceName = "xyz.openbmc_project.Object.Delete";
+        auto transaction =
+            std::make_shared<InProgressActionData>(asyncResp->res);
+        transaction->path = objectPath;
+        transaction->methodName = "Delete";
+        transaction->interfaceName = "xyz.openbmc_project.Object.Delete";
 
-            for (const std::pair<std::string, std::vector<std::string>>&
-                     object : interfaceNames)
-            {
-                findActionOnInterface(transaction, object.first);
-            }
+        for (const std::pair<std::string, std::vector<std::string>>& object :
+             interfaceNames)
+        {
+            findActionOnInterface(transaction, object.first);
+        }
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1627,20 +1642,21 @@ inline void handleList(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& objectPath, int32_t depth = 0)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec,
-                    const std::vector<std::string>& objectPaths) {
-            if (ec)
-            {
-                setErrorResponse(asyncResp->res,
-                                 boost::beast::http::status::not_found,
-                                 notFoundDesc, notFoundMsg);
-            }
-            else
-            {
-                asyncResp->res.jsonValue = {{"status", "ok"},
-                                            {"message", "200 OK"},
-                                            {"data", objectPaths}};
-            }
+        [asyncResp](
+            const boost::system::error_code ec,
+            const dbus::utility::MapperGetSubTreePathsResponse& objectPaths) {
+        if (ec)
+        {
+            setErrorResponse(asyncResp->res,
+                             boost::beast::http::status::not_found,
+                             notFoundDesc, notFoundMsg);
+        }
+        else
+        {
+            asyncResp->res.jsonValue["status"] = "ok";
+            asyncResp->res.jsonValue["message"] = "200 OK";
+            asyncResp->res.jsonValue["data"] = objectPaths;
+        }
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1653,32 +1669,34 @@ inline void handleEnumerate(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 {
     BMCWEB_LOG_DEBUG << "Doing enumerate on " << objectPath;
 
-    asyncResp->res.jsonValue = {{"message", "200 OK"},
-                                {"status", "ok"},
-                                {"data", nlohmann::json::object()}};
+    asyncResp->res.jsonValue["message"] = "200 OK";
+    asyncResp->res.jsonValue["status"] = "ok";
+    asyncResp->res.jsonValue["data"] = nlohmann::json::object();
 
     crow::connections::systemBus->async_method_call(
-        [objectPath, asyncResp](const boost::system::error_code ec,
-                                const GetSubTreeType& objectNames) {
-            auto transaction = std::make_shared<InProgressEnumerateData>(
-                objectPath, asyncResp);
+        [objectPath, asyncResp](
+            const boost::system::error_code ec,
+            const dbus::utility::MapperGetSubTreeResponse& objectNames) {
+        auto transaction =
+            std::make_shared<InProgressEnumerateData>(objectPath, asyncResp);
 
-            transaction->subtree =
-                std::make_shared<GetSubTreeType>(objectNames);
+        transaction->subtree =
+            std::make_shared<dbus::utility::MapperGetSubTreeResponse>(
+                objectNames);
 
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "GetSubTree failed on "
-                                 << transaction->objectPath;
-                setErrorResponse(transaction->asyncResp->res,
-                                 boost::beast::http::status::not_found,
-                                 notFoundDesc, notFoundMsg);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "GetSubTree failed on "
+                             << transaction->objectPath;
+            setErrorResponse(transaction->asyncResp->res,
+                             boost::beast::http::status::not_found,
+                             notFoundDesc, notFoundMsg);
+            return;
+        }
 
-            // Add the data for the path passed in to the results
-            // as if GetSubTree returned it, and continue on enumerating
-            getObjectAndEnumerate(transaction);
+        // Add the data for the path passed in to the results
+        // as if GetSubTree returned it, and continue on enumerating
+        getObjectAndEnumerate(transaction);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1696,102 +1714,97 @@ inline void handleGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     std::shared_ptr<std::string> path =
         std::make_shared<std::string>(std::move(objectPath));
 
-    using GetObjectType =
-        std::vector<std::pair<std::string, std::vector<std::string>>>;
     crow::connections::systemBus->async_method_call(
-        [asyncResp, path, propertyName](const boost::system::error_code ec,
-                                        const GetObjectType& objectNames) {
-            if (ec || objectNames.size() <= 0)
+        [asyncResp, path,
+         propertyName](const boost::system::error_code ec,
+                       const dbus::utility::MapperGetObject& objectNames) {
+        if (ec || objectNames.empty())
+        {
+            setErrorResponse(asyncResp->res,
+                             boost::beast::http::status::not_found,
+                             notFoundDesc, notFoundMsg);
+            return;
+        }
+        std::shared_ptr<nlohmann::json> response =
+            std::make_shared<nlohmann::json>(nlohmann::json::object());
+        // The mapper should never give us an empty interface names
+        // list, but check anyway
+        for (const std::pair<std::string, std::vector<std::string>>&
+                 connection : objectNames)
+        {
+            const std::vector<std::string>& interfaceNames = connection.second;
+
+            if (interfaceNames.empty())
             {
                 setErrorResponse(asyncResp->res,
                                  boost::beast::http::status::not_found,
                                  notFoundDesc, notFoundMsg);
                 return;
             }
-            std::shared_ptr<nlohmann::json> response =
-                std::make_shared<nlohmann::json>(nlohmann::json::object());
-            // The mapper should never give us an empty interface names
-            // list, but check anyway
-            for (const std::pair<std::string, std::vector<std::string>>&
-                     connection : objectNames)
+
+            for (const std::string& interface : interfaceNames)
             {
-                const std::vector<std::string>& interfaceNames =
-                    connection.second;
-
-                if (interfaceNames.size() <= 0)
-                {
-                    setErrorResponse(asyncResp->res,
-                                     boost::beast::http::status::not_found,
-                                     notFoundDesc, notFoundMsg);
-                    return;
-                }
-
-                for (const std::string& interface : interfaceNames)
-                {
-                    sdbusplus::message::message m =
-                        crow::connections::systemBus->new_method_call(
-                            connection.first.c_str(), path->c_str(),
-                            "org.freedesktop.DBus.Properties", "GetAll");
-                    m.append(interface);
-                    crow::connections::systemBus->async_send(
-                        m, [asyncResp, response,
-                            propertyName](const boost::system::error_code ec2,
-                                          sdbusplus::message::message& msg) {
-                            if (ec2)
+                sdbusplus::message_t m =
+                    crow::connections::systemBus->new_method_call(
+                        connection.first.c_str(), path->c_str(),
+                        "org.freedesktop.DBus.Properties", "GetAll");
+                m.append(interface);
+                crow::connections::systemBus->async_send(
+                    m, [asyncResp, response,
+                        propertyName](const boost::system::error_code ec2,
+                                      sdbusplus::message_t& msg) {
+                        if (ec2)
+                        {
+                            BMCWEB_LOG_ERROR << "Bad dbus request error: "
+                                             << ec2;
+                        }
+                        else
+                        {
+                            nlohmann::json properties;
+                            int r = convertDBusToJSON("a{sv}", msg, properties);
+                            if (r < 0)
                             {
-                                BMCWEB_LOG_ERROR << "Bad dbus request error: "
-                                                 << ec2;
+                                BMCWEB_LOG_ERROR << "convertDBusToJSON failed";
                             }
                             else
                             {
-                                nlohmann::json properties;
-                                int r =
-                                    convertDBusToJSON("a{sv}", msg, properties);
-                                if (r < 0)
+                                for (const auto& prop : properties.items())
                                 {
-                                    BMCWEB_LOG_ERROR
-                                        << "convertDBusToJSON failed";
-                                }
-                                else
-                                {
-                                    for (auto& prop : properties.items())
-                                    {
-                                        // if property name is empty, or
-                                        // matches our search query, add it
-                                        // to the response json
+                                    // if property name is empty, or
+                                    // matches our search query, add it
+                                    // to the response json
 
-                                        if (propertyName->empty())
-                                        {
-                                            (*response)[prop.key()] =
-                                                std::move(prop.value());
-                                        }
-                                        else if (prop.key() == *propertyName)
-                                        {
-                                            *response = std::move(prop.value());
-                                        }
+                                    if (propertyName->empty())
+                                    {
+                                        (*response)[prop.key()] =
+                                            std::move(prop.value());
+                                    }
+                                    else if (prop.key() == *propertyName)
+                                    {
+                                        *response = std::move(prop.value());
                                     }
                                 }
                             }
-                            if (response.use_count() == 1)
+                        }
+                        if (response.use_count() == 1)
+                        {
+                            if (!propertyName->empty() && response->empty())
                             {
-                                if (!propertyName->empty() && response->empty())
-                                {
-                                    setErrorResponse(
-                                        asyncResp->res,
-                                        boost::beast::http::status::not_found,
-                                        propNotFoundDesc, notFoundMsg);
-                                }
-                                else
-                                {
-                                    asyncResp->res.jsonValue = {
-                                        {"status", "ok"},
-                                        {"message", "200 OK"},
-                                        {"data", *response}};
-                                }
+                                setErrorResponse(
+                                    asyncResp->res,
+                                    boost::beast::http::status::not_found,
+                                    propNotFoundDesc, notFoundMsg);
                             }
-                        });
-                }
+                            else
+                            {
+                                asyncResp->res.jsonValue["status"] = "ok";
+                                asyncResp->res.jsonValue["message"] = "200 OK";
+                                asyncResp->res.jsonValue["data"] = *response;
+                            }
+                        }
+                    });
             }
+        }
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1801,7 +1814,7 @@ inline void handleGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
 struct AsyncPutRequest
 {
-    AsyncPutRequest(const std::shared_ptr<bmcweb::AsyncResp>& resIn) :
+    explicit AsyncPutRequest(const std::shared_ptr<bmcweb::AsyncResp>& resIn) :
         asyncResp(resIn)
     {}
     ~AsyncPutRequest()
@@ -1855,7 +1868,7 @@ inline void handlePut(const crow::Request& req,
         return;
     }
 
-    nlohmann::json::const_iterator propertyIt = requestDbusData.find("data");
+    auto propertyIt = requestDbusData.find("data");
     if (propertyIt == requestDbusData.end())
     {
         setErrorResponse(asyncResp->res,
@@ -1869,167 +1882,144 @@ inline void handlePut(const crow::Request& req,
     transaction->propertyName = destProperty;
     transaction->propertyValue = propertySetValue;
 
-    using GetObjectType =
-        std::vector<std::pair<std::string, std::vector<std::string>>>;
-
     crow::connections::systemBus->async_method_call(
         [transaction](const boost::system::error_code ec2,
-                      const GetObjectType& objectNames) {
-            if (!ec2 && objectNames.size() <= 0)
-            {
-                setErrorResponse(transaction->asyncResp->res,
-                                 boost::beast::http::status::not_found,
-                                 propNotFoundDesc, notFoundMsg);
-                return;
-            }
+                      const dbus::utility::MapperGetObject& objectNames) {
+        if (!ec2 && objectNames.empty())
+        {
+            setErrorResponse(transaction->asyncResp->res,
+                             boost::beast::http::status::not_found,
+                             propNotFoundDesc, notFoundMsg);
+            return;
+        }
 
-            for (const std::pair<std::string, std::vector<std::string>>&
-                     connection : objectNames)
-            {
-                const std::string& connectionName = connection.first;
+        for (const std::pair<std::string, std::vector<std::string>>&
+                 connection : objectNames)
+        {
+            const std::string& connectionName = connection.first;
 
-                crow::connections::systemBus->async_method_call(
-                    [connectionName{std::string(connectionName)},
-                     transaction](const boost::system::error_code ec3,
-                                  const std::string& introspectXml) {
-                        if (ec3)
-                        {
-                            BMCWEB_LOG_ERROR
-                                << "Introspect call failed with error: "
-                                << ec3.message()
-                                << " on process: " << connectionName;
-                            transaction->setErrorStatus("Unexpected Error");
-                            return;
-                        }
-                        tinyxml2::XMLDocument doc;
+            crow::connections::systemBus->async_method_call(
+                [connectionName{std::string(connectionName)},
+                 transaction](const boost::system::error_code ec3,
+                              const std::string& introspectXml) {
+                if (ec3)
+                {
+                    BMCWEB_LOG_ERROR << "Introspect call failed with error: "
+                                     << ec3.message()
+                                     << " on process: " << connectionName;
+                    transaction->setErrorStatus("Unexpected Error");
+                    return;
+                }
+                tinyxml2::XMLDocument doc;
 
-                        doc.Parse(introspectXml.c_str());
-                        tinyxml2::XMLNode* pRoot =
-                            doc.FirstChildElement("node");
-                        if (pRoot == nullptr)
+                doc.Parse(introspectXml.c_str());
+                tinyxml2::XMLNode* pRoot = doc.FirstChildElement("node");
+                if (pRoot == nullptr)
+                {
+                    BMCWEB_LOG_ERROR << "XML document failed to parse: "
+                                     << introspectXml;
+                    transaction->setErrorStatus("Unexpected Error");
+                    return;
+                }
+                tinyxml2::XMLElement* ifaceNode =
+                    pRoot->FirstChildElement("interface");
+                while (ifaceNode != nullptr)
+                {
+                    const char* interfaceName = ifaceNode->Attribute("name");
+                    BMCWEB_LOG_DEBUG << "found interface " << interfaceName;
+                    tinyxml2::XMLElement* propNode =
+                        ifaceNode->FirstChildElement("property");
+                    while (propNode != nullptr)
+                    {
+                        const char* propertyName = propNode->Attribute("name");
+                        BMCWEB_LOG_DEBUG << "Found property " << propertyName;
+                        if (propertyName == transaction->propertyName)
                         {
-                            BMCWEB_LOG_ERROR << "XML document failed to parse: "
-                                             << introspectXml;
-                            transaction->setErrorStatus("Unexpected Error");
-                            return;
-                        }
-                        tinyxml2::XMLElement* ifaceNode =
-                            pRoot->FirstChildElement("interface");
-                        while (ifaceNode != nullptr)
-                        {
-                            const char* interfaceName =
-                                ifaceNode->Attribute("name");
-                            BMCWEB_LOG_DEBUG << "found interface "
-                                             << interfaceName;
-                            tinyxml2::XMLElement* propNode =
-                                ifaceNode->FirstChildElement("property");
-                            while (propNode != nullptr)
+                            const char* argType = propNode->Attribute("type");
+                            if (argType != nullptr)
                             {
-                                const char* propertyName =
-                                    propNode->Attribute("name");
-                                BMCWEB_LOG_DEBUG << "Found property "
-                                                 << propertyName;
-                                if (propertyName == transaction->propertyName)
+                                sdbusplus::message_t m =
+                                    crow::connections::systemBus
+                                        ->new_method_call(
+                                            connectionName.c_str(),
+                                            transaction->objectPath.c_str(),
+                                            "org.freedesktop.DBus."
+                                            "Properties",
+                                            "Set");
+                                m.append(interfaceName,
+                                         transaction->propertyName);
+                                int r = sd_bus_message_open_container(
+                                    m.get(), SD_BUS_TYPE_VARIANT, argType);
+                                if (r < 0)
                                 {
-                                    const char* argType =
-                                        propNode->Attribute("type");
-                                    if (argType != nullptr)
-                                    {
-                                        sdbusplus::message::message m =
-                                            crow::connections::systemBus
-                                                ->new_method_call(
-                                                    connectionName.c_str(),
-                                                    transaction->objectPath
-                                                        .c_str(),
-                                                    "org.freedesktop.DBus."
-                                                    "Properties",
-                                                    "Set");
-                                        m.append(interfaceName,
-                                                 transaction->propertyName);
-                                        int r = sd_bus_message_open_container(
-                                            m.get(), SD_BUS_TYPE_VARIANT,
-                                            argType);
-                                        if (r < 0)
-                                        {
-                                            transaction->setErrorStatus(
-                                                "Unexpected Error");
-                                            return;
-                                        }
-                                        r = convertJsonToDbus(
-                                            m.get(), argType,
-                                            transaction->propertyValue);
-                                        if (r < 0)
-                                        {
-                                            if (r == -ERANGE)
-                                            {
-                                                transaction->setErrorStatus(
-                                                    "Provided property value "
-                                                    "is out of range for the "
-                                                    "property type");
-                                            }
-                                            else
-                                            {
-                                                transaction->setErrorStatus(
-                                                    "Invalid arg type");
-                                            }
-                                            return;
-                                        }
-                                        r = sd_bus_message_close_container(
-                                            m.get());
-                                        if (r < 0)
-                                        {
-                                            transaction->setErrorStatus(
-                                                "Unexpected Error");
-                                            return;
-                                        }
-                                        crow::connections::systemBus
-                                            ->async_send(
-                                                m,
-                                                [transaction](
-                                                    boost::system::error_code
-                                                        ec,
-                                                    sdbusplus::message::message&
-                                                        m2) {
-                                                    BMCWEB_LOG_DEBUG << "sent";
-                                                    if (ec)
-                                                    {
-                                                        const sd_bus_error* e =
-                                                            m2.get_error();
-                                                        setErrorResponse(
-                                                            transaction
-                                                                ->asyncResp
-                                                                ->res,
-                                                            boost::beast::http::
-                                                                status::
-                                                                    forbidden,
-                                                            (e) ? e->name
-                                                                : ec.category()
-                                                                      .name(),
-                                                            (e) ? e->message
-                                                                : ec.message());
-                                                    }
-                                                    else
-                                                    {
-                                                        transaction->asyncResp
-                                                            ->res.jsonValue = {
-                                                            {"status", "ok"},
-                                                            {"message",
-                                                             "200 OK"},
-                                                            {"data", nullptr}};
-                                                    }
-                                                });
-                                    }
+                                    transaction->setErrorStatus(
+                                        "Unexpected Error");
+                                    return;
                                 }
-                                propNode =
-                                    propNode->NextSiblingElement("property");
+                                r = convertJsonToDbus(
+                                    m.get(), argType,
+                                    transaction->propertyValue);
+                                if (r < 0)
+                                {
+                                    if (r == -ERANGE)
+                                    {
+                                        transaction->setErrorStatus(
+                                            "Provided property value "
+                                            "is out of range for the "
+                                            "property type");
+                                    }
+                                    else
+                                    {
+                                        transaction->setErrorStatus(
+                                            "Invalid arg type");
+                                    }
+                                    return;
+                                }
+                                r = sd_bus_message_close_container(m.get());
+                                if (r < 0)
+                                {
+                                    transaction->setErrorStatus(
+                                        "Unexpected Error");
+                                    return;
+                                }
+                                crow::connections::systemBus->async_send(
+                                    m,
+                                    [transaction](boost::system::error_code ec,
+                                                  sdbusplus::message_t& m2) {
+                                    BMCWEB_LOG_DEBUG << "sent";
+                                    if (ec)
+                                    {
+                                        const sd_bus_error* e = m2.get_error();
+                                        setErrorResponse(
+                                            transaction->asyncResp->res,
+                                            boost::beast::http::status::
+                                                forbidden,
+                                            (e) != nullptr
+                                                ? e->name
+                                                : ec.category().name(),
+                                            (e) != nullptr ? e->message
+                                                           : ec.message());
+                                    }
+                                    else
+                                    {
+                                        transaction->asyncResp->res
+                                            .jsonValue["status"] = "ok";
+                                        transaction->asyncResp->res
+                                            .jsonValue["message"] = "200 OK";
+                                        transaction->asyncResp->res
+                                            .jsonValue["data"] = nullptr;
+                                    }
+                                    });
                             }
-                            ifaceNode =
-                                ifaceNode->NextSiblingElement("interface");
                         }
-                    },
-                    connectionName, transaction->objectPath,
-                    "org.freedesktop.DBus.Introspectable", "Introspect");
-            }
+                        propNode = propNode->NextSiblingElement("property");
+                    }
+                    ifaceNode = ifaceNode->NextSiblingElement("interface");
+                }
+                },
+                connectionName, transaction->objectPath,
+                "org.freedesktop.DBus.Introspectable", "Introspect");
+        }
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -2044,10 +2034,10 @@ inline void handleDBusUrl(const crow::Request& req,
 
     // If accessing a single attribute, fill in and update objectPath,
     // otherwise leave destProperty blank
-    std::string destProperty = "";
+    std::string destProperty;
     const char* attrSeperator = "/attr/";
     size_t attrPosition = objectPath.find(attrSeperator);
-    if (attrPosition != objectPath.npos)
+    if (attrPosition != std::string::npos)
     {
         destProperty = objectPath.substr(attrPosition + strlen(attrSeperator),
                                          objectPath.length());
@@ -2058,7 +2048,7 @@ inline void handleDBusUrl(const crow::Request& req,
     {
         constexpr const char* actionSeperator = "/action/";
         size_t actionPosition = objectPath.find(actionSeperator);
-        if (actionPosition != objectPath.npos)
+        if (actionPosition != std::string::npos)
         {
             std::string postProperty =
                 objectPath.substr((actionPosition + strlen(actionSeperator)),
@@ -2070,13 +2060,13 @@ inline void handleDBusUrl(const crow::Request& req,
     }
     else if (req.method() == boost::beast::http::verb::get)
     {
-        if (boost::ends_with(objectPath, "/enumerate"))
+        if (objectPath.ends_with("/enumerate"))
         {
             objectPath.erase(objectPath.end() - sizeof("enumerate"),
                              objectPath.end());
             handleEnumerate(asyncResp, objectPath);
         }
-        else if (boost::ends_with(objectPath, "/list"))
+        else if (objectPath.ends_with("/list"))
         {
             objectPath.erase(objectPath.end() - sizeof("list"),
                              objectPath.end());
@@ -2085,7 +2075,7 @@ inline void handleDBusUrl(const crow::Request& req,
         else
         {
             // Trim any trailing "/" at the end
-            if (boost::ends_with(objectPath, "/"))
+            if (objectPath.ends_with("/"))
             {
                 objectPath.pop_back();
                 handleList(asyncResp, objectPath, 1);
@@ -2113,6 +2103,323 @@ inline void handleDBusUrl(const crow::Request& req,
                      methodNotAllowedDesc, methodNotAllowedMsg);
 }
 
+inline void
+    handleBusSystemPost(const crow::Request& req,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& processName,
+                        const std::string& requestedPath)
+{
+    std::vector<std::string> strs;
+    boost::split(strs, requestedPath, boost::is_any_of("/"));
+    std::string objectPath;
+    std::string interfaceName;
+    std::string methodName;
+    auto it = strs.begin();
+    if (it == strs.end())
+    {
+        objectPath = "/";
+    }
+    while (it != strs.end())
+    {
+        // Check if segment contains ".".  If it does, it must be an
+        // interface
+        if (it->find(".") != std::string::npos)
+        {
+            break;
+            // This check is necessary as the trailing slash gets
+            // parsed as part of our <path> specifier above, which
+            // causes the normal trailing backslash redirector to
+            // fail.
+        }
+        if (!it->empty())
+        {
+            objectPath += "/" + *it;
+        }
+        it++;
+    }
+    if (it != strs.end())
+    {
+        interfaceName = *it;
+        it++;
+
+        // after interface, we might have a method name
+        if (it != strs.end())
+        {
+            methodName = *it;
+            it++;
+        }
+    }
+    if (it != strs.end())
+    {
+        // if there is more levels past the method name, something
+        // went wrong, return not found
+        asyncResp->res.result(boost::beast::http::status::not_found);
+        return;
+    }
+    if (interfaceName.empty())
+    {
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, processName,
+             objectPath](const boost::system::error_code ec,
+                         const std::string& introspectXml) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "Introspect call failed with error: " << ec.message()
+                    << " on process: " << processName << " path: " << objectPath
+                    << "\n";
+                return;
+            }
+            tinyxml2::XMLDocument doc;
+
+            doc.Parse(introspectXml.c_str());
+            tinyxml2::XMLNode* pRoot = doc.FirstChildElement("node");
+            if (pRoot == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "XML document failed to parse "
+                                 << processName << " " << objectPath << "\n";
+                asyncResp->res.jsonValue["status"] = "XML parse error";
+                asyncResp->res.result(
+                    boost::beast::http::status::internal_server_error);
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << introspectXml;
+            asyncResp->res.jsonValue["status"] = "ok";
+            asyncResp->res.jsonValue["bus_name"] = processName;
+            asyncResp->res.jsonValue["object_path"] = objectPath;
+
+            nlohmann::json& interfacesArray =
+                asyncResp->res.jsonValue["interfaces"];
+            interfacesArray = nlohmann::json::array();
+            tinyxml2::XMLElement* interface =
+                pRoot->FirstChildElement("interface");
+
+            while (interface != nullptr)
+            {
+                const char* ifaceName = interface->Attribute("name");
+                if (ifaceName != nullptr)
+                {
+                    nlohmann::json::object_t interfaceObj;
+                    interfaceObj["name"] = ifaceName;
+                    interfacesArray.push_back(std::move(interfaceObj));
+                }
+
+                interface = interface->NextSiblingElement("interface");
+            }
+            },
+            processName, objectPath, "org.freedesktop.DBus.Introspectable",
+            "Introspect");
+    }
+    else if (methodName.empty())
+    {
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, processName, objectPath,
+             interfaceName](const boost::system::error_code ec,
+                            const std::string& introspectXml) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "Introspect call failed with error: " << ec.message()
+                    << " on process: " << processName << " path: " << objectPath
+                    << "\n";
+                return;
+            }
+            tinyxml2::XMLDocument doc;
+
+            doc.Parse(introspectXml.data(), introspectXml.size());
+            tinyxml2::XMLNode* pRoot = doc.FirstChildElement("node");
+            if (pRoot == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "XML document failed to parse "
+                                 << processName << " " << objectPath << "\n";
+                asyncResp->res.result(
+                    boost::beast::http::status::internal_server_error);
+                return;
+            }
+
+            asyncResp->res.jsonValue["status"] = "ok";
+            asyncResp->res.jsonValue["bus_name"] = processName;
+            asyncResp->res.jsonValue["interface"] = interfaceName;
+            asyncResp->res.jsonValue["object_path"] = objectPath;
+
+            nlohmann::json& methodsArray = asyncResp->res.jsonValue["methods"];
+            methodsArray = nlohmann::json::array();
+
+            nlohmann::json& signalsArray = asyncResp->res.jsonValue["signals"];
+            signalsArray = nlohmann::json::array();
+
+            nlohmann::json& propertiesObj =
+                asyncResp->res.jsonValue["properties"];
+            propertiesObj = nlohmann::json::object();
+
+            // if we know we're the only call, build the
+            // json directly
+            tinyxml2::XMLElement* interface =
+                pRoot->FirstChildElement("interface");
+            while (interface != nullptr)
+            {
+                const char* ifaceName = interface->Attribute("name");
+
+                if (ifaceName != nullptr && ifaceName == interfaceName)
+                {
+                    break;
+                }
+
+                interface = interface->NextSiblingElement("interface");
+            }
+            if (interface == nullptr)
+            {
+                // if we got to the end of the list and
+                // never found a match, throw 404
+                asyncResp->res.result(boost::beast::http::status::not_found);
+                return;
+            }
+
+            tinyxml2::XMLElement* methods =
+                interface->FirstChildElement("method");
+            while (methods != nullptr)
+            {
+                nlohmann::json argsArray = nlohmann::json::array();
+                tinyxml2::XMLElement* arg = methods->FirstChildElement("arg");
+                while (arg != nullptr)
+                {
+                    nlohmann::json thisArg;
+                    for (const char* fieldName : std::array<const char*, 3>{
+                             "name", "direction", "type"})
+                    {
+                        const char* fieldValue = arg->Attribute(fieldName);
+                        if (fieldValue != nullptr)
+                        {
+                            thisArg[fieldName] = fieldValue;
+                        }
+                    }
+                    argsArray.push_back(std::move(thisArg));
+                    arg = arg->NextSiblingElement("arg");
+                }
+
+                const char* name = methods->Attribute("name");
+                if (name != nullptr)
+                {
+                    std::string uri;
+                    uri.reserve(14 + processName.size() + objectPath.size() +
+                                interfaceName.size() + strlen(name));
+                    uri += "/bus/system/";
+                    uri += processName;
+                    uri += objectPath;
+                    uri += "/";
+                    uri += interfaceName;
+                    uri += "/";
+                    uri += name;
+
+                    nlohmann::json::object_t object;
+                    object["name"] = name;
+                    object["uri"] = std::move(uri);
+                    object["args"] = argsArray;
+
+                    methodsArray.push_back(std::move(object));
+                }
+                methods = methods->NextSiblingElement("method");
+            }
+            tinyxml2::XMLElement* signals =
+                interface->FirstChildElement("signal");
+            while (signals != nullptr)
+            {
+                nlohmann::json argsArray = nlohmann::json::array();
+
+                tinyxml2::XMLElement* arg = signals->FirstChildElement("arg");
+                while (arg != nullptr)
+                {
+                    const char* name = arg->Attribute("name");
+                    const char* type = arg->Attribute("type");
+                    if (name != nullptr && type != nullptr)
+                    {
+                        argsArray.push_back({
+                            {"name", name},
+                            {"type", type},
+                        });
+                    }
+                    arg = arg->NextSiblingElement("arg");
+                }
+                const char* name = signals->Attribute("name");
+                if (name != nullptr)
+                {
+                    nlohmann::json::object_t object;
+                    object["name"] = name;
+                    object["args"] = argsArray;
+                    signalsArray.push_back(std::move(object));
+                }
+
+                signals = signals->NextSiblingElement("signal");
+            }
+
+            tinyxml2::XMLElement* property =
+                interface->FirstChildElement("property");
+            while (property != nullptr)
+            {
+                const char* name = property->Attribute("name");
+                const char* type = property->Attribute("type");
+                if (type != nullptr && name != nullptr)
+                {
+                    sdbusplus::message_t m =
+                        crow::connections::systemBus->new_method_call(
+                            processName.c_str(), objectPath.c_str(),
+                            "org.freedesktop."
+                            "DBus."
+                            "Properties",
+                            "Get");
+                    m.append(interfaceName, name);
+                    nlohmann::json& propertyItem = propertiesObj[name];
+                    crow::connections::systemBus->async_send(
+                        m, [&propertyItem,
+                            asyncResp](const boost::system::error_code& e,
+                                       sdbusplus::message_t& msg) {
+                            if (e)
+                            {
+                                return;
+                            }
+
+                            convertDBusToJSON("v", msg, propertyItem);
+                        });
+                }
+                property = property->NextSiblingElement("property");
+            }
+            },
+            processName, objectPath, "org.freedesktop.DBus.Introspectable",
+            "Introspect");
+    }
+    else
+    {
+        if (req.method() != boost::beast::http::verb::post)
+        {
+            asyncResp->res.result(boost::beast::http::status::not_found);
+            return;
+        }
+
+        nlohmann::json requestDbusData =
+            nlohmann::json::parse(req.body, nullptr, false);
+
+        if (requestDbusData.is_discarded())
+        {
+            asyncResp->res.result(boost::beast::http::status::bad_request);
+            return;
+        }
+        if (!requestDbusData.is_array())
+        {
+            asyncResp->res.result(boost::beast::http::status::bad_request);
+            return;
+        }
+        auto transaction =
+            std::make_shared<InProgressActionData>(asyncResp->res);
+
+        transaction->path = objectPath;
+        transaction->methodName = methodName;
+        transaction->arguments = std::move(requestDbusData);
+
+        findActionOnInterface(transaction, processName);
+    }
+}
+
 inline void requestRoutes(App& app)
 {
     BMCWEB_ROUTE(app, "/bus/")
@@ -2120,47 +2427,51 @@ inline void requestRoutes(App& app)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                asyncResp->res.jsonValue = {{"buses", {{{"name", "system"}}}},
-                                            {"status", "ok"}};
-            });
+        nlohmann::json::array_t buses;
+        nlohmann::json& bus = buses.emplace_back();
+        bus["name"] = "system";
+        asyncResp->res.jsonValue["busses"] = std::move(buses);
+        asyncResp->res.jsonValue["status"] = "ok";
+        });
 
     BMCWEB_ROUTE(app, "/bus/system/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                auto myCallback = [asyncResp](
-                                      const boost::system::error_code ec,
+        auto myCallback = [asyncResp](const boost::system::error_code ec,
                                       std::vector<std::string>& names) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR << "Dbus call failed with code " << ec;
-                        asyncResp->res.result(
-                            boost::beast::http::status::internal_server_error);
-                    }
-                    else
-                    {
-                        std::sort(names.begin(), names.end());
-                        asyncResp->res.jsonValue = {{"status", "ok"}};
-                        auto& objectsSub = asyncResp->res.jsonValue["objects"];
-                        for (auto& name : names)
-                        {
-                            objectsSub.push_back({{"name", name}});
-                        }
-                    }
-                };
-                crow::connections::systemBus->async_method_call(
-                    std::move(myCallback), "org.freedesktop.DBus", "/",
-                    "org.freedesktop.DBus", "ListNames");
-            });
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Dbus call failed with code " << ec;
+                asyncResp->res.result(
+                    boost::beast::http::status::internal_server_error);
+            }
+            else
+            {
+                std::sort(names.begin(), names.end());
+                asyncResp->res.jsonValue["status"] = "ok";
+                auto& objectsSub = asyncResp->res.jsonValue["objects"];
+                for (const auto& name : names)
+                {
+                    nlohmann::json::object_t object;
+                    object["name"] = name;
+                    objectsSub.push_back(std::move(object));
+                }
+            }
+        };
+        crow::connections::systemBus->async_method_call(
+            std::move(myCallback), "org.freedesktop.DBus", "/",
+            "org.freedesktop.DBus", "ListNames");
+        });
 
     BMCWEB_ROUTE(app, "/list/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                handleList(asyncResp, "/");
-            });
+        handleList(asyncResp, "/");
+        });
 
     BMCWEB_ROUTE(app, "/xyz/<path>")
         .privileges({{"Login"}})
@@ -2168,9 +2479,9 @@ inline void requestRoutes(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& path) {
-                std::string objectPath = "/xyz/" + path;
-                handleDBusUrl(req, asyncResp, objectPath);
-            });
+        std::string objectPath = "/xyz/" + path;
+        handleDBusUrl(req, asyncResp, objectPath);
+        });
 
     BMCWEB_ROUTE(app, "/xyz/<path>")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
@@ -2179,9 +2490,9 @@ inline void requestRoutes(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& path) {
-                std::string objectPath = "/xyz/" + path;
-                handleDBusUrl(req, asyncResp, objectPath);
-            });
+        std::string objectPath = "/xyz/" + path;
+        handleDBusUrl(req, asyncResp, objectPath);
+        });
 
     BMCWEB_ROUTE(app, "/org/<path>")
         .privileges({{"Login"}})
@@ -2189,9 +2500,9 @@ inline void requestRoutes(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& path) {
-                std::string objectPath = "/org/" + path;
-                handleDBusUrl(req, asyncResp, objectPath);
-            });
+        std::string objectPath = "/org/" + path;
+        handleDBusUrl(req, asyncResp, objectPath);
+        });
 
     BMCWEB_ROUTE(app, "/org/<path>")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
@@ -2200,9 +2511,9 @@ inline void requestRoutes(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& path) {
-                std::string objectPath = "/org/" + path;
-                handleDBusUrl(req, asyncResp, objectPath);
-            });
+        std::string objectPath = "/org/" + path;
+        handleDBusUrl(req, asyncResp, objectPath);
+        });
 
     BMCWEB_ROUTE(app, "/download/dump/<str>/")
         .privileges({{"ConfigureManager"}})
@@ -2210,69 +2521,63 @@ inline void requestRoutes(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& dumpId) {
-                std::regex validFilename(R"(^[\w\- ]+(\.?[\w\- ]*)$)");
-                if (!std::regex_match(dumpId, validFilename))
-                {
-                    asyncResp->res.result(
-                        boost::beast::http::status::bad_request);
-                    return;
-                }
-                std::filesystem::path loc(
-                    "/var/lib/phosphor-debug-collector/dumps");
+        if (!validateFilename(dumpId))
+        {
+            asyncResp->res.result(boost::beast::http::status::bad_request);
+            return;
+        }
+        std::filesystem::path loc("/var/lib/phosphor-debug-collector/dumps");
 
-                loc /= dumpId;
+        loc /= dumpId;
 
-                if (!std::filesystem::exists(loc) ||
-                    !std::filesystem::is_directory(loc))
-                {
-                    BMCWEB_LOG_ERROR << loc << "Not found";
-                    asyncResp->res.result(
-                        boost::beast::http::status::not_found);
-                    return;
-                }
-                std::filesystem::directory_iterator files(loc);
+        if (!std::filesystem::exists(loc) ||
+            !std::filesystem::is_directory(loc))
+        {
+            BMCWEB_LOG_ERROR << loc.string() << "Not found";
+            asyncResp->res.result(boost::beast::http::status::not_found);
+            return;
+        }
+        std::filesystem::directory_iterator files(loc);
 
-                for (auto& file : files)
-                {
-                    std::ifstream readFile(file.path());
-                    if (!readFile.good())
-                    {
-                        continue;
-                    }
+        for (const auto& file : files)
+        {
+            std::ifstream readFile(file.path());
+            if (!readFile.good())
+            {
+                continue;
+            }
 
-                    asyncResp->res.addHeader("Content-Type",
-                                             "application/octet-stream");
+            asyncResp->res.addHeader(boost::beast::http::field::content_type,
+                                     "application/octet-stream");
 
-                    // Assuming only one dump file will be present in the dump
-                    // id directory
-                    std::string dumpFileName = file.path().filename().string();
+            // Assuming only one dump file will be present in the dump
+            // id directory
+            std::string dumpFileName = file.path().filename().string();
 
-                    // Filename should be in alphanumeric, dot and underscore
-                    // Its based on phosphor-debug-collector application
-                    // dumpfile format
-                    std::regex dumpFileRegex("[a-zA-Z0-9\\._]+");
-                    if (!std::regex_match(dumpFileName, dumpFileRegex))
-                    {
-                        BMCWEB_LOG_ERROR << "Invalid dump filename "
-                                         << dumpFileName;
-                        asyncResp->res.result(
-                            boost::beast::http::status::not_found);
-                        return;
-                    }
-                    std::string contentDispositionParam =
-                        "attachment; filename=\"" + dumpFileName + "\"";
-
-                    asyncResp->res.addHeader("Content-Disposition",
-                                             contentDispositionParam);
-
-                    asyncResp->res.body() = {
-                        std::istreambuf_iterator<char>(readFile),
-                        std::istreambuf_iterator<char>()};
-                    return;
-                }
+            // Filename should be in alphanumeric, dot and underscore
+            // Its based on phosphor-debug-collector application
+            // dumpfile format
+            std::regex dumpFileRegex("[a-zA-Z0-9\\._]+");
+            if (!std::regex_match(dumpFileName, dumpFileRegex))
+            {
+                BMCWEB_LOG_ERROR << "Invalid dump filename " << dumpFileName;
                 asyncResp->res.result(boost::beast::http::status::not_found);
                 return;
-            });
+            }
+            std::string contentDispositionParam =
+                "attachment; filename=\"" + dumpFileName + "\"";
+
+            asyncResp->res.addHeader(
+                boost::beast::http::field::content_disposition,
+                contentDispositionParam);
+
+            asyncResp->res.body() = {std::istreambuf_iterator<char>(readFile),
+                                     std::istreambuf_iterator<char>()};
+            return;
+        }
+        asyncResp->res.result(boost::beast::http::status::not_found);
+        return;
+        });
 
     BMCWEB_ROUTE(app, "/bus/system/<str>/")
         .privileges({{"Login"}})
@@ -2281,358 +2586,13 @@ inline void requestRoutes(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& connection) {
-                introspectObjects(
-                    connection, "/",
-                    std::make_shared<bmcweb::AsyncResp>(asyncResp->res));
-            });
+        introspectObjects(connection, "/", asyncResp);
+        });
 
     BMCWEB_ROUTE(app, "/bus/system/<str>/<path>")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
-        .methods(boost::beast::http::verb::get, boost::beast::http::verb::post)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& processName,
-               const std::string& requestedPath) {
-                std::vector<std::string> strs;
-                boost::split(strs, requestedPath, boost::is_any_of("/"));
-                std::string objectPath;
-                std::string interfaceName;
-                std::string methodName;
-                auto it = strs.begin();
-                if (it == strs.end())
-                {
-                    objectPath = "/";
-                }
-                while (it != strs.end())
-                {
-                    // Check if segment contains ".".  If it does, it must be an
-                    // interface
-                    if (it->find(".") != std::string::npos)
-                    {
-                        break;
-                        // This check is necessary as the trailing slash gets
-                        // parsed as part of our <path> specifier above, which
-                        // causes the normal trailing backslash redirector to
-                        // fail.
-                    }
-                    if (!it->empty())
-                    {
-                        objectPath += "/" + *it;
-                    }
-                    it++;
-                }
-                if (it != strs.end())
-                {
-                    interfaceName = *it;
-                    it++;
-
-                    // after interface, we might have a method name
-                    if (it != strs.end())
-                    {
-                        methodName = *it;
-                        it++;
-                    }
-                }
-                if (it != strs.end())
-                {
-                    // if there is more levels past the method name, something
-                    // went wrong, return not found
-                    asyncResp->res.result(
-                        boost::beast::http::status::not_found);
-                    return;
-                }
-                if (interfaceName.empty())
-                {
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp, processName,
-                         objectPath](const boost::system::error_code ec,
-                                     const std::string& introspectXml) {
-                            if (ec)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "Introspect call failed with error: "
-                                    << ec.message()
-                                    << " on process: " << processName
-                                    << " path: " << objectPath << "\n";
-                                return;
-                            }
-                            tinyxml2::XMLDocument doc;
-
-                            doc.Parse(introspectXml.c_str());
-                            tinyxml2::XMLNode* pRoot =
-                                doc.FirstChildElement("node");
-                            if (pRoot == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "XML document failed to parse "
-                                    << processName << " " << objectPath << "\n";
-                                asyncResp->res.jsonValue = {
-                                    {"status", "XML parse error"}};
-                                asyncResp->res.result(
-                                    boost::beast::http::status::
-                                        internal_server_error);
-                                return;
-                            }
-
-                            BMCWEB_LOG_DEBUG << introspectXml;
-                            asyncResp->res.jsonValue = {
-                                {"status", "ok"},
-                                {"bus_name", processName},
-                                {"object_path", objectPath}};
-                            nlohmann::json& interfacesArray =
-                                asyncResp->res.jsonValue["interfaces"];
-                            interfacesArray = nlohmann::json::array();
-                            tinyxml2::XMLElement* interface =
-                                pRoot->FirstChildElement("interface");
-
-                            while (interface != nullptr)
-                            {
-                                const char* ifaceName =
-                                    interface->Attribute("name");
-                                if (ifaceName != nullptr)
-                                {
-                                    interfacesArray.push_back(
-                                        {{"name", ifaceName}});
-                                }
-
-                                interface =
-                                    interface->NextSiblingElement("interface");
-                            }
-                        },
-                        processName, objectPath,
-                        "org.freedesktop.DBus.Introspectable", "Introspect");
-                }
-                else if (methodName.empty())
-                {
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp, processName, objectPath,
-                         interfaceName](const boost::system::error_code ec,
-                                        const std::string& introspectXml) {
-                            if (ec)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "Introspect call failed with error: "
-                                    << ec.message()
-                                    << " on process: " << processName
-                                    << " path: " << objectPath << "\n";
-                                return;
-                            }
-                            tinyxml2::XMLDocument doc;
-
-                            doc.Parse(introspectXml.data(),
-                                      introspectXml.size());
-                            tinyxml2::XMLNode* pRoot =
-                                doc.FirstChildElement("node");
-                            if (pRoot == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "XML document failed to parse "
-                                    << processName << " " << objectPath << "\n";
-                                asyncResp->res.result(
-                                    boost::beast::http::status::
-                                        internal_server_error);
-                                return;
-                            }
-                            asyncResp->res.jsonValue = {
-                                {"status", "ok"},
-                                {"bus_name", processName},
-                                {"interface", interfaceName},
-                                {"object_path", objectPath}};
-
-                            nlohmann::json& methodsArray =
-                                asyncResp->res.jsonValue["methods"];
-                            methodsArray = nlohmann::json::array();
-
-                            nlohmann::json& signalsArray =
-                                asyncResp->res.jsonValue["signals"];
-                            signalsArray = nlohmann::json::array();
-
-                            nlohmann::json& propertiesObj =
-                                asyncResp->res.jsonValue["properties"];
-                            propertiesObj = nlohmann::json::object();
-
-                            // if we know we're the only call, build the
-                            // json directly
-                            tinyxml2::XMLElement* interface =
-                                pRoot->FirstChildElement("interface");
-                            while (interface != nullptr)
-                            {
-                                const char* ifaceName =
-                                    interface->Attribute("name");
-
-                                if (ifaceName != nullptr &&
-                                    ifaceName == interfaceName)
-                                {
-                                    break;
-                                }
-
-                                interface =
-                                    interface->NextSiblingElement("interface");
-                            }
-                            if (interface == nullptr)
-                            {
-                                // if we got to the end of the list and
-                                // never found a match, throw 404
-                                asyncResp->res.result(
-                                    boost::beast::http::status::not_found);
-                                return;
-                            }
-
-                            tinyxml2::XMLElement* methods =
-                                interface->FirstChildElement("method");
-                            while (methods != nullptr)
-                            {
-                                nlohmann::json argsArray =
-                                    nlohmann::json::array();
-                                tinyxml2::XMLElement* arg =
-                                    methods->FirstChildElement("arg");
-                                while (arg != nullptr)
-                                {
-                                    nlohmann::json thisArg;
-                                    for (const char* fieldName :
-                                         std::array<const char*, 3>{
-                                             "name", "direction", "type"})
-                                    {
-                                        const char* fieldValue =
-                                            arg->Attribute(fieldName);
-                                        if (fieldValue != nullptr)
-                                        {
-                                            thisArg[fieldName] = fieldValue;
-                                        }
-                                    }
-                                    argsArray.push_back(std::move(thisArg));
-                                    arg = arg->NextSiblingElement("arg");
-                                }
-
-                                const char* name = methods->Attribute("name");
-                                if (name != nullptr)
-                                {
-                                    std::string uri;
-                                    uri.reserve(14 + processName.size() +
-                                                objectPath.size() +
-                                                interfaceName.size() +
-                                                strlen(name));
-                                    uri += "/bus/system/";
-                                    uri += processName;
-                                    uri += objectPath;
-                                    uri += "/";
-                                    uri += interfaceName;
-                                    uri += "/";
-                                    uri += name;
-                                    methodsArray.push_back(
-                                        {{"name", name},
-                                         {"uri", std::move(uri)},
-                                         {"args", argsArray}});
-                                }
-                                methods = methods->NextSiblingElement("method");
-                            }
-                            tinyxml2::XMLElement* signals =
-                                interface->FirstChildElement("signal");
-                            while (signals != nullptr)
-                            {
-                                nlohmann::json argsArray =
-                                    nlohmann::json::array();
-
-                                tinyxml2::XMLElement* arg =
-                                    signals->FirstChildElement("arg");
-                                while (arg != nullptr)
-                                {
-                                    const char* name = arg->Attribute("name");
-                                    const char* type = arg->Attribute("type");
-                                    if (name != nullptr && type != nullptr)
-                                    {
-                                        argsArray.push_back({
-                                            {"name", name},
-                                            {"type", type},
-                                        });
-                                    }
-                                    arg = arg->NextSiblingElement("arg");
-                                }
-                                const char* name = signals->Attribute("name");
-                                if (name != nullptr)
-                                {
-                                    signalsArray.push_back(
-                                        {{"name", name}, {"args", argsArray}});
-                                }
-
-                                signals = signals->NextSiblingElement("signal");
-                            }
-
-                            tinyxml2::XMLElement* property =
-                                interface->FirstChildElement("property");
-                            while (property != nullptr)
-                            {
-                                const char* name = property->Attribute("name");
-                                const char* type = property->Attribute("type");
-                                if (type != nullptr && name != nullptr)
-                                {
-                                    sdbusplus::message::message m =
-                                        crow::connections::systemBus
-                                            ->new_method_call(
-                                                processName.c_str(),
-                                                objectPath.c_str(),
-                                                "org.freedesktop."
-                                                "DBus."
-                                                "Properties",
-                                                "Get");
-                                    m.append(interfaceName, name);
-                                    nlohmann::json& propertyItem =
-                                        propertiesObj[name];
-                                    crow::connections::systemBus->async_send(
-                                        m,
-                                        [&propertyItem, asyncResp](
-                                            boost::system::error_code& e,
-                                            sdbusplus::message::message& msg) {
-                                            if (e)
-                                            {
-                                                return;
-                                            }
-
-                                            convertDBusToJSON("v", msg,
-                                                              propertyItem);
-                                        });
-                                }
-                                property =
-                                    property->NextSiblingElement("property");
-                            }
-                        },
-                        processName, objectPath,
-                        "org.freedesktop.DBus.Introspectable", "Introspect");
-                }
-                else
-                {
-                    if (req.method() != boost::beast::http::verb::post)
-                    {
-                        asyncResp->res.result(
-                            boost::beast::http::status::not_found);
-                        return;
-                    }
-
-                    nlohmann::json requestDbusData =
-                        nlohmann::json::parse(req.body, nullptr, false);
-
-                    if (requestDbusData.is_discarded())
-                    {
-                        asyncResp->res.result(
-                            boost::beast::http::status::bad_request);
-                        return;
-                    }
-                    if (!requestDbusData.is_array())
-                    {
-                        asyncResp->res.result(
-                            boost::beast::http::status::bad_request);
-                        return;
-                    }
-                    auto transaction =
-                        std::make_shared<InProgressActionData>(asyncResp->res);
-
-                    transaction->path = objectPath;
-                    transaction->methodName = methodName;
-                    transaction->arguments = std::move(requestDbusData);
-
-                    findActionOnInterface(transaction, processName);
-                }
-            });
+        .methods(boost::beast::http::verb::get,
+                 boost::beast::http::verb::post)(handleBusSystemPost);
 }
 } // namespace openbmc_mapper
 } // namespace crow

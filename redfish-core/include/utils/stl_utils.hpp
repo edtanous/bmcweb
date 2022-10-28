@@ -1,7 +1,10 @@
 #pragma once
 
 #include <algorithm>
+<<<<<<< HEAD
 #include <string>
+=======
+>>>>>>> origin/master
 #include <vector>
 
 namespace redfish

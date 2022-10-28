@@ -1,10 +1,15 @@
 #pragma once
+<<<<<<< HEAD
+=======
+#include <async_resp.hpp>
+>>>>>>> origin/master
 
 namespace redfish
 {
 
 namespace chassis_utils
 {
+<<<<<<< HEAD
 
 constexpr const char* acceleratorInvIntf =
     "xyz.openbmc_project.Inventory.Item.Accelerator";
@@ -23,12 +28,23 @@ constexpr const char* bmcInvInterf =
 template <typename Callback>
 void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& chassisID, Callback&& callback)
+=======
+/**
+ * @brief Retrieves valid chassis path
+ * @param asyncResp   Pointer to object holding response data
+ * @param callback  Callback for next step to get valid chassis path
+ */
+template <typename Callback>
+void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& chassisId, Callback&& callback)
+>>>>>>> origin/master
 {
     BMCWEB_LOG_DEBUG << "checkChassisId enter";
     const std::array<const char*, 2> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Board",
         "xyz.openbmc_project.Inventory.Item.Chassis"};
 
+<<<<<<< HEAD
     auto respHandler = [callback{std::forward<Callback>(callback)}, asyncResp,
                         chassisID](
                            const boost::system::error_code ec,
@@ -37,12 +53,27 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (ec)
         {
             BMCWEB_LOG_ERROR << "getValidChassisID respHandler DBUS error: "
+=======
+    auto respHandler =
+        [callback{std::forward<Callback>(callback)}, asyncResp,
+         chassisId](const boost::system::error_code ec,
+                    const dbus::utility::MapperGetSubTreePathsResponse&
+                        chassisPaths) mutable {
+        BMCWEB_LOG_DEBUG << "getValidChassisPath respHandler enter";
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "getValidChassisPath respHandler DBUS error: "
+>>>>>>> origin/master
                              << ec;
             messages::internalError(asyncResp->res);
             return;
         }
 
+<<<<<<< HEAD
         std::optional<std::string> validChassisID;
+=======
+        std::optional<std::string> chassisPath;
+>>>>>>> origin/master
         std::string chassisName;
         for (const std::string& chassis : chassisPaths)
         {
@@ -50,6 +81,7 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             chassisName = path.filename();
             if (chassisName.empty())
             {
+<<<<<<< HEAD
                 BMCWEB_LOG_ERROR << "Failed to find chassisName in " << chassis;
                 continue;
             }
@@ -60,6 +92,18 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
         }
         callback(validChassisID);
+=======
+                BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassis;
+                continue;
+            }
+            if (chassisName == chassisId)
+            {
+                chassisPath = chassis;
+                break;
+            }
+        }
+        callback(chassisPath);
+>>>>>>> origin/master
     };
 
     // Get the Chassis Collection
@@ -70,6 +114,7 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "/xyz/openbmc_project/inventory", 0, interfaces);
     BMCWEB_LOG_DEBUG << "checkChassisId exit";
 }
+<<<<<<< HEAD
 template <typename Callback>
 void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::string& chassisID, Callback&& callback)
@@ -591,6 +636,8 @@ a{sas} 2
         dbus_utils::mapperIntf, "GetObject", invObjPath.string(),
         std::array<const char*, 0>());
 }
+=======
+>>>>>>> origin/master
 
 } // namespace chassis_utils
 } // namespace redfish

@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
+<<<<<<< HEAD
 <!--# Redfish Schema:  PowerSubsystem v1.0.0                                               -->
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
 <!--# Copyright 2014-2020 DMTF.                                                            -->
+=======
+<!--# Redfish Schema:  PowerSubsystem v1.1.0                                               -->
+<!--#                                                                                      -->
+<!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
+<!--# available at http://www.dmtf.org/standards/redfish                                   -->
+<!--# Copyright 2014-2022 DMTF.                                                            -->
+>>>>>>> origin/master
 <!--# For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright -->
 <!--################################################################################       -->
 <!---->
@@ -31,6 +39,12 @@
   <edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/PowerSupplyCollection_v1.xml">
     <edmx:Include Namespace="PowerSupplyCollection"/>
   </edmx:Reference>
+<<<<<<< HEAD
+=======
+  <edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/BatteryCollection_v1.xml">
+    <edmx:Include Namespace="BatteryCollection"/>
+  </edmx:Reference>
+>>>>>>> origin/master
   <edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/Redundancy_v1.xml">
     <edmx:Include Namespace="Redundancy"/>
   </edmx:Reference>
@@ -51,7 +65,11 @@
         </Annotation>
         <Annotation Term="Capabilities.UpdateRestrictions">
           <Record>
+<<<<<<< HEAD
             <PropertyValue Property="Updatable" Bool="false"/>
+=======
+            <PropertyValue Property="Updatable" Bool="true"/>
+>>>>>>> origin/master
           </Record>
         </Annotation>
         <Annotation Term="Capabilities.DeleteRestrictions">
@@ -139,5 +157,22 @@
       </ComplexType>
     </Schema>
 
+<<<<<<< HEAD
+=======
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="PowerSubsystem.v1_1_0">
+      <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
+      <Annotation Term="Redfish.Release" String="2021.2"/>
+
+      <EntityType Name="PowerSubsystem" BaseType="PowerSubsystem.v1_0_0.PowerSubsystem">
+        <NavigationProperty Name="Batteries" Type="BatteryCollection.BatteryCollection" Nullable="false">
+          <Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
+          <Annotation Term="OData.Description" String="The link to the collection of batteries within this subsystem."/>
+          <Annotation Term="OData.LongDescription" String="This property shall contain a link to a resource collection of type BatteryCollection."/>
+          <Annotation Term="OData.AutoExpandReferences"/>
+        </NavigationProperty>
+      </EntityType>
+    </Schema>
+
+>>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

@@ -30,22 +30,18 @@ static EVP_PKEY* createEcKey();
 // Trust chain related errors.`
 inline bool isTrustChainError(int errnum)
 {
-    if ((errnum == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
-        (errnum == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
-        (errnum == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) ||
-        (errnum == X509_V_ERR_CERT_UNTRUSTED) ||
-        (errnum == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE))
-    {
-        return true;
-    }
-    return false;
+    return (errnum == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
+           (errnum == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
+           (errnum == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) ||
+           (errnum == X509_V_ERR_CERT_UNTRUSTED) ||
+           (errnum == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE);
 }
 
 inline bool validateCertificate(X509* const cert)
 {
     // Create an empty X509_STORE structure for certificate validation.
     X509_STORE* x509Store = X509_STORE_new();
-    if (!x509Store)
+    if (x509Store == nullptr)
     {
         BMCWEB_LOG_ERROR << "Error occurred during X509_STORE_new call";
         return false;
@@ -53,7 +49,7 @@ inline bool validateCertificate(X509* const cert)
 
     // Load Certificate file into the X509 structure.
     X509_STORE_CTX* storeCtx = X509_STORE_CTX_new();
-    if (!storeCtx)
+    if (storeCtx == nullptr)
     {
         BMCWEB_LOG_ERROR << "Error occurred during X509_STORE_CTX_new call";
         X509_STORE_free(x509Store);
@@ -152,7 +148,7 @@ inline bool verifyOpensslKeyCert(const std::string& filepath, pem_password_cb *p
             EVP_PKEY_CTX* pkeyCtx =
                 EVP_PKEY_CTX_new_from_pkey(nullptr, pkey, nullptr);
 
-            if (!pkeyCtx)
+            if (pkeyCtx == nullptr)
             {
                 std::cerr << "Unable to allocate pkeyCtx " << ERR_get_error()
                           << "\n";
@@ -203,7 +199,7 @@ inline bool verifyOpensslKeyCert(const std::string& filepath, pem_password_cb *p
 inline X509* loadCert(const std::string& filePath)
 {
     BIO* certFileBio = BIO_new_file(filePath.c_str(), "rb");
-    if (!certFileBio)
+    if (certFileBio == nullptr)
     {
         BMCWEB_LOG_ERROR << "Error occured during BIO_new_file call, "
                          << "FILE= " << filePath;
@@ -211,7 +207,7 @@ inline X509* loadCert(const std::string& filePath)
     }
 
     X509* cert = X509_new();
-    if (!cert)
+    if (cert == nullptr)
     {
         BMCWEB_LOG_ERROR << "Error occured during X509_new call, "
                          << ERR_get_error();
@@ -219,7 +215,7 @@ inline X509* loadCert(const std::string& filePath)
         return nullptr;
     }
 
-    if (!PEM_read_bio_X509(certFileBio, &cert, nullptr, nullptr))
+    if (PEM_read_bio_X509(certFileBio, &cert, nullptr, nullptr) == nullptr)
     {
         BMCWEB_LOG_ERROR << "Error occured during PEM_read_bio_X509 call, "
                          << "FILE= " << filePath;
@@ -240,7 +236,7 @@ inline int addExt(X509* cert, int nid, const char* value)
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
     ex = X509V3_EXT_conf_nid(nullptr, &ctx, nid, const_cast<char*>(value));
-    if (!ex)
+    if (ex == nullptr)
     {
         BMCWEB_LOG_ERROR << "Error: In X509V3_EXT_conf_nidn: " << value;
         return -1;
@@ -361,13 +357,21 @@ EVP_PKEY* createEcKey()
         pKey = EVP_PKEY_new();
         if (pKey != nullptr)
         {
+<<<<<<< HEAD
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
             if (EVP_PKEY_assign_EC_KEY(pKey, myecc))
+=======
+            if (EVP_PKEY_assign(pKey, EVP_PKEY_EC, myecc) != 0)
+>>>>>>> origin/master
             {
                 /* pKey owns myecc from now */
                 if (EC_KEY_check_key(myecc) <= 0)
                 {
+<<<<<<< HEAD
                     BMCWEB_LOG_ERROR << "EC_check_key failed.\n";
+=======
+                    std::cerr << "EC_check_key failed.\n";
+>>>>>>> origin/master
                 }
             }
         }
@@ -544,4 +548,65 @@ inline std::shared_ptr<boost::asio::ssl::context>
     }
     return mSslContext;
 }
+
+inline std::optional<boost::asio::ssl::context> getSSLClientContext()
+{
+    boost::asio::ssl::context sslCtx(boost::asio::ssl::context::tls_client);
+
+    boost::system::error_code ec;
+
+    // Support only TLS v1.2 & v1.3
+    sslCtx.set_options(boost::asio::ssl::context::default_workarounds |
+                           boost::asio::ssl::context::no_sslv2 |
+                           boost::asio::ssl::context::no_sslv3 |
+                           boost::asio::ssl::context::single_dh_use |
+                           boost::asio::ssl::context::no_tlsv1 |
+                           boost::asio::ssl::context::no_tlsv1_1,
+                       ec);
+    if (ec)
+    {
+        BMCWEB_LOG_ERROR << "SSL context set_options failed";
+        return std::nullopt;
+    }
+
+    // Add a directory containing certificate authority files to be used
+    // for performing verification.
+    sslCtx.set_default_verify_paths(ec);
+    if (ec)
+    {
+        BMCWEB_LOG_ERROR << "SSL context set_default_verify failed";
+        return std::nullopt;
+    }
+
+    // Verify the remote server's certificate
+    sslCtx.set_verify_mode(boost::asio::ssl::verify_peer, ec);
+    if (ec)
+    {
+        BMCWEB_LOG_ERROR << "SSL context set_verify_mode failed";
+        return std::nullopt;
+    }
+
+    // All cipher suites are set as per OWASP datasheet.
+    // https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html
+    constexpr const char* sslCiphers = "ECDHE-ECDSA-AES128-GCM-SHA256:"
+                                       "ECDHE-RSA-AES128-GCM-SHA256:"
+                                       "ECDHE-ECDSA-AES256-GCM-SHA384:"
+                                       "ECDHE-RSA-AES256-GCM-SHA384:"
+                                       "ECDHE-ECDSA-CHACHA20-POLY1305:"
+                                       "ECDHE-RSA-CHACHA20-POLY1305:"
+                                       "DHE-RSA-AES128-GCM-SHA256:"
+                                       "DHE-RSA-AES256-GCM-SHA384"
+                                       "TLS_AES_128_GCM_SHA256:"
+                                       "TLS_AES_256_GCM_SHA384:"
+                                       "TLS_CHACHA20_POLY1305_SHA256";
+
+    if (SSL_CTX_set_cipher_list(sslCtx.native_handle(), sslCiphers) != 1)
+    {
+        BMCWEB_LOG_ERROR << "SSL_CTX_set_cipher_list failed";
+        return std::nullopt;
+    }
+
+    return sslCtx;
+}
+
 } // namespace ensuressl

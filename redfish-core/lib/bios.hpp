@@ -1,8 +1,10 @@
 #pragma once
 
 #include <app.hpp>
+#include <query.hpp>
 #include <registries/privilege_registry.hpp>
-#include <utils/fw_utils.hpp>
+#include <utils/sw_utils.hpp>
+
 namespace redfish
 {
 namespace bios
@@ -1507,11 +1509,26 @@ inline void
  * BiosService class supports handle get method for bios.
  */
 inline void
-    handleBiosServiceGet(const crow::Request&,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    handleBiosServiceGet(crow::App& app, const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& systemName)
 {
+<<<<<<< HEAD
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios";
+=======
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    if (systemName != "system")
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/system/Bios";
+>>>>>>> origin/master
     asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_1_0.Bios";
     asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
     asyncResp->res.jsonValue["Description"] = "BIOS Configuration Service";
@@ -1521,7 +1538,7 @@ inline void
                    "/Bios/Actions/Bios.ResetBios"}};
 
     // Get the ActiveSoftwareImage and SoftwareImages
-    fw_util::populateFirmwareInformation(asyncResp, fw_util::biosPurpose, "",
+    sw_util::populateSoftwareInformation(asyncResp, sw_util::biosPurpose, "",
                                          true);
 
     asyncResp->res.jsonValue["Attributes"] = {};
@@ -1534,6 +1551,7 @@ inline void
 
 inline void requestRoutesBiosService(App& app)
 {
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/")
         .privileges(redfish::privileges::getBios)
         .methods(boost::beast::http::verb::get)(handleBiosServiceGet);
@@ -1604,6 +1622,12 @@ inline void requestRoutesBiosSettings(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/Settings")
         .privileges(redfish::privileges::patchBios)
         .methods(boost::beast::http::verb::patch)(handleBiosSettingsPatch);
+=======
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/")
+        .privileges(redfish::privileges::getBios)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleBiosServiceGet, std::ref(app)));
+>>>>>>> origin/master
 }
 
 /**
@@ -1614,17 +1638,30 @@ inline void requestRoutesBiosSettings(App& app)
  * Analyzes POST body message before sends Reset request data to D-Bus.
  */
 inline void
-    handleBiosResetPost(const crow::Request&,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    handleBiosResetPost(crow::App& app, const crow::Request& req,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& systemName)
 {
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    if (systemName != "system")
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Failed to reset bios: " << ec;
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Failed to reset bios: " << ec;
+            messages::internalError(asyncResp->res);
+            return;
+        }
         },
         "org.open_power.Software.Host.Updater", "/xyz/openbmc_project/software",
         "xyz.openbmc_project.Common.FactoryReset", "Reset");
@@ -1632,10 +1669,15 @@ inline void
 
 inline void requestRoutesBiosReset(App& app)
 {
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/Bios/Actions/Bios.ResetBios/")
+=======
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/Actions/Bios.ResetBios/")
+>>>>>>> origin/master
         .privileges(redfish::privileges::postBios)
-        .methods(boost::beast::http::verb::post)(handleBiosResetPost);
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleBiosResetPost, std::ref(app)));
 }
 
 /**
