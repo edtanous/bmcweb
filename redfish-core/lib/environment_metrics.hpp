@@ -1309,6 +1309,44 @@ inline void getSensorDataByService(
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
+inline void getSensorDataService(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& service, const std::string& chassisId,
+    const std::string& objPath, const std::string& resourceType)
+{
+    BMCWEB_LOG_DEBUG << "Get sensor service.";
+
+    const std::array<const char*, 1> sensorInterfaces = {
+        "xyz.openbmc_project.Sensor.Value"};
+    // Process sensor reading
+    crow::connections::systemBus->async_method_call(
+        [aResp, chassisId, resourceType, objPath](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                object) {
+            if (ec)
+            {
+                // The path does not implement any state interfaces.
+                return;
+            }
+
+            for (const auto& [service, interfaces] : object)
+            {
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Sensor.Value") !=
+                    interfaces.end())
+                {
+                    getSensorDataByService(aResp, service, chassisId, objPath,
+                                           resourceType);
+                }
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
+        sensorInterfaces);
+}
+
 inline void getEnvironmentMetricsDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath, const std::string& resourceType)
@@ -1369,6 +1407,173 @@ inline void getEnvironmentMetricsDataByService(
         "xyz.openbmc_project.Association", "endpoints");
 }
 
+inline void getCpuEnvironmentMetricsDataByService(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get CPU environment metrics data.";
+    crow::connections::systemBus->async_method_call(
+        [aResp, service,
+         objPath](const boost::system::error_code& e,
+                  std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+
+            sdbusplus::message::object_path objectPath(objPath);
+            std::string chassisName = objectPath.filename();
+            if (chassisName.empty())
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            const std::string& chassisId = chassisName;
+            const std::string resourceType = "Processor";
+            for (const std::string& sensorPath : *data)
+            {
+                getSensorDataService(aResp, service, chassisId, sensorPath,
+                                     resourceType);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/all_sensors",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void getCpuPowerCapData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                               const std::string& service,
+                               const std::string& objPath,
+                               const std::string& cpuId, bool persistence)
+{
+    BMCWEB_LOG_DEBUG << "Get CPU power cap data.";
+    crow::connections::systemBus->async_method_call(
+        [aResp, service, objPath, cpuId,
+         persistence](const boost::system::error_code& e,
+                      const std::variant<bool>& value) {
+            if (e)
+            {
+                // The path does not implement any state interfaces.
+                return;
+            }
+
+            const bool* data = std::get_if<bool>(&value);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            if (persistence != *data)
+            {
+                // Not the sensor we expected
+                return;
+            }
+
+            sdbusplus::message::object_path objectPath(objPath);
+            std::string sensorName = objectPath.filename();
+            if (sensorName.empty())
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            std::string sensorURI =
+                (boost::format("/redfish/v1/Chassis/%s/Controls/%s") % cpuId %
+                 sensorName)
+                    .str();
+            aResp->res.jsonValue["PowerLimitWatts"]["DataSourceUri"] =
+                sensorURI;
+
+            getPowerCap(aResp, service, objPath);
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.State.Decorator.Persistence", "persistent");
+}
+
+inline void
+    getCpuPowerCapService(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          const std::string& service,
+                          const std::string& objPath, const std::string& cpuId)
+{
+    BMCWEB_LOG_DEBUG << "Get CPU power cap service.";
+
+    const std::array<const char*, 1> sensorInterfaces = {
+        "xyz.openbmc_project.Control.Power.Cap"};
+    // Process sensor reading
+    crow::connections::systemBus->async_method_call(
+        [aResp, service, objPath, cpuId](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                object) {
+            if (ec)
+            {
+                // The path does not implement any state interfaces.
+                return;
+            }
+
+            for (const auto& [service, interfaces] : object)
+            {
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Control.Power.Cap") !=
+                    interfaces.end())
+                {
+                    getCpuPowerCapData(aResp, service, objPath, cpuId, true);
+                }
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
+        sensorInterfaces);
+}
+
+inline void
+    getCpuPowerCapByService(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& service,
+                            const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get CPU power Cap";
+    crow::connections::systemBus->async_method_call(
+        [aResp, service,
+         objPath](const boost::system::error_code& e,
+                  std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            sdbusplus::message::object_path objectPath(objPath);
+            std::string cpuName = objectPath.filename();
+            if (cpuName.empty())
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            const std::string& cpuId = cpuName;
+            for (const std::string& sensorPath : *data)
+            {
+                getCpuPowerCapService(aResp, service, sensorPath, cpuId);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/power_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 inline void
     getProcessorEnvironmentMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                        const std::string& processorId)
@@ -1425,8 +1630,33 @@ inline void
                     }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-                    getEnvironmentMetricsDataByService(aResp, service, path,
-                                                       resourceType);
+                    if (std::find(
+                            interfaces.begin(), interfaces.end(),
+                            "xyz.openbmc_project.Inventory.Item.Accelerator") !=
+                        interfaces.end())
+                    {
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                        aResp->res.jsonValue
+                            ["Actions"]["Oem"]["Nvidia"]
+                            ["#NvidiaEnvironmentMetrics.ResetEDPp"] = {
+                            {"target",
+                             "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                             "/Processors/" +
+                                 processorId +
+                                 "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp"}};
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                        getEnvironmentMetricsDataByService(aResp, service, path,
+                                                           resourceType);
+                    }
+                    else if (std::find(
+                                 interfaces.begin(), interfaces.end(),
+                                 "xyz.openbmc_project.Inventory.Item.Cpu") !=
+                             interfaces.end())
+                    {
+                        getCpuEnvironmentMetricsDataByService(aResp, service,
+                                                              path);
+                        getCpuPowerCapByService(aResp, service, path);
+                    }
                 }
                 return;
             }
@@ -1438,8 +1668,9 @@ inline void
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", 0,
-        std::array<const char*, 1>{
-            "xyz.openbmc_project.Inventory.Item.Accelerator"});
+        std::array<const char*, 2>{
+            "xyz.openbmc_project.Inventory.Item.Accelerator",
+            "xyz.openbmc_project.Inventory.Item.Cpu"});
 }
 
 inline void requestRoutesProcessorEnvironmentMetrics(App& app)
@@ -1447,32 +1678,23 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::getProcessor)
-        .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
-                                              const std::shared_ptr<
-                                                  bmcweb::AsyncResp>& asyncResp,
-                                              const std::string& processorId) {
-            std::string envMetricsURI =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
-            envMetricsURI += processorId;
-            envMetricsURI += "/EnvironmentMetrics";
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#EnvironmentMetrics.v1_2_0.EnvironmentMetrics";
-            asyncResp->res.jsonValue["@odata.id"] = envMetricsURI;
-            asyncResp->res.jsonValue["Id"] = "Environment Metrics";
-            asyncResp->res.jsonValue["Name"] =
-                processorId + " Environment Metrics";
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]
-                                    ["#NvidiaEnvironmentMetrics.ResetEDPp"] = {
-                {"target",
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
-                     processorId +
-                     "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp"}};
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& processorId) {
+                std::string envMetricsURI =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+                envMetricsURI += processorId;
+                envMetricsURI += "/EnvironmentMetrics";
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#EnvironmentMetrics.v1_2_0.EnvironmentMetrics";
+                asyncResp->res.jsonValue["@odata.id"] = envMetricsURI;
+                asyncResp->res.jsonValue["Id"] = "Environment Metrics";
+                asyncResp->res.jsonValue["Name"] =
+                    processorId + " Environment Metrics";
 
-            getProcessorEnvironmentMetricsData(asyncResp, processorId);
-        });
+                getProcessorEnvironmentMetricsData(asyncResp, processorId);
+            });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/Processors/<str>/EnvironmentMetrics")
