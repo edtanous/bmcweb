@@ -1728,7 +1728,6 @@ inline static void
                 {
                     continue;
                 }
-
                 crow::connections::systemBus->async_method_call(
                     [aResp](const boost::system::error_code ec,
                             std::variant<std::vector<std::string>>& resp) {
@@ -1778,21 +1777,14 @@ inline static void
     getRelatedItems(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     const std::string& swId, const std::string& purpose)
 {
-    if (purpose == fw_util::bmcPurpose)
-    {
-        nlohmann::json& relatedItem = aResp->res.jsonValue["RelatedItem"];
-        relatedItem.push_back(
-            {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}});
-        aResp->res.jsonValue["RelatedItem@odata.count"] = relatedItem.size();
-    }
-    else if (purpose == fw_util::biosPurpose)
+    if (purpose == fw_util::biosPurpose)
     {
         nlohmann::json& relatedItem = aResp->res.jsonValue["RelatedItem"];
         relatedItem.push_back(
             {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios"}});
         aResp->res.jsonValue["Members@odata.count"] = relatedItem.size();
     }
-    else if (purpose == fw_util::otherPurpose)
+    else if (purpose == fw_util::otherPurpose || purpose == fw_util::bmcPurpose)
     {
         getRelatedItemsOthers(aResp, swId);
     }
