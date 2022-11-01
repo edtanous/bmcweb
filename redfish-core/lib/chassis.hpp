@@ -1551,62 +1551,115 @@ inline void requestRoutesChassis(App& app)
 inline void
     doChassisPowerCycle(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    const char* busName = "xyz.openbmc_project.ObjectMapper";
-    const char* path = "/xyz/openbmc_project/object_mapper";
-    const char* interface = "xyz.openbmc_project.ObjectMapper";
-    const char* method = "GetSubTreePaths";
-
-    const std::array<const char*, 1> interfaces = {
-        "xyz.openbmc_project.State.Chassis"};
-
-    // Use mapper to get subtree paths.
     crow::connections::systemBus->async_method_call(
-        [asyncResp](
-            const boost::system::error_code ec,
-            const dbus::utility::MapperGetSubTreePathsResponse& chassisList) {
+        [asyncResp](const boost::system::error_code ec,
+                    const std::vector<std::string>& chassisList) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "[mapper] Bad D-Bus request error: " << ec;
                 messages::internalError(asyncResp->res);
                 return;
             }
-
-            const char* processName = "xyz.openbmc_project.State.Chassis";
-            const char* interfaceName = "xyz.openbmc_project.State.Chassis";
-            const char* destProperty = "RequestedPowerTransition";
-            const std::string propertyValue =
-                "xyz.openbmc_project.State.Chassis.Transition.PowerCycle";
             std::string objectPath =
                 "/xyz/openbmc_project/state/chassis_system0";
-
-            /* Look for system reset chassis path */
             if ((std::find(chassisList.begin(), chassisList.end(),
                            objectPath)) == chassisList.end())
             {
-                /* We prefer to reset the full chassis_system, but if it doesn't
-                 * exist on some platforms, fall back to a host-only power reset
-                 */
                 objectPath = "/xyz/openbmc_project/state/chassis0";
             }
-
             crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code ec2) {
-                    // Use "Set" method to set the property value.
-                    if (ec2)
+                [asyncResp, objectPath](const boost::system::error_code ec) {
+                    // Use "Set" method to set the property
+                    // value.
+                    if (ec)
                     {
                         BMCWEB_LOG_DEBUG << "[Set] Bad D-Bus request error: "
-                                         << ec2;
+                                         << ec;
                         messages::internalError(asyncResp->res);
                         return;
                     }
 
                     messages::success(asyncResp->res);
                 },
-                processName, objectPath, "org.freedesktop.DBus.Properties",
-                "Set", interfaceName, destProperty,
-                dbus::utility::DbusVariantType{propertyValue});
+                "xyz.openbmc_project.State.Chassis", objectPath,
+                "org.freedesktop.DBus.Properties", "Set",
+                "xyz.openbmc_project.State.Chassis ",
+                "RequestedPowerTransition",
+                dbus::utility::DbusVariantType{
+                    "xyz.openbmc_project.State.Chassis.Transition.PowerCycle"});
         },
-        busName, path, interface, method, "/", 0, interfaces);
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/", 0,
+        std::array<std::string, 1>{"xyz.openbmc_project.State.Chassis"});
+}
+inline void powerCycle(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec,
+                    const std::vector<std::string>& hostList) {
+            if (ec)
+            {
+                doChassisPowerCycle(asyncResp);
+            }
+            std::string objectPath = "/xyz/openbmc_project/state/host_system0";
+            if ((std::find(hostList.begin(), hostList.end(), objectPath)) ==
+                hostList.end())
+            {
+                objectPath = "/xyz/openbmc_project/state/host0";
+            }
+            crow::connections::systemBus->async_method_call(
+                [asyncResp,
+                 objectPath](const boost::system::error_code ec,
+                             const std::variant<std::string>& state) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG << "[mapper] Bad D-Bus request error: "
+                                         << ec;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    const std::string* hostState =
+                        std::get_if<std::string>(&state);
+                    if (*hostState ==
+                        "xyz.openbmc_project.State.Host.HostState.Running")
+                    {
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp,
+                             objectPath](const boost::system::error_code ec) {
+                                // Use "Set" method to set the property value.
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_DEBUG
+                                        << "[Set] Bad D-Bus request error: "
+                                        << ec;
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+
+                                messages::success(asyncResp->res);
+                            },
+                            "xyz.openbmc_project.State.Host", objectPath,
+                            "org.freedesktop.DBus.Properties", "Set",
+                            "xyz.openbmc_project.State.Host",
+                            "RequestedHostTransition",
+                            dbus::utility::DbusVariantType{
+                                "xyz.openbmc_project.State.Host.Transition.Reboot"});
+                    }
+                    else
+                    {
+                        doChassisPowerCycle(asyncResp);
+                    }
+                },
+                "xyz.openbmc_project.State.Host", objectPath,
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.State.Host", "CurrentHostState");
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/", 0,
+        std::array<std::string, 1>{"xyz.openbmc_project.State.Host"});
 }
 
 inline void handleChassisResetActionInfoPost(
@@ -1636,7 +1689,7 @@ inline void handleChassisResetActionInfoPost(
 
         return;
     }
-    doChassisPowerCycle(asyncResp);
+    powerCycle(asyncResp);
 }
 
 /**
