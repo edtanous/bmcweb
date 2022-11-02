@@ -1178,6 +1178,8 @@ inline void getSensorDataByService(
                             {"Reading", *attributeValue},
                             {"DataSourceUri", sensorURI},
                         };
+                        // TODO: section as pick reading from sensor association.
+                        aResp->res.jsonValue["PowerLimitWatts"]["Reading"] = *attributeValue;
                     }
                     else if (sensorType == "energy")
                     {
