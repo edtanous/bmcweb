@@ -22,6 +22,7 @@
 #include <sdbusplus/asio/property.hpp>
 #include <utils/chassis_utils.hpp>
 #include <utils/collection.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 
 namespace redfish
@@ -338,6 +339,9 @@ inline void getEROTChassis(const crow::Request&,
                 // Link association to parent chassis
                 redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
                                                                    objPath);
+
+                redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                                     chassisId);
                 return;
             }
 
