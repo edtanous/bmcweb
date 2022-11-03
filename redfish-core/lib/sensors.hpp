@@ -176,7 +176,7 @@ inline std::string_view toReadingUnits(std::string_view sensorType)
     }
     if (sensorType == "altitude")
     {
-        return "m";
+        return "Pa";
     }
     if (sensorType == "airflow")
     {
