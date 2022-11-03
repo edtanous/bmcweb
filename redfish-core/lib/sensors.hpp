@@ -154,7 +154,7 @@ inline const char* toReadingUnits(const std::string& sensorType)
     }
     if (sensorType == "altitude")
     {
-        return "m";
+        return "Pa";
     }
     if (sensorType == "airflow")
     {
