@@ -1673,6 +1673,45 @@ inline void getProcessorEccModeData(
     getEccModeData(aResp, cpuId, service, objPath);
 }
 
+inline void getProcessorResetTypeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& cpuId, const std::string& service,
+                           const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, cpuId](const boost::system::error_code ec,
+                       const OperatingConfigProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error on reset interface";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const auto& property : properties)
+            {
+                if (property.first == "ResetType")
+                {
+                    const std::string* processorResetType =
+                        std::get_if<std::string>(&property.second);
+                    if (processorResetType == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Property processorResetType is null";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    const std::string processorResetTypeValue =
+                        getProcessorResetType(*processorResetType);
+                    aResp->res.jsonValue["Actions"]["#Processor.Reset"] = {
+                        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/"
+                            + cpuId + "/Actions/Processor.Reset"},
+                        {"ResetType@Redfish.AllowableValues", {processorResetTypeValue}}};
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Control.Processor.Reset");
+}
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void
@@ -1851,6 +1890,11 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getFpgaTypeData(aResp, serviceName, objectPath);
             }
+            else if (interface == "xyz.openbmc_project.Control.Processor.Reset")
+            {
+                getProcessorResetTypeData(aResp, processorId, serviceName,
+                                        objectPath);
+            }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             else if (interface == "com.nvidia.MigMode")
@@ -1869,11 +1913,6 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     aResp->res.jsonValue["@Redfish.Settings"]["SettingsObject"] = {
         {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
                           processorId + "/Settings"}};
-
-    aResp->res.jsonValue["Actions"]["#Processor.Reset"] = {
-        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
-                       processorId + "/Actions/Processor.Reset"},
-        {"ResetType@Redfish.AllowableValues", {"GracefulRestart"}}};
 
     aResp->res.jsonValue["Ports"] = {
         {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
