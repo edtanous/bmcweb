@@ -1128,16 +1128,10 @@ inline void
             }
         });
 }
-
 inline void
-    handleChassisPatch(App& app, const crow::Request& req,
-                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    handleChassisPatch(const crow::Request& req, const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& param)
 {
-    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-    {
-        return;
-    }
     std::optional<bool> locationIndicatorActive;
     std::optional<std::string> indicatorLed;
 
@@ -1256,6 +1250,29 @@ inline void
         "/xyz/openbmc_project/inventory", 0, interfaces);
 }
 
+inline void
+    handleChassisPatchReq(App& app, const crow::Request& req,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& param)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    redfish::chassis_utils::isEROTChassis(
+        param, [req, asyncResp, param](bool isEROT) {
+            if (isEROT)
+            {
+                BMCWEB_LOG_DEBUG << " EROT chassis";
+                handleEROTChassisPatch(req, asyncResp, param);
+            }
+            else
+            {
+                handleChassisPatch(req, asyncResp, param);
+            }
+    });
+}
+
 /**
  * Chassis override class for delivering Chassis Schema
  * Functions triggers appropriate requests on DBus
@@ -1270,7 +1287,7 @@ inline void requestRoutesChassis(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/")
         .privileges(redfish::privileges::patchChassis)
         .methods(boost::beast::http::verb::patch)(
-            std::bind_front(handleChassisPatch, std::ref(app)));
+            std::bind_front(handleChassisPatchReq, std::ref(app)));
 }
 
 inline void

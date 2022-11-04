@@ -15,6 +15,9 @@
 */
 #pragma once
 
+#include "background_copy.hpp"
+#include "in_band.hpp"
+
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
 #include <dbus_utility.hpp>
@@ -317,7 +320,7 @@ inline void getEROTChassis(const crow::Request&,
                     certsObject;
 
                 redfish::chassis_utils::getChassisUUID(
-                    asyncResp, connectionNames[0].first, path);
+                    asyncResp, connectionNames[0].first, path, true);
 
                 redfish::chassis_utils::getChassisLocationType(
                     asyncResp, connectionNames[0].first, path);
@@ -418,5 +421,105 @@ inline void requestRoutesEROTChassisCertificate(App& app)
                     members.size();
             });
 }
+
+/**
+ * @brief Handles request PATCH 
+ * The function set all delivered properties 
+ * in request body on chassis defined in chassisId 
+ * The function is designed only for chassis
+ * which is ERoot
+ * 
+ * @param resp Async HTTP response.
+ * @param asyncResp Pointer to object holding response data
+ * @param chassisId  Chassis ID
+ */
+inline void handleEROTChassisPatch( const crow::Request& req,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& chassisId)
+{
+    std::optional<bool> backgroundCopyEnabled;
+    std::optional<bool> inBandEnabled;
+
+    if (chassisId.empty())
+    {
+        return;
+    }
+
+    if (!json_util::readJsonAction(
+            req, asyncResp->res, 
+            "AutomaticBackgroundCopyEnabled", backgroundCopyEnabled, 
+            "InbandUpdatePolicyEnabled", inBandEnabled))
+    {
+        return;
+    }
+
+    const std::array<const char*, 1> interfaces = {
+        "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisId(std::string(chassisId)), backgroundCopyEnabled, inBandEnabled](
+            const boost::system::error_code ec,
+            const crow::openbmc_mapper::GetSubTreeType& subtree) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            // Iterate over all retrieved ObjectPaths.
+            for (const std::pair<std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                     object : subtree)
+            {
+                const std::string& path = object.first;
+                const std::vector<
+                    std::pair<std::string, std::vector<std::string>>>&
+                    connectionNames = object.second;
+
+                sdbusplus::message::object_path objPath(path);
+                if (objPath.filename() != chassisId)
+                {
+                    continue;
+                }
+
+                const std::string& connectionName = connectionNames[0].first;
+
+                sdbusplus::asio::getProperty<std::string>(
+                        *crow::connections::systemBus, connectionName, path,
+                        "xyz.openbmc_project.Common.UUID", "UUID",
+                        [asyncResp, backgroundCopyEnabled, inBandEnabled](const boost::system::error_code ec,
+                                    const std::string& chassisUUID) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            
+                            if(backgroundCopyEnabled.has_value())
+                            {
+                                redfish::chassis_utils::setBackgroundCopyEnabled(asyncResp, chassisUUID, backgroundCopyEnabled.value());
+                            }
+
+                            if(inBandEnabled.has_value())
+                            {
+                                redfish::chassis_utils::setInBandEnabled(asyncResp, chassisUUID, inBandEnabled.value());
+                            }
+                        });
+                return;
+            }
+
+            // Couldn't find an object with that name.  return an error
+            messages::resourceNotFound(asyncResp->res,
+                                       "#Chassis.v1_16_0.Chassis", chassisId);
+        },
+
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0, interfaces);
+
+}
+
 
 } // namespace redfish
