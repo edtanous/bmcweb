@@ -130,8 +130,8 @@ inline void getSensorMap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 sensorUri += "/Sensors/";
                 sensorUri += sensorName;
                 thisMetric["MetricProperty"] = sensorUri;
-                thisMetric["Oem"]["Nvidia"]["SensingIntervalMilliseconds"] =
-                    std::to_string(pmSensingInterval);
+                thisMetric["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaMetricReport.v1_0_0.NvidiaMetricReport";
                 thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = true;
                 if (requestTimestamp != 0 && thisMetric["MetricValue"] != "nan")
                 {
@@ -178,6 +178,11 @@ inline void getPlatforMetricsFromSensorMap(
             asyncResp->res.jsonValue["MetricReportDefinition"]["@odata.id"] =
                 telemetry::metricReportDefinitionUri +
                 std::string("/" PLATFORMMETRICSID);
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaMetricReport.v1_0_0.NvidiaMetricReport";
+            asyncResp->res
+                .jsonValue["Oem"]["Nvidia"]["SensingIntervalMilliseconds"] =
+                pmSensingInterval;
             asyncResp->res.jsonValue["MetricValues"] = nlohmann::json::array();
             for (const auto& [path, serviceMap] : subtree)
             {
