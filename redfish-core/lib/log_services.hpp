@@ -1004,11 +1004,34 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, req](const boost::system::error_code ec,
+                         sdbusplus::message::message& msg,
                          const sdbusplus::message::object_path& objPath) {
             if (ec)
             {
+                const sd_bus_error* dbusError = msg.get_error();
+
                 BMCWEB_LOG_ERROR << "CreateDump resp_handler got error " << ec;
-                messages::internalError(asyncResp->res);
+
+                if (dbusError == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                BMCWEB_LOG_ERROR << "Error message: " << dbusError->message;
+
+                if (strcmp(
+                        dbusError->name,
+                        "xyz.openbmc_project.Dump.Create.Error.QuotaExceeded") ==
+                    0)
+                {
+                    messages::createLimitReachedForResource(asyncResp->res);
+                }
+                else
+                {
+                    messages::internalError(asyncResp->res);
+                }
+
                 return;
             }
             BMCWEB_LOG_DEBUG << "Dump Created. Path: " << objPath.str;
