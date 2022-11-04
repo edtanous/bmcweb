@@ -605,11 +605,11 @@ inline void getParentChassisPCIeDeviceLink(
  */
 inline void
     getProcessorChassisLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                            const std::string& objPath)
+                            const std::string& objPath, const std::string& service)
 {
     BMCWEB_LOG_DEBUG << "Get parent chassis link";
     crow::connections::systemBus->async_method_call(
-        [aResp, objPath](const boost::system::error_code ec,
+        [aResp, objPath, service](const boost::system::error_code ec,
                          std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
@@ -633,59 +633,49 @@ inline void
             aResp->res.jsonValue["Links"]["Chassis"] = {
                 {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
 
-            // Check if PCIeDevice on this chassis
+            // Get PCIeDevice on this chassis
             crow::connections::systemBus->async_method_call(
-                [aResp, chassisName,
-                 chassisPath](const boost::system::error_code ec1,
-                              const MapperGetSubTreeResponse& subtree) {
-                    if (ec1)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    // If PCIeDevice doesn't exists on this chassis
-                    // Check PCIeDevice on its parent chassis
-                    if (subtree.empty())
-                    {
-                        getParentChassisPCIeDeviceLink(aResp, chassisPath,
-                                                       chassisName);
-                    }
-                    else
-                    {
-                        for (const auto& [objectPath1, serviceMap] : subtree)
-                        {
-                            // Process same device
-                            if (!boost::ends_with(objectPath1, chassisName))
-                            {
-                                continue;
-                            }
+                [aResp, chassisName, chassisPath,  
+                service](const boost::system::error_code ec,
+                        std::variant<std::vector<std::string>>& resp) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
+                    return; // no pciedevices = no failures
+                }
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&resp);
+                if (data == nullptr && data->size() > 1)
+                {
+                    // Chassis must have single pciedevice
+                    BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
+                    return;
+                }
+                const std::string& pcieDevicePath = data->front();
+                sdbusplus::message::object_path objectPath(pcieDevicePath);
+                std::string pcieDeviceName = objectPath.filename();
+                if (pcieDeviceName.empty())
+                {
+                    BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                    messages::internalError(aResp->res);
+                    return;
+                }
                             std::string pcieDeviceLink = "/redfish/v1/Chassis/";
                             pcieDeviceLink += chassisName;
                             pcieDeviceLink += "/PCIeDevices/";
                             pcieDeviceLink += chassisName;
                             aResp->res.jsonValue["Links"]["PCIeDevice"] = {
                                 {"@odata.id", pcieDeviceLink}};
-                            if (serviceMap.size() < 1)
-                            {
-                                BMCWEB_LOG_ERROR << "Got 0 service names";
-                                messages::internalError(aResp->res);
-                                return;
-                            }
-                            const std::string& serviceName =
-                                serviceMap[0].first;
-                            // Get PCIeFunctions Link
-                            getProcessorPCIeFunctionsLinks(aResp, serviceName,
-                                                           objectPath1,
-                                                           pcieDeviceLink);
-                        }
-                    }
+
+                // Get PCIeFunctions Link
+                getProcessorPCIeFunctionsLinks(
+                       aResp, service, pcieDevicePath, pcieDeviceLink);
+
                 },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree", chassisPath,
-                0,
-                std::array<const char*, 1>{
-                    "xyz.openbmc_project.Inventory.Item.PCIeDevice"});
+                "xyz.openbmc_project.ObjectMapper", chassisPath + "/pciedevice",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+
         },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
@@ -1920,7 +1910,10 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     // Links association to underneath memory
     getProcessorMemoryLinks(aResp, objectPath);
     // Link association to parent chassis
-    getProcessorChassisLink(aResp, objectPath);
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        getProcessorChassisLink(aResp, objectPath, serviceName);
+    }
     // Get system and fpga interfaces properties
     getProcessorSystemPCIeInterface(aResp, objectPath);
     getProcessorFPGAPCIeInterface(aResp, objectPath);
