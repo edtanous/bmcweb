@@ -1224,6 +1224,13 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     messages::resourceInUse(asyncResp->res);
                     return;
                 }
+                if (std::string_view(
+                        "xyz.openbmc_project.Dump.Create.Error.QuotaExceeded") ==
+                    dbusError->name)
+                {
+                    messages::createLimitReachedForResource(asyncResp->res);
+                    return;
+                }
                 // Other Dbus errors such as:
                 // xyz.openbmc_project.Common.Error.InvalidArgument &
                 // org.freedesktop.DBus.Error.InvalidArgs are all related to
