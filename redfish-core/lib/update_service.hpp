@@ -2034,7 +2034,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                         return;
                     }
                     asyncResp->res.jsonValue["@odata.type"] =
-                        "#SoftwareInventory.v1_1_0.SoftwareInventory";
+                        "#SoftwareInventory.v1_4_0.SoftwareInventory";
                     asyncResp->res.jsonValue["Name"] = "Software Inventory";
 
                     asyncResp->res.jsonValue["Updateable"] = false;
@@ -2155,7 +2155,7 @@ inline void requestRoutesInventorySoftware(App& app)
                                         if (version != nullptr)
                                         {
                                             asyncResp->res
-                                                .jsonValue["version"] =
+                                                .jsonValue["Version"] =
                                                 *version;
                                         }
                                     }
