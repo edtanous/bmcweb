@@ -41,6 +41,18 @@ namespace json_util
  */
 bool processJsonFromRequest(crow::Response& res, const crow::Request& req,
                             nlohmann::json& reqJson);
+
+/**
+ * @brief Processes request to extract JSON from its body.
+ *
+ * @param[in]  req       Request object
+ * @param[out] reqJson   JSON object extracted from request's body
+ *
+ * @return true if JSON is valid, false when JSON is invalid and response has
+ *         been filled with message and ended.
+ */
+bool processJsonFromRequest(const crow::Request& req,
+                            nlohmann::json& reqJson);
 namespace details
 {
 
