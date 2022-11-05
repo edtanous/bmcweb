@@ -1240,7 +1240,7 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 aResp->res.jsonValue["Id"] = "MemoryMetrics";
                 aResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.id"] =
+                aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
                     "#NvidiaMemoryMetrics.v1_0_0.NvidiaMemoryMetrics";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 for (const auto& [service, interfaces] : object)
