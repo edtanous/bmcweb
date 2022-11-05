@@ -1249,7 +1249,11 @@ inline void
         "xyz.openbmc_project.Inventory.Item.Chassis"};
 
     crow::connections::systemBus->async_method_call(
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         [asyncResp, chassisId, locationIndicatorActive, indicatorLed, partNumber, serialNumber](
+#else
+        [asyncResp, chassisId, locationIndicatorActive, indicatorLed](
+#endif
             const boost::system::error_code ec,
             const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)
