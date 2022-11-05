@@ -145,6 +145,19 @@ inline void checkDbusPathExists(const std::string& path, Callback&& callback)
         std::array<std::string, 0>());
 }
 
+template <typename Callback>
+inline void findAssociations(const std::string& path, Callback&& callback)
+{
+    crow::connections::systemBus->async_method_call(
+        [callback{std::forward<Callback>(callback)}](const boost::system::error_code ec,
+                std::variant<std::vector<std::string>>& resp) {
+            callback(ec, resp);
+        },
+        "xyz.openbmc_project.ObjectMapper", path,
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 inline void systemdReload()
 {
     auto method = crow::connections::systemBus->new_method_call("org.freedesktop.systemd1",
