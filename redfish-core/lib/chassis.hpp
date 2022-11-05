@@ -1192,14 +1192,16 @@ inline void
     nlohmann::json reqJson;
     std::optional<bool> locationIndicatorActive;
     std::optional<std::string> indicatorLed;
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     std::optional<nlohmann::json> oemJsonObj;
     std::optional<std::string> partNumber;
     std::optional<std::string> serialNumber;
+#endif
     if (chassisId.empty())
     {
         return;
     }
-    if(!json_util::processJsonFromRequest(req, reqJson))
+    if(!json_util::processJsonFromRequest(asyncResp->res, req, reqJson))
     {
         return;
     }
@@ -1215,6 +1217,7 @@ inline void
             req, asyncResp->res, "IndicatorLED",
             indicatorLed);
     }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     if(reqJson.find("Oem") != reqJson.end())
     {
         if (json_util::readJson(req, asyncResp->res, "Oem", oemJsonObj))
@@ -1228,6 +1231,7 @@ inline void
             }
         }
     }
+#endif
     // TODO (Gunnar): Remove IndicatorLED after enough time has passed
     if (!locationIndicatorActive && !indicatorLed)
     {
@@ -1320,6 +1324,7 @@ inline void
                                                     "IndicatorLED");
                     }
                 }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 if(partNumber)
                 {
                     setOemBaseboardChassisAssert(asyncResp, path, "PartNumber", *partNumber);
@@ -1328,6 +1333,7 @@ inline void
                 {
                     setOemBaseboardChassisAssert(asyncResp, path, "SerialNumber", *serialNumber);
                 }
+#endif
                 return;
             }
 
