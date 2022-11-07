@@ -885,47 +885,46 @@ inline void
             aResp->res.jsonValue["Links"]["Chassis"] = {
                 {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
 
-            // Check if PCIeDevice on this chassis
+            // Get PCIeDevice on this chassis
             crow::connections::systemBus->async_method_call(
-                [aResp, chassisName, chassisPath](
-                    const boost::system::error_code ec,
-                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                    if (ec)
+                [aResp, chassisName]
+                (const boost::system::error_code ec,
+                        std::variant<std::vector<std::string>>& resp) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
+                    return; // no pciedevices = no failures
+                }
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&resp);
+                if (data == nullptr && data->size() > 1)
+                {
+                    // Chassis must have single pciedevice
+                    BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
+                    return;
+                }
+
+                for(const std::string& pcieDevicePath : *data)
+                {
+                    sdbusplus::message::object_path objectPath(pcieDevicePath);
+                    std::string pcieDeviceName = objectPath.filename();
+                    if (pcieDeviceName.empty())
                     {
-                        messages::internalError(aResp->res);
+                        BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
                         return;
                     }
-                    // If PCIeDevice doesn't exists on this chassis
-                    // Check PCIeDevice on its parent chassis
-                    if (subtree.empty())
-                    {
-                        getSwitchParentChassisPCIeDeviceLink(aResp, chassisPath,
-                                                             chassisName);
-                    }
-                    else
-                    {
-                        for (const auto& [objectPath, serviceMap] : subtree)
-                        {
-                            // Process same device
-                            if (!boost::ends_with(objectPath, chassisName))
-                            {
-                                continue;
-                            }
-                            std::string pcieDeviceLink = "/redfish/v1/Chassis/";
-                            pcieDeviceLink += chassisName;
-                            pcieDeviceLink += "/PCIeDevices/";
-                            pcieDeviceLink += chassisName;
-                            aResp->res.jsonValue["Links"]["PCIeDevice"] = {
-                                {"@odata.id", pcieDeviceLink}};
-                        }
-                    }
+                    std::string pcieDeviceLink = "/redfish/v1/Chassis/";
+                    pcieDeviceLink += chassisName;
+                    pcieDeviceLink += "/PCIeDevices/";
+                    pcieDeviceLink += pcieDeviceName;
+                    aResp->res.jsonValue["Links"]["PCIeDevice"] = {
+                        {"@odata.id", pcieDeviceLink}};
+                }
+
                 },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree", chassisPath,
-                0,
-                std::array<const char*, 1>{
-                    "xyz.openbmc_project.Inventory.Item.PCIeDevice"});
+                "xyz.openbmc_project.ObjectMapper", chassisPath + "/pciedevice",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
         },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
