@@ -54,71 +54,6 @@ def make_getter(dmtf_name, header_name, type_name):
     return (path, json_file, type_name, url)
 
 
-<<<<<<< HEAD
-def clang_format(filename):
-    subprocess.check_call(["clang-format-12", "-i", filename])
-
-
-files = []
-files.append(make_getter('Base.1.11.0.json',
-                         'base_message_registry.hpp',
-                         'base'))
-files.append(make_getter('TaskEvent.1.0.3.json',
-                         'task_event_message_registry.hpp',
-                         'task_event'))
-files.append(make_getter('ResourceEvent.1.0.3.json',
-                         'resource_event_message_registry.hpp',
-                         'resource_event'))
-files.append(make_getter('Update.1.0.0.json',
-                         'update_event_message_registry.hpp',
-                         'update_event'))
-# Remove the old files
-for file, json_dict, namespace, url in files:
-    try:
-        os.remove(file)
-    except BaseException:
-        print("{} not found".format(file))
-
-    with open(file, 'w') as registry:
-        registry.write(REGISTRY_HEADER.format(namespace))
-        # Parse the Registry header info
-        registry.write("const Header header = {")
-        registry.write("\"{}\",".format(json_dict["@Redfish.Copyright"]))
-        registry.write("\"{}\",".format(json_dict["@odata.type"]))
-        registry.write("\"{}\",".format(json_dict["Id"]))
-        registry.write("\"{}\",".format(json_dict["Name"]))
-        registry.write("\"{}\",".format(json_dict["Language"]))
-        registry.write("\"{}\",".format(json_dict["Description"]))
-        registry.write("\"{}\",".format(json_dict["RegistryPrefix"]))
-        registry.write("\"{}\",".format(json_dict["RegistryVersion"]))
-        registry.write("\"{}\",".format(json_dict["OwningEntity"]))
-        registry.write("};")
-
-        registry.write('constexpr const char * url = "{}";\n\n'.format(url))
-        # Parse each Message entry
-        registry.write(
-            "constexpr std::array<MessageEntry, {}> registry = {{".format(
-                len(json_dict["Messages"])))
-        for messageId, message in sorted(json_dict["Messages"].items()):
-            registry.write("MessageEntry{")
-            registry.write("\"{}\",".format(messageId))
-            registry.write("{")
-            registry.write("\"{}\",".format(message["Description"]))
-            registry.write("\"{}\",".format(message["Message"]))
-            registry.write("\"{}\",".format(message["Severity"]))
-            registry.write("\"{}\",".format(message["MessageSeverity"]))
-            registry.write("{},".format(message["NumberOfArgs"]))
-            registry.write("{")
-            paramTypes = message.get("ParamTypes")
-            if paramTypes:
-                for paramType in paramTypes:
-                    registry.write("\"{}\",".format(paramType))
-            registry.write("},")
-            registry.write("\"{}\",".format(message["Resolution"]))
-            registry.write("}},")
-        registry.write("};}\n")
-    clang_format(file)
-=======
 def update_registries(files):
     # Remove the old files
     for file, json_dict, namespace, url in files:
@@ -193,7 +128,6 @@ def update_registries(files):
                 "}};\n"
                 "}} // namespace redfish::registries::{}\n"
                 .format(namespace))
->>>>>>> origin/master
 
 
 def get_privilege_string_from_list(privilege_list):
@@ -282,7 +216,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--registries', type=str,
-        default="base,task_event,resource_event,privilege",
+        default="base,task_event,resource_event, update_event, privilege",
         help="Comma delimited list of registries to update")
 
     args = parser.parse_args()
@@ -302,6 +236,10 @@ def main():
         files.append(make_getter('ResourceEvent.1.0.3.json',
                                  'resource_event_message_registry.hpp',
                                  'resource_event'))
+    if "update_event" in registries:
+        files.append(make_getter('Update.1.0.1.json',
+                            'update_event_message_registry.hpp',
+                            'update_event'))
 
     update_registries(files)
 
