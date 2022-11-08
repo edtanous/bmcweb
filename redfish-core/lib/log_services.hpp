@@ -5251,7 +5251,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                             "#LogEntryCollection.LogEntryCollection";
                         asyncResp->res.jsonValue["@odata.id"] =
                             "/redfish/v1/Chassis/" + chassisId +
-                            "/LogServices/EventLog/Entries";
+                            "/LogServices/XID/Entries";
                         asyncResp->res.jsonValue["Name"] = "XID Log Entries";
                         asyncResp->res.jsonValue["Description"] =
                             "Collection of XID Log Entries";
