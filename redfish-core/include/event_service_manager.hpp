@@ -14,11 +14,9 @@
 // limitations under the License.
 */
 #pragma once
-<<<<<<< HEAD
 #include <sys/inotify.h>
 
 #include <async_resp.hpp>
-=======
 #include "metric_report.hpp"
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
@@ -30,7 +28,6 @@
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
->>>>>>> origin/master
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/beast/http/parser.hpp>
@@ -72,8 +69,6 @@ static constexpr const char* metricReportFormatType = "MetricReport";
 static constexpr const char* eventServiceFile =
     "/var/lib/bmcweb/eventservice_config.json";
 
-<<<<<<< HEAD
-=======
 namespace registries
 {
 inline std::span<const MessageEntry>
@@ -95,7 +90,6 @@ inline std::span<const MessageEntry>
 }
 } // namespace registries
 
->>>>>>> origin/master
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
 static std::optional<boost::asio::posix::stream_descriptor> inotifyConn;
 static constexpr const char* redfishEventLogDir = "/var/log";
@@ -112,8 +106,6 @@ using EventLogObjectsType =
 
 namespace registries
 {
-<<<<<<< HEAD
-=======
 static const Message*
     getMsgFromRegistry(const std::string& messageKey,
                        const std::span<const MessageEntry>& registry)
@@ -130,7 +122,6 @@ static const Message*
 
     return nullptr;
 }
->>>>>>> origin/master
 
 static const Message* formatMessage(const std::string_view& messageID)
 {
@@ -923,12 +914,8 @@ class EventServiceManager
     std::streampos redfishLogFilePosition{0};
     size_t noOfEventLogSubscribers{0};
     size_t noOfMetricReportSubscribers{0};
-<<<<<<< HEAD
-    std::shared_ptr<sdbusplus::bus::match::match> matchTelemetryMonitor;
-    std::shared_ptr<sdbusplus::bus::match::match> matchDbusLogging;
-=======
     std::shared_ptr<sdbusplus::bus::match_t> matchTelemetryMonitor;
->>>>>>> origin/master
+    std::shared_ptr<sdbusplus::bus::match_t> matchDbusLogging;
     boost::container::flat_map<std::string, std::shared_ptr<Subscription>>
         subscriptionsMap;
 
@@ -1014,13 +1001,10 @@ class EventServiceManager
             subValue->updateRetryConfig(retryAttempts, retryTimeoutInterval);
             subValue->updateRetryPolicy();
         }
-<<<<<<< HEAD
 
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
         registerDbusLoggingSignal();
 #endif
-=======
->>>>>>> origin/master
     }
 
     static void loadOldBehavior()
@@ -1772,8 +1756,7 @@ class EventServiceManager
                                "interface='org.freedesktop.DBus.Properties',"
                                "arg0=xyz.openbmc_project.Telemetry.Report";
 
-<<<<<<< HEAD
-        matchTelemetryMonitor = std::make_shared<sdbusplus::bus::match::match>(
+        matchTelemetryMonitor = std::make_shared<sdbusplus::bus::match_t>(
             *crow::connections::systemBus, matchStr,
             [this](sdbusplus::message::message& msg) {
                 if (msg.is_method_error())
@@ -2148,7 +2131,7 @@ class EventServiceManager
             }
         };
 
-        matchDbusLogging = std::make_shared<sdbusplus::bus::match::match>(
+        matchDbusLogging = std::make_shared<sdbusplus::bus::match_t>(
             *crow::connections::systemBus, matchStr, signalHandler);
     }
 #endif
@@ -2194,10 +2177,6 @@ class EventServiceManager
             path = "/";
         }
         return true;
-=======
-        matchTelemetryMonitor = std::make_shared<sdbusplus::bus::match_t>(
-            *crow::connections::systemBus, matchStr, getReadingsForReport);
->>>>>>> origin/master
     }
 };
 

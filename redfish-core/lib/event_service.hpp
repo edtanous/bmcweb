@@ -16,13 +16,10 @@
 #pragma once
 #include <app.hpp>
 #include <boost/beast/http/fields.hpp>
-<<<<<<< HEAD
 #include <event_service_manager.hpp>
-=======
 #include <http/utility.hpp>
 #include <logging.hpp>
 #include <query.hpp>
->>>>>>> origin/master
 #include <registries/privilege_registry.hpp>
 
 #include <span>
@@ -52,54 +49,6 @@ inline void requestRoutesEventService(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/")
         .privileges(redfish::privileges::getEventService)
         .methods(boost::beast::http::verb::get)(
-<<<<<<< HEAD
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                asyncResp->res.jsonValue = {
-                    {"@odata.type", "#EventService.v1_7_2.EventService"},
-                    {"Id", "EventService"},
-                    {"Name", "Event Service"},
-                    {"Subscriptions",
-                     {{"@odata.id", "/redfish/v1/EventService/Subscriptions"}}},
-                    {"Actions",
-                     {{"#EventService.SubmitTestEvent",
-                       {{"target", "/redfish/v1/EventService/Actions/"
-                                   "EventService.SubmitTestEvent"}}}}},
-                    {"@odata.id", "/redfish/v1/EventService"}};
-
-                const persistent_data::EventServiceConfig eventServiceConfig =
-                    persistent_data::EventServiceStore::getInstance()
-                        .getEventServiceConfig();
-
-                asyncResp->res.jsonValue["Status"]["State"] =
-                    (eventServiceConfig.enabled ? "Enabled" : "Disabled");
-                asyncResp->res.jsonValue["ServiceEnabled"] =
-                    eventServiceConfig.enabled;
-                asyncResp->res.jsonValue["DeliveryRetryAttempts"] =
-                    eventServiceConfig.retryAttempts;
-                asyncResp->res.jsonValue["DeliveryRetryIntervalSeconds"] =
-                    eventServiceConfig.retryTimeoutInterval;
-                asyncResp->res.jsonValue["EventFormatTypes"] =
-                    supportedEvtFormatTypes;
-                asyncResp->res.jsonValue["RegistryPrefixes"] =
-                    supportedRegPrefixes;
-                asyncResp->res.jsonValue["ResourceTypes"] =
-                    supportedResourceTypes;
-
-                nlohmann::json supportedSSEFilters = {
-                    {"EventFormatType", true},        {"MessageId", true},
-                    {"MetricReportDefinition", true}, {"RegistryPrefix", true},
-                    {"OriginResource", false},        {"ResourceType", false}};
-
-                asyncResp->res.jsonValue["SSEFilterPropertiesSupported"] =
-                    supportedSSEFilters;
-
-                asyncResp->res.jsonValue["SubordinateResourcesSupported"] =
-                    false;
-                asyncResp->res.jsonValue["IncludeOriginOfConditionSupported"] =
-                    true;
-            });
-=======
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -109,7 +58,7 @@ inline void requestRoutesEventService(App& app)
 
         asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/EventService";
         asyncResp->res.jsonValue["@odata.type"] =
-            "#EventService.v1_5_0.EventService";
+            "#EventService.v1_7_2.EventService";
         asyncResp->res.jsonValue["Id"] = "EventService";
         asyncResp->res.jsonValue["Name"] = "Event Service";
         asyncResp->res.jsonValue["Subscriptions"]["@odata.id"] =
@@ -143,8 +92,10 @@ inline void requestRoutesEventService(App& app)
 
         asyncResp->res.jsonValue["SSEFilterPropertiesSupported"] =
             std::move(supportedSSEFilters);
+
+        asyncResp->res.jsonValue["SubordinateResourcesSupported"] = false;
+        asyncResp->res.jsonValue["IncludeOriginOfConditionSupported"] = true;
         });
->>>>>>> origin/master
 
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/")
         .privileges(redfish::privileges::patchEventService)
@@ -218,122 +169,108 @@ inline void requestRoutesSubmitTestEvent(App& app)
         app, "/redfish/v1/EventService/Actions/EventService.SubmitTestEvent/")
         .privileges(redfish::privileges::postEventService)
         .methods(boost::beast::http::verb::post)(
-<<<<<<< HEAD
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                std::string messageId;
-                std::optional<int64_t> eventGroupId;
-                std::optional<std::string> eventId;
-                std::optional<std::string> eventTimestamp;
-                std::optional<std::string> message;
-                std::optional<std::vector<std::string>> messageArgs;
-                std::optional<std::string> originOfCondition;
-                std::optional<std::string> severity;
-                // deprecated
-                std::optional<std::string> eventType;
-                (void)eventType;
-
-                if (!json_util::readJson(
-                        req, asyncResp->res, "MessageId", messageId,
-                        "EventGroupId", eventGroupId, "EventId", eventId,
-                        "EventTimestamp", eventTimestamp, "Message", message,
-                        "MessageArgs", messageArgs, "OriginOfCondition",
-                        originOfCondition, "Severity", severity, "EventType",
-                        eventType))
-                {
-                    return;
-                }
-
-                if (!redfish::message_registries::isMessageIdValid(messageId))
-                {
-                    messages::propertyValueNotInList(asyncResp->res, messageId,
-                                                     "MessageId");
-                    return;
-                }
-
-                Event event(messageId);
-                if (eventGroupId)
-                {
-                    event.eventGroupId = *eventGroupId;
-                }
-                if (eventId)
-                {
-                    event.eventId = *eventId;
-                }
-                if (eventTimestamp)
-                {
-                    event.eventTimestamp = *eventTimestamp;
-                }
-                if (message)
-                {
-                    if (event.setCustomMsg(*message, *messageArgs) != 0)
-                    {
-                        BMCWEB_LOG_ERROR << "Invalid message or message "
-                                            "arguments.";
-                        messages::actionParameterValueError(
-                            asyncResp->res, "MessageArgs", "SubmitTestEvent");
-                        return;
-                    }
-                }
-                else if (messageArgs)
-                {
-                    if (event.setRegistryMsg(*messageArgs) != 0)
-                    {
-                        BMCWEB_LOG_ERROR << "Invalid message arguments.";
-                        messages::actionParameterValueError(
-                            asyncResp->res, "MessageArgs", "SubmitTestEvent");
-                        return;
-                    }
-                }
-                else
-                {
-                    std::vector<std::string> noArgs = {};
-                    if (event.setRegistryMsg(noArgs) != 0)
-                    {
-                        BMCWEB_LOG_ERROR << "Invalid message arguments.";
-                        messages::actionParameterValueError(
-                            asyncResp->res, "MessageArgs", "SubmitTestEvent");
-                        return;
-                    }
-                }
-
-                if (originOfCondition)
-                {
-                    event.originOfCondition = *originOfCondition;
-                }
-                if (severity)
-                {
-                    event.messageSeverity = *severity;
-                }
-
-                if (!persistent_data::EventServiceStore::getInstance()
-                         .getEventServiceConfig()
-                         .enabled)
-                {
-                    messages::serviceDisabled(asyncResp->res,
-                                              "/redfish/v1/EventService/");
-                    return;
-                }
-
-                EventServiceManager::getInstance().sendEvent(event);
-                asyncResp->res.result(boost::beast::http::status::no_content);
-            });
-=======
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
         }
-        if (!EventServiceManager::getInstance().sendTestEventLog())
+        std::string messageId;
+        std::optional<int64_t> eventGroupId;
+        std::optional<std::string> eventId;
+        std::optional<std::string> eventTimestamp;
+        std::optional<std::string> message;
+        std::optional<std::vector<std::string>> messageArgs;
+        std::optional<std::string> originOfCondition;
+        std::optional<std::string> severity;
+        // deprecated
+        std::optional<std::string> eventType;
+        (void)eventType;
+
+        if (!json_util::readJson(req, asyncResp->res, "MessageId", messageId,
+                                 "EventGroupId", eventGroupId, "EventId",
+                                 eventId, "EventTimestamp", eventTimestamp,
+                                 "Message", message, "MessageArgs", messageArgs,
+                                 "OriginOfCondition", originOfCondition,
+                                 "Severity", severity, "EventType", eventType))
+        {
+            return;
+        }
+
+        if (!redfish::message_registries::isMessageIdValid(messageId))
+        {
+            messages::propertyValueNotInList(asyncResp->res, messageId,
+                                             "MessageId");
+            return;
+        }
+
+        Event event(messageId);
+        if (eventGroupId)
+        {
+            event.eventGroupId = *eventGroupId;
+        }
+        if (eventId)
+        {
+            event.eventId = *eventId;
+        }
+        if (eventTimestamp)
+        {
+            event.eventTimestamp = *eventTimestamp;
+        }
+        if (message)
+        {
+            if (event.setCustomMsg(*message, *messageArgs) != 0)
+            {
+                BMCWEB_LOG_ERROR << "Invalid message or message "
+                                    "arguments.";
+                messages::actionParameterValueError(
+                    asyncResp->res, "MessageArgs", "SubmitTestEvent");
+                return;
+            }
+        }
+        else if (messageArgs)
+        {
+            if (event.setRegistryMsg(*messageArgs) != 0)
+            {
+                BMCWEB_LOG_ERROR << "Invalid message arguments.";
+                messages::actionParameterValueError(
+                    asyncResp->res, "MessageArgs", "SubmitTestEvent");
+                return;
+            }
+        }
+        else
+        {
+            std::vector<std::string> noArgs = {};
+            if (event.setRegistryMsg(noArgs) != 0)
+            {
+                BMCWEB_LOG_ERROR << "Invalid message arguments.";
+                messages::actionParameterValueError(
+                    asyncResp->res, "MessageArgs", "SubmitTestEvent");
+                return;
+            }
+        }
+
+        if (originOfCondition)
+        {
+            event.originOfCondition = *originOfCondition;
+        }
+        if (severity)
+        {
+            event.messageSeverity = *severity;
+        }
+
+        if (!persistent_data::EventServiceStore::getInstance()
+                 .getEventServiceConfig()
+                 .enabled)
         {
             messages::serviceDisabled(asyncResp->res,
                                       "/redfish/v1/EventService/");
             return;
         }
+
+        EventServiceManager::getInstance().sendEvent(event);
         asyncResp->res.result(boost::beast::http::status::no_content);
         });
->>>>>>> origin/master
 }
 
 inline void requestRoutesEventDestinationCollection(App& app)
@@ -371,47 +308,6 @@ inline void requestRoutesEventDestinationCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/")
         .privileges(redfish::privileges::postEventDestinationCollection)
         .methods(boost::beast::http::verb::post)(
-<<<<<<< HEAD
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (EventServiceManager::getInstance()
-                        .getNumberOfSubscriptions() >= maxNoOfSubscriptions)
-                {
-                    messages::eventSubscriptionLimitExceeded(asyncResp->res);
-                    return;
-                }
-                std::string destUrl;
-                std::string protocol;
-                std::optional<std::string> context;
-                std::optional<std::string> subscriptionType;
-                std::optional<std::string> eventFormatType2;
-                std::optional<std::string> retryPolicy;
-                std::optional<std::vector<std::string>> msgIds;
-                std::optional<std::vector<std::string>> regPrefixes;
-                std::optional<std::vector<std::string>> resTypes;
-                std::optional<std::vector<nlohmann::json>> headers;
-                std::optional<std::vector<nlohmann::json>> mrdJsonArray;
-                std::optional<std::vector<std::string>> originResources;
-                std::optional<bool> includeOriginOfCondition;
-                // deprecated
-                std::optional<std::vector<std::string>> eventTypes;
-                (void)eventTypes;
-
-                if (!json_util::readJson(
-                        req, asyncResp->res, "Destination", destUrl, "Context",
-                        context, "Protocol", protocol, "SubscriptionType",
-                        subscriptionType, "EventFormatType", eventFormatType2,
-                        "HttpHeaders", headers, "RegistryPrefixes", regPrefixes,
-                        "MessageIds", msgIds, "DeliveryRetryPolicy",
-                        retryPolicy, "MetricReportDefinitions", mrdJsonArray,
-                        "ResourceTypes", resTypes, "OriginResources",
-                        originResources, "EventTypes", eventTypes))
-                {
-                    return;
-                }
-
-                if (regPrefixes && msgIds)
-=======
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -435,49 +331,81 @@ inline void requestRoutesEventDestinationCollection(App& app)
         std::optional<std::vector<std::string>> resTypes;
         std::optional<std::vector<nlohmann::json>> headers;
         std::optional<std::vector<nlohmann::json>> mrdJsonArray;
+        std::optional<std::vector<std::string>> originResources;
+        std::optional<bool> includeOriginOfCondition;
+        // deprecated
+        std::optional<std::vector<std::string>> eventTypes;
+        (void)eventTypes;
 
-        if (!json_util::readJsonPatch(
+        if (!json_util::readJson(
                 req, asyncResp->res, "Destination", destUrl, "Context", context,
                 "Protocol", protocol, "SubscriptionType", subscriptionType,
                 "EventFormatType", eventFormatType2, "HttpHeaders", headers,
                 "RegistryPrefixes", regPrefixes, "MessageIds", msgIds,
                 "DeliveryRetryPolicy", retryPolicy, "MetricReportDefinitions",
-                mrdJsonArray, "ResourceTypes", resTypes))
+                mrdJsonArray, "ResourceTypes", resTypes, "OriginResources",
+                originResources, "EventTypes", eventTypes))
         {
             return;
         }
 
         if (regPrefixes && msgIds)
         {
-            if (!regPrefixes->empty() && !msgIds->empty())
+            if (regPrefixes->size() && msgIds->size())
             {
-                messages::propertyValueConflict(asyncResp->res, "MessageIds",
-                                                "RegistryPrefixes");
+                messages::mutualExclusiveProperties(
+                    asyncResp->res, "RegistryPrefixes", "MessageIds");
                 return;
             }
         }
 
-        std::string host;
-        std::string urlProto;
-        uint16_t port = 0;
-        std::string path;
-
-        if (!crow::utility::validateAndSplitUrl(destUrl, urlProto, host, port,
-                                                path))
+        // Validate the URL using regex expression
+        // Format: <protocol>://<host>:<port>/<uri>
+        // protocol: http/https
+        // host: Exclude ' ', ':', '#', '?'
+        // port: Empty or numeric value with ':' separator.
+        // uri: Start with '/' and Exclude '#', ' '
+        //      Can include query params(ex: '/event?test=1')
+        // TODO: Need to validate hostname extensively(as per rfc)
+        std::cmatch match;
+        if (!std::regex_match(destUrl.c_str(), match, urlRegex))
         {
-            BMCWEB_LOG_WARNING
-                << "Failed to validate and split destination url";
             messages::propertyValueFormatError(asyncResp->res, destUrl,
                                                "Destination");
             return;
         }
 
+        std::string uriProto = std::string(match[1].first, match[1].second);
+        if (uriProto == "http")
+        {
+#ifndef BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING
+            messages::propertyValueFormatError(asyncResp->res, destUrl,
+                                               "Destination");
+            return;
+#endif
+        }
+
+        std::string host = std::string(match[2].first, match[2].second);
+        std::string port = std::string(match[3].first, match[3].second);
+        std::string path = std::string(match[4].first, match[4].second);
+        if (port.empty())
+        {
+            if (uriProto == "http")
+            {
+                port = "80";
+            }
+            else
+            {
+                port = "443";
+            }
+        }
         if (path.empty())
         {
             path = "/";
         }
+
         std::shared_ptr<Subscription> subValue =
-            std::make_shared<Subscription>(host, port, path, urlProto);
+            std::make_shared<Subscription>(host, port, path, uriProto);
 
         subValue->destinationUrl = destUrl;
 
@@ -532,14 +460,13 @@ inline void requestRoutesEventDestinationCollection(App& app)
             for (const nlohmann::json& headerChunk : *headers)
             {
                 for (const auto& item : headerChunk.items())
->>>>>>> origin/master
                 {
                     const std::string* value =
                         item.value().get_ptr<const std::string*>();
                     if (value == nullptr)
                     {
                         messages::propertyValueFormatError(
-                            asyncResp->res, item.value().dump(2, 1),
+                            asyncResp->res, item.value().dump(2, true),
                             "HttpHeaders/" + item.key());
                         return;
                     }
@@ -548,18 +475,6 @@ inline void requestRoutesEventDestinationCollection(App& app)
             }
         }
 
-<<<<<<< HEAD
-                // Validate the URL using regex expression
-                // Format: <protocol>://<host>:<port>/<uri>
-                // protocol: http/https
-                // host: Exclude ' ', ':', '#', '?'
-                // port: Empty or numeric value with ':' separator.
-                // uri: Start with '/' and Exclude '#', ' '
-                //      Can include query params(ex: '/event?test=1')
-                // TODO: Need to validate hostname extensively(as per rfc)
-                std::cmatch match;
-                if (!std::regex_match(destUrl.c_str(), match, urlRegex))
-=======
         if (regPrefixes)
         {
             for (const std::string& it : *regPrefixes)
@@ -567,7 +482,6 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 if (std::find(supportedRegPrefixes.begin(),
                               supportedRegPrefixes.end(),
                               it) == supportedRegPrefixes.end())
->>>>>>> origin/master
                 {
                     messages::propertyValueNotInList(asyncResp->res, it,
                                                      "RegistryPrefixes");
@@ -616,15 +530,18 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 // Check for Message ID in each of the selected Registry
                 for (const std::string& it : registryPrefix)
                 {
-                    const std::span<const redfish::registries::MessageEntry>
+                    const std::span<
+                        const redfish::message_registries::MessageEntry>
                         registry =
-                            redfish::registries::getRegistryFromPrefix(it);
+                            redfish::message_registries::getRegistryFromPrefix(
+                                it);
 
                     if (std::any_of(
                             registry.begin(), registry.end(),
-                            [&id](const redfish::registries::MessageEntry&
-                                      messageEntry) {
-                        return id == messageEntry.first;
+                            [&id](
+                                const redfish::message_registries::MessageEntry&
+                                    messageEntry) {
+                        return !id.compare(messageEntry.first);
                             }))
                     {
                         validId = true;
@@ -666,71 +583,45 @@ inline void requestRoutesEventDestinationCollection(App& app)
             for (nlohmann::json& mrdObj : *mrdJsonArray)
             {
                 std::string mrdUri;
-
-                if (!json_util::readJson(mrdObj, asyncResp->res, "@odata.id",
-                                         mrdUri))
-
+                if (json_util::getValueFromJsonObject(mrdObj, "@odata.id",
+                                                      mrdUri))
                 {
-<<<<<<< HEAD
-                    for (nlohmann::json& mrdObj : *mrdJsonArray)
-                    {
-                        std::string mrdUri;
-                        if (json_util::getValueFromJsonObject(
-                                mrdObj, "@odata.id", mrdUri))
-                        {
-                            subValue->metricReportDefinitions.emplace_back(
-                                mrdUri);
-                        }
-                        else
-                        {
-                            messages::propertyValueFormatError(
-                                asyncResp->res,
-                                mrdObj.dump(
-                                    2, ' ', true,
-                                    nlohmann::json::error_handler_t::replace),
-                                "MetricReportDefinitions");
-                            return;
-                        }
-                    }
-                }
-
-                if (originResources)
-                {
-                    for (const std::string& it : *originResources)
-                    {
-                        // TODO Check for each origin resource.
-                        if (it.empty())
-                        {
-                            messages::propertyValueNotInList(asyncResp->res, it,
-                                                             "OriginResources");
-                            return;
-                        }
-                    }
-                    subValue->originResources = *originResources;
-                }
-
-                if (includeOriginOfCondition)
-                {
-                    subValue->includeOriginOfCondition =
-                        *includeOriginOfCondition;
+                    subValue->metricReportDefinitions.emplace_back(mrdUri);
                 }
                 else
                 {
-                    subValue->includeOriginOfCondition = true;
-                }
-
-                std::string id =
-                    EventServiceManager::getInstance().addSubscription(
-                        subValue);
-                if (id.empty())
-                {
-                    messages::internalError(asyncResp->res);
-=======
->>>>>>> origin/master
+                    messages::propertyValueFormatError(
+                        asyncResp->res,
+                        mrdObj.dump(2, ' ', true,
+                                    nlohmann::json::error_handler_t::replace),
+                        "MetricReportDefinitions");
                     return;
                 }
-                subValue->metricReportDefinitions.emplace_back(mrdUri);
             }
+        }
+
+        if (originResources)
+        {
+            for (const std::string& it : *originResources)
+            {
+                // TODO Check for each origin resource.
+                if (it.empty())
+                {
+                    messages::propertyValueNotInList(asyncResp->res, it,
+                                                     "OriginResources");
+                    return;
+                }
+            }
+            subValue->originResources = *originResources;
+        }
+
+        if (includeOriginOfCondition)
+        {
+            subValue->includeOriginOfCondition = *includeOriginOfCondition;
+        }
+        else
+        {
+            subValue->includeOriginOfCondition = true;
         }
 
         std::string id =
@@ -752,59 +643,6 @@ inline void requestRoutesEventDestination(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/<str>/")
         .privileges(redfish::privileges::getEventDestination)
         .methods(boost::beast::http::verb::get)(
-<<<<<<< HEAD
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
-                std::shared_ptr<Subscription> subValue =
-                    EventServiceManager::getInstance().getSubscription(param);
-                if (subValue == nullptr)
-                {
-                    asyncResp->res.result(
-                        boost::beast::http::status::not_found);
-                    return;
-                }
-                const std::string& id = param;
-
-                asyncResp->res.jsonValue = {
-                    {"@odata.type",
-                     "#EventDestination.v1_11_0.EventDestination"},
-                    {"Protocol", "Redfish"}};
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/EventService/Subscriptions/" + id;
-                asyncResp->res.jsonValue["Id"] = id;
-                asyncResp->res.jsonValue["Name"] = "Event Destination " + id;
-                asyncResp->res.jsonValue["Destination"] =
-                    subValue->destinationUrl;
-                asyncResp->res.jsonValue["Context"] = subValue->customText;
-                asyncResp->res.jsonValue["SubscriptionType"] =
-                    subValue->subscriptionType;
-                asyncResp->res.jsonValue["HttpHeaders"] =
-                    nlohmann::json::array();
-                asyncResp->res.jsonValue["EventFormatType"] =
-                    subValue->eventFormatType;
-                asyncResp->res.jsonValue["RegistryPrefixes"] =
-                    subValue->registryPrefixes;
-                asyncResp->res.jsonValue["ResourceTypes"] =
-                    subValue->resourceTypes;
-                asyncResp->res.jsonValue["MessageIds"] =
-                    subValue->registryMsgIds;
-                asyncResp->res.jsonValue["DeliveryRetryPolicy"] =
-                    subValue->retryPolicy;
-                asyncResp->res.jsonValue["OriginResources"] =
-                    subValue->originResources;
-                asyncResp->res.jsonValue["IncludeOriginOfCondition"] =
-                    subValue->includeOriginOfCondition;
-
-                std::vector<nlohmann::json> mrdJsonArray;
-                for (const auto& mdrUri : subValue->metricReportDefinitions)
-                {
-                    mrdJsonArray.push_back({{"@odata.id", mdrUri}});
-                }
-                asyncResp->res.jsonValue["MetricReportDefinitions"] =
-                    mrdJsonArray;
-            });
-=======
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& param) {
@@ -821,9 +659,9 @@ inline void requestRoutesEventDestination(App& app)
         }
         const std::string& id = param;
 
-        asyncResp->res.jsonValue["@odata.type"] =
-            "#EventDestination.v1_7_0.EventDestination";
-        asyncResp->res.jsonValue["Protocol"] = "Redfish";
+        asyncResp->res.jsonValue = {
+            {"@odata.type", "#EventDestination.v1_11_0.EventDestination"},
+            {"Protocol", "Redfish"}};
         asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/EventService/Subscriptions/" + id;
         asyncResp->res.jsonValue["Id"] = id;
@@ -837,20 +675,19 @@ inline void requestRoutesEventDestination(App& app)
         asyncResp->res.jsonValue["RegistryPrefixes"] =
             subValue->registryPrefixes;
         asyncResp->res.jsonValue["ResourceTypes"] = subValue->resourceTypes;
-
         asyncResp->res.jsonValue["MessageIds"] = subValue->registryMsgIds;
         asyncResp->res.jsonValue["DeliveryRetryPolicy"] = subValue->retryPolicy;
+        asyncResp->res.jsonValue["OriginResources"] = subValue->originResources;
+        asyncResp->res.jsonValue["IncludeOriginOfCondition"] =
+            subValue->includeOriginOfCondition;
 
-        nlohmann::json::array_t mrdJsonArray;
+        std::vector<nlohmann::json> mrdJsonArray;
         for (const auto& mdrUri : subValue->metricReportDefinitions)
         {
-            nlohmann::json::object_t mdr;
-            mdr["@odata.id"] = mdrUri;
-            mrdJsonArray.emplace_back(std::move(mdr));
+            mrdJsonArray.push_back({{"@odata.id", mdrUri}});
         }
         asyncResp->res.jsonValue["MetricReportDefinitions"] = mrdJsonArray;
         });
->>>>>>> origin/master
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/<str>/")
         // The below privilege is wrong, it should be ConfigureManager OR
         // ConfigureSelf
