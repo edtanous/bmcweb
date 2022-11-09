@@ -129,7 +129,7 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     }
     else if (registry == "BiosAttributeRegistry")
     {
-        header = &message_registries::bios::header;
+        header = &registries::bios::header;
         dmtf.clear();
     }
     else
@@ -232,9 +232,9 @@ inline void handleMessageRegistryGet(
     }
     else if (registry == "BiosAttributeRegistry")
     {
-        header = &message_registries::bios::header;
+        header = &registries::bios::header;
         for (const message_registries::MessageEntry& entry :
-             message_registries::bios::registry)
+             registries::bios::registry)
         {
             registryEntries.emplace_back(&entry);
         }
