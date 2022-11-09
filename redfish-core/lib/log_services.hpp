@@ -138,7 +138,6 @@ static void generateMessageRegistry(
     const std::string& messageId, const std::string& messageArgs,
     const std::string& resolution, const bool& resolved,
     const std::string& severity = "")
-
 {
     BMCWEB_LOG_DEBUG << "Generating MessageRegitry for [" << messageId << "]";
     const registries::Message* msg = registries::getMessage(messageId);
