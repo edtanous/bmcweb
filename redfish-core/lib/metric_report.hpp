@@ -121,9 +121,24 @@ inline void getSensorMap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 auto var = std::get<0>(data);
                 const double* reading = std::get_if<double>(&var);
                 thisMetric["MetricValue"] = std::to_string(*reading);
-                uint64_t sensorUpdatetimestamp = std::get<1>(data);
-                thisMetric["Timestamp"] =
-                    crow::utility::getDateTimeUintMs(sensorUpdatetimestamp);
+                // sensorUpdatetimeSteadyClock is in ms
+                const uint64_t sensorUpdatetimeSteadyClock = std::get<1>(data);
+                /*
+                the complex code here converts sensorUpdatetimeSteadyClock
+                from std::chrono::steady_clock to std::chrono::system_clock
+                */
+                const uint64_t sensorUpdatetimeSystemClock =
+                    static_cast<uint64_t>(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::system_clock::now().time_since_epoch())
+                            .count()) -
+                    static_cast<uint64_t>(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now().time_since_epoch())
+                            .count()) +
+                    sensorUpdatetimeSteadyClock;
+                thisMetric["Timestamp"] = crow::utility::getDateTimeUintMs(
+                    sensorUpdatetimeSystemClock);
                 sdbusplus::message::object_path chassisPath = std::get<2>(data);
                 std::string sensorUri = "/redfish/v1/Chassis/";
                 sensorUri += chassisPath.filename();
@@ -135,8 +150,10 @@ inline void getSensorMap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = true;
                 if (requestTimestamp != 0 && thisMetric["MetricValue"] != "nan")
                 {
+                    // Note: requestTimestamp, sensorUpdatetimeSteadyClock uses
+                    // steadyclock to calculate time
                     int64_t freshness = static_cast<int64_t>(
-                        requestTimestamp - sensorUpdatetimestamp);
+                        requestTimestamp - sensorUpdatetimeSteadyClock);
 
                     if (freshness <= staleSensorUpperLimit)
                     {
@@ -277,7 +294,8 @@ inline void
 inline void requestRoutesPlatformMetricReport(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/TelemetryService/MetricReports/" PLATFORMMETRICSID "/")
+                 "/redfish/v1/TelemetryService/MetricReports/" PLATFORMMETRICSID
+                 "/")
         .privileges(redfish::privileges::getMetricReport)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
