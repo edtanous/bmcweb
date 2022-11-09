@@ -318,13 +318,13 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     }
                     asyncResp->res.jsonValue["MaxSpeedGbps"] = *value;
                 }
-                else if (propertyName == "Width")
+                else if ((propertyName == "Width") || (propertyName == "ActiveWidth"))
                 {
                     const size_t* value = std::get_if<size_t>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for Width";
+                                            "for Width or ActiveWidth";
                         messages::internalError(asyncResp->res);
                         return;
                     }
