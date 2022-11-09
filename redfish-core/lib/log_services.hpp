@@ -5044,7 +5044,8 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     if (!request || !request->isRunning())
                     {
                         request = std::make_shared<debug_token::Request>(
-                            req, asyncResp, std::move(callback));
+                            std::move(callback));
+                        request->run(req, asyncResp);
                     }
                     else
                     {
@@ -5058,7 +5059,8 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     if (!query || !query->isRunning())
                     {
                         query = std::make_shared<debug_token::StatusQuery>(
-                            req, asyncResp, std::move(callback));
+                            std::move(callback));
+                        query->run(req, asyncResp);
                     }
                     else
                     {
