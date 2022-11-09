@@ -244,44 +244,43 @@ static void
     BMCWEB_LOG_DEBUG << "Set Reset Bios Settings to Defaults Pending Status";
     crow::connections::systemBus->async_method_call(
         [asyncResp, resetBiosToDefaultsPending](
-            const boost::system::error_code ec, const GetObjectType& objType) {
-            if (ec || objType.empty())
+            const boost::system::error_code ec,
+            const dbus::utility::MapperGetObject& objType) {
+        if (ec || objType.empty())
+        {
+            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            return;
+        }
+
+        const std::string& biosService = objType.begin()->first;
+
+        std::string biosMode;
+        if (resetBiosToDefaultsPending)
+        {
+            biosMode =
+                "xyz.openbmc_project.BIOSConfig.Manager.ResetFlag.FactoryDefaults";
+        }
+        else
+        {
+            biosMode =
+                "xyz.openbmc_project.BIOSConfig.Manager.ResetFlag.NoAction";
+        }
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec2) {
+            if (ec2)
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Set Reset BIOS setting to default status.";
                 messages::internalError(asyncResp->res);
                 return;
             }
 
-            const std::string& biosService = objType.begin()->first;
-
-            std::string biosMode;
-            if (resetBiosToDefaultsPending)
-            {
-                biosMode =
-                    "xyz.openbmc_project.BIOSConfig.Manager.ResetFlag.FactoryDefaults";
-            }
-            else
-            {
-                biosMode =
-                    "xyz.openbmc_project.BIOSConfig.Manager.ResetFlag.NoAction";
-            }
-
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code ec) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "DBUS response error for "
-                               "Set Reset BIOS setting to default status.";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    messages::success(asyncResp->res);
-                },
-                biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
-                "Set", biosConfigIface, "ResetBIOSSettings",
-                std::variant<std::string>(biosMode));
+            messages::success(asyncResp->res);
+            },
+            biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            "Set", biosConfigIface, "ResetBIOSSettings",
+            std::variant<std::string>(biosMode));
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -302,61 +301,56 @@ static void
     BMCWEB_LOG_DEBUG << "Get Reset Bios Settings to Defaults Pending Status";
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
-                    const GetObjectType& objType) {
-            if (ec || objType.empty())
+                    const dbus::utility::MapperGetObject& objType) {
+        if (ec || objType.empty())
+        {
+            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            return;
+        }
+
+        const std::string& biosService = objType.begin()->first;
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](
+                const boost::system::error_code ec2,
+                const std::variant<std::string>& resetBiosSettingsMode) {
+            if (ec2)
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Get Reset BIOS setting to default status.";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            const std::string* value =
+                std::get_if<std::string>(&resetBiosSettingsMode);
+            if (value == nullptr)
+            {
+                BMCWEB_LOG_DEBUG
+                    << "Null value returned for Reset BIOS Settings status";
                 messages::internalError(asyncResp->res);
                 return;
             }
 
-            const std::string& biosService = objType.begin()->first;
+            std::string biosMode = getBiosDefaultSettingsMode(*value);
 
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](
-                    const boost::system::error_code ec,
-                    const std::variant<std::string>& resetBiosSettingsMode) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "DBUS response error for "
-                               "Get Reset BIOS setting to default status.";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    const std::string* value =
-                        std::get_if<std::string>(&resetBiosSettingsMode);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Null value returned for Reset BIOS Settings status";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    std::string biosMode = getBiosDefaultSettingsMode(*value);
-
-                    if (biosMode == "NoAction")
-                    {
-                        asyncResp->res.jsonValue["ResetBiosToDefaultsPending"] =
-                            false;
-                    }
-                    else if ((biosMode == "FactoryDefaults") ||
-                             (biosMode == "FailSafeDefaults"))
-                    {
-                        asyncResp->res.jsonValue["ResetBiosToDefaultsPending"] =
-                            true;
-                    }
-                    else
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Invalid Reset BIOS Settings Status";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                },
-                biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
-                "Get", biosConfigIface, "ResetBIOSSettings");
+            if (biosMode == "NoAction")
+            {
+                asyncResp->res.jsonValue["ResetBiosToDefaultsPending"] = false;
+            }
+            else if ((biosMode == "FactoryDefaults") ||
+                     (biosMode == "FailSafeDefaults"))
+            {
+                asyncResp->res.jsonValue["ResetBiosToDefaultsPending"] = true;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Invalid Reset BIOS Settings Status";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            },
+            biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            "Get", biosConfigIface, "ResetBIOSSettings");
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -377,112 +371,104 @@ static void
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
-                    const GetObjectType& objType) {
-            if (ec || objType.empty())
+                    const dbus::utility::MapperGetObject& objType) {
+        if (ec || objType.empty())
+        {
+            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            return;
+        }
+
+        const std::string& biosService = objType.begin()->first;
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec2,
+                        const std::variant<BaseBIOSTable>& baseBiosTableResp) {
+            if (ec2)
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
+                BMCWEB_LOG_ERROR << "Get BaseBIOSTable DBus response error"
+                                 << ec2;
                 messages::internalError(asyncResp->res);
                 return;
             }
 
-            const std::string& biosService = objType.begin()->first;
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](
-                    const boost::system::error_code ec,
-                    const std::variant<BaseBIOSTable>& baseBiosTableResp) {
-                    if (ec)
+            const BaseBIOSTable* baseBiosTable =
+                std::get_if<BaseBIOSTable>(&baseBiosTableResp);
+
+            nlohmann::json& attributesJson =
+                asyncResp->res.jsonValue["Attributes"];
+            if (baseBiosTable == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            for (const BaseBIOSTableItem& attrIt : *baseBiosTable)
+            {
+                const std::string& attr = attrIt.first;
+
+                // read the attribute type at 0th field and convert from
+                // dbus to string format
+                std::string attrType = getBiosAttrType(
+                    std::string(std::get<BaseBiosTableIndex::baseBiosAttrType>(
+                        attrIt.second)));
+                if ((attrType == "String") || (attrType == "Enumeration"))
+                {
+                    // read the current value of attribute at 5th field
+                    const std::string* attrCurrValue = std::get_if<std::string>(
+                        &std::get<BaseBiosTableIndex::baseBiosCurrValue>(
+                            attrIt.second));
+                    if (attrCurrValue != nullptr)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "Get BaseBIOSTable DBus response error" << ec;
-                        messages::internalError(asyncResp->res);
-                        return;
+                        attributesJson.emplace(attr, *attrCurrValue);
                     }
-
-                    const BaseBIOSTable* baseBiosTable =
-                        std::get_if<BaseBIOSTable>(&baseBiosTableResp);
-
-                    nlohmann::json& attributesJson =
-                        asyncResp->res.jsonValue["Attributes"];
-                    if (baseBiosTable == nullptr)
+                    else
                     {
-                        BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
-                        messages::internalError(asyncResp->res);
-                        return;
+                        attributesJson.emplace(attr, std::string(""));
                     }
-                    for (const BaseBIOSTableItem& attrIt : *baseBiosTable)
+                }
+                else if ((attrType == "Integer") || (attrType == "Boolean"))
+                {
+                    // read the current value of attribute at 5th field
+                    const int64_t* attrCurrValue = std::get_if<int64_t>(
+                        &std::get<BaseBiosTableIndex::baseBiosCurrValue>(
+                            attrIt.second));
+                    if (attrCurrValue != nullptr)
                     {
-                        const std::string& attr = attrIt.first;
-
-                        // read the attribute type at 0th field and convert from
-                        // dbus to string format
-                        std::string attrType = getBiosAttrType(std::string(
-                            std::get<BaseBiosTableIndex::baseBiosAttrType>(
-                                attrIt.second)));
-                        if ((attrType == "String") ||
-                            (attrType == "Enumeration"))
+                        if (attrType == "Boolean")
                         {
-                            // read the current value of attribute at 5th field
-                            const std::string* attrCurrValue =
-                                std::get_if<std::string>(
-                                    &std::get<
-                                        BaseBiosTableIndex::baseBiosCurrValue>(
-                                        attrIt.second));
-                            if (attrCurrValue != nullptr)
+                            if (*attrCurrValue)
                             {
-                                attributesJson.emplace(attr, *attrCurrValue);
+                                attributesJson.emplace(attr, true);
                             }
                             else
                             {
-                                attributesJson.emplace(attr, std::string(""));
-                            }
-                        }
-                        else if ((attrType == "Integer") ||
-                                 (attrType == "Boolean"))
-                        {
-                            // read the current value of attribute at 5th field
-                            const int64_t* attrCurrValue = std::get_if<int64_t>(
-                                &std::get<
-                                    BaseBiosTableIndex::baseBiosCurrValue>(
-                                    attrIt.second));
-                            if (attrCurrValue != nullptr)
-                            {
-                                if (attrType == "Boolean")
-                                {
-                                    if (*attrCurrValue)
-                                    {
-                                        attributesJson.emplace(attr, true);
-                                    }
-                                    else
-                                    {
-                                        attributesJson.emplace(attr, false);
-                                    }
-                                }
-                                else
-                                {
-                                    attributesJson.emplace(attr,
-                                                           *attrCurrValue);
-                                }
-                            }
-                            else
-                            {
-                                if (attrType == "Boolean")
-                                {
-                                    attributesJson.emplace(attr, false);
-                                }
-                                else
-                                {
-                                    attributesJson.emplace(attr, 0);
-                                }
+                                attributesJson.emplace(attr, false);
                             }
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR << "Attribute type not supported";
+                            attributesJson.emplace(attr, *attrCurrValue);
                         }
                     }
-                },
-                biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
-                "Get", biosConfigIface, "BaseBIOSTable");
+                    else
+                    {
+                        if (attrType == "Boolean")
+                        {
+                            attributesJson.emplace(attr, false);
+                        }
+                        else
+                        {
+                            attributesJson.emplace(attr, 0);
+                        }
+                    }
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR << "Attribute type not supported";
+                }
+            }
+            },
+            biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            "Get", biosConfigIface, "BaseBIOSTable");
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -660,22 +646,16 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
     }
 
-    if (baseBiosTable.empty())
-    {
-        BMCWEB_LOG_ERROR << "Base Bios Table empty";
-        messages::invalidObject(asyncResp->res, "Attributes");
-    }
-
     crow::connections::systemBus->async_method_call(
         [asyncResp, baseBiosTable](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "Error occurred in setting BaseBIOSTable";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Error occurred in setting BaseBIOSTable";
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            messages::success(asyncResp->res);
+        messages::success(asyncResp->res);
         },
         "xyz.openbmc_project.BIOSConfigManager",
         "/xyz/openbmc_project/bios_config/manager",
@@ -697,114 +677,107 @@ static void
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
-                    const GetObjectType& objType) {
-            if (ec || objType.empty())
+                    const dbus::utility::MapperGetObject& objType) {
+        if (ec || objType.empty())
+        {
+            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            return;
+        }
+
+        const std::string& biosService = objType.begin()->first;
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec2,
+                        const std::variant<PendingAttrType>& pendingAttrsResp) {
+            if (ec2)
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
+                BMCWEB_LOG_ERROR << "Get PendingAttributes DBus response error"
+                                 << ec2;
                 messages::internalError(asyncResp->res);
                 return;
             }
 
-            const std::string& biosService = objType.begin()->first;
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](
-                    const boost::system::error_code ec,
-                    const std::variant<PendingAttrType>& pendingAttrsResp) {
-                    if (ec)
+            const PendingAttrType* pendingAttrs =
+                std::get_if<PendingAttrType>(&pendingAttrsResp);
+
+            nlohmann::json& attributesJson =
+                asyncResp->res.jsonValue["Attributes"];
+            if (pendingAttrs == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "Empty Pending Attributes";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            for (const PendingAttrItemType& attrIt : *pendingAttrs)
+            {
+                const std::string& attr = attrIt.first;
+
+                // read the attribute type at 0th field and convert from
+                // dbus to string format
+                std::string attrType = getBiosAttrType(std::string(
+                    std::get<BiosPendingAttributesIndex::biosPendingAttrType>(
+                        attrIt.second)));
+                if ((attrType == "String") || (attrType == "Enumeration"))
+                {
+                    // read the current value of attribute at 1st field
+                    const std::string* attrCurrValue = std::get_if<std::string>(
+                        &std::get<
+                            BiosPendingAttributesIndex::biosPendingAttrValue>(
+                            attrIt.second));
+                    if (attrCurrValue != nullptr)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "Get PendingAttributes DBus response error"
-                            << ec;
-                        messages::internalError(asyncResp->res);
-                        return;
+                        attributesJson.emplace(attr, *attrCurrValue);
                     }
-
-                    const PendingAttrType* pendingAttrs =
-                        std::get_if<PendingAttrType>(&pendingAttrsResp);
-
-                    nlohmann::json& attributesJson =
-                        asyncResp->res.jsonValue["Attributes"];
-                    if (pendingAttrs == nullptr)
+                    else
                     {
-                        BMCWEB_LOG_ERROR << "Empty Pending Attributes";
-                        messages::internalError(asyncResp->res);
-                        return;
+                        attributesJson.emplace(attr, std::string(""));
                     }
-
-                    for (const PendingAttrItemType& attrIt : *pendingAttrs)
+                }
+                else if ((attrType == "Integer") || (attrType == "Boolean"))
+                {
+                    // read the current value of attribute at 1st field
+                    const int64_t* attrCurrValue = std::get_if<int64_t>(
+                        &std::get<
+                            BiosPendingAttributesIndex::biosPendingAttrValue>(
+                            attrIt.second));
+                    if (attrCurrValue != nullptr)
                     {
-                        const std::string& attr = attrIt.first;
-
-                        // read the attribute type at 0th field and convert from
-                        // dbus to string format
-                        std::string attrType = getBiosAttrType(std::string(
-                            std::get<BiosPendingAttributesIndex::
-                                         biosPendingAttrType>(attrIt.second)));
-                        if ((attrType == "String") ||
-                            (attrType == "Enumeration"))
+                        if (attrType == "Boolean")
                         {
-                            // read the current value of attribute at 1st field
-                            const std::string* attrCurrValue =
-                                std::get_if<std::string>(
-                                    &std::get<BiosPendingAttributesIndex::
-                                                  biosPendingAttrValue>(
-                                        attrIt.second));
-                            if (attrCurrValue != nullptr)
+                            if (*attrCurrValue)
                             {
-                                attributesJson.emplace(attr, *attrCurrValue);
+                                attributesJson.emplace(attr, true);
                             }
                             else
                             {
-                                attributesJson.emplace(attr, std::string(""));
-                            }
-                        }
-                        else if ((attrType == "Integer") ||
-                                 (attrType == "Boolean"))
-                        {
-                            // read the current value of attribute at 1st field
-                            const int64_t* attrCurrValue = std::get_if<int64_t>(
-                                &std::get<BiosPendingAttributesIndex::
-                                              biosPendingAttrValue>(
-                                    attrIt.second));
-                            if (attrCurrValue != nullptr)
-                            {
-                                if (attrType == "Boolean")
-                                {
-                                    if (*attrCurrValue)
-                                    {
-                                        attributesJson.emplace(attr, true);
-                                    }
-                                    else
-                                    {
-                                        attributesJson.emplace(attr, false);
-                                    }
-                                }
-                                else
-                                {
-                                    attributesJson.emplace(attr,
-                                                           *attrCurrValue);
-                                }
-                            }
-                            else
-                            {
-                                if (attrType == "Boolean")
-                                {
-                                    attributesJson.emplace(attr, false);
-                                }
-                                else
-                                {
-                                    attributesJson.emplace(attr, 0);
-                                }
+                                attributesJson.emplace(attr, false);
                             }
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR << "Attribute type not supported";
+                            attributesJson.emplace(attr, *attrCurrValue);
                         }
                     }
-                },
-                biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
-                "Get", biosConfigIface, "PendingAttributes");
+                    else
+                    {
+                        if (attrType == "Boolean")
+                        {
+                            attributesJson.emplace(attr, false);
+                        }
+                        else
+                        {
+                            attributesJson.emplace(attr, 0);
+                        }
+                    }
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR << "Attribute type not supported";
+                }
+            }
+            },
+            biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            "Get", biosConfigIface, "PendingAttributes");
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -825,222 +798,202 @@ static void
                        const nlohmann::json& pendingAttrJson)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp, pendingAttrJson](const boost::system::error_code ec,
-                                     const GetObjectType& objType) {
-            if (ec || objType.empty())
+        [asyncResp,
+         pendingAttrJson](const boost::system::error_code ec,
+                          const dbus::utility::MapperGetObject& objType) {
+        if (ec || objType.empty())
+        {
+            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            return;
+        }
+
+        const std::string& biosService = objType.begin()->first;
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, pendingAttrJson, biosService](
+                const boost::system::error_code ec2,
+                const std::variant<BaseBIOSTable>& baseBiosTableResp) {
+            if (ec2)
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
+                BMCWEB_LOG_ERROR << "Get BaseBIOSTable DBus response error"
+                                 << ec2;
                 messages::internalError(asyncResp->res);
                 return;
             }
 
-            const std::string& biosService = objType.begin()->first;
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, pendingAttrJson, biosService](
-                    const boost::system::error_code ec,
-                    const std::variant<BaseBIOSTable>& baseBiosTableResp) {
-                    if (ec)
+            const BaseBIOSTable* baseBiosTable =
+                std::get_if<BaseBIOSTable>(&baseBiosTableResp);
+
+            if (baseBiosTable == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            PendingAttrType pendingAttrs{};
+            for (const auto& pendingAttrIt : pendingAttrJson.items())
+            {
+
+                // Check whether the requested attribute is available
+                // inside BaseBIOSTable or not
+                auto attrIt = baseBiosTable->find(pendingAttrIt.key());
+                if (attrIt == baseBiosTable->end())
+                {
+                    BMCWEB_LOG_ERROR << "Not Found Attribute "
+                                     << pendingAttrIt.key();
+                    messages::propertyValueNotInList(
+                        asyncResp->res, pendingAttrIt.key(), "Attributes");
+                    return;
+                }
+
+                // read the attribute type at 0th field and convert from
+                // dbus to string format
+                std::string attrItType =
+                    std::get<BaseBiosTableIndex::baseBiosAttrType>(
+                        attrIt->second);
+                std::string attrType = getBiosAttrType(attrItType);
+                if ((attrType == "String") || (attrType == "Enumeration"))
+                {
+
+                    std::string attrReqVal = pendingAttrIt.value();
+                    // read the bound values for the attribute
+                    const std::vector<AttrBoundType> boundValues =
+                        std::get<BaseBiosTableIndex::baseBiosBoundValues>(
+                            attrIt->second);
+                    bool found = false;
+
+                    for (const AttrBoundType& boundValueIt : boundValues)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "Get BaseBIOSTable DBus response error" << ec;
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+                        // read the bound value type at 0th field
+                        // and convert from dbus to string format
+                        std::string boundValType =
+                            getBiosBoundValType(std::string(
+                                std::get<BaseBiosBoundIndex::baseBiosBoundType>(
+                                    boundValueIt)));
 
-                    const BaseBIOSTable* baseBiosTable =
-                        std::get_if<BaseBIOSTable>(&baseBiosTableResp);
-
-                    if (baseBiosTable == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    PendingAttrType pendingAttrs{};
-                    for (const auto& pendingAttrIt : pendingAttrJson.items())
-                    {
-
-                        // Check whether the requested attribute is available
-                        // inside BaseBIOSTable or not
-                        auto attrIt = baseBiosTable->find(pendingAttrIt.key());
-                        if (attrIt == baseBiosTable->end())
+                        if (boundValType == "OneOf")
                         {
-                            BMCWEB_LOG_ERROR << "Not Found Attribute "
-                                             << pendingAttrIt.key();
-                            messages::propertyValueNotInList(
-                                asyncResp->res, pendingAttrIt.key(),
-                                "Attributes");
-                            return;
-                        }
-
-                        // read the attribute type at 0th field and convert from
-                        // dbus to string format
-                        std::string attrItType =
-                            std::get<BaseBiosTableIndex::baseBiosAttrType>(
-                                attrIt->second);
-                        std::string attrType = getBiosAttrType(attrItType);
-                        if ((attrType == "String") ||
-                            (attrType == "Enumeration"))
-                        {
-
-                            std::string attrReqVal = pendingAttrIt.value();
-                            // read the bound values for the attribute
-                            const std::vector<AttrBoundType> boundValues =
-                                std::get<
-                                    BaseBiosTableIndex::baseBiosBoundValues>(
-                                    attrIt->second);
-                            bool found = false;
-
-                            for (const AttrBoundType& boundValueIt :
-                                 boundValues)
+                            // read the bound value  at 1st field
+                            // for each entry
+                            const std::string* currBoundVal =
+                                std::get_if<std::string>(
+                                    &std::get<
+                                        BaseBiosBoundIndex::baseBiosBoundValue>(
+                                        boundValueIt));
+                            if (currBoundVal == nullptr)
                             {
-                                // read the bound value type at 0th field
-                                // and convert from dbus to string format
-                                std::string boundValType = getBiosBoundValType(
-                                    std::string(std::get<BaseBiosBoundIndex::
-                                                             baseBiosBoundType>(
-                                        boundValueIt)));
-
-                                if (boundValType == "OneOf")
-                                {
-                                    // read the bound value  at 1st field
-                                    // for each entry
-                                    const std::string* currBoundVal =
-                                        std::get_if<std::string>(
-                                            &std::get<BaseBiosBoundIndex::
-                                                          baseBiosBoundValue>(
-                                                boundValueIt));
-                                    if (currBoundVal == nullptr)
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "Bound Value not found";
-                                        continue;
-                                    }
-                                    if (attrReqVal == *currBoundVal)
-                                    {
-                                        found = true;
-                                    }
-                                }
-                                else
-                                {
-                                    continue;
-                                }
+                                BMCWEB_LOG_ERROR << "Bound Value not found";
+                                continue;
                             }
-
-                            if (!found)
+                            if (attrReqVal == *currBoundVal)
                             {
-                                BMCWEB_LOG_ERROR
-                                    << "Requested Attribute Value invalid";
-                                messages::internalError(asyncResp->res);
-                                return;
+                                found = true;
                             }
-                            pendingAttrs.insert(std::make_pair(
-                                pendingAttrIt.key(),
-                                std::make_tuple(attrItType, attrReqVal)));
-                        }
-                        else if (attrType == "Boolean")
-                        {
-
-                            int64_t attrReqVal = static_cast<int64_t>(
-                                pendingAttrIt.value().get<bool>());
-                            // read the bound values for the attribute
-                            const std::vector<AttrBoundType> boundValues =
-                                std::get<
-                                    BaseBiosTableIndex::baseBiosBoundValues>(
-                                    attrIt->second);
-
-                            bool found = false;
-                            for (const AttrBoundType& boundValueIt :
-                                 boundValues)
-                            {
-                                // read the bound value type at 0th field
-                                // and convert from dbus to string format
-                                std::string boundValType = getBiosBoundValType(
-                                    std::string(std::get<BaseBiosBoundIndex::
-                                                             baseBiosBoundType>(
-                                        boundValueIt)));
-
-                                if (boundValType == "OneOf")
-                                {
-                                    // read the bound value  at 1st field
-                                    // for each entry
-                                    const int64_t* currBoundVal =
-                                        std::get_if<int64_t>(
-                                            &std::get<BaseBiosBoundIndex::
-                                                          baseBiosBoundValue>(
-                                                boundValueIt));
-
-                                    if (currBoundVal == nullptr)
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "Bound Value not found";
-                                        continue;
-                                    }
-
-                                    if (attrReqVal == *currBoundVal)
-                                    {
-                                        found = true;
-                                    }
-                                }
-                                else
-                                {
-                                    continue;
-                                }
-                            }
-
-                            if (!found)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "Requested Attribute Value invalid";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            pendingAttrs.insert(std::make_pair(
-                                pendingAttrIt.key(),
-                                std::make_tuple(attrItType, attrReqVal)));
-                        }
-                        else if (attrType == "Integer")
-                        {
-                            int64_t attrReqVal = pendingAttrIt.value();
-                            pendingAttrs.emplace(
-                                pendingAttrIt.key(),
-                                std::make_tuple(attrItType, attrReqVal));
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR << "Unknown Attribute Type"
-                                             << attrType;
-                            messages::internalError(asyncResp->res);
-                            return;
+                            continue;
                         }
                     }
 
-                    if (pendingAttrs.empty())
+                    if (!found)
                     {
-                        BMCWEB_LOG_ERROR << "PendingAttributes empty";
-                        messages::invalidObject(asyncResp->res, "Attributes");
+                        BMCWEB_LOG_ERROR << "Requested Attribute Value invalid";
+                        messages::internalError(asyncResp->res);
+                        return;
                     }
+                    pendingAttrs.insert(std::make_pair(
+                        pendingAttrIt.key(),
+                        std::make_tuple(attrItType, attrReqVal)));
+                }
+                else if (attrType == "Boolean")
+                {
 
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp](const boost::system::error_code ec) {
-                            if (ec)
+                    int64_t attrReqVal =
+                        static_cast<int64_t>(pendingAttrIt.value().get<bool>());
+                    // read the bound values for the attribute
+                    const std::vector<AttrBoundType> boundValues =
+                        std::get<BaseBiosTableIndex::baseBiosBoundValues>(
+                            attrIt->second);
+
+                    bool found = false;
+                    for (const AttrBoundType& boundValueIt : boundValues)
+                    {
+                        // read the bound value type at 0th field
+                        // and convert from dbus to string format
+                        std::string boundValType =
+                            getBiosBoundValType(std::string(
+                                std::get<BaseBiosBoundIndex::baseBiosBoundType>(
+                                    boundValueIt)));
+
+                        if (boundValType == "OneOf")
+                        {
+                            // read the bound value  at 1st field
+                            // for each entry
+                            const int64_t* currBoundVal = std::get_if<int64_t>(
+                                &std::get<
+                                    BaseBiosBoundIndex::baseBiosBoundValue>(
+                                    boundValueIt));
+
+                            if (currBoundVal == nullptr)
                             {
-                                BMCWEB_LOG_ERROR
-                                    << "Set PendingAttributes failed " << ec;
-                                messages::internalError(asyncResp->res);
-                                return;
+                                BMCWEB_LOG_ERROR << "Bound Value not found";
+                                continue;
                             }
 
-                            messages::success(asyncResp->res);
-                        },
-                        biosService, biosConfigObj,
-                        "org.freedesktop.DBus.Properties", "Set",
-                        biosConfigIface, "PendingAttributes",
-                        std::variant<PendingAttrType>(pendingAttrs));
+                            if (attrReqVal == *currBoundVal)
+                            {
+                                found = true;
+                            }
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        BMCWEB_LOG_ERROR << "Requested Attribute Value invalid";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    pendingAttrs.insert(std::make_pair(
+                        pendingAttrIt.key(),
+                        std::make_tuple(attrItType, attrReqVal)));
+                }
+                else if (attrType == "Integer")
+                {
+                    int64_t attrReqVal = pendingAttrIt.value();
+                    pendingAttrs.emplace(
+                        pendingAttrIt.key(),
+                        std::make_tuple(attrItType, attrReqVal));
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR << "Unknown Attribute Type" << attrType;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            }
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec3) {
+                if (ec3)
+                {
+                    BMCWEB_LOG_ERROR << "Set PendingAttributes failed " << ec3;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                messages::success(asyncResp->res);
                 },
                 biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
-                "Get", biosConfigIface, "BaseBIOSTable");
+                "Set", biosConfigIface, "PendingAttributes",
+                std::variant<PendingAttrType>(pendingAttrs));
+            },
+            biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            "Get", biosConfigIface, "BaseBIOSTable");
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1061,345 +1014,319 @@ static void getBiosAttributeRegistry(
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
-                    const GetObjectType& objType) {
-            if (ec || objType.empty())
+                    const dbus::utility::MapperGetObject& objType) {
+        if (ec || objType.empty())
+        {
+            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            return;
+        }
+
+        const std::string& biosService = objType.begin()->first;
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec2,
+                        const std::variant<BaseBIOSTable>& baseBiosTableResp) {
+            if (ec2)
             {
-                BMCWEB_LOG_ERROR << "GetObject for path " << biosConfigObj;
+                BMCWEB_LOG_ERROR << "Get BaseBIOSTable DBus response error"
+                                 << ec2;
+                messages::internalError(asyncResp->res);
                 return;
             }
 
-            const std::string& biosService = objType.begin()->first;
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](
-                    const boost::system::error_code ec,
-                    const std::variant<BaseBIOSTable>& baseBiosTableResp) {
-                    if (ec)
+            const BaseBIOSTable* baseBiosTable =
+                std::get_if<BaseBIOSTable>(&baseBiosTableResp);
+
+            nlohmann::json& attributeArray =
+                asyncResp->res.jsonValue["RegistryEntries"]["Attributes"];
+
+            if (baseBiosTable == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            for (const BaseBIOSTableItem& attrIt : *baseBiosTable)
+            {
+                // read the attribute type at 0th field and convert from
+                // dbus to string format
+                std::string attrType = getBiosAttrType(
+                    std::string(std::get<BaseBiosTableIndex::baseBiosAttrType>(
+                        attrIt.second)));
+
+                if (attrType == "UNKNOWN")
+                {
+                    BMCWEB_LOG_ERROR << "Attribute type not supported";
+                    continue;
+                }
+
+                nlohmann::json attributeIt;
+                attributeIt["AttributeName"] = attrIt.first;
+                attributeIt["Type"] = attrType;
+                attributeIt["ReadOnly"] =
+                    std::get<BaseBiosTableIndex::baseBiosReadonlyStatus>(
+                        attrIt.second);
+                attributeIt["DisplayName"] =
+                    std::get<BaseBiosTableIndex::baseBiosDisplayName>(
+                        attrIt.second);
+                const std::string& helpText =
+                    std::get<BaseBiosTableIndex::baseBiosDescription>(
+                        attrIt.second);
+                if (!helpText.empty())
+                {
+                    attributeIt["HelpText"] = helpText;
+                }
+                attributeIt["MenuPath"] =
+                    std::get<BaseBiosTableIndex::baseBiosMenuPath>(
+                        attrIt.second);
+
+                if ((attrType == "String") || (attrType == "Enumeration"))
+                {
+                    // read the current value of attribute at 5th field
+                    const std::string* attrCurrValue = std::get_if<std::string>(
+                        &std::get<BaseBiosTableIndex::baseBiosCurrValue>(
+                            attrIt.second));
+                    if (attrCurrValue != nullptr)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "Get BaseBIOSTable DBus response error" << ec;
-                        messages::internalError(asyncResp->res);
-                        return;
+                        attributeIt["CurrentValue"] = *attrCurrValue;
+                    }
+                    else
+                    {
+                        attributeIt["CurrentValue"] = "";
                     }
 
-                    const BaseBIOSTable* baseBiosTable =
-                        std::get_if<BaseBIOSTable>(&baseBiosTableResp);
-
-                    nlohmann::json& attributeArray =
-                        asyncResp->res
-                            .jsonValue["RegistryEntries"]["Attributes"];
-
-                    if (baseBiosTable == nullptr)
+                    // read the default value of attribute at 6th field
+                    const std::string* attrDefaultValue =
+                        std::get_if<std::string>(
+                            &std::get<BaseBiosTableIndex::baseBiosDefaultValue>(
+                                attrIt.second));
+                    if (attrDefaultValue != nullptr)
                     {
-                        BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
-                        messages::internalError(asyncResp->res);
-                        return;
+                        attributeIt["DefaultValue"] = *attrDefaultValue;
                     }
-                    for (const BaseBIOSTableItem& attrIt : *baseBiosTable)
+                    else
                     {
-                        // read the attribute type at 0th field and convert from
-                        // dbus to string format
-                        std::string attrType = getBiosAttrType(std::string(
-                            std::get<BaseBiosTableIndex::baseBiosAttrType>(
-                                attrIt.second)));
-
-                        if (attrType == "UNKNOWN")
+                        attributeIt["DefaultValue"] = "";
+                    }
+                }
+                else if ((attrType == "Integer") || (attrType == "Boolean"))
+                {
+                    // read the current value of attribute at 5th field
+                    const int64_t* attrCurrValue = std::get_if<int64_t>(
+                        &std::get<BaseBiosTableIndex::baseBiosCurrValue>(
+                            attrIt.second));
+                    if (attrCurrValue != nullptr)
+                    {
+                        if (attrType == "Boolean")
                         {
-                            BMCWEB_LOG_ERROR << "Attribute type not supported";
-                            continue;
+                            if (*attrCurrValue)
+                            {
+                                attributeIt["CurrentValue"] = true;
+                            }
+                            else
+                            {
+                                attributeIt["CurrentValue"] = false;
+                            }
                         }
-
-                        nlohmann::json attributeIt;
-                        attributeIt["AttributeName"] = attrIt.first;
-                        attributeIt["Type"] = attrType;
-                        attributeIt["ReadOnly"] = std::get<
-                            BaseBiosTableIndex::baseBiosReadonlyStatus>(
-                            attrIt.second);
-                        attributeIt["DisplayName"] =
-                            std::get<BaseBiosTableIndex::baseBiosDisplayName>(
-                                attrIt.second);
-                        const std::string& helpText =
-                            std::get<BaseBiosTableIndex::baseBiosDescription>(
-                                attrIt.second);
-                        if (!helpText.empty())
+                        else
                         {
-                            attributeIt["HelpText"] = helpText;
+                            attributeIt["CurrentValue"] = *attrCurrValue;
                         }
-                        attributeIt["MenuPath"] =
-                            std::get<BaseBiosTableIndex::baseBiosMenuPath>(
-                                attrIt.second);
+                    }
+                    else
+                    {
+                        if (attrType == "Boolean")
+                        {
+                            attributeIt["CurrentValue"] = false;
+                        }
+                        else
+                        {
+                            attributeIt["CurrentValue"] = 0;
+                        }
+                    }
 
+                    // read the current value of attribute at 6th field
+                    const int64_t* attrDefaultValue = std::get_if<int64_t>(
+                        &std::get<BaseBiosTableIndex::baseBiosDefaultValue>(
+                            attrIt.second));
+                    if (attrDefaultValue != nullptr)
+                    {
+                        if (attrType == "Boolean")
+                        {
+                            if (*attrDefaultValue)
+                            {
+                                attributeIt["DefaultValue"] = true;
+                            }
+                            else
+                            {
+                                attributeIt["DefaultValue"] = false;
+                            }
+                        }
+                        else
+                        {
+                            attributeIt["DefaultValue"] = *attrDefaultValue;
+                        }
+                    }
+                    else
+                    {
+                        if (attrType == "Boolean")
+                        {
+                            attributeIt["DefaultValue"] = false;
+                        }
+                        else
+                        {
+                            attributeIt["DefaultValue"] = 0;
+                        }
+                    }
+                }
+
+                nlohmann::json boundValArray = nlohmann::json::array();
+
+                // read the bound values for the attribute
+                const std::vector<AttrBoundType> boundValues =
+                    std::get<BaseBiosTableIndex::baseBiosBoundValues>(
+                        attrIt.second);
+
+                for (const AttrBoundType& boundValueIt : boundValues)
+                {
+                    nlohmann::json boundValJson;
+
+                    // read the bound value type at 0th field
+                    // and convert from dbus to string format
+                    std::string boundValType = getBiosBoundValType(std::string(
+                        std::get<BaseBiosBoundIndex::baseBiosBoundType>(
+                            boundValueIt)));
+
+                    if (boundValType == "UNKNOWN")
+                    {
+                        BMCWEB_LOG_ERROR << "Attribute type not supported";
+                        continue;
+                    }
+
+                    if (boundValType == "OneOf")
+                    {
                         if ((attrType == "String") ||
                             (attrType == "Enumeration"))
                         {
-                            // read the current value of attribute at 5th field
-                            const std::string* attrCurrValue =
+                            // read the bound value  at 1st field
+                            // for each entry
+                            const std::string* currBoundVal =
                                 std::get_if<std::string>(
                                     &std::get<
-                                        BaseBiosTableIndex::baseBiosCurrValue>(
-                                        attrIt.second));
-                            if (attrCurrValue != nullptr)
+                                        BaseBiosBoundIndex::baseBiosBoundValue>(
+                                        boundValueIt));
+                            if (currBoundVal != nullptr)
                             {
-                                attributeIt["CurrentValue"] = *attrCurrValue;
+                                boundValJson["ValueName"] = *currBoundVal;
                             }
                             else
                             {
-                                attributeIt["CurrentValue"] = "";
-                            }
-
-                            // read the default value of attribute at 6th field
-                            const std::string* attrDefaultValue = std::get_if<
-                                std::string>(
-                                &std::get<
-                                    BaseBiosTableIndex::baseBiosDefaultValue>(
-                                    attrIt.second));
-                            if (attrDefaultValue != nullptr)
-                            {
-                                attributeIt["DefaultValue"] = *attrDefaultValue;
-                            }
-                            else
-                            {
-                                attributeIt["DefaultValue"] = "";
+                                boundValJson["ValueName"] = "";
                             }
                         }
-                        else if ((attrType == "Integer") ||
-                                 (attrType == "Boolean"))
+                        else if (attrType == "Boolean")
                         {
-                            // read the current value of attribute at 5th field
-                            const int64_t* attrCurrValue = std::get_if<int64_t>(
+                            // read the bound value  at 1st field
+                            // for each entry
+                            const int64_t* currBoundVal = std::get_if<int64_t>(
                                 &std::get<
-                                    BaseBiosTableIndex::baseBiosCurrValue>(
-                                    attrIt.second));
-                            if (attrCurrValue != nullptr)
+                                    BaseBiosBoundIndex::baseBiosBoundValue>(
+                                    boundValueIt));
+                            if (currBoundVal != nullptr)
                             {
-                                if (attrType == "Boolean")
+                                if (*currBoundVal)
                                 {
-                                    if (*attrCurrValue)
-                                    {
-                                        attributeIt["CurrentValue"] = true;
-                                    }
-                                    else
-                                    {
-                                        attributeIt["CurrentValue"] = false;
-                                    }
+                                    boundValJson["ValueName"] = true;
                                 }
                                 else
                                 {
-                                    attributeIt["CurrentValue"] =
-                                        *attrCurrValue;
+                                    boundValJson["ValueName"] = false;
                                 }
                             }
                             else
                             {
-                                if (attrType == "Boolean")
-                                {
-                                    attributeIt["CurrentValue"] = false;
-                                }
-                                else
-                                {
-                                    attributeIt["CurrentValue"] = 0;
-                                }
-                            }
-
-                            // read the current value of attribute at 6th field
-                            const int64_t* attrDefaultValue = std::get_if<
-                                int64_t>(
-                                &std::get<
-                                    BaseBiosTableIndex::baseBiosDefaultValue>(
-                                    attrIt.second));
-                            if (attrDefaultValue != nullptr)
-                            {
-                                if (attrType == "Boolean")
-                                {
-                                    if (*attrDefaultValue)
-                                    {
-                                        attributeIt["DefaultValue"] = true;
-                                    }
-                                    else
-                                    {
-                                        attributeIt["DefaultValue"] = false;
-                                    }
-                                }
-                                else
-                                {
-                                    attributeIt["DefaultValue"] =
-                                        *attrDefaultValue;
-                                }
-                            }
-                            else
-                            {
-                                if (attrType == "Boolean")
-                                {
-                                    attributeIt["DefaultValue"] = false;
-                                }
-                                else
-                                {
-                                    attributeIt["DefaultValue"] = 0;
-                                }
+                                boundValJson["ValueName"] = false;
                             }
                         }
-
-                        nlohmann::json boundValArray = nlohmann::json::array();
-
-                        // read the bound values for the attribute
-                        const std::vector<AttrBoundType> boundValues =
-                            std::get<BaseBiosTableIndex::baseBiosBoundValues>(
-                                attrIt.second);
-
-                        for (const AttrBoundType& boundValueIt : boundValues)
+                        else
                         {
-                            nlohmann::json boundValJson;
-
-                            // read the bound value type at 0th field
-                            // and convert from dbus to string format
-                            std::string boundValType =
-                                getBiosBoundValType(std::string(
-                                    std::get<
-                                        BaseBiosBoundIndex::baseBiosBoundType>(
-                                        boundValueIt)));
-
-                            if (boundValType == "UNKNOWN")
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "Attribute type not supported";
-                                continue;
-                            }
-
-                            if (boundValType == "OneOf")
-                            {
-                                if ((attrType == "String") ||
-                                    (attrType == "Enumeration"))
-                                {
-                                    // read the bound value  at 1st field
-                                    // for each entry
-                                    const std::string* currBoundVal =
-                                        std::get_if<std::string>(
-                                            &std::get<BaseBiosBoundIndex::
-                                                          baseBiosBoundValue>(
-                                                boundValueIt));
-                                    if (currBoundVal != nullptr)
-                                    {
-                                        boundValJson["ValueName"] =
-                                            *currBoundVal;
-                                    }
-                                    else
-                                    {
-                                        boundValJson["ValueName"] = "";
-                                    }
-                                }
-                                else if (attrType == "Boolean")
-                                {
-                                    // read the bound value  at 1st field
-                                    // for each entry
-                                    const int64_t* currBoundVal =
-                                        std::get_if<int64_t>(
-                                            &std::get<BaseBiosBoundIndex::
-                                                          baseBiosBoundValue>(
-                                                boundValueIt));
-                                    if (currBoundVal != nullptr)
-                                    {
-                                        if (*currBoundVal)
-                                        {
-                                            boundValJson["ValueName"] = true;
-                                        }
-                                        else
-                                        {
-                                            boundValJson["ValueName"] = false;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        boundValJson["ValueName"] = false;
-                                    }
-                                }
-                                else
-                                {
-                                    continue;
-                                }
-                            }
-                            else if (boundValType == "LowerBound")
-                            {
-                                const int64_t* currBoundVal = std::get_if<
-                                    int64_t>(
-                                    &std::get<
-                                        BaseBiosBoundIndex::baseBiosBoundValue>(
-                                        boundValueIt));
-                                if (currBoundVal != nullptr)
-                                {
-                                    attributeIt["LowerBound"] = *currBoundVal;
-                                }
-                                else
-                                {
-                                    attributeIt["LowerBound"] = 0;
-                                }
-                            }
-                            else if (boundValType == "UpperBound")
-                            {
-                                const int64_t* currBoundVal = std::get_if<
-                                    int64_t>(
-                                    &std::get<
-                                        BaseBiosBoundIndex::baseBiosBoundValue>(
-                                        boundValueIt));
-                                if (currBoundVal != nullptr)
-                                {
-                                    attributeIt["UpperBound"] = *currBoundVal;
-                                }
-                                else
-                                {
-                                    attributeIt["UpperBound"] = 0;
-                                }
-                            }
-                            else if (boundValType == "ScalarIncrement")
-                            {
-                                const int64_t* currBoundVal = std::get_if<
-                                    int64_t>(
-                                    &std::get<
-                                        BaseBiosBoundIndex::baseBiosBoundValue>(
-                                        boundValueIt));
-                                if (currBoundVal != nullptr)
-                                {
-                                    attributeIt["ScalarIncrement"] =
-                                        *currBoundVal;
-                                }
-                                else
-                                {
-                                    attributeIt["ScalarIncrement"] = 0;
-                                }
-                            }
-                            else
-                            {
-                                // read the bound value  at 1st field
-                                // for each entry
-                                const int64_t* currBoundVal = std::get_if<
-                                    int64_t>(
-                                    &std::get<
-                                        BaseBiosBoundIndex::baseBiosBoundValue>(
-                                        boundValueIt));
-                                if (currBoundVal != nullptr)
-                                {
-                                    boundValJson["ValueName"] = *currBoundVal;
-                                }
-                                else
-                                {
-                                    boundValJson["ValueName"] = 0;
-                                }
-                            }
-                            boundValArray.push_back(boundValJson);
-                        }
-
-                        if (boundValArray.empty())
-                        {
-                            BMCWEB_LOG_ERROR << "Bound Values Array is empty";
                             continue;
                         }
-                        if (attrType != "Integer")
-                        {
-                            attributeIt["Value"] = boundValArray;
-                        }
-                        attributeArray.push_back(attributeIt);
                     }
-                },
-                biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
-                "Get", biosConfigIface, "BaseBIOSTable");
+                    else if (boundValType == "LowerBound")
+                    {
+                        const int64_t* currBoundVal = std::get_if<int64_t>(
+                            &std::get<BaseBiosBoundIndex::baseBiosBoundValue>(
+                                boundValueIt));
+                        if (currBoundVal != nullptr)
+                        {
+                            attributeIt["LowerBound"] = *currBoundVal;
+                        }
+                        else
+                        {
+                            attributeIt["LowerBound"] = 0;
+                        }
+                    }
+                    else if (boundValType == "UpperBound")
+                    {
+                        const int64_t* currBoundVal = std::get_if<int64_t>(
+                            &std::get<BaseBiosBoundIndex::baseBiosBoundValue>(
+                                boundValueIt));
+                        if (currBoundVal != nullptr)
+                        {
+                            attributeIt["UpperBound"] = *currBoundVal;
+                        }
+                        else
+                        {
+                            attributeIt["UpperBound"] = 0;
+                        }
+                    }
+                    else if (boundValType == "ScalarIncrement")
+                    {
+                        const int64_t* currBoundVal = std::get_if<int64_t>(
+                            &std::get<BaseBiosBoundIndex::baseBiosBoundValue>(
+                                boundValueIt));
+                        if (currBoundVal != nullptr)
+                        {
+                            attributeIt["ScalarIncrement"] = *currBoundVal;
+                        }
+                        else
+                        {
+                            attributeIt["ScalarIncrement"] = 0;
+                        }
+                    }
+                    else
+                    {
+                        // read the bound value  at 1st field
+                        // for each entry
+                        const int64_t* currBoundVal = std::get_if<int64_t>(
+                            &std::get<BaseBiosBoundIndex::baseBiosBoundValue>(
+                                boundValueIt));
+                        if (currBoundVal != nullptr)
+                        {
+                            boundValJson["ValueName"] = *currBoundVal;
+                        }
+                        else
+                        {
+                            boundValJson["ValueName"] = 0;
+                        }
+                    }
+                    boundValArray.push_back(boundValJson);
+                }
+
+                if (boundValArray.empty())
+                {
+                    BMCWEB_LOG_ERROR << "Bound Values Array is empty";
+                    continue;
+                }
+                if (attrType != "Integer")
+                {
+                    attributeIt["Value"] = boundValArray;
+                }
+                attributeArray.push_back(attributeIt);
+            }
+            },
+            biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            "Get", biosConfigIface, "BaseBIOSTable");
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1412,69 +1339,65 @@ static void getBiosAttributeRegistry(
  * BiosService class supports handle put method for bios.
  */
 inline void
-    handleBiosServicePut(const crow::Request& req,
+    handleBiosServicePut(crow::App& app, const crow::Request& req,
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
     crow::connections::systemBus->async_method_call(
         [req,
          asyncResp](const boost::system::error_code ec,
                     const std::map<std::string, dbus::utility::DbusVariantType>&
                         userInfo) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "GetUserInfo failed";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "GetUserInfo failed";
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            const std::vector<std::string>* userGroupPtr = nullptr;
-            auto userInfoIter = userInfo.find("UserGroups");
-            if (userInfoIter != userInfo.end())
-            {
-                userGroupPtr = std::get_if<std::vector<std::string>>(
+        const std::vector<std::string>* userGroupPtr = nullptr;
+        auto userInfoIter = userInfo.find("UserGroups");
+        if (userInfoIter != userInfo.end())
+        {
+            userGroupPtr = std::get_if<std::vector<std::string>>(
 
-                    &userInfoIter->second);
-            }
+                &userInfoIter->second);
+        }
 
-            if (userGroupPtr == nullptr)
-            {
-                BMCWEB_LOG_ERROR << "User Group not found";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (userGroupPtr == nullptr)
+        {
+            BMCWEB_LOG_ERROR << "User Group not found";
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            auto found = std::find_if(
-                userGroupPtr->begin(), userGroupPtr->end(),
-                [](const auto& group) {
-                    return (group == "redfish-hostiface") ? true : false;
-                });
+        auto found = std::find_if(userGroupPtr->begin(), userGroupPtr->end(),
+                                  [](const auto& group) {
+            return (group == "redfish-hostiface") ? true : false;
+        });
 
-            // Only Host Iface (redfish-hostiface) group user should
-            // perform PUT operations
-            if (found == userGroupPtr->end())
-            {
-                BMCWEB_LOG_ERROR << "Not Sufficient Privilage";
-                messages::insufficientPrivilege(asyncResp->res);
-                return;
-            }
-            std::vector<nlohmann::json> baseBiosTableJson;
-            if (!redfish::json_util::readJson(req, asyncResp->res, "Attributes",
-                                              baseBiosTableJson))
-            {
-                BMCWEB_LOG_ERROR << "No 'Attributes' found";
-                messages::unrecognizedRequestBody(asyncResp->res);
-                return;
-            }
+        // Only Host Iface (redfish-hostiface) group user should
+        // perform PUT operations
+        if (found == userGroupPtr->end())
+        {
+            BMCWEB_LOG_ERROR << "Not Sufficient Privilage";
+            messages::insufficientPrivilege(asyncResp->res);
+            return;
+        }
+        std::vector<nlohmann::json> baseBiosTableJson;
+        if (!redfish::json_util::readJsonAction(
+                req, asyncResp->res, "Attributes", baseBiosTableJson))
+        {
+            BMCWEB_LOG_ERROR << "No 'Attributes' found";
+            messages::unrecognizedRequestBody(asyncResp->res);
+            return;
+        }
 
-            if (baseBiosTableJson.empty())
-            {
-                messages::invalidObject(asyncResp->res, "Attributes");
-                BMCWEB_LOG_ERROR << "No input in req!";
-                return;
-            }
-
-            // Set the BaseBIOSTable
-            bios::fillBiosTable(asyncResp, baseBiosTableJson);
+        // Set the BaseBIOSTable
+        bios::fillBiosTable(asyncResp, baseBiosTableJson);
         },
         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
         "xyz.openbmc_project.User.Manager", "GetUserInfo",
@@ -1485,13 +1408,17 @@ inline void
  * BiosService class supports handle patch method for bios.
  */
 inline void
-    handleBiosServicePatch(const crow::Request& req,
+    handleBiosServicePatch(crow::App& app, const crow::Request& req,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
     std::optional<bool> resetBiosToDefaultsPending;
-    if (!json_util::readJson(req, asyncResp->res, "ResetBiosToDefaultsPending",
-                             resetBiosToDefaultsPending))
+    if (!json_util::readJsonAction(req, asyncResp->res,
+                                   "ResetBiosToDefaultsPending",
+                                   resetBiosToDefaultsPending))
     {
         BMCWEB_LOG_ERROR << "No 'ResetBiosToDefaultsPending' found";
         messages::unrecognizedRequestBody(asyncResp->res);
@@ -1510,25 +1437,14 @@ inline void
  */
 inline void
     handleBiosServiceGet(crow::App& app, const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const std::string& systemName)
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-<<<<<<< HEAD
-    asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios";
-=======
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
-    if (systemName != "system")
-    {
-        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                   systemName);
-        return;
-    }
-    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/system/Bios";
->>>>>>> origin/master
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios";
     asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_1_0.Bios";
     asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
     asyncResp->res.jsonValue["Description"] = "BIOS Configuration Service";
@@ -1551,41 +1467,39 @@ inline void
 
 inline void requestRoutesBiosService(App& app)
 {
-<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/")
         .privileges(redfish::privileges::getBios)
-        .methods(boost::beast::http::verb::get)(handleBiosServiceGet);
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleBiosServiceGet, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/")
         .privileges(redfish::privileges::patchBios)
-        .methods(boost::beast::http::verb::patch)(handleBiosServicePatch);
+        .methods(boost::beast::http::verb::patch)(
+            std::bind_front(handleBiosServicePatch, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/")
         .privileges(redfish::privileges::putBios)
-        .methods(boost::beast::http::verb::put)(handleBiosServicePut);
+        .methods(boost::beast::http::verb::put)(
+            std::bind_front(handleBiosServicePut, std::ref(app)));
 }
 
 /**
  * BiosSetting class supports handle patch method for Bios Settings.
  */
 inline void
-    handleBiosSettingsPatch(const crow::Request& req,
+    handleBiosSettingsPatch(crow::App& app, const crow::Request& req,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
     nlohmann::json pendingAttrJson;
-    if (!redfish::json_util::readJson(req, asyncResp->res, "Attributes",
-                                      pendingAttrJson))
+    if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Attributes",
+                                            pendingAttrJson))
     {
         BMCWEB_LOG_ERROR << "No 'Attributes' found";
         messages::unrecognizedRequestBody(asyncResp->res);
-        return;
-    }
-
-    if (pendingAttrJson.empty())
-    {
-        messages::invalidObject(asyncResp->res, "Attributes");
-        BMCWEB_LOG_ERROR << "No input in req!";
         return;
     }
 
@@ -1597,9 +1511,13 @@ inline void
  * BiosSetting class supports handle get method for Bios Settings.
  */
 inline void
-    handleBiosSettingsGet(const crow::Request&,
+    handleBiosSettingsGet(crow::App& app, const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/Settings";
     asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_1_0.Bios";
@@ -1617,17 +1535,13 @@ inline void requestRoutesBiosSettings(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/Settings")
         .privileges(redfish::privileges::getBios)
-        .methods(boost::beast::http::verb::get)(handleBiosSettingsGet);
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleBiosSettingsGet, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/Settings")
         .privileges(redfish::privileges::patchBios)
-        .methods(boost::beast::http::verb::patch)(handleBiosSettingsPatch);
-=======
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/")
-        .privileges(redfish::privileges::getBios)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(handleBiosServiceGet, std::ref(app)));
->>>>>>> origin/master
+        .methods(boost::beast::http::verb::patch)(
+            std::bind_front(handleBiosSettingsPatch, std::ref(app)));
 }
 
 /**
@@ -1639,18 +1553,10 @@ inline void requestRoutesBiosSettings(App& app)
  */
 inline void
     handleBiosResetPost(crow::App& app, const crow::Request& req,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::string& systemName)
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
-        return;
-    }
-
-    if (systemName != "system")
-    {
-        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                   systemName);
         return;
     }
 
@@ -1669,12 +1575,8 @@ inline void
 
 inline void requestRoutesBiosReset(App& app)
 {
-<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/Bios/Actions/Bios.ResetBios/")
-=======
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/Actions/Bios.ResetBios/")
->>>>>>> origin/master
         .privileges(redfish::privileges::postBios)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleBiosResetPost, std::ref(app)));
@@ -1685,8 +1587,13 @@ inline void requestRoutesBiosReset(App& app)
  * Registry.
  */
 inline void handleBiosAttrRegistryGet(
-    const crow::Request&, const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Registries/BiosAttributeRegistry/"
         "BiosAttributeRegistry";
@@ -1709,7 +1616,7 @@ inline void requestRoutesBiosAttrRegistryService(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Registries/"
                       "BiosAttributeRegistry/BiosAttributeRegistry/")
         .privileges(redfish::privileges::getBios)
-        .methods(boost::beast::http::verb::get)(handleBiosAttrRegistryGet);
-}
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleBiosAttrRegistryGet, std::ref(app)));
 
 } // namespace redfish
