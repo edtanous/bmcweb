@@ -71,7 +71,8 @@ static void generateMessageRegistry(
     const std::string& odataTypeVer /* e.g. v1_8_0 */, const std::string& id,
     const std::string& name, const std::string& timestamp,
     const std::string& messageId, const std::string& messageArgs,
-    const std::string& resolution, const std::string& severity = "")
+    const std::string& resolution, const bool& resolved,
+    const std::string& severity = "")
 {
     BMCWEB_LOG_DEBUG << "Generating MessageRegitry for [" << messageId << "]";
     const Message* msg = getMessage(messageId);
@@ -131,7 +132,8 @@ static void generateMessageRegistry(
                 {"Message", message},
                 {"MessageId", messageId},
                 {"MessageArgs", msgArgs},
-                {"Resolution", resolution}};
+                {"Resolution", resolution},
+                {"Resolved", resolved}};
 }
 
 } // namespace message_registries
@@ -1738,7 +1740,8 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                 "v1_9_0", std::to_string(*id),
                                 "System Event Log Entry",
                                 crow::utility::getDateTimeStdtime(timestamp),
-                                messageId, messageArgs, *resolution, *severity);
+                                messageId, messageArgs, *resolution, resolved,
+                                *severity);
 
                             origin_utils::convertDbusObjectToOriginOfCondition(
                                 originOfCondition, asyncResp,
@@ -1949,7 +1952,8 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                                 "v1_9_0", std::to_string(*id),
                                 "System Event Log Entry",
                                 crow::utility::getDateTimeStdtime(timestamp),
-                                messageId, messageArgs, *resolution, *severity);
+                                messageId, messageArgs, *resolution, resolved,
+                                *severity);
 
                             origin_utils::convertDbusObjectToOriginOfCondition(
                                 originOfCondition, asyncResp,
@@ -4866,7 +4870,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App &app)
                                                 crow::utility::getDateTimeStdtime(
                                                     timestamp),
                                                 messageId, messageArgs, *resolution,
-                                                *severity);
+                                                resolved, *severity);
 
                                         origin_utils::convertDbusObjectToOriginOfCondition(
                                             originOfCondition, asyncResp,
