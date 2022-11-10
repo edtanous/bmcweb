@@ -358,5 +358,128 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
 }
 
+/**
+ * @brief Get all cpu info by requesting data
+ * from the given D-Bus object.
+ *
+ * @param[in,out]   asyncResp   Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& service,
+                           const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG << "Get CPU Port Data";
+    using PropertyType = std::variant<std::string>;
+    using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
+
+    // Get interface properties
+    crow::connections::systemBus->async_method_call(
+        [asyncResp{asyncResp}](const boost::system::error_code ec,
+                               const PropertiesMap& properties) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            for (const auto& property : properties)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "Type")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for port type";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["PortType"] = getPortType(*value);
+                }
+                else if (propertyName == "Protocol")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for protocol type";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["PortProtocol"] =
+                        getPortProtocol(*value);
+                }
+                else if (propertyName == "LinkStatus")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for link status";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    if (*value ==
+                            "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.LinkDown" ||
+                        *value ==
+                            "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.LinkUp")
+                    {
+                        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+                    }
+                    else if (
+                        *value ==
+                        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.NoLink")
+                    {
+                        asyncResp->res.jsonValue["Status"]["Health"] =
+                            "Critical";
+                    }
+                }
+                else if (propertyName == "LinkState")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for link state";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    if (*value ==
+                        "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Enabled")
+                    {
+                        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+                    }
+                    else if (
+                        *value ==
+                        "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Disabled")
+                    {
+                        asyncResp->res.jsonValue["Status"]["State"] =
+                            "Disabled";
+                    }
+                    else if (
+                        *value ==
+                        "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Error")
+                    {
+                        asyncResp->res.jsonValue["Status"]["State"] =
+                            "UnavailableOffline";
+                    }
+                    else
+                    {
+                        asyncResp->res.jsonValue["Status"]["State"] = "Absent";
+                    }
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Item.Port");
+}
+
 } // namespace port_utils
 } // namespace redfish

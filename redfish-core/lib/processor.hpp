@@ -28,13 +28,13 @@
 #include <sdbusplus/message/native_types.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 #include <sdbusplus/utility/dedup_variant.hpp>
+#include <utils/chassis_utils.hpp>
 #include <utils/collection.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
-#include <utils/chassis_utils.hpp>
 
 namespace redfish
 {
@@ -3931,6 +3931,47 @@ inline void requestRoutesProcessorReset(App& app)
             });
 }
 
+inline void
+    getProcessorPortCollection(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                               const std::string& objPath,
+                               const std::string& processorId)
+{
+    // Find objPath parent_chassis for matching port
+    BMCWEB_LOG_DEBUG << "Get Processor Ports Collection";
+
+    // Get parent chassis for sensors URI
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath,
+         processorId](const boost::system::error_code ec,
+                      std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                aResp->res.jsonValue["Members"] = nlohmann::json::array();
+                aResp->res.jsonValue["Members@odata.count"] = 0;
+                return; // no chassis = no failures
+            }
+
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr && data->size() > 1)
+            {
+                // Object must have single parent chassis
+                return;
+            }
+            const std::string& chassisPath = data->front();
+
+            collection_util::getCollectionMembersByAssociation(
+                aResp,
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
+                    processorId + "/Ports",
+                chassisPath + "/all_states",
+                {"xyz.openbmc_project.Inventory.Item.Port"});
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 inline void requestRoutesProcessorPortCollection(App& app)
 {
     /**
@@ -3940,67 +3981,87 @@ inline void requestRoutesProcessorPortCollection(App& app)
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
                  "Ports")
         .privileges(redfish::privileges::getProcessor)
-        .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                   const std::string& processorId) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                BMCWEB_LOG_DEBUG << "Get available system processor resource";
-                crow::connections::systemBus->async_method_call(
-                    [processorId,
-                     asyncResp](const boost::system::error_code ec,
-                                const boost::container::flat_map<
-                                    std::string,
-                                    boost::container::flat_map<
-                                        std::string, std::vector<std::string>>>&
-                                    subtree) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_DEBUG << "DBUS response error";
-                            messages::internalError(asyncResp->res);
+        .methods(
+            boost::beast::http::verb::
+                get)([&app](const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+            BMCWEB_LOG_DEBUG << "Get available system processor resource";
+            crow::connections::systemBus->async_method_call(
+                [processorId, asyncResp](
+                    const boost::system::error_code ec,
+                    const boost::container::flat_map<
+                        std::string,
+                        boost::container::flat_map<
+                            std::string, std::vector<std::string>>>& subtree) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG << "DBUS response error";
+                        messages::internalError(asyncResp->res);
 
-                            return;
-                        }
-                        for (const auto& [path, object] : subtree)
+                        return;
+                    }
+                    for (const auto& [path, object] : subtree)
+                    {
+                        if (!boost::ends_with(path, processorId))
                         {
-                            if (!boost::ends_with(path, processorId))
+                            continue;
+                        }
+                        asyncResp->res.jsonValue["@odata.id"] =
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/Processors/" +
+                            processorId + "/Ports";
+                        asyncResp->res.jsonValue["@odata.type"] =
+                            "#PortCollection.PortCollection";
+                        asyncResp->res.jsonValue["Name"] =
+                            "NVLink Port Collection";
+
+                        for (const auto& [serviceName, interfacesList] : object)
+                        {
+                            if (std::find(
+                                    interfacesList.begin(),
+                                    interfacesList.end(),
+                                    "xyz.openbmc_project.Inventory.Item.Cpu") !=
+                                interfacesList.end())
                             {
-                                continue;
+                                getProcessorPortCollection(asyncResp, path,
+                                                           processorId);
                             }
-                            asyncResp->res.jsonValue["@odata.id"] =
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/Processors/" +
-                                processorId + "/Ports";
-                            asyncResp->res.jsonValue["@odata.type"] =
-                                "#PortCollection.PortCollection";
-                            asyncResp->res.jsonValue["Name"] =
-                                "NVLink Port Collection";
-                            collection_util::getCollectionMembers(
-                                asyncResp,
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/Processors/" +
-                                    processorId + "/Ports",
-                                {"xyz.openbmc_project.Inventory.Item.Port"},
-                                path.c_str());
-
-                            return;
+                            else if (
+                                std::find(
+                                    interfacesList.begin(),
+                                    interfacesList.end(),
+                                    "xyz.openbmc_project.Inventory.Item.Accelerator") !=
+                                interfacesList.end())
+                            {
+                                collection_util::getCollectionMembers(
+                                    asyncResp,
+                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                    "/Processors/" +
+                                        processorId + "/Ports",
+                                    {"xyz.openbmc_project.Inventory.Item.Port"},
+                                    path.c_str());
+                            }
                         }
-                        // Object not found
-                        messages::resourceNotFound(
-                            asyncResp->res, "#Processor.v1_13_0.Processor",
-                            processorId);
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                    "/xyz/openbmc_project/inventory", 0,
-                    std::array<const char*, 2>{
-                        "xyz.openbmc_project.Inventory.Item.Cpu",
-                        "xyz.openbmc_project.Inventory.Item.Accelerator"});
-            });
+                        return;
+                    }
+                    // Object not found
+                    messages::resourceNotFound(asyncResp->res,
+                                               "#Processor.v1_13_0.Processor",
+                                               processorId);
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/inventory", 0,
+                std::array<const char*, 2>{
+                    "xyz.openbmc_project.Inventory.Item.Cpu",
+                    "xyz.openbmc_project.Inventory.Item.Accelerator"});
+        });
 }
 
 inline void
@@ -4147,6 +4208,115 @@ inline void
         "xyz.openbmc_project.Association", "endpoints");
 }
 
+inline void getProcessorPortData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath,
+    const std::string& processorId, const std::string& portId)
+{
+    BMCWEB_LOG_DEBUG << "Get processor port data";
+    crow::connections::systemBus->async_method_call(
+        [aResp, processorId,
+         portId](const boost::system::error_code& e,
+                 std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                // no state sensors attached.
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const std::string& sensorpath : *data)
+            {
+                // Check Interface in Object or not
+                BMCWEB_LOG_DEBUG << "processor state sensor object path "
+                                 << sensorpath;
+                crow::connections::systemBus->async_method_call(
+                    [aResp, sensorpath, processorId, portId](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                        if (ec)
+                        {
+                            // the path does not implement any state interfaces
+                            return;
+                        }
+
+                        sdbusplus::message::object_path path(sensorpath);
+                        if (path.filename() != portId || object.size() != 1)
+                        {
+                            return;
+                        }
+
+                        std::string portUri =
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/Processors/";
+                        portUri += processorId;
+                        portUri += "/Ports/";
+                        portUri += portId;
+                        aResp->res.jsonValue["@odata.id"] = portUri;
+                        aResp->res.jsonValue["@odata.type"] =
+                            "#Port.v1_4_0.Port";
+                        std::string portName = processorId + " ";
+                        portName += portId + " Port";
+                        aResp->res.jsonValue["Name"] = portName;
+                        aResp->res.jsonValue["Id"] = portId;
+
+                        redfish::port_utils::getCpuPortData(
+                            aResp, object.front().first, sensorpath);
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorpath,
+                    std::array<std::string, 1>(
+                        {"xyz.openbmc_project.Inventory.Item.Port"}));
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void getProcessorChassis(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                const std::string& objPath,
+                                const std::string& processorId,
+                                const std::string& portId)
+{
+
+    // Get parent chassis for sensors URI
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath, processorId,
+         portId](const boost::system::error_code ec,
+                 std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr && data->size() > 1)
+            {
+                // Object must have single parent chassis
+                messages::internalError(aResp->res);
+                return;
+            }
+            const std::string& chassisPath = data->front();
+            getProcessorPortData(aResp, chassisPath, processorId, portId);
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 inline void requestRoutesProcessorPort(App& app)
 {
     /**
@@ -4187,68 +4357,105 @@ inline void requestRoutesProcessorPort(App& app)
                         {
                             continue;
                         }
-                        crow::connections::systemBus->async_method_call(
-                            [processorId, port, asyncResp](
-                                const boost::system::error_code ec1,
-                                const boost::container::flat_map<
-                                    std::string,
-                                    boost::container::flat_map<
-                                        std::string, std::vector<std::string>>>&
-                                    subtree1) {
-                                if (ec1)
-                                {
-                                    BMCWEB_LOG_DEBUG << "DBUS response error";
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                for (const auto& [portPath, object1] : subtree1)
-                                {
-                                    if (!boost::ends_with(portPath, port))
-                                    {
-                                        continue;
-                                    }
-                                    std::string portUri =
-                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                        "/Processors/";
-                                    portUri += processorId;
-                                    portUri += "/Ports/";
-                                    portUri += port;
-                                    asyncResp->res.jsonValue["@odata.id"] =
-                                        portUri;
-                                    asyncResp->res.jsonValue["@odata.type"] =
-                                        "#Port.v1_4_0.Port";
-                                    asyncResp->res.jsonValue["Name"] =
-                                        port + " Resource";
-                                    asyncResp->res.jsonValue["Id"] = port;
-                                    std::string metricsURI =
-                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                        "/Processors/";
-                                    metricsURI += processorId + "/Ports/";
-                                    metricsURI += port + "/Metrics";
-                                    asyncResp->res
-                                        .jsonValue["Metrics"]["@odata.id"] =
-                                        metricsURI;
-                                    for (const auto& [service, interfaces] :
-                                         object1)
-                                    {
-                                        redfish::port_utils::getPortData(
-                                            asyncResp, service, portPath);
-                                        getProcessorPortLinks(
-                                            asyncResp, portPath, processorId,
+                        for (const auto& [serviceName, interfacesList] : object)
+                        {
+                            if (std::find(
+                                    interfacesList.begin(),
+                                    interfacesList.end(),
+                                    "xyz.openbmc_project.Inventory.Item.Cpu") !=
+                                interfacesList.end())
+                            {
+                                getProcessorChassis(asyncResp, path,
+                                                    processorId, port);
+                            }
+                            else if (
+                                std::find(
+                                    interfacesList.begin(),
+                                    interfacesList.end(),
+                                    "xyz.openbmc_project.Inventory.Item.Accelerator") !=
+                                interfacesList.end())
+                            {
+
+                                //
+                                crow::connections::systemBus->async_method_call(
+                                    [processorId, port, asyncResp](
+                                        const boost::system::error_code ec1,
+                                        const boost::container::flat_map<
+                                            std::string,
+                                            boost::container::flat_map<
+                                                std::string,
+                                                std::vector<std::string>>>&
+                                            subtree1) {
+                                        if (ec1)
+                                        {
+                                            BMCWEB_LOG_DEBUG
+                                                << "DBUS response error";
+                                            messages::internalError(
+                                                asyncResp->res);
+                                            return;
+                                        }
+                                        for (const auto& [portPath, object1] :
+                                             subtree1)
+                                        {
+                                            if (!boost::ends_with(portPath,
+                                                                  port))
+                                            {
+                                                continue;
+                                            }
+                                            std::string portUri =
+                                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                                "/Processors/";
+                                            portUri += processorId;
+                                            portUri += "/Ports/";
+                                            portUri += port;
+                                            asyncResp->res
+                                                .jsonValue["@odata.id"] =
+                                                portUri;
+                                            asyncResp->res
+                                                .jsonValue["@odata.type"] =
+                                                "#Port.v1_4_0.Port";
+                                            asyncResp->res.jsonValue["Name"] =
+                                                port + " Resource";
+                                            asyncResp->res.jsonValue["Id"] =
+                                                port;
+                                            std::string metricsURI =
+                                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                                "/Processors/";
+                                            metricsURI +=
+                                                processorId + "/Ports/";
+                                            metricsURI += port + "/Metrics";
+                                            asyncResp->res
+                                                .jsonValue["Metrics"]
+                                                          ["@odata.id"] =
+                                                metricsURI;
+                                            for (const auto& [service,
+                                                              interfaces] :
+                                                 object1)
+                                            {
+                                                redfish::port_utils::
+                                                    getPortData(asyncResp,
+                                                                service,
+                                                                portPath);
+                                                getProcessorPortLinks(
+                                                    asyncResp, portPath,
+                                                    processorId, port);
+                                            }
+                                            return;
+                                        }
+                                        // Object not found
+                                        messages::resourceNotFound(
+                                            asyncResp->res, "#Port.v1_4_0.Port",
                                             port);
-                                    }
-                                    return;
-                                }
-                                // Object not found
-                                messages::resourceNotFound(
-                                    asyncResp->res, "#Port.v1_4_0.Port", port);
-                            },
-                            "xyz.openbmc_project.ObjectMapper",
-                            "/xyz/openbmc_project/object_mapper",
-                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                            path, 0,
-                            std::array<const char*, 1>{
-                                "xyz.openbmc_project.Inventory.Item.Port"});
+                                    },
+                                    "xyz.openbmc_project.ObjectMapper",
+                                    "/xyz/openbmc_project/object_mapper",
+                                    "xyz.openbmc_project.ObjectMapper",
+                                    "GetSubTree", path, 0,
+                                    std::array<const char*, 1>{
+                                        "xyz.openbmc_project.Inventory.Item.Port"});
+                                //
+                            }
+                        }
                         return;
                     }
                     // Object not found
