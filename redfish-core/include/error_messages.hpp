@@ -1104,6 +1104,14 @@ void resourceErrorsDetectedFormatError(crow::Response& res,
                                        const std::string& arg1,
                                        const std::string& arg2);
 
+/**
+ * @brief message registry entry for update in progress
+ *
+ * @param res[in] - response
+ * @param resolution[in] - if empty default resolution will be used
+ */
+void updateInProgressMsg(crow::Response& res, const std::string& resolution);
+
 } // namespace messages
 
 } // namespace redfish

@@ -21,6 +21,7 @@
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
 #include "source_location.hpp"
+#include "update_messages.hpp"
 
 #include <boost/beast/http/field.hpp>
 #include <boost/beast/http/status.hpp>
@@ -1888,6 +1889,19 @@ void mutualExclusiveProperties(crow::Response& res, const std::string& arg1,
 }
 
 
+
+void updateInProgressMsg(crow::Response& res, const std::string& resolution)
+{
+    res.result(boost::beast::http::status::bad_request);
+    std::vector<std::string> rfArgs;
+    auto message = redfish::messages::getUpdateMessage(
+        "Update.1.0.UpdateInProgress", rfArgs);
+    if (!resolution.empty())
+    {
+        message["Resolution"] = resolution;
+    }
+    addMessageToErrorJson(res.jsonValue, message);
+}
 
 } // namespace messages
 

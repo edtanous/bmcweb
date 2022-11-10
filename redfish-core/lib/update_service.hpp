@@ -439,10 +439,10 @@ static bool monitorForSoftwareAvailable(
     {
         if (asyncResp)
         {
-            std::string retryTimeSeconds =
-                std::to_string((updateServiceTaskTimeout * 60));
-            messages::serviceTemporarilyUnavailable(asyncResp->res,
-                                                    retryTimeSeconds);
+            std::string resolution =
+                "Another update is in progress. Retry"
+                " the update operation once it is complete.";
+            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
         }
         return true;
     }
