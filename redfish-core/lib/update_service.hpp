@@ -847,6 +847,7 @@ inline void requestRoutesUpdateService(App& app)
                                             pushURITargets;
                                     }
                                 }
+                                /*
                                 else if (propertyMap.first == "ForceUpdate")
                                 {
                                     auto forceUpdate =
@@ -859,6 +860,7 @@ inline void requestRoutesUpdateService(App& app)
                                             *forceUpdate;
                                     }
                                 }
+                                */
                             }
                             return;
                         },
@@ -894,11 +896,11 @@ inline void requestRoutesUpdateService(App& app)
 
             if (pushUriOptions)
             {
-                std::optional<bool> forceUpdate;
+                /*std::optional<bool> forceUpdate;*/
                 std::optional<nlohmann::json> pushUriApplyTime;
                 if (!json_util::readJson(
                         *pushUriOptions, asyncResp->res, "HttpPushUriApplyTime",
-                        pushUriApplyTime, "ForceUpdate", forceUpdate))
+                        pushUriApplyTime/*, "ForceUpdate", forceUpdate*/))
                 {
                     return;
                 }
@@ -954,6 +956,7 @@ inline void requestRoutesUpdateService(App& app)
                             dbus::utility::DbusVariantType{applyTimeNewVal});
                     }
                 }
+                /*
                 if (forceUpdate)
                 {
                     crow::connections::systemBus->async_method_call(
@@ -1011,6 +1014,7 @@ inline void requestRoutesUpdateService(App& app)
                         std::array<const char*, 1>{
                             "xyz.openbmc_project.Software.UpdatePolicy"});
                 }
+                */
             }
 
             if (imgTargets)
