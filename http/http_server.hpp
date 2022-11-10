@@ -12,11 +12,7 @@
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
-<<<<<<< HEAD
 #include <boost/date_time/posix_time/posix_time.hpp>
-=======
-#include <ssl_key_handler.hpp>
->>>>>>> origin/master
 
 #include <atomic>
 #include <chrono>
@@ -41,14 +37,9 @@ class Server
                std::make_shared<boost::asio::io_context>()) :
         ioService(std::move(io)),
         acceptor(std::move(acceptorIn)),
-<<<<<<< HEAD
         signals(*ioService, SIGINT, SIGTERM, SIGHUP), timer(*ioService), 
         fileWatcher(), handler(handlerIn), 
         adaptorCtx(std::move(adaptorCtx))
-=======
-        signals(*ioService, SIGINT, SIGTERM, SIGHUP), handler(handlerIn),
-        adaptorCtx(std::move(adaptorCtxIn))
->>>>>>> origin/master
     {}
 
     Server(Handler* handlerIn, const std::string& bindaddr, uint16_t port,
@@ -141,18 +132,6 @@ class Server
             adaptorCtx = sslContext;
             handler->ssl(std::move(sslContext));
         }
-<<<<<<< HEAD
-=======
-        fs::path certFile = certPath / "server.pem";
-        BMCWEB_LOG_INFO << "Building SSL Context file=" << certFile.string();
-        std::string sslPemFile(certFile);
-        ensuressl::ensureOpensslKeyPresentAndValid(sslPemFile);
-        std::shared_ptr<boost::asio::ssl::context> sslContext =
-            ensuressl::getSslContext(sslPemFile);
-        adaptorCtx = sslContext;
-        handler->ssl(std::move(sslContext));
->>>>>>> origin/master
-#endif
     }
 
     bool fileHasCredentials(const std::string &filename) 

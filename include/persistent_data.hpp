@@ -259,13 +259,6 @@ class ConfigFile
         authConfig["BasicAuth"] = c.basic;
         authConfig["TLS"] = c.tls;
 
-<<<<<<< HEAD
-            },
-            {"system_uuid", systemUuid},
-            {"tls_auth_enabled", tlsAuthToWrite},
-            {"revision", jsonRevision},
-            {"timeout", SessionStore::getInstance().getTimeoutInSeconds()}};
-=======
         nlohmann::json& eventserviceConfig = data["eventservice_config"];
         eventserviceConfig["ServiceEnabled"] = eventServiceConfig.enabled;
         eventserviceConfig["DeliveryRetryAttempts"] =
@@ -274,9 +267,9 @@ class ConfigFile
             eventServiceConfig.retryTimeoutInterval;
 
         data["system_uuid"] = systemUuid;
+	data["tls_auth_enabled"] = tlsAuthToWrite;
         data["revision"] = jsonRevision;
         data["timeout"] = SessionStore::getInstance().getTimeoutInSeconds();
->>>>>>> origin/master
 
         nlohmann::json& sessions = data["sessions"];
         sessions = nlohmann::json::array();
@@ -310,10 +303,18 @@ class ConfigFile
                     << "The subscription type is SSE, so skipping.";
                 continue;
             }
+	    nlohmann::json::object_t headers;
+            for (const boost::beast::http::fields::value_type& header :
+                 subValue->httpHeaders)
+            {
+                // Note, these are technically copies because nlohmann doesn't
+                // support key lookup by std::string_view.  At least the
+                // following code can use move
+                // https://github.com/nlohmann/json/issues/1529
+                std::string name(header.name_string());
+                headers[std::move(name)] = header.value();
+            }
 
-<<<<<<< HEAD
-            subscriptions.push_back(std::move(subValue->toJson()));
-=======
             nlohmann::json::object_t subscription;
 
             subscription["Id"] = subValue->id;
@@ -331,7 +332,6 @@ class ConfigFile
                 subValue->metricReportDefinitions;
 
             subscriptions.push_back(std::move(subscription));
->>>>>>> origin/master
         }
         persistentFile << data;
     }
