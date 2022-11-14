@@ -981,6 +981,9 @@ inline void objectPropertiesToJson(
         properties.emplace_back(
             "xyz.openbmc_project.Sensor.Threshold.HardShutdown",
             "HardShutdownHigh", "/Thresholds/UpperFatal/Reading"_json_pointer);
+        properties.emplace_back(
+            "xyz.openbmc_project.Sensor.Threshold.HardShutdown", "HardShutdownLow",
+            "/Thresholds/LowerFatal/Reading"_json_pointer);
     }
     else if (sensorType != "power")
     {
