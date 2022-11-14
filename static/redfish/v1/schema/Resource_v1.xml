@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  Resource v1.14.0                                                    -->
-=======
 <!--# Redfish Schema:  Resource v1.14.1                                                    -->
->>>>>>> origin/master
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
@@ -649,11 +645,7 @@
         </Member>
         <Member Name="MACAddress">
           <Annotation Term="OData.Description" String="The media access control address (MAC address)."/>
-<<<<<<< HEAD
-          <Annotation Term="OData.LongDescription" String="This durable name shall be a media access control address (MAC address), which is a unique identifier assigned to a network interface controller (NIC) for use as a network address.  This value should not be used if a more specific type of identifier is available.  The DurableName property shall follow the pattern '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$', where the most significant octet is first."/>
-=======
           <Annotation Term="OData.LongDescription" String="This durable name shall be a media access control address (MAC address), which is a unique identifier assigned to a network interface controller (NIC) for use as a network address.  This value should not be used if a more specific type of identifier is available.  The DurableName property shall follow the regular expression pattern '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$', where the most significant octet is first."/>
->>>>>>> origin/master
           <Annotation Term="Redfish.Revisions">
             <Collection>
               <Record>
@@ -1469,14 +1461,11 @@
       <Annotation Term="OData.Description" String="This version was created to enhance the description of AltitudeMeters."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_6_11">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_7_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2018.2"/>
@@ -1571,14 +1560,11 @@
       <Annotation Term="OData.Description" String="This version was created to enhance the description of AltitudeMeters."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_7_10">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_8_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2018.3"/>
@@ -1630,14 +1616,11 @@
       <Annotation Term="OData.Description" String="This version was created to enhance the description of AltitudeMeters."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_8_10">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_9_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2019.4"/>
@@ -1679,14 +1662,11 @@
       <Annotation Term="OData.Description" String="This version was created to enhance the description of AltitudeMeters."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_9_8">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_10_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2020.3"/>
@@ -1713,14 +1693,11 @@
       <Annotation Term="OData.Description" String="This version was created to enhance the description of AltitudeMeters."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_10_5">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_11_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2020.4"/>
@@ -1742,14 +1719,11 @@
       <Annotation Term="OData.Description" String="This version was created to enhance the description of AltitudeMeters.  It was also added to improve the description of Conditions."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_11_4">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_12_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2021.1"/>
@@ -1766,14 +1740,11 @@
       <Annotation Term="OData.Description" String="This version was created to enhance the description of AltitudeMeters.  It was also added to improve the description of Conditions."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_12_3">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_13_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2021.2"/>
@@ -1785,27 +1756,21 @@
       <Annotation Term="OData.Description" String="This version was created to enhance the description of AltitudeMeters.  It was also added to improve the description of Conditions."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_13_2">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_14_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2021.4"/>
       <Annotation Term="OData.Description" String="This version was created to add Resolution to the Conditions property in Status.  It was also was created to add `MACAddress` to DurableNameFormat."/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Resource.v1_14_1">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to enhance the description of DurableNameFormat values to indicate that the patterns shown are regular expressions."/>
     </Schema>
 
->>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

@@ -227,15 +227,15 @@ Chassis to Drives, The name of the association is "chassis<->drive")
 
 ##### ThermalSubsystem
 - Status
+- ThermalMetrics
 
-<<<<<<< HEAD
 #### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/ThermalMetrics/
 
 ##### ThermalMetrics
+
 - TemperatureReadingsCelsius
 
-=======
->>>>>>> origin/master
+
 #### /redfish/v1/Chassis/{ChassisId}/Power/
 ##### Power
 PowerControl Voltages PowerSupplies Redundancy

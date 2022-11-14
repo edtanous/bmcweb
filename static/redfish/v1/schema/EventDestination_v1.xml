@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  EventDestination v1.11.2                                            -->
-=======
 <!--# Redfish Schema:  EventDestination v1.12.0                                            -->
->>>>>>> origin/master
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
@@ -1179,15 +1175,12 @@
       <EntityType Name="EventDestination" BaseType="EventDestination.v1_9_4.EventDestination"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="EventDestination.v1_9_6">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the format of the MessageId in the MessageIds property."/>
       <EntityType Name="EventDestination" BaseType="EventDestination.v1_9_5.EventDestination"/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="EventDestination.v1_10_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to add additional SNMP authentication protocols and to provide better description for the authentication and encryption keys.  It also added `RetryForeverWithBackoff` to DeliveryRetryPolicy and long description details to the DeliveryRetryPolicy values."/>
@@ -1233,15 +1226,12 @@
       <EntityType Name="EventDestination" BaseType="EventDestination.v1_10_3.EventDestination"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="EventDestination.v1_10_5">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the format of the MessageId in the MessageIds property."/>
       <EntityType Name="EventDestination" BaseType="EventDestination.v1_10_4.EventDestination"/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="EventDestination.v1_11_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2021.2"/>
@@ -1280,8 +1270,6 @@
       <EntityType Name="EventDestination" BaseType="EventDestination.v1_11_1.EventDestination"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="EventDestination.v1_11_3">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the format of the MessageId in the MessageIds property."/>
@@ -1307,6 +1295,5 @@
       </EntityType>
     </Schema>
 
->>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  ServiceRoot v1.13.0                                                 -->
-=======
 <!--# Redfish Schema:  ServiceRoot v1.14.0                                                 -->
->>>>>>> origin/master
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
@@ -805,8 +801,6 @@
       </EntityType>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="ServiceRoot.v1_14_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2022.1"/>
@@ -828,6 +822,5 @@
       </ComplexType>
     </Schema>
 
->>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

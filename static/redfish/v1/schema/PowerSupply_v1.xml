@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  PowerSupply v1.0.0                                                  -->
-<!--#                                                                                      -->
-<!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
-<!--# available at http://www.dmtf.org/standards/redfish                                   -->
-<!--# Copyright 2014-2020 DMTF.                                                            -->
-=======
 <!--# Redfish Schema:  PowerSupply v1.5.0                                                  -->
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
 <!--# Copyright 2014-2022 DMTF.                                                            -->
->>>>>>> origin/master
 <!--# For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright -->
 <!--################################################################################       -->
 <!---->
@@ -54,12 +46,9 @@
   <edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/PowerSupplyMetrics_v1.xml">
     <edmx:Include Namespace="PowerSupplyMetrics"/>
   </edmx:Reference>
-<<<<<<< HEAD
-=======
   <edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/Chassis_v1.xml">
     <edmx:Include Namespace="Chassis"/>
   </edmx:Reference>
->>>>>>> origin/master
 
   <edmx:DataServices>
 
@@ -88,23 +77,15 @@
         <Annotation Term="Redfish.Uris">
           <Collection>
             <String>/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/PowerSupplies/{PowerSupplyId}</String>
-<<<<<<< HEAD
-=======
             <String>/redfish/v1/PowerEquipment/PowerShelves/{PowerDistributionId}/PowerSupplies/{PowerSupplyId}</String>
->>>>>>> origin/master
           </Collection>
         </Annotation>
       </EntityType>
 
       <Action Name="Reset" IsBound="true">
         <Annotation Term="OData.Description" String="This action resets the power supply."/>
-<<<<<<< HEAD
-        <Annotation Term="OData.LongDescription" String="This action shall reset a power supply.  A `GracefulRestart` ResetType shall reset the power supply but shall not affect the power output.  A `ForceRestart` ResetType might affect the power supply output."/>
-        <Parameter Name="Power" Type="PowerSupply.v1_0_0.Actions"/>
-=======
         <Annotation Term="OData.LongDescription" String="This action shall reset a power supply.  A `GracefulRestart` ResetType shall reset the power supply but shall not affect the power output.  A `ForceRestart` ResetType can affect the power supply output."/>
         <Parameter Name="PowerSupply" Type="PowerSupply.v1_0_0.Actions"/>
->>>>>>> origin/master
         <Parameter Name="ResetType" Type="Resource.ResetType">
           <Annotation Term="OData.Description" String="The type of reset."/>
           <Annotation Term="OData.LongDescription" String="This parameter shall contain the type of reset.  The service can accept a request without the parameter and shall perform a `GracefulRestart`."/>
@@ -137,11 +118,7 @@
         <Property Name="Manufacturer" Type="Edm.String">
           <Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
           <Annotation Term="OData.Description" String="The manufacturer of this power supply."/>
-<<<<<<< HEAD
-          <Annotation Term="OData.LongDescription" String="This property shall contain the name of the organization responsible for producing the power supply.  This organization might be the entity from whom the power supply is purchased, but this is not necessarily true."/>
-=======
           <Annotation Term="OData.LongDescription" String="This property shall contain the name of the organization responsible for producing the power supply.  This organization may be the entity from whom the power supply is purchased, but this is not necessarily true."/>
->>>>>>> origin/master
         </Property>
         <Property Name="Model" Type="Edm.String">
           <Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
@@ -238,8 +215,6 @@
           <Annotation Term="OData.Description" String="A link to the outlet connected to this power supply."/>
           <Annotation Term="OData.LongDescription" String="This property shall contain a link to a resource of type Outlet that represents the outlet connected to this power supply."/>
           <Annotation Term="OData.AutoExpandReferences"/>
-<<<<<<< HEAD
-=======
           <Annotation Term="Redfish.Revisions">
             <Collection>
               <Record>
@@ -249,7 +224,6 @@
               </Record>
             </Collection>
           </Annotation>
->>>>>>> origin/master
         </NavigationProperty>
       </ComplexType>
 
@@ -319,8 +293,6 @@
         <Member Name="ACorDC">
           <Annotation Term="OData.Description" String="The power supply supports both DC or AC."/>
         </Member>
-<<<<<<< HEAD
-=======
         <Member Name="DCRegulator">
           <Annotation Term="OData.Description" String="Direct Current (DC) voltage regulator."/>
           <Annotation Term="Redfish.Revisions">
@@ -332,7 +304,6 @@
             </Collection>
           </Annotation>
         </Member>
->>>>>>> origin/master
       </EnumType>
 
       <ComplexType Name="Actions">
@@ -352,8 +323,6 @@
       </ComplexType>
     </Schema>
 
-<<<<<<< HEAD
-=======
 
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="PowerSupply.v1_0_1">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
@@ -469,6 +438,5 @@
       </EntityType>
     </Schema>
 
->>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  LogEntry v1.11.0                                                    -->
-=======
 <!--# Redfish Schema:  LogEntry v1.13.0                                                    -->
->>>>>>> origin/master
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
@@ -1265,15 +1261,12 @@
       <EntityType Name="LogEntry" BaseType="LogEntry.v1_9_0.LogEntry"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="LogEntry.v1_9_2">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the usage of OriginOfCondition for creation and deletion events.  It was also created to clarify that DiagnosticDataType refers to the data located at the AdditionalDataURI."/>
       <EntityType Name="LogEntry" BaseType="LogEntry.v1_9_1.LogEntry"/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="LogEntry.v1_10_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2021.3"/>
@@ -1288,15 +1281,12 @@
       <EntityType Name="LogEntry" BaseType="LogEntry.v1_10_0.LogEntry"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="LogEntry.v1_10_2">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the usage of OriginOfCondition for creation and deletion events.  It was also created to clarify that DiagnosticDataType refers to the data located at the AdditionalDataURI."/>
       <EntityType Name="LogEntry" BaseType="LogEntry.v1_10_1.LogEntry"/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="LogEntry.v1_11_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2021.4"/>
@@ -1327,8 +1317,6 @@
       </EnumType>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="LogEntry.v1_11_1">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the usage of OriginOfCondition for creation and deletion events.  It was also created to clarify that DiagnosticDataType refers to the data located at the AdditionalDataURI."/>
@@ -1370,6 +1358,5 @@
       </EntityType>
     </Schema>
 
->>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

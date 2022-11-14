@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
-    "$id": "http://redfish.dmtf.org/schemas/v1/ServiceRoot.v1_13_0.json",
-=======
     "$id": "http://redfish.dmtf.org/schemas/v1/ServiceRoot.v1_14_0.json",
->>>>>>> origin/master
     "$ref": "#/definitions/ServiceRoot",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
@@ -441,8 +437,6 @@
                     "readonly": true,
                     "versionAdded": "v1_13_0"
                 },
-<<<<<<< HEAD
-=======
                 "ServiceIdentification": {
                     "description": "The vendor or user-provided product and service identifier.",
                     "longDescription": "This property shall contain a vendor or user-provided value that identifies and associates a discovered Redfish service with a particular product instance.  The value of the property shall contain the value of the `ServiceIdentification` property in the Manager resource providing the Redfish service root resource.  The value of this property can be used during deployment processes to match user credentials or other a priori product instance information to the appropriate Redfish service.",
@@ -450,7 +444,6 @@
                     "type": "string",
                     "versionAdded": "v1_14_0"
                 },
->>>>>>> origin/master
                 "SessionService": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/SessionService.json#/definitions/SessionService",
                     "description": "The link to the Sessions Service.",
@@ -539,11 +532,6 @@
         }
     },
     "owningEntity": "DMTF",
-<<<<<<< HEAD
-    "release": "2021.4",
-    "title": "#ServiceRoot.v1_13_0.ServiceRoot"
-=======
     "release": "2022.1",
     "title": "#ServiceRoot.v1_14_0.ServiceRoot"
->>>>>>> origin/master
 }

@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  PCIeDevice v1.9.0                                                   -->
-=======
 <!--# Redfish Schema:  PCIeDevice v1.10.0                                                  -->
->>>>>>> origin/master
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
@@ -630,8 +626,6 @@
       </EnumType>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="PCIeDevice.v1_10_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2022.2"/>
@@ -648,6 +642,5 @@
       </ComplexType>
     </Schema>
 
->>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

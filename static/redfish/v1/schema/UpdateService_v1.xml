@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  UpdateService v1.11.0                                               -->
-=======
 <!--# Redfish Schema:  UpdateService v1.11.1                                               -->
->>>>>>> origin/master
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
@@ -851,15 +847,12 @@
       <EntityType Name="UpdateService" BaseType="UpdateService.v1_9_0.UpdateService"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="UpdateService.v1_9_2">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the description of the StartUpdate action.  It was also created to clarify that non-resource URIs should not contain URIs of Redfish resources."/>
       <EntityType Name="UpdateService" BaseType="UpdateService.v1_9_1.UpdateService"/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="UpdateService.v1_10_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2021.2"/>
@@ -880,15 +873,12 @@
       <EntityType Name="UpdateService" BaseType="UpdateService.v1_10_0.UpdateService"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="UpdateService.v1_10_2">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the description of the StartUpdate action.  It was also created to clarify that non-resource URIs should not contain URIs of Redfish resources."/>
       <EntityType Name="UpdateService" BaseType="UpdateService.v1_10_1.UpdateService"/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="UpdateService.v1_11_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2021.4"/>
@@ -913,14 +903,11 @@
       </ComplexType>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="UpdateService.v1_11_1">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the description of the StartUpdate action.  It was also created to clarify that non-resource URIs should not contain URIs of Redfish resources."/>
       <EntityType Name="UpdateService" BaseType="UpdateService.v1_11_0.UpdateService"/>
     </Schema>
 
->>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

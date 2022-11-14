@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
-    "$id": "http://redfish.dmtf.org/schemas/v1/EventDestination.v1_11_2.json",
-=======
     "$id": "http://redfish.dmtf.org/schemas/v1/EventDestination.v1_12_0.json",
->>>>>>> origin/master
     "$ref": "#/definitions/EventDestination",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
@@ -915,11 +911,6 @@
         }
     },
     "owningEntity": "DMTF",
-<<<<<<< HEAD
-    "release": "2021.2",
-    "title": "#EventDestination.v1_11_2.EventDestination"
-=======
     "release": "2022.1",
     "title": "#EventDestination.v1_12_0.EventDestination"
->>>>>>> origin/master
 }

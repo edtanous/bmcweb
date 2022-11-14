@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
-    "$id": "http://redfish.dmtf.org/schemas/v1/Memory.v1_14_0.json",
-=======
     "$id": "http://redfish.dmtf.org/schemas/v1/Memory.v1_16_0.json",
->>>>>>> origin/master
     "$ref": "#/definitions/Memory",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
@@ -1631,11 +1627,6 @@
         }
     },
     "owningEntity": "DMTF",
-<<<<<<< HEAD
-    "release": "2021.4",
-    "title": "#Memory.v1_14_0.Memory"
-=======
     "release": "2022.2",
     "title": "#Memory.v1_16_0.Memory"
->>>>>>> origin/master
 }

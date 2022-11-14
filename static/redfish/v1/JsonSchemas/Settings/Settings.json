@@ -1,13 +1,7 @@
 {
-<<<<<<< HEAD
-    "$id": "http://redfish.dmtf.org/schemas/v1/Settings.v1_3_4.json",
-    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
-    "copyright": "Copyright 2014-2021 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
-=======
     "$id": "http://redfish.dmtf.org/schemas/v1/Settings.v1_3_5.json",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
->>>>>>> origin/master
     "definitions": {
         "ApplyTime": {
             "enum": [
@@ -253,9 +247,5 @@
     },
     "owningEntity": "DMTF",
     "release": "2019.3",
-<<<<<<< HEAD
-    "title": "#Settings.v1_3_4"
-=======
     "title": "#Settings.v1_3_5"
->>>>>>> origin/master
 }

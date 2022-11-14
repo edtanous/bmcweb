@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  Settings v1.3.4                                                     -->
-=======
 <!--# Redfish Schema:  Settings v1.3.5                                                     -->
->>>>>>> origin/master
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
@@ -245,8 +241,6 @@
       <ComplexType Name="PreferredApplyTime" BaseType="Settings.v1_1_5.PreferredApplyTime"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Settings.v1_1_7">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the behavior of `Immediate` in SettingsApplyTime to allow for side effects."/>
@@ -254,7 +248,6 @@
       <ComplexType Name="PreferredApplyTime" BaseType="Settings.v1_1_6.PreferredApplyTime"/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Settings.v1_2_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2018.1"/>
@@ -371,8 +364,6 @@
       <ComplexType Name="MaintenanceWindow" BaseType="Settings.v1_2_5.MaintenanceWindow"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Settings.v1_2_7">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the behavior of `Immediate` in SettingsApplyTime and OperationApplyTime to allow for side effects."/>
@@ -382,7 +373,6 @@
       <ComplexType Name="MaintenanceWindow" BaseType="Settings.v1_2_6.MaintenanceWindow"/>
     </Schema>
 
->>>>>>> origin/master
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Settings.v1_3_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2019.3"/>
@@ -430,8 +420,6 @@
       <ComplexType Name="MaintenanceWindow" BaseType="Settings.v1_3_3.MaintenanceWindow"/>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Settings.v1_3_5">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="OData.Description" String="This version was created to clarify the behavior of `Immediate` in SettingsApplyTime and OperationApplyTime to allow for side effects."/>
@@ -441,6 +429,5 @@
       <ComplexType Name="MaintenanceWindow" BaseType="Settings.v1_3_4.MaintenanceWindow"/>
     </Schema>
 
->>>>>>> origin/master
   </edmx:DataServices>
 </edmx:Edmx>

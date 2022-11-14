@@ -1,15 +1,8 @@
 {
-<<<<<<< HEAD
-    "$id": "http://redfish.dmtf.org/schemas/v1/PowerSupply.v1_0_0.json",
-    "$ref": "#/definitions/PowerSupply",
-    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
-    "copyright": "Copyright 2014-2020 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
-=======
     "$id": "http://redfish.dmtf.org/schemas/v1/PowerSupply.v1_5_0.json",
     "$ref": "#/definitions/PowerSupply",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
->>>>>>> origin/master
     "definitions": {
         "Actions": {
             "additionalProperties": false,
@@ -133,8 +126,6 @@
             },
             "type": "object"
         },
-<<<<<<< HEAD
-=======
         "LineStatus": {
             "enum": [
                 "Normal",
@@ -148,7 +139,6 @@
             },
             "type": "string"
         },
->>>>>>> origin/master
         "Links": {
             "additionalProperties": false,
             "description": "The links to other resources that are related to this resource.",
@@ -175,11 +165,6 @@
                 },
                 "Outlet": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/Outlet.json#/definitions/Outlet",
-<<<<<<< HEAD
-                    "description": "A link to the outlet connected to this power supply.",
-                    "longDescription": "This property shall contain a link to a resource of type Outlet that represents the outlet connected to this power supply.",
-                    "readonly": false
-=======
                     "deprecated": "This property has been deprecated in favor of the PowerOutlets property to allow for consistent modeling of power supplies with multiple outlet support.",
                     "description": "A link to the outlet connected to this power supply.",
                     "longDescription": "This property shall contain a link to a resource of type Outlet that represents the outlet connected to this power supply.",
@@ -211,7 +196,6 @@
                 },
                 "PoweringChassis@odata.count": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/count"
->>>>>>> origin/master
                 }
             },
             "type": "object"
@@ -342,8 +326,6 @@
                     "longDescription": "This property shall contain an array of efficiency ratings for this power supply.",
                     "type": "array"
                 },
-<<<<<<< HEAD
-=======
                 "ElectricalSourceManagerURIs": {
                     "description": "The URIs of the management interfaces for the upstream electrical source connections for this power supply.",
                     "format": "uri-reference",
@@ -371,7 +353,6 @@
                     "type": "array",
                     "versionAdded": "v1_2_0"
                 },
->>>>>>> origin/master
                 "FirmwareVersion": {
                     "description": "The firmware version for this power supply.",
                     "longDescription": "This property shall contain the firmware version as defined by the manufacturer for this power supply.",
@@ -415,8 +396,6 @@
                     "longDescription": "This property shall contain a collection of ranges usable by this power supply.",
                     "type": "array"
                 },
-<<<<<<< HEAD
-=======
                 "LineInputStatus": {
                     "anyOf": [
                         {
@@ -431,7 +410,6 @@
                     "readonly": true,
                     "versionAdded": "v1_3_0"
                 },
->>>>>>> origin/master
                 "Links": {
                     "$ref": "#/definitions/Links",
                     "description": "The links to other resources that are related to this resource.",
@@ -453,11 +431,7 @@
                 },
                 "Manufacturer": {
                     "description": "The manufacturer of this power supply.",
-<<<<<<< HEAD
-                    "longDescription": "This property shall contain the name of the organization responsible for producing the power supply.  This organization might be the entity from whom the power supply is purchased, but this is not necessarily true.",
-=======
                     "longDescription": "This property shall contain the name of the organization responsible for producing the power supply.  This organization may be the entity from whom the power supply is purchased, but this is not necessarily true.",
->>>>>>> origin/master
                     "readonly": true,
                     "type": [
                         "string",
@@ -488,8 +462,6 @@
                     "description": "The OEM extension property.",
                     "longDescription": "This property shall contain the OEM extensions.  All values for properties that this object contains shall conform to the Redfish Specification-described requirements."
                 },
-<<<<<<< HEAD
-=======
                 "OutputNominalVoltageType": {
                     "anyOf": [
                         {
@@ -504,7 +476,6 @@
                     "readonly": true,
                     "versionAdded": "v1_5_0"
                 },
->>>>>>> origin/master
                 "OutputRails": {
                     "description": "The output power rails provided by this power supply.",
                     "items": {
@@ -572,8 +543,6 @@
                     "longDescription": "This property shall contain the input power type (AC or DC) of this power supply.",
                     "readonly": true
                 },
-<<<<<<< HEAD
-=======
                 "ProductionDate": {
                     "description": "The production or manufacturing date of this power supply.",
                     "format": "date-time",
@@ -595,7 +564,6 @@
                     ],
                     "versionAdded": "v1_5_0"
                 },
->>>>>>> origin/master
                 "SerialNumber": {
                     "description": "The serial number for this power supply.",
                     "longDescription": "This property shall contain the serial number as defined by the manufacturer for this power supply.",
@@ -618,8 +586,6 @@
                     "$ref": "http://redfish.dmtf.org/schemas/v1/Resource.json#/definitions/Status",
                     "description": "The status and health of the resource and its subordinate or dependent resources.",
                     "longDescription": "This property shall contain any status or health properties of the resource."
-<<<<<<< HEAD
-=======
                 },
                 "Version": {
                     "description": "The hardware version of this power supply.",
@@ -630,7 +596,6 @@
                         "null"
                     ],
                     "versionAdded": "v1_1_0"
->>>>>>> origin/master
                 }
             },
             "required": [
@@ -645,36 +610,24 @@
             "enum": [
                 "AC",
                 "DC",
-<<<<<<< HEAD
-                "ACorDC"
-=======
                 "ACorDC",
                 "DCRegulator"
->>>>>>> origin/master
             ],
             "enumDescriptions": {
                 "AC": "Alternating Current (AC) power supply.",
                 "ACorDC": "The power supply supports both DC or AC.",
-<<<<<<< HEAD
-                "DC": "Direct Current (DC) power supply."
-=======
                 "DC": "Direct Current (DC) power supply.",
                 "DCRegulator": "Direct Current (DC) voltage regulator."
             },
             "enumVersionAdded": {
                 "DCRegulator": "v1_5_0"
->>>>>>> origin/master
             },
             "type": "string"
         },
         "Reset": {
             "additionalProperties": false,
             "description": "This action resets the power supply.",
-<<<<<<< HEAD
-            "longDescription": "This action shall reset a power supply.  A `GracefulRestart` ResetType shall reset the power supply but shall not affect the power output.  A `ForceRestart` ResetType might affect the power supply output.",
-=======
             "longDescription": "This action shall reset a power supply.  A `GracefulRestart` ResetType shall reset the power supply but shall not affect the power output.  A `ForceRestart` ResetType can affect the power supply output.",
->>>>>>> origin/master
             "parameters": {
                 "ResetType": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/Resource.json#/definitions/ResetType",
@@ -711,11 +664,6 @@
         }
     },
     "owningEntity": "DMTF",
-<<<<<<< HEAD
-    "release": "2020.4",
-    "title": "#PowerSupply.v1_0_0.PowerSupply"
-=======
     "release": "2022.2",
     "title": "#PowerSupply.v1_5_0.PowerSupply"
->>>>>>> origin/master
 }

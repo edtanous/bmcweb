@@ -1,15 +1,8 @@
 {
-<<<<<<< HEAD
-    "$id": "http://redfish.dmtf.org/schemas/v1/EnvironmentMetrics.v1_0_0.json",
-    "$ref": "#/definitions/EnvironmentMetrics",
-    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
-    "copyright": "Copyright 2014-2020 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
-=======
     "$id": "http://redfish.dmtf.org/schemas/v1/EnvironmentMetrics.v1_3_0.json",
     "$ref": "#/definitions/EnvironmentMetrics",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
->>>>>>> origin/master
     "definitions": {
         "Actions": {
             "additionalProperties": false,
@@ -33,12 +26,9 @@
                 "#EnvironmentMetrics.ResetMetrics": {
                     "$ref": "#/definitions/ResetMetrics"
                 },
-<<<<<<< HEAD
-=======
                 "#EnvironmentMetrics.ResetToDefaults": {
                     "$ref": "#/definitions/ResetToDefaults"
                 },
->>>>>>> origin/master
                 "Oem": {
                     "$ref": "#/definitions/OemActions",
                     "description": "The available OEM-specific actions for this resource.",
@@ -78,8 +68,6 @@
                 "@odata.type": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/type"
                 },
-<<<<<<< HEAD
-=======
                 "AbsoluteHumidity": {
                     "anyOf": [
                         {
@@ -94,7 +82,6 @@
                     "longDescription": "This property shall contain the absolute (volumetric) humidity sensor reading, in grams/cubic meter units, for this resource.  The value of the DataSourceUri property, if present, shall reference a resource of type Sensor with the ReadingType property containing the value `AbsoluteHumidity`.",
                     "versionAdded": "v1_2_0"
                 },
->>>>>>> origin/master
                 "Actions": {
                     "$ref": "#/definitions/Actions",
                     "description": "The available actions for this resource.",
@@ -111,8 +98,6 @@
                     ],
                     "readonly": true
                 },
-<<<<<<< HEAD
-=======
                 "DewPointCelsius": {
                     "anyOf": [
                         {
@@ -141,7 +126,6 @@
                     "longDescription": "This property shall contain the total energy, in joules, for this resource.  The value of the DataSourceUri property, if present, shall reference a resource of type Sensor with the ReadingType property containing the value `EnergyJoules`.  This property is used for reporting device-level energy consumption measurements, while EnergykWh is used for large-scale consumption measurements.",
                     "versionAdded": "v1_2_0"
                 },
->>>>>>> origin/master
                 "EnergykWh": {
                     "anyOf": [
                         {
@@ -153,12 +137,7 @@
                     ],
                     "description": "Energy consumption (kWh).",
                     "excerptCopy": "SensorEnergykWhExcerpt",
-<<<<<<< HEAD
-                    "longDescription": "This property shall contain the total energy, measured in kilowatt-hours (kW.h), for this resource.",
-                    "readonly": true
-=======
                     "longDescription": "This property shall contain the total energy, in kilowatt-hours, for this resource.  The value of the DataSourceUri property, if present, shall reference a resource of type Sensor with the ReadingType property containing the value `EnergykWh`."
->>>>>>> origin/master
                 },
                 "FanSpeedsPercent": {
                     "description": "Fan speeds (percent).",
@@ -166,12 +145,7 @@
                     "items": {
                         "$ref": "http://redfish.dmtf.org/schemas/v1/Sensor.json#/definitions/SensorFanArrayExcerpt"
                     },
-<<<<<<< HEAD
-                    "longDescription": "This property shall contain the fan speed readings for this resource.",
-                    "readonly": true,
-=======
                     "longDescription": "This property shall contain the fan speeds, in percent units, for this resource.  The value of the DataSourceUri property, if present, shall reference a resource of type Sensor with the ReadingType property containing the value `Percent`.",
->>>>>>> origin/master
                     "type": "array"
                 },
                 "FanSpeedsPercent@odata.count": {
@@ -188,12 +162,7 @@
                     ],
                     "description": "Humidity (percent).",
                     "excerptCopy": "SensorExcerpt",
-<<<<<<< HEAD
-                    "longDescription": "This property shall contain the humidity sensor reading for this resource.",
-                    "readonly": true
-=======
                     "longDescription": "This property shall contain the humidity, in percent units, for this resource.  The value of the DataSourceUri property, if present, shall reference a resource of type Sensor with the ReadingType property containing the value `Humidity`."
->>>>>>> origin/master
                 },
                 "Id": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/Resource.json#/definitions/Id",
@@ -208,8 +177,6 @@
                     "description": "The OEM extension property.",
                     "longDescription": "This property shall contain the OEM extensions.  All values for properties that this object contains shall conform to the Redfish Specification-described requirements."
                 },
-<<<<<<< HEAD
-=======
                 "PowerLimitWatts": {
                     "anyOf": [
                         {
@@ -239,7 +206,6 @@
                     "longDescription": "This property shall contain the power load, in percent units, for this device, that represents the `Total` ElectricalContext for this device.  The value of the DataSourceUri property, if present, shall reference a resource of type Sensor with the ReadingType property containing the value `Percent`.",
                     "versionAdded": "v1_1_0"
                 },
->>>>>>> origin/master
                 "PowerWatts": {
                     "anyOf": [
                         {
@@ -249,16 +215,9 @@
                             "type": "null"
                         }
                     ],
-<<<<<<< HEAD
-                    "description": "Power consumption (Watts).",
-                    "excerptCopy": "SensorPowerExcerpt",
-                    "longDescription": "This property shall contain the total power, measured in Watts, for this resource.",
-                    "readonly": true
-=======
                     "description": "Power consumption (W).",
                     "excerptCopy": "SensorPowerExcerpt",
                     "longDescription": "This property shall contain the total power, in watt units, for this resource.  The value of the DataSourceUri property, if present, shall reference a resource of type Sensor with the ReadingType property containing the value `Power`."
->>>>>>> origin/master
                 },
                 "TemperatureCelsius": {
                     "anyOf": [
@@ -271,12 +230,7 @@
                     ],
                     "description": "Temperature (Celsius).",
                     "excerptCopy": "SensorExcerpt",
-<<<<<<< HEAD
-                    "longDescription": "This property shall contain the temperature sensor reading for this resource.",
-                    "readonly": true
-=======
                     "longDescription": "This property shall contain the temperature, in degrees Celsius units, for this resource.  The value of the DataSourceUri property, if present, shall reference a resource of type Sensor with the ReadingType property containing the value `Temperature`."
->>>>>>> origin/master
                 }
             },
             "required": [
@@ -339,13 +293,6 @@
                 }
             },
             "type": "object"
-<<<<<<< HEAD
-        }
-    },
-    "owningEntity": "DMTF",
-    "release": "2020.4",
-    "title": "#EnvironmentMetrics.v1_0_0.EnvironmentMetrics"
-=======
         },
         "ResetToDefaults": {
             "additionalProperties": false,
@@ -384,5 +331,4 @@
     "owningEntity": "DMTF",
     "release": "2022.2",
     "title": "#EnvironmentMetrics.v1_3_0.EnvironmentMetrics"
->>>>>>> origin/master
 }
