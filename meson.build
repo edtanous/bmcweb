@@ -93,12 +93,12 @@ feature_map = {
   'static-hosting'                              : '-DBMCWEB_ENABLE_STATIC_HOSTING',
   'vm-websocket'                                : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
   'xtoken-auth'                                 : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
-  'health-rollup-alternative'                   : '-DBMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE',
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
-  'rmedia'                	                : '-DBMCWEB_ENABLE_RMEDIA',
   'tls-auth-opt-in'                             : '-DBMCWEB_ENABLE_TLS_AUTH_OPT_IN',
   'manufacturing-test'                          : '-DBMCWEB_ENABLE_MFG_TEST_API',
   'host-iface'                          	: '-DBMCWEB_ENABLE_HOST_IFACE',
+  'array-bootprogress'                          : '-DBMCWEB_ARRAY_BOOT_PROGRESS',
+
 }
 
 if(get_option('tls-auth-opt-in').enabled())
@@ -109,6 +109,8 @@ if(get_option('tls-auth-opt-in').enabled())
     error('Feature tls-auth-opt-in conflicts with insecure-disable-ssl, only one can be enabled!')
   endif
 endif
+
+
 
 # Get the options status and build a project summary to show which flags are
 # being enabled during the configuration time.
@@ -189,8 +191,9 @@ if (cxx.get_id() == 'gcc' and cxx.version().version_compare('>8.0'))
      '-Wunused-parameter',
      '-Wnull-dereference',
      '-Wdouble-promotion',
-     '-Wshadow',
-     '-Wno-psabi',
+     #TODO: Enable this flags
+     #'-Wshadow',
+     #'-Wno-psabi',
      ]),
     language:'cpp')
 endif
@@ -334,40 +337,6 @@ if get_option('tests').enabled()
   gmock = gmock.as_system('system')
 endif
 
-<<<<<<< HEAD
-# Gather the Configuration data
-
-conf_data = configuration_data()
-conf_data.set('BMCWEB_HTTP_REQ_BODY_LIMIT_MB', get_option('http-body-limit'))
-if get_option('firmware-image-limit') > get_option('http-body-limit')
-  error('Firmware image size limit should be lesser than http body limit.')
-else
-  conf_data.set('FIRMWARE_IMAGE_LIMIT_MB', get_option('firmware-image-limit'))
-endif
-xss_enabled = get_option('insecure-disable-xss')
-conf_data.set10('BMCWEB_INSECURE_DISABLE_XSS_PREVENTION', xss_enabled.enabled())
-conf_data.set('MESON_INSTALL_PREFIX', get_option('prefix'))
-conf_data.set('HTTPS_PORT', get_option('https_port'))
-conf_data.set('STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND', get_option('stalesensor-upper-limit-milisecond'))
-conf_data.set('PLATFORM_METRICS_SENSING_INTERVAL', get_option('platform-metrics-sensing-interval'))
-conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-location'))
-conf_data.set('UPDATE_SERVICE_TASK_TIMEOUT', get_option('update-service-task-timeout'))
-conf_data.set('MFG_TEST_TIMEOUT', get_option('manufacturing-test-timeout'))
-conf_data.set_quoted('PLATFORM_SYSTEM_ID', get_option('platform-system-id'))
-conf_data.set_quoted('PLATFORM_BMC_ID', get_option('platform-bmc-id'))
-conf_data.set_quoted('PLATFORM_TOTAL_POWER_SENSOR_NAME', get_option('platform-total-power-sensor-name'))
-conf_data.set_quoted('PLATFORM_METRICS_ID', get_option('platform-metrics-id'))
-conf_data.set_quoted('HOST_IFACE_CHANNEL', get_option('host-iface-channel'))
-conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
-conf_data.set('OTP_PROVISIONING_STATUS_FILE_PATH', get_option('otp-provisioning-status-file-path'))
-configure_file(input: 'bmcweb_config.h.in',
-               output: 'bmcweb_config.h',
-               configuration: conf_data)
-
-# Configure and install systemd unit files
-
-=======
->>>>>>> origin/master
 systemd_system_unit_dir = systemd.get_variable(pkgconfig: 'systemdsystemunitdir')
 
 bindir = get_option('prefix') + '/' +get_option('bindir')
@@ -409,27 +378,6 @@ executable(
   install_dir:bindir
 )
 
-<<<<<<< HEAD
-srcfiles_unittest = [
-  'http/ut/utility_test.cpp',
-  'include/ut/dbus_utility_test.cpp',
-  'include/ut/multipart_test.cpp',
-  'include/ut/http_utility_test.cpp',
-  'include/ut/human_sort_test.cpp',
-  'include/ut/ssl_key_handler_test.cpp',
-  'include/ut/file_watcher_test.cpp',
-  'redfish-core/ut/privileges_test.cpp',
-  'redfish-core/ut/lock_test.cpp',
-  'redfish-core/ut/configfile_test.cpp',
-  'redfish-core/ut/hex_utils_test.cpp',
-  'redfish-core/ut/stl_utils_test.cpp',
-  'redfish-core/ut/time_utils_test.cpp',
-  'redfish-core/ut/registry_utils_test.cpp',
-  'redfish-core/ut/dbus_log_utils_test.cpp',
-  'redfish-core/ut/event_service_test.cpp',
-  'redfish-core/ut/health_rollup_test.cpp'
-]
-=======
 srcfiles_unittest = files(
   'test/http/crow_getroutes_test.cpp',
   'test/http/router_test.cpp',
@@ -456,30 +404,9 @@ srcfiles_unittest = files(
   'test/redfish-core/lib/thermal_subsystem_test.cpp',
   'test/redfish-core/lib/power_subsystem_test.cpp',
 )
->>>>>>> origin/master
 
 if(get_option('tests').enabled())
-    ut_incdir = include_directories(
-        'include',
-        'include/ut/',
-        'redfish-core/include',
-        'redfish-core/lib',
-        'http'
-    )
     # generate the test executable
-<<<<<<< HEAD
-    ut_bin = executable(
-      'bmcweb_unit_test',
-      srcfiles_unittest + srcfiles_bmcweb,
-      include_directories : ut_incdir,
-      install_dir: bindir,
-      dependencies: bmcweb_dependencies + [
-        gtest,
-        gmock,
-      ]
-    )
-    test('bmcweb_unit_test', ut_bin)
-=======
     foreach test_src : srcfiles_unittest
       test_bin = executable(
         fs.stem(test_src),
@@ -493,5 +420,4 @@ if(get_option('tests').enabled())
       )
       test(fs.stem(test_src), test_bin)
     endforeach
->>>>>>> origin/master
 endif

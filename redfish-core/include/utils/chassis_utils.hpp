@@ -1,24 +1,18 @@
 #pragma once
-<<<<<<< HEAD
-=======
 #include <async_resp.hpp>
->>>>>>> origin/master
 
 namespace redfish
 {
 
 namespace chassis_utils
 {
-<<<<<<< HEAD
-
 constexpr const char* acceleratorInvIntf =
     "xyz.openbmc_project.Inventory.Item.Accelerator";
 
 constexpr const char* switchInvIntf =
     "xyz.openbmc_project.Inventory.Item.Switch";
 
-constexpr const char* bmcInvInterf =
-    "xyz.openbmc_project.Inventory.Item.BMC";
+constexpr const char* bmcInvInterf = "xyz.openbmc_project.Inventory.Item.BMC";
 
 /**
  * @brief Retrieves valid chassis ID
@@ -28,23 +22,12 @@ constexpr const char* bmcInvInterf =
 template <typename Callback>
 void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& chassisID, Callback&& callback)
-=======
-/**
- * @brief Retrieves valid chassis path
- * @param asyncResp   Pointer to object holding response data
- * @param callback  Callback for next step to get valid chassis path
- */
-template <typename Callback>
-void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const std::string& chassisId, Callback&& callback)
->>>>>>> origin/master
 {
     BMCWEB_LOG_DEBUG << "checkChassisId enter";
     const std::array<const char*, 2> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Board",
         "xyz.openbmc_project.Inventory.Item.Chassis"};
 
-<<<<<<< HEAD
     auto respHandler = [callback{std::forward<Callback>(callback)}, asyncResp,
                         chassisID](
                            const boost::system::error_code ec,
@@ -53,27 +36,12 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (ec)
         {
             BMCWEB_LOG_ERROR << "getValidChassisID respHandler DBUS error: "
-=======
-    auto respHandler =
-        [callback{std::forward<Callback>(callback)}, asyncResp,
-         chassisId](const boost::system::error_code ec,
-                    const dbus::utility::MapperGetSubTreePathsResponse&
-                        chassisPaths) mutable {
-        BMCWEB_LOG_DEBUG << "getValidChassisPath respHandler enter";
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR << "getValidChassisPath respHandler DBUS error: "
->>>>>>> origin/master
                              << ec;
             messages::internalError(asyncResp->res);
             return;
         }
 
-<<<<<<< HEAD
         std::optional<std::string> validChassisID;
-=======
-        std::optional<std::string> chassisPath;
->>>>>>> origin/master
         std::string chassisName;
         for (const std::string& chassis : chassisPaths)
         {
@@ -81,7 +49,6 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             chassisName = path.filename();
             if (chassisName.empty())
             {
-<<<<<<< HEAD
                 BMCWEB_LOG_ERROR << "Failed to find chassisName in " << chassis;
                 continue;
             }
@@ -92,18 +59,6 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
         }
         callback(validChassisID);
-=======
-                BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassis;
-                continue;
-            }
-            if (chassisName == chassisId)
-            {
-                chassisPath = chassis;
-                break;
-            }
-        }
-        callback(chassisPath);
->>>>>>> origin/master
     };
 
     // Get the Chassis Collection
@@ -114,10 +69,15 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "/xyz/openbmc_project/inventory", 0, interfaces);
     BMCWEB_LOG_DEBUG << "checkChassisId exit";
 }
-<<<<<<< HEAD
+
+/**
+ * @brief Retrieves valid chassis path
+ * @param asyncResp   Pointer to object holding response data
+ * @param callback  Callback for next step to get valid chassis path
+ */
 template <typename Callback>
 void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const std::string& chassisID, Callback&& callback)
+                         const std::string& chassisId, Callback&& callback)
 {
     BMCWEB_LOG_DEBUG << "checkChassisId enter";
     const std::array<const char*, 2> interfaces = {
@@ -126,8 +86,9 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
     auto respHandler =
         [callback{std::forward<Callback>(callback)}, asyncResp,
-         chassisID](const boost::system::error_code ec,
-                    const std::vector<std::string>& chassisPaths) {
+         chassisId](const boost::system::error_code ec,
+                    const dbus::utility::MapperGetSubTreePathsResponse&
+                        chassisPaths) mutable {
             BMCWEB_LOG_DEBUG << "getValidChassisPath respHandler enter";
             if (ec)
             {
@@ -145,10 +106,10 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 chassisName = path.filename();
                 if (chassisName.empty())
                 {
-                    BMCWEB_LOG_ERROR << "Empty chassis Path";
+                    BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassis;
                     continue;
                 }
-                if (chassisName == chassisID)
+                if (chassisName == chassisId)
                 {
                     chassisPath = chassis;
                     break;
@@ -163,6 +124,7 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
         "/xyz/openbmc_project/inventory", 0, interfaces);
+    BMCWEB_LOG_DEBUG << "checkChassisId exit";
 }
 
 inline std::string getChassisType(const std::string& chassisType)
@@ -277,11 +239,13 @@ inline void
  */
 inline std::string getPowerModeType(const std::string& dbusAction)
 {
-    if (dbusAction == "xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance")
+    if (dbusAction ==
+        "xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance")
     {
         return "MaxP";
     }
-    if (dbusAction == "xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving")
+    if (dbusAction ==
+        "xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving")
     {
         return "MaxQ";
     }
@@ -289,7 +253,7 @@ inline std::string getPowerModeType(const std::string& dbusAction)
     {
         return "Custom";
     }
-    
+
     return "";
 }
 
@@ -319,17 +283,382 @@ inline std::string convertToPowerModeType(const std::string& powerMode)
 
     return "";
 }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+/**
+ *@brief Sets the background copy for particular chassis
+ *
+ * @param asyncResp   Pointer to object holding response data
+ * @param chassisUUID  Chassis ID
+ * @param enabled Enable or disable the background copy
+ * @param isPCIe If true then sets service name on PCIe
+ * If false then sets status name on SPI.
+ * The service name is used to get EID connected
+ * to chassis which id is delivered in the parameter.
+ *
+ * If relevant EID cannot be found, the proper error message
+ * is added to the response (asyncResp).
+ *
+ * @return None.
+ */
+inline void setBackgroundCopyEnabled(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisUUID, bool enabled, bool isPCIe = true)
+{
+    std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
+    if (!isPCIe)
+    {
+        serviceName = "xyz.openbmc_project.MCTP.Control.SPI";
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisUUID, enabled,
+         isPCIe](const boost::system::error_code ec,
+                 const dbus::utility::ManagedObjectType& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const uint32_t* eid = nullptr;
+            const std::string* uuid = nullptr;
+            bool foundEID = false;
+
+            for (auto& objectPath : resp)
+            {
+                for (auto& interfaceMap : objectPath.second)
+                {
+                    if (interfaceMap.first == "xyz.openbmc_project.Common.UUID")
+                    {
+                        for (auto& propertyMap : interfaceMap.second)
+                        {
+                            if (propertyMap.first == "UUID")
+                            {
+                                uuid = std::get_if<std::string>(
+                                    &propertyMap.second);
+                            }
+                        }
+                    }
+
+                    if (interfaceMap.first ==
+                        "xyz.openbmc_project.MCTP.Endpoint")
+                    {
+                        for (auto& propertyMap : interfaceMap.second)
+                        {
+                            if (propertyMap.first == "EID")
+                            {
+                                eid =
+                                    std::get_if<uint32_t>(&propertyMap.second);
+                            }
+                        }
+                    }
+                }
+
+                if ((*uuid) == chassisUUID)
+                {
+                    foundEID = true;
+                    break;
+                }
+            }
+
+            if (foundEID)
+            {
+                if (enableBackgroundCopy(*eid, enabled) != 0)
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "mctp-vdm-util could not execute command ...";
+                    messages::internalError(asyncResp->res);
+                }
+                else
+                {
+                    messages::success(asyncResp->res);
+                }
+            }
+            else
+            {
+                if (isPCIe)
+                {
+                    setBackgroundCopyEnabled(asyncResp, chassisUUID, enabled,
+                                             false);
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "Can not find relevant MCTP endpoint for chassis "
+                        << chassisUUID;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            }
+        },
+        serviceName, "/xyz/openbmc_project/mctp",
+        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+}
+
+/**
+ *@brief Sets in-band for particular chassis
+ *
+ * @param asyncResp   Pointer to object holding response data
+ * @param chassisUUID  Chassis ID
+ * @param enabled Enable or disable the in-band
+ * @param isPCIe If true then sets service name on PCIe
+ * If false then sets status name on SPI.
+ * The service name is used to get EID connected
+ * to chassis which id is delivered in the parameter.
+ *
+ * If relevant EID cannot be found, the proper error message
+ * is added to the response (asyncResp).
+ *
+ * @return None.
+ */
+inline void
+    setInBandEnabled(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                     const std::string& chassisUUID, bool enabled,
+                     bool isPCIe = true)
+{
+    std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
+    if (!isPCIe)
+    {
+        serviceName = "xyz.openbmc_project.MCTP.Control.SPI";
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisUUID, enabled,
+         isPCIe](const boost::system::error_code ec,
+                 const dbus::utility::ManagedObjectType& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const uint32_t* eid = nullptr;
+            const std::string* uuid = nullptr;
+            bool foundEID = false;
+
+            for (auto& objectPath : resp)
+            {
+                for (auto& interfaceMap : objectPath.second)
+                {
+                    if (interfaceMap.first == "xyz.openbmc_project.Common.UUID")
+                    {
+                        for (auto& propertyMap : interfaceMap.second)
+                        {
+                            if (propertyMap.first == "UUID")
+                            {
+                                uuid = std::get_if<std::string>(
+                                    &propertyMap.second);
+                            }
+                        }
+                    }
+
+                    if (interfaceMap.first ==
+                        "xyz.openbmc_project.MCTP.Endpoint")
+                    {
+                        for (auto& propertyMap : interfaceMap.second)
+                        {
+                            if (propertyMap.first == "EID")
+                            {
+                                eid =
+                                    std::get_if<uint32_t>(&propertyMap.second);
+                            }
+                        }
+                    }
+                }
+
+                if ((*uuid) == chassisUUID)
+                {
+                    foundEID = true;
+                    break;
+                }
+            }
+
+            if (foundEID)
+            {
+                if (enableInBand(*eid, enabled) != 0)
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "mctp-vdm-util could not execute command ...";
+                    messages::internalError(asyncResp->res);
+                }
+                else
+                {
+                    messages::success(asyncResp->res);
+                }
+            }
+            else
+            {
+                if (isPCIe)
+                {
+                    setInBandEnabled(asyncResp, chassisUUID, enabled, false);
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "Can not find relevant MCTP endpoint for chassis "
+                        << chassisUUID;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            }
+        },
+        serviceName, "/xyz/openbmc_project/mctp",
+        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+}
+
+/**
+ *@brief Gets background copy and in-band info for particular chassis
+ *
+ * @param asyncResp   Pointer to object holding response data
+ * @param chassisUUID  Chassis ID
+ * @param isPCIe If true then sets service name on PCIe
+ * If false then sets status name on SPI.
+ * The service name is used to get EID connected
+ * to chassis which id is delivered in the parameter.
+ *
+ * If relevant EID cannot be found, the proper error message
+ * is added to the response (asyncResp).
+ *
+ * @return None.
+ */
+inline void getBackgroundCopyAndInBandInfo(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisUUID, bool isPCIe = true)
+{
+
+    std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
+    if (!isPCIe)
+    {
+        serviceName = "xyz.openbmc_project.MCTP.Control.SPI";
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisUUID,
+         isPCIe](const boost::system::error_code ec,
+                 const dbus::utility::ManagedObjectType& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const uint32_t* eid = nullptr;
+            const std::string* uuid = nullptr;
+            bool foundEID = false;
+
+            for (auto& objectPath : resp)
+            {
+                for (auto& interfaceMap : objectPath.second)
+                {
+                    if (interfaceMap.first == "xyz.openbmc_project.Common.UUID")
+                    {
+                        for (auto& propertyMap : interfaceMap.second)
+                        {
+                            if (propertyMap.first == "UUID")
+                            {
+                                uuid = std::get_if<std::string>(
+                                    &propertyMap.second);
+                            }
+                        }
+                    }
+
+                    if (interfaceMap.first ==
+                        "xyz.openbmc_project.MCTP.Endpoint")
+                    {
+                        for (auto& propertyMap : interfaceMap.second)
+                        {
+                            if (propertyMap.first == "EID")
+                            {
+                                eid =
+                                    std::get_if<uint32_t>(&propertyMap.second);
+                            }
+                        }
+                    }
+                }
+
+                if ((*uuid) == chassisUUID)
+                {
+                    foundEID = true;
+                    break;
+                }
+            }
+
+            if (foundEID)
+            {
+
+                nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+
+                MctpVdmUtilStatusResponse inBandStatusResp =
+                    isInBandEnabled(*eid);
+
+                if (inBandStatusResp.isSuccess)
+                {
+                    oem["InbandUpdatePolicyEnabled"] = inBandStatusResp.enabled;
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "mctp-vdm-util could not execute command in_band_query_status";
+                }
+
+                MctpVdmUtilStatusResponse statusResp =
+                    isBackgroundCopyEnabled(*eid);
+
+                if (statusResp.isSuccess)
+                {
+                    oem["AutomaticBackgroundCopyEnabled"] = statusResp.enabled;
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "mctp-vdm-util could not execute command background_copy_query_status";
+                }
+
+                MctpVdmUtilProgressStatusResponse progressStatusResp =
+                    getBackgroundCopyStatus(*eid);
+
+                if (progressStatusResp.isSuccess)
+                {
+                    oem["BackgroundCopyStatus"] = progressStatusResp.status;
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "mctp-vdm-util could not execute command background_copy_query_progress";
+                }
+            }
+            else
+            {
+                if (isPCIe)
+                {
+                    getBackgroundCopyAndInBandInfo(asyncResp, chassisUUID,
+                                                   false);
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "Can not find relevant MCTP endpoint for chassis "
+                        << chassisUUID;
+                }
+            }
+        },
+        serviceName, "/xyz/openbmc_project/mctp",
+        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+}
 
 inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
-                           const std::string& path)
+                           const std::string& path, bool isERoT = false)
 {
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Common.UUID", "UUID",
-        [asyncResp](const boost::system::error_code ec,
-                    const std::string& chassisUUID) {
+        [asyncResp, isERoT](const boost::system::error_code ec,
+                            const std::string& chassisUUID) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
@@ -337,6 +666,11 @@ inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 return;
             }
             asyncResp->res.jsonValue["UUID"] = chassisUUID;
+
+            if (isERoT)
+            {
+                getBackgroundCopyAndInBandInfo(asyncResp, chassisUUID);
+            }
         });
 }
 
@@ -399,10 +733,9 @@ inline void
         });
 }
 
-inline void
-    getChassisSKU(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& connectionName,
-                           const std::string& path)
+inline void getChassisSKU(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& connectionName,
+                          const std::string& path)
 {
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, connectionName, path,
@@ -491,11 +824,11 @@ inline void getAssociationEndpoint(const std::string& objPath,
                             std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec
-                    << " (busctl call " << dbus_utils::mapperBusName
-                    << " " << objPath << " " << dbus_utils::propertyInterface
-                    << " Get ss " << dbus_utils::associationInterface
-                    << " endpoints)";
+                BMCWEB_LOG_ERROR
+                    << "D-Bus responses error: " << ec << " (busctl call "
+                    << dbus_utils::mapperBusName << " " << objPath << " "
+                    << dbus_utils::propertyInterface << " Get ss "
+                    << dbus_utils::associationInterface << " endpoints)";
                 callback(false, std::string(""));
                 return; // should have associated inventory object.
             }
@@ -503,21 +836,24 @@ inline void getAssociationEndpoint(const std::string& objPath,
                 std::get_if<std::vector<std::string>>(&resp);
             if (data == nullptr || data->size() == 0)
             {
-                BMCWEB_LOG_ERROR << ((data == nullptr) ?
-                        "Data is null. " : "Data is empty")
-                    << "(busctl call " << dbus_utils::mapperBusName
-                    << " " << objPath << " " << dbus_utils::propertyInterface
-                    << " Get ss " <<dbus_utils::associationInterface
+                BMCWEB_LOG_ERROR
+                    << ((data == nullptr) ? "Data is null. " : "Data is empty")
+                    << "(busctl call " << dbus_utils::mapperBusName << " "
+                    << objPath << " " << dbus_utils::propertyInterface
+                    << " Get ss " << dbus_utils::associationInterface
                     << " endpoints)";
-/*
-                Object must have associated inventory object.
-                Exemplary test on hardware:
-                    busctl call xyz.openbmc_project.ObjectMapper \
-                    /xyz/openbmc_project/inventory/system/chassis/HGX_ERoT_FPGA_0/inventory \
-                    org.freedesktop.DBus.Properties \
-                    Get ss xyz.openbmc_project.Association endpoints
-                Response: v as 1 "/xyz/openbmc_project/inventory/system/processors/FPGA_0"
-*/
+                /*
+                                Object must have associated inventory object.
+                                Exemplary test on hardware:
+                                    busctl call xyz.openbmc_project.ObjectMapper
+                   \
+                                    /xyz/openbmc_project/inventory/system/chassis/HGX_ERoT_FPGA_0/inventory
+                   \
+                                    org.freedesktop.DBus.Properties \
+                                    Get ss xyz.openbmc_project.Association
+                   endpoints Response: v as 1
+                   "/xyz/openbmc_project/inventory/system/processors/FPGA_0"
+                */
                 callback(false, std::string(""));
                 return;
             }
@@ -534,7 +870,7 @@ template <typename CallbackFunc>
 inline void getRedfishURL(const std::filesystem::path& invObjPath,
                           CallbackFunc&& callback)
 {
-    BMCWEB_LOG_DEBUG << "getRedfishURL(" << invObjPath <<")";
+    BMCWEB_LOG_DEBUG << "getRedfishURL(" << invObjPath << ")";
     crow::connections::systemBus->async_method_call(
         [invObjPath, callback](const boost::system::error_code ec,
                                const GetObjectType& resp) {
@@ -551,7 +887,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
             // of type fpga or GPU.
             // If switch interface then it could be Nvswitch or
             // PcieSwitch else it is BMC
-            for (const auto& serObj: resp)
+            for (const auto& serObj : resp)
             {
                 std::string service = serObj.first;
                 auto interfaces = serObj.second;
@@ -560,41 +896,53 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                 {
                     if (interface == acceleratorInvIntf)
                     {
-/*
-busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetObject sas /xyz/openbmc_project/inventory/system/chassis/HGX_GPU_SXM_1 0
- a{sas} 2
- - "xyz.openbmc_project.GpuMgr" ...
- - "xyz.openbmc_project.ObjectMapper" ...
-busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetObject sas /xyz/openbmc_project/inventory/system/chassis/HGX_FPGA_0 0
-  a{sas} 2
-   - "xyz.openbmc_project.GpuMgr" ...
-   - "xyz.openbmc_project.ObjectMapper" ...
-*/
-                        url = std::string("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/")
-                            + invObjPath.filename().string();
-                        BMCWEB_LOG_DEBUG << service << " " << interface
-                            << " => URL: " << url;
+                        /*
+                        busctl call xyz.openbmc_project.ObjectMapper
+                        /xyz/openbmc_project/object_mapper
+                        xyz.openbmc_project.ObjectMapper GetObject sas
+                        /xyz/openbmc_project/inventory/system/chassis/HGX_GPU_SXM_1
+                        0 a{sas} 2
+                         - "xyz.openbmc_project.GpuMgr" ...
+                         - "xyz.openbmc_project.ObjectMapper" ...
+                        busctl call xyz.openbmc_project.ObjectMapper
+                        /xyz/openbmc_project/object_mapper
+                        xyz.openbmc_project.ObjectMapper GetObject sas
+                        /xyz/openbmc_project/inventory/system/chassis/HGX_FPGA_0
+                        0 a{sas} 2
+                           - "xyz.openbmc_project.GpuMgr" ...
+                           - "xyz.openbmc_project.ObjectMapper" ...
+                        */
+                        url =
+                            std::string("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                        "/Processors/") +
+                            invObjPath.filename().string();
+                        BMCWEB_LOG_DEBUG << service << " "
+                                         << interface << " => URL: " << url;
                         callback(true, url);
                         return;
                     }
 
                     if (interface == switchInvIntf)
                     {
-/* busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetObject sas /xyz/openbmc_project/inventory/system/chassis/HGX_NVSwitch_0 0
-a{sas} 2
- - "xyz.openbmc_project.GpuMgr" ...
- - "xyz.openbmc_project.ObjectMapper" ...
-*/
+                        /* busctl call xyz.openbmc_project.ObjectMapper
+                        /xyz/openbmc_project/object_mapper
+                        xyz.openbmc_project.ObjectMapper GetObject sas
+                        /xyz/openbmc_project/inventory/system/chassis/HGX_NVSwitch_0
+                        0 a{sas} 2
+                         - "xyz.openbmc_project.GpuMgr" ...
+                         - "xyz.openbmc_project.ObjectMapper" ...
+                        */
                         // This is NVSwitch or PCIeSwitch
                         std::string switchID = invObjPath.filename();
                         // Now get the fabric ID
-                        BMCWEB_LOG_DEBUG << "DBUS resp: " << service << " "
+                        BMCWEB_LOG_DEBUG
+                            << "DBUS resp: " << service << " "
                             << interface << " => getAssociationEndpoint("
                             << invObjPath.string() << "/fabrics, CALLBACK)";
                         getAssociationEndpoint(
                             invObjPath.string() + "/fabrics",
                             [switchID, callback](const bool& status,
-                                            const std::string& ep) {
+                                                 const std::string& ep) {
                                 std::string url;
                                 if (!status)
                                 {
@@ -604,8 +952,10 @@ a{sas} 2
                                     callback(false, url);
                                     return;
                                 }
-                                sdbusplus::message::object_path invObjectPath(ep);
-                                const std::string& fabricID = invObjectPath.filename();
+                                sdbusplus::message::object_path invObjectPath(
+                                    ep);
+                                const std::string& fabricID =
+                                    invObjectPath.filename();
 
                                 url = std::string("/redfish/v1/Fabrics/");
                                 url += fabricID;
@@ -619,14 +969,15 @@ a{sas} 2
                     }
                     if (interface == bmcInvInterf)
                     {
-                        url = std::string("/redfish/v1/Managers/" PLATFORMBMCID);
-                        BMCWEB_LOG_DEBUG << service << " " << interface
-                            << " => URL: " << url;
+                        url =
+                            std::string("/redfish/v1/Managers/" PLATFORMBMCID);
+                        BMCWEB_LOG_DEBUG << service << " "
+                                         << interface << " => URL: " << url;
                         callback(true, url);
                         return;
                     }
                 }
-                BMCWEB_LOG_DEBUG << "Not found proper interface for service " 
+                BMCWEB_LOG_DEBUG << "Not found proper interface for service "
                                  << service;
             }
             BMCWEB_LOG_ERROR << "Failed to find proper URL";
@@ -636,8 +987,6 @@ a{sas} 2
         dbus_utils::mapperIntf, "GetObject", invObjPath.string(),
         std::array<const char*, 0>());
 }
-=======
->>>>>>> origin/master
 
 } // namespace chassis_utils
 } // namespace redfish

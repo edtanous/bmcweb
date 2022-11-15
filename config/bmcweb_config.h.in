@@ -2,14 +2,14 @@
 
 #include <cstddef>
 #include <cstdint>
-
+// clang-format off
 #define PLATFORMSYSTEMID @PLATFORM_SYSTEM_ID@
 #define PLATFORMBMCID @PLATFORM_BMC_ID@
 #define PLATFORMMETRICSID @PLATFORM_METRICS_ID@
 
 #define HOSTIFACECHANNEL @HOST_IFACE_CHANNEL@
 
-// clang-format off
+
 constexpr const int bmcwebInsecureDisableXssPrevention =
     @BMCWEB_INSECURE_DISABLE_XSS_PREVENTION@;
 
@@ -22,7 +22,6 @@ constexpr const size_t firmwareImageLimitBytes =
 
 constexpr const char* mesonInstallPrefix = "@MESON_INSTALL_PREFIX@";
 
-<<<<<<< HEAD:bmcweb_config.h.in
 constexpr const int updateServiceTaskTimeout = @UPDATE_SERVICE_TASK_TIMEOUT@;
 
 constexpr const char* updateServiceImageLocation = "@UPDATE_SERVICE_IMAGE_LOCATION@";
@@ -39,7 +38,6 @@ constexpr const int mfgTestTimeout = @MFG_TEST_TIMEOUT@;
 
 constexpr const char* platformTotalPowerSensorName = @PLATFORM_TOTAL_POWER_SENSOR_NAME@;
 
-=======
+constexpr const char* platformPowerControlSensorName = @PLATFORM_POWER_CONTOL_SENSOR_NAME@;
 constexpr const bool bmcwebInsecureEnableHttpPushStyleEventing = @BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING@ == 1;
->>>>>>> origin/master:config/bmcweb_config.h.in
 // clang-format on
