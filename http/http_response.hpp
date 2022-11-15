@@ -7,11 +7,8 @@
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/beast/http/basic_dynamic_body.hpp>
 #include <boost/beast/http/message.hpp>
-<<<<<<< HEAD
-=======
 #include <boost/beast/http/string_body.hpp>
 #include <utils/hex_utils.hpp>
->>>>>>> origin/master
 
 #include <optional>
 #include <string>
@@ -185,18 +182,11 @@ struct Response
             return;
         }
         completed = true;
-<<<<<<< HEAD
-        if (completeRequestHandler)
-        {
-            BMCWEB_LOG_DEBUG << "completion handler was valid, calling it";
-            completeRequestHandler();
-=======
         BMCWEB_LOG_DEBUG << this << " calling completion handler";
         if (completeRequestHandler)
         {
             BMCWEB_LOG_DEBUG << this << " completion handler was valid";
             completeRequestHandler(*this);
->>>>>>> origin/master
         }
         else
         {
@@ -249,9 +239,9 @@ struct Response
 
 struct DynamicResponse
 {
-    using response_type =
-        boost::beast::http::response<boost::beast::http::basic_dynamic_body<
-            boost::beast::flat_static_buffer<static_cast<std::size_t>(1024 * 1024)>>>;
+    using response_type = boost::beast::http::response<
+        boost::beast::http::basic_dynamic_body<boost::beast::flat_static_buffer<
+            static_cast<std::size_t>(1024 * 1024)>>>;
 
     std::optional<response_type> bufferResponse;
 

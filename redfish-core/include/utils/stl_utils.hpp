@@ -1,10 +1,7 @@
 #pragma once
 
 #include <algorithm>
-<<<<<<< HEAD
 #include <string>
-=======
->>>>>>> origin/master
 #include <vector>
 
 namespace redfish
@@ -69,7 +66,8 @@ uint8_t hexCharToInt(char ch)
 
 std::vector<uint8_t> hexStringToVector(std::string_view str)
 {
-    if (str.size() % 2) {
+    if (str.size() % 2)
+    {
         throw std::invalid_argument("String not an even number of characters");
     }
     std::vector<uint8_t> ret;
@@ -77,7 +75,7 @@ std::vector<uint8_t> hexStringToVector(std::string_view str)
     for (size_t i = 0; i < ret.size(); ++i)
     {
         auto bits = hexCharToInt(str[i * 2]) << 4;
-        bits |= hexCharToInt(str[ i *2 + 1]);
+        bits |= hexCharToInt(str[i * 2 + 1]);
         ret[i] |= static_cast<uint8_t>(bits);
     }
 

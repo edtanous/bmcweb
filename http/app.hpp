@@ -116,7 +116,6 @@ class App
 #ifdef BMCWEB_ENABLE_SSL
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
-<<<<<<< HEAD
             BMCWEB_LOG_DEBUG << "TLS RUN";
             if (-1 == socketFd)
             {
@@ -125,33 +124,14 @@ class App
             }
             else
             {
-                sslServer =
-                    std::make_unique<ssl_server_t>(this, socketFd, sslContext, io);
+                sslServer = std::make_unique<ssl_server_t>(this, socketFd,
+                                                           sslContext, io);
             }
             sslServer->run();
-=======
-            sslServer = std::make_unique<ssl_server_t>(
-                this, bindaddrStr, portUint, sslContext, io);
-        }
-        else
-        {
-            sslServer =
-                std::make_unique<ssl_server_t>(this, socketFd, sslContext, io);
-        }
-        sslServer->run();
-
-#else
-
-        if (-1 == socketFd)
-        {
-            server = std::make_unique<server_t>(this, bindaddrStr, portUint,
-                                                nullptr, io);
->>>>>>> origin/master
         }
         else
 #endif
         {
-<<<<<<< HEAD
             BMCWEB_LOG_DEBUG << "HTTP RUN";
             if (-1 == socketFd)
             {
@@ -164,9 +144,6 @@ class App
                     std::make_unique<server_t>(this, socketFd, nullptr, io));
             }
             server->run();
-=======
-            server = std::make_unique<server_t>(this, socketFd, nullptr, io);
->>>>>>> origin/master
         }
     }
 
@@ -228,7 +205,6 @@ class App
     std::unique_ptr<ssl_server_t> sslServer;
 #endif
     std::unique_ptr<server_t> server;
-    
 };
 } // namespace crow
 using App = crow::App;

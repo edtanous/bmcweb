@@ -47,76 +47,44 @@ inline void handleServiceRootGetImpl(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
-<<<<<<< HEAD
-    asyncResp->res.jsonValue["@odata.type"] = "#ServiceRoot.v1_13_0.ServiceRoot";
-=======
     asyncResp->res.jsonValue["@odata.type"] =
-        "#ServiceRoot.v1_11_0.ServiceRoot";
->>>>>>> origin/master
+        "#ServiceRoot.v1_13_0.ServiceRoot";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1";
     asyncResp->res.jsonValue["Id"] = "RootService";
     asyncResp->res.jsonValue["Name"] = "Root Service";
     asyncResp->res.jsonValue["RedfishVersion"] = "1.9.0";
-<<<<<<< HEAD
-    if (persistent_data::getConfig().isTLSAuthEnabled()) {
-        asyncResp->res.jsonValue["Links"]["Sessions"] = {
-            {"@odata.id", "/redfish/v1/SessionService/Sessions"}};
-        asyncResp->res.jsonValue["AccountService"] = {
-            {"@odata.id", "/redfish/v1/AccountService"}};
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        asyncResp->res.jsonValue["Links"]["Sessions"]["@odata.id"] =
+            "/redfish/v1/SessionService/Sessions";
+        asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
+            "/redfish/v1/AccountService";
     }
-    asyncResp->res.jsonValue["Chassis"] = {
-        {"@odata.id", "/redfish/v1/Chassis"}};
-    asyncResp->res.jsonValue["ComponentIntegrity"] = {
-        {"@odata.id", "/redfish/v1/ComponentIntegrity"}};
-    asyncResp->res.jsonValue["Fabrics"] = {
-        {"@odata.id", "/redfish/v1/Fabrics"}};
-    asyncResp->res.jsonValue["JsonSchemas"] = {
-        {"@odata.id", "/redfish/v1/JsonSchemas"}};
-    asyncResp->res.jsonValue["Managers"] = {
-        {"@odata.id", "/redfish/v1/Managers"}};
-    if (persistent_data::getConfig().isTLSAuthEnabled()) {
-        asyncResp->res.jsonValue["SessionService"] = {
-            {"@odata.id", "/redfish/v1/SessionService"}};
-    }
-    asyncResp->res.jsonValue["Systems"] = {
-        {"@odata.id", "/redfish/v1/Systems"}};
-    asyncResp->res.jsonValue["Registries"] = {
-        {"@odata.id", "/redfish/v1/Registries"}};
-    asyncResp->res.jsonValue["UpdateService"] = {
-        {"@odata.id", "/redfish/v1/UpdateService"}};
-    asyncResp->res.jsonValue["UUID"] = uuid;
-    if (persistent_data::getConfig().isTLSAuthEnabled()) {
-        asyncResp->res.jsonValue["CertificateService"] = {
-            {"@odata.id", "/redfish/v1/CertificateService"}};
-    }
-    asyncResp->res.jsonValue["Tasks"] = {
-        {"@odata.id", "/redfish/v1/TaskService"}};
-    asyncResp->res.jsonValue["EventService"] = {
-        {"@odata.id", "/redfish/v1/EventService"}};
-    asyncResp->res.jsonValue["TelemetryService"] = {
-        {"@odata.id", "/redfish/v1/TelemetryService"}};
-    asyncResp->res.jsonValue["ServiceConditions"] = {
-        {"@odata.id", "/redfish/v1/ServiceConditions"}};
-
-=======
-    asyncResp->res.jsonValue["Links"]["Sessions"]["@odata.id"] =
-        "/redfish/v1/SessionService/Sessions";
-    asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
-        "/redfish/v1/AccountService";
     asyncResp->res.jsonValue["Chassis"]["@odata.id"] = "/redfish/v1/Chassis";
+    asyncResp->res.jsonValue["ComponentIntegrity"]["@odata.id"] =
+        "/redfish/v1/ComponentIntegrity";
+    asyncResp->res.jsonValue["Fabrics"]["@odata.id"] = "/redfish/v1/Fabrics";
     asyncResp->res.jsonValue["JsonSchemas"]["@odata.id"] =
         "/redfish/v1/JsonSchemas";
     asyncResp->res.jsonValue["Managers"]["@odata.id"] = "/redfish/v1/Managers";
-    asyncResp->res.jsonValue["SessionService"]["@odata.id"] =
-        "/redfish/v1/SessionService";
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        asyncResp->res.jsonValue["SessionService"]["@odata.id"] =
+            "/redfish/v1/SessionService";
+    }
     asyncResp->res.jsonValue["Systems"]["@odata.id"] = "/redfish/v1/Systems";
     asyncResp->res.jsonValue["Registries"]["@odata.id"] =
         "/redfish/v1/Registries";
     asyncResp->res.jsonValue["UpdateService"]["@odata.id"] =
         "/redfish/v1/UpdateService";
     asyncResp->res.jsonValue["UUID"] = uuid;
-    asyncResp->res.jsonValue["CertificateService"]["@odata.id"] =
-        "/redfish/v1/CertificateService";
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        asyncResp->res.jsonValue["CertificateService"]["@odata.id"] =
+            "/redfish/v1/CertificateService";
+    }
+    asyncResp->res.jsonValue["ServiceConditions"]["@odata.id"] =
+        "/redfish/v1/ServiceConditions";
     asyncResp->res.jsonValue["Tasks"]["@odata.id"] = "/redfish/v1/TaskService";
     asyncResp->res.jsonValue["EventService"]["@odata.id"] =
         "/redfish/v1/EventService";
@@ -151,7 +119,6 @@ inline void
 {
     handleServiceRootHead(app, req, asyncResp);
     handleServiceRootGetImpl(asyncResp);
->>>>>>> origin/master
 }
 
 inline void requestRoutesServiceRoot(App& app)
@@ -165,6 +132,5 @@ inline void requestRoutesServiceRoot(App& app)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleServiceRootGet, std::ref(app)));
 }
-
 
 } // namespace redfish

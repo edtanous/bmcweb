@@ -18,15 +18,14 @@
 #include "async_resp.hpp"
 
 #include <app.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/container/flat_set.hpp>
 #include <dbus_singleton.hpp>
 #include <dbus_utility.hpp>
-<<<<<<< HEAD
+#include <nlohmann/json.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/message.hpp>
-=======
-#include <nlohmann/json.hpp>
->>>>>>> origin/master
 
 #include <variant>
 
@@ -201,12 +200,12 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
         crow::connections::systemBus->async_method_call(
             [self](const boost::system::error_code ec,
                    const dbus::utility::MapperGetSubTreePathsResponse& resp) {
-            if (ec || resp.size() != 1)
-            {
-                // no global item, or too many
-                return;
-            }
-            self->globalInventoryPath = resp[0];
+                if (ec || resp.size() != 1)
+                {
+                    // no global item, or too many
+                    return;
+                }
+                self->globalInventoryPath = resp[0];
             },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -221,21 +220,22 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
         crow::connections::systemBus->async_method_call(
             [self](const boost::system::error_code ec,
                    const dbus::utility::ManagedObjectType& resp) {
-            if (ec)
-            {
-                return;
-            }
-            self->statuses = resp;
-            for (auto it = self->statuses.begin(); it != self->statuses.end();)
-            {
-                if (it->first.str.ends_with("critical") ||
-                    it->first.str.ends_with("warning"))
+                if (ec)
                 {
-                    it++;
-                    continue;
+                    return;
                 }
-                it = self->statuses.erase(it);
-            }
+                self->statuses = resp;
+                for (auto it = self->statuses.begin();
+                     it != self->statuses.end();)
+                {
+                    if (it->first.str.ends_with("critical") ||
+                        it->first.str.ends_with("warning"))
+                    {
+                        it++;
+                        continue;
+                    }
+                    it = self->statuses.erase(it);
+                }
             },
             "xyz.openbmc_project.ObjectMapper", "/",
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");

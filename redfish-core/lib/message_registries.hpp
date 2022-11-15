@@ -42,40 +42,24 @@ inline void handleMessageRegistryFileCollectionGet(
     // Collections don't include the static data added by SubRoute
     // because it has a duplicate entry for members
 
-<<<<<<< HEAD
-    asyncResp->res.jsonValue = {
-        {"@odata.type",
-         "#MessageRegistryFileCollection.MessageRegistryFileCollection"},
-        {"@odata.id", "/redfish/v1/Registries"},
-        {"Name", "MessageRegistryFile Collection"},
-        {"Description", "Collection of MessageRegistryFiles"},
-        {"Members@odata.count", 5},
-        {"Members",
-         {{{"@odata.id", "/redfish/v1/Registries/Base"}},
-          {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
-          {{"@odata.id", "/redfish/v1/Registries/ResourceEvent"}},
-          {{"@odata.id", "/redfish/v1/Registries/UpdateEvent"}},
-          {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}},
-          {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}}}}};
-=======
     asyncResp->res.jsonValue["@odata.type"] =
         "#MessageRegistryFileCollection.MessageRegistryFileCollection";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Registries";
     asyncResp->res.jsonValue["Name"] = "MessageRegistryFile Collection";
     asyncResp->res.jsonValue["Description"] =
         "Collection of MessageRegistryFiles";
-    asyncResp->res.jsonValue["Members@odata.count"] = 4;
+    asyncResp->res.jsonValue["Members@odata.count"] = 5;
 
     nlohmann::json& members = asyncResp->res.jsonValue["Members"];
     for (const char* memberName :
-         std::to_array({"Base", "TaskEvent", "ResourceEvent", "OpenBMC"}))
+         std::to_array({"Base", "TaskEvent", "ResourceEvent", "OpenBMC",
+                        "BiosAttributeRegistry"}))
     {
         nlohmann::json::object_t member;
         member["@odata.id"] = crow::utility::urlFromPieces(
             "redfish", "v1", "Registries", memberName);
         members.emplace_back(std::move(member));
     }
->>>>>>> origin/master
 }
 
 inline void requestRoutesMessageRegistryFileCollection(App& app)
@@ -225,7 +209,7 @@ inline void handleMessageRegistryGet(
     {
         header = &message_registries::update_event::header;
         for (const message_registries::MessageEntry& entry :
-                message_registries::update_event::registry)
+             message_registries::update_event::registry)
         {
             registryEntries.emplace_back(&entry);
         }
