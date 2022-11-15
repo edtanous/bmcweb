@@ -460,14 +460,15 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
                 break;
             }
 
-            result = std::visit(
-                         [&item, &unpackSpec, &res](auto&& val) {
-                using ContainedT =
-                    std::remove_pointer_t<std::decay_t<decltype(val)>>;
-                return details::unpackValue<ContainedT>(
-                    item.value(), unpackSpec.key, res, *val);
-                         },
-                         unpackSpec.value) &&
+            result =
+                std::visit(
+                    [&item, &unpackSpec, &res](auto&& val) {
+                        using ContainedT =
+                            std::remove_pointer_t<std::decay_t<decltype(val)>>;
+                        return details::unpackValue<ContainedT>(
+                            item.value(), unpackSpec.key, res, *val);
+                    },
+                    unpackSpec.value) &&
                 result;
 
             unpackSpec.complete = true;
@@ -487,9 +488,9 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
         {
             bool isOptional = std::visit(
                 [](auto&& val) {
-                using ContainedType =
-                    std::remove_pointer_t<std::decay_t<decltype(val)>>;
-                return details::IsOptional<ContainedType>::value;
+                    using ContainedType =
+                        std::remove_pointer_t<std::decay_t<decltype(val)>>;
+                    return details::IsOptional<ContainedType>::value;
                 },
                 perUnpack.value);
             if (isOptional)
@@ -518,6 +519,52 @@ void packVariant(std::span<PerUnpack> toPack, std::string_view key,
     toPack[0].value = &first;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     packVariant(toPack.subspan(1), std::forward<UnpackTypes&&>(in)...);
+}
+
+template <typename... UnpackTypes>
+bool readJson(nlohmann::json& jsonRequest, crow::Response& res, const char* key,
+              UnpackTypes&... in)
+{
+    bool result = true;
+    if (!jsonRequest.is_object())
+    {
+        BMCWEB_LOG_DEBUG << "Json value is not an object";
+        messages::unrecognizedRequestBody(res);
+        return false;
+    }
+
+    if (jsonRequest.empty())
+    {
+        BMCWEB_LOG_DEBUG << "Json value is empty";
+        messages::emptyJSON(res);
+        return false;
+    }
+
+    std::bitset<(sizeof...(in) + 1) / 2> handled(0);
+    for (const auto& item : jsonRequest.items())
+    {
+        result =
+            details::readJsonValues<(sizeof...(in) + 1) / 2, 0, UnpackTypes...>(
+                item.key(), item.value(), res, handled, key, in...) &&
+            result;
+    }
+
+    BMCWEB_LOG_DEBUG << "JSON result is: " << result;
+
+    return details::handleMissing(handled, res, key, in...) && result;
+}
+
+template <typename... UnpackTypes>
+bool readJson(const crow::Request& req, crow::Response& res, const char* key,
+              UnpackTypes&... in)
+{
+    nlohmann::json jsonRequest;
+    if (!json_util::processJsonFromRequest(res, req, jsonRequest))
+    {
+        BMCWEB_LOG_DEBUG << "Json value not readable";
+        return false;
+    }
+    return readJson(jsonRequest, res, key, in...);
 }
 
 template <typename FirstType, typename... UnpackTypes>
@@ -549,8 +596,8 @@ inline std::optional<nlohmann::json>
     }
     std::erase_if(*object,
                   [](const std::pair<std::string, nlohmann::json>& item) {
-        return item.first.starts_with("@odata.");
-    });
+                      return item.first.starts_with("@odata.");
+                  });
     if (object->empty())
     {
         //  If the update request only contains OData annotations, the service
