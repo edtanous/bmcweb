@@ -32,7 +32,6 @@ namespace redfish
 
 // Match signals added on software path
 static std::unique_ptr<sdbusplus::bus::match::match> fwUpdateMatcher;
-static std::unique_ptr<sdbusplus::bus::match::match> fwUpdateErrorMatcher;
 // Only allow one update at a time
 static bool fwUpdateInProgress = false;
 // Timer for software available
@@ -44,7 +43,6 @@ inline static void cleanUp()
 {
     fwUpdateInProgress = false;
     fwUpdateMatcher = nullptr;
-    fwUpdateErrorMatcher = nullptr;
 }
 inline static void activateImage(const std::string& objPath,
                                  const std::string& service)
@@ -430,8 +428,7 @@ static void
 // then no asyncResp updates will occur
 static bool monitorForSoftwareAvailable(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const crow::Request& req, const std::string& url,
-    int timeoutTimeSeconds = 10)
+    const crow::Request& req, int timeoutTimeSeconds = 10)
 {
     // Only allow one FW update at a time
     if (fwUpdateInProgress != false)
@@ -488,88 +485,6 @@ static bool monitorForSoftwareAvailable(
         "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
         "member='InterfacesAdded',path='/'",
         callback);
-
-    fwUpdateErrorMatcher = std::make_unique<sdbusplus::bus::match::match>(
-        *crow::connections::systemBus,
-        "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
-        "member='InterfacesAdded',"
-        "path='/xyz/openbmc_project/logging'",
-        [asyncResp, url](sdbusplus::message::message& m) {
-            std::vector<
-                std::pair<std::string, dbus::utility::DBusPropertiesMap>>
-                interfacesProperties;
-            sdbusplus::message::object_path objPath;
-            m.read(objPath, interfacesProperties);
-            BMCWEB_LOG_DEBUG << "obj path = " << objPath.str;
-            for (const std::pair<std::string, dbus::utility::DBusPropertiesMap>&
-                     interface : interfacesProperties)
-            {
-                if (interface.first == "xyz.openbmc_project.Logging.Entry")
-                {
-                    for (const std::pair<std::string,
-                                         dbus::utility::DbusVariantType>&
-                             value : interface.second)
-                    {
-                        if (value.first != "Message")
-                        {
-                            continue;
-                        }
-                        const std::string* type =
-                            std::get_if<std::string>(&value.second);
-                        if (type == nullptr)
-                        {
-                            // if this was our message, timeout will cover it
-                            return;
-                        }
-                        fwAvailableTimer = nullptr;
-                        if (*type ==
-                            "xyz.openbmc_project.Software.Image.Error.UnTarFailure")
-                        {
-                            redfish::messages::invalidUpload(
-                                asyncResp->res, url, "Invalid archive");
-                        }
-                        else if (*type ==
-                                 "xyz.openbmc_project.Software.Image.Error."
-                                 "ManifestFileFailure")
-                        {
-                            redfish::messages::invalidUpload(
-                                asyncResp->res, url, "Invalid manifest");
-                        }
-                        else if (
-                            *type ==
-                            "xyz.openbmc_project.Software.Image.Error.ImageFailure")
-                        {
-                            redfish::messages::invalidUpload(
-                                asyncResp->res, url, "Invalid image format");
-                        }
-                        else if (
-                            *type ==
-                            "xyz.openbmc_project.Software.Version.Error.AlreadyExists")
-                        {
-                            redfish::messages::invalidUpload(
-                                asyncResp->res, url,
-                                "Image version already exists");
-
-                            redfish::messages::resourceAlreadyExists(
-                                asyncResp->res,
-                                "UpdateService.v1_5_0.UpdateService", "Version",
-                                "uploaded version");
-                        }
-                        else if (
-                            *type ==
-                            "xyz.openbmc_project.Software.Image.Error.BusyFailure")
-                        {
-                            redfish::messages::resourceExhaustion(
-                                asyncResp->res, url);
-                        }
-                        else
-                        {
-                            redfish::messages::internalError(asyncResp->res);
-                        }
-                    }
-                }
-            }
-        });
 
     loggingMatch = std::make_unique<sdbusplus::bus::match::match>(
         *crow::connections::systemBus,
@@ -669,10 +584,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
 
             // Setup callback for when new software detected
             // Give TFTP 10 minutes to complete
-            (void)monitorForSoftwareAvailable(
-                asyncResp, req,
-                "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
-                600);
+            (void)monitorForSoftwareAvailable(asyncResp, req, 600);
 
             // TFTP can take up to 10 minutes depending on image size and
             // connection speed. Return to caller as soon as the TFTP operation
@@ -1184,8 +1096,7 @@ inline void requestRoutesUpdateService(App& app)
                     return;
                 }
                 // Setup callback for when new software detected
-                if (monitorForSoftwareAvailable(asyncResp, req,
-                                                "/redfish/v1/UpdateService"))
+                if (monitorForSoftwareAvailable(asyncResp, req))
                 {
                     // don't copy the image, update already in progress.
                     BMCWEB_LOG_ERROR << "Update already in progress.";
