@@ -192,8 +192,8 @@ static void
                         objInfo) mutable {
                     if (errorCode)
                     {
-                        BMCWEB_LOG_DEBUG << "error_code = " << errorCode;
-                        BMCWEB_LOG_DEBUG << "error msg = "
+                        BMCWEB_LOG_ERROR << "error_code = " << errorCode;
+                        BMCWEB_LOG_ERROR << "error msg = "
                                          << errorCode.message();
                         if (asyncResp)
                         {
@@ -222,6 +222,7 @@ static void
                     std::string swID = objectPath.filename();
                     if (swID.empty())
                     {
+                        BMCWEB_LOG_ERROR << "Software Id is empty";
                         messages::internalError(asyncResp->res);
                         return;
                     }

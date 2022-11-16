@@ -24,6 +24,7 @@ option('redfish-host-logger', type : 'feature', value : 'enabled', description :
 option('redfish-dbus-event', type : 'feature', value : 'disabled', description : 'Enable Redfish event service pushes based on DBUS signals of DBUS log service transactions.')
 option('redfish-provisioning-feature', type : 'feature', value : 'disabled', description : 'Enable provisioning feature support in redfish. Paths are under \'/redfish/v1/Systems/system/\'')
 option('bmcweb-logging', type : 'feature', value : 'disabled', description : 'Enable output the extended debug logs')
+option ('bmcweb-logging-log-level', type : 'integer', min : 0, max : 4, value : 3, description : 'log level for bmcweb logging. Default is 3(Error and above). Enum Mapping Debug = 0, Info = 1, Warning = 2, Error = 3, Critical =4.')
 option('basic-auth', type : 'feature', value : 'enabled', description : '''Enable basic authentication''')
 option('session-auth', type : 'feature', value : 'enabled', description : '''Enable session authentication''')
 option('xtoken-auth', type : 'feature', value : 'enabled', description : '''Enable xtoken authentication''')

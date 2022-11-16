@@ -37,4 +37,6 @@ constexpr const int mfgTestTimeout = @MFG_TEST_TIMEOUT@;
 constexpr const char* platformTotalPowerSensorName = @PLATFORM_TOTAL_POWER_SENSOR_NAME@;
 
 constexpr const char* platformPowerControlSensorName = @PLATFORM_POWER_CONTOL_SENSOR_NAME@;
+
+constexpr const uint8_t bmcwebLogLevel = @BMCWEB_LOG_LEVEL@;
 // clang-format on

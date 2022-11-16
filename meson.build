@@ -341,6 +341,7 @@ conf_data.set('STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND', get_option('stalesensor-
 conf_data.set('PLATFORM_METRICS_SENSING_INTERVAL', get_option('platform-metrics-sensing-interval'))
 conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-location'))
 conf_data.set('UPDATE_SERVICE_TASK_TIMEOUT', get_option('update-service-task-timeout'))
+conf_data.set('BMCWEB_LOG_LEVEL', get_option('bmcweb-logging-log-level'))
 conf_data.set('MFG_TEST_TIMEOUT', get_option('manufacturing-test-timeout'))
 conf_data.set_quoted('PLATFORM_SYSTEM_ID', get_option('platform-system-id'))
 conf_data.set_quoted('PLATFORM_BMC_ID', get_option('platform-bmc-id'))
