@@ -586,7 +586,7 @@ class Connection :
                     }
                     else
                     {
-                        BMCWEB_LOG_ERROR
+                        BMCWEB_LOG_DEBUG
                             << this << " Error while reading: " << ec.message();
                     }
                 }

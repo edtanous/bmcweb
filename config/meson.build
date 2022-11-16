@@ -30,6 +30,7 @@ conf_data.set_quoted('PLATFORM_METRICS_ID', get_option('platform-metrics-id'))
 conf_data.set_quoted('HOST_IFACE_CHANNEL', get_option('host-iface-channel'))
 conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
 conf_data.set('OTP_PROVISIONING_STATUS_FILE_PATH', get_option('otp-provisioning-status-file-path'))
+conf_data.set('BMCWEB_LOG_LEVEL', get_option('bmcweb-logging-log-level'))
 
 conf_h_dep = declare_dependency(
     include_directories: include_directories('.'),
