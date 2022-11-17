@@ -522,39 +522,6 @@ void packVariant(std::span<PerUnpack> toPack, std::string_view key,
 }
 
 template <typename... UnpackTypes>
-bool readJson(nlohmann::json& jsonRequest, crow::Response& res, const char* key,
-              UnpackTypes&... in)
-{
-    bool result = true;
-    if (!jsonRequest.is_object())
-    {
-        BMCWEB_LOG_DEBUG << "Json value is not an object";
-        messages::unrecognizedRequestBody(res);
-        return false;
-    }
-
-    if (jsonRequest.empty())
-    {
-        BMCWEB_LOG_DEBUG << "Json value is empty";
-        messages::emptyJSON(res);
-        return false;
-    }
-
-    std::bitset<(sizeof...(in) + 1) / 2> handled(0);
-    for (const auto& item : jsonRequest.items())
-    {
-        result =
-            details::readJsonValues<(sizeof...(in) + 1) / 2, 0, UnpackTypes...>(
-                item.key(), item.value(), res, handled, key, in...) &&
-            result;
-    }
-
-    BMCWEB_LOG_DEBUG << "JSON result is: " << result;
-
-    return details::handleMissing(handled, res, key, in...) && result;
-}
-
-template <typename... UnpackTypes>
 bool readJson(const crow::Request& req, crow::Response& res, const char* key,
               UnpackTypes&... in)
 {

@@ -413,7 +413,6 @@ class Connection :
             return;
         }
 
-        auto asyncResp = std::make_shared<bmcweb::AsyncResp>(res);
         handler->handle(thisReq, asyncResp);
     }
 

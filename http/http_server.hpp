@@ -132,6 +132,7 @@ class Server
             adaptorCtx = sslContext;
             handler->ssl(std::move(sslContext));
         }
+#endif
     }
 
     bool fileHasCredentials(const std::string &filename) 

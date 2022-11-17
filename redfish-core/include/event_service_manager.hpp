@@ -326,7 +326,7 @@ class Event
     std::string resourceType;
 
   private:
-    const message_registries::Message* registryMsg;
+    const registries::Message* registryMsg;
     bool valid;
 
   public:
@@ -738,8 +738,9 @@ class Subscription : public persistent_data::UserSubscription
                                   {"Context", customText},
                                   {"Events", logEntry}};
 
-            this->sendEvent(msg.dump(2, ' ', true,
-                                     nlohmann::json::error_handler_t::replace));
+            std::string strMsg =
+            msg.dump(2, ' ', true, nlohmann::json::error_handler_t::replace);
+            this->sendEvent(strMsg);
         }
     }
 
@@ -2082,8 +2083,8 @@ class EventServiceManager
                     timestampPtr = std::get_if<uint64_t>(&val);
                     if (timestampPtr != nullptr)
                     {
-                        timestamp = std::move(crow::utility::getDateTimeStdtime(
-                            crow::utility::getTimestamp(*timestampPtr)));
+                        timestamp = std::move(redfish::time_utils::getDateTimeStdtime(
+                            redfish::time_utils::getTimestamp(*timestampPtr)));
                     }
                     else
                     {

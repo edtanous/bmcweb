@@ -39,6 +39,7 @@ constexpr std::array registry =
             "Indicates that a license has been added.",
             "A license for '%1' has been added.  The following message was returned: '%2'.",
             "OK",
+            "OK",
             2,
             {
                 "string",
@@ -51,6 +52,7 @@ constexpr std::array registry =
         {
             "Indicates that a license has changed.",
             "A license for '%1' has changed.  The following message was returned: '%2'.",
+            "Warning",
             "Warning",
             2,
             {
@@ -65,6 +67,7 @@ constexpr std::array registry =
             "Indicates that a license has expired.",
             "A license for '%1' has expired.  The following message was returned: '%2'.",
             "Warning",
+            "Warning",
             2,
             {
                 "string",
@@ -78,6 +81,7 @@ constexpr std::array registry =
             "Indicates that one or more resource properties have changed.  This is not used whenever there is another event message for that specific change, such as only the state has changed.",
             "One or more resource properties have changed.",
             "OK",
+            "OK",
             0,
             {},
             "None.",
@@ -88,6 +92,7 @@ constexpr std::array registry =
             "Indicates that all conditions of a successful creation operation have been met.",
             "The resource has been created successfully.",
             "OK",
+            "OK",
             0,
             {},
             "None",
@@ -97,6 +102,7 @@ constexpr std::array registry =
         {
             "Indicates that a specified resource property has cleared its error threshold.  Examples would be drive I/O errors, or network link errors.",
             "The resource property %1 has cleared the error threshold of value %2.",
+            "OK",
             "OK",
             2,
             {
@@ -111,6 +117,7 @@ constexpr std::array registry =
             "Indicates that a specified resource property has exceeded its error threshold.  Examples would be drive I/O errors, or network link errors.",
             "The resource property %1 has exceeded error threshold of value %2.",
             "Critical",
+            "Critical",
             2,
             {
                 "string",
@@ -123,6 +130,7 @@ constexpr std::array registry =
         {
             "Indicates that a specified resource property has corrected errors.  Examples would be drive I/O errors, or network link errors.",
             "The resource property %1 has corrected errors of type '%2'.",
+            "OK",
             "OK",
             2,
             {
@@ -137,6 +145,7 @@ constexpr std::array registry =
             "Indicates that a specified resource property has detected errors.  Examples would be drive I/O errors, or network link errors.",
             "The resource property %1 has detected errors of type '%2'.",
             "Warning",
+            "Warning",
             2,
             {
                 "string",
@@ -150,6 +159,7 @@ constexpr std::array registry =
             "Indicates that all conditions of a successful remove operation have been met.",
             "The resource has been removed successfully.",
             "OK",
+            "OK",
             0,
             {},
             "None",
@@ -160,6 +170,7 @@ constexpr std::array registry =
             "Indicates that a self-test has completed.",
             "A self-test has completed.",
             "OK",
+            "OK",
             0,
             {},
             "None.",
@@ -169,6 +180,7 @@ constexpr std::array registry =
         {
             "Indicates that a self-test has failed.  Suggested resolution may be provided as OEM data.",
             "A self-test has failed.  The following message was returned: '%1'.",
+            "Critical",
             "Critical",
             1,
             {
@@ -181,6 +193,7 @@ constexpr std::array registry =
         {
             "Indicates that the health of a resource has changed to Critical.",
             "The health of resource `%1` has changed to %2.",
+            "Critical",
             "Critical",
             2,
             {
@@ -195,6 +208,7 @@ constexpr std::array registry =
             "Indicates that the health of a resource has changed to OK.",
             "The health of resource '%1' has changed to %2.",
             "OK",
+            "OK",
             2,
             {
                 "string",
@@ -207,6 +221,7 @@ constexpr std::array registry =
         {
             "Indicates that the health of a resource has changed to Warning.",
             "The health of resource `%1` has changed to %2.",
+            "Warning",
             "Warning",
             2,
             {
@@ -221,6 +236,7 @@ constexpr std::array registry =
             "Indicates that an incompatible version of software has been detected.  Examples may be after a component or system level software update.",
             "An incompatible version of software '%1' has been detected.",
             "Warning",
+            "Warning",
             1,
             {
                 "string",
@@ -232,6 +248,7 @@ constexpr std::array registry =
         {
             "Indicates that a specified resource property has cleared its warning threshold.  Examples would be drive I/O errors, or network link errors.  Suggested resolution may be provided as OEM data.",
             "The resource property %1 has cleared the warning threshold of value %2.",
+            "OK",
             "OK",
             2,
             {
@@ -246,6 +263,7 @@ constexpr std::array registry =
             "Indicates that a specified resource property has exceeded its warning threshold.  Examples would be drive I/O errors, or network link errors.  Suggested resolution may be provided as OEM data.",
             "The resource property %1 has exceeded its warning threshold of value %2.",
             "Warning",
+            "Warning",
             2,
             {
                 "string",
@@ -258,6 +276,7 @@ constexpr std::array registry =
         {
             "Indicates that the URI for a resource has changed.  Examples for this would be physical component replacement or redistribution.",
             "The URI for the resource has changed.",
+            "OK",
             "OK",
             0,
             {},

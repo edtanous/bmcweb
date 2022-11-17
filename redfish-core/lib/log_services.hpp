@@ -275,53 +275,53 @@ inline static int getJournalMetadata(sd_journal* journal,
     return ret;
 }
 
-static bool getSkipParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const crow::Request& req, uint64_t& skip)
-{
-    boost::urls::query_params_view::iterator it = req.urlParams.find("$skip");
-    if (it != req.urlParams.end())
-    {
-        std::string skipParam = it->value();
-        char* ptr = nullptr;
-        skip = std::strtoul(skipParam.c_str(), &ptr, 10);
-        if (skipParam.empty() || *ptr != '\0')
-        {
+// static bool getSkipParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+//                          const crow::Request& req, uint64_t& skip)
+// {
+//     boost::urls::query_params_view::iterator it = req.urlParams.find("$skip");
+//     if (it != req.urlParams.end())
+//     {
+//         std::string skipParam = it->value();
+//         char* ptr = nullptr;
+//         skip = std::strtoul(skipParam.c_str(), &ptr, 10);
+//         if (skipParam.empty() || *ptr != '\0')
+//         {
 
-            messages::queryParameterValueTypeError(
-                asyncResp->res, std::string(skipParam), "$skip");
-            return false;
-        }
-    }
-    return true;
-}
+//             messages::queryParameterValueTypeError(
+//                 asyncResp->res, std::string(skipParam), "$skip");
+//             return false;
+//         }
+//     }
+//     return true;
+// }
 
-static constexpr const uint64_t maxEntriesPerPage = 1000;
-static bool getTopParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const crow::Request& req, uint64_t& top)
-{
-    boost::urls::query_params_view::iterator it = req.urlParams.find("$top");
-    if (it != req.urlParams.end())
-    {
-        std::string topParam = it->value();
-        char* ptr = nullptr;
-        top = std::strtoul(topParam.c_str(), &ptr, 10);
-        if (topParam.empty() || *ptr != '\0')
-        {
-            messages::queryParameterValueTypeError(
-                asyncResp->res, std::string(topParam), "$top");
-            return false;
-        }
-        if (top < 1U || top > maxEntriesPerPage)
-        {
+// static constexpr const uint64_t maxEntriesPerPage = 1000;
+// static bool getTopParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+//                         const crow::Request& req, uint64_t& top)
+// {
+//     boost::urls::query_params_view::iterator it = req.urlParams.find("$top");
+//     if (it != req.urlParams.end())
+//     {
+//         std::string topParam = it->value();
+//         char* ptr = nullptr;
+//         top = std::strtoul(topParam.c_str(), &ptr, 10);
+//         if (topParam.empty() || *ptr != '\0')
+//         {
+//             messages::queryParameterValueTypeError(
+//                 asyncResp->res, std::string(topParam), "$top");
+//             return false;
+//         }
+//         if (top < 1U || top > maxEntriesPerPage)
+//         {
 
-            messages::queryParameterOutOfRange(
-                asyncResp->res, std::to_string(top), "$top",
-                "1-" + std::to_string(maxEntriesPerPage));
-            return false;
-        }
-    }
-    return true;
-}
+//             messages::queryParameterOutOfRange(
+//                 asyncResp->res, std::to_string(top), "$top",
+//                 "1-" + std::to_string(maxEntriesPerPage));
+//             return false;
+//         }
+//     }
+//     return true;
+// }
 
 inline static bool getEntryTimestamp(sd_journal* journal,
                                      std::string& entryTimestamp)
@@ -4799,7 +4799,7 @@ static void getPostCodeForBoot(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
 static void
     getCurrentBootNumber(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                         const uint64_t skip, const uint64_t top)
+                         size_t skip, size_t top)
 {
     uint64_t entryCount = 0;
     sdbusplus::asio::getProperty<uint16_t>(
@@ -4848,16 +4848,8 @@ inline void requestRoutesPostCodesEntryCollection(App& app)
                 asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
                 asyncResp->res.jsonValue["Members@odata.count"] = 0;
 
-                uint64_t skip = 0;
-                uint64_t top = maxEntriesPerPage; // Show max entries by default
-                if (!getSkipParam(asyncResp, req, skip))
-                {
-                    return;
-                }
-                if (!getTopParam(asyncResp, req, top))
-                {
-                    return;
-                }
+                size_t skip = delegatedQuery.skip.value_or(0);
+                size_t top = delegatedQuery.top.value_or(query_param::Query::maxTop);
                 getCurrentBootNumber(asyncResp, skip, top);
             });
 }
@@ -4915,8 +4907,9 @@ inline void requestRoutesPostCodesEntryAdditionalData(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& postCodeID) {
-                if (!http_helpers::isOctetAccepted(
-                        req.getHeaderValue("Accept")))
+                if (!http_helpers::isContentTypeAllowed(
+                req.getHeaderValue("Accept"),
+                http_helpers::ContentType::OctetStream))
                 {
                     asyncResp->res.result(
                         boost::beast::http::status::bad_request);
@@ -5677,7 +5670,9 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const uint32_t& id) {
                 std::string_view accept = req.getHeaderValue("Accept");
-                if (!accept.empty() && !http_helpers::isOctetAccepted(accept))
+                if (!accept.empty() && !http_helpers::isContentTypeAllowed(
+                req.getHeaderValue("Accept"),
+                http_helpers::ContentType::OctetStream))
                 {
                     asyncResp->res.result(
                         boost::beast::http::status::bad_request);

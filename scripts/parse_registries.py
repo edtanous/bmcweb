@@ -94,6 +94,7 @@ def update_registries(files):
                     "        {{\n"
                     "            \"{message[Description]}\",\n"
                     "            \"{message[Message]}\",\n"
+                    "            \"{message[Severity]}\",\n"
                     "            \"{message[MessageSeverity]}\",\n"
                     "            {message[NumberOfArgs]},\n"
                     "            {{".format(
@@ -216,7 +217,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--registries', type=str,
-        default="base,task_event,resource_event, update_event, privilege",
+        default="base,task_event,resource_event,update_event,privilege",
         help="Comma delimited list of registries to update")
 
     args = parser.parse_args()

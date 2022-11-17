@@ -3,6 +3,7 @@
 
 #include "sensors.hpp"
 #include "utils/dbus_utils.hpp"
+#include "utils/time_utils.hpp"
 
 namespace redfish
 {
@@ -159,7 +160,7 @@ inline void processSensorsValue(
                             if (metricUpdatetimestamp != nullptr)
                             {
                                 thisMetric["Timestamp"] =
-                                    crow::utility::getDateTimeUintMs(
+                                    redfish::time_utils::getDateTimeUintMs(
                                         *metricUpdatetimestamp);
                             }
                             else

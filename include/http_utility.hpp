@@ -41,18 +41,6 @@ constexpr std::array<ContentTypePair, 4> contentTypes{{
     {"text/html", ContentType::HTML},
 }};
 
-inline bool isOctetAccepted(std::string_view header)
-{
-    for (const std::string& encoding : parseAccept(header))
-    {
-        if (encoding == "*/*" || encoding == "application/octet-stream")
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 inline ContentType getPreferedContentType(std::string_view header,
                                           std::span<ContentType> preferedOrder)
 {
@@ -88,8 +76,8 @@ inline ContentType getPreferedContentType(std::string_view header,
         const auto* knownContentType =
             std::find_if(contentTypes.begin(), contentTypes.end(),
                          [encoding](const ContentTypePair& pair) {
-                             return pair.contentTypeString == encoding;
-                         });
+            return pair.contentTypeString == encoding;
+            });
 
         if (knownContentType == contentTypes.end())
         {

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <dbus_utility.hpp>
 #include <query.hpp>
 #include <sdbusplus/asio/property.hpp>
