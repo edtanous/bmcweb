@@ -313,6 +313,7 @@ class RedfishService
 
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
+        requestRoutesUpdateServiceCommitImage(app);
     }
 };
 

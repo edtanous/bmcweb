@@ -16,6 +16,8 @@
 #pragma once
 
 #include "bmcweb_config.h"
+#include "commit_image_values_manager.hpp"
+#include "background_copy.hpp"
 
 #include <app.hpp>
 #include <boost/algorithm/string.hpp>
@@ -643,6 +645,9 @@ inline void requestRoutesUpdateService(App& app)
             // Get the MaxImageSizeBytes
             asyncResp->res.jsonValue["MaxImageSizeBytes"] =
                 firmwareImageLimitBytes;
+            asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]["#NvidiaUpdateService.CommitImage"]= {
+                {"target", "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage"},
+                {"@Redfish.ActionInfo", "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo"}};
 
 #ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
             // Update Actions object.
@@ -2204,6 +2209,327 @@ inline void requestRoutesInventorySoftware(App& app)
                     std::array<const char*, 1>{
                         "xyz.openbmc_project.Software.Version"});
             }
+        });
+}
+
+/**
+ * @brief Get allowable values for Commit Image action 
+ * The function gets allowable values from config file
+ * /usr/share/bmcweb/fw_mctp_mapping.json.
+ * @returns Collection of CommitImageValueEntry.
+ */
+inline std::vector<CommitImageValueEntry> getAllowableValuesForCommitImage()
+{
+    CommitImageValuesManager valuesManager;
+    return valuesManager.getAllowableValues();
+}
+
+/**
+ * @brief Check whether firmware inventory is allowable 
+ * The function gets allowable values from config file 
+ * /usr/share/bmcweb/fw_mctp_mapping.json.
+ * and check if the firmware inventory is in this collection
+ * 
+ * @param[in] inventoryPath - firmware inventory path.
+ * @returns boolean value indicates whether firmware inventory 
+ * is allowable.
+ */
+inline bool isInventoryAllowableValue(const std::string_view inventoryPath)
+{
+    bool isAllowable = false;
+
+    std::vector<CommitImageValueEntry> allowableValues = getAllowableValuesForCommitImage();
+    std::vector<CommitImageValueEntry>::iterator it 
+     = find(allowableValues.begin(), allowableValues.end(), static_cast<std::string>(inventoryPath));
+
+    if (it != allowableValues.end())
+    {
+        isAllowable = true;
+    }
+    else
+    {
+        isAllowable = false;
+    }
+
+    return isAllowable;
+}
+
+
+/**
+ * @brief Get allowable value for particular firmware inventory 
+ * The function gets allowable values from config file 
+ * /usr/share/bmcweb/fw_mctp_mapping.json.
+ * and returns the allowable value if exists in the collection
+ * 
+ * @param[in] inventoryPath - firmware inventory path.
+ * @returns Pair of boolean value if the allowable value exists 
+ * and the object of AllowableValue who contains inventory path 
+ * and assigned to its MCTP EID.
+ */
+inline std::pair<bool, CommitImageValueEntry> getAllowableValue(const std::string_view inventoryPath)
+{
+    std::pair<bool, CommitImageValueEntry> result;
+
+    std::vector<CommitImageValueEntry> allowableValues = getAllowableValuesForCommitImage();
+    std::vector<CommitImageValueEntry>::iterator it 
+     = find(allowableValues.begin(), allowableValues.end(), static_cast<std::string>(inventoryPath));
+
+    if (it != allowableValues.end())
+    {
+        result.second = *it;
+        result.first = true;
+    }
+    else
+    {
+        result.first = false;
+    }
+
+    return result;
+}
+
+/**
+ * @brief Update parameters for GET Method CommitImageInfo
+ *
+ * @param[in] asyncResp Shared pointer to the response message
+ * @param[in] subtree  Collection of objectmappers for 
+ * "/xyz/openbmc_project/software"
+ * 
+ * @return None
+ */
+inline void
+    updateParametersForCommitImageInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                const std::vector<
+                std::pair<std::string,
+                    std::vector<std::pair<
+                    std::string, std::vector<std::string>>>>>&
+                subtree)
+{
+    asyncResp->res.jsonValue["Parameters"] = nlohmann::json::array();
+    nlohmann::json& parameters = asyncResp->res.jsonValue["Parameters"];
+
+    nlohmann::json parameterTargets;
+    parameterTargets["Name"] = "Targets";
+    parameterTargets["Required"] = "false";
+    parameterTargets["DataType"] = "StringArray";
+    parameterTargets["Targets@Redfish.AllowableValues"] = nlohmann::json::array();
+
+    nlohmann::json& allowableValues = parameterTargets["Targets@Redfish.AllowableValues"];
+
+    for (auto& obj : subtree)
+    {
+        sdbusplus::message::object_path path(obj.first);
+        std::string fwId = path.filename();
+        if (fwId.empty())
+        {
+            messages::internalError(asyncResp->res);
+            BMCWEB_LOG_DEBUG << "Cannot parse firmware ID";
+            return;
+        }
+
+        if(isInventoryAllowableValue(obj.first))
+        {
+            allowableValues.push_back("/redfish/v1/UpdateService/FirmwareInventory/" + fwId);
+        }
+    }
+
+    parameters.push_back(parameterTargets);
+}
+
+/**
+ * @brief Handles request POST 
+ * The function triggers Commit Image action
+ * for the list of delivered in the body of request
+ * firmware inventories
+ * 
+ * @param resp Async HTTP response.
+ * @param asyncResp Pointer to object holding response data
+ * @param[in] subtree  Collection of objectmappers for 
+ * "/xyz/openbmc_project/software"
+ * 
+ * @return None
+ */
+inline void handleCommitImagePost( const crow::Request& req,
+                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                const std::vector<
+                std::pair<std::string,
+                    std::vector<std::pair<
+                    std::string, std::vector<std::string>>>>>&
+                subtree)
+{
+    std::optional<std::vector<std::string>> targets;
+    json_util::readJson(req, asyncResp->res,
+                        "Targets", targets);
+
+    bool hasTargets = false;
+    bool hasError = false;
+
+    if(targets && targets.value().empty() == false)
+    {
+        hasTargets = true;
+    }
+
+    if(hasTargets)
+    {
+        std::vector<std::string> targetsCollection = targets.value();
+
+        for (auto& target : targetsCollection)
+        {
+            std::pair<bool, CommitImageValueEntry> result = getAllowableValue(target);
+            if (result.first == true)
+            {
+                uint32_t eid = result.second.mctpEndpointId;
+
+                if(initBackgroundCopy(eid) != 0)
+                {
+                    BMCWEB_LOG_DEBUG << "mctp-vdm-util could not execute backgroundcopy_init.";
+
+                    messages::resourceErrorsDetectedFormatError(asyncResp->res,
+                        result.second.inventoryUri,
+                        "backgroundCopy_init");
+
+                    hasError = true;
+                }
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Cannot find firmware inventory in allowable values";
+                messages::resourceMissingAtURI(asyncResp->res, target);
+
+                hasError = true;
+            }
+        }
+    }
+    else
+    {
+        for (auto& obj : subtree)
+        {       
+            std::pair<bool, CommitImageValueEntry> result = getAllowableValue(obj.first);
+
+            if (result.first == true)
+            {
+                uint32_t eid = result.second.mctpEndpointId;
+                
+                if(initBackgroundCopy(eid) != 0)
+                {
+                    BMCWEB_LOG_DEBUG << "mctp-vdm-util could not execute backgroundcopy_init.";
+
+                    messages::resourceErrorsDetectedFormatError(asyncResp->res,
+                        result.second.inventoryUri,
+                        "backgroundCopy_init");
+
+                    hasError = true;
+                }
+            }
+        }
+    }   
+
+    if(hasError == false)
+    {
+        messages::success(asyncResp->res);
+    }
+}
+
+/**
+ * @brief Register Web Api endpoints for Commit Image functionality
+ * 
+ * @return None
+ */
+inline void requestRoutesUpdateServiceCommitImage(App& app)
+{
+    BMCWEB_ROUTE(app, 
+        "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo")
+        .privileges(redfish::privileges::getSoftwareInventoryCollection)
+        .methods(
+            boost::beast::http::verb::
+                get)([](const crow::Request&,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+
+            asyncResp->res.jsonValue["@odata.type"] =
+               "#UpdateService.v1_11_0.CommitImageActionInfo";
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo";
+            asyncResp->res.jsonValue["Name"] = "Commit Image Action Information";
+            asyncResp->res.jsonValue["Id"] = "CommitImageActionInfo";
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp{asyncResp}](
+                    const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string,
+                                  std::vector<std::pair<
+                                      std::string, std::vector<std::string>>>>>&
+                        subtree) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    updateParametersForCommitImageInfo(asyncResp, subtree);
+                },
+                // Note that only firmware levels associated with a device
+                // are stored under /xyz/openbmc_project/software therefore
+                // to ensure only real FirmwareInventory items are returned,
+                // this full object path must be used here as input to
+                // mapper
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/software", static_cast<int32_t>(0),
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Software.Version"});
+        });
+
+    BMCWEB_ROUTE(app,
+        "/redfish/v1/UpdateService/Oem/Nvidia/CommitImage/")
+        .privileges(redfish::privileges::postUpdateService)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                
+            BMCWEB_LOG_DEBUG << "doPost...";
+
+            if (fwUpdateInProgress == true)
+            {
+                redfish::messages::updateInProgressMsg(
+                    asyncResp->res, 
+                    "Retry the operation once firmware update operation is complete.");
+
+                // don't copy the image, update already in progress.
+                BMCWEB_LOG_ERROR << "Cannot execute commit image. Update firmware is in progress.";
+
+                return;
+            }
+
+            crow::connections::systemBus->async_method_call(
+                [req, asyncResp{asyncResp}](
+                    const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string,
+                                  std::vector<std::pair<
+                                      std::string, std::vector<std::string>>>>>&
+                        subtree) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    handleCommitImagePost(req, asyncResp, subtree);
+
+                },
+                // Note that only firmware levels associated with a device
+                // are stored under /xyz/openbmc_project/software therefore
+                // to ensure only real FirmwareInventory items are returned,
+                // this full object path must be used here as input to
+                // mapper
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/software", static_cast<int32_t>(0),
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Software.Version"});
+
         });
 }
 
