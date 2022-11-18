@@ -427,7 +427,7 @@ inline void requestRoutesEROTChassisCertificate(App& app)
  * The function set all delivered properties 
  * in request body on chassis defined in chassisId 
  * The function is designed only for chassis
- * which is ERoot
+ * which is ERoT
  * 
  * @param resp Async HTTP response.
  * @param asyncResp Pointer to object holding response data

@@ -309,7 +309,7 @@ class RedfishService
         requestRoutesServiceConditions(app);
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
-
+        requestRoutesUpdateServiceCommitImage(app);
         // Note, this must be the last route registered
         requestRoutesRedfish(app);
     }

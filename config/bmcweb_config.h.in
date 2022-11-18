@@ -8,6 +8,7 @@
 #define PLATFORMMETRICSID @PLATFORM_METRICS_ID@
 
 #define HOSTIFACECHANNEL @HOST_IFACE_CHANNEL@
+#define FWMCTPMAPPINGJSON @FW_MCTP_MAPPING_JSON@
 
 
 constexpr const int bmcwebInsecureDisableXssPrevention =

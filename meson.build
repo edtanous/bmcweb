@@ -34,6 +34,7 @@ optimization = get_option('optimization')
 summary('Build Type',build, section : 'Build Info')
 summary('Optimization',optimization, section : 'Build Info')
 
+package_datadir = join_paths(get_option('prefix'), get_option('datadir'), meson.project_name())
 
 # remove debug information for minsize buildtype
 if(get_option('buildtype') == 'minsize')

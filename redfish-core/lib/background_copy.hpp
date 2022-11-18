@@ -162,3 +162,19 @@ inline int enableBackgroundCopy(uint32_t endpointId, bool enabled)
 
     return mctpVdmUtilWrapper.getReturnStatus();
 }
+
+/**
+ *@brief Execute backgroundcopy_init command
+ *
+ * @param endpointId the EID which is used 
+ * by mctp-vdm-util tool to call request on MCTP
+ * 
+ * @return exit code form mctp-vdm-tool.
+ */
+inline int initBackgroundCopy(uint32_t endpointId)
+{
+    MctpVdmUtil mctpVdmUtilWrapper(endpointId);
+    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_INIT);
+
+    return mctpVdmUtilWrapper.getReturnStatus();
+}
