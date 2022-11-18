@@ -1619,4 +1619,5 @@ inline void requestRoutesBiosAttrRegistryService(App& app)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleBiosAttrRegistryGet, std::ref(app)));
 
-} // namespace redfish
+} 
+}// namespace redfish

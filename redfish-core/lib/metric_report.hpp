@@ -22,7 +22,7 @@ namespace telemetry
 {
 constexpr const char* metricReportDefinitionUriStr =
     "/redfish/v1/TelemetryService/MetricReportDefinitions";
-constexpr const std::string metricReportUri =
+constexpr const char* metricReportUri =
     "/redfish/v1/TelemetryService/MetricReports";
 
 using Readings =

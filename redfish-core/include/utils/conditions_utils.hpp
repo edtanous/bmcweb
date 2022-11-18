@@ -22,7 +22,7 @@ namespace conditions_utils
 
 inline void populateServiceConditions(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisId)
+    std::string_view chassisId)
 {
     bool isDevice = !chassisId.empty();
     if (isDevice)

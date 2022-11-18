@@ -1,6 +1,8 @@
 #pragma once
-#include <async_resp.hpp>
+#include "background_copy.hpp"
+#include "in_band.hpp"
 
+#include <async_resp.hpp>
 namespace redfish
 {
 
@@ -13,6 +15,9 @@ constexpr const char* switchInvIntf =
     "xyz.openbmc_project.Inventory.Item.Switch";
 
 constexpr const char* bmcInvInterf = "xyz.openbmc_project.Inventory.Item.BMC";
+
+using GetObjectType =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
 
 /**
  * @brief Retrieves valid chassis ID
