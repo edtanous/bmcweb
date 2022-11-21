@@ -90,7 +90,6 @@ class DebugTokenBase
         task->messages.emplace_back(
             messages::taskAborted(
                 std::to_string(task->index)));
-        finish();
     }
 
     void addError(const std::string& desc, const std::string& err)
@@ -177,10 +176,17 @@ class DebugTokenBase
     {
         if (task)
         {
-            task->finishTask();
             if (task->state == "Running")
             {
                 abort("Operation timed out");
+            }
+            // task timer timeout callback already did everything
+            if (task->state != "Cancelled")
+            {
+                task->finishTask();
+                task->match.reset();
+                task->timer.cancel();
+                task->sendTaskEvent(task->state, task->index);
             }
         }
         cleanup();
@@ -483,6 +489,7 @@ class StatusQuery :
         if (entries.size() == 0)
         {
             abort("No MCTP endpoints");
+            finish();
             return;
         }
         size_t size = 0;
@@ -552,6 +559,7 @@ class StatusQuery :
         else
         {
             abort("No valid debug token query responses");
+            finish();
         }
     }
 };
@@ -819,6 +827,7 @@ class Request :
         if (entries.size() == 0)
         {
             abort("No SPDM responders");
+            finish();
             return;
         }
         size_t size = 0;
@@ -891,6 +900,7 @@ class Request :
         else
         {
             abort("No valid debug token request responses");
+            finish();
         }
     }
 };
