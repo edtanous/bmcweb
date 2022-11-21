@@ -3441,29 +3441,72 @@ inline void requestRoutesManager(App& app)
                 "/redfish/v1/Chassis/" + chassisId;
         });
 
-        static bool started = false;
-
-        if (!started)
-        {
-            sdbusplus::asio::getProperty<double>(
-                *crow::connections::systemBus, "org.freedesktop.systemd1",
-                "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
-                "Progress",
-                [asyncResp](const boost::system::error_code ec,
-                            const double& val) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "Error while getting progress";
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                if (val < 1.0)
-                {
-                    asyncResp->res.jsonValue["Status"]["State"] = "Starting";
-                    started = true;
-                }
-                });
-        }
+        crow::connections::systemBus->async_method_call(
+                [asyncResp, bmcId](
+                    const boost::system::error_code ec,
+                    const std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+                        subtree) {
+                            if(ec)
+                            {
+                                sdbusplus::asio::getProperty<double>(
+                                *crow::connections::systemBus, "org.freedesktop.systemd1",
+                                "/org/freedesktop/systemd1",
+                                "org.freedesktop.systemd1.Manager", "Progress",
+                                [asyncResp](const boost::system::error_code ec,
+                                            const double& val) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_ERROR << "Error while getting progress";
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    if (val < 1.0)
+                                    {
+                                        asyncResp->res.jsonValue["Status"]["State"] =
+                                            "Starting";
+                                    }
+                                });
+                            }
+                            else
+                            {
+                                // Iterate over all retrieved ObjectPaths.
+                                for (const std::pair<
+                                        std::string,
+                                        std::vector<std::pair<
+                                            std::string, std::vector<std::string>>>>&
+                                        object : subtree)
+                                {
+                                    const std::string& path = object.first;
+                                    const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>&
+                                        connectionNames = object.second;
+                                    if (!boost::ends_with(path, PLATFORMBMCID))
+                                    {
+                                        continue;
+                                    }
+                                    const std::string& connectionName =
+                                                                connectionNames[0].first;
+                                    const std::vector<std::string>& interfaces =
+                                                                connectionNames[0].second;
+                                    for (const auto& interfaceName : interfaces)
+                                    {
+                                        if (interfaceName ==
+                                                "xyz.openbmc_project.State."
+                                                "Decorator.OperationalStatus")
+                                        {
+                                            getManagerState(asyncResp, connectionName,
+                                                            path);
+                                        }
+                                    }
+                                }
+                            }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                    "/xyz/openbmc_project/inventory", int32_t(0),
+                    std::array<const char*, 1>{"xyz.openbmc_project.Inventory."
+                                               "Item.ManagementService"});
 
         crow::connections::systemBus->async_method_call(
             [asyncResp](
