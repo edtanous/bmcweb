@@ -15,7 +15,7 @@
 */
 #pragma once
 
-#include "error_messages.hpp"
+//#include "error_messages.hpp"
 #include "health.hpp"
 #include "redfish_util.hpp"
 #include "utils/dbus_utils.hpp"
@@ -2917,7 +2917,8 @@ inline void
     // Validate privilege type
     if (privilege == 0)
     {
-        messages::invalidObject(resp->res, privilegeType);
+        messages::invalidObject(resp->res,
+            crow::utility::urlFromPieces(privilegeType));
         return;
     }
 

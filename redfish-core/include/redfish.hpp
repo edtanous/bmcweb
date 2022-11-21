@@ -27,12 +27,12 @@
 #include "erot_chassis.hpp"
 #include "ethernet.hpp"
 // #include "event_service.hpp"
-//#include "fabric.hpp"
+#include "fabric.hpp"
 #include "host_interface.hpp"
 #include "hypervisor_system.hpp"
 // #include "log_services.hpp"
 #include "manager_diagnostic_data.hpp"
-// #include "managers.hpp"
+#include "managers.hpp"
 #include "memory.hpp"
 // #include "message_registries.hpp"
 #include "metric_report.hpp"
@@ -98,12 +98,12 @@ class RedfishService
         requestRoutesPowerSupplyCollection(app);
         requestRoutesPowerSupply(app);
 #endif
-        //         requestRoutesManagerCollection(app);
-        //         requestRoutesManager(app);
-        //         requestRoutesManagerResetAction(app);
-        //         requestRoutesManagerResetActionInfo(app);
-        //         requestRoutesManagerResetToDefaultsAction(app);
-        //         requestRoutesManagerDiagnosticData(app);
+        requestRoutesManagerCollection(app);
+        requestRoutesManager(app);
+        requestRoutesManagerResetAction(app);
+        requestRoutesManagerResetActionInfo(app);
+        requestRoutesManagerResetToDefaultsAction(app);
+        requestRoutesManagerDiagnosticData(app);
         requestRoutesChassisCollection(app);
         requestRoutesChassis(app);
         requestRoutesChassisResetAction(app);
@@ -288,19 +288,19 @@ class RedfishService
         requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReport(app);
 #endif
-        //         requestRoutesFabricCollection(app);
-        //         requestRoutesFabric(app);
-        //         requestRoutesSwitchCollection(app);
-        //         requestRoutesSwitch(app);
-        //         requestRoutesNVSwitchReset(app);
-        //         requestRoutesSwitchMetrics(app);
-        //         requestRoutesPortCollection(app);
-        //         requestRoutesPort(app);
-        //         requestRoutesPortMetrics(app);
-        //         requestRoutesEndpointCollection(app);
-        //         requestRoutesEndpoint(app);
-        //         requestRoutesZoneCollection(app);
-        //         requestRoutesZone(app);
+        requestRoutesFabricCollection(app);
+        requestRoutesFabric(app);
+        requestRoutesSwitchCollection(app);
+        requestRoutesSwitch(app);
+        requestRoutesNVSwitchReset(app);
+        requestRoutesSwitchMetrics(app);
+        requestRoutesPortCollection(app);
+        requestRoutesPort(app);
+        requestRoutesPortMetrics(app);
+        requestRoutesEndpointCollection(app);
+        requestRoutesEndpoint(app);
+        requestRoutesZoneCollection(app);
+        requestRoutesZone(app);
 
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);

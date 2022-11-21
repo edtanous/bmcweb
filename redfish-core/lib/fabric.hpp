@@ -15,6 +15,8 @@
 */
 #pragma once
 
+#include "redfish_util.hpp"
+
 #include <app.hpp>
 #include <boost/format.hpp>
 #include <utils/collection.hpp>
@@ -1501,8 +1503,8 @@ inline void requestRoutesNVSwitchReset(App& app)
                          const std::string& fabricId,
                          const std::string& switchId) {
             std::optional<std::string> resetType;
-            if (!json_util::readJson(req, asyncResp->res, "ResetType",
-                                     resetType))
+            if (!redfish::json_util::readJsonAction(req, asyncResp->res, "ResetType",
+                                       resetType))
             {
                 return;
             }
