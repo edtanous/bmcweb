@@ -494,10 +494,12 @@ inline void
                                         }
                                     }
 
+#ifdef BMCWEB_ENABLE_BIOS
                                     // Grab the bios version
                                     fw_util::populateFirmwareInformation(
                                         aResp, fw_util::biosPurpose,
                                         "BiosVersion", false);
+#endif
                                 },
                                 connection.first, path,
                                 "org.freedesktop.DBus.Properties", "GetAll",
@@ -2971,8 +2973,10 @@ inline void requestRoutesSystems(App& app)
                 {"@odata.id",
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices"}};
 
+#ifdef BMCWEB_ENABLE_BIOS
             asyncResp->res.jsonValue["Bios"] = {
                 {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios"}};
+#endif
 
             asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
                 {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}};
