@@ -42,6 +42,13 @@ using GetSubTreeType = std::vector<
               std::vector<std::pair<std::string, std::vector<std::string>>>>>;
 using GetManagedPropertyType =
     boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
+// Map of service name to list of interfaces
+using MapperServiceMap =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
+
+// Map of object paths to MapperServiceMaps
+using MapperGetSubTreeResponse =
+    std::vector<std::pair<std::string, MapperServiceMap>>;
 
 // Interfaces which imply a D-Bus object represents a Processor
 constexpr std::array<const char*, 2> processorInterfaces = {
@@ -2273,10 +2280,9 @@ inline void requestRoutesOperatingConfigCollection(App& app)
                         // Collection of all Config objects under this CPU.
                         collection_util::getCollectionMembers(
                             asyncResp,
-                            boost::urls::url(
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/Processors/" +
-                                cpuName + "/OperatingConfigs"),
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/Processors/" +
+                                cpuName + "/OperatingConfigs",
                             {"xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"},
                             object.c_str());
                         return;
@@ -2387,8 +2393,7 @@ inline void requestRoutesProcessorCollection(App& app)
 
                 collection_util::getCollectionMembers(
                     asyncResp,
-                    boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                     "/Processors"),
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors",
                     std::vector<const char*>(processorInterfaces.begin(),
                                              processorInterfaces.end()));
             });
@@ -3521,10 +3526,9 @@ inline void requestRoutesProcessorPortCollection(App& app)
                                 "NVLink Port Collection";
                             collection_util::getCollectionMembers(
                                 asyncResp,
-                                boost::urls::url(
-                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                    "/Processors/" +
-                                    processorId + "/Ports"),
+                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Processors/" +
+                                    processorId + "/Ports",
                                 {"xyz.openbmc_project.Inventory.Item.Port"},
                                 path.c_str());
 

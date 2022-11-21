@@ -1726,24 +1726,24 @@ inline void parseInterfaceData(
         }
     }
 }
+// TODO: Clean up this code post testing
+// inline void parseInterfaceData(nlohmann::json& jsonResponse,
+//                                const std::string& parentIfaceId,
+//                                const std::string& ifaceId,
+//                                const EthernetInterfaceData& ethData)
+// {
+//     // Fill out obvious data...
+//     jsonResponse["Id"] = ifaceId;
+//     jsonResponse["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+//                                 "/EthernetInterfaces/" +
+//                                 parentIfaceId + "/VLANs/" + ifaceId;
 
-inline void parseInterfaceData(nlohmann::json& jsonResponse,
-                               const std::string& parentIfaceId,
-                               const std::string& ifaceId,
-                               const EthernetInterfaceData& ethData)
-{
-    // Fill out obvious data...
-    jsonResponse["Id"] = ifaceId;
-    jsonResponse["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                                "/EthernetInterfaces/" +
-                                parentIfaceId + "/VLANs/" + ifaceId;
-
-    jsonResponse["VLANEnable"] = true;
-    if (!ethData.vlan_id.empty())
-    {
-        jsonResponse["VLANId"] = ethData.vlan_id.back();
-    }
-}
+//     jsonResponse["VLANEnable"] = true;
+//     if (!ethData.vlan_id.empty())
+//     {
+//         jsonResponse["VLANId"] = ethData.vlan_id.back();
+//     }
+// }
 
 inline bool verifyNames(const std::string& parent, const std::string& iface)
 {

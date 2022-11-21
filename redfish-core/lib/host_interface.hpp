@@ -11,6 +11,8 @@
 
 namespace redfish
 {
+using GetObjectType =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
 
 static void
     getInterfaceStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -344,10 +346,10 @@ inline void requestHostInterfacesRoutes(App& app)
 
                 std::optional<bool> interfaceEnabled;
                 std::optional<nlohmann::json> credentialBootstrap;
-                if (!json_util::readJson(req, asyncResp->res,
-                                         "InterfaceEnabled", interfaceEnabled,
-                                         "CredentialBootstrapping",
-                                         credentialBootstrap))
+                if (!json_util::readJsonAction(
+                        req, asyncResp->res, "InterfaceEnabled",
+                        interfaceEnabled, "CredentialBootstrapping",
+                        credentialBootstrap))
                 {
                     BMCWEB_LOG_ERROR << "Bad request for PATCH HostInterface";
                     asyncResp->res.result(

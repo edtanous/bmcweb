@@ -23,33 +23,33 @@
 #include "chassis.hpp"
 // #include "component_integrity.hpp"
 // #include "control.hpp"
-//#include "environment_metrics.hpp"
-// #include "erot_chassis.hpp"
-//#include "ethernet.hpp"
+#include "environment_metrics.hpp"
+#include "erot_chassis.hpp"
+#include "ethernet.hpp"
 // #include "event_service.hpp"
 //#include "fabric.hpp"
-// #include "host_interface.hpp"
-// #include "hypervisor_system.hpp"
+#include "host_interface.hpp"
+#include "hypervisor_system.hpp"
 // #include "log_services.hpp"
-// #include "manager_diagnostic_data.hpp"
+#include "manager_diagnostic_data.hpp"
 // #include "managers.hpp"
 #include "memory.hpp"
 // #include "message_registries.hpp"
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
 #include "network_protocol.hpp"
-// #include "pcie.hpp"
-// #include "pcieslots.hpp"
-// #include "power.hpp"
-// #include "power_subsystem.hpp"
-// #include "processor.hpp"
+#include "pcie.hpp"
+#include "pcieslots.hpp"
+#include "power.hpp"
+#include "power_subsystem.hpp"
+#include "processor.hpp"
 #include "redfish_sessions.hpp"
 #include "redfish_v1.hpp"
 #include "roles.hpp"
-// #include "sensors.hpp"
+#include "sensors.hpp"
 #include "service_conditions.hpp"
 #include "service_root.hpp"
-// #include "storage.hpp"
+//#include "storage.hpp"
 #include "systems.hpp"
 // #include "task.hpp"
 #include "telemetry_service.hpp"
@@ -79,21 +79,21 @@ class RedfishService
 
         requestAccountServiceRoutes(app);
         requestAssemblyRoutes(app);
-        //         requestPcieSlotsRoutes(app);
+        requestPcieSlotsRoutes(app);
         requestRoutesRoles(app);
         requestRoutesRoleCollection(app);
         requestRoutesServiceRoot(app);
         requestRoutesNetworkProtocol(app);
         requestRoutesSession(app);
-// requestEthernetInterfacesRoutes(app);
+        requestEthernetInterfacesRoutes(app);
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
         requestRoutesThermal(app);
-//         requestRoutesPower(app);
+        requestRoutesPower(app);
 #endif
         //         requestRoutesThermalSubsystem(app);
         //         requestRoutesThermalMetrics(app);
         // #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
-        //         requestRoutesPowerSubsystem(app);
+        requestRoutesPowerSubsystem(app);
         //         requestRoutesPowerSupplyCollection(app);
         //         requestRoutesPowerSupply(app);
         // #endif
@@ -107,9 +107,9 @@ class RedfishService
         requestRoutesChassis(app);
         requestRoutesChassisResetAction(app);
         requestRoutesChassisResetActionInfo(app);
-        // requestRoutesEnvironmentMetrics(app);
-        // requestRoutesProcessorEnvironmentMetrics(app);
-        // requestRoutesMemoryEnvironmentMetrics(app);
+        requestRoutesEnvironmentMetrics(app);
+        requestRoutesProcessorEnvironmentMetrics(app);
+        requestRoutesMemoryEnvironmentMetrics(app);
         // requestRoutesUpdateService(app);
         // requestRoutesChassisDrive(app);
         // requestRoutesChassisDriveName(app);
@@ -190,14 +190,14 @@ class RedfishService
         //         requestRoutesCrashdumpCollect(app);
         // #endif // BMCWEB_ENABLE_REDFISH_CPU_LOG
 
-        //         requestRoutesProcessorCollection(app);
-        //         requestRoutesProcessor(app);
-        //         requestRoutesOperatingConfigCollection(app);
-        //         requestRoutesOperatingConfig(app);
-        //         requestRoutesProcessorMetrics(app);
-        //         requestRoutesProcessorMemoryMetrics(app);
-        //         requestRoutesProcessorSettings(app);
-        //         requestRoutesProcessorReset(app);
+        requestRoutesProcessorCollection(app);
+        requestRoutesProcessor(app);
+        requestRoutesOperatingConfigCollection(app);
+        requestRoutesOperatingConfig(app);
+        requestRoutesProcessorMetrics(app);
+        requestRoutesProcessorMemoryMetrics(app);
+        requestRoutesProcessorSettings(app);
+        requestRoutesProcessorReset(app);
         // #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         // requestRoutesEdppReset(app);
         //         requestRoutesNvidiaManagerResetToDefaultsAction(app);
@@ -205,9 +205,9 @@ class RedfishService
         //         requestRouteSyncRawOobCommand(app);
         //         requestRouteAsyncRawOobCommand(app);
         // #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        //         requestRoutesProcessorPortCollection(app);
-        //         requestRoutesProcessorPort(app);
-        //         requestRoutesProcessorPortMetrics(app);
+        requestRoutesProcessorPortCollection(app);
+        requestRoutesProcessorPort(app);
+        requestRoutesProcessorPortMetrics(app);
         requestRoutesMemoryCollection(app);
         requestRoutesMemory(app);
         requestRoutesMemoryMetrics(app);
@@ -254,17 +254,17 @@ class RedfishService
         requestRoutesLDAPCertificate(app);
         requestRoutesTrustStoreCertificate(app);
 
-        //         requestRoutesSystemPCIeFunctionCollection(app);
-        //         requestRoutesSystemPCIeFunction(app);
-        //         requestRoutesSystemPCIeDeviceCollection(app);
-        //         requestRoutesSystemPCIeDevice(app);
-        //         requestRoutesChassisPCIeFunctionCollection(app);
-        //         requestRoutesChassisPCIeFunction(app);
-        //         requestRoutesChassisPCIeDeviceCollection(app);
-        //         requestRoutesChassisPCIeDevice(app);
+        requestRoutesSystemPCIeFunctionCollection(app);
+        requestRoutesSystemPCIeFunction(app);
+        requestRoutesSystemPCIeDeviceCollection(app);
+        requestRoutesSystemPCIeDevice(app);
+        requestRoutesChassisPCIeFunctionCollection(app);
+        requestRoutesChassisPCIeFunction(app);
+        requestRoutesChassisPCIeDeviceCollection(app);
+        requestRoutesChassisPCIeDevice(app);
 
-        //         requestRoutesSensorCollection(app);
-        //         requestRoutesSensor(app);
+        requestRoutesSensorCollection(app);
+        requestRoutesSensor(app);
 
         //         requestRoutesTaskMonitor(app);
         //         requestRoutesTaskService(app);
@@ -275,7 +275,7 @@ class RedfishService
         //         requestRoutesEventDestination(app);
         //         requestRoutesSubmitTestEvent(app);
 
-        //         hypervisor::requestRoutesHypervisorSystems(app);
+        hypervisor::requestRoutesHypervisorSystems(app);
 
         requestRoutesTelemetryService(app);
         requestRoutesMetricReportDefinitionCollection(app);
@@ -303,7 +303,7 @@ class RedfishService
 
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);
-        //         requestRoutesEROTChassisCertificate(app);
+        requestRoutesEROTChassisCertificate(app);
         // requestRoutesComponentIntegrity(app);
         requestRoutesServiceConditions(app);
         // requestRoutesChassisControls(app);
