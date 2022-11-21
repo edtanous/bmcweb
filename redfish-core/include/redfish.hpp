@@ -307,8 +307,8 @@ class RedfishService
         requestRoutesEROTChassisCertificate(app);
         requestRoutesComponentIntegrity(app);
         requestRoutesServiceConditions(app);
-        // requestRoutesChassisControls(app);
-        // requestRoutesChassisControlsCollection(app);
+        requestRoutesChassisControls(app);
+        requestRoutesChassisControlsCollection(app);
 
         // Note, this must be the last route registered
         requestRoutesRedfish(app);
