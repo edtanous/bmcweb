@@ -217,10 +217,13 @@ class RedfishService
         requestRoutesSystems(app);
         requestRoutesSystemActionsReset(app);
         requestRoutesSystemResetActionInfo(app);
+#ifdef BMCWEB_ENABLE_BIOS
         requestRoutesBiosService(app);
         requestRoutesBiosSettings(app);
         requestRoutesBiosReset(app);
         requestRoutesBiosAttrRegistryService(app);
+#endif
+
 #ifdef BMCWEB_ENABLE_HOST_IFACE
         requestHostInterfacesRoutes(app);
 #endif

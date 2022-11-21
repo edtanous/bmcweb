@@ -512,10 +512,12 @@ inline void
                                             *subModel;
                                     }
 
+#ifdef BMCWEB_ENABLE_BIOS
                                     // Grab the bios version
                                     sw_util::populateSoftwareInformation(
                                         aResp, sw_util::biosPurpose,
                                         "BiosVersion", false);
+#endif
                                 });
 
                             sdbusplus::asio::getProperty<std::string>(
@@ -3045,8 +3047,10 @@ inline void requestRoutesSystems(App& app)
 
             asyncResp->res.jsonValue["LogServices"]["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices";
+#ifdef BMCWEB_ENABLE_BIOS
             asyncResp->res.jsonValue["Bios"]["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios";
+#endif
 
             nlohmann::json::array_t managedBy;
             nlohmann::json& manager = managedBy.emplace_back();
