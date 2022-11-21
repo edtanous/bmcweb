@@ -32,7 +32,7 @@ class Server
   public:
     Server(Handler* handlerIn,
            std::unique_ptr<boost::asio::ip::tcp::acceptor>&& acceptorIn,
-           std::shared_ptr<boost::asio::ssl::context> adaptorCtxIn,
+           [[maybe_unused]] std::shared_ptr<boost::asio::ssl::context> adaptorCtxIn,
            std::shared_ptr<boost::asio::io_context> io =
                std::make_shared<boost::asio::io_context>()) :
         ioService(std::move(io)),

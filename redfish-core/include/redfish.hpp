@@ -51,12 +51,12 @@
 #include "service_root.hpp"
 //#include "storage.hpp"
 #include "systems.hpp"
-// #include "task.hpp"
+#include "task.hpp"
 #include "telemetry_service.hpp"
 #include "thermal.hpp"
 #include "thermal_subsystem.hpp"
 #include "trigger.hpp"
-// #include "update_service.hpp"
+#include "update_service.hpp"
 #include "virtual_media.hpp"
 
 namespace redfish

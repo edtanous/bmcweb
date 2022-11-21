@@ -1102,7 +1102,7 @@ inline void requestRoutesUpdateService(App& app)
                             for (const std::string& target : uriTargets)
                             {
                                 std::string compName =
-                                    fs::path(target).filename();
+                                    std::filesystem::path(target).filename();
                                 bool validTarget = false;
                                 std::string objPath = "software/" + compName;
                                 for (const std::string& path : swInvPaths)
