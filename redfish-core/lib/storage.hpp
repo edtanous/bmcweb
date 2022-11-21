@@ -30,7 +30,7 @@ namespace redfish
 {
 inline void requestRoutesStorageCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/")
         .privileges(redfish::privileges::getStorageCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -565,8 +565,7 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
 inline void requestRoutesDrive(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/Storage/1/Drives/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/")
         .privileges(redfish::privileges::getDrive)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

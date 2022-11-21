@@ -257,7 +257,7 @@ inline void handleSPDMGETSignedMeasurement(
     std::string body = req.body;
     body.erase(std::remove_if(body.begin(), body.end(), isspace), body.end());
     if (!body.empty() && body != "{}" &&
-            !json_util::readJson(req, asyncResp->res, "Nonce", nonce,
+            !json_util::readJsonAction(req, asyncResp->res, "Nonce", nonce,
                 "SlotId", slotID, "MeasurementIndices", indices))
     {
         messages::unrecognizedRequestBody(asyncResp->res);
@@ -636,7 +636,8 @@ inline void requestRoutesComponentIntegrity(App& app)
                 if (meas == spdmMeasurementData.end() ||
                     meas->second.measurement.size() == 0)
                 {
-                    messages::resourceMissingAtURI(asyncResp->res, id);
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                            "redfish", "v1", "ComponentIntegrity", id));
                     asyncResp->res.result(
                         boost::beast::http::status::not_found);
                     return;

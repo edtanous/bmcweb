@@ -592,7 +592,7 @@ inline void requestRoutesChassisControls(App& app)
                                         std::optional<std::string> mode;
                                         std::optional<uint32_t> setpoint;
                                         std::string controlMode;
-                                        if (!json_util::readJson(
+                                        if (!json_util::readJsonAction(
                                                 req, asyncResp->res,
                                                 "ControlMode", mode, "SetPoint",
                                                 setpoint))
