@@ -5708,7 +5708,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
                     messages::resourceMissingAtURI(asyncResp->res,
                                                    crow::utility::urlFromPieces(
                                                         "redfish", "v1", "Systems", PLATFORMSYSTEMID,
-                                                        "LogServices", "DebugTokenService", "DiagnosticData", id, "attachment"));
+                                                        "LogServices", "DebugTokenService", "DiagnosticData", std::to_string(id), "attachment"));
                     asyncResp->res.result(
                         boost::beast::http::status::not_found);
                     return;
