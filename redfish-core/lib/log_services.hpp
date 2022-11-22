@@ -421,8 +421,7 @@ static bool getUniqueEntryID(const std::string& logEntry, std::string& entryID,
 }
 
 inline static bool
-    getTimestampFromID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const std::string& entryID, uint64_t& timestamp,
+    getTimestampFromID(const std::string& entryID, uint64_t& timestamp,
                        uint64_t& index)
 {
     if (entryID.empty())
@@ -443,7 +442,6 @@ inline static bool
             indexStr.data(), indexStr.data() + indexStr.size(), index);
         if (ec != std::errc())
         {
-            messages::resourceMissingAtURI(asyncResp->res, entryID);
             return false;
         }
     }
@@ -452,7 +450,6 @@ inline static bool
         std::from_chars(tsStr.data(), tsStr.data() + tsStr.size(), timestamp);
     if (ec != std::errc())
     {
-        messages::resourceMissingAtURI(asyncResp->res, entryID);
         return false;
     }
     return true;
@@ -1131,7 +1128,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     std::optional<std::string> oemDiagnosticDataType;
     std::vector<std::pair<std::string, std::string>> createDumpParamVec;
 
-    if (!redfish::json_util::readJson(
+    if (!redfish::json_util::readJsonAction(
             req, asyncResp->res, "DiagnosticDataType", diagnosticDataType,
             "OEMDiagnosticDataType", oemDiagnosticDataType))
     {
@@ -1803,7 +1800,10 @@ inline void requestRoutesJournalEventLogEntry(App& app)
                     }
                 }
                 // Requested ID was not found
-                messages::resourceMissingAtURI(asyncResp->res, targetID);
+                messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                    "redfish", "v1", "Systems",
+                    PLATFORMSYSTEMID,
+                    "LogServices", "EventLog", "Entries", targetID));
             });
 }
 
@@ -3011,7 +3011,9 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
                 if (ec == std::errc::invalid_argument ||
                     ec == std::errc::result_out_of_range)
                 {
-                    messages::resourceMissingAtURI(asyncResp->res, targetID);
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                        "LogServices", "HostLogger", "Entries", targetID));
                     return;
                 }
 
@@ -3045,7 +3047,9 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
                 }
 
                 // Requested ID was not found
-                messages::resourceMissingAtURI(asyncResp->res, targetID);
+                messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                        "LogServices", "HostLogger", "Entries", targetID));
             });
 }
 
@@ -3330,7 +3334,8 @@ inline void requestRoutesBMCJournalLogEntryCollection(App& app)
 inline void requestRoutesBMCJournalLogEntry(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/bmc/LogServices/Journal/Entries/<str>/")
+                 "/redfish/v1/Managers/" PLATFORMBMCID 
+                 "/LogServices/Journal/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -3343,8 +3348,11 @@ inline void requestRoutesBMCJournalLogEntry(App& app)
                 // Convert the unique ID back to a timestamp to find the entry
                 uint64_t ts = 0;
                 uint64_t index = 0;
-                if (!getTimestampFromID(asyncResp, entryID, ts, index))
+                if (!getTimestampFromID(entryID, ts, index))
                 {
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                                                                    "redfish", "v1", "Managers", PLATFORMBMCID,
+                                                                    "LogServices", "Journal", "Entries", entryID));
                     return;
                 }
 
@@ -3385,7 +3393,9 @@ inline void requestRoutesBMCJournalLogEntry(App& app)
                 // Confirm that the entry ID matches what was requested
                 if (idStr != entryID)
                 {
-                    messages::resourceMissingAtURI(asyncResp->res, entryID);
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                                                                    "redfish", "v1", "Managers", PLATFORMBMCID,
+                                                                    "LogServices", "Journal", "Entries", entryID));
                     return;
                 }
 
@@ -3858,7 +3868,9 @@ static void
 
             if (filename.empty() || timestamp.empty())
             {
-                messages::resourceMissingAtURI(asyncResp->res, logID);
+                messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                                                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                            "LogServices", "Crashdump", "Entries", logID, filename));
                 return;
             }
 
@@ -4030,7 +4042,9 @@ inline void requestRoutesCrashdumpFile(App& app)
                             dbusFilepath.empty())
                         {
                             messages::resourceMissingAtURI(asyncResp->res,
-                                                           fileName);
+                                                           crow::utility::urlFromPieces(
+                                                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                            "LogServices", "Crashdump", "Entries", logID, fileName));
 
                             return;
                         }
@@ -4039,7 +4053,9 @@ inline void requestRoutesCrashdumpFile(App& app)
                         if (fileName != dbusFilename)
                         {
                             messages::resourceMissingAtURI(asyncResp->res,
-                                                           fileName);
+                                                           crow::utility::urlFromPieces(
+                                                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                            "LogServices", "Crashdump", "Entries", logID, fileName));
 
                             return;
                         }
@@ -4047,7 +4063,9 @@ inline void requestRoutesCrashdumpFile(App& app)
                         if (!std::filesystem::exists(dbusFilepath))
                         {
                             messages::resourceMissingAtURI(asyncResp->res,
-                                                           fileName);
+                                                           crow::utility::urlFromPieces(
+                                                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                            "LogServices", "Crashdump", "Entries", logID, fileName));
 
                             return;
                         }
@@ -4113,7 +4131,7 @@ inline void requestRoutesCrashdumpCollect(App& app)
 
             std::string diagnosticDataType;
             std::string oemDiagnosticDataType;
-            if (!redfish::json_util::readJson(
+            if (!redfish::json_util::readJsonAction(
                     req, asyncResp->res, "DiagnosticDataType",
                     diagnosticDataType, "OEMDiagnosticDataType",
                     oemDiagnosticDataType))
@@ -4386,7 +4404,7 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
             std::string diagnosticDataType;
             std::string oemDiagnosticDataType;
-            if (!redfish::json_util::readJson(
+            if (!redfish::json_util::readJsonAction(
                     req, asyncResp->res, "DiagnosticDataType",
                     diagnosticDataType, "OEMDiagnosticDataType",
                     oemDiagnosticDataType))
@@ -4483,14 +4501,18 @@ inline void requestRoutesEventLogDiagnosticDataEntry(App& app)
                 if (files == 0 || id > files - 1)
                 {
                     messages::resourceMissingAtURI(asyncResp->res,
-                                                   std::to_string(id));
+                                                   crow::utility::urlFromPieces(
+                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                        "LogServices", "EventLog", "DiagnosticData", id, "attachment");
                     return;
                 }
                 std::ifstream file(scriptExecOutputFiles[id]);
                 if (!file.good())
                 {
                     messages::resourceMissingAtURI(asyncResp->res,
-                                                   std::to_string(id));
+                                                   crow::utility::urlFromPieces(
+                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                        "LogServices", "EventLog", "DiagnosticData", id, "attachment"));
                     return;
                 }
                 std::stringstream ss;
@@ -4909,7 +4931,7 @@ inline void requestRoutesPostCodesEntryAdditionalData(App& app)
                const std::string& postCodeID) {
                 if (!http_helpers::isContentTypeAllowed(
                 req.getHeaderValue("Accept"),
-                http_helpers::ContentType::OctetStream))
+                http_helpers::ContentType::OctetStream, true))
                 {
                     asyncResp->res.result(
                         boost::beast::http::status::bad_request);
@@ -4993,7 +5015,9 @@ inline void requestRoutesPostCodesEntry(App& app)
                 if (!parsePostCode(targetID, codeIndex, bootIndex))
                 {
                     // Requested ID was not found
-                    messages::resourceMissingAtURI(asyncResp->res, targetID);
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                        "LogServices", "PostCodes", "Entries", targetID));
                     return;
                 }
                 if (bootIndex == 0 || codeIndex == 0)
@@ -5149,7 +5173,7 @@ inline void requestRoutesChassisXIDLogService(App& app)
 
                             std::pair<std::string, std::string>
                                 redfishDateTimeOffset =
-                                    crow::utility::getDateTimeOffsetNow();
+                                    redfish::time_utils::getDateTimeOffsetNow();
 
                             asyncResp->res.jsonValue["DateTime"] =
                                 redfishDateTimeOffset.first;
@@ -5567,7 +5591,7 @@ inline void requestRoutesDebugToken(App& app)
             asyncResp->res.jsonValue["Id"] = "Debug token";
 
             std::pair<std::string, std::string> redfishDateTimeOffset =
-                crow::utility::getDateTimeOffsetNow();
+                redfish::time_utils::getDateTimeOffsetNow();
             asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
             asyncResp->res.jsonValue["DateTimeLocalOffset"] =
                 redfishDateTimeOffset.second;
@@ -5589,7 +5613,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
                 std::string diagnosticDataType;
                 std::string oemDiagnosticDataType;
-                if (!redfish::json_util::readJson(
+                if (!redfish::json_util::readJsonAction(
                         req, asyncResp->res, "DiagnosticDataType",
                         diagnosticDataType, "OEMDiagnosticDataType",
                         oemDiagnosticDataType))
@@ -5672,7 +5696,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
                 std::string_view accept = req.getHeaderValue("Accept");
                 if (!accept.empty() && !http_helpers::isContentTypeAllowed(
                 req.getHeaderValue("Accept"),
-                http_helpers::ContentType::OctetStream))
+                http_helpers::ContentType::OctetStream, true))
                 {
                     asyncResp->res.result(
                         boost::beast::http::status::bad_request);
@@ -5682,7 +5706,9 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
                 if (dataCount == 0 || id > dataCount - 1)
                 {
                     messages::resourceMissingAtURI(asyncResp->res,
-                                                   std::to_string(id));
+                                                   crow::utility::urlFromPieces(
+                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                        "LogServices", "DebugTokenService", "DiagnosticData", id, "attachment"));
                     asyncResp->res.result(
                         boost::beast::http::status::not_found);
                     return;

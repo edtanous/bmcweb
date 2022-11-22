@@ -30,7 +30,7 @@
 #include "fabric.hpp"
 #include "host_interface.hpp"
 #include "hypervisor_system.hpp"
-// #include "log_services.hpp"
+#include "log_services.hpp"
 #include "manager_diagnostic_data.hpp"
 #include "managers.hpp"
 #include "memory.hpp"
