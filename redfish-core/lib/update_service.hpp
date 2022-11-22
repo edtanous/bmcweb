@@ -16,7 +16,7 @@
 #pragma once
 
 #include "bmcweb_config.h"
-#include "commit_image_values_manager.hpp"
+#include "commit_image.hpp"
 #include "background_copy.hpp"
 
 #include <app.hpp>
@@ -2356,18 +2356,6 @@ inline void requestRoutesInventorySoftware(App& app)
 }
 
 /**
- * @brief Get allowable values for Commit Image action 
- * The function gets allowable values from config file
- * /usr/share/bmcweb/fw_mctp_mapping.json.
- * @returns Collection of CommitImageValueEntry.
- */
-inline std::vector<CommitImageValueEntry> getAllowableValuesForCommitImage()
-{
-    CommitImageValuesManager valuesManager;
-    return valuesManager.getAllowableValues();
-}
-
-/**
  * @brief Check whether firmware inventory is allowable 
  * The function gets allowable values from config file 
  * /usr/share/bmcweb/fw_mctp_mapping.json.
@@ -2381,7 +2369,7 @@ inline bool isInventoryAllowableValue(const std::string_view inventoryPath)
 {
     bool isAllowable = false;
 
-    std::vector<CommitImageValueEntry> allowableValues = getAllowableValuesForCommitImage();
+    std::vector<CommitImageValueEntry> allowableValues = getAllowableValues();
     std::vector<CommitImageValueEntry>::iterator it 
      = find(allowableValues.begin(), allowableValues.end(), static_cast<std::string>(inventoryPath));
 
@@ -2413,7 +2401,7 @@ inline std::pair<bool, CommitImageValueEntry> getAllowableValue(const std::strin
 {
     std::pair<bool, CommitImageValueEntry> result;
 
-    std::vector<CommitImageValueEntry> allowableValues = getAllowableValuesForCommitImage();
+    std::vector<CommitImageValueEntry> allowableValues = getAllowableValues();
     std::vector<CommitImageValueEntry>::iterator it 
      = find(allowableValues.begin(), allowableValues.end(), static_cast<std::string>(inventoryPath));
 
