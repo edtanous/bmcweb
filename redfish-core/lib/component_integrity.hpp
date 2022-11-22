@@ -19,9 +19,9 @@
 #include <dbus_utility.hpp>
 #include <error_messages.hpp>
 #include <openbmc_dbus_rest.hpp>
-#include <task.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
+#include <task.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/stl_utils.hpp>
 
@@ -38,6 +38,8 @@ using GetObjectType =
     std::vector<std::pair<std::string, std::vector<std::string>>>;
 using SPDMCertificates = std::vector<std::tuple<uint8_t, std::string>>;
 using SignedMeasurementData = std::vector<uint8_t>;
+using GetManagedPropertyType =
+    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
 
 struct SPDMMeasurementData
 {
@@ -49,12 +51,13 @@ struct SPDMMeasurementData
     std::string measurement;
 };
 
-static std::map<std::string, SPDMMeasurementData> spdmMeasurementData;
 // Measurements for index 11 and 12 take around 17 seconds each,
 // for other indices it is around 1 second.
 // In a worst case scenario measurements for 254 indices will take
 // 286 seconds - rounded up to 300 seconds.
 static const int spdmMeasurementTimeout = 300;
+
+static std::map<std::string, SPDMMeasurementData> spdmMeasurementData;
 
 inline std::string getVersionStr(const uint8_t version)
 {
@@ -89,12 +92,90 @@ inline bool startsWithPrefix(const std::string& str, const std::string& prefix)
     return false;
 }
 
+inline SPDMMeasurementData
+    parseSPDMInterfaceProperties(const GetManagedPropertyType& propMap)
+{
+    SPDMMeasurementData config{};
+    for (const auto& property : propMap)
+    {
+        if (property.first == "Version")
+        {
+            const uint8_t* version = std::get_if<uint8_t>(&property.second);
+
+            if (version == nullptr)
+            {
+                continue;
+            }
+            config.version = *version;
+        }
+        else if (property.first == "Slot")
+        {
+            const uint8_t* slot = std::get_if<uint8_t>(&property.second);
+            if (slot == nullptr)
+            {
+                continue;
+            }
+            config.slot = *slot;
+        }
+        else if (property.first == "HashingAlgorithm")
+        {
+            const std::string* hashAlgo =
+                std::get_if<std::string>(&property.second);
+            if (hashAlgo == nullptr)
+            {
+                continue;
+            }
+            config.hashAlgo = stripPrefix(
+                *hashAlgo,
+                "xyz.openbmc_project.SPDM.Responder.HashingAlgorithms.");
+        }
+        else if (property.first == "SigningAlgorithm")
+        {
+            const std::string* signAlgo =
+                std::get_if<std::string>(&property.second);
+            if (signAlgo == nullptr)
+            {
+                continue;
+            }
+            config.signAlgo = stripPrefix(
+                *signAlgo,
+                "xyz.openbmc_project.SPDM.Responder.SigningAlgorithms.");
+        }
+        else if (property.first == "Certificate")
+        {
+            const SPDMCertificates* certs =
+                std::get_if<SPDMCertificates>(&property.second);
+            if (certs == nullptr)
+            {
+                continue;
+            }
+            config.certs = *certs;
+        }
+        else if (property.first == "SignedMeasurements")
+        {
+            const SignedMeasurementData* data =
+                std::get_if<SignedMeasurementData>(&property.second);
+            if (data == nullptr)
+            {
+                continue;
+            }
+
+            config.measurement.resize(data->size());
+            std::copy(data->begin(), data->end(), config.measurement.begin());
+            config.measurement =
+                crow::utility::base64encode(config.measurement);
+        }
+    }
+    return config;
+}
+
 template <typename CallbackFunc>
-inline void processSPDMMeasurementData(
-    const std::string& objectPath,
-    CallbackFunc&& callback,
-    const boost::system::error_code ec,
-    const dbus::utility::ManagedObjectType& objects) {
+inline void
+    processSPDMMeasurementData(const std::string& objectPath,
+                               CallbackFunc&& callback,
+                               const boost::system::error_code ec,
+                               const dbus::utility::ManagedObjectType& objects)
+{
     SPDMMeasurementData config{};
     if (ec)
     {
@@ -104,9 +185,8 @@ inline void processSPDMMeasurementData(
     }
     const auto objIt = std::find_if(
         objects.begin(), objects.end(),
-        [objectPath](
-            const std::pair<sdbusplus::message::object_path,
-                            dbus::utility::DBusInteracesMap>& object) {
+        [objectPath](const std::pair<sdbusplus::message::object_path,
+                                     dbus::utility::DBusInteracesMap>& object) {
             return !objectPath.compare(object.first);
         });
 
@@ -127,7 +207,6 @@ inline void processSPDMMeasurementData(
                 {
                     const uint8_t* version =
                         std::get_if<uint8_t>(&property.second);
-
                     if (version == nullptr)
                     {
                         continue;
@@ -181,16 +260,14 @@ inline void processSPDMMeasurementData(
                 else if (property.first == "SignedMeasurements")
                 {
                     const SignedMeasurementData* data =
-                        std::get_if<SignedMeasurementData>(
-                            &property.second);
+                        std::get_if<SignedMeasurementData>(&property.second);
                     if (data == nullptr)
                     {
                         continue;
                     }
-
                     config.measurement.resize(data->size());
                     std::copy(data->begin(), data->end(),
-                                config.measurement.begin());
+                              config.measurement.begin());
                     config.measurement =
                         crow::utility::base64encode(config.measurement);
                 }
@@ -205,42 +282,16 @@ inline void processSPDMMeasurementData(
  */
 template <typename CallbackFunc>
 inline void asyncGetSPDMMeasurementData(const std::string& objectPath,
-    CallbackFunc&& callback)
+                                        CallbackFunc&& callback)
 {
     crow::connections::systemBus->async_method_call(
-        [objectPath, callback](
-            const boost::system::error_code ec,
-            const dbus::utility::ManagedObjectType& objects) {
+        [objectPath,
+         callback](const boost::system::error_code ec,
+                   const dbus::utility::ManagedObjectType& objects) {
             processSPDMMeasurementData(objectPath, callback, ec, objects);
         },
         spdmBusName, rootSPDMDbusPath, dbus_utils::dbusObjManagerIntf,
         "GetManagedObjects");
-}
-
-/**
- * Function that retrieves all properties for SPDM Measurement object
- */
-template <typename CallbackFunc>
-inline void syncGetSPDMMeasurementData(const std::string& objectPath,
-    CallbackFunc&& callback)
-{
-    boost::system::error_code ec;
-    dbus::utility::ManagedObjectType objects;
-    try
-    {
-        auto method = crow::connections::systemBus->new_method_call(
-            spdmBusName, rootSPDMDbusPath, dbus_utils::dbusObjManagerIntf,
-            "GetManagedObjects");
-        uint64_t timeoutUs =
-            static_cast<uint64_t>(spdmMeasurementTimeout) * 1000000u;
-        auto message = crow::connections::systemBus->call(method, timeoutUs);
-        message.read(objects);
-    }
-    catch (const sdbusplus::exception::SdBusError& e)
-    {
-        ec.assign(e.get_errno(), boost::system::system_category());
-    }
-    processSPDMMeasurementData(objectPath, callback, ec, objects);
 }
 
 inline void handleSPDMGETSignedMeasurement(
@@ -257,8 +308,8 @@ inline void handleSPDMGETSignedMeasurement(
     std::string body = req.body;
     body.erase(std::remove_if(body.begin(), body.end(), isspace), body.end());
     if (!body.empty() && body != "{}" &&
-            !json_util::readJson(req, asyncResp->res, "Nonce", nonce,
-                "SlotId", slotID, "MeasurementIndices", indices))
+        !json_util::readJson(req, asyncResp->res, "Nonce", nonce, "SlotId",
+                             slotID, "MeasurementIndices", indices))
     {
         messages::unrecognizedRequestBody(asyncResp->res);
         return;
@@ -274,9 +325,9 @@ inline void handleSPDMGETSignedMeasurement(
         if (nonce->size() != 64)
         {
             BMCWEB_LOG_ERROR << "Invalid length for nonce hex string "
-                "(should be 64)";
-            messages::actionParameterValueError(
-                asyncResp->res, "Nonce", "SPDMGetSignedMeasurements");
+                                "(should be 64)";
+            messages::actionParameterValueError(asyncResp->res, "Nonce",
+                                                "SPDMGetSignedMeasurements");
             return;
         }
 
@@ -286,10 +337,10 @@ inline void handleSPDMGETSignedMeasurement(
         }
         catch (const std::invalid_argument& e)
         {
-            BMCWEB_LOG_ERROR << "Invalid character for nonce hex string in '" <<
-                *nonce << "'";
-            messages::actionParameterValueError(
-                asyncResp->res, "Nonce", "SPDMGetSignedMeasurements");
+            BMCWEB_LOG_ERROR << "Invalid character for nonce hex string in '"
+                             << *nonce << "'";
+            messages::actionParameterValueError(asyncResp->res, "Nonce",
+                                                "SPDMGetSignedMeasurements");
             return;
         }
     }
@@ -300,8 +351,8 @@ inline void handleSPDMGETSignedMeasurement(
     }
     if (!indices)
     {
-        BMCWEB_LOG_DEBUG <<
-            "MeasurementIndices is not given, setting it to default value";
+        BMCWEB_LOG_DEBUG
+            << "MeasurementIndices is not given, setting it to default value";
         indices = std::vector<uint8_t>{};
         indices.value().emplace_back(255);
     }
@@ -318,8 +369,8 @@ inline void handleSPDMGETSignedMeasurement(
     if (meas != spdmMeasurementData.end() &&
         meas->second.measurement.size() == 0)
     {
-        messages::serviceTemporarilyUnavailable(asyncResp->res,
-            std::to_string(spdmMeasurementTimeout));
+        messages::serviceTemporarilyUnavailable(
+            asyncResp->res, std::to_string(spdmMeasurementTimeout));
         BMCWEB_LOG_DEBUG
             << "Already measurement collection is going on this object"
             << objPath;
@@ -330,8 +381,8 @@ inline void handleSPDMGETSignedMeasurement(
     // create a task to wait for the status property changed signal
     std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
         [id, objPath](boost::system::error_code ec,
-                sdbusplus::message::message& msg,
-                const std::shared_ptr<task::TaskData>& taskData) {
+                      sdbusplus::message::message& msg,
+                      const std::shared_ptr<task::TaskData>& taskData) {
             if (ec)
             {
                 if (ec != boost::asio::error::operation_aborted)
@@ -353,7 +404,7 @@ inline void handleSPDMGETSignedMeasurement(
             auto it = props.find("Status");
             if (it == props.end())
             {
-                BMCWEB_LOG_ERROR << "Did not receive an SPDM Status value";
+                BMCWEB_LOG_DEBUG << "Did not receive an SPDM Status value";
                 return !task::completed;
             }
             auto value = std::get_if<std::string>(&(it->second));
@@ -366,48 +417,29 @@ inline void handleSPDMGETSignedMeasurement(
             if (*value ==
                 "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Success")
             {
-                syncGetSPDMMeasurementData(
-                    objPath,
-                    [id, objPath, taskData](const SPDMMeasurementData& data,
-                        bool gotData)
-                    {
-                        if (!gotData)
-                        {
-                            BMCWEB_LOG_ERROR
-                                << "Did not receive SPDM Measurement data";
-                            taskData->state = "Aborted";
-                            taskData->messages.emplace_back(
-                                messages::resourceErrorsDetectedFormatError(
-                                    "SPDM measurement data", "no data"));
-                            taskData->finishTask();
-                            spdmMeasurementData.erase(objPath);
-                        }
-                        else
-                        {
-                            spdmMeasurementData[objPath] = data;
-                            std::string location = "Location: /redfish/v1/"
-                                "ComponentIntegrity/" + id +
-                                "/Actions/SPDMGetSignedMeasurements/data";
-                            taskData->payload->httpHeaders.emplace_back(
-                                std::move(location));
-                            taskData->state = "Completed";
-                            taskData->percentComplete = 100;
-                            taskData->messages.emplace_back(
-                                messages::taskCompletedOK(
-                                    std::to_string(taskData->index)));
-                            taskData->finishTask();
-                        }
-                    });
+                std::string location =
+                    "Location: /redfish/v1/"
+                    "ComponentIntegrity/" +
+                    id + "/Actions/SPDMGetSignedMeasurements/data";
+                taskData->payload->httpHeaders.emplace_back(
+                    std::move(location));
+                taskData->state = "Completed";
+                taskData->percentComplete = 100;
+                taskData->messages.emplace_back(
+                    messages::taskCompletedOK(std::to_string(taskData->index)));
+                taskData->finishTask();
+                spdmMeasurementData.erase(objPath);
                 return task::completed;
             }
-            if (startsWithPrefix(*value,
+            if (startsWithPrefix(
+                    *value,
                     "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_"))
             {
                 BMCWEB_LOG_ERROR << "Received SPDM Error: " << *value;
                 taskData->state = "Aborted";
                 taskData->messages.emplace_back(
-                    messages::resourceErrorsDetectedFormatError(
-                        "Status", *value));
+                    messages::resourceErrorsDetectedFormatError("Status",
+                                                                *value));
                 taskData->finishTask();
                 spdmMeasurementData.erase(objPath);
                 return task::completed;
@@ -418,8 +450,10 @@ inline void handleSPDMGETSignedMeasurement(
         },
         "type='signal',member='PropertiesChanged',"
         "interface='org.freedesktop.DBus.Properties',"
-        "path='" + objPath + "',"
-        "arg0=xyz.openbmc_project.SPDM.Responder");
+        "path='" +
+            objPath +
+            "',"
+            "arg0=xyz.openbmc_project.SPDM.Responder");
     task->startTimer(std::chrono::seconds(spdmMeasurementTimeout));
     task->populateResp(asyncResp->res);
     task->payload.emplace(req);
@@ -432,8 +466,8 @@ inline void handleSPDMGETSignedMeasurement(
                                  << ec;
                 task->state = "Aborted";
                 task->messages.emplace_back(
-                    messages::resourceErrorsDetectedFormatError(
-                        "SPDM refresh", ec.message()));
+                    messages::resourceErrorsDetectedFormatError("SPDM refresh",
+                                                                ec.message()));
                 task->finishTask();
                 spdmMeasurementData.erase(objPath);
                 return;
@@ -504,9 +538,9 @@ inline void requestRoutesComponentIntegrity(App& app)
                                               const std::string& id) -> void {
             std::string objectPath = std::string(rootSPDMDbusPath) + "/" + id;
             asyncGetSPDMMeasurementData(objectPath, [asyncResp, id, objectPath](
-                                                   const SPDMMeasurementData&
-                                                       data,
-                                                   bool gotData) {
+                                                        const SPDMMeasurementData&
+                                                            data,
+                                                        bool gotData) {
                 if (!gotData)
                 {
                     messages::internalError(asyncResp->res);
@@ -582,80 +616,81 @@ inline void requestRoutesComponentIntegrity(App& app)
                                     return;
                                 }
 
-                                chassis_utils::getRedfishURL(ep, [ep,
-                                                                  asyncResp](
-                                                                     const bool&
-                                                                         status,
-                                                                     const std::
-                                                                         string&
-                                                                             url) {
-                                    nlohmann::json& componentsProtectedArray =
-                                        asyncResp->res
-                                            .jsonValue["Links"]
-                                                      ["ComponentsProtected"];
-                                    componentsProtectedArray =
-                                        nlohmann::json::array();
+                                chassis_utils::getRedfishURL(
+                                    ep,
+                                    [ep, asyncResp](const bool& status,
+                                                    const std::string& url) {
+                                        nlohmann::json&
+                                            componentsProtectedArray =
+                                                asyncResp->res.jsonValue
+                                                    ["Links"]
+                                                    ["ComponentsProtected"];
+                                        componentsProtectedArray =
+                                            nlohmann::json::array();
 
-                                    //if (!status || url.empty()) In curent implementation of getRedfishURL function never returns empty URL with status = true
-                                    if (!status)
-                                    {
-                                        BMCWEB_LOG_DEBUG
-                                            << "Unable to get the Redfish URL for "
-                                            << ep;
-                                        return;
-                                    }
+                                        // if (!status || url.empty()) In curent
+                                        // implementation of getRedfishURL
+                                        // function never returns empty URL with
+                                        // status = true
+                                        if (!status)
+                                        {
+                                            BMCWEB_LOG_DEBUG
+                                                << "Unable to get the Redfish URL for "
+                                                << ep;
+                                            return;
+                                        }
 
-                                    componentsProtectedArray.push_back(
-                                        {nlohmann::json::array(
-                                            {"@odata.id", url})});
-                                });
+                                        componentsProtectedArray.push_back(
+                                            {nlohmann::json::array(
+                                                {"@odata.id", url})});
+                                    });
                             });
                     });
             });
         });
 
-    BMCWEB_ROUTE(
-        app,
-        "/redfish/v1/ComponentIntegrity/<str>/"
-            "Actions/SPDMGetSignedMeasurements")
+    BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
+                      "Actions/SPDMGetSignedMeasurements")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::post)(
             handleSPDMGETSignedMeasurement);
 
-    BMCWEB_ROUTE(
-        app,
-        "/redfish/v1/ComponentIntegrity/<str>/"
-            "Actions/SPDMGetSignedMeasurements/data")
+    BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
+                      "Actions/SPDMGetSignedMeasurements/data")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& id) {
-                const std::string objPath = std::string(rootSPDMDbusPath) + "/" + id;
-                const auto meas = spdmMeasurementData.find(objPath);
-                if (meas == spdmMeasurementData.end() ||
-                    meas->second.measurement.size() == 0)
-                {
-                    messages::resourceMissingAtURI(asyncResp->res, id);
-                    asyncResp->res.result(
-                        boost::beast::http::status::not_found);
-                    return;
-                }
+                const std::string objPath =
+                    std::string(rootSPDMDbusPath) + "/" + id;
 
-                asyncResp->res.jsonValue["SignedMeasurements"] =
-                    meas->second.measurement;
-                asyncResp->res.jsonValue["Version"] =
-                    getVersionStr(meas->second.version);
-                asyncResp->res.jsonValue["HashingAlgorithm"] =
-                    meas->second.hashAlgo;
-                asyncResp->res.jsonValue["SigningAlgorithm"] =
-                    meas->second.signAlgo;
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, objPath](const boost::system::error_code ec,
+                                         GetManagedPropertyType& resp) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Get all function failed for object = "
+                                << objPath;
+                            return;
+                        }
+                        auto config = parseSPDMInterfaceProperties(resp);
+                        asyncResp->res.jsonValue["SignedMeasurements"] =
+                            config.measurement;
+                        asyncResp->res.jsonValue["Version"] =
+                            getVersionStr(config.version);
+                        asyncResp->res.jsonValue["HashingAlgorithm"] =
+                            config.hashAlgo;
+                        asyncResp->res.jsonValue["SigningAlgorithm"] =
+                            config.signAlgo;
+                    },
+                    "xyz.openbmc_project.SPDM", objPath,
+                    "org.freedesktop.DBus.Properties", "GetAll", "");
             });
 
-    BMCWEB_ROUTE(
-        app,
-        "/redfish/v1/ComponentIntegrity/<str>/"
-            "SPDMGetSignedMeasurementsActionInfo")
+    BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
+                      "SPDMGetSignedMeasurementsActionInfo")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
