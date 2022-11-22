@@ -463,6 +463,113 @@ inline void requestRoutesManagerResetActionInfo(App& app)
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
+/**
+ * SyncOOBRawCommandActionInfo derived class for delivering Managers
+ * RawOOBCommands AllowableValues using NvidiaSyncOOBRawCommandAction schema.
+ */
+inline void requestRoutesNvidiaSyncOOBRawCommandActionInfo(App& app)
+{
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Managers/<str>/NvidiaSyncOOBRawCommandActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& bmcId)
+
+            {
+                // Process non bmc service manager
+                if (bmcId != PLATFORMBMCID)
+                {
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Manager.v1_11_0.Manager", bmcId); 
+                    return;
+                }
+                asyncResp->res.jsonValue = {
+                    {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
+                    {"@odata.id", "/redfish/v1/Managers/" + bmcId +
+                                      "/NvidiaSyncOOBRawCommandActionInfo"},
+                    {"Name", "SyncOOBRawCommand Action Info"},
+                    {"Id", "NvidiaSyncOOBRawCommandActionInfo"},
+                    {"Parameters",
+                     {{{"Name", "TargetType"},
+                       {"Required", true},
+                       {"DataType", "String"},
+                       {"AllowableValues", {"GPU", "NVSwitch", "Baseboard"}}},
+                      {{"Name", "TartgetInstanceId"},
+                       {"Required", false},
+                       {"DataType", "Number"}},
+                      {{"Name", "Opcode"},
+                       {"Required", true},
+                       {"DataType", "String"}},
+                      {{"Name", "Arg1"},
+                       {"Required", false},
+                       {"DataType", "String"}},
+                      {{"Name", "Arg2"},
+                       {"Required", false},
+                       {"DataType", "String"}},
+                      {{"Name", "DataIn"},
+                       {"Required", false},
+                       {"DataType", "StringArray"},
+                       {"ArraySizeMaximum", 4},
+                       {"ArraySizeMinimum", 4}},
+                      {{"Name", "ExtDataIn"},
+                       {"Required", false},
+                       {"DataType", "StringArray"},
+                       {"ArraySizeMaximum", 4},
+                       {"ArraySizeMinimum", 4}}}}};
+            });
+}
+
+/**
+ * AsyncOOBRawCommandActionInfo derived class for delivering Managers
+ * RawOOBCommands AllowableValues using NvidiaAsyncOOBRawCommandAction schema.
+ */
+inline void requestRoutesNvidiaAsyncOOBRawCommandActionInfo(App& app)
+{
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Managers/<str>/NvidiaAsyncOOBRawCommandActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& bmcId)
+
+            {
+                // Process non bmc service manager
+                if (bmcId != PLATFORMBMCID)
+                {
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Manager.v1_11_0.Manager", bmcId); 
+                    return;
+                }
+
+                asyncResp->res.jsonValue = {
+                    {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
+                    {"@odata.id", "/redfish/v1/Managers/" + bmcId +
+                                      "/NvidiaAsyncOOBRawCommandActionInfo"},
+                    {"Name", "AsyncOOBRawCommand Action Info"},
+                    {"Id", "NvidiaAsyncOOBRawCommandActionInfo"},
+                    {"Parameters",
+                     {{{"Name", "TargetType"},
+                       {"Required", true},
+                       {"DataType", "String"},
+                       {"AllowableValues", {"GPU", "NVSwitch"}}},
+                      {{"Name", "TartgetInstanceId"},
+                       {"Required", true},
+                       {"DataType", "Number"}},
+                      {{"Name", "AsyncArg1"},
+                       {"Required", true},
+                       {"DataType", "String"}},
+                      {{"Name", "AsyncDataIn"},
+                       {"Required", false},
+                       {"DataType", "StringArray"}},
+                      {{"Name", "RequestedDataOutBytes"},
+                       {"Required", true},
+                       {"DataType", "number"}}}}};
+            });
+}
+
 // convert sync command input request data to raw datain
 inline uint32_t formatSyncDataIn(std::vector<std::string>& data)
 {

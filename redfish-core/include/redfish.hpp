@@ -199,6 +199,8 @@ class RedfishService
         requestRoutesNvidiaManagerResetToDefaultsAction(app);
         requestRouteSyncRawOobCommand(app);
         requestRouteAsyncRawOobCommand(app);
+        requestRoutesNvidiaAsyncOOBRawCommandActionInfo(app);
+        requestRoutesNvidiaSyncOOBRawCommandActionInfo(app);
 #endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesProcessorPortCollection(app);
         requestRoutesProcessorPort(app);
