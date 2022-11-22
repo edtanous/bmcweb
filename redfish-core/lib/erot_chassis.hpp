@@ -486,8 +486,8 @@ inline void handleEROTChassisPatch( const crow::Request& req,
                 sdbusplus::asio::getProperty<std::string>(
                         *crow::connections::systemBus, connectionName, path,
                         "xyz.openbmc_project.Common.UUID", "UUID",
-                        [asyncResp, backgroundCopyEnabled, inBandEnabled](const boost::system::error_code ec,
-                                    const std::string& chassisUUID) {
+                        [asyncResp, chassisId(std::string(chassisId)), backgroundCopyEnabled, inBandEnabled]
+                        (const boost::system::error_code ec, const std::string& chassisUUID) {
                             if (ec)
                             {
                                 BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
@@ -497,12 +497,12 @@ inline void handleEROTChassisPatch( const crow::Request& req,
                             
                             if(backgroundCopyEnabled.has_value())
                             {
-                                redfish::chassis_utils::setBackgroundCopyEnabled(asyncResp, chassisUUID, backgroundCopyEnabled.value());
+                                redfish::chassis_utils::setBackgroundCopyEnabled(asyncResp, chassisId, chassisUUID, backgroundCopyEnabled.value());
                             }
 
                             if(inBandEnabled.has_value())
                             {
-                                redfish::chassis_utils::setInBandEnabled(asyncResp, chassisUUID, inBandEnabled.value());
+                                redfish::chassis_utils::setInBandEnabled(asyncResp, chassisId, chassisUUID, inBandEnabled.value());
                             }
                         });
                 return;

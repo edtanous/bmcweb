@@ -306,9 +306,12 @@ inline std::string convertToPowerModeType(const std::string& powerMode)
  *
  * @return None.
  */
-inline void setBackgroundCopyEnabled(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisUUID, bool enabled, bool isPCIe = true)
+inline void 
+    setBackgroundCopyEnabled(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& chassisId,
+                        const std::string& chassisUUID,
+                        bool enabled,
+                        bool isPCIe = true)
 {
     std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
     if (!isPCIe)
@@ -317,9 +320,11 @@ inline void setBackgroundCopyEnabled(
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisUUID, enabled,
-         isPCIe](const boost::system::error_code ec,
-                 const dbus::utility::ManagedObjectType& resp) {
+            [asyncResp, chassisId, chassisUUID, enabled, isPCIe](
+            const boost::system::error_code ec, 
+            const dbus::utility::ManagedObjectType& resp
+            ) {
+            
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
@@ -372,9 +377,15 @@ inline void setBackgroundCopyEnabled(
             {
                 if (enableBackgroundCopy(*eid, enabled) != 0)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute command ...";
-                    messages::internalError(asyncResp->res);
+                    BMCWEB_LOG_DEBUG << "mctp-vdm-util could not execute command ...";
+                    
+                    const std::string errorMessage = (enabled == true) 
+                            ? "MCTP Command Failure: Background Copy Enable" 
+                            : "MCTP Command Failure: Background Copy Disable";
+ 
+                    messages::resourceErrorsDetectedFormatError(asyncResp->res,
+                        "/redfish/v1/Chassis/" + chassisId,
+                        errorMessage);
                 }
                 else
                 {
@@ -385,15 +396,14 @@ inline void setBackgroundCopyEnabled(
             {
                 if (isPCIe)
                 {
-                    setBackgroundCopyEnabled(asyncResp, chassisUUID, enabled,
-                                             false);
+                    setBackgroundCopyEnabled(asyncResp, chassisId, chassisUUID, enabled, false);
                 }
                 else
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Can not find relevant MCTP endpoint for chassis "
-                        << chassisUUID;
-                    messages::internalError(asyncResp->res);
+                    BMCWEB_LOG_DEBUG << "Can not find relevant MCTP endpoint for chassis " << chassisId;
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces("redfish", "v1", "Chassis",
+                                                     chassisId));
+
                     return;
                 }
             }
@@ -418,10 +428,12 @@ inline void setBackgroundCopyEnabled(
  *
  * @return None.
  */
-inline void
+inline void 
     setInBandEnabled(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                     const std::string& chassisUUID, bool enabled,
-                     bool isPCIe = true)
+                        const std::string& chassisId,
+                        const std::string& chassisUUID,
+                        bool enabled,
+                        bool isPCIe = true)
 {
     std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
     if (!isPCIe)
@@ -430,9 +442,11 @@ inline void
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisUUID, enabled,
-         isPCIe](const boost::system::error_code ec,
-                 const dbus::utility::ManagedObjectType& resp) {
+            [asyncResp, chassisId, chassisUUID, enabled, isPCIe](
+            const boost::system::error_code ec, 
+            const dbus::utility::ManagedObjectType& resp
+            ) {
+            
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
@@ -485,9 +499,15 @@ inline void
             {
                 if (enableInBand(*eid, enabled) != 0)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute command ...";
-                    messages::internalError(asyncResp->res);
+                    BMCWEB_LOG_DEBUG << "mctp-vdm-util could not execute command ...";
+                    
+                    const std::string errorMessage = (enabled == true) 
+                            ? "MCTP Command Failure: In-Band Enable" 
+                            : "MCTP Command Failure: In-Band Disable";
+ 
+                    messages::resourceErrorsDetectedFormatError(asyncResp->res,
+                        "/redfish/v1/Chassis/" + chassisId,
+                        errorMessage);
                 }
                 else
                 {
@@ -498,14 +518,14 @@ inline void
             {
                 if (isPCIe)
                 {
-                    setInBandEnabled(asyncResp, chassisUUID, enabled, false);
+                    setInBandEnabled(asyncResp, chassisId, chassisUUID, enabled, false);
                 }
                 else
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Can not find relevant MCTP endpoint for chassis "
-                        << chassisUUID;
-                    messages::internalError(asyncResp->res);
+                    BMCWEB_LOG_DEBUG << "Can not find relevant MCTP endpoint for chassis " << chassisId;
+                    messages::resourceMissingAtURI(asyncResp->res,
+                            crow::utility::urlFromPieces("redfish", "v1", "Chassis",
+                                                     chassisId));
                     return;
                 }
             }
