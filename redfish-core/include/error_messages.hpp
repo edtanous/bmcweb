@@ -1041,6 +1041,21 @@ void invalidUpload(crow::Response& res, std::string_view arg1,
                    std::string_view arg2);
 
 /**
+ * @brief Formats MutualExclusiveProperties message into JSON
+ * Message body: "The properties <arg1> and <arg2> are mutually exclusive."
+ *
+ * @param[in] arg1 Parameter of message that will replace %1 in its body.
+ * @param[in] arg2 Parameter of message that will replace %2 in its body.
+ *
+ * @returns Message MutualExclusiveProperties formatted to JSON */
+nlohmann::json mutualExclusiveProperties(const std::string& arg1,
+                                         const std::string& arg2);
+
+void mutualExclusiveProperties(crow::Response& res, const std::string& arg1,
+                               const std::string& arg2);
+
+
+/**
  * @brief Formats InsufficientStorage message into JSON
  * Message body: "Insufficent storage or memory available to complete the
  *  request."

@@ -108,8 +108,8 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     }
     else if (registry == "UpdateEvent")
     {
-        header = &message_registries::update_event::header;
-        url = message_registries::update_event::url;
+        header = &registries::update_event::header;
+        url = registries::update_event::url;
     }
     else if (registry == "BiosAttributeRegistry")
     {
@@ -207,9 +207,9 @@ inline void handleMessageRegistryGet(
     }
     else if (registry == "UpdateEvent")
     {
-        header = &message_registries::update_event::header;
-        for (const message_registries::MessageEntry& entry :
-             message_registries::update_event::registry)
+        header = &registries::update_event::header;
+        for (const registries::MessageEntry& entry :
+             registries::update_event::registry)
         {
             registryEntries.emplace_back(&entry);
         }
@@ -217,7 +217,7 @@ inline void handleMessageRegistryGet(
     else if (registry == "BiosAttributeRegistry")
     {
         header = &registries::bios::header;
-        for (const message_registries::MessageEntry& entry :
+        for (const registries::MessageEntry& entry :
              registries::bios::registry)
         {
             registryEntries.emplace_back(&entry);

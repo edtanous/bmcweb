@@ -187,7 +187,7 @@ inline void requestRoutesSubmitTestEvent(App& app)
         std::optional<std::string> eventType;
         (void)eventType;
 
-        if (!json_util::readJson(req, asyncResp->res, "MessageId", messageId,
+        if (!json_util::readJsonPatch(req, asyncResp->res, "MessageId", messageId,
                                  "EventGroupId", eventGroupId, "EventId",
                                  eventId, "EventTimestamp", eventTimestamp,
                                  "Message", message, "MessageArgs", messageArgs,
@@ -337,7 +337,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
         std::optional<std::vector<std::string>> eventTypes;
         (void)eventTypes;
 
-        if (!json_util::readJson(
+        if (!json_util::readJsonPatch(
                 req, asyncResp->res, "Destination", destUrl, "Context", context,
                 "Protocol", protocol, "SubscriptionType", subscriptionType,
                 "EventFormatType", eventFormatType2, "HttpHeaders", headers,
@@ -359,24 +359,22 @@ inline void requestRoutesEventDestinationCollection(App& app)
             }
         }
 
-        // Validate the URL using regex expression
-        // Format: <protocol>://<host>:<port>/<uri>
-        // protocol: http/https
-        // host: Exclude ' ', ':', '#', '?'
-        // port: Empty or numeric value with ':' separator.
-        // uri: Start with '/' and Exclude '#', ' '
-        //      Can include query params(ex: '/event?test=1')
-        // TODO: Need to validate hostname extensively(as per rfc)
-        std::cmatch match;
-        if (!std::regex_match(destUrl.c_str(), match, urlRegex))
+        std::string host;
+        std::string urlProto;
+        uint16_t port = 0;
+        std::string path;
+
+        if (!crow::utility::validateAndSplitUrl(destUrl, urlProto, host, port,
+                                                path))
         {
+            BMCWEB_LOG_WARNING
+                << "Failed to validate and split destination url";
             messages::propertyValueFormatError(asyncResp->res, destUrl,
                                                "Destination");
             return;
         }
 
-        std::string uriProto = std::string(match[1].first, match[1].second);
-        if (uriProto == "http")
+        if (urlProto == "http")
         {
 #ifndef BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING
             messages::propertyValueFormatError(asyncResp->res, destUrl,
@@ -384,19 +382,15 @@ inline void requestRoutesEventDestinationCollection(App& app)
             return;
 #endif
         }
-
-        std::string host = std::string(match[2].first, match[2].second);
-        std::string port = std::string(match[3].first, match[3].second);
-        std::string path = std::string(match[4].first, match[4].second);
-        if (port.empty())
+        if (port == 0)
         {
-            if (uriProto == "http")
+            if (urlProto == "http")
             {
-                port = "80";
+                port = 80;
             }
             else
             {
-                port = "443";
+                port = 443;
             }
         }
         if (path.empty())
@@ -405,7 +399,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
         }
 
         std::shared_ptr<Subscription> subValue =
-            std::make_shared<Subscription>(host, port, path, uriProto);
+            std::make_shared<Subscription>(host, port, path, urlProto);
 
         subValue->destinationUrl = destUrl;
 
@@ -531,15 +525,15 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 for (const std::string& it : registryPrefix)
                 {
                     const std::span<
-                        const redfish::message_registries::MessageEntry>
+                        const redfish::registries::MessageEntry>
                         registry =
-                            redfish::message_registries::getRegistryFromPrefix(
+                            redfish::registries::getRegistryFromPrefix(
                                 it);
 
                     if (std::any_of(
                             registry.begin(), registry.end(),
                             [&id](
-                                const redfish::message_registries::MessageEntry&
+                                const redfish::registries::MessageEntry&
                                     messageEntry) {
                         return !id.compare(messageEntry.first);
                             }))

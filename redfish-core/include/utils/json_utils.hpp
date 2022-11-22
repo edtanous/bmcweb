@@ -603,5 +603,20 @@ bool readJsonAction(const crow::Request& req, crow::Response& res,
     return readJson(jsonRequest, res, key, std::forward<UnpackTypes&&>(in)...);
 }
 
+template <typename Type>
+bool getValueFromJsonObject(nlohmann::json& jsonData, const std::string& key,
+                            Type& value)
+{
+    nlohmann::json::iterator it = jsonData.find(key);
+    if (it == jsonData.end())
+    {
+        BMCWEB_LOG_DEBUG << "Key " << key << " not exist";
+        return false;
+    }
+
+    return details::unpackValue(*it, key, value);
+}
+
+
 } // namespace json_util
 } // namespace redfish
