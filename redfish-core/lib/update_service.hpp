@@ -2299,9 +2299,9 @@ inline void
     parameterTargets["Name"] = "Targets";
     parameterTargets["Required"] = "false";
     parameterTargets["DataType"] = "StringArray";
-    parameterTargets["Targets@Redfish.AllowableValues"] = nlohmann::json::array();
+    parameterTargets["AllowableValues"] = nlohmann::json::array();
 
-    nlohmann::json& allowableValues = parameterTargets["Targets@Redfish.AllowableValues"];
+    nlohmann::json& allowableValues = parameterTargets["AllowableValues"];
 
     for (auto& obj : subtree)
     {
@@ -2433,10 +2433,10 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
 
             asyncResp->res.jsonValue["@odata.type"] =
-               "#UpdateService.v1_11_0.CommitImageActionInfo";
+               "#ActionInfo.v1_2_0.ActionInfo";
             asyncResp->res.jsonValue["@odata.id"] =
                 "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo";
-            asyncResp->res.jsonValue["Name"] = "Commit Image Action Information";
+            asyncResp->res.jsonValue["Name"] = "CommitImage Action Info";
             asyncResp->res.jsonValue["Id"] = "CommitImageActionInfo";
 
             crow::connections::systemBus->async_method_call(
