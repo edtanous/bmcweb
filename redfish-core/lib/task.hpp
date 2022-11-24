@@ -147,6 +147,8 @@ struct TaskData : std::enable_shared_from_this<TaskData>
             const auto& last = tasks.front();
 
             // destroy all references
+            last->messages.emplace_back(
+                last->getMsgCallback("Aborted", last->index));
             last->timer.cancel();
             last->match.reset();
             tasks.pop_front();
