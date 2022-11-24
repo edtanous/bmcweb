@@ -169,114 +169,6 @@ inline SPDMMeasurementData
     return config;
 }
 
-template <typename CallbackFunc>
-inline void
-    processSPDMMeasurementData(const std::string& objectPath,
-                               CallbackFunc&& callback,
-                               const boost::system::error_code ec,
-                               const dbus::utility::ManagedObjectType& objects)
-{
-    SPDMMeasurementData config{};
-    if (ec)
-    {
-        BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
-        callback(std::move(config), false);
-        return;
-    }
-    const auto objIt = std::find_if(
-        objects.begin(), objects.end(),
-        [objectPath](const std::pair<sdbusplus::message::object_path,
-                                     dbus::utility::DBusInteracesMap>& object) {
-            return !objectPath.compare(object.first);
-        });
-
-    if (objIt == objects.end())
-    {
-        BMCWEB_LOG_ERROR << "Dbus Object not found:" << objectPath;
-        callback(std::move(config), false);
-        return;
-    }
-
-    for (const auto& interface : objIt->second)
-    {
-        if (interface.first == "xyz.openbmc_project.SPDM.Responder")
-        {
-            for (const auto& property : interface.second)
-            {
-                if (property.first == "Version")
-                {
-                    const uint8_t* version =
-                        std::get_if<uint8_t>(&property.second);
-                    if (version == nullptr)
-                    {
-                        continue;
-                    }
-                    config.version = *version;
-                }
-                else if (property.first == "Slot")
-                {
-                    const uint8_t* slot =
-                        std::get_if<uint8_t>(&property.second);
-                    if (slot == nullptr)
-                    {
-                        continue;
-                    }
-                    config.slot = *slot;
-                }
-                else if (property.first == "HashingAlgorithm")
-                {
-                    const std::string* hashAlgo =
-                        std::get_if<std::string>(&property.second);
-                    if (hashAlgo == nullptr)
-                    {
-                        continue;
-                    }
-                    config.hashAlgo = stripPrefix(
-                        *hashAlgo,
-                        "xyz.openbmc_project.SPDM.Responder.HashingAlgorithms.");
-                }
-                else if (property.first == "SigningAlgorithm")
-                {
-                    const std::string* signAlgo =
-                        std::get_if<std::string>(&property.second);
-                    if (signAlgo == nullptr)
-                    {
-                        continue;
-                    }
-                    config.signAlgo = stripPrefix(
-                        *signAlgo,
-                        "xyz.openbmc_project.SPDM.Responder.SigningAlgorithms.");
-                }
-                else if (property.first == "Certificate")
-                {
-                    const SPDMCertificates* certs =
-                        std::get_if<SPDMCertificates>(&property.second);
-                    if (certs == nullptr)
-                    {
-                        continue;
-                    }
-                    config.certs = *certs;
-                }
-                else if (property.first == "SignedMeasurements")
-                {
-                    const SignedMeasurementData* data =
-                        std::get_if<SignedMeasurementData>(&property.second);
-                    if (data == nullptr)
-                    {
-                        continue;
-                    }
-                    config.measurement.resize(data->size());
-                    std::copy(data->begin(), data->end(),
-                              config.measurement.begin());
-                    config.measurement =
-                        crow::utility::base64encode(config.measurement);
-                }
-            }
-        }
-    }
-    callback(std::move(config), true);
-}
-
 /**
  * Function that retrieves all properties for SPDM Measurement object
  */
@@ -285,13 +177,21 @@ inline void asyncGetSPDMMeasurementData(const std::string& objectPath,
                                         CallbackFunc&& callback)
 {
     crow::connections::systemBus->async_method_call(
-        [objectPath,
-         callback](const boost::system::error_code ec,
-                   const dbus::utility::ManagedObjectType& objects) {
-            processSPDMMeasurementData(objectPath, callback, ec, objects);
+        [objectPath, callback](const boost::system::error_code ec,
+                               GetManagedPropertyType& resp) {
+            SPDMMeasurementData config{};
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Get all function failed for object = "
+                                 << objectPath;
+                callback(std::move(config), true);
+                return;
+            }
+            config = parseSPDMInterfaceProperties(resp);
+            callback(std::move(config), true);
         },
-        spdmBusName, rootSPDMDbusPath, dbus_utils::dbusObjManagerIntf,
-        "GetManagedObjects");
+        "xyz.openbmc_project.SPDM", objectPath,
+        "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
 inline void handleSPDMGETSignedMeasurement(
@@ -662,29 +562,18 @@ inline void requestRoutesComponentIntegrity(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& id) {
-                const std::string objPath = std::string(rootSPDMDbusPath) + "/" + id;
-                const auto meas = spdmMeasurementData.find(objPath);
-                if (meas == spdmMeasurementData.end() ||
-                    meas->second.measurement.size() == 0)
-                {
-                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
-                            "redfish", "v1", "ComponentIntegrity", id));
-                    asyncResp->res.result(
-                        boost::beast::http::status::not_found);
-                    return;
-                }
-
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, objPath](const boost::system::error_code ec,
-                                         GetManagedPropertyType& resp) {
-                        if (ec)
+                const std::string objPath =
+                    std::string(rootSPDMDbusPath) + "/" + id;
+                asyncGetSPDMMeasurementData(
+                    objPath,
+                    [asyncResp, id, objPath](const SPDMMeasurementData& config,
+                                             bool gotData) {
+                        if (!gotData)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "Get all function failed for object = "
-                                << objPath;
+                            messages::internalError(asyncResp->res);
                             return;
                         }
-                        auto config = parseSPDMInterfaceProperties(resp);
+
                         asyncResp->res.jsonValue["SignedMeasurements"] =
                             config.measurement;
                         asyncResp->res.jsonValue["Version"] =
@@ -693,9 +582,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                             config.hashAlgo;
                         asyncResp->res.jsonValue["SigningAlgorithm"] =
                             config.signAlgo;
-                    },
-                    "xyz.openbmc_project.SPDM", objPath,
-                    "org.freedesktop.DBus.Properties", "GetAll", "");
+                    });
             });
 
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
