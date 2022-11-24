@@ -2469,7 +2469,7 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
         });
 
     BMCWEB_ROUTE(app,
-        "/redfish/v1/UpdateService/Oem/Nvidia/CommitImage/")
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
