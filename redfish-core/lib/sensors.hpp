@@ -2546,9 +2546,9 @@ inline void getSensorData(
                         std::remove(sensorTypeEscaped.begin(),
                                     sensorTypeEscaped.end(), '_'),
                         sensorTypeEscaped.end());
-                    std::string sensorId(sensorTypeEscaped);
-                    sensorId += "_";
-                    sensorId += sensorName;
+                    std::string sensorId(sensorName);
+                    // sensorId += "_";
+                    // sensorId += sensorName;
 
                     sensorsAsyncResp->asyncResp->res.jsonValue["@odata.id"] =
                         crow::utility::urlFromPieces(
@@ -2636,9 +2636,9 @@ inline void getSensorData(
                             std::remove(sensorTypeEscaped.begin(),
                                         sensorTypeEscaped.end(), '_'),
                             sensorTypeEscaped.end());
-                        std::string sensorId(sensorTypeEscaped);
-                        sensorId += "_";
-                        sensorId += sensorName;
+                        std::string sensorId(sensorName);
+                        // sensorId += "_";
+                        // sensorId += sensorName;
 
                         nlohmann::json::object_t member;
                         member["@odata.id"] = crow::utility::urlFromPieces(
@@ -3021,9 +3021,7 @@ inline void getChassisCallback(
         type.erase(std::remove(type.begin(), type.end(), '_'), type.end());
 
         nlohmann::json::object_t member;
-        std::string id = type;
-        id += "_";
-        id += sensorName;
+        std::string id = sensorName;
         member["@odata.id"] = crow::utility::urlFromPieces(
             "redfish", "v1", "Chassis", chassisId, chassisSubNode, id);
 
