@@ -338,7 +338,7 @@ static inline void
             }
             else if (*s == "xyz.openbmc_project.State.Chassis.PowerState.Off")
             {
-                asyncResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
+                asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
                 asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
                 asyncResp->res.jsonValue["Status"]["HealthRollup"] = "Critical";
             }
