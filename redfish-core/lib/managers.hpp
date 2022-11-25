@@ -505,7 +505,7 @@ inline void requestRoutesManagerResetActionInfo(App& app)
 inline void requestRoutesNvidiaSyncOOBRawCommandActionInfo(App& app)
 {
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Managers/<str>/NvidiaSyncOOBRawCommandActionInfo/")
+        app, "/redfish/v1/Managers/<str>/Oem/Nvidia/SyncOOBRawCommandActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -523,7 +523,7 @@ inline void requestRoutesNvidiaSyncOOBRawCommandActionInfo(App& app)
                 asyncResp->res.jsonValue = {
                     {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
                     {"@odata.id", "/redfish/v1/Managers/" + bmcId +
-                                      "/NvidiaSyncOOBRawCommandActionInfo"},
+                                      "/Oem/Nvidia/SyncOOBRawCommandActionInfo"},
                     {"Name", "SyncOOBRawCommand Action Info"},
                     {"Id", "NvidiaSyncOOBRawCommandActionInfo"},
                     {"Parameters",
@@ -563,7 +563,7 @@ inline void requestRoutesNvidiaSyncOOBRawCommandActionInfo(App& app)
 inline void requestRoutesNvidiaAsyncOOBRawCommandActionInfo(App& app)
 {
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Managers/<str>/NvidiaAsyncOOBRawCommandActionInfo/")
+        app, "/redfish/v1/Managers/<str>/Oem/Nvidia/AsyncOOBRawCommandActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -582,7 +582,7 @@ inline void requestRoutesNvidiaAsyncOOBRawCommandActionInfo(App& app)
                 asyncResp->res.jsonValue = {
                     {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
                     {"@odata.id", "/redfish/v1/Managers/" + bmcId +
-                                      "/NvidiaAsyncOOBRawCommandActionInfo"},
+                                      "/Oem/Nvidia/AsyncOOBRawCommandActionInfo"},
                     {"Name", "AsyncOOBRawCommand Action Info"},
                     {"Id", "NvidiaAsyncOOBRawCommandActionInfo"},
                     {"Parameters",
@@ -3359,12 +3359,12 @@ inline void requestRoutesManager(App& app)
             oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["target"] =
                 "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Oem/NvidiaManager.SyncOOBRawCommand";
             oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/NvidiaSyncOOBRawCommandActionInfo";
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia/SyncOOBRawCommandActionInfo";
 
             oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]["target"] =
                 "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand";
             oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/NvidiaAsyncOOBRawCommandActionInfo";
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia/AsyncOOBRawCommandActionInfo";
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
