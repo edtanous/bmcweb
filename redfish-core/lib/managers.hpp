@@ -3367,21 +3367,27 @@ inline void requestRoutesManager(App& app)
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-        std::pair<std::string, std::string> redfishDateTimeOffset =
-            redfish::time_utils::getDateTimeOffsetNow();
+            std::pair<std::string, std::string> redfishDateTimeOffset =
+                redfish::time_utils::getDateTimeOffsetNow();
 
-        asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
-        asyncResp->res.jsonValue["DateTimeLocalOffset"] =
-            redfishDateTimeOffset.second;
+            asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
+            asyncResp->res.jsonValue["DateTimeLocalOffset"] =
+                redfishDateTimeOffset.second;
 
-        // TODO (Gunnar): Remove these one day since moved to ComputerSystem
-        // Still used by OCP profiles
-        // https://github.com/opencomputeproject/OCP-Profiles/issues/23
-        // Fill in SerialConsole info
-        asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
-        asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] = 15;
-        asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
-            nlohmann::json::array_t({"IPMI", "SSH"});
+            // TODO (Gunnar): Remove these one day since moved to ComputerSystem
+            // Still used by OCP profiles
+            // https://github.com/opencomputeproject/OCP-Profiles/issues/23
+            // Fill in SerialConsole info
+            asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
+            asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
+                15;
+#ifdef BMCWEB_ENABLE_IPMI
+            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
+                nlohmann::json::array_t({"IPMI", "SSH"});
+#else
+            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
+                nlohmann::json::array_t({"SSH"});
+#endif
 #ifdef BMCWEB_ENABLE_KVM
         // Fill in GraphicalConsole info
         asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] = true;

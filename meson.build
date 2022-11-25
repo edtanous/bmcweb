@@ -101,6 +101,7 @@ feature_map = {
   'host-iface'                          	: '-DBMCWEB_ENABLE_HOST_IFACE',
   'array-bootprogress'                          : '-DBMCWEB_ARRAY_BOOT_PROGRESS',
   'bios'                                        : '-DBMCWEB_ENABLE_BIOS',
+  'ipmi'                                        : '-DBMCWEB_ENABLE_IPMI',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

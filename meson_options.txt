@@ -352,3 +352,4 @@ option('host-iface', type : 'feature', value : 'disabled', description : 'Enable
 option ('host-iface-channel', type : 'string', value : 'usb0', description : 'Host interface channel name')
 
 option('bios', type: 'feature', value : 'enabled', description : 'Enable the BIOS Redfish API.')
+option('ipmi', type : 'feature', value : 'enabled', description : 'Enable/disable ipmi feature.')

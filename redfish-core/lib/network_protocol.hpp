@@ -510,7 +510,9 @@ inline void requestRoutesNetworkProtocol(App& app)
                 std::optional<std::string> newHostName;
                 std::optional<std::vector<nlohmann::json>> ntpServerObjects;
                 std::optional<bool> ntpEnabled;
+#ifdef BMCWEB_ENABLE_IPMI
                 std::optional<bool> ipmiEnabled;
+#endif
                 std::optional<bool> sshEnabled;
 
                 // clang-format off
@@ -519,7 +521,9 @@ inline void requestRoutesNetworkProtocol(App& app)
                 "HostName", newHostName,
                 "NTP/NTPServers", ntpServerObjects,
                 "NTP/ProtocolEnabled", ntpEnabled,
+#ifdef BMCWEB_ENABLE_IPMI
                 "IPMI/ProtocolEnabled", ipmiEnabled,
+#endif
                 "SSH/ProtocolEnabled", sshEnabled))
         {
             return;
@@ -553,7 +557,7 @@ inline void requestRoutesNetworkProtocol(App& app)
                                                   std::move(currentNtpServers));
                         });
                 }
-
+#ifdef BMCWEB_ENABLE_IPMI
                 if (ipmiEnabled)
                 {
                     handleProtocolEnabled(
@@ -561,6 +565,7 @@ inline void requestRoutesNetworkProtocol(App& app)
                         encodeServiceObjectPath(std::string(ipmiServiceName) +
                                                 '@'));
                 }
+#endif
 
                 if (sshEnabled)
                 {
