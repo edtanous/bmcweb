@@ -182,7 +182,8 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         const std::string& protocolName = protocol.first;
         const std::string& serviceName = protocol.second;
 #ifdef BMCWEB_ENABLE_SSL
-        if (protocolName == "HTTPS" && !persistent_data::getConfig().isTLSAuthEnabled())
+        if (protocolName == "HTTPS" &&
+            !persistent_data::getConfig().isTLSAuthEnabled())
         {
             continue;
         }
@@ -425,11 +426,18 @@ inline void requestRoutesNetworkProtocol(App& app)
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
             std::optional<std::string> newHostName;
             std::optional<nlohmann::json> ntp;
+#ifdef BMCWEB_ENABLE_IPMI
             std::optional<nlohmann::json> ipmi;
+#endif
             std::optional<nlohmann::json> ssh;
 
             if (!json_util::readJson(req, asyncResp->res, "NTP", ntp,
-                                     "HostName", newHostName, "IPMI", ipmi,
+                                     "HostName", newHostName
+#ifdef BMCWEB_ENABLE_IPMI
+                                     ,
+                                     "IPMI", ipmi
+#endif
+                                     ,
                                      "SSH", ssh))
             {
                 return;
@@ -465,6 +473,7 @@ inline void requestRoutesNetworkProtocol(App& app)
                 }
             }
 
+#ifdef BMCWEB_ENABLE_IPMI
             if (ipmi)
             {
                 std::optional<bool> ipmiProtocolEnabled;
@@ -482,6 +491,7 @@ inline void requestRoutesNetworkProtocol(App& app)
                         "/xyz/openbmc_project/control/service/phosphor_2dipmi_2dnet_40");
                 }
             }
+#endif
 
             if (ssh)
             {

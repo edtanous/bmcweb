@@ -3373,8 +3373,13 @@ inline void requestRoutesManager(App& app)
             asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
             asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
                 15;
+#ifdef BMCWEB_ENABLE_IPMI
             asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
                 {"IPMI", "SSH"};
+#else
+            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
+                {"SSH"};
+#endif
 #ifdef BMCWEB_ENABLE_KVM
             // Fill in GraphicalConsole info
             asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
