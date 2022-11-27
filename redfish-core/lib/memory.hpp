@@ -630,7 +630,7 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
     auto health = std::make_shared<HealthPopulate>(aResp);
     health->selfPath = objPath;
     health->populate();
-#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE*/
 
     BMCWEB_LOG_DEBUG << "Get available system components.";
     sdbusplus::asio::getAllProperties(

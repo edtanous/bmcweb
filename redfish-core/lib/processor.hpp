@@ -37,6 +37,7 @@
 
 namespace redfish
 {
+
 using GetSubTreeType = std::vector<
     std::pair<std::string,
               std::vector<std::pair<std::string, std::vector<std::string>>>>>;
@@ -3984,9 +3985,9 @@ inline void requestRoutesProcessorPort(App& app)
         });
 }
 
-inline void
-    getPortMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const std::string& service, const std::string& path)
+inline void getProcessorPortMetricsData(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& service, const std::string& path)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, service,
@@ -4092,7 +4093,7 @@ inline void
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
                                             ["RecoveryCount"] = *value;
                 }
-                else if (property.first == "ReplayCount")
+                else if (property.first == "ReplayErrorsCount")
                 {
                     const uint32_t* value =
                         std::get_if<uint32_t>(&property.second);
@@ -4155,10 +4156,107 @@ inline void
                     }
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                else if (property.first == "ceCount")
+                {
+                    const int64_t* value =
+                        std::get_if<int64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["PCIeErrors"]["CorrectableErrorCount"] =
+                        *value;
+                }
+                else if (property.first == "nonfeCount")
+                {
+                    const int64_t* value =
+                        std::get_if<int64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["PCIeErrors"]["NonFatalErrorCount"] = *value;
+                }
+                else if (property.first == "feCount")
+                {
+                    const int64_t* value =
+                        std::get_if<int64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["PCIeErrors"]["FatalErrorCount"] =
+                        *value;
+                }
+                else if (property.first == "L0ToRecoveryCount")
+                {
+                    const int64_t* value =
+                        std::get_if<int64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["PCIeErrors"]["L0ToRecoveryCount"] = *value;
+                }
+                else if (property.first == "ReplayCount")
+                {
+                    const int64_t* value =
+                        std::get_if<int64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["PCIeErrors"]["ReplayCount"] =
+                        *value;
+                }
+                else if (property.first == "ReplayRolloverCount")
+                {
+                    const int64_t* value =
+                        std::get_if<int64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["PCIeErrors"]["ReplayRolloverCount"] =
+                        *value;
+                }
+                else if (property.first == "NAKSentCount")
+                {
+                    const int64_t* value =
+                        std::get_if<int64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["PCIeErrors"]["NAKSentCount"] =
+                        *value;
+                }
+                else if (property.first == "NAKReceivedCount")
+                {
+                    const int64_t* value =
+                        std::get_if<int64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] =
+                        *value;
+                }
             }
         },
-        service, path, "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.Inventory.Item.Port");
+        service, path, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
 inline void requestRoutesProcessorPortMetrics(App& app)
@@ -4232,20 +4330,8 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                     for (const auto& [service, interfaces] :
                                          object1)
                                     {
-                                        getPortMetricsData(asyncResp, service,
-                                                           portPath);
-
-                                        if (std::find(
-                                                interfaces.begin(),
-                                                interfaces.end(),
-                                                "xyz.openbmc_project.PCIe.PCIeECC") !=
-                                            interfaces.end())
-                                        {
-                                            redfish::processor_utils::
-                                                getPCIeErrorData(asyncResp,
-                                                                 service,
-                                                                 portPath);
-                                        }
+                                        getProcessorPortMetricsData(
+                                            asyncResp, service, portPath);
                                     }
 
                                     return;

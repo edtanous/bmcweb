@@ -802,420 +802,378 @@ inline void
 }
 
 inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& objPath,
+                           const std::string& service,
                            const std::string& chassisId)
 {
-    const std::array<const char*, 2> interfaces = {
-        "xyz.openbmc_project.Inventory.Item.Board",
-        "xyz.openbmc_project.Inventory.Item.Chassis"};
+    asyncResp->res.jsonValue["@odata.type"] = "#Chassis.v1_17_0.Chassis";
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" + chassisId;
+    asyncResp->res.jsonValue["Name"] = chassisId;
+    asyncResp->res.jsonValue["Id"] = chassisId;
+    asyncResp->res.jsonValue["ChassisType"] = "RackMount";
+    asyncResp->res.jsonValue["Actions"]["#Chassis.Reset"]["target"] =
+        "/redfish/v1/Chassis/" + chassisId + "/Actions/Chassis.Reset";
+    asyncResp->res
+        .jsonValue["Actions"]["#Chassis.Reset"]["@Redfish.ActionInfo"] =
+        "/redfish/v1/Chassis/" + chassisId + "/ResetActionInfo";
+    asyncResp->res.jsonValue["PCIeDevices"] = {
+        {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/PCIeDevices"}};
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+
+    asyncResp->res.jsonValue["LogServices"] = {
+        {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/LogServices"}};
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+
+#ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
+    asyncResp->res.jsonValue["Thermal"]["@odata.id"] =
+        "/redfish/v1/Chassis/" + chassisId + "/Thermal";
+    asyncResp->res.jsonValue["ThermalSubsystem"]["@odata.id"] =
+        crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
+                                     "ThermalSubsystem");
+    asyncResp->res.jsonValue["EnvironmentMetrics"] = {
+        {"@odata.id",
+         "/redfish/v1/Chassis/" + chassisId + "/EnvironmentMetrics"}};
+    // Power object
+    asyncResp->res.jsonValue["Power"]["@odata.id"] =
+        "/redfish/v1/Chassis/" + chassisId + "/Power";
+
+#endif
+#ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
+    asyncResp->res.jsonValue["PowerSubsystem"]["@odata.id"] =
+        crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
+                                     "PowerSubsystem");
+#endif
+    // SensorCollection
+    asyncResp->res.jsonValue["Sensors"]["@odata.id"] =
+        "/redfish/v1/Chassis/" + chassisId + "/Sensors";
+    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+
+    // Assembly collection
+    asyncResp->res.jsonValue["Assembly"] = {
+        {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/Assembly"}};
+
+    // PCIeSlots collection
+    asyncResp->res.jsonValue["PCIeSlots"] = {
+        {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/PCIeSlots"}};
+
+    // Controls Collection
+    asyncResp->res.jsonValue["Controls"] = {
+        {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/Controls"}};
+    asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
+        {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
+
+    asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
+        {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
+    asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
+        {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}};
+
+    using GetManagedPropertyType = boost::container::flat_map<
+        std::string, std::variant<std::string, bool, double, uint64_t, uint32_t>>;
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisId(std::string(chassisId))](
-            const boost::system::error_code ec,
-            const dbus::utility::MapperGetSubTreeResponse& subtree) {
+        [asyncResp](const boost::system::error_code ec,
+                    const GetManagedPropertyType& properties) {
             if (ec)
             {
                 messages::internalError(asyncResp->res);
                 return;
             }
-            // Iterate over all retrieved ObjectPaths.
-            for (const std::pair<std::string,
-                                 std::vector<std::pair<
-                                     std::string, std::vector<std::string>>>>&
-                     object : subtree)
+
+            for (const auto& property : properties)
             {
-                const std::string& path = object.first;
-                const std::vector<
-                    std::pair<std::string, std::vector<std::string>>>&
-                    connectionNames = object.second;
-
-                sdbusplus::message::object_path objPath(path);
-                if (objPath.filename() != chassisId)
+                const std::string& propertyName = property.first;
+                if (propertyName == "PartNumber")
                 {
-                    continue;
-                }
-#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                std::shared_ptr<HealthRollup> health =
-                    std::make_shared<HealthRollup>(
-                        path, [asyncResp](const std::string& rootHealth,
-                                          const std::string& healthRollup) {
-                            asyncResp->res.jsonValue["Status"]["Health"] =
-                                rootHealth;
-                            asyncResp->res.jsonValue["Status"]["HealthRollup"] =
-                                healthRollup;
-                        });
-                health->start();
-#else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                auto health = std::make_shared<HealthPopulate>(asyncResp);
-
-                sdbusplus::asio::getProperty<std::vector<std::string>>(
-                    *crow::connections::systemBus,
-                    "xyz.openbmc_project.ObjectMapper", path + "/all_sensors",
-                    "xyz.openbmc_project.Association", "endpoints",
-                    [health](const boost::system::error_code ec2,
-                             const std::vector<std::string>& resp) {
-                        if (ec2)
-                        {
-                            return; // no sensors = no failures
-                        }
-                        health->inventory = resp;
-                    });
-
-                health->populate();
-#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-
-                if (connectionNames.empty())
-                {
-                    BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                    continue;
-                }
-
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#Chassis.v1_17_0.Chassis";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Chassis/" + chassisId;
-                asyncResp->res.jsonValue["Name"] = "Chassis Collection";
-                asyncResp->res.jsonValue["ChassisType"] = "RackMount";
-                asyncResp->res
-                    .jsonValue["Actions"]["#Chassis.Reset"]["target"] =
-                    "/redfish/v1/Chassis/" + chassisId +
-                    "/Actions/Chassis.Reset";
-                asyncResp->res.jsonValue["Actions"]["#Chassis.Reset"]
-                                        ["@Redfish.ActionInfo"] =
-                    "/redfish/v1/Chassis/" + chassisId + "/ResetActionInfo";
-                asyncResp->res.jsonValue["PCIeDevices"] = {
-                    {"@odata.id",
-                     "/redfish/v1/Chassis/" + chassisId + "/PCIeDevices"}};
-
-                redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                                     chassisId);
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
-
-                asyncResp->res.jsonValue["LogServices"] = {
-                    {"@odata.id",
-                     "/redfish/v1/Chassis/" + chassisId + "/LogServices"}};
-
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
-
-                sdbusplus::asio::getProperty<std::vector<std::string>>(
-                    *crow::connections::systemBus,
-                    "xyz.openbmc_project.ObjectMapper", path + "/drive",
-                    "xyz.openbmc_project.Association", "endpoints",
-                    [asyncResp,
-                     chassisId](const boost::system::error_code ec3,
-                                const std::vector<std::string>& resp) {
-                        if (ec3 || resp.empty())
-                        {
-                            return; // no drives = no failures
-                        }
-
-                        nlohmann::json reference;
-                        reference["@odata.id"] = crow::utility::urlFromPieces(
-                            "redfish", "v1", "Chassis", chassisId, "Drives");
-                        asyncResp->res.jsonValue["Drives"] =
-                            std::move(reference);
-                    });
-
-                const std::string& connectionName = connectionNames[0].first;
-
-                const std::vector<std::string>& interfaces2 =
-                    connectionNames[0].second;
-                const std::array<const char*, 2> hasIndicatorLed = {
-                    "xyz.openbmc_project.Inventory.Item.Panel",
-                    "xyz.openbmc_project.Inventory.Item.Board.Motherboard"};
-
-                const std::string assetTagInterface =
-                    "xyz.openbmc_project.Inventory.Decorator.AssetTag";
-                if (std::find(interfaces2.begin(), interfaces2.end(),
-                              assetTagInterface) != interfaces2.end())
-                {
-                    sdbusplus::asio::getProperty<std::string>(
-                        *crow::connections::systemBus, connectionName, path,
-                        assetTagInterface, "AssetTag",
-                        [asyncResp, chassisId(std::string(chassisId))](
-                            const boost::system::error_code ec2,
-                            const std::string& property) {
-                            if (ec2)
-                            {
-                                BMCWEB_LOG_DEBUG
-                                    << "DBus response error for AssetTag";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            asyncResp->res.jsonValue["AssetTag"] = property;
-                        });
-                }
-
-                for (const char* interface : hasIndicatorLed)
-                {
-                    if (std::find(interfaces2.begin(), interfaces2.end(),
-                                  interface) != interfaces2.end())
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
                     {
-                        getIndicatorLedState(asyncResp);
-                        getLocationIndicatorActive(asyncResp);
-                        break;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["PartNumber"] = *value;
+                }
+                if (propertyName == "SerialNumber")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["SerialNumber"] = *value;
+                }
+                if (propertyName == "Manufacturer")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Manufacturer"] = *value;
+                }
+                if (propertyName == "Model")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Model"] = *value;
+                }
+                if (propertyName == "SparePartNumber")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value != nullptr && !value->empty())
+                    {
+                        asyncResp->res.jsonValue["SparePartNumber"] = *value;
                     }
                 }
-
-                sdbusplus::asio::getAllProperties(
-                    *crow::connections::systemBus, connectionName, path,
-                    "xyz.openbmc_project.Inventory.Decorator.Asset",
-                    [asyncResp, chassisId(std::string(chassisId))](
-                        const boost::system::error_code /*ec2*/,
-                        const dbus::utility::DBusPropertiesMap&
-                            propertiesList) {
-                        const std::string* partNumber = nullptr;
-                        const std::string* serialNumber = nullptr;
-                        const std::string* manufacturer = nullptr;
-                        const std::string* model = nullptr;
-                        const std::string* sparePartNumber = nullptr;
-
-                        const std::string* sku = nullptr;
-
-                        const bool success = sdbusplus::unpackPropertiesNoThrow(
-                            dbus_utils::UnpackErrorPrinter(), propertiesList,
-                            "PartNumber", partNumber, "SerialNumber",
-                            serialNumber, "Manufacturer", manufacturer, "Model",
-                            model, "SparePartNumber", sparePartNumber, "SKU",
-                            sku);
-
-                        if (!success)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        if (partNumber != nullptr)
-                        {
-                            asyncResp->res.jsonValue["PartNumber"] =
-                                *partNumber;
-                        }
-
-                        if (serialNumber != nullptr)
-                        {
-                            asyncResp->res.jsonValue["SerialNumber"] =
-                                *serialNumber;
-                        }
-
-                        if (manufacturer != nullptr)
-                        {
-                            asyncResp->res.jsonValue["Manufacturer"] =
-                                *manufacturer;
-                        }
-
-                        if (model != nullptr)
-                        {
-                            asyncResp->res.jsonValue["Model"] = *model;
-                        }
-
-                        // SparePartNumber is optional on D-Bus
-                        // so skip if it is empty
-                        if (sparePartNumber != nullptr &&
-                            !sparePartNumber->empty())
-                        {
-                            asyncResp->res.jsonValue["SparePartNumber"] =
-                                *sparePartNumber;
-                        }
-
-                        if (sku != nullptr)
-                        {
-                            asyncResp->res.jsonValue["SKU"] = *sku;
-                        }
-
-                        asyncResp->res.jsonValue["Name"] = chassisId;
-                        asyncResp->res.jsonValue["Id"] = chassisId;
-#ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
-                        asyncResp->res.jsonValue["Thermal"]["@odata.id"] =
-                            "/redfish/v1/Chassis/" + chassisId + "/Thermal";
-                        asyncResp->res
-                            .jsonValue["ThermalSubsystem"]["@odata.id"] =
-                            crow::utility::urlFromPieces("redfish", "v1",
-                                                         "Chassis", chassisId,
-                                                         "ThermalSubsystem");
-                        asyncResp->res.jsonValue["EnvironmentMetrics"] = {
-                            {"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                              "/EnvironmentMetrics"}};
-                        // Power object
-                        asyncResp->res.jsonValue["Power"]["@odata.id"] =
-                            "/redfish/v1/Chassis/" + chassisId + "/Power";
-
-#endif
-#ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
-                        asyncResp->res
-                            .jsonValue["PowerSubsystem"]["@odata.id"] =
-                            crow::utility::urlFromPieces("redfish", "v1",
-                                                         "Chassis", chassisId,
-                                                         "PowerSubsystem");
-#endif
-                        // SensorCollection
-                        asyncResp->res.jsonValue["Sensors"]["@odata.id"] =
-                            "/redfish/v1/Chassis/" + chassisId + "/Sensors";
-                        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-
-                        // Assembly collection
-                        asyncResp->res.jsonValue["Assembly"] = {
-                            {"@odata.id",
-                             "/redfish/v1/Chassis/" + chassisId + "/Assembly"}};
-
-                        // PCIeSlots collection
-                        asyncResp->res.jsonValue["PCIeSlots"] = {
-                            {"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                              "/PCIeSlots"}};
-
-                        // Controls Collection
-                        asyncResp->res.jsonValue["Controls"] = {
-                            {"@odata.id",
-                             "/redfish/v1/Chassis/" + chassisId + "/Controls"}};
-                        asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
-                            {{"@odata.id",
-                              "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
-
-                        asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
-                            {{"@odata.id",
-                              "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
-                        asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
-                            {{"@odata.id",
-                              "/redfish/v1/Managers/" PLATFORMBMCID}}};
-
-                        getChassisState(asyncResp);
-                        redfish::conditions_utils::populateServiceConditions(
-                            asyncResp, chassisId);
-                    });
-
-                for (const auto& interface : interfaces2)
+                if (propertyName == "SKU")
                 {
-                    if (interface == "xyz.openbmc_project.Common.UUID")
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
                     {
-                        redfish::chassis_utils::getChassisUUID(
-                            asyncResp, connectionName, path);
+                        messages::internalError(asyncResp->res);
+                        return;
                     }
-                    else if (
-                        interface ==
-                        "xyz.openbmc_project.Inventory.Decorator.LocationCode")
-                    {
-                        getChassisLocationCode(asyncResp, connectionName, path);
-                    }
-                    else if (interface ==
-                             "xyz.openbmc_project.Inventory.Decorator.Location")
-                    {
-                        redfish::chassis_utils::getChassisLocationType(
-                            asyncResp, connectionName, path);
-                    }
-                    else if (interface == "xyz.openbmc_project.Inventory.Item")
-                    {
-                        redfish::chassis_utils::getChassisName(
-                            asyncResp, connectionName, path);
-                    }
+                    asyncResp->res.jsonValue["SKU"] = *value;
                 }
-
-                // Chassis item properties
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp](
-                        const boost::system::error_code ec1,
-                        const std::vector<std::pair<
-                            std::string, dbus::utility::DbusVariantType>>&
-                            propertiesList) {
-                        if (ec1)
-                        {
-                            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                                "Chassis properties";
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        for (const std::pair<std::string,
-                                             dbus::utility::DbusVariantType>&
-                                 property : propertiesList)
-                        {
-                            const std::string& propertyName = property.first;
-                            if (propertyName == "Type")
-                            {
-                                const std::string* value =
-                                    std::get_if<std::string>(&property.second);
-                                if (value == nullptr)
-                                {
-                                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                                        "for type";
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                std::string chassisType =
-                                    redfish::chassis_utils::getChassisType(
-                                        *value);
-                                asyncResp->res.jsonValue["ChassisType"] =
-                                    chassisType;
-                            }
-                        }
-                    },
-                    connectionName, path, "org.freedesktop.DBus.Properties",
-                    "GetAll", "xyz.openbmc_project.Inventory.Item.Chassis");
-                // Chassis physical dimensions
-                const std::string dimensionInterface =
-                    "xyz.openbmc_project.Inventory.Decorator.Dimension";
-                if (std::find(interfaces2.begin(), interfaces2.end(),
-                              dimensionInterface) != interfaces2.end())
+                if (propertyName == "UUID")
                 {
-                    getChassisDimensions(asyncResp, connectionName, path);
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["UUID"] = *value;
                 }
-
-                // Chassis power limits
-                const std::string powerInterface =
-                    "xyz.openbmc_project.Inventory.Decorator."
-                    "PowerLimit";
-                if (std::find(interfaces2.begin(), interfaces2.end(),
-                              powerInterface) != interfaces2.end())
+                if (propertyName == "LocationCode")
                 {
-                    getChassisPowerLimits(asyncResp, connectionName, path);
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
+                        *value;
                 }
-
+                if (propertyName == "LocationType")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["Location"]["PartLocation"]["LocationType"] =
+                        redfish::dbus_utils::toLocationType(*value);
+                }
+                if (propertyName == "PrettyName")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Name"] = *value;
+                }
+                if (propertyName == "Type")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["ChassisType"] =
+                        redfish::chassis_utils::getChassisType(*value);
+                }
+                if (propertyName == "Height")
+                {
+                    const double* value = std::get_if<double>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for Height";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["HeightMm"] = *value;
+                }
+                if (propertyName == "Width")
+                {
+                    const double* value = std::get_if<double>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for Width";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["WidthMm"] = *value;
+                }
+                if (propertyName == "Depth")
+                {
+                    const double* value = std::get_if<double>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for Depth";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["DepthMm"] = *value;
+                }
+                if (propertyName == "MinPowerWatts")
+                {
+                    const size_t* value = std::get_if<size_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for MinPowerWatts";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["MinPowerWatts"] = *value;
+                }
+                if (propertyName == "MaxPowerWatts")
+                {
+                    const size_t* value = std::get_if<size_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for MaxPowerWatts";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["MaxPowerWatts"] = *value;
+                }
+                if (property.first == "AssetTag")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["AssetTag"] = *value;
+                }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 // default oem data
                 nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
                 oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
-
-                // Baseboard Chassis OEM properties if exist, search by
-                // association
-                getOemBaseboardChassisAssert(asyncResp, path);
-
-                // Baseboard Chassis hardware write protect info
-                const std::string hdwWriteProtectInterface =
-                    "xyz.openbmc_project.Software.Settings";
-                if (std::find(interfaces2.begin(), interfaces2.end(),
-                              hdwWriteProtectInterface) != interfaces2.end())
+                if (property.first == "WriteProtected")
                 {
-                    getOemHdwWriteProtectInfo(asyncResp, connectionName, path);
+                    const bool* value = std::get_if<bool>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for hardware write protected";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["Oem"]["Nvidia"]["HardwareWriteProtected"] =
+                        *value;
                 }
-
-                // Baseboard Chassis PCIe reference clock count
-                const std::string PCIeDeviceclkRefInterface =
-                    "xyz.openbmc_project.Inventory.Decorator.PCIeRefClock";
-                if (std::find(interfaces2.begin(), interfaces2.end(),
-                              PCIeDeviceclkRefInterface) != interfaces2.end())
+                if (property.first == "WriteProtectedControl")
                 {
-                    getOemPCIeDeviceClockReferenceInfo(asyncResp,
-                                                       connectionName, path);
+                    const bool* value = std::get_if<bool>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "Null value returned "
+                               "for hardware write protected control";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                            ["HardwareWriteProtectedControl"] =
+                        *value;
+                }
+                if (property.first == "PCIeReferenceClockCount")
+                {
+                    const uint64_t* value =
+                        std::get_if<uint64_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for pcie refernce clock count";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res
+                        .jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockCount"] =
+                        *value;
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
-                // Links association to underneath chassis
-                getChassisLinksContains(asyncResp, path);
-                // Links association to underneath processors
-                getChassisProcessorLinks(asyncResp, path);
-                // Links association to connected fabric switches
-                getChassisFabricSwitchesLinks(asyncResp, path);
-                // Link association to parent chassis
-                redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
-                                                                   path);
-
-                return;
             }
-
-            // Couldn't find an object with that name.  return an error
-            messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-        "/xyz/openbmc_project/inventory", 0, interfaces);
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
+    getChassisState(asyncResp);
+    redfish::conditions_utils::populateServiceConditions(asyncResp, chassisId);
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    // Baseboard Chassis OEM properties if exist, search by association
+    getOemBaseboardChassisAssert(asyncResp, objPath);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        objPath, [asyncResp](const std::string& rootHealth,
+                             const std::string& healthRollup) {
+            asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+            asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+        });
+    health->start();
+#else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+    auto health = std::make_shared<HealthPopulate>(asyncResp);
+
+    sdbusplus::asio::getProperty<std::vector<std::string>>(
+        *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
+        objPath + "/all_sensors", "xyz.openbmc_project.Association",
+        "endpoints",
+        [health](const boost::system::error_code ec2,
+                 const std::vector<std::string>& resp) {
+            if (ec2)
+            {
+                return; // no sensors = no failures
+            }
+            health->inventory = resp;
+        });
+
+    health->populate();
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE*/
+
+    // Links association to underneath chassis
+    getChassisLinksContains(asyncResp, objPath);
+    // Links association to underneath processors
+    getChassisProcessorLinks(asyncResp, objPath);
+    // Links association to connected fabric switches
+    getChassisFabricSwitchesLinks(asyncResp, objPath);
+    // Link association to parent chassis
+    redfish::chassis_utils::getChassisLinksContainedBy(asyncResp, objPath);
     getPhysicalSecurityData(asyncResp);
 }
 
@@ -1247,19 +1205,106 @@ inline void
     {
         return;
     }
-    redfish::chassis_utils::isEROTChassis(
-        chassisId, [req, asyncResp, chassisId](bool isEROT) {
-            if (isEROT)
-            {
-                BMCWEB_LOG_DEBUG << " EROT chassis";
-                getEROTChassis(req, asyncResp, chassisId);
-            }
-            else
-            {
-                getChassisData(asyncResp, chassisId);
-            }
-        });
+
+    redfish::chassis_utils::isEROTChassis(chassisId, [req, asyncResp,
+                                                      chassisId](bool isEROT) {
+        if (isEROT)
+        {
+            BMCWEB_LOG_DEBUG << " EROT chassis";
+            getEROTChassis(req, asyncResp, chassisId);
+        }
+        else
+        {
+            const std::array<const char*, 2> interfaces = {
+                "xyz.openbmc_project.Inventory.Item.Board",
+                "xyz.openbmc_project.Inventory.Item.Chassis"};
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, chassisId(std::string(chassisId))](
+                    const boost::system::error_code ec,
+                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    // Iterate over all retrieved ObjectPaths.
+                    for (const std::pair<
+                             std::string,
+                             std::vector<std::pair<std::string,
+                                                   std::vector<std::string>>>>&
+                             object : subtree)
+                    {
+                        const std::string& path = object.first;
+                        const std::vector<
+                            std::pair<std::string, std::vector<std::string>>>&
+                            connectionNames = object.second;
+
+                        sdbusplus::message::object_path objPath(path);
+                        if (objPath.filename() != chassisId)
+                        {
+                            continue;
+                        }
+
+                        const std::string& connectionName =
+                            connectionNames[0].first;
+                        const std::vector<std::string>& interfaces1 =
+                            connectionNames[0].second;
+
+                        getChassisData(asyncResp, path, connectionName,
+                                       chassisId);
+
+                        const std::array<const char*, 2> hasIndicatorLed = {
+                            "xyz.openbmc_project.Inventory.Item.Panel",
+                            "xyz.openbmc_project.Inventory.Item.Board.Motherboard"};
+
+                        for (const char* interface : hasIndicatorLed)
+                        {
+                            if (std::find(interfaces1.begin(),
+                                          interfaces1.end(),
+                                          interface) != interfaces1.end())
+                            {
+                                getIndicatorLedState(asyncResp);
+                                getLocationIndicatorActive(asyncResp);
+                                break;
+                            }
+                        }
+
+                        sdbusplus::asio::getProperty<std::vector<std::string>>(
+                            *crow::connections::systemBus,
+                            "xyz.openbmc_project.ObjectMapper", path + "/drive",
+                            "xyz.openbmc_project.Association", "endpoints",
+                            [asyncResp,
+                             chassisId](const boost::system::error_code ec3,
+                                        const std::vector<std::string>& resp) {
+                                if (ec3 || resp.empty())
+                                {
+                                    return; // no drives = no failures
+                                }
+
+                                nlohmann::json reference;
+                                reference["@odata.id"] =
+                                    crow::utility::urlFromPieces(
+                                        "redfish", "v1", "Chassis", chassisId,
+                                        "Drives");
+                                asyncResp->res.jsonValue["Drives"] =
+                                    std::move(reference);
+                            });
+
+                        return;
+                    }
+                    // Couldn't find an object with that name.  return an error
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/inventory", 0, interfaces);
+        }
+    });
 }
+
 inline void
     handleChassisPatch(const crow::Request& req,
                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
