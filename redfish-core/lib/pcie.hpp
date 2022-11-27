@@ -322,8 +322,7 @@ static inline void
                 asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 std::shared_ptr<HealthRollup> health =
-                    std::make_shared<HealthRollup>(
-                        crow::connections::systemBus, escapedPath,
+                    std::make_shared<HealthRollup>(escapedPath,
                         [asyncResp](const std::string& rootHealth,
                                     const std::string& healthRollup) {
                             asyncResp->res.jsonValue["Status"]["Health"] =

@@ -815,8 +815,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 std::shared_ptr<HealthRollup> health =
-                    std::make_shared<HealthRollup>(
-                        crow::connections::systemBus, path,
+                    std::make_shared<HealthRollup>(path,
                         [asyncResp](const std::string& rootHealth,
                                     const std::string& healthRollup) {
                             asyncResp->res.jsonValue["Status"]["Health"] =

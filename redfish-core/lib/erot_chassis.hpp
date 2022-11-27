@@ -275,8 +275,7 @@ inline void getEROTChassis(const crow::Request&,
                 }
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                auto health = std::make_shared<HealthRollup>(
-                    crow::connections::systemBus, path,
+                auto health = std::make_shared<HealthRollup>(path,
                     [asyncResp](const std::string& rootHealth,
                                 const std::string& healthRollup) {
                         asyncResp->res.jsonValue["Status"]["Health"] =

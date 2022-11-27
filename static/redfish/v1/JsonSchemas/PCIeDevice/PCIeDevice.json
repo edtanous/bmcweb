@@ -63,19 +63,6 @@
             },
             "type": "string"
         },
-        "LaneSplittingType": {
-            "enum": [
-                "None",
-                "Bridged",
-                "Bifurcated"
-            ],
-            "enumDescriptions": {
-                "Bifurcated": "The slot is bifurcated to split the lanes with associated devices.",
-                "Bridged": "The slot has a bridge to share the lanes with associated devices.",
-                "None": "The slot has no lane splitting."
-            },
-            "type": "string"
-        },
         "Links": {
             "additionalProperties": false,
             "description": "The links to other resources that are related to this resource.",

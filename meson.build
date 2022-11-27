@@ -94,6 +94,7 @@ feature_map = {
   'static-hosting'                              : '-DBMCWEB_ENABLE_STATIC_HOSTING',
   'vm-websocket'                                : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
   'xtoken-auth'                                 : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
+  'health-rollup-alternative'                   : '-DBMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE',
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
   'tls-auth-opt-in'                             : '-DBMCWEB_ENABLE_TLS_AUTH_OPT_IN',
   'manufacturing-test'                          : '-DBMCWEB_ENABLE_MFG_TEST_API',
@@ -378,7 +379,7 @@ executable(
   install_dir:bindir
 )
 
-srcfiles_unittest = files(
+srcfiles_unittest = [
   'test/http/crow_getroutes_test.cpp',
   'test/http/router_test.cpp',
   'test/http/utility_test.cpp',
@@ -402,22 +403,44 @@ srcfiles_unittest = files(
   'test/redfish-core/lib/log_services_dump_test.cpp',
   'test/redfish-core/lib/service_root_test.cpp',
   'test/redfish-core/lib/thermal_subsystem_test.cpp',
-  'test/redfish-core/lib/power_subsystem_test.cpp',
-)
+  'test/redfish-core/lib/power_subsystem_test.cpp'
+]
+
+# if(get_option('tests').enabled())
+#     # generate the test executable
+#     foreach test_src : srcfiles_unittest
+#       test_bin = executable(
+#         fs.stem(test_src),
+#         srcfiles_bmcweb + test_src,
+#         include_directories : incdir,
+#         install_dir: bindir,
+#         dependencies: bmcweb_dependencies + [
+#           gtest,
+#           gmock,
+#         ]
+#       )
+#       test(fs.stem(test_src), test_bin)
+#     endforeach
+# endif
 
 if(get_option('tests').enabled())
+    # ut_incdir = include_directories(
+    #     'include',
+    #     'include/ut/',
+    #     'redfish-core/include',
+    #     'redfish-core/lib',
+    #     'http'
+    # )
     # generate the test executable
-    foreach test_src : srcfiles_unittest
-      test_bin = executable(
-        fs.stem(test_src),
-        srcfiles_bmcweb + test_src,
-        include_directories : incdir,
-        install_dir: bindir,
-        dependencies: bmcweb_dependencies + [
-          gtest,
-          gmock,
-        ]
-      )
-      test(fs.stem(test_src), test_bin)
-    endforeach
+    ut_bin = executable(
+      'bmcweb_unit_test',
+      srcfiles_unittest + srcfiles_bmcweb,
+      include_directories : incdir,
+      install_dir: bindir,
+      dependencies: bmcweb_dependencies + [
+        gtest,
+        gmock,
+      ]
+    )
+    test('bmcweb_unit_test', ut_bin)
 endif

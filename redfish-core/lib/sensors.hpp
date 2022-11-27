@@ -3323,8 +3323,7 @@ inline void
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 std::shared_ptr<HealthRollup> health =
-                    std::make_shared<HealthRollup>(
-                        crow::connections::systemBus, sensorPath,
+                    std::make_shared<HealthRollup>(sensorPath,
                         [asyncResp](const std::string& rootHealth,
                                     const std::string& healthRollup) {
                             asyncResp->res.jsonValue["Status"]["Health"] =

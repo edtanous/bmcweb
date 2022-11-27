@@ -2068,8 +2068,7 @@ inline void requestRoutesSoftwareInventory(App& app)
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(
-                                crow::connections::systemBus, objPath,
+                            std::make_shared<HealthRollup>(objPath,
                                 [asyncResp](const std::string& rootHealth,
                                             const std::string& healthRollup) {
                                     asyncResp->res
@@ -2168,8 +2167,7 @@ inline void requestRoutesInventorySoftware(App& app)
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(
-                                crow::connections::systemBus, path,
+                            std::make_shared<HealthRollup>(path,
                                 [asyncResp](const std::string& rootHealth,
                                             const std::string& healthRollup) {
                                     asyncResp->res

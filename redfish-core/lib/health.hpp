@@ -597,8 +597,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
      * be passed, in case of which every such situation will result in this
      * object stopping the crawling and moving to STOP_ERROR state.
      */
-    HealthRollup(const std::shared_ptr<sdbusplus::asio::connection>& conn,
-                 const std::string& rootObject,
+    HealthRollup(const std::string& rootObject,
                  std::function<void(const std::string& rootHealth,
                                     const std::string& healthRollup)>
                      finishCallback,
@@ -608,7 +607,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
         rootHealth(&health_state::ok),
         globalHealth(&health_state::ok), state(INITIALIZED), devicesToVisit(),
         assumedHealthWhenMissing(assumedHealthWhenMissing),
-        rootObject(rootObject), conn(conn),
+        rootObject(rootObject), 
         finishCallback(std::move(finishCallback))
     {}
 
@@ -624,7 +623,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
     {
         // assert(state == INITIALIZED);
         state = ROOT_Q_HEALTH_SERVICE;
-        queryForService(conn, rootObject,
+        queryForService(rootObject,
                         "xyz.openbmc_project.State.Decorator.Health");
     }
 
@@ -640,7 +639,6 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
     // Static fields (constant throughout the whole life of the object)
     const health_state::Type* assumedHealthWhenMissing;
     std::string rootObject;
-    std::shared_ptr<sdbusplus::asio::connection> conn;
     std::function<void(const std::string& rootHealth,
                        const std::string& healthRollup)>
         finishCallback;
@@ -788,14 +786,12 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
      *   |                      +-------------------------------+
      *   `----
      */
-    void rootQueryForAssocs(
-        const std::shared_ptr<sdbusplus::asio::connection>& conn,
-        const std::string& serviceManager, const std::string& objPath)
+    void rootQueryForAssocs(const std::string& serviceManager, const std::string& objPath)
     {
         // assert(state == ROOT_Q_ASSOCS);
         std::shared_ptr<HealthRollup> self = shared_from_this();
-        conn->async_method_call(
-            [self, conn, serviceManager,
+        crow::connections::systemBus->async_method_call(
+            [self, serviceManager,
              objPath](const boost::system::error_code ec,
                       const std::variant<Association>& result) mutable {
                 if (ec)
@@ -827,7 +823,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                                 self->devicesToVisit.push_back(get<2>(tup));
                             }
                         }
-                        self->assocQueryForService(conn);
+                        self->assocQueryForService();
                     }
                 }
             },
@@ -838,8 +834,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
     /** @brief Pop first element from @devicesToVisit; obtain its managing
      * service. Call @queryForHealth passing the element as `objPath' and the
      * service as `serviceManager'. **/
-    void assocQueryForService(
-        const std::shared_ptr<sdbusplus::asio::connection>& conn)
+    void assocQueryForService()
     {
         // assert(state == ROOT_Q_ASSOCS || state == ASSOC_Q_HEALTH);
         state = ASSOC_Q_HEALTH_SERVICE;
@@ -847,7 +842,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
         {
             auto objPath = devicesToVisit.front();
             devicesToVisit.pop_front();
-            queryForService(conn, objPath,
+            queryForService(objPath,
                             "xyz.openbmc_project.State.Decorator.Health");
         }
         else // devicesToVisit.empty()
@@ -1076,15 +1071,14 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
      *   `----
      */
     void queryForService(
-        const std::shared_ptr<sdbusplus::asio::connection>& conn,
         const std::string& objPath, const char* interface)
     {
         // assert(state == ROOT_Q_HEALTH_SERVICE ||
         //        state == ROOT_Q_ASSOCS_SERVICE ||
         //        state == ASSOC_Q_HEALTH_SERVICE); // (2)
         std::shared_ptr<HealthRollup> self = shared_from_this();
-        conn->async_method_call(
-            [self, conn, objPath, interface](
+        crow::connections::systemBus->async_method_call(
+            [self, objPath, interface](
                 const boost::system::error_code ec,
                 const std::map<std::string, std::vector<std::string>>& result) {
                 ServiceQueryingResult nextMove =
@@ -1100,19 +1094,19 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                     if (self->state == ROOT_Q_HEALTH_SERVICE)
                     {
                         self->state = ROOT_Q_HEALTH;
-                        self->queryForHealth(conn, manager, objPath);
+                        self->queryForHealth(manager, objPath);
                     }
                     else if (self->state == ROOT_Q_ASSOCS_SERVICE)
                     {
                         self->state = ROOT_Q_ASSOCS;
-                        self->rootQueryForAssocs(conn, manager, objPath);
+                        self->rootQueryForAssocs( manager, objPath);
                     }
                     else // self->state == ASSOC_Q_HEALTH_SERVICE
                     {
                         // 'state == ASSOC_Q_HEALTH_SERVICE' by virtue of
                         // assertion (2)
                         self->state = ASSOC_Q_HEALTH;
-                        self->queryForHealth(conn, manager, objPath);
+                        self->queryForHealth( manager, objPath);
                     }
                 }
                 else if (nextMove == SERVICE_ERROR_SKIP)
@@ -1121,18 +1115,18 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                     {
                         self->state = ROOT_Q_HEALTH;
                         self->proceedWithCurrentNodeHealth(
-                            conn, self->assumedHealthWhenMissing);
+                             self->assumedHealthWhenMissing);
                     }
                     else if (self->state == ROOT_Q_ASSOCS_SERVICE)
                     {
                         self->state = ROOT_Q_ASSOCS;
-                        self->assocQueryForService(conn);
+                        self->assocQueryForService();
                     }
                     else // self->state == ASSOC_Q_HEALTH_SERVICE
                     {
                         self->state = ASSOC_Q_HEALTH;
                         self->proceedWithCurrentNodeHealth(
-                            conn, self->assumedHealthWhenMissing);
+                             self->assumedHealthWhenMissing);
                     }
                 }
                 else // nextMove == SERVICE_ERROR_STOP
@@ -1191,9 +1185,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
         return nodeHealth;
     }
 
-    void proceedWithCurrentNodeHealth(
-        const std::shared_ptr<sdbusplus::asio::connection>& conn,
-        const health_state::Type* nodeHealth, const std::string& objPath = "")
+    void proceedWithCurrentNodeHealth( const health_state::Type* nodeHealth, const std::string& objPath = "")
     {
         // assert(state == ROOT_Q_HEALTH || state == ASSOC_Q_HEALTH);
         if (nodeHealth == nullptr)
@@ -1222,15 +1214,14 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                 if (state == ROOT_Q_HEALTH)
                 {
                     state = ROOT_Q_ASSOCS_SERVICE;
-                    queryForService(
-                        conn, objPath,
+                    queryForService(objPath,
                         "xyz.openbmc_project.Association.Definitions");
                 }
                 else // state == ASSOC_Q_HEALTH
                 {
                     // 'state == ASSOC_Q_HEALTH' by
                     // virtue of assertion (1)
-                    assocQueryForService(conn);
+                    assocQueryForService();
                 }
             }
         }
@@ -1338,20 +1329,19 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
      *   `----
      */
     void
-        queryForHealth(const std::shared_ptr<sdbusplus::asio::connection>& conn,
-                       const std::string& serviceManager,
+        queryForHealth(const std::string& serviceManager,
                        const std::string& objPath)
     {
         // assert(state == ROOT_Q_HEALTH || state == ASSOC_Q_HEALTH); // (1)
         std::shared_ptr<HealthRollup> self = shared_from_this();
-        conn->async_method_call(
-            [self, conn, serviceManager,
+        crow::connections::systemBus->async_method_call(
+            [self, serviceManager,
              objPath](const boost::system::error_code ec,
                       const std::variant<std::string>& result) {
                 const health_state::Type* nodeHealth =
                     self->determineNodeHealth(ec, result, serviceManager,
                                               objPath);
-                self->proceedWithCurrentNodeHealth(conn, nodeHealth, objPath);
+                self->proceedWithCurrentNodeHealth( nodeHealth, objPath);
             },
             serviceManager.c_str(), objPath.c_str(), dbusIntfProperties, "Get",
             dbusIntfHealth, dbusPropHealth);

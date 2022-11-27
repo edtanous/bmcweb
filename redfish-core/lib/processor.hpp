@@ -1114,8 +1114,7 @@ inline void getAcceleratorDataByService(
         << "Get available system Accelerator resources by service.";
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
-        crow::connections::systemBus, objPath,
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(objPath,
         [aResp](const std::string& rootHealth,
                 const std::string& healthRollup) {
             aResp->res.jsonValue["Status"]["Health"] = rootHealth;

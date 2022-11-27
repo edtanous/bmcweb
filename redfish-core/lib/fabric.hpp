@@ -519,8 +519,7 @@ inline void
 
     // update switch health
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
-        crow::connections::systemBus, objPath,
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(objPath,
         [asyncResp](const std::string& rootHealth,
                     const std::string& healthRollup) {
             asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
