@@ -3498,7 +3498,10 @@ inline void requestRoutesManager(App& app)
                                                             path);
                                         }
                                     }
+                                    return;
                                 }
+                                messages::resourceNotFound(
+                                    asyncResp->res, "#Manager.v1_11_0.Manager", PLATFORMBMCID);
                             }
                     },
                     "xyz.openbmc_project.ObjectMapper",
