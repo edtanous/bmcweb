@@ -34,6 +34,7 @@
 #include <utils/json_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
+#include <utils/chassis_utils.hpp>
 
 namespace redfish
 {
@@ -1141,10 +1142,12 @@ inline void getAcceleratorDataByService(
             const bool* functional = nullptr;
             const bool* present = nullptr;
             const std::string* accType = nullptr;
+            const std::string* operationalState = nullptr;
 
             const bool success = sdbusplus::unpackPropertiesNoThrow(
                 dbus_utils::UnpackErrorPrinter(), properties, "Functional",
-                functional, "Present", present, "Type", accType);
+                functional, "Present", present, "Type", accType, "State",
+                operationalState);
 
             if (!success)
             {
@@ -1184,6 +1187,13 @@ inline void getAcceleratorDataByService(
             {
                 aResp->res.jsonValue["ProcessorType"] =
                     getProcessorType(*accType);
+            }
+
+            if (operationalState != nullptr && !operationalState->empty())
+            {
+                aResp->res.jsonValue["Status"]["State"] =
+                    redfish::chassis_utils::getPowerStateType(
+                        *operationalState);
             }
         });
 }

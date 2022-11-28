@@ -34,6 +34,7 @@
 #include <utils/hex_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/systemd_utils.hpp>
+#include <utils/chassis_utils.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -2533,52 +2534,6 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
     size_t objectCount = 0;
 };
 
-inline std::string getStateType(const std::string& stateType)
-{
-    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
-                     "StateType.Absent")
-    {
-        return "Absent";
-    }
-    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
-                     "StateType.Deferring")
-    {
-        return "Deferring";
-    }
-    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
-                     "StateType.Disabled")
-    {
-        return "Disabled";
-    }
-    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
-                     "StateType.Enabled")
-    {
-        return "Enabled";
-    }
-    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
-                     "StateType.StandbyOffline")
-    {
-        return "StandbyOffline";
-    }
-    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
-                     "StateType.Starting")
-    {
-        return "Starting";
-    }
-    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
-                     "StateType.UnavailableOffline")
-    {
-        return "UnavailableOffline";
-    }
-    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
-                     "StateType.Updating")
-    {
-        return "Updating";
-    }
-    // Unknown or others
-    return "";
-}
-
 /**
  * @brief Retrieves manager service state data over DBus
  *
@@ -2617,7 +2572,7 @@ inline void getManagerState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         messages::internalError(aResp->res);
                         return;
                     }
-                    std::string state = getStateType(*value);
+                    std::string state = redfish::chassis_utils::getPowerStateType(*value);
                     aResp->res.jsonValue["Status"]["State"] = state;
                     if (state == "Enabled")
                     {

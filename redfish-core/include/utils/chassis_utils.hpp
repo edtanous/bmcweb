@@ -24,6 +24,52 @@ using GetSubTreeType = std::vector<
 using GetObjectType =
     std::vector<std::pair<std::string, std::vector<std::string>>>;
 
+inline std::string getPowerStateType(const std::string& stateType)
+{
+    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
+                     "StateType.Absent")
+    {
+        return "Absent";
+    }
+    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
+                     "StateType.Deferring")
+    {
+        return "Deferring";
+    }
+    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
+                     "StateType.Disabled")
+    {
+        return "Disabled";
+    }
+    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
+                     "StateType.Enabled")
+    {
+        return "Enabled";
+    }
+    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
+                     "StateType.StandbyOffline")
+    {
+        return "StandbyOffline";
+    }
+    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
+                     "StateType.Starting")
+    {
+        return "Starting";
+    }
+    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
+                     "StateType.UnavailableOffline")
+    {
+        return "UnavailableOffline";
+    }
+    if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
+                     "StateType.Updating")
+    {
+        return "Updating";
+    }
+    // Unknown or others
+    return "";
+}
+
 /**
  * @brief Retrieves valid chassis ID
  * @param asyncResp   Pointer to object holding response data

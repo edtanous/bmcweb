@@ -804,7 +804,8 @@ inline void
 inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& objPath,
                            const std::string& service,
-                           const std::string& chassisId)
+                           const std::string& chassisId,
+                           const bool operationalStatusPresent)
 {
     asyncResp->res.jsonValue["@odata.type"] = "#Chassis.v1_17_0.Chassis";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" + chassisId;
@@ -871,11 +872,13 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
         {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}};
 
+
     using GetManagedPropertyType = boost::container::flat_map<
         std::string, std::variant<std::string, bool, double, uint64_t, uint32_t>>;
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec,
-                    const GetManagedPropertyType& properties) {
+        [asyncResp,
+         operationalStatusPresent](const boost::system::error_code ec,
+                                   const GetManagedPropertyType& properties) {
             if (ec)
             {
                 messages::internalError(asyncResp->res);
@@ -1128,12 +1131,31 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         .jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockCount"] =
                         *value;
                 }
+
+                if ((property.first == "State") && operationalStatusPresent)
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for powerstate";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["Status"]["State"] =
+                        redfish::chassis_utils::getPowerStateType(*value);
+                }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             }
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
-    getChassisState(asyncResp);
+    if (!operationalStatusPresent)
+    {
+        getChassisState(asyncResp);
+    }
+
     redfish::conditions_utils::populateServiceConditions(asyncResp, chassisId);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
@@ -1253,8 +1275,19 @@ inline void
                         const std::vector<std::string>& interfaces1 =
                             connectionNames[0].second;
 
+                        bool operationalStatusPresent = false;
+                        const std::string operationalStatusInterface =
+                            "xyz.openbmc_project.State.Decorator.OperationalStatus";
+
+                        if (std::find(interfaces1.begin(), interfaces1.end(),
+                                      operationalStatusInterface) !=
+                            interfaces1.end())
+                        {
+                            operationalStatusPresent = true;
+                        }
+
                         getChassisData(asyncResp, path, connectionName,
-                                       chassisId);
+                                       chassisId, operationalStatusPresent);
 
                         const std::array<const char*, 2> hasIndicatorLed = {
                             "xyz.openbmc_project.Inventory.Item.Panel",
