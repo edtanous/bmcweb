@@ -22,6 +22,7 @@ namespace debug_token {
 constexpr const size_t statusSubprocOutputSize = 256;
 
 constexpr const char * mctpEndpointIf = "xyz.openbmc_project.MCTP.Endpoint";
+constexpr const uint8_t mctpSpdmMessageType = 5;
 
 using FinishCallback = std::function<
     void(const std::shared_ptr<task::TaskData>&, const std::string&)>;
@@ -300,14 +301,10 @@ class StatusQuery :
             addError(desc, "state invalid");
             return;
         }
-        sdbusplus::asio::getProperty<uint32_t>(
-            *crow::connections::systemBus,
-            entry.service, entry.object, mctpEndpointIf, "EID",
-            [this, &entry, desc](
-                const boost::system::error_code ec,
-                const uint32_t& eid)
-            {
-                BMCWEB_LOG_DEBUG << "EID: " << eid;
+        crow::connections::systemBus->async_method_call(
+            [this, &entry, desc](const boost::system::error_code ec,
+                const boost::container::flat_map<
+                    std::string, dbus::utility::DbusVariantType>& props) {
                 if (ec)
                 {
                     addError(desc, ec.message());
@@ -315,13 +312,53 @@ class StatusQuery :
                 }
                 else
                 {
-                    entry.object = std::to_string(eid);
+                    auto eidProp = props.find("EID");
+                    auto typesProp = props.find("SupportedMessageTypes");
+                    if (eidProp == props.end() || typesProp == props.end())
+                    {
+                        addError(desc, "cannot find properties");
+                        entry.valid = false;
+                    }
+                    else
+                    {
+                        auto eid = std::get_if<uint32_t>(&eidProp->second);
+                        auto types = std::get_if<std::vector<uint8_t>>(
+                            &typesProp->second);
+                        if (eid != nullptr && types != nullptr)
+                        {
+                            if (std::find(types->begin(), types->end(),
+                                    mctpSpdmMessageType) !=
+                                    types->end())
+                            {
+                                entry.object = std::to_string(*eid);
+                            }
+                            else
+                            {
+                                BMCWEB_LOG_DEBUG <<
+                                    "Message type " << mctpSpdmMessageType <<
+                                    " not supported for " << entry.object;
+                                entry.object = std::string("-1");
+                            }
+                        }
+                        else
+                        {
+                            addError(desc, "cannot get properties' values");
+                            entry.valid = false;
+                        }
+                    }
                 }
                 if (++enumeratedEntries == entries.size())
                 {
+                    // remove endpoints not supporting debug token,
+                    // otherwise they would cause errors to be reported
+                    entries.erase(std::remove_if(entries.begin(), entries.end(),
+                        [](const Entry &e) { return e.object == "-1"; }),
+                        entries.end());
                     processState();
                 }
-            });
+            },
+            entry.service, entry.object, "org.freedesktop.DBus.Properties",
+            "GetAll", mctpEndpointIf);
     }
 
     void subprocessCleanup()
