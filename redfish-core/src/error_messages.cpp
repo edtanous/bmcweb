@@ -1856,7 +1856,8 @@ void resourceErrorsDetectedFormatError(crow::Response& res,
                                        const std::string& arg2)
 {
     res.result(boost::beast::http::status::internal_server_error);
-    addMessageToErrorJson(res.jsonValue, resourceErrorsDetectedFormatError(arg1, arg2));
+    addMessageToErrorJson(res.jsonValue,
+                          resourceErrorsDetectedFormatError(arg1, arg2));
 }
 
 /**
