@@ -190,7 +190,7 @@ inline void getSystemPCIeInterfaceProperties(
                                 redfish::port_utils::getLinkSpeedGeneration(
                                     *value);
                         }
-                        else if (propertyName == "Width")
+                        else if (propertyName == "ActiveWidth")
                         {
                             const size_t* value =
                                 std::get_if<size_t>(&property.second);
