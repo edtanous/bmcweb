@@ -1488,139 +1488,132 @@ inline void requestAccountServiceRoutes(App& app)
 
     BMCWEB_ROUTE(app, "/redfish/v1/AccountService/Accounts/")
         .privileges(redfish::privileges::getManagerAccountCollection)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) -> void {
-                asyncResp->res.jsonValue = {
-                    {"@odata.id", "/redfish/v1/AccountService/Accounts"},
-                    {"@odata.type", "#ManagerAccountCollection."
-                                    "ManagerAccountCollection"},
-                    {"Name", "Accounts Collection"},
-                    {"Description", "BMC User Accounts"}};
+        .methods(
+            boost::beast::http::verb::get)([](const crow::Request& req,
+                                              const std::shared_ptr<
+                                                  bmcweb::AsyncResp>& asyncResp)
+                                               -> void {
+            asyncResp->res.jsonValue = {
+                {"@odata.id", "/redfish/v1/AccountService/Accounts"},
+                {"@odata.type", "#ManagerAccountCollection."
+                                "ManagerAccountCollection"},
+                {"Name", "Accounts Collection"},
+                {"Description", "BMC User Accounts"}};
 
-                Privileges effectiveUserPrivileges =
-                    redfish::getUserPrivileges(req.userRole);
+            Privileges effectiveUserPrivileges =
+                redfish::getUserPrivileges(req.userRole);
 
-                std::string thisUser;
-                if (req.session)
-                {
-                    thisUser = req.session->username;
-                }
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, thisUser, effectiveUserPrivileges](
-                        const boost::system::error_code ec,
-                        const dbus::utility::ManagedObjectType& users) {
-                        if (ec)
+            std::string thisUser;
+            if (req.session)
+            {
+                thisUser = req.session->username;
+            }
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, thisUser, effectiveUserPrivileges](
+                    const boost::system::error_code ec,
+                    const dbus::utility::ManagedObjectType& users) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    bool userCanSeeAllAccounts =
+                        effectiveUserPrivileges.isSupersetOf(
+                            {"ConfigureUsers"});
+
+                    bool userCanSeeSelf =
+                        effectiveUserPrivileges.isSupersetOf({"ConfigureSelf"});
+
+                    nlohmann::json& memberArray =
+                        asyncResp->res.jsonValue["Members"];
+                    memberArray = nlohmann::json::array();
+
+                    for (auto& userpath : users)
+                    {
+                        std::string user = userpath.first.filename();
+                        if (user.empty())
                         {
                             messages::internalError(asyncResp->res);
+                            BMCWEB_LOG_ERROR << "Invalid firmware ID";
+
                             return;
                         }
 
-                        bool userCanSeeAllAccounts =
-                            effectiveUserPrivileges.isSupersetOf(
-                                {"ConfigureUsers"});
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, thisUser, userCanSeeAllAccounts,
+                             userCanSeeSelf, user, &memberArray](
+                                const boost::system::error_code ec,
+                                const std::map<std::string,
+                                               dbus::utility::DbusVariantType>&
+                                    userInfo) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_ERROR << "GetUserInfo failed";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
 
-                        bool userCanSeeSelf =
-                            effectiveUserPrivileges.isSupersetOf(
-                                {"ConfigureSelf"});
-
-                        nlohmann::json& memberArray =
-                            asyncResp->res.jsonValue["Members"];
-                        memberArray = nlohmann::json::array();
-
-                        for (auto& userpath : users)
-                        {
-                            std::string user = userpath.first.filename();
-                            if (user.empty())
-                            {
-                                messages::internalError(asyncResp->res);
-                                BMCWEB_LOG_ERROR << "Invalid firmware ID";
-
-                                return;
-                            }
-
-                            crow::connections::systemBus->async_method_call(
-                                [asyncResp, thisUser, userCanSeeAllAccounts,
-                                 userCanSeeSelf, user, &memberArray](
-                                    const boost::system::error_code ec,
-                                    const std::map<
-                                        std::string,
-                                        dbus::utility::DbusVariantType>&
-                                        userInfo) {
-                                    if (ec)
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "GetUserInfo failed";
-                                        messages::internalError(asyncResp->res);
-                                        return;
-                                    }
-
-                                    const std::vector<std::string>*
-                                        userGroupPtr = nullptr;
-                                    auto userInfoIter =
-                                        userInfo.find("UserGroups");
-                                    if (userInfoIter != userInfo.end())
-                                    {
-                                        userGroupPtr = std::get_if<
-                                            std::vector<std::string>>(
+                                const std::vector<std::string>* userGroupPtr =
+                                    nullptr;
+                                auto userInfoIter = userInfo.find("UserGroups");
+                                if (userInfoIter != userInfo.end())
+                                {
+                                    userGroupPtr =
+                                        std::get_if<std::vector<std::string>>(
                                             &userInfoIter->second);
-                                    }
+                                }
 
-                                    if (userGroupPtr == nullptr)
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "User Group not found";
-                                        messages::internalError(asyncResp->res);
-                                        return;
-                                    }
+                                if (userGroupPtr == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR << "User Group not found";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
 
-                                    // If the host interface user found, then
-                                    // skip that user and don't add in response.
-                                    auto found = std::find_if(
-                                        userGroupPtr->begin(),
-                                        userGroupPtr->end(),
-                                        [](const auto& group) {
-                                            return (group ==
-                                                    "redfish-hostiface")
-                                                       ? true
-                                                       : false;
-                                        });
-                                    if (found == userGroupPtr->end())
+                                // If the host interface user found, then
+                                // skip that user and don't add in response.
+                                auto found = std::find_if(
+                                    userGroupPtr->begin(), userGroupPtr->end(),
+                                    [](const auto& group) {
+                                        return (group == "redfish-hostiface")
+                                                   ? true
+                                                   : false;
+                                    });
+                                if (found == userGroupPtr->end())
+                                {
+                                    // As clarified by Redfish here:
+                                    // https://redfishforum.com/thread/281/manageraccountcollection-change-allows-account-enumeration
+                                    // Users without ConfigureUsers, only
+                                    // see their own account. Users with
+                                    // ConfigureUsers, see all accounts.
+                                    if (userCanSeeAllAccounts ||
+                                        (thisUser == user && userCanSeeSelf))
                                     {
-                                        // As clarified by Redfish here:
-                                        // https://redfishforum.com/thread/281/manageraccountcollection-change-allows-account-enumeration
-                                        // Users without ConfigureUsers, only
-                                        // see their own account. Users with
-                                        // ConfigureUsers, see all accounts.
-                                        if (userCanSeeAllAccounts ||
-                                            (thisUser == user &&
-                                             userCanSeeSelf))
-                                        {
-                                            memberArray.push_back(
-                                                {{"@odata.id",
-                                                  "/redfish/v1/AccountService/Accounts/" +
-                                                      user}});
-                                        }
+                                        memberArray.push_back(
+                                            {{"@odata.id",
+                                              "/redfish/v1/AccountService/Accounts/" +
+                                                  user}});
                                     }
-                                    else
-                                    {
-                                        BMCWEB_LOG_DEBUG
-                                            << "Skip the HostInterface User";
-                                    }
-                                    asyncResp->res
-                                        .jsonValue["Members@odata.count"] =
-                                        memberArray.size();
-                                },
-                                "xyz.openbmc_project.User.Manager",
-                                "/xyz/openbmc_project/user",
-                                "xyz.openbmc_project.User.Manager",
-                                "GetUserInfo", user);
-                        }
-                    },
-                    "xyz.openbmc_project.User.Manager",
-                    "/xyz/openbmc_project/user",
-                    "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-            });
+                                }
+                                else
+                                {
+                                    BMCWEB_LOG_DEBUG
+                                        << "Skip the HostInterface User";
+                                }
+                                asyncResp->res
+                                    .jsonValue["Members@odata.count"] =
+                                    memberArray.size();
+                            },
+                            "xyz.openbmc_project.User.Manager",
+                            "/xyz/openbmc_project/user",
+                            "xyz.openbmc_project.User.Manager", "GetUserInfo",
+                            user);
+                    }
+                },
+                "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
+                "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        });
 
     BMCWEB_ROUTE(app, "/redfish/v1/AccountService/Accounts/")
         .privileges(redfish::privileges::postManagerAccountCollection)
