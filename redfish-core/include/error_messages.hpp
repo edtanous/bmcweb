@@ -160,6 +160,21 @@ nlohmann::json resourceCannotBeDeleted();
 void resourceCannotBeDeleted(crow::Response& res);
 
 /**
+ * @brief Formats ResourceCannotBeDeleted message into JSON
+ * Message body: "The requested resource of type <arg1> named <arg2> cannot be
+ * deleted."
+ *
+ * @param[in] arg1 Parameter of message that will replace %1 in its body.
+ * @param[in] arg2 Parameter of message that will replace %2 in its body.
+ *
+ * @returns Message ResourceCannotBeDeleted formatted to JSON */
+nlohmann::json resourceCannotBeDeleted(const std::string& arg1,
+                                       const std::string& arg2);
+
+void resourceCannotBeDeleted(crow::Response& res, const std::string& arg1,
+                             const std::string& arg2);
+
+/**
  * @brief Formats PropertyDuplicate message into JSON
  * Message body: "The property <arg1> was duplicated in the request."
  *

@@ -1921,19 +1921,48 @@ inline void
     tempObjPath /= username;
     const std::string userPath(tempObjPath);
 
-    crow::connections::systemBus->async_method_call(
-        [asyncResp, username](const boost::system::error_code ec) {
-        if (ec)
-        {
-            messages::resourceNotFound(asyncResp->res, "ManagerAccount",
-                                       username);
-            return;
-        }
-
-        messages::accountRemoved(asyncResp->res);
-        },
-        "xyz.openbmc_project.User.Manager", userPath,
-        "xyz.openbmc_project.Object.Delete", "Delete");
+     crow::connections::systemBus->async_method_call(
+                [asyncResp, username](const boost::system::error_code ec,
+                                      sdbusplus::message::message& m) {
+                    if (ec)
+                    {
+                        const sd_bus_error* dbusError = m.get_error();
+                        if (dbusError && dbusError->name)
+                        {
+                            if (!strcmp(
+                                    dbusError->name,
+                                    "xyz.openbmc_project.Common.Error.NotAllowed"))
+                            {
+                                messages::resourceCannotBeDeleted(
+                                    asyncResp->res,
+                                    "#ManagerAccount.v1_4_0.ManagerAccount",
+                                    username);
+                            }
+                            else if (
+                                !strcmp(
+                                    dbusError->name,
+                                    "org.freedesktop.DBus.Error.UnknownObject"))
+                            {
+                                messages::resourceNotFound(
+                                    asyncResp->res,
+                                    "#ManagerAccount.v1_4_0.ManagerAccount",
+                                    username);
+                            }
+                            else
+                            {
+                                messages::internalError(asyncResp->res);
+                            }
+                        }
+                        else
+                        {
+                            messages::internalError(asyncResp->res);
+                        }
+                        return;
+                    }
+                    messages::accountRemoved(asyncResp->res);
+                },
+                "xyz.openbmc_project.User.Manager", userPath,
+                "xyz.openbmc_project.Object.Delete", "Delete");
 }
 
 inline void
