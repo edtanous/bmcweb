@@ -378,6 +378,33 @@ void resourceCannotBeDeleted(crow::Response& res)
 
 /**
  * @internal
+ * @brief Formats ResourceCannotBeDeleted message into JSON
+ *
+ * See header file for more information
+ * @endinternal
+ */
+nlohmann::json resourceCannotBeDeleted(const std::string& arg1,
+                                       const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#Message.v1_1_1.Message"},
+        {"MessageId", "Base.1.8.1.ResourceCannotBeDeleted"},
+        {"Message", "The requested resource of type " + arg1 + " named " +
+                        arg2 + " cannot be deleted."},
+        {"MessageArgs", {arg1, arg2}},
+        {"MessageSeverity", "Critical"},
+        {"Resolution", "Do not attempt to delete a non-deletable resource."}};
+}
+
+void resourceCannotBeDeleted(crow::Response& res, const std::string& arg1,
+                             const std::string& arg2)
+{
+    res.result(boost::beast::http::status::forbidden);
+    addMessageToErrorJson(res.jsonValue, resourceCannotBeDeleted(arg1, arg2));
+}
+
+/**
+ * @internal
  * @brief Formats PropertyDuplicate message into JSON
  *
  * See header file for more information

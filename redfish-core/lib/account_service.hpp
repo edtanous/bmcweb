@@ -1971,30 +1971,58 @@ inline void requestAccountServiceRoutes(App& app)
 
     BMCWEB_ROUTE(app, "/redfish/v1/AccountService/Accounts/<str>/")
         .privileges(redfish::privileges::deleteManagerAccount)
-        .methods(boost::beast::http::verb::delete_)(
-            [](const crow::Request& /*req*/,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& username) -> void {
-                sdbusplus::message::object_path tempObjPath(rootUserDbusPath);
-                tempObjPath /= username;
-                const std::string userPath(tempObjPath);
+        .methods(
+            boost::beast::http::verb::
+                delete_)([](const crow::Request& /*req*/,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& username) -> void {
+            sdbusplus::message::object_path tempObjPath(rootUserDbusPath);
+            tempObjPath /= username;
+            const std::string userPath(tempObjPath);
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, username](const boost::system::error_code ec) {
-                        if (ec)
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, username](const boost::system::error_code ec,
+                                      sdbusplus::message::message& m) {
+                    if (ec)
+                    {
+                        const sd_bus_error* dbusError = m.get_error();
+                        if (dbusError && dbusError->name)
                         {
-                            messages::resourceNotFound(
-                                asyncResp->res,
-                                "#ManagerAccount.v1_4_0.ManagerAccount",
-                                username);
-                            return;
+                            if (!strcmp(
+                                    dbusError->name,
+                                    "xyz.openbmc_project.Common.Error.NotAllowed"))
+                            {
+                                messages::resourceCannotBeDeleted(
+                                    asyncResp->res,
+                                    "#ManagerAccount.v1_4_0.ManagerAccount",
+                                    username);
+                            }
+                            else if (
+                                !strcmp(
+                                    dbusError->name,
+                                    "org.freedesktop.DBus.Error.UnknownObject"))
+                            {
+                                messages::resourceNotFound(
+                                    asyncResp->res,
+                                    "#ManagerAccount.v1_4_0.ManagerAccount",
+                                    username);
+                            }
+                            else
+                            {
+                                messages::internalError(asyncResp->res);
+                            }
                         }
-
-                        messages::accountRemoved(asyncResp->res);
-                    },
-                    "xyz.openbmc_project.User.Manager", userPath,
-                    "xyz.openbmc_project.Object.Delete", "Delete");
-            });
+                        else
+                        {
+                            messages::internalError(asyncResp->res);
+                        }
+                        return;
+                    }
+                    messages::accountRemoved(asyncResp->res);
+                },
+                "xyz.openbmc_project.User.Manager", userPath,
+                "xyz.openbmc_project.Object.Delete", "Delete");
+        });
 }
 
 } // namespace redfish
