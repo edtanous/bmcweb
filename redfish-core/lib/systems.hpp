@@ -2988,7 +2988,7 @@ inline void handleComputerSystemCollectionHead(
 inline void requestRoutesSystems(App& app)
 {
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/system/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/")
         .privileges(redfish::privileges::headComputerSystem)
         .methods(boost::beast::http::verb::head)(
             std::bind_front(handleComputerSystemCollectionHead, std::ref(app)));
@@ -3040,7 +3040,7 @@ inline void requestRoutesSystems(App& app)
 
             asyncResp->res
                 .jsonValue["Actions"]["#ComputerSystem.Reset"]["target"] =
-                "/redfish/v1/Systems/system/Actions/ComputerSystem.Reset";
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Actions/ComputerSystem.Reset";
             asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"]
                                     ["@Redfish.ActionInfo"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
@@ -3319,7 +3319,7 @@ inline void requestRoutesSystemResetActionInfo(App& app)
                 "</redfish/v1/JsonSchemas/ActionInfo/ActionInfo.json>; rel=describedby");
 
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/system/ResetActionInfo";
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
             asyncResp->res.jsonValue["@odata.type"] =
                 "#ActionInfo.v1_1_2.ActionInfo";
             asyncResp->res.jsonValue["Name"] = "Reset Action Info";

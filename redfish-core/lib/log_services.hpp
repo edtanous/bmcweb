@@ -1155,7 +1155,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             messages::internalError(asyncResp->res);
             return;
         }
-        dumpPath = "/redfish/v1/Systems/system/LogServices/Dump/";
+        dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/";
     }
     else if (dumpType == "BMC")
     {
@@ -1174,7 +1174,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             messages::internalError(asyncResp->res);
             return;
         }
-        dumpPath = "/redfish/v1/Managers/bmc/LogServices/Dump/";
+        dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/";
     }
     else
     {
@@ -1676,7 +1676,7 @@ inline void requestRoutesJournalEventLogEntryCollection(App& app)
             asyncResp->res.jsonValue["@odata.type"] =
                 "#LogEntryCollection.LogEntryCollection";
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/system/LogServices/EventLog/Entries";
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/EventLog/Entries";
             asyncResp->res.jsonValue["Name"] = "System Event Log Entries";
             asyncResp->res.jsonValue["Description"] =
                 "Collection of System Event Log Entries";
@@ -1740,7 +1740,7 @@ inline void requestRoutesJournalEventLogEntryCollection(App& app)
             if (skip + top < entryCount)
             {
                 asyncResp->res.jsonValue["Members@odata.nextLink"] =
-                    "/redfish/v1/Systems/system/LogServices/EventLog/Entries?$skip=" +
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/EventLog/Entries?$skip=" +
                     std::to_string(skip + top);
             }
         });
@@ -1832,7 +1832,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
             asyncResp->res.jsonValue["@odata.type"] =
                 "#LogEntryCollection.LogEntryCollection";
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/system/LogServices/EventLog/Entries";
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/EventLog/Entries";
             asyncResp->res.jsonValue["Name"] = "System Event Log Entries";
             asyncResp->res.jsonValue["Description"] =
                 "Collection of System Event Log Entries";
@@ -3074,7 +3074,7 @@ inline void handleBMCLogServicesCollectionGet(
     asyncResp->res.jsonValue["@odata.type"] =
         "#LogServiceCollection.LogServiceCollection";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Managers/bmc/LogServices";
+        "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices";
     asyncResp->res.jsonValue["Name"] = "Open BMC Log Services Collection";
     asyncResp->res.jsonValue["Description"] =
         "Collection of LogServices for this Manager";
@@ -3083,7 +3083,7 @@ inline void handleBMCLogServicesCollectionGet(
 
 #ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
     nlohmann::json::object_t journal;
-    journal["@odata.id"] = "/redfish/v1/Managers/bmc/LogServices/Journal";
+    journal["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Journal";
     logServiceArray.push_back(std::move(journal));
 #endif
 
@@ -3113,14 +3113,14 @@ inline void handleBMCLogServicesCollectionGet(
             {
                 nlohmann::json::object_t member;
                 member["@odata.id"] =
-                    "/redfish/v1/Managers/bmc/LogServices/Dump";
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump";
                 logServiceArrayLocal.push_back(std::move(member));
             }
             else if (path == "/xyz/openbmc_project/dump/faultlog")
             {
                 nlohmann::json::object_t member;
                 member["@odata.id"] =
-                    "/redfish/v1/Managers/bmc/LogServices/FaultLog";
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/FaultLog";
                 logServiceArrayLocal.push_back(std::move(member));
             }
         }
@@ -3426,19 +3426,19 @@ inline void
 
     if (dumpType == "BMC")
     {
-        dumpPath = "/redfish/v1/Managers/bmc/LogServices/Dump";
+        dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump";
         overWritePolicy = "WrapsWhenFull";
         collectDiagnosticDataSupported = true;
     }
     else if (dumpType == "FaultLog")
     {
-        dumpPath = "/redfish/v1/Managers/bmc/LogServices/FaultLog";
+        dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/FaultLog";
         overWritePolicy = "Unknown";
         collectDiagnosticDataSupported = false;
     }
     else if (dumpType == "System")
     {
-        dumpPath = "/redfish/v1/Systems/system/LogServices/Dump";
+        dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump";
         overWritePolicy = "WrapsWhenFull";
         collectDiagnosticDataSupported = true;
     }
@@ -3621,7 +3621,7 @@ inline void requestRoutesBMCDumpService(App& app)
 
 inline void requestRoutesBMCDumpEntryCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleLogServicesDumpEntriesCollectionGet, std::ref(app), "BMC"));
@@ -3886,7 +3886,7 @@ static void
             nlohmann::json::object_t logEntry;
             logEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
             logEntry["@odata.id"] =
-                "/redfish/v1/Systems/system/LogServices/Crashdump/Entries/" +
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Crashdump/Entries/" +
                 logID;
             logEntry["Name"] = "CPU Crashdump";
             logEntry["Id"] = logID;
