@@ -1956,6 +1956,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
                 }
                 if (dhcpv4)
                 {
+#ifdef BMCWEB_DHCP_CONFIGURATION_UPDATE
                     if (!json_util::readJson(
                             *dhcpv4, asyncResp->res, "DHCPEnabled",
                             v4dhcpParms.dhcpv4Enabled, "UseDNSServers",
@@ -1965,10 +1966,15 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     {
                         return;
                     }
+#else
+                    messages::propertyNotWritable(asyncResp->res, "DHCPv4");
+                    return;
+#endif
                 }
 
                 if (dhcpv6)
                 {
+#ifdef BMCWEB_DHCP_CONFIGURATION_UPDATE
                     if (!json_util::readJson(
                             *dhcpv6, asyncResp->res, "OperatingMode",
                             v6dhcpParms.dhcpv6OperatingMode, "UseDNSServers",
@@ -1978,6 +1984,10 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     {
                         return;
                     }
+#else
+                    messages::propertyNotWritable(asyncResp->res, "DHCPv6");
+                    return;
+#endif
                 }
 
                 // Get single eth interface data, and call the below callback
@@ -2066,9 +2076,15 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
                         if (interfaceEnabled)
                         {
+#ifdef BMCWEB_NIC_CONFIGURATION_UPDATE
                             setEthernetInterfaceBoolProperty(
                                 ifaceId, "NICEnabled", *interfaceEnabled,
                                 asyncResp);
+#else
+                            messages::propertyNotWritable(asyncResp->res,
+                                                          "InterfaceEnabled");
+                            return;
+#endif
                         }
                     });
             });

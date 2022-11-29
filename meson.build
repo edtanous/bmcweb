@@ -101,6 +101,8 @@ feature_map = {
   'bios'                                        : '-DBMCWEB_ENABLE_BIOS',
   'ipmi'                                        : '-DBMCWEB_ENABLE_IPMI',
   'patch-ssh'                                   : '-DBMCWEB_ENABLE_PATCH_SSH',
+  'dhcp-configuration-update'                   : '-DBMCWEB_DHCP_CONFIGURATION_UPDATE',
+  'nic-configuration-update'                    : '-DBMCWEB_NIC_CONFIGURATION_UPDATE',  
 }
 
 if(get_option('tls-auth-opt-in').enabled())
