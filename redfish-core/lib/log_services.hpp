@@ -1104,7 +1104,7 @@ inline void createDumpTaskCallback(
 
             // The task timer is set to max time limit within which the
             // requested dump will be collected.
-            task->startTimer(std::chrono::minutes(6));
+            task->startTimer(std::chrono::minutes(30));
             task->populateResp(asyncResp->res);
             task->payload.emplace(payload);
         },
