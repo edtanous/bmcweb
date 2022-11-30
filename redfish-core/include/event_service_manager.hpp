@@ -106,22 +106,22 @@ using EventLogObjectsType =
 
 namespace registries
 {
-static const Message*
-    getMsgFromRegistry(const std::string& messageKey,
-                       const std::span<const MessageEntry>& registry)
-{
-    std::span<const MessageEntry>::iterator messageIt =
-        std::find_if(registry.begin(), registry.end(),
-                     [&messageKey](const MessageEntry& messageEntry) {
-        return messageKey == messageEntry.first;
-        });
-    if (messageIt != registry.end())
-    {
-        return &messageIt->second;
-    }
+// static const Message*
+//     getMsgFromRegistry(const std::string& messageKey,
+//                        const std::span<const MessageEntry>& registry)
+// {
+//     std::span<const MessageEntry>::iterator messageIt =
+//         std::find_if(registry.begin(), registry.end(),
+//                      [&messageKey](const MessageEntry& messageEntry) {
+//         return messageKey == messageEntry.first;
+//         });
+//     if (messageIt != registry.end())
+//     {
+//         return &messageIt->second;
+//     }
 
-    return nullptr;
-}
+//     return nullptr;
+// }
 
 static const Message* formatMessage(const std::string_view& messageID)
 {
@@ -139,7 +139,7 @@ static const Message* formatMessage(const std::string_view& messageID)
     const std::string& messageKey = fields[3];
 
     // Find the right registry and check it for the MessageKey
-    return getMessageFromRegistry(messageKey,
+    return redfish::message_registries::getMessageFromRegistry(messageKey,
                                   getRegistryFromPrefix(registryName));
 }
 } // namespace registries

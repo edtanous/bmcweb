@@ -21,12 +21,14 @@
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
 #include <dbus_utility.hpp>
+#include <openbmc_dbus_rest.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <utils/chassis_utils.hpp>
 #include <utils/collection.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
+#include <utils/json_utils.hpp>
 
 namespace redfish
 {
@@ -275,7 +277,8 @@ inline void getEROTChassis(const crow::Request&,
                 }
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                auto health = std::make_shared<HealthRollup>(path,
+                auto health = std::make_shared<HealthRollup>(
+                    path,
                     [asyncResp](const std::string& rootHealth,
                                 const std::string& healthRollup) {
                         asyncResp->res.jsonValue["Status"]["Health"] =
@@ -422,19 +425,20 @@ inline void requestRoutesEROTChassisCertificate(App& app)
 }
 
 /**
- * @brief Handles request PATCH 
- * The function set all delivered properties 
- * in request body on chassis defined in chassisId 
+ * @brief Handles request PATCH
+ * The function set all delivered properties
+ * in request body on chassis defined in chassisId
  * The function is designed only for chassis
  * which is ERoT
- * 
+ *
  * @param resp Async HTTP response.
  * @param asyncResp Pointer to object holding response data
  * @param chassisId  Chassis ID
  */
-inline void handleEROTChassisPatch( const crow::Request& req,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::string& chassisId)
+inline void
+    handleEROTChassisPatch(const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& chassisId)
 {
     std::optional<bool> backgroundCopyEnabled;
     std::optional<bool> inBandEnabled;
@@ -445,9 +449,8 @@ inline void handleEROTChassisPatch( const crow::Request& req,
     }
 
     if (!json_util::readJsonAction(
-            req, asyncResp->res, 
-            "AutomaticBackgroundCopyEnabled", backgroundCopyEnabled, 
-            "InbandUpdatePolicyEnabled", inBandEnabled))
+            req, asyncResp->res, "AutomaticBackgroundCopyEnabled",
+            backgroundCopyEnabled, "InbandUpdatePolicyEnabled", inBandEnabled))
     {
         return;
     }
@@ -456,9 +459,9 @@ inline void handleEROTChassisPatch( const crow::Request& req,
         "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisId(std::string(chassisId)), backgroundCopyEnabled, inBandEnabled](
-            const boost::system::error_code ec,
-            const crow::openbmc_mapper::GetSubTreeType& subtree) {
+        [asyncResp, chassisId(std::string(chassisId)), backgroundCopyEnabled,
+         inBandEnabled](const boost::system::error_code ec,
+                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)
             {
                 messages::internalError(asyncResp->res);
@@ -484,27 +487,33 @@ inline void handleEROTChassisPatch( const crow::Request& req,
                 const std::string& connectionName = connectionNames[0].first;
 
                 sdbusplus::asio::getProperty<std::string>(
-                        *crow::connections::systemBus, connectionName, path,
-                        "xyz.openbmc_project.Common.UUID", "UUID",
-                        [asyncResp, chassisId(std::string(chassisId)), backgroundCopyEnabled, inBandEnabled]
-                        (const boost::system::error_code ec, const std::string& chassisUUID) {
-                            if (ec)
-                            {
-                                BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            
-                            if(backgroundCopyEnabled.has_value())
-                            {
-                                redfish::chassis_utils::setBackgroundCopyEnabled(asyncResp, chassisId, chassisUUID, backgroundCopyEnabled.value());
-                            }
+                    *crow::connections::systemBus, connectionName, path,
+                    "xyz.openbmc_project.Common.UUID", "UUID",
+                    [asyncResp, chassisId(std::string(chassisId)),
+                     backgroundCopyEnabled,
+                     inBandEnabled](const boost::system::error_code ec,
+                                    const std::string& chassisUUID) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
 
-                            if(inBandEnabled.has_value())
-                            {
-                                redfish::chassis_utils::setInBandEnabled(asyncResp, chassisId, chassisUUID, inBandEnabled.value());
-                            }
-                        });
+                        if (backgroundCopyEnabled.has_value())
+                        {
+                            redfish::chassis_utils::setBackgroundCopyEnabled(
+                                asyncResp, chassisId, chassisUUID,
+                                backgroundCopyEnabled.value());
+                        }
+
+                        if (inBandEnabled.has_value())
+                        {
+                            redfish::chassis_utils::setInBandEnabled(
+                                asyncResp, chassisId, chassisUUID,
+                                inBandEnabled.value());
+                        }
+                    });
                 return;
             }
 
@@ -517,8 +526,6 @@ inline void handleEROTChassisPatch( const crow::Request& req,
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", 0, interfaces);
-
 }
-
 
 } // namespace redfish

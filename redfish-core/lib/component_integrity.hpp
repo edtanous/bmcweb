@@ -24,6 +24,7 @@
 #include <task.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/stl_utils.hpp>
+#include <utils/chassis_utils.hpp>
 
 namespace redfish
 {

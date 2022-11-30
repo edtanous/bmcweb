@@ -380,7 +380,7 @@ executable(
   install_dir:bindir
 )
 
-srcfiles_unittest = [
+srcfiles_unittest = files(
   'test/http/crow_getroutes_test.cpp',
   'test/http/router_test.cpp',
   'test/http/utility_test.cpp',
@@ -398,14 +398,14 @@ srcfiles_unittest = [
   'test/redfish-core/include/utils/ip_utils_test.cpp',
   'test/redfish-core/include/utils/json_utils_test.cpp',
   'test/redfish-core/include/utils/query_param_test.cpp',
-  'test/redfish-core/include/utils/stl_utils_test.cpp',
+  #'test/redfish-core/include/utils/stl_utils_test.cpp',
   'test/redfish-core/include/utils/time_utils_test.cpp',
-  'test/redfish-core/lib/chassis_test.cpp',
-  'test/redfish-core/lib/log_services_dump_test.cpp',
+  #'test/redfish-core/lib/chassis_test.cpp',
+  #'test/redfish-core/lib/log_services_dump_test.cpp',
   'test/redfish-core/lib/service_root_test.cpp',
-  'test/redfish-core/lib/thermal_subsystem_test.cpp',
-  'test/redfish-core/lib/power_subsystem_test.cpp'
-]
+  #'test/redfish-core/lib/thermal_subsystem_test.cpp',
+  #'test/redfish-core/lib/power_subsystem_test.cpp'
+)
 
 # if(get_option('tests').enabled())
 #     # generate the test executable
