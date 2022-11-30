@@ -100,6 +100,7 @@ feature_map = {
   'array-bootprogress'                          : '-DBMCWEB_ARRAY_BOOT_PROGRESS',
   'bios'                                        : '-DBMCWEB_ENABLE_BIOS',
   'ipmi'                                        : '-DBMCWEB_ENABLE_IPMI',
+  'patch-ssh'                                   : '-DBMCWEB_ENABLE_PATCH_SSH',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

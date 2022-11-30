@@ -429,7 +429,9 @@ inline void requestRoutesNetworkProtocol(App& app)
 #ifdef BMCWEB_ENABLE_IPMI
             std::optional<nlohmann::json> ipmi;
 #endif
+#ifdef BMCWEB_ENABLE_PATCH_SSH
             std::optional<nlohmann::json> ssh;
+#endif
 
             if (!json_util::readJson(req, asyncResp->res, "NTP", ntp,
                                      "HostName", newHostName
@@ -437,8 +439,11 @@ inline void requestRoutesNetworkProtocol(App& app)
                                      ,
                                      "IPMI", ipmi
 #endif
+#ifdef BMCWEB_ENABLE_PATCH_SSH
                                      ,
-                                     "SSH", ssh))
+                                     "SSH", ssh
+#endif
+                                     ))
             {
                 return;
             }
@@ -493,6 +498,7 @@ inline void requestRoutesNetworkProtocol(App& app)
             }
 #endif
 
+#ifdef BMCWEB_ENABLE_PATCH_SSH
             if (ssh)
             {
                 std::optional<bool> sshProtocolEnabled;
@@ -509,6 +515,7 @@ inline void requestRoutesNetworkProtocol(App& app)
                         "/xyz/openbmc_project/control/service/dropbear");
                 }
             }
+#endif
         });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
