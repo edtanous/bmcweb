@@ -381,11 +381,11 @@ executable(
 )
 
 srcfiles_unittest = files(
-  'test/http/crow_getroutes_test.cpp',
+  #'test/http/crow_getroutes_test.cpp',
   'test/http/router_test.cpp',
   'test/http/utility_test.cpp',
   'test/include/dbus_utility_test.cpp',
-  'test/include/google/google_service_root_test.cpp',
+  #'test/include/google/google_service_root_test.cpp',
   'test/include/http_utility_test.cpp',
   'test/include/human_sort_test.cpp',
   'test/include/ibm/configfile_test.cpp',
@@ -402,7 +402,7 @@ srcfiles_unittest = files(
   'test/redfish-core/include/utils/time_utils_test.cpp',
   #'test/redfish-core/lib/chassis_test.cpp',
   #'test/redfish-core/lib/log_services_dump_test.cpp',
-  'test/redfish-core/lib/service_root_test.cpp',
+  #'test/redfish-core/lib/service_root_test.cpp',
   #'test/redfish-core/lib/thermal_subsystem_test.cpp',
   #'test/redfish-core/lib/power_subsystem_test.cpp'
 )
