@@ -77,15 +77,20 @@ class RedfishService
      */
     explicit RedfishService(App& app)
     {
-
-        requestAccountServiceRoutes(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled()) {
+                requestAccountServiceRoutes(app);
+        }
         requestAssemblyRoutes(app);
         requestPcieSlotsRoutes(app);
-        requestRoutesRoles(app);
-        requestRoutesRoleCollection(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled()) {
+                requestRoutesRoles(app);
+                requestRoutesRoleCollection(app);
+        }
         requestRoutesServiceRoot(app);
         requestRoutesNetworkProtocol(app);
-        requestRoutesSession(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled()) {
+                requestRoutesSession(app);
+        }
         requestEthernetInterfacesRoutes(app);
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
         requestRoutesThermal(app);
@@ -254,12 +259,12 @@ class RedfishService
         requestRoutesMessageRegistryFileCollection(app);
         requestRoutesMessageRegistryFile(app);
         requestRoutesMessageRegistry(app);
-
-        requestRoutesCertificateService(app);
-        requestRoutesHTTPSCertificate(app);
-        requestRoutesLDAPCertificate(app);
-        requestRoutesTrustStoreCertificate(app);
-
+        if (persistent_data::getConfig().isTLSAuthEnabled()) {
+                requestRoutesCertificateService(app);
+                requestRoutesHTTPSCertificate(app);
+                requestRoutesLDAPCertificate(app);
+                requestRoutesTrustStoreCertificate(app);
+        }
         requestRoutesSystemPCIeFunctionCollection(app);
         requestRoutesSystemPCIeFunction(app);
         requestRoutesSystemPCIeDeviceCollection(app);

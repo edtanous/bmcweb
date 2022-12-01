@@ -3467,7 +3467,7 @@ inline void requestRoutesManager(App& app)
                                     }
                                 });
                             }
-                            else
+                            else if(!subtree.empty())
                             {
                                 // Iterate over all retrieved ObjectPaths.
                                 for (const std::pair<
