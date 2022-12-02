@@ -32,7 +32,8 @@ namespace task
 {
 constexpr size_t maxTaskCount = 100; // arbitrary limit
 
-static std::deque<std::shared_ptr<struct TaskData>> tasks;
+using TaskQueue = std::deque<std::shared_ptr<struct TaskData>>;
+static TaskQueue tasks;
 
 constexpr bool completed = true;
 
@@ -118,6 +119,47 @@ struct TaskData : std::enable_shared_from_this<TaskData>
 
   public:
     TaskData() = delete;
+
+    /**
+     * @brief This method identifies oldest completed task to remove in task
+     * queue. If all the tasks are in running state then oldest running task
+     * will be returned.
+     *
+     * @return TaskQueue::iterator
+     */
+    static TaskQueue::iterator getTaskToRemove()
+    {
+        TaskQueue::iterator runningTask = tasks.end();
+        TaskQueue::iterator completedTask = tasks.end();
+        for (TaskQueue::iterator currentTask = tasks.begin();
+             currentTask != tasks.end(); currentTask++)
+        {
+            if ((*currentTask)->state == "Running")
+            {
+                // Running task is the first running task initially. When there
+                // are multiple running tasks, oldest running task will be
+                // choosen for removal
+                if (runningTask == tasks.end() ||
+                    (*runningTask)->startTime > (*currentTask)->startTime)
+                {
+                    runningTask = currentTask;
+                }
+            }
+            else // task is completed/failed
+            {
+                // Completed task is the first completed task initially. When
+                // there are multiple completed tasks, oldest completed task will
+                // be choosen for removal
+                if (completedTask == tasks.end() ||
+                    (*completedTask)->startTime > (*currentTask)->startTime)
+                {
+                    completedTask = currentTask;
+                }
+            }
+        }
+        return completedTask == tasks.end() ? runningTask : completedTask;
+    }
+
     static std::shared_ptr<TaskData>& createTask(
         std::function<bool(boost::system::error_code,
                            sdbusplus::message::message&,
@@ -143,14 +185,15 @@ struct TaskData : std::enable_shared_from_this<TaskData>
 
         if (tasks.size() >= maxTaskCount)
         {
-            auto& last = tasks.front();
-
+            auto taskToRemove = getTaskToRemove();
             // destroy all references
-            last->messages.emplace_back(
-                last->getMsgCallback("Aborted", last->index));
-            last->timer.cancel();
-            last->match.reset();
-            tasks.pop_front();
+            (*taskToRemove)
+                ->messages.emplace_back(
+                    (*taskToRemove)
+                        ->getMsgCallback("Aborted", (*taskToRemove)->index));
+            (*taskToRemove)->timer.cancel();
+            (*taskToRemove)->match.reset();
+            tasks.erase(taskToRemove);
         }
 
         return tasks.emplace_back(std::make_shared<MakeSharedHelper>(
