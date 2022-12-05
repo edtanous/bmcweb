@@ -982,10 +982,9 @@ inline void getBootOverrideType(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
             BMCWEB_LOG_DEBUG << "Boot type: " << bootType;
 
-            aResp->res
-                .jsonValue["Boot"]
-                          ["BootSourceOverrideMode@Redfish.AllowableValues"] =
-                nlohmann::json::array_t({"Legacy", "UEFI"});
+        aResp->res.jsonValue["Boot"]
+                            ["BootSourceOverrideMode@Redfish.AllowableValues"] =
+            {"Legacy", "UEFI"};
 
             auto rfType = dbusToRfBootType(bootType);
             if (rfType.empty())
@@ -3075,14 +3074,12 @@ inline void requestRoutesSystems(App& app)
                 "Press ~. to exit console";
 
 #ifdef BMCWEB_ENABLE_KVM
-            // Fill in GraphicalConsole info
-            asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
-                true;
-            asyncResp->res
-                .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
-            asyncResp->res
-                .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
-                nlohmann::json::array_t({"KVMIP"});
+        // Fill in GraphicalConsole info
+        asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] = true;
+        asyncResp->res.jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] =
+            4;
+        asyncResp->res
+            .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] = {"KVMIP"};
 
 #endif // BMCWEB_ENABLE_KVM
             constexpr const std::array<const char*, 4> inventoryForSystems = {

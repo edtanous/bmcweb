@@ -1389,38 +1389,32 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                         const boost::system::error_code ec,
                         const dbus::utility::MapperGetSubTreePathsResponse&
                             subtreePath) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << ec;
-                            return;
-                        }
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << ec;
+                return;
+            }
 
-                        for (auto& pathStr : subtreePath)
-                        {
-                            if (pathStr.find("PostCode") != std::string::npos)
-                            {
-                                nlohmann::json& logServiceArrayLocal =
-                                    asyncResp->res.jsonValue["Members"];
-                                nlohmann::json::object_t member;
-                                member["@odata.id"] =
-                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                    "/LogServices/PostCodes";
-
-                                logServiceArrayLocal.push_back(
-                                    std::move(member));
-
-                                asyncResp->res
-                                    .jsonValue["Members@odata.count"] =
-                                    logServiceArrayLocal.size();
-                                return;
-                            }
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/",
-                    0, std::array<const char*, 1>{postCodeIface});
-            });
+            for (const auto& pathStr : subtreePath)
+            {
+                if (pathStr.find("PostCode") != std::string::npos)
+                {
+                    nlohmann::json& logServiceArrayLocal =
+                        asyncResp->res.jsonValue["Members"];
+                    logServiceArrayLocal.push_back(
+                        {{"@odata.id",
+                          "/redfish/v1/Systems/system/LogServices/PostCodes"}});
+                    asyncResp->res.jsonValue["Members@odata.count"] =
+                        logServiceArrayLocal.size();
+                    return;
+                }
+            }
+            },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/", 0,
+            std::array<const char*, 1>{postCodeIface});
+        });
 }
 
 inline void requestRoutesEventLogService(App& app)
@@ -3082,9 +3076,8 @@ inline void handleBMCLogServicesCollectionGet(
     logServiceArray = nlohmann::json::array();
 
 #ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
-    nlohmann::json::object_t journal;
-    journal["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Journal";
-    logServiceArray.push_back(std::move(journal));
+    logServiceArray.push_back(
+        {{"@odata.id", "/redfish/v1/Managers/bmc/LogServices/Journal"}});
 #endif
 
     asyncResp->res.jsonValue["Members@odata.count"] = logServiceArray.size();
@@ -3111,17 +3104,15 @@ inline void handleBMCLogServicesCollectionGet(
         {
             if (path == "/xyz/openbmc_project/dump/bmc")
             {
-                nlohmann::json::object_t member;
-                member["@odata.id"] =
-                    "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump";
-                logServiceArrayLocal.push_back(std::move(member));
+                logServiceArrayLocal.push_back(
+                    {{"@odata.id",
+                      "/redfish/v1/Managers/bmc/LogServices/Dump"}});
             }
             else if (path == "/xyz/openbmc_project/dump/faultlog")
             {
-                nlohmann::json::object_t member;
-                member["@odata.id"] =
-                    "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/FaultLog";
-                logServiceArrayLocal.push_back(std::move(member));
+                logServiceArrayLocal.push_back(
+                    {{"@odata.id",
+                      "/redfish/v1/Managers/bmc/LogServices/FaultLog"}});
             }
         }
 

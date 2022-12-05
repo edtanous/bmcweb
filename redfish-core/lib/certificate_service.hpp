@@ -47,6 +47,7 @@ constexpr char const* authorityObjectPath =
 // "redfish standard registries". Need to modify after DMTF
 // publish Privilege details for certificate service
 
+
 inline std::string getCertificateFromReqBody(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const crow::Request& req)

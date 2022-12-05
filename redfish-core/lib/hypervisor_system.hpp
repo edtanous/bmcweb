@@ -137,13 +137,12 @@ inline void
                 return;
             }
 
-            // Object present so system support limited ComputerSystem Action
-            nlohmann::json& reset =
-                aResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"];
-            reset["target"] =
-                "/redfish/v1/Systems/hypervisor/Actions/ComputerSystem.Reset";
-            reset["@Redfish.ActionInfo"] =
-                "/redfish/v1/Systems/hypervisor/ResetActionInfo";
+        // Object present so system support limited ComputerSystem Action
+        aResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"] = {
+            {"target",
+             "/redfish/v1/Systems/hypervisor/Actions/ComputerSystem.Reset"},
+            {"@Redfish.ActionInfo",
+             "/redfish/v1/Systems/hypervisor/ResetActionInfo"}};
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",

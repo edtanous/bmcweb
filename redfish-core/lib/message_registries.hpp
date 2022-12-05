@@ -26,8 +26,6 @@
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 
-#include <array>
-
 namespace redfish
 {
 
@@ -48,18 +46,13 @@ inline void handleMessageRegistryFileCollectionGet(
     asyncResp->res.jsonValue["Name"] = "MessageRegistryFile Collection";
     asyncResp->res.jsonValue["Description"] =
         "Collection of MessageRegistryFiles";
-    asyncResp->res.jsonValue["Members@odata.count"] = 5;
-
-    nlohmann::json& members = asyncResp->res.jsonValue["Members"];
-    for (const char* memberName :
-         std::to_array({"Base", "TaskEvent", "ResourceEvent", "OpenBMC",
-                        "BiosAttributeRegistry"}))
-    {
-        nlohmann::json::object_t member;
-        member["@odata.id"] = crow::utility::urlFromPieces(
-            "redfish", "v1", "Registries", memberName);
-        members.emplace_back(std::move(member));
-    }
+    asyncResp->res.jsonValue["Members@odata.count"] = 4;
+    asyncResp->res.jsonValue["Members"] = {
+        {{"@odata.id", "/redfish/v1/Registries/Base"}},
+        {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
+        {{"@odata.id", "/redfish/v1/Registries/ResourceEvent"}},
+        {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}},
+        {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}}};
 }
 
 inline void requestRoutesMessageRegistryFileCollection(App& app)
@@ -132,22 +125,18 @@ inline void handleMessageRoutesMessageRegistryFileGet(
         dmtf + registry + " Message Registry File Location";
     asyncResp->res.jsonValue["Id"] = header->registryPrefix;
     asyncResp->res.jsonValue["Registry"] = header->id;
-    nlohmann::json::array_t languages;
-    languages.push_back("en");
-    asyncResp->res.jsonValue["Languages@odata.count"] = languages.size();
-    asyncResp->res.jsonValue["Languages"] = std::move(languages);
-    nlohmann::json::array_t locationMembers;
-    nlohmann::json::object_t location;
-    location["Language"] = "en";
-    location["Uri"] = "/redfish/v1/Registries/" + registry + "/" + registry;
+    asyncResp->res.jsonValue["Languages"] = {"en"};
+    asyncResp->res.jsonValue["Languages@odata.count"] = 1;
+    asyncResp->res.jsonValue["Location"] = {
+        {{"Language", "en"},
+         {"Uri", "/redfish/v1/Registries/" + registry + "/" + registry}}};
+
+    asyncResp->res.jsonValue["Location@odata.count"] = 1;
 
     if (url != nullptr)
     {
-        location["PublicationUri"] = url;
+        asyncResp->res.jsonValue["Location"][0]["PublicationUri"] = url;
     }
-    locationMembers.emplace_back(std::move(location));
-    asyncResp->res.jsonValue["Location@odata.count"] = locationMembers.size();
-    asyncResp->res.jsonValue["Location"] = std::move(locationMembers);
 }
 
 inline void requestRoutesMessageRegistryFile(App& app)

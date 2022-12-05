@@ -1179,8 +1179,8 @@ inline void
                         chassis = "#IllegalValue";
                     }
                     nlohmann::json& zone = zones[name];
-                    zone["Chassis"]["@odata.id"] =
-                        "/redfish/v1/Chassis/" + chassis;
+                    zone["Chassis"] = {
+                        {"@odata.id", "/redfish/v1/Chassis/" + chassis}};
                     zone["@odata.id"] =
                         "/redfish/v1/Managers/" PLATFORMBMCID "#/Oem/OpenBmc/Fan/FanZones/" +
                         name;
@@ -3346,55 +3346,31 @@ inline void requestRoutesManager(App& app)
         nlohmann::json& resetToDefaults =
             asyncResp->res.jsonValue["Actions"]["#Manager.ResetToDefaults"];
         resetToDefaults["target"] =
-            "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Manager.ResetToDefaults";
-        resetToDefaults["ResetType@Redfish.AllowableValues"] =
-            nlohmann::json::array_t({"ResetAll"});
+            "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
+        resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        std::pair<std::string, std::string> redfishDateTimeOffset =
+            redfish::time_utils::getDateTimeOffsetNow();
 
-            nlohmann::json& oemActions = asyncResp->res.jsonValue["Actions"]["Oem"];
-            nlohmann::json& oemActionsNvidia = oemActions["Nvidia"];
+        asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
+        asyncResp->res.jsonValue["DateTimeLocalOffset"] =
+            redfishDateTimeOffset.second;
 
-            oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["target"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Oem/NvidiaManager.SyncOOBRawCommand";
-            oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia/SyncOOBRawCommandActionInfo";
-
-            oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]["target"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand";
-            oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia/AsyncOOBRawCommandActionInfo";
-
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
-            std::pair<std::string, std::string> redfishDateTimeOffset =
-                redfish::time_utils::getDateTimeOffsetNow();
-
-            asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
-            asyncResp->res.jsonValue["DateTimeLocalOffset"] =
-                redfishDateTimeOffset.second;
-
-            // TODO (Gunnar): Remove these one day since moved to ComputerSystem
-            // Still used by OCP profiles
-            // https://github.com/opencomputeproject/OCP-Profiles/issues/23
-            // Fill in SerialConsole info
-            asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
-            asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
-                15;
-#ifdef BMCWEB_ENABLE_IPMI
-            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
-                nlohmann::json::array_t({"IPMI", "SSH"});
-#else
-            asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
-                nlohmann::json::array_t({"SSH"});
-#endif
+        // TODO (Gunnar): Remove these one day since moved to ComputerSystem
+        // Still used by OCP profiles
+        // https://github.com/opencomputeproject/OCP-Profiles/issues/23
+        // Fill in SerialConsole info
+        asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
+        asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] = 15;
+        asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] = {
+            "IPMI", "SSH"};
 #ifdef BMCWEB_ENABLE_KVM
         // Fill in GraphicalConsole info
         asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] = true;
         asyncResp->res.jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] =
             4;
-        asyncResp->res.jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
-            nlohmann::json::array_t({"KVMIP"});
+        asyncResp->res
+            .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] = {"KVMIP"};
 #endif // BMCWEB_ENABLE_KVM
 
         asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] = 1;

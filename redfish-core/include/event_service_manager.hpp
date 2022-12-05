@@ -636,15 +636,15 @@ class Subscription : public persistent_data::UserSubscription
         logEntryArray.push_back({});
         nlohmann::json& logEntryJson = logEntryArray.back();
 
-        logEntryJson["EventId"] = "TestID";
-        logEntryJson["EventType"] = "Event";
-        logEntryJson["Severity"] = "OK";
-        logEntryJson["Message"] = "Generated test event";
-        logEntryJson["MessageId"] = "OpenBMC.0.2.TestEventLog";
-        logEntryJson["MessageArgs"] = nlohmann::json::array();
-        logEntryJson["EventTimestamp"] =
-            redfish::time_utils::getDateTimeOffsetNow().first;
-        logEntryJson["Context"] = customText;
+        logEntryJson = {{"EventId", "TestID"},
+                        {"EventType", "Event"},
+                        {"Severity", "OK"},
+                        {"Message", "Generated test event"},
+                        {"MessageId", "OpenBMC.0.2.TestEventLog"},
+                        {"MessageArgs", nlohmann::json::array()},
+                        {"EventTimestamp",
+                         redfish::time_utils::getDateTimeOffsetNow().first},
+                        {"Context", customText}};
 
         nlohmann::json msg;
         msg["@odata.type"] = "#Event.v1_4_0.Event";
@@ -1345,8 +1345,8 @@ class EventServiceManager
         return true;
     }
 
-    void sendEvent(nlohmann::json eventMessage, const std::string& origin,
-                   const std::string& resType)
+    void sendEvent(const nlohmann::json& eventMessageIn,
+                   const std::string& origin, const std::string& resType)
     {
         if (!serviceEnabled || (noOfEventLogSubscribers == 0U))
         {
@@ -1354,15 +1354,22 @@ class EventServiceManager
             return;
         }
         nlohmann::json eventRecord = nlohmann::json::array();
-
-        eventMessage["EventId"] = eventId;
+        nlohmann::json eventMessage = eventMessageIn;
         // MemberId is 0 : since we are sending one event record.
-        eventMessage["MemberId"] = 0;
-        eventMessage["EventTimestamp"] =
-            redfish::time_utils::getDateTimeOffsetNow().first;
-        eventMessage["OriginOfCondition"] = origin;
+        uint64_t memberId = 0;
 
-        eventRecord.emplace_back(std::move(eventMessage));
+        nlohmann::json event = {
+            {"EventId", eventId},
+            {"MemberId", memberId},
+            {"EventTimestamp",
+             redfish::time_utils::getDateTimeOffsetNow().first},
+            {"OriginOfCondition", origin}};
+        for (nlohmann::json::iterator it = event.begin(); it != event.end();
+             ++it)
+        {
+            eventMessage[it.key()] = it.value();
+        }
+        eventRecord.push_back(eventMessage);
 
         for (const auto& it : this->subscriptionsMap)
         {
@@ -1390,12 +1397,11 @@ class EventServiceManager
             }
             if (isSubscribed)
             {
-                nlohmann::json msgJson;
-
-                msgJson["@odata.type"] = "#Event.v1_4_0.Event";
-                msgJson["Name"] = "Event Log";
-                msgJson["Id"] = eventId;
-                msgJson["Events"] = eventRecord;
+                nlohmann::json msgJson = {
+                    {"@odata.type", "#Event.v1_4_0.Event"},
+                    {"Name", "Event Log"},
+                    {"Id", eventId},
+                    {"Events", eventRecord}};
 
                 std::string strMsg = msgJson.dump(
                     2, ' ', true, nlohmann::json::error_handler_t::replace);
@@ -1413,12 +1419,12 @@ class EventServiceManager
         for (const auto& it : this->subscriptionsMap)
         {
             std::shared_ptr<Subscription> entry = it.second;
-            nlohmann::json msgJson;
-            msgJson["Timestamp"] =
-                redfish::time_utils::getDateTimeOffsetNow().first;
-            msgJson["OriginOfCondition"] = "/ibm/v1/HMC/BroadcastService";
-            msgJson["Name"] = "Broadcast Message";
-            msgJson["Message"] = broadcastMsg;
+            nlohmann::json msgJson = {
+                {"Timestamp",
+                 redfish::time_utils::getDateTimeOffsetNow().first},
+                {"OriginOfCondition", "/ibm/v1/HMC/BroadcastService"},
+                {"Name", "Broadcast Message"},
+                {"Message", broadcastMsg}};
 
             std::string strMsg = msgJson.dump(
                 2, ' ', true, nlohmann::json::error_handler_t::replace);

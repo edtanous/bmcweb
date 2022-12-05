@@ -485,33 +485,30 @@ inline void requestRoutesTaskCollection(App& app)
         .privileges(redfish::privileges::getTaskCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#TaskCollection.TaskCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/TaskService/Tasks";
-                asyncResp->res.jsonValue["Name"] = "Task Collection";
-                asyncResp->res.jsonValue["Members@odata.count"] =
-                    task::tasks.size();
-                nlohmann::json& members = asyncResp->res.jsonValue["Members"];
-                members = nlohmann::json::array();
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#TaskCollection.TaskCollection";
+        asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/TaskService/Tasks";
+        asyncResp->res.jsonValue["Name"] = "Task Collection";
+        asyncResp->res.jsonValue["Members@odata.count"] = task::tasks.size();
+        nlohmann::json& members = asyncResp->res.jsonValue["Members"];
+        members = nlohmann::json::array();
 
-                for (const std::shared_ptr<task::TaskData>& task : task::tasks)
-                {
-                    if (task == nullptr)
-                    {
-                        continue; // shouldn't be possible
-                    }
-                    nlohmann::json::object_t member;
-                    member["@odata.id"] =
-                        "redfish/v1/TaskService/Tasks/" + std::to_string(task->index);
-                    members.emplace_back(std::move(member));
-                }
-            });
+        for (const std::shared_ptr<task::TaskData>& task : task::tasks)
+        {
+            if (task == nullptr)
+            {
+                continue; // shouldn't be possible
+            }
+            members.emplace_back(
+                nlohmann::json{{"@odata.id", "/redfish/v1/TaskService/Tasks/" +
+                                                 std::to_string(task->index)}});
+        }
+        });
 }
 
 inline void requestRoutesTaskService(App& app)
