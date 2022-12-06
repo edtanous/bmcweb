@@ -442,7 +442,7 @@ inline void requestRoutesChassisControlsCollection(App& app)
                         return;
                     }
                     asyncResp->res.jsonValue = {
-                        {"@odata.type", "#Controls"},
+                        {"@odata.type", "#ControlCollection.ControlCollection"},
                         {"@odata.id",
                          "/redfish/v1/Chassis/" + chassisID + "/Controls"},
                         {"Name", "Controls"},

@@ -870,7 +870,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
 
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#Chassis.v1_16_0.Chassis";
+                    "#Chassis.v1_17_0.Chassis";
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Chassis/" + chassisId;
                 asyncResp->res.jsonValue["Name"] = "Chassis Collection";

@@ -793,7 +793,6 @@ inline void
                             "/LogServices/Dump/Entries/" +
                             entryID + "/attachment";
                     }
-                    entriesArray.push_back(std::move(thisEntry));
                 }
                 entriesArray.push_back(std::move(thisEntry));
             }
@@ -5129,7 +5128,7 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
                         // Couldn't find an object with that name.  return an
                         // error
                         messages::resourceNotFound(asyncResp->res,
-                                                   "#Chassis.v1_16_0.Chassis",
+                                                   "#Chassis.v1_17_0.Chassis",
                                                    chassisId);
                     },
                     "xyz.openbmc_project.ObjectMapper",
@@ -5205,7 +5204,7 @@ inline void requestRoutesChassisXIDLogService(App& app)
                         // Couldn't find an object with that name.  return an
                         // error
                         messages::resourceNotFound(asyncResp->res,
-                                                   "#Chassis.v1_16_0.Chassis",
+                                                   "#Chassis.v1_17_0.Chassis",
                                                    chassisId);
                     },
                     "xyz.openbmc_project.ObjectMapper",
@@ -5373,7 +5372,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                     std::get_if<uint64_t>(&propertyMap.second);
                                                                 if (millisTimeStamp != nullptr)
                                                                 {
-                                                                    timestamp = crow::utility::getTimestamp(
+                                                                    timestamp = redfish::time_utils::getTimestamp(
                                                                         *millisTimeStamp);
                                                                 }
                                                             }
@@ -5384,7 +5383,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                 if (millisTimeStamp != nullptr)
                                                                 {
                                                                     updateTimestamp =
-                                                                        crow::utility::getTimestamp(
+                                                                        redfish::time_utils::getTimestamp(
                                                                             *millisTimeStamp);
                                                                 }
                                                             }

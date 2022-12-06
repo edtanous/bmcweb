@@ -310,7 +310,7 @@ inline void getEROTChassis(const crow::Request&,
                 asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#Chassis.v1_16_0.Chassis";
+                    "#Chassis.v1_17_0.Chassis";
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Chassis/" + chassisId;
                 asyncResp->res.jsonValue["Name"] = chassisId;
@@ -352,7 +352,7 @@ inline void getEROTChassis(const crow::Request&,
 
             // Couldn't find an object with that name.  return an error
             messages::resourceNotFound(asyncResp->res,
-                                       "#Chassis.v1_16_0.Chassis", chassisId);
+                                       "#Chassis.v1_17_0.Chassis", chassisId);
         },
 
         "xyz.openbmc_project.ObjectMapper",
@@ -519,7 +519,7 @@ inline void
 
             // Couldn't find an object with that name.  return an error
             messages::resourceNotFound(asyncResp->res,
-                                       "#Chassis.v1_16_0.Chassis", chassisId);
+                                       "#Chassis.v1_17_0.Chassis", chassisId);
         },
 
         "xyz.openbmc_project.ObjectMapper",

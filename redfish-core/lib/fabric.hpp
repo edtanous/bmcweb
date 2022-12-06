@@ -2890,7 +2890,7 @@ inline void
                      fabricId % switchId % portId)
                         .str();
                 asyncResp->res.jsonValue = {
-                    {"@odata.type", "#PortMetrics.v1_2_0.PortMetrics"},
+                    {"@odata.type", "#PortMetrics.v1_3_0.PortMetrics"},
                     {"@odata.id", portMetricsURI},
                     {"Name", portId + " Port Metrics"},
                     {"Id", "Metrics"}};

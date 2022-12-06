@@ -524,7 +524,7 @@ inline void requestRoutesNetworkProtocol(App& app)
                 "NTP/ProtocolEnabled", ntpEnabled
 #ifdef BMCWEB_ENABLE_IPMI
                  ,
-                "IPMI/ProtocolEnabled", ipmiEnabled,
+                "IPMI/ProtocolEnabled", ipmiEnabled
 #endif
 #ifdef BMCWEB_ENABLE_PATCH_SSH
                  ,

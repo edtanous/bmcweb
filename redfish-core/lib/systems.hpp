@@ -3016,7 +3016,7 @@ inline void requestRoutesSystems(App& app)
                 boost::beast::http::field::link,
                 "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
             asyncResp->res.jsonValue["@odata.type"] =
-                "#ComputerSystem.v1_16_0.ComputerSystem";
+                "#ComputerSystem.v1_17_0.ComputerSystem";
             asyncResp->res.jsonValue["Name"] = PLATFORMSYSTEMID;
             asyncResp->res.jsonValue["Id"] = PLATFORMSYSTEMID;
             asyncResp->res.jsonValue["SystemType"] = "Physical";

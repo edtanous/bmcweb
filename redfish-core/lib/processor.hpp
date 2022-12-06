@@ -663,7 +663,7 @@ inline void
                             std::string pcieDeviceLink = "/redfish/v1/Chassis/";
                             pcieDeviceLink += chassisName;
                             pcieDeviceLink += "/PCIeDevices/";
-                            pcieDeviceLink += chassisName;
+                            pcieDeviceLink += pcieDeviceName;
                             aResp->res.jsonValue["Links"]["PCIeDevice"] = {
                                 {"@odata.id", pcieDeviceLink}};
 
@@ -4128,7 +4128,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                         continue;
                                     }
                                     asyncResp->res.jsonValue["@odata.type"] =
-                                        "#PortMetrics.v1_1_0.PortMetrics";
+                                        "#PortMetrics.v1_3_0.PortMetrics";
                                     std::string portMetricUri =
                                         "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                         "/Processors/";
