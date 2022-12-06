@@ -9,6 +9,13 @@
 #include "routing.hpp"
 #include "utility.hpp"
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#ifdef BMCWEB_ENABLE_SSL
+#include <boost/asio/ssl/context.hpp>
+#include <boost/beast/ssl/ssl_stream.hpp>
+#endif
+
 #include <chrono>
 #include <cstdint>
 #include <functional>
@@ -117,8 +124,8 @@ class App
             }
             else
             {
-                sslServer =
-                    std::make_unique<ssl_server_t>(this, socketFd, sslContext, io);
+                sslServer = std::make_unique<ssl_server_t>(this, socketFd,
+                                                           sslContext, io);
             }
             sslServer->run();
         }
@@ -153,7 +160,7 @@ class App
 
     std::vector<const std::string*> getRoutes()
     {
-        const std::string root("");
+        const std::string root;
         return router.getRoutes(root);
     }
     std::vector<const std::string*> getRoutes(const std::string& parent)
@@ -162,35 +169,6 @@ class App
     }
 
 #ifdef BMCWEB_ENABLE_SSL
-    App& sslFile(const std::string& crtFilename, const std::string& keyFilename)
-    {
-        sslContext = std::make_shared<ssl_context_t>(
-            boost::asio::ssl::context::tls_server);
-        sslContext->set_verify_mode(boost::asio::ssl::verify_peer);
-        sslContext->use_certificate_file(crtFilename, ssl_context_t::pem);
-        sslContext->use_private_key_file(keyFilename, ssl_context_t::pem);
-        sslContext->set_options(boost::asio::ssl::context::default_workarounds |
-                                boost::asio::ssl::context::no_sslv2 |
-                                boost::asio::ssl::context::no_sslv3 |
-                                boost::asio::ssl::context::no_tlsv1 |
-                                boost::asio::ssl::context::no_tlsv1_1);
-        return *this;
-    }
-
-    App& sslFile(const std::string& pemFilename)
-    {
-        sslContext = std::make_shared<ssl_context_t>(
-            boost::asio::ssl::context::tls_server);
-        sslContext->set_verify_mode(boost::asio::ssl::verify_peer);
-        sslContext->load_verify_file(pemFilename);
-        sslContext->set_options(boost::asio::ssl::context::default_workarounds |
-                                boost::asio::ssl::context::no_sslv2 |
-                                boost::asio::ssl::context::no_sslv3 |
-                                boost::asio::ssl::context::no_tlsv1 |
-                                boost::asio::ssl::context::no_tlsv1_1);
-        return *this;
-    }
-
     App& ssl(std::shared_ptr<boost::asio::ssl::context>&& ctx)
     {
         sslContext = std::move(ctx);
@@ -202,18 +180,6 @@ class App
     std::shared_ptr<ssl_context_t> sslContext = nullptr;
 
 #else
-    template <typename T, typename... Remain>
-    App& ssl_file(T&&, Remain&&...)
-    {
-        // We can't call .ssl() member function unless BMCWEB_ENABLE_SSL is
-        // defined.
-        static_assert(
-            // make static_assert dependent to T; always false
-            std::is_base_of<T, void>::value,
-            "Define BMCWEB_ENABLE_SSL to enable ssl support.");
-        return *this;
-    }
-
     template <typename T>
     App& ssl(T&&)
     {
@@ -239,7 +205,6 @@ class App
     std::unique_ptr<ssl_server_t> sslServer;
 #endif
     std::unique_ptr<server_t> server;
-    
 };
 } // namespace crow
 using App = crow::App;

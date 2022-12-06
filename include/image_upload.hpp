@@ -16,7 +16,7 @@ namespace crow
 namespace image_upload
 {
 
-static std::unique_ptr<sdbusplus::bus::match::match> fwUpdateMatcher;
+static std::unique_ptr<sdbusplus::bus::match_t> fwUpdateMatcher;
 
 inline void
     uploadImageHandler(const crow::Request& req,
@@ -51,45 +51,40 @@ inline void
         }
 
         asyncResp->res.result(boost::beast::http::status::bad_request);
-        asyncResp->res.jsonValue = {
-            {"data",
-             {{"description",
-               "Version already exists or failed to be extracted"}}},
-            {"message", "400 Bad Request"},
-            {"status", "error"}};
+        asyncResp->res.jsonValue["data"]["description"] =
+            "Version already exists or failed to be extracted";
+        asyncResp->res.jsonValue["message"] = "400 Bad Request";
+        asyncResp->res.jsonValue["status"] = "error";
     };
 
-    std::function<void(sdbusplus::message::message&)> callback =
-        [asyncResp](sdbusplus::message::message& m) {
-            BMCWEB_LOG_DEBUG << "Match fired";
+    std::function<void(sdbusplus::message_t&)> callback =
+        [asyncResp](sdbusplus::message_t& m) {
+        BMCWEB_LOG_DEBUG << "Match fired";
 
-            sdbusplus::message::object_path path;
-            std::vector<std::pair<
-                std::string, std::vector<std::pair<
-                                 std::string, dbus::utility::DbusVariantType>>>>
-                interfaces;
-            m.read(path, interfaces);
+        sdbusplus::message::object_path path;
+        dbus::utility::DBusInteracesMap interfaces;
+        m.read(path, interfaces);
 
-            if (std::find_if(interfaces.begin(), interfaces.end(),
-                             [](const auto& i) {
-                                 return i.first ==
-                                        "xyz.openbmc_project.Software.Version";
-                             }) != interfaces.end())
+        if (std::find_if(interfaces.begin(), interfaces.end(),
+                         [](const auto& i) {
+            return i.first == "xyz.openbmc_project.Software.Version";
+            }) != interfaces.end())
+        {
+            timeout.cancel();
+            std::string leaf = path.filename();
+            if (leaf.empty())
             {
-                timeout.cancel();
-                std::string leaf = path.filename();
-                if (leaf.empty())
-                {
-                    leaf = path.str;
-                }
-
-                asyncResp->res.jsonValue = {
-                    {"data", leaf}, {"message", "200 OK"}, {"status", "ok"}};
-                BMCWEB_LOG_DEBUG << "ending response";
-                fwUpdateMatcher = nullptr;
+                leaf = path.str;
             }
-        };
-    fwUpdateMatcher = std::make_unique<sdbusplus::bus::match::match>(
+
+            asyncResp->res.jsonValue["data"] = leaf;
+            asyncResp->res.jsonValue["message"] = "200 OK";
+            asyncResp->res.jsonValue["status"] = "ok";
+            BMCWEB_LOG_DEBUG << "ending response";
+            fwUpdateMatcher = nullptr;
+        }
+    };
+    fwUpdateMatcher = std::make_unique<sdbusplus::bus::match_t>(
         *crow::connections::systemBus,
         "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
         "member='InterfacesAdded',path='/xyz/openbmc_project/software'",
@@ -120,8 +115,8 @@ inline void requestRoutes(App& app)
         .methods(boost::beast::http::verb::post, boost::beast::http::verb::put)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                uploadImageHandler(req, asyncResp);
-            });
+        uploadImageHandler(req, asyncResp);
+        });
 }
 } // namespace image_upload
 } // namespace crow

@@ -19,13 +19,13 @@ static crow::websocket::Connection* session = nullptr;
 // The max network block device buffer size is 128kb plus 16bytes
 // for the message header:
 // https://github.com/NetworkBlockDevice/nbd/blob/master/doc/proto.md#simple-reply-message
-static constexpr auto nbdBufferSize = 131088;
+static constexpr auto nbdBufferSize = (128 * 1024 + 16) * 4;
 
 class Handler : public std::enable_shared_from_this<Handler>
 {
   public:
     Handler(const std::string& mediaIn, boost::asio::io_context& ios) :
-        pipeOut(ios), pipeIn(ios), media(mediaIn), doingWrite(false),
+        pipeOut(ios), pipeIn(ios), media(mediaIn),
         outputBuffer(new boost::beast::flat_static_buffer<nbdBufferSize>),
         inputBuffer(new boost::beast::flat_static_buffer<nbdBufferSize>)
     {}
@@ -42,7 +42,7 @@ class Handler : public std::enable_shared_from_this<Handler>
         // boost::process::child::terminate uses SIGKILL, need to send SIGTERM
         // to allow the proxy to stop nbd-client and the USB device gadget.
         int rc = kill(proxy.id(), SIGTERM);
-        if (rc)
+        if (rc != 0)
         {
             return;
         }
@@ -88,26 +88,26 @@ class Handler : public std::enable_shared_from_this<Handler>
             inputBuffer->data(),
             [this, self(shared_from_this())](boost::beast::error_code ec,
                                              std::size_t bytesWritten) {
-                BMCWEB_LOG_DEBUG << "Wrote " << bytesWritten << "bytes";
-                doingWrite = false;
-                inputBuffer->consume(bytesWritten);
+            BMCWEB_LOG_DEBUG << "Wrote " << bytesWritten << "bytes";
+            doingWrite = false;
+            inputBuffer->consume(bytesWritten);
 
-                if (session == nullptr)
-                {
-                    return;
-                }
-                if (ec == boost::asio::error::eof)
-                {
-                    session->close("VM socket port closed");
-                    return;
-                }
-                if (ec)
-                {
-                    session->close("Error in writing to proxy port");
-                    BMCWEB_LOG_ERROR << "Error in VM socket write " << ec;
-                    return;
-                }
-                doWrite();
+            if (session == nullptr)
+            {
+                return;
+            }
+            if (ec == boost::asio::error::eof)
+            {
+                session->close("VM socket port closed");
+                return;
+            }
+            if (ec)
+            {
+                session->close("Error in writing to proxy port");
+                BMCWEB_LOG_ERROR << "Error in VM socket write " << ec;
+                return;
+            }
+            doWrite();
             });
     }
 
@@ -119,30 +119,29 @@ class Handler : public std::enable_shared_from_this<Handler>
             outputBuffer->prepare(bytes),
             [this, self(shared_from_this())](
                 const boost::system::error_code& ec, std::size_t bytesRead) {
-                BMCWEB_LOG_DEBUG << "Read done.  Read " << bytesRead
-                                 << " bytes";
-                if (ec)
+            BMCWEB_LOG_DEBUG << "Read done.  Read " << bytesRead << " bytes";
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Couldn't read from VM port: " << ec;
+                if (session != nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Couldn't read from VM port: " << ec;
-                    if (session != nullptr)
-                    {
-                        session->close("Error in connecting to VM port");
-                    }
-                    return;
+                    session->close("Error in connecting to VM port");
                 }
-                if (session == nullptr)
-                {
-                    return;
-                }
+                return;
+            }
+            if (session == nullptr)
+            {
+                return;
+            }
 
-                outputBuffer->commit(bytesRead);
-                std::string_view payload(
-                    static_cast<const char*>(outputBuffer->data().data()),
-                    bytesRead);
-                session->sendBinary(payload);
-                outputBuffer->consume(bytesRead);
+            outputBuffer->commit(bytesRead);
+            std::string_view payload(
+                static_cast<const char*>(outputBuffer->data().data()),
+                bytesRead);
+            session->sendBinary(payload);
+            outputBuffer->consume(bytesRead);
 
-                doRead();
+            doRead();
             });
     }
 
@@ -150,7 +149,7 @@ class Handler : public std::enable_shared_from_this<Handler>
     boost::process::async_pipe pipeIn;
     boost::process::child proxy;
     std::string media;
-    bool doingWrite;
+    bool doingWrite{false};
 
     std::unique_ptr<boost::beast::flat_static_buffer<nbdBufferSize>>
         outputBuffer;
@@ -165,8 +164,7 @@ inline void requestRoutes(App& app)
     BMCWEB_ROUTE(app, "/vm/0/0")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .websocket()
-        .onopen([](crow::websocket::Connection& conn,
-                   const std::shared_ptr<bmcweb::AsyncResp>&) {
+        .onopen([](crow::websocket::Connection& conn) {
             BMCWEB_LOG_DEBUG << "Connection " << &conn << " opened";
 
             if (session != nullptr)
@@ -204,7 +202,8 @@ inline void requestRoutes(App& app)
         })
         .onmessage([](crow::websocket::Connection& conn,
                       const std::string& data, bool) {
-            if (data.length() > handler->inputBuffer->capacity())
+            if (data.length() >
+                handler->inputBuffer->capacity() - handler->inputBuffer->size())
             {
                 BMCWEB_LOG_ERROR << "Buffer overrun when writing "
                                  << data.length() << " bytes";

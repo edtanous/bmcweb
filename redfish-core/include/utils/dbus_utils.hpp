@@ -1,10 +1,26 @@
 #pragma once
 
+#include "logging.hpp"
+
+#include <sdbusplus/unpack_properties.hpp>
+
 namespace redfish
 {
-
 namespace dbus_utils
 {
+
+struct UnpackErrorPrinter
+{
+    void operator()(const sdbusplus::UnpackErrorReason reason,
+                    const std::string& property) const noexcept
+    {
+        BMCWEB_LOG_DEBUG
+            << "DBUS property error in property: " << property << ", reason: "
+            << static_cast<
+                   std::underlying_type_t<sdbusplus::UnpackErrorReason>>(
+                   reason);
+    }
+};
 
 constexpr const char* dbusObjManagerIntf = "org.freedesktop.DBus.ObjectManager";
 constexpr const char* propertyInterface = "org.freedesktop.DBus.Properties";
@@ -182,7 +198,6 @@ inline std::string toLocationType(const std::string& location)
 }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
 inline std::string toSMPBIPrivilegeString(uint8_t privilege)
 {
     if (privilege == 0x01)
@@ -214,7 +229,6 @@ inline uint8_t toSMPBIPrivilegeType(const std::string& privilegeType)
         return 0x00;
     }
 }
-
 #endif //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace dbus_utils

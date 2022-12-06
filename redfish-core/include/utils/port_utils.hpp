@@ -356,8 +356,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         // update port health
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(
-                                crow::connections::systemBus, objPath,
+                            std::make_shared<HealthRollup>(objPath,
                                 [asyncResp](const std::string& rootHealth,
                                             const std::string& healthRollup) {
                                     asyncResp->res

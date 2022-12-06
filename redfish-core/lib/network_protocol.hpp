@@ -21,6 +21,7 @@
 
 #include <app.hpp>
 #include <dbus_utility.hpp>
+#include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <utils/json_utils.hpp>
@@ -28,14 +29,20 @@
 
 #include <optional>
 #include <variant>
+
 namespace redfish
 {
 
 void getNTPProtocolEnabled(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp);
 std::string getHostName();
 
-const static std::array<std::pair<std::string, std::string>, 3> protocolToDBus{
-    {{"SSH", "dropbear"}, {"HTTPS", "bmcweb"}, {"IPMI", "phosphor-ipmi-net"}}};
+static constexpr const char* sshServiceName = "dropbear";
+static constexpr const char* httpsServiceName = "bmcweb";
+static constexpr const char* ipmiServiceName = "phosphor-ipmi-net";
+static constexpr std::array<std::pair<const char*, const char*>, 3>
+    protocolToService = {{{"SSH", sshServiceName},
+                          {"HTTPS", httpsServiceName},
+                          {"IPMI", ipmiServiceName}}};
 
 inline void extractNTPServersAndDomainNamesData(
     const dbus::utility::ManagedObjectType& dbusData,
@@ -76,6 +83,7 @@ inline void extractNTPServersAndDomainNamesData(
             }
         }
     }
+    stl_utils::removeDuplicate(ntpData);
 }
 
 template <typename CallbackFunc>
@@ -151,10 +159,10 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             return;
         }
         asyncResp->res.jsonValue["NTP"]["NTPServers"] = ntpServers;
-        if (hostName.empty() == false)
+        if (!hostName.empty())
         {
             std::string fqdn = hostName;
-            if (domainNames.empty() == false)
+            if (!domainNames.empty())
             {
                 fqdn += ".";
                 fqdn += domainNames[0];
@@ -172,12 +180,12 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (isOperationAllowedWithPrivileges({{"ConfigureManager"}},
                                          effectiveUserPrivileges))
     {
-        asyncResp->res.jsonValue["HTTPS"]["Certificates"] = {
-            {"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
-                          "/NetworkProtocol/HTTPS/Certificates"}};
+        asyncResp->res.jsonValue["HTTPS"]["Certificates"]["@odata.id"] =
+            "/redfish/v1/Managers/" PLATFORMBMCID
+            "/NetworkProtocol/HTTPS/Certificates";
     }
 
-    for (const auto& protocol : protocolToDBus)
+    for (const auto& protocol : protocolToService)
     {
         const std::string& protocolName = protocol.first;
         const std::string& serviceName = protocol.second;
@@ -217,8 +225,8 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 getPortNumber(
                     socketPath,
                     [asyncResp, protocolName](
-                        const boost::system::error_code ec, int portNumber) {
-                        if (ec)
+                        const boost::system::error_code ec2, int portNumber) {
+                        if (ec2)
                         {
                             messages::internalError(asyncResp->res);
                             return;
@@ -259,22 +267,86 @@ inline void handleNTPProtocolEnabled(
 
 inline void
     handleNTPServersPatch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          std::vector<std::string>& ntpServers)
+                          const std::vector<nlohmann::json>& ntpServerObjects,
+                          std::vector<std::string> currentNtpServers)
 {
-    auto iter = stl_utils::firstDuplicate(ntpServers.begin(), ntpServers.end());
-    if (iter != ntpServers.end())
+    std::vector<std::string>::iterator currentNtpServer =
+        currentNtpServers.begin();
+    for (size_t index = 0; index < ntpServerObjects.size(); index++)
     {
-        std::string pointer =
-            "NTPServers/" +
-            std::to_string(std::distance(ntpServers.begin(), iter));
-        messages::propertyValueIncorrect(asyncResp->res, pointer, *iter);
-        return;
+        const nlohmann::json& ntpServer = ntpServerObjects[index];
+        if (ntpServer.is_null())
+        {
+            // Can't delete an item that doesn't exist
+            if (currentNtpServer == currentNtpServers.end())
+            {
+                messages::propertyValueNotInList(asyncResp->res, "null",
+                                                 "NTP/NTPServers/" +
+                                                     std::to_string(index));
+
+                return;
+            }
+            currentNtpServer = currentNtpServers.erase(currentNtpServer);
+            continue;
+        }
+        const nlohmann::json::object_t* ntpServerObject =
+            ntpServer.get_ptr<const nlohmann::json::object_t*>();
+        if (ntpServerObject != nullptr)
+        {
+            if (!ntpServerObject->empty())
+            {
+                messages::propertyValueNotInList(
+                    asyncResp->res,
+                    ntpServer.dump(2, ' ', true,
+                                   nlohmann::json::error_handler_t::replace),
+                    "NTP/NTPServers/" + std::to_string(index));
+                return;
+            }
+            // Can't retain an item that doesn't exist
+            if (currentNtpServer == currentNtpServers.end())
+            {
+                messages::propertyValueOutOfRange(
+                    asyncResp->res,
+                    ntpServer.dump(2, ' ', true,
+                                   nlohmann::json::error_handler_t::replace),
+                    "NTP/NTPServers/" + std::to_string(index));
+
+                return;
+            }
+            // empty objects should leave the NtpServer unmodified
+            currentNtpServer++;
+            continue;
+        }
+
+        const std::string* ntpServerStr =
+            ntpServer.get_ptr<const std::string*>();
+        if (ntpServerStr == nullptr)
+        {
+            messages::propertyValueTypeError(
+                asyncResp->res,
+                ntpServer.dump(2, ' ', true,
+                               nlohmann::json::error_handler_t::replace),
+                "NTP/NTPServers/" + std::to_string(index));
+            return;
+        }
+        if (currentNtpServer == currentNtpServers.end())
+        {
+            // if we're at the end of the list, append to the end
+            currentNtpServers.push_back(*ntpServerStr);
+            currentNtpServer = currentNtpServers.end();
+            continue;
+        }
+        *currentNtpServer = *ntpServerStr;
+        currentNtpServer++;
     }
 
+    // Any remaining array elements should be removed
+    currentNtpServers.erase(currentNtpServer, currentNtpServers.end());
+
     crow::connections::systemBus->async_method_call(
-        [asyncResp,
-         ntpServers](boost::system::error_code ec,
-                     const crow::openbmc_mapper::GetSubTreeType& subtree) {
+        [asyncResp, currentNtpServers](
+            boost::system::error_code ec,
+            const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
@@ -296,8 +368,8 @@ inline void
                         }
 
                         crow::connections::systemBus->async_method_call(
-                            [asyncResp](const boost::system::error_code ec) {
-                                if (ec)
+                            [asyncResp](const boost::system::error_code ec2) {
+                                if (ec2)
                                 {
                                     messages::internalError(asyncResp->res);
                                     return;
@@ -306,7 +378,7 @@ inline void
                             service, objectPath,
                             "org.freedesktop.DBus.Properties", "Set", interface,
                             "NTPServers",
-                            dbus::utility::DbusVariantType{ntpServers});
+                            dbus::utility::DbusVariantType{currentNtpServers});
                     }
                 }
             }
@@ -322,12 +394,12 @@ inline void
 inline void
     handleProtocolEnabled(const bool protocolEnabled,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const std::string_view netBasePath)
+                          const std::string& netBasePath)
 {
     crow::connections::systemBus->async_method_call(
         [protocolEnabled, asyncResp,
          netBasePath](const boost::system::error_code ec,
-                      const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                      const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 messages::internalError(asyncResp->res);
@@ -416,53 +488,58 @@ inline void
         });
 }
 
+inline std::string encodeServiceObjectPath(const std::string& serviceName)
+{
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/control/service");
+    objPath /= serviceName;
+    return objPath.str;
+}
+
 inline void requestRoutesNetworkProtocol(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
         .privileges(redfish::privileges::patchManagerNetworkProtocol)
-        .methods(
-            boost::beast::http::verb::
-                patch)([](const crow::Request& req,
-                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-            std::optional<std::string> newHostName;
-            std::optional<nlohmann::json> ntp;
-#ifdef BMCWEB_ENABLE_IPMI
-            std::optional<nlohmann::json> ipmi;
-#endif
-#ifdef BMCWEB_ENABLE_PATCH_SSH
-            std::optional<nlohmann::json> ssh;
-#endif
-
-            if (!json_util::readJson(req, asyncResp->res, "NTP", ntp,
-                                     "HostName", newHostName
-#ifdef BMCWEB_ENABLE_IPMI
-                                     ,
-                                     "IPMI", ipmi
-#endif
-#ifdef BMCWEB_ENABLE_PATCH_SSH
-                                     ,
-                                     "SSH", ssh
-#endif
-                                     ))
-            {
-                return;
-            }
-
-            asyncResp->res.result(boost::beast::http::status::no_content);
-            if (newHostName)
-            {
-                messages::propertyNotWritable(asyncResp->res, "HostName");
-                return;
-            }
-
-            if (ntp)
-            {
-                std::optional<std::vector<std::string>> ntpServers;
-                std::optional<bool> ntpEnabled;
-                if (!json_util::readJson(*ntp, asyncResp->res, "NTPServers",
-                                         ntpServers, "ProtocolEnabled",
-                                         ntpEnabled))
+        .methods(boost::beast::http::verb::patch)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
+                    return;
+                }
+                std::optional<std::string> newHostName;
+                std::optional<std::vector<nlohmann::json>> ntpServerObjects;
+                std::optional<bool> ntpEnabled;
+#ifdef BMCWEB_ENABLE_IPMI
+                std::optional<bool> ipmiEnabled;
+#endif
+#ifdef BMCWEB_ENABLE_PATCH_SSH
+                std::optional<bool> sshEnabled;
+#endif
+                // clang-format off
+        if (!json_util::readJsonPatch(
+                req, asyncResp->res,
+                "HostName", newHostName,
+                "NTP/NTPServers", ntpServerObjects,
+                "NTP/ProtocolEnabled", ntpEnabled
+#ifdef BMCWEB_ENABLE_IPMI
+                 ,
+                "IPMI/ProtocolEnabled", ipmiEnabled,
+#endif
+#ifdef BMCWEB_ENABLE_PATCH_SSH
+                 ,
+                "SSH/ProtocolEnabled", sshEnabled
+#endif
+                ))
+        {
+            return;
+        }
+                // clang-format on
+
+                asyncResp->res.result(boost::beast::http::status::no_content);
+                if (newHostName)
+                {
+                    messages::propertyNotWritable(asyncResp->res, "HostName");
                     return;
                 }
 
@@ -470,59 +547,50 @@ inline void requestRoutesNetworkProtocol(App& app)
                 {
                     handleNTPProtocolEnabled(*ntpEnabled, asyncResp);
                 }
-
-                if (ntpServers)
+                if (ntpServerObjects)
                 {
-                    stl_utils::removeDuplicate(*ntpServers);
-                    handleNTPServersPatch(asyncResp, *ntpServers);
+                    getEthernetIfaceData(
+                        [asyncResp, ntpServerObjects](
+                            const bool success,
+                            std::vector<std::string>& currentNtpServers,
+                            const std::vector<std::string>& /*domainNames*/) {
+                            if (!success)
+                            {
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            handleNTPServersPatch(asyncResp, *ntpServerObjects,
+                                                  std::move(currentNtpServers));
+                        });
                 }
-            }
-
 #ifdef BMCWEB_ENABLE_IPMI
-            if (ipmi)
-            {
-                std::optional<bool> ipmiProtocolEnabled;
-                if (!json_util::readJson(*ipmi, asyncResp->res,
-                                         "ProtocolEnabled",
-                                         ipmiProtocolEnabled))
-                {
-                    return;
-                }
-
-                if (ipmiProtocolEnabled)
+                if (ipmiEnabled)
                 {
                     handleProtocolEnabled(
-                        *ipmiProtocolEnabled, asyncResp,
-                        "/xyz/openbmc_project/control/service/phosphor_2dipmi_2dnet_40");
+                        *ipmiEnabled, asyncResp,
+                        encodeServiceObjectPath(std::string(ipmiServiceName) +
+                                                '@'));
                 }
-            }
 #endif
-
 #ifdef BMCWEB_ENABLE_PATCH_SSH
-            if (ssh)
-            {
-                std::optional<bool> sshProtocolEnabled;
-                if (!json_util::readJson(*ssh, asyncResp->res,
-                                         "ProtocolEnabled", sshProtocolEnabled))
-                {
-                    return;
-                }
-
-                if (sshProtocolEnabled)
+                if (sshEnabled)
                 {
                     handleProtocolEnabled(
-                        *sshProtocolEnabled, asyncResp,
-                        "/xyz/openbmc_project/control/service/dropbear");
+                        *sshEnabled, asyncResp,
+                        encodeServiceObjectPath(sshServiceName));
                 }
-            }
 #endif
-        });
+            });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
         .privileges(redfish::privileges::getManagerNetworkProtocol)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 getNetworkData(asyncResp, req);
             });
 }

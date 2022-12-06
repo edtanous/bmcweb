@@ -1,14 +1,16 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
+#include "ibm/utils.hpp"
+
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/endian/conversion.hpp>
-#include <include/ibm/utils.hpp>
 #include <logging.hpp>
 #include <nlohmann/json.hpp>
 
 #include <filesystem>
 #include <fstream>
+#include <variant>
 
 namespace crow
 {
@@ -51,7 +53,7 @@ class Lock
      * Returns : False (if not a Valid lock request)
      */
 
-    virtual bool isValidLockRequest(const LockRequest&);
+    virtual bool isValidLockRequest(const LockRequest& refLockRecord);
 
     /*
      * This function implements the logic of checking if the incoming
@@ -61,7 +63,7 @@ class Lock
      * Returns : False (if not conflicting)
      */
 
-    virtual bool isConflictRequest(const LockRequests&);
+    virtual bool isConflictRequest(const LockRequests& refLockRequestStructure);
     /*
      * Implements the core algorithm to find the conflicting
      * lock requests.
@@ -72,7 +74,8 @@ class Lock
      * Returns : True (if conflicting)
      * Returns : False (if not conflicting)
      */
-    virtual bool isConflictRecord(const LockRequest&, const LockRequest&);
+    virtual bool isConflictRecord(const LockRequest& refLockRecord1,
+                                  const LockRequest& refLockRecord2);
 
     /*
      * This function implements the logic of checking the conflicting
@@ -81,7 +84,7 @@ class Lock
      *
      */
 
-    virtual Rc isConflictWithTable(const LockRequests&);
+    virtual Rc isConflictWithTable(const LockRequests& refLockRequestStructure);
     /*
      * This function implements the logic of checking the ownership of the
      * lock from the releaselock request.
@@ -90,22 +93,22 @@ class Lock
      * Returns : False (if the request HMC or Session does not own the lock(s))
      */
 
-    virtual RcRelaseLock isItMyLock(const ListOfTransactionIds&,
-                                    const SessionFlags&);
+    virtual RcRelaseLock isItMyLock(const ListOfTransactionIds& refRids,
+                                    const SessionFlags& ids);
 
     /*
      * This function validates the the list of transactionID's and returns false
      * if the transaction ID is not valid & not present in the lock table
      */
 
-    virtual bool validateRids(const ListOfTransactionIds&);
+    virtual bool validateRids(const ListOfTransactionIds& refRids);
 
     /*
      * This function releases the locks that are already obtained by the
      * requesting Management console.
      */
 
-    void releaseLock(const ListOfTransactionIds&);
+    void releaseLock(const ListOfTransactionIds& refRids);
 
     Lock()
     {
@@ -117,7 +120,8 @@ class Lock
      * bytes of the resource id based on the lock management algorithm.
      */
 
-    bool checkByte(uint64_t, uint64_t, uint32_t);
+    static bool checkByte(uint64_t resourceId1, uint64_t resourceId2,
+                          uint32_t position);
 
     /*
      * This functions implements a counter that generates a unique 32 bit
@@ -143,7 +147,7 @@ class Lock
      *
      */
 
-    RcAcquireLock acquireLock(const LockRequests&);
+    RcAcquireLock acquireLock(const LockRequests& lockRequestStructure);
 
     /*
      * This function implements the logic for releasing the lock that are
@@ -156,21 +160,21 @@ class Lock
      * Client can choose either of the ways by using `Type` JSON key.
      *
      */
-    RcReleaseLockApi releaseLock(const ListOfTransactionIds&,
-                                 const SessionFlags&);
+    RcReleaseLockApi releaseLock(const ListOfTransactionIds& p,
+                                 const SessionFlags& ids);
 
     /*
      * This function implements the logic for getting the list of locks obtained
      * by a particular management console.
      */
-    RcGetLockList getLockList(const ListOfSessionIds&);
+    RcGetLockList getLockList(const ListOfSessionIds& listSessionId);
 
     /*
      * This function is releases all the locks obtained by a particular
      * session.
      */
 
-    void releaseLock(const std::string&);
+    void releaseLock(const std::string& sessionId);
 
     static Lock& getInstance()
     {
@@ -217,23 +221,20 @@ inline RcGetLockList Lock::getLockList(const ListOfSessionIds& listSessionId)
 inline RcReleaseLockApi Lock::releaseLock(const ListOfTransactionIds& p,
                                           const SessionFlags& ids)
 {
-
     bool status = validateRids(p);
 
     if (!status)
     {
         // Validation of rids failed
-        BMCWEB_LOG_DEBUG << "Not a Valid request id";
+        BMCWEB_LOG_ERROR << "releaseLock: Contains invalid request id";
         return std::make_pair(false, status);
     }
     // Validation passed, check if all the locks are owned by the
     // requesting HMC
     auto status2 = isItMyLock(p, ids);
-    if (status2.first)
+    if (!status2.first)
     {
-        // The current hmc owns all the locks, so we can release
-        // them
-        releaseLock(p);
+        return std::make_pair(false, status2);
     }
     return std::make_pair(true, status2);
 }
@@ -243,7 +244,7 @@ inline RcAcquireLock Lock::acquireLock(const LockRequests& lockRequestStructure)
 
     // validate the lock request
 
-    for (auto& lockRecord : lockRequestStructure)
+    for (const auto& lockRecord : lockRequestStructure)
     {
         bool status = isValidLockRequest(lockRecord);
         if (!status)
@@ -273,25 +274,6 @@ inline RcAcquireLock Lock::acquireLock(const LockRequests& lockRequestStructure)
     return std::make_pair(false, conflict);
 }
 
-inline void Lock::releaseLock(const ListOfTransactionIds& refRids)
-{
-    for (const auto& id : refRids)
-    {
-        if (lockTable.erase(id))
-        {
-            BMCWEB_LOG_DEBUG << "Removing the locks with transaction ID : "
-                             << id;
-        }
-
-        else
-        {
-            BMCWEB_LOG_DEBUG << "Removing the locks from the lock table "
-                                "failed, transaction ID: "
-                             << id;
-        }
-    }
-}
-
 inline void Lock::releaseLock(const std::string& sessionId)
 {
     if (!lockTable.empty())
@@ -299,7 +281,7 @@ inline void Lock::releaseLock(const std::string& sessionId)
         auto it = lockTable.begin();
         while (it != lockTable.end())
         {
-            if (it->second.size() != 0)
+            if (!it->second.empty())
             {
                 // Check if session id of this entry matches with session id
                 // given
@@ -336,6 +318,18 @@ inline RcRelaseLock Lock::isItMyLock(const ListOfTransactionIds& refRids,
         {
             // It is owned by the currently request hmc
             BMCWEB_LOG_DEBUG << "Lock is owned  by the current hmc";
+            // remove the lock
+            if (lockTable.erase(id) != 0U)
+            {
+                BMCWEB_LOG_DEBUG << "Removing the locks with transaction ID : "
+                                 << id;
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Removing the locks from the lock table "
+                                    "failed, transaction ID: "
+                                 << id;
+            }
         }
         else
         {
@@ -359,7 +353,8 @@ inline bool Lock::validateRids(const ListOfTransactionIds& refRids)
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "At least 1 inValid Request id";
+            BMCWEB_LOG_ERROR << "validateRids: At least 1 inValid Request id: "
+                             << id;
             return false;
         }
     }
@@ -437,19 +432,19 @@ inline bool Lock::isValidLockRequest(const LockRequest& refLockRecord)
 inline Rc Lock::isConflictWithTable(const LockRequests& refLockRequestStructure)
 {
 
-    uint32_t transactionId = 0;
+    uint32_t thisTransactionId = 0;
 
     if (lockTable.empty())
     {
-        transactionId = generateTransactionId();
-        BMCWEB_LOG_DEBUG << transactionId;
+        thisTransactionId = generateTransactionId();
+        BMCWEB_LOG_DEBUG << thisTransactionId;
         // Lock table is empty, so we are safe to add the lockrecords
         // as there will be no conflict
         BMCWEB_LOG_DEBUG << "Lock table is empty, so adding the lockrecords";
         lockTable.emplace(std::pair<uint32_t, LockRequests>(
-            transactionId, refLockRequestStructure));
+            thisTransactionId, refLockRequestStructure));
 
-        return std::make_pair(false, transactionId);
+        return std::make_pair(false, thisTransactionId);
     }
     BMCWEB_LOG_DEBUG
         << "Lock table is not empty, check for conflict with lock table";
@@ -542,12 +537,7 @@ inline bool Lock::checkByte(uint64_t resourceId1, uint64_t resourceId2,
 
     BMCWEB_LOG_DEBUG << "Comparing bytes " << std::to_string(pPosition) << ","
                      << std::to_string(qPosition);
-    if (pPosition != qPosition)
-    {
-        return false;
-    }
-
-    return true;
+    return pPosition == qPosition;
 }
 
 inline bool Lock::isConflictRecord(const LockRequest& refLockRecord1,
@@ -600,7 +590,7 @@ inline bool Lock::isConflictRecord(const LockRequest& refLockRecord1,
 
         // compare segment data
 
-        for (uint32_t i = 0; i < p.second; i++)
+        for (uint32_t j = 0; j < p.second; j++)
         {
             // if the segment data is different, then the locks is on a
             // different resource so no conflict between the lock
@@ -613,7 +603,7 @@ inline bool Lock::isConflictRecord(const LockRequest& refLockRecord1,
             if (!(checkByte(
                     boost::endian::endian_reverse(std::get<3>(refLockRecord1)),
                     boost::endian::endian_reverse(std::get<3>(refLockRecord2)),
-                    i)))
+                    j)))
             {
                 return false;
             }
@@ -622,7 +612,7 @@ inline bool Lock::isConflictRecord(const LockRequest& refLockRecord1,
         ++i;
     }
 
-    return false;
+    return true;
 }
 
 inline uint32_t Lock::generateTransactionId()

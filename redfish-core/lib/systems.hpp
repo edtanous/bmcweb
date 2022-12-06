@@ -21,15 +21,19 @@
 #include "health.hpp"
 #include "led.hpp"
 #include "pcie.hpp"
+#include "query.hpp"
 #include "redfish_util.hpp"
+#include "utils/time_utils.hpp"
 
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
 #include <dbus_utility.hpp>
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
-#include <utils/fw_utils.hpp>
+#include <sdbusplus/unpack_properties.hpp>
+#include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/sw_utils.hpp>
 
 #include <variant>
 
@@ -53,11 +57,11 @@ inline void
     // Set it as Enabled if at least one DIMM is functional
     // Update STATE only if previous State was DISABLED and current Dimm is
     // ENABLED.
-    nlohmann::json& prevMemSummary =
+    const nlohmann::json& prevMemSummary =
         aResp->res.jsonValue["MemorySummary"]["Status"]["State"];
     if (prevMemSummary == "Disabled")
     {
-        if (isDimmFunctional == true)
+        if (isDimmFunctional)
         {
             aResp->res.jsonValue["MemorySummary"]["Status"]["State"] =
                 "Enabled";
@@ -79,11 +83,11 @@ inline void
 {
     BMCWEB_LOG_DEBUG << "Cpu Present: " << isCpuPresent;
 
-    if (isCpuPresent == true)
+    if (isCpuPresent)
     {
         nlohmann::json& procCount =
             aResp->res.jsonValue["ProcessorSummary"]["Count"];
-        auto procCountPtr =
+        auto* procCountPtr =
             procCount.get_ptr<nlohmann::json::number_integer_t*>();
         if (procCountPtr != nullptr)
         {
@@ -108,7 +112,7 @@ inline void
 {
     BMCWEB_LOG_DEBUG << "Cpu Functional: " << isCpuFunctional;
 
-    nlohmann::json& prevProcState =
+    const nlohmann::json& prevProcState =
         aResp->res.jsonValue["ProcessorSummary"]["Status"]["State"];
 
     // Set it as Enabled if at least one CPU is functional
@@ -116,7 +120,7 @@ inline void
     // Functional.
     if (prevProcState == "Disabled")
     {
-        if (isCpuFunctional == true)
+        if (isCpuFunctional)
         {
             aResp->res.jsonValue["ProcessorSummary"]["Status"]["State"] =
                 "Enabled";
@@ -125,13 +129,56 @@ inline void
 }
 
 inline void getProcessorProperties(
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
-    const std::string& path,
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     const std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>&
         properties)
 {
 
     BMCWEB_LOG_DEBUG << "Got " << properties.size() << " Cpu properties.";
+
+    // TODO: Get Model
+
+    const uint16_t* coreCount = nullptr;
+
+    const bool success = sdbusplus::unpackPropertiesNoThrow(
+        dbus_utils::UnpackErrorPrinter(), properties, "CoreCount", coreCount);
+
+    if (!success)
+    {
+        messages::internalError(aResp->res);
+        return;
+    }
+
+    if (coreCount != nullptr)
+    {
+        nlohmann::json& coreCountJson =
+            aResp->res.jsonValue["ProcessorSummary"]["CoreCount"];
+        uint64_t* coreCountJsonPtr = coreCountJson.get_ptr<uint64_t*>();
+
+        if (coreCountJsonPtr == nullptr)
+        {
+            coreCountJson = *coreCount;
+        }
+        else
+        {
+            *coreCountJsonPtr += *coreCount;
+        }
+    }
+}
+
+/*
+ * @brief Get ProcessorSummary fields
+ *
+ * @param[in] aResp Shared pointer for completing asynchronous calls
+ * @param[in] service dbus service for Cpu Information
+ * @param[in] path dbus path for Cpu
+ *
+ * @return None.
+ */
+inline void getProcessorSummary(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                const std::string& service,
+                                const std::string& path)
+{
 
     auto getCpuPresenceState = [aResp](const boost::system::error_code ec3,
                                        const bool cpuPresenceCheck) {
@@ -165,70 +212,20 @@ inline void getProcessorProperties(
         "xyz.openbmc_project.State.Decorator.OperationalStatus", "Functional",
         std::move(getCpuFunctionalState));
 
-    for (const auto& property : properties)
-    {
-
-        // TODO: Get Model
-
-        // Get CoreCount
-        if (property.first == "CoreCount")
-        {
-
-            // Get CPU CoreCount and add it to the total
-            const uint16_t* coreCountVal =
-                std::get_if<uint16_t>(&property.second);
-
-            if (!coreCountVal)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            nlohmann::json& coreCount =
-                aResp->res.jsonValue["ProcessorSummary"]["CoreCount"];
-            uint64_t* coreCountPtr = coreCount.get_ptr<uint64_t*>();
-
-            if (coreCountPtr == nullptr)
-            {
-                coreCount = 0;
-            }
-            else
-            {
-                *coreCountPtr += *coreCountVal;
-            }
-        }
-    }
-}
-
-/*
- * @brief Get ProcessorSummary fields
- *
- * @param[in] aResp Shared pointer for completing asynchronous calls
- * @param[in] service dbus service for Cpu Information
- * @param[in] path dbus path for Cpu
- *
- * @return None.
- */
-inline void getProcessorSummary(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                                const std::string& service,
-                                const std::string& path)
-{
-
-    crow::connections::systemBus->async_method_call(
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, service, path,
+        "xyz.openbmc_project.Inventory.Item.Cpu",
         [aResp, service,
          path](const boost::system::error_code ec2,
-               const std::vector<std::pair<
-                   std::string, dbus::utility::DbusVariantType>>& properties) {
+               const dbus::utility::DBusPropertiesMap& properties) {
             if (ec2)
             {
                 BMCWEB_LOG_ERROR << "DBUS response error " << ec2;
                 messages::internalError(aResp->res);
                 return;
             }
-            getProcessorProperties(aResp, service, path, properties);
-        },
-        service, path, "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.Inventory.Item.Cpu");
+            getProcessorProperties(aResp, properties);
+        });
 }
 
 /*
@@ -246,12 +243,9 @@ inline void
     BMCWEB_LOG_DEBUG << "Get available system components.";
 
     crow::connections::systemBus->async_method_call(
-        [aResp, systemHealth](
-            const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
-                subtree) {
+        [aResp,
+         systemHealth](const boost::system::error_code ec,
+                       const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -269,16 +263,16 @@ inline void
                 const std::vector<
                     std::pair<std::string, std::vector<std::string>>>&
                     connectionNames = object.second;
-                if (connectionNames.size() < 1)
+                if (connectionNames.empty())
                 {
                     continue;
                 }
 
                 auto memoryHealth = std::make_shared<HealthPopulate>(
-                    aResp, aResp->res.jsonValue["MemorySummary"]["Status"]);
+                    aResp, "/MemorySummary/Status"_json_pointer);
 
                 auto cpuHealth = std::make_shared<HealthPopulate>(
-                    aResp, aResp->res.jsonValue["ProcessorSummary"]["Status"]);
+                    aResp, "/ProcessorSummary/Status"_json_pointer);
 
                 systemHealth->children.emplace_back(memoryHealth);
                 systemHealth->children.emplace_back(cpuHealth);
@@ -295,12 +289,12 @@ inline void
                             BMCWEB_LOG_DEBUG
                                 << "Found Dimm, now get its properties.";
 
-                            crow::connections::systemBus->async_method_call(
+                            sdbusplus::asio::getAllProperties(
+                                *crow::connections::systemBus, connection.first,
+                                path, "xyz.openbmc_project.Inventory.Item.Dimm",
                                 [aResp, service{connection.first},
                                  path](const boost::system::error_code ec2,
-                                       const std::vector<std::pair<
-                                           std::string,
-                                           dbus::utility::DbusVariantType>>&
+                                       const dbus::utility::DBusPropertiesMap&
                                            properties) {
                                     if (ec2)
                                     {
@@ -313,51 +307,7 @@ inline void
                                                      << properties.size()
                                                      << " Dimm properties.";
 
-                                    if (properties.size() > 0)
-                                    {
-                                        for (const std::pair<
-                                                 std::string,
-                                                 dbus::utility::
-                                                     DbusVariantType>&
-                                                 property : properties)
-                                        {
-                                            if (property.first !=
-                                                "MemorySizeInKB")
-                                            {
-                                                continue;
-                                            }
-                                            const uint32_t* value =
-                                                std::get_if<uint32_t>(
-                                                    &property.second);
-                                            if (value == nullptr)
-                                            {
-                                                BMCWEB_LOG_DEBUG
-                                                    << "Find incorrect type of MemorySize";
-                                                continue;
-                                            }
-                                            nlohmann::json& totalMemory =
-                                                aResp->res.jsonValue
-                                                    ["MemorySummary"]
-                                                    ["TotalSystemMemoryGiB"];
-                                            uint64_t* preValue =
-                                                totalMemory
-                                                    .get_ptr<uint64_t*>();
-                                            if (preValue == nullptr)
-                                            {
-                                                continue;
-                                            }
-                                            aResp->res.jsonValue
-                                                ["MemorySummary"]
-                                                ["TotalSystemMemoryGiB"] =
-                                                *value / (1024 * 1024) +
-                                                *preValue;
-                                            aResp->res
-                                                .jsonValue["MemorySummary"]
-                                                          ["Status"]["State"] =
-                                                "Enabled";
-                                        }
-                                    }
-                                    else
+                                    if (properties.empty())
                                     {
                                         sdbusplus::asio::getProperty<bool>(
                                             *crow::connections::systemBus,
@@ -379,11 +329,54 @@ inline void
                                                 updateDimmProperties(aResp,
                                                                      dimmState);
                                             });
+                                        return;
                                     }
-                                },
-                                connection.first, path,
-                                "org.freedesktop.DBus.Properties", "GetAll",
-                                "xyz.openbmc_project.Inventory.Item.Dimm");
+
+                                    const uint32_t* memorySizeInKB = nullptr;
+
+                                    const bool success =
+                                        sdbusplus::unpackPropertiesNoThrow(
+                                            dbus_utils::UnpackErrorPrinter(),
+                                            properties, "MemorySizeInKB",
+                                            memorySizeInKB);
+
+                                    if (!success)
+                                    {
+                                        messages::internalError(aResp->res);
+                                        return;
+                                    }
+
+                                    if (memorySizeInKB != nullptr)
+                                    {
+                                        nlohmann::json& totalMemory =
+                                            aResp->res.jsonValue
+                                                ["MemorySummary"]
+                                                ["TotalSystemMemoryGiB"];
+                                        const uint64_t* preValue =
+                                            totalMemory
+                                                .get_ptr<const uint64_t*>();
+                                        if (preValue == nullptr)
+                                        {
+                                            aResp->res.jsonValue
+                                                ["MemorySummary"]
+                                                ["TotalSystemMemoryGiB"] =
+                                                *memorySizeInKB / (1024 * 1024);
+                                        }
+                                        else
+                                        {
+                                            aResp->res.jsonValue
+                                                ["MemorySummary"]
+                                                ["TotalSystemMemoryGiB"] =
+                                                *memorySizeInKB /
+                                                    (1024 * 1024) +
+                                                *preValue;
+                                        }
+                                        aResp->res
+                                            .jsonValue["MemorySummary"]
+                                                      ["Status"]["State"] =
+                                            "Enabled";
+                                    }
+                                });
 
                             memoryHealth->inventory.emplace_back(path);
                         }
@@ -402,11 +395,12 @@ inline void
                         {
                             BMCWEB_LOG_DEBUG
                                 << "Found UUID, now get its properties.";
-                            crow::connections::systemBus->async_method_call(
+
+                            sdbusplus::asio::getAllProperties(
+                                *crow::connections::systemBus, connection.first,
+                                path, "xyz.openbmc_project.Common.UUID",
                                 [aResp](const boost::system::error_code ec3,
-                                        const std::vector<std::pair<
-                                            std::string,
-                                            dbus::utility::DbusVariantType>>&
+                                        const dbus::utility::DBusPropertiesMap&
                                             properties) {
                                     if (ec3)
                                     {
@@ -418,47 +412,45 @@ inline void
                                     BMCWEB_LOG_DEBUG << "Got "
                                                      << properties.size()
                                                      << " UUID properties.";
-                                    for (const std::pair<
-                                             std::string,
-                                             dbus::utility::DbusVariantType>&
-                                             property : properties)
-                                    {
-                                        if (property.first == "UUID")
-                                        {
-                                            const std::string* value =
-                                                std::get_if<std::string>(
-                                                    &property.second);
 
-                                            if (value != nullptr)
-                                            {
-                                                std::string valueStr = *value;
-                                                if (valueStr.size() == 32)
-                                                {
-                                                    valueStr.insert(8, 1, '-');
-                                                    valueStr.insert(13, 1, '-');
-                                                    valueStr.insert(18, 1, '-');
-                                                    valueStr.insert(23, 1, '-');
-                                                }
-                                                BMCWEB_LOG_DEBUG << "UUID = "
-                                                                 << valueStr;
-                                                aResp->res.jsonValue["UUID"] =
-                                                    valueStr;
-                                            }
-                                        }
+                                    const std::string* uUID = nullptr;
+
+                                    const bool success =
+                                        sdbusplus::unpackPropertiesNoThrow(
+                                            dbus_utils::UnpackErrorPrinter(),
+                                            properties, "UUID", uUID);
+
+                                    if (!success)
+                                    {
+                                        messages::internalError(aResp->res);
+                                        return;
                                     }
-                                },
-                                connection.first, path,
-                                "org.freedesktop.DBus.Properties", "GetAll",
-                                "xyz.openbmc_project.Common.UUID");
+
+                                    if (uUID != nullptr)
+                                    {
+                                        std::string valueStr = *uUID;
+                                        if (valueStr.size() == 32)
+                                        {
+                                            valueStr.insert(8, 1, '-');
+                                            valueStr.insert(13, 1, '-');
+                                            valueStr.insert(18, 1, '-');
+                                            valueStr.insert(23, 1, '-');
+                                        }
+                                        BMCWEB_LOG_DEBUG << "UUID = "
+                                                         << valueStr;
+                                        aResp->res.jsonValue["UUID"] = valueStr;
+                                    }
+                                });
                         }
                         else if (interfaceName ==
                                  "xyz.openbmc_project.Inventory.Item.System")
                         {
-                            crow::connections::systemBus->async_method_call(
+                            sdbusplus::asio::getAllProperties(
+                                *crow::connections::systemBus, connection.first,
+                                path,
+                                "xyz.openbmc_project.Inventory.Decorator.Asset",
                                 [aResp](const boost::system::error_code ec2,
-                                        const std::vector<std::pair<
-                                            std::string,
-                                            dbus::utility::DbusVariantType>>&
+                                        const dbus::utility::DBusPropertiesMap&
                                             propertiesList) {
                                     if (ec2)
                                     {
@@ -469,41 +461,64 @@ inline void
                                     BMCWEB_LOG_DEBUG
                                         << "Got " << propertiesList.size()
                                         << " properties for system";
-                                    for (const std::pair<
-                                             std::string,
-                                             dbus::utility::DbusVariantType>&
-                                             property : propertiesList)
+
+                                    const std::string* partNumber = nullptr;
+                                    const std::string* serialNumber = nullptr;
+                                    const std::string* manufacturer = nullptr;
+                                    const std::string* model = nullptr;
+                                    const std::string* subModel = nullptr;
+
+                                    const bool success =
+                                        sdbusplus::unpackPropertiesNoThrow(
+                                            dbus_utils::UnpackErrorPrinter(),
+                                            propertiesList, "PartNumber",
+                                            partNumber, "SerialNumber",
+                                            serialNumber, "Manufacturer",
+                                            manufacturer, "Model", model,
+                                            "SubModel", subModel);
+
+                                    if (!success)
                                     {
-                                        const std::string& propertyName =
-                                            property.first;
-                                        if ((propertyName == "PartNumber") ||
-                                            (propertyName == "SerialNumber") ||
-                                            (propertyName == "Manufacturer") ||
-                                            (propertyName == "Model") ||
-                                            (propertyName == "SubModel"))
-                                        {
-                                            const std::string* value =
-                                                std::get_if<std::string>(
-                                                    &property.second);
-                                            if (value != nullptr)
-                                            {
-                                                aResp->res
-                                                    .jsonValue[propertyName] =
-                                                    *value;
-                                            }
-                                        }
+                                        messages::internalError(aResp->res);
+                                        return;
+                                    }
+
+                                    if (partNumber != nullptr)
+                                    {
+                                        aResp->res.jsonValue["PartNumber"] =
+                                            *partNumber;
+                                    }
+
+                                    if (serialNumber != nullptr)
+                                    {
+                                        aResp->res.jsonValue["SerialNumber"] =
+                                            *serialNumber;
+                                    }
+
+                                    if (manufacturer != nullptr)
+                                    {
+                                        aResp->res.jsonValue["Manufacturer"] =
+                                            *manufacturer;
+                                    }
+
+                                    if (model != nullptr)
+                                    {
+                                        aResp->res.jsonValue["Model"] = *model;
+                                    }
+
+                                    if (subModel != nullptr)
+                                    {
+                                        aResp->res.jsonValue["SubModel"] =
+                                            *subModel;
                                     }
 
 #ifdef BMCWEB_ENABLE_BIOS
                                     // Grab the bios version
-                                    fw_util::populateFirmwareInformation(
-                                        aResp, fw_util::biosPurpose,
+                                    sw_util::populateSoftwareInformation(
+                                        aResp, sw_util::biosPurpose,
                                         "BiosVersion", false);
 #endif
-                                },
-                                connection.first, path,
-                                "org.freedesktop.DBus.Properties", "GetAll",
-                                "xyz.openbmc_project.Inventory.Decorator.Asset");
+                                });
 
                             sdbusplus::asio::getProperty<std::string>(
                                 *crow::connections::systemBus, connection.first,
@@ -524,6 +539,7 @@ inline void
                                 });
                         }
                     }
+                    break;
                 }
             }
         },
@@ -558,7 +574,14 @@ inline void getHostState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
                 const std::string& hostState) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                if (ec == boost::system::errc::host_unreachable)
+                {
+                    // Service not available, no error, just don't return
+                    // host state info
+                    BMCWEB_LOG_DEBUG << "Service not available " << ec;
+                    return;
+                }
+                BMCWEB_LOG_ERROR << "DBUS response error " << ec;
                 messages::internalError(aResp->res);
                 return;
             }
@@ -890,7 +913,7 @@ inline void getBootProgress(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
                     {
                         uint64_t lastResetTimeStamp = *lastResetTime / 1000;
                         aResp->res.jsonValue["BootProgress"]["LastStateTime"] =
-                            crow::utility::getDateTimeUintMs(
+                            redfish::time_utils::getDateTimeUintMs(
                                 lastResetTimeStamp);
 		    }
                 }
@@ -899,6 +922,40 @@ inline void getBootProgress(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
         "xyz.openbmc_project.State.Host", "/xyz/openbmc_project/state/host0",
         "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.State.Boot.Progress");
+}
+
+/**
+ * @brief Retrieves boot progress Last Update of the system
+ *
+ * @param[in] aResp  Shared pointer for generating response message.
+ *
+ * @return None.
+ */
+inline void getBootProgressLastStateTime(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+{
+    sdbusplus::asio::getProperty<uint64_t>(
+        *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
+        "/xyz/openbmc_project/state/host0",
+        "xyz.openbmc_project.State.Boot.Progress", "BootProgressLastUpdate",
+        [aResp](const boost::system::error_code ec,
+                const uint64_t lastStateTime) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "D-BUS response error " << ec;
+                return;
+            }
+
+            // BootProgressLastUpdate is the last time the BootProgress property
+            // was updated. The time is the Epoch time, number of microseconds
+            // since 1 Jan 1970 00::00::00 UTC."
+            // https://github.com/openbmc/phosphor-dbus-interfaces/blob/master/
+            // yaml/xyz/openbmc_project/State/Boot/Progress.interface.yaml#L11
+
+            // Convert to ISO 8601 standard
+            aResp->res.jsonValue["BootProgress"]["LastStateTime"] =
+                redfish::time_utils::getDateTimeUintUs(lastStateTime);
+        });
 }
 
 /**
@@ -927,8 +984,8 @@ inline void getBootOverrideType(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
             aResp->res
                 .jsonValue["Boot"]
-                          ["BootSourceOverrideMode@Redfish.AllowableValues"] = {
-                "Legacy", "UEFI"};
+                          ["BootSourceOverrideMode@Redfish.AllowableValues"] =
+                nlohmann::json::array_t({"Legacy", "UEFI"});
 
             auto rfType = dbusToRfBootType(bootType);
             if (rfType.empty())
@@ -1004,6 +1061,10 @@ inline void
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                if (ec.value() == boost::asio::error::host_unreachable)
+                {
+                    return;
+                }
                 messages::internalError(aResp->res);
                 return;
             }
@@ -1090,6 +1151,10 @@ inline void
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                if (ec.value() == boost::asio::error::host_unreachable)
+                {
+                    return;
+                }
                 messages::internalError(aResp->res);
                 return;
             }
@@ -1147,7 +1212,7 @@ inline void getLastResetTime(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
             // Convert to ISO 8601 standard
             aResp->res.jsonValue["LastResetTime"] =
-                crow::utility::getDateTimeUint(lastResetTimeStamp);
+                redfish::time_utils::getDateTimeUint(lastResetTimeStamp);
         });
 }
 
@@ -1174,7 +1239,7 @@ inline void getAutomaticRetry(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             }
 
             BMCWEB_LOG_DEBUG << "Auto Reboot: " << autoRebootEnabled;
-            if (autoRebootEnabled == true)
+            if (autoRebootEnabled)
             {
                 aResp->res.jsonValue["Boot"]["AutomaticRetryConfig"] =
                     "RetryAttempts";
@@ -1252,7 +1317,10 @@ inline void
                 {"xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOff",
                  "AlwaysOff"},
                 {"xyz.openbmc_project.Control.Power.RestorePolicy.Policy.Restore",
-                 "LastState"}};
+                 "LastState"},
+                // Return `AlwaysOff` when power restore policy set to "None"
+                {"xyz.openbmc_project.Control.Power.RestorePolicy.Policy.None",
+                 "AlwaysOff"}};
 
             auto policyMapsIt = policyMaps.find(policy);
             if (policyMapsIt == policyMaps.end())
@@ -1279,12 +1347,8 @@ inline void getTrustedModuleRequiredToBoot(
     BMCWEB_LOG_DEBUG << "Get TPM required to boot.";
 
     crow::connections::systemBus->async_method_call(
-        [aResp](
-            const boost::system::error_code ec,
-            std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
-                subtree) {
+        [aResp](const boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG
@@ -1293,7 +1357,7 @@ inline void getTrustedModuleRequiredToBoot(
                 // error occurs
                 return;
             }
-            if (subtree.size() == 0)
+            if (subtree.empty())
             {
                 // As noted above, this is an optional interface so just return
                 // if there is no instance found
@@ -1327,11 +1391,11 @@ inline void getTrustedModuleRequiredToBoot(
             sdbusplus::asio::getProperty<bool>(
                 *crow::connections::systemBus, serv, path,
                 "xyz.openbmc_project.Control.TPM.Policy", "TPMEnable",
-                [aResp](const boost::system::error_code ec, bool tpmRequired) {
-                    if (ec)
+                [aResp](const boost::system::error_code ec2, bool tpmRequired) {
+                    if (ec2)
                     {
                         BMCWEB_LOG_DEBUG
-                            << "D-BUS response error on TPM.Policy Get" << ec;
+                            << "D-BUS response error on TPM.Policy Get" << ec2;
                         messages::internalError(aResp->res);
                         return;
                     }
@@ -1371,12 +1435,8 @@ inline void setTrustedModuleRequiredToBoot(
     BMCWEB_LOG_DEBUG << "Set TrustedModuleRequiredToBoot.";
 
     crow::connections::systemBus->async_method_call(
-        [aResp, tpmRequired](
-            const boost::system::error_code ec,
-            std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
-                subtree) {
+        [aResp, tpmRequired](const boost::system::error_code ec,
+                             dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG
@@ -1384,7 +1444,7 @@ inline void setTrustedModuleRequiredToBoot(
                 messages::internalError(aResp->res);
                 return;
             }
-            if (subtree.size() == 0)
+            if (subtree.empty())
             {
                 messages::propertyValueNotInList(aResp->res, "ComputerSystem",
                                                  "TrustedModuleRequiredToBoot");
@@ -1423,12 +1483,12 @@ inline void setTrustedModuleRequiredToBoot(
 
             // Valid TPM Enable object found, now setting the value
             crow::connections::systemBus->async_method_call(
-                [aResp](const boost::system::error_code ec) {
-                    if (ec)
+                [aResp](const boost::system::error_code ec2) {
+                    if (ec2)
                     {
                         BMCWEB_LOG_DEBUG
                             << "DBUS response error: Set TrustedModuleRequiredToBoot"
-                            << ec;
+                            << ec2;
                         messages::internalError(aResp->res);
                         return;
                     }
@@ -1555,10 +1615,10 @@ inline void setBootEnable(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     BMCWEB_LOG_DEBUG << "DBUS boot override enable: " << bootOverrideEnable;
 
     crow::connections::systemBus->async_method_call(
-        [aResp](const boost::system::error_code ec) {
-            if (ec)
+        [aResp](const boost::system::error_code ec2) {
+            if (ec2)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                BMCWEB_LOG_DEBUG << "DBUS response error " << ec2;
                 messages::internalError(aResp->res);
                 return;
             }
@@ -1619,7 +1679,8 @@ inline void setBootModeOrSource(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     // Source target specified
     BMCWEB_LOG_DEBUG << "Boot source: " << *bootSource;
     // Figure out which DBUS interface and property to use
-    if (assignBootParameters(aResp, *bootSource, bootSourceStr, bootModeStr))
+    if (assignBootParameters(aResp, *bootSource, bootSourceStr, bootModeStr) !=
+        0)
     {
         BMCWEB_LOG_DEBUG
             << "Invalid property value for BootSourceOverrideTarget: "
@@ -1701,19 +1762,16 @@ inline void setAssetTag(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         const std::string& assetTag)
 {
     crow::connections::systemBus->async_method_call(
-        [aResp, assetTag](
-            const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
-                subtree) {
+        [aResp,
+         assetTag](const boost::system::error_code ec,
+                   const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "D-Bus response error on GetSubTree " << ec;
                 messages::internalError(aResp->res);
                 return;
             }
-            if (subtree.size() == 0)
+            if (subtree.empty())
             {
                 BMCWEB_LOG_DEBUG << "Can't find system D-Bus object!";
                 messages::internalError(aResp->res);
@@ -1874,11 +1932,11 @@ inline void
 inline void getProvisioningStatus(std::shared_ptr<bmcweb::AsyncResp> aResp)
 {
     BMCWEB_LOG_DEBUG << "Get OEM information.";
-    crow::connections::systemBus->async_method_call(
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, "xyz.openbmc_project.PFR.Manager",
+        "/xyz/openbmc_project/pfr", "xyz.openbmc_project.PFR.Attributes",
         [aResp](const boost::system::error_code ec,
-                const std::vector<
-                    std::pair<std::string, dbus::utility::DbusVariantType>>&
-                    propertiesList) {
+                const dbus::utility::DBusPropertiesMap& propertiesList) {
             nlohmann::json& oemPFR =
                 aResp->res.jsonValue["Oem"]["OpenBmc"]["FirmwareProvisioning"];
             aResp->res.jsonValue["Oem"]["OpenBmc"]["@odata.type"] =
@@ -1895,17 +1953,15 @@ inline void getProvisioningStatus(std::shared_ptr<bmcweb::AsyncResp> aResp)
 
             const bool* provState = nullptr;
             const bool* lockState = nullptr;
-            for (const std::pair<std::string, dbus::utility::DbusVariantType>&
-                     property : propertiesList)
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), propertiesList,
+                "UfmProvisioned", provState, "UfmLocked", lockState);
+
+            if (!success)
             {
-                if (property.first == "UfmProvisioned")
-                {
-                    provState = std::get_if<bool>(&property.second);
-                }
-                else if (property.first == "UfmLocked")
-                {
-                    lockState = std::get_if<bool>(&property.second);
-                }
+                messages::internalError(aResp->res);
+                return;
             }
 
             if ((provState == nullptr) || (lockState == nullptr))
@@ -1930,10 +1986,7 @@ inline void getProvisioningStatus(std::shared_ptr<bmcweb::AsyncResp> aResp)
             {
                 oemPFR["ProvisioningStatus"] = "NotProvisioned";
             }
-        },
-        "xyz.openbmc_project.PFR.Manager", "/xyz/openbmc_project/pfr",
-        "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.PFR.Attributes");
+        });
 }
 #endif
 
@@ -1948,8 +2001,6 @@ inline void getProvisioningStatus(std::shared_ptr<bmcweb::AsyncResp> aResp)
 inline void translatePowerMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                const std::string& modeValue)
 {
-    std::string modeString;
-
     if (modeValue == "xyz.openbmc_project.Control.Power.Mode.PowerMode.Static")
     {
         aResp->res.jsonValue["PowerMode"] = "Static";
@@ -1991,12 +2042,8 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
     // Get Power Mode object path:
     crow::connections::systemBus->async_method_call(
-        [aResp](
-            const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
-                subtree) {
+        [aResp](const boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG
@@ -2039,12 +2086,12 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             sdbusplus::asio::getProperty<std::string>(
                 *crow::connections::systemBus, service, path,
                 "xyz.openbmc_project.Control.Power.Mode", "PowerMode",
-                [aResp](const boost::system::error_code ec,
+                [aResp](const boost::system::error_code ec2,
                         const std::string& pmode) {
-                    if (ec)
+                    if (ec2)
                     {
                         BMCWEB_LOG_DEBUG
-                            << "DBUS response error on PowerMode Get: " << ec;
+                            << "DBUS response error on PowerMode Get: " << ec2;
                         messages::internalError(aResp->res);
                         return;
                     }
@@ -2119,12 +2166,9 @@ inline void setPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
     // Get Power Mode object path:
     crow::connections::systemBus->async_method_call(
-        [aResp, powerMode](
-            const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
-                subtree) {
+        [aResp,
+         powerMode](const boost::system::error_code ec,
+                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG
@@ -2170,8 +2214,8 @@ inline void setPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
             // Set the Power Mode property
             crow::connections::systemBus->async_method_call(
-                [aResp](const boost::system::error_code ec) {
-                    if (ec)
+                [aResp](const boost::system::error_code ec2) {
+                    if (ec2)
                     {
                         messages::internalError(aResp->res);
                         return;
@@ -2259,9 +2303,12 @@ inline void
     getHostWatchdogTimer(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 {
     BMCWEB_LOG_DEBUG << "Get host watchodg";
-    crow::connections::systemBus->async_method_call(
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, "xyz.openbmc_project.Watchdog",
+        "/xyz/openbmc_project/watchdog/host0",
+        "xyz.openbmc_project.State.Watchdog",
         [aResp](const boost::system::error_code ec,
-                const PropertiesType& properties) {
+                const dbus::utility::DBusPropertiesMap& properties) {
             if (ec)
             {
                 // watchdog service is stopped
@@ -2277,44 +2324,35 @@ inline void
             // watchdog service is running/enabled
             hostWatchdogTimer["Status"]["State"] = "Enabled";
 
-            for (const auto& property : properties)
+            const bool* enabled = nullptr;
+            const std::string* expireAction = nullptr;
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), properties, "Enabled",
+                enabled, "ExpireAction", expireAction);
+
+            if (!success)
             {
-                BMCWEB_LOG_DEBUG << "prop=" << property.first;
-                if (property.first == "Enabled")
-                {
-                    const bool* state = std::get_if<bool>(&property.second);
-
-                    if (!state)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-
-                    hostWatchdogTimer["FunctionEnabled"] = *state;
-                }
-                else if (property.first == "ExpireAction")
-                {
-                    const std::string* s =
-                        std::get_if<std::string>(&property.second);
-                    if (!s)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-
-                    std::string action = dbusToRfWatchdogAction(*s);
-                    if (action.empty())
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    hostWatchdogTimer["TimeoutAction"] = action;
-                }
+                messages::internalError(aResp->res);
+                return;
             }
-        },
-        "xyz.openbmc_project.Watchdog", "/xyz/openbmc_project/watchdog/host0",
-        "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.State.Watchdog");
+
+            if (enabled != nullptr)
+            {
+                hostWatchdogTimer["FunctionEnabled"] = *enabled;
+            }
+
+            if (expireAction != nullptr)
+            {
+                std::string action = dbusToRfWatchdogAction(*expireAction);
+                if (action.empty())
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                hostWatchdogTimer["TimeoutAction"] = action;
+            }
+        });
 }
 
 /**
@@ -2381,8 +2419,6 @@ inline void setWDTProperties(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     }
 }
 
-using ipsPropertiesType =
-    std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>;
 /**
  * @brief Parse the Idle Power Saver properties into json
  *
@@ -2391,73 +2427,58 @@ using ipsPropertiesType =
  *
  * @return true if successful
  */
-inline bool parseIpsProperties(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                               ipsPropertiesType& properties)
+inline bool
+    parseIpsProperties(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                       const dbus::utility::DBusPropertiesMap& properties)
 {
-    for (const auto& property : properties)
+    const bool* enabled = nullptr;
+    const uint8_t* enterUtilizationPercent = nullptr;
+    const uint64_t* enterDwellTime = nullptr;
+    const uint8_t* exitUtilizationPercent = nullptr;
+    const uint64_t* exitDwellTime = nullptr;
+
+    const bool success = sdbusplus::unpackPropertiesNoThrow(
+        dbus_utils::UnpackErrorPrinter(), properties, "Enabled", enabled,
+        "EnterUtilizationPercent", enterUtilizationPercent,
+        "ExitUtilizationPercent", exitUtilizationPercent, "ExitDwellTime",
+        exitDwellTime);
+
+    if (!success)
     {
-        if (property.first == "Enabled")
-        {
-            const bool* state = std::get_if<bool>(&property.second);
-            if (!state)
-            {
-                return false;
-            }
-            aResp->res.jsonValue["IdlePowerSaver"][property.first] = *state;
-        }
-        else if (property.first == "EnterUtilizationPercent")
-        {
-            const uint8_t* util = std::get_if<uint8_t>(&property.second);
-            if (!util)
-            {
-                return false;
-            }
-            aResp->res.jsonValue["IdlePowerSaver"][property.first] = *util;
-        }
-        else if (property.first == "EnterDwellTime")
-        {
-            // Convert Dbus time from milliseconds to seconds
-            const uint64_t* timeMilliseconds =
-                std::get_if<uint64_t>(&property.second);
-            if (!timeMilliseconds)
-            {
-                return false;
-            }
-            const std::chrono::duration<uint64_t, std::milli> ms(
-                *timeMilliseconds);
-            aResp->res.jsonValue["IdlePowerSaver"]["EnterDwellTimeSeconds"] =
-                std::chrono::duration_cast<std::chrono::duration<uint64_t>>(ms)
-                    .count();
-        }
-        else if (property.first == "ExitUtilizationPercent")
-        {
-            const uint8_t* util = std::get_if<uint8_t>(&property.second);
-            if (!util)
-            {
-                return false;
-            }
-            aResp->res.jsonValue["IdlePowerSaver"][property.first] = *util;
-        }
-        else if (property.first == "ExitDwellTime")
-        {
-            // Convert Dbus time from milliseconds to seconds
-            const uint64_t* timeMilliseconds =
-                std::get_if<uint64_t>(&property.second);
-            if (!timeMilliseconds)
-            {
-                return false;
-            }
-            const std::chrono::duration<uint64_t, std::milli> ms(
-                *timeMilliseconds);
-            aResp->res.jsonValue["IdlePowerSaver"]["ExitDwellTimeSeconds"] =
-                std::chrono::duration_cast<std::chrono::duration<uint64_t>>(ms)
-                    .count();
-        }
-        else
-        {
-            BMCWEB_LOG_WARNING << "Unexpected IdlePowerSaver property: "
-                               << property.first;
-        }
+        return false;
+    }
+
+    if (enabled != nullptr)
+    {
+        aResp->res.jsonValue["IdlePowerSaver"]["Enabled"] = *enabled;
+    }
+
+    if (enterUtilizationPercent != nullptr)
+    {
+        aResp->res.jsonValue["IdlePowerSaver"]["EnterUtilizationPercent"] =
+            *enterUtilizationPercent;
+    }
+
+    if (enterDwellTime != nullptr)
+    {
+        const std::chrono::duration<uint64_t, std::milli> ms(*enterDwellTime);
+        aResp->res.jsonValue["IdlePowerSaver"]["EnterDwellTimeSeconds"] =
+            std::chrono::duration_cast<std::chrono::duration<uint64_t>>(ms)
+                .count();
+    }
+
+    if (exitUtilizationPercent != nullptr)
+    {
+        aResp->res.jsonValue["IdlePowerSaver"]["ExitUtilizationPercent"] =
+            *exitUtilizationPercent;
+    }
+
+    if (exitDwellTime != nullptr)
+    {
+        const std::chrono::duration<uint64_t, std::milli> ms(*exitDwellTime);
+        aResp->res.jsonValue["IdlePowerSaver"]["ExitDwellTimeSeconds"] =
+            std::chrono::duration_cast<std::chrono::duration<uint64_t>>(ms)
+                .count();
     }
 
     return true;
@@ -2476,12 +2497,8 @@ inline void getIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
     // Get IdlePowerSaver object path:
     crow::connections::systemBus->async_method_call(
-        [aResp](
-            const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
-                subtree) {
+        [aResp](const boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG
@@ -2524,26 +2541,26 @@ inline void getIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             }
 
             // Valid IdlePowerSaver object found, now read the current values
-            crow::connections::systemBus->async_method_call(
-                [aResp](const boost::system::error_code ec,
-                        ipsPropertiesType& properties) {
-                    if (ec)
+            sdbusplus::asio::getAllProperties(
+                *crow::connections::systemBus, service, path,
+                "xyz.openbmc_project.Control.Power.IdlePowerSaver",
+                [aResp](const boost::system::error_code ec2,
+                        const dbus::utility::DBusPropertiesMap& properties) {
+                    if (ec2)
                     {
                         BMCWEB_LOG_ERROR
                             << "DBUS response error on IdlePowerSaver GetAll: "
-                            << ec;
+                            << ec2;
                         messages::internalError(aResp->res);
                         return;
                     }
 
-                    if (parseIpsProperties(aResp, properties) == false)
+                    if (!parseIpsProperties(aResp, properties))
                     {
                         messages::internalError(aResp->res);
                         return;
                     }
-                },
-                service, path, "org.freedesktop.DBus.Properties", "GetAll",
-                "xyz.openbmc_project.Control.Power.IdlePowerSaver");
+                });
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -2581,12 +2598,8 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     // Get IdlePowerSaver object path:
     crow::connections::systemBus->async_method_call(
         [aResp, ipsEnable, ipsEnterUtil, ipsEnterTime, ipsExitUtil,
-         ipsExitTime](
-            const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string,
-                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
-                subtree) {
+         ipsExitTime](const boost::system::error_code ec,
+                      const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG
@@ -2634,10 +2647,10 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             if (ipsEnable)
             {
                 crow::connections::systemBus->async_method_call(
-                    [aResp](const boost::system::error_code ec) {
-                        if (ec)
+                    [aResp](const boost::system::error_code ec2) {
+                        if (ec2)
                         {
-                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec2;
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -2649,10 +2662,10 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             if (ipsEnterUtil)
             {
                 crow::connections::systemBus->async_method_call(
-                    [aResp](const boost::system::error_code ec) {
-                        if (ec)
+                    [aResp](const boost::system::error_code ec2) {
+                        if (ec2)
                         {
-                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec2;
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -2667,10 +2680,10 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 // Convert from seconds into milliseconds for DBus
                 const uint64_t timeMilliseconds = *ipsEnterTime * 1000;
                 crow::connections::systemBus->async_method_call(
-                    [aResp](const boost::system::error_code ec) {
-                        if (ec)
+                    [aResp](const boost::system::error_code ec2) {
+                        if (ec2)
                         {
-                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec2;
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -2683,10 +2696,10 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             if (ipsExitUtil)
             {
                 crow::connections::systemBus->async_method_call(
-                    [aResp](const boost::system::error_code ec) {
-                        if (ec)
+                    [aResp](const boost::system::error_code ec2) {
+                        if (ec2)
                         {
-                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec2;
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -2701,10 +2714,10 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 // Convert from seconds into milliseconds for DBus
                 const uint64_t timeMilliseconds = *ipsExitTime * 1000;
                 crow::connections::systemBus->async_method_call(
-                    [aResp](const boost::system::error_code ec) {
-                        if (ec)
+                    [aResp](const boost::system::error_code ec2) {
+                        if (ec2)
                         {
-                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec2;
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -2724,6 +2737,19 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     BMCWEB_LOG_DEBUG << "EXIT: Set idle power saver parameters";
 }
 
+inline void handleComputerSystemHead(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/ComputerSystemCollection/ComputerSystemCollection.json>; rel=describedby");
+}
+
 /**
  * SystemsCollection derived class for delivering ComputerSystems Collection
  * Schema
@@ -2731,43 +2757,58 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 inline void requestRoutesSystemsCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/")
-        .privileges(redfish::privileges::getComputerSystemCollection)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& /*req*/,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#ComputerSystemCollection.ComputerSystemCollection";
-                asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems";
-                asyncResp->res.jsonValue["Name"] = "Computer System Collection";
+        .privileges(redfish::privileges::headComputerSystemCollection)
+        .methods(boost::beast::http::verb::head)(
+            std::bind_front(handleComputerSystemHead, std::ref(app)));
 
-                sdbusplus::asio::getProperty<std::string>(
-                    *crow::connections::systemBus,
-                    "xyz.openbmc_project.Settings",
-                    "/xyz/openbmc_project/network/hypervisor",
-                    "xyz.openbmc_project.Network.SystemConfiguration",
-                    "HostName",
-                    [asyncResp](const boost::system::error_code ec,
-                                const std::string& /*hostName*/) {
-                        nlohmann::json& ifaceArray =
-                            asyncResp->res.jsonValue["Members"];
-                        ifaceArray = nlohmann::json::array();
-                        auto& count =
-                            asyncResp->res.jsonValue["Members@odata.count"];
-                        ifaceArray.push_back(
-                            {{"@odata.id",
-                              "/redfish/v1/Systems/" PLATFORMSYSTEMID}});
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/")
+        .privileges(redfish::privileges::getComputerSystemCollection)
+        .methods(boost::beast::http::verb::get)([&app](const crow::Request& req,
+                                                       const std::shared_ptr<
+                                                           bmcweb::AsyncResp>&
+                                                           asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+
+            asyncResp->res.addHeader(
+                boost::beast::http::field::link,
+                "</redfish/v1/JsonSchemas/ComputerSystemCollection.json>; rel=describedby");
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#ComputerSystemCollection.ComputerSystemCollection";
+            asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems";
+            asyncResp->res.jsonValue["Name"] = "Computer System Collection";
+
+            sdbusplus::asio::getProperty<std::string>(
+                *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+                "/xyz/openbmc_project/network/hypervisor",
+                "xyz.openbmc_project.Network.SystemConfiguration", "HostName",
+                [asyncResp](const boost::system::error_code ec2,
+                            const std::string& /*hostName*/) {
+                    nlohmann::json& ifaceArray =
+                        asyncResp->res.jsonValue["Members"];
+                    ifaceArray = nlohmann::json::array();
+                    auto& count =
+                        asyncResp->res.jsonValue["Members@odata.count"];
+
+                    nlohmann::json::object_t system;
+                    system["@odata.id"] =
+                        "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+                    ifaceArray.push_back(std::move(system));
+                    count = ifaceArray.size();
+                    if (!ec2)
+                    {
+                        BMCWEB_LOG_DEBUG << "Hypervisor is available";
+                        nlohmann::json::object_t hypervisor;
+                        hypervisor["@odata.id"] =
+                            "/redfish/v1/Systems/hypervisor";
+                        ifaceArray.push_back(std::move(hypervisor));
                         count = ifaceArray.size();
-                        if (!ec)
-                        {
-                            BMCWEB_LOG_DEBUG << "Hypervisor is available";
-                            ifaceArray.push_back(
-                                {{"@odata.id",
-                                  "/redfish/v1/Systems/hypervisor"}});
-                            count = ifaceArray.size();
-                        }
-                    });
-            });
-}
+                    }
+                });
+        });
+} // namespace redfish
 
 /**
  * Function transceives data with dbus directly.
@@ -2808,11 +2849,16 @@ inline void requestRoutesSystemActionsReset(App& app)
         .privileges(redfish::privileges::postComputerSystem)
         .methods(
             boost::beast::http::verb::
-                post)([](const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                post)([&app](
+                          const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string resetType;
-            if (!json_util::readJson(req, asyncResp->res, "ResetType",
-                                     resetType))
+            if (!json_util::readJsonAction(req, asyncResp->res, "ResetType",
+                                           resetType))
             {
                 return;
             }
@@ -2922,25 +2968,57 @@ inline void requestRoutesSystemActionsReset(App& app)
         });
 }
 
+inline void handleComputerSystemCollectionHead(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
+}
+
 /**
  * Systems derived class for delivering Computer Systems Schema.
  */
 inline void requestRoutesSystems(App& app)
 {
 
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/")
+        .privileges(redfish::privileges::headComputerSystem)
+        .methods(boost::beast::http::verb::head)(
+            std::bind_front(handleComputerSystemCollectionHead, std::ref(app)));
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(
             boost::beast::http::verb::
-                get)([](const crow::Request&,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                get)([&app](const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& systemName) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+            if (systemName != PLATFORMSYSTEMID)
+            {
+                messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                           systemName);
+                return;
+            }
+            asyncResp->res.addHeader(
+                boost::beast::http::field::link,
+                "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
             asyncResp->res.jsonValue["@odata.type"] =
                 "#ComputerSystem.v1_16_0.ComputerSystem";
-            asyncResp->res.jsonValue["Name"] = "system";
-            asyncResp->res.jsonValue["Id"] = "system";
+            asyncResp->res.jsonValue["Name"] = PLATFORMSYSTEMID;
+            asyncResp->res.jsonValue["Id"] = PLATFORMSYSTEMID;
             asyncResp->res.jsonValue["SystemType"] = "Physical";
             asyncResp->res.jsonValue["Description"] = "Computer System";
             asyncResp->res.jsonValue["ProcessorSummary"]["Count"] = 0;
@@ -2953,60 +3031,59 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.jsonValue["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID;
 
-            asyncResp->res.jsonValue["Processors"] = {
-                {"@odata.id",
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors"}};
-            asyncResp->res.jsonValue["Memory"] = {
-                {"@odata.id",
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory"}};
-            asyncResp->res.jsonValue["Storage"] = {
-                {"@odata.id",
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage"}};
+            asyncResp->res.jsonValue["Processors"]["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors";
+            asyncResp->res.jsonValue["Memory"]["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
+            asyncResp->res.jsonValue["Storage"]["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
 
-            asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"] = {
-                {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                           "/Actions/ComputerSystem.Reset"},
-                {"@Redfish.ActionInfo",
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo"}};
+            asyncResp->res
+                .jsonValue["Actions"]["#ComputerSystem.Reset"]["target"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Actions/ComputerSystem.Reset";
+            asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"]
+                                    ["@Redfish.ActionInfo"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
 
-            asyncResp->res.jsonValue["LogServices"] = {
-                {"@odata.id",
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices"}};
-
+            asyncResp->res.jsonValue["LogServices"]["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices";
 #ifdef BMCWEB_ENABLE_BIOS
-            asyncResp->res.jsonValue["Bios"] = {
-                {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios"}};
+            asyncResp->res.jsonValue["Bios"]["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios";
 #endif
 
-            asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
-                {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}};
-
-            asyncResp->res.jsonValue["Status"] = {
-                {"Health", "OK"},
-                {"State", "Enabled"},
-            };
+            nlohmann::json::array_t managedBy;
+            nlohmann::json& manager = managedBy.emplace_back();
+            manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
+            asyncResp->res.jsonValue["Links"]["ManagedBy"] =
+                std::move(managedBy);
+            asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
             // Fill in SerialConsole info
             asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
                 15;
-            asyncResp->res.jsonValue["SerialConsole"]["IPMI"] = {
-                {"ServiceEnabled", true},
-            };
+            asyncResp->res
+                .jsonValue["SerialConsole"]["IPMI"]["ServiceEnabled"] = true;
+
             // TODO (Gunnar): Should look for obmc-console-ssh@2200.service
-            asyncResp->res.jsonValue["SerialConsole"]["SSH"] = {
-                {"ServiceEnabled", true},
-                {"Port", 2200},
-                // https://github.com/openbmc/docs/blob/master/console.md
-                {"HotKeySequenceDisplay", "Press ~. to exit console"},
-            };
+            asyncResp->res.jsonValue["SerialConsole"]["SSH"]["ServiceEnabled"] =
+                true;
+            asyncResp->res.jsonValue["SerialConsole"]["SSH"]["Port"] = 2200;
+            asyncResp->res
+                .jsonValue["SerialConsole"]["SSH"]["HotKeySequenceDisplay"] =
+                "Press ~. to exit console";
 
 #ifdef BMCWEB_ENABLE_KVM
             // Fill in GraphicalConsole info
-            asyncResp->res.jsonValue["GraphicalConsole"] = {
-                {"ServiceEnabled", true},
-                {"MaxConcurrentSessions", 4},
-                {"ConnectTypesSupported", {"KVMIP"}},
-            };
+            asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
+                true;
+            asyncResp->res
+                .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
+            asyncResp->res
+                .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
+                nlohmann::json::array_t({"KVMIP"});
+
 #endif // BMCWEB_ENABLE_KVM
             constexpr const std::array<const char*, 4> inventoryForSystems = {
                 "xyz.openbmc_project.Inventory.Item.Dimm",
@@ -3036,8 +3113,11 @@ inline void requestRoutesSystems(App& app)
             getMainChassisId(
                 asyncResp, [](const std::string& chassisId,
                               const std::shared_ptr<bmcweb::AsyncResp>& aRsp) {
-                    aRsp->res.jsonValue["Links"]["Chassis"] = {
-                        {{"@odata.id", "/redfish/v1/Chassis/" + chassisId}}};
+                    nlohmann::json::array_t chassisArray;
+                    nlohmann::json& chassis = chassisArray.emplace_back();
+                    chassis["@odata.id"] = "/redfish/v1/Chassis/" + chassisId;
+                    aRsp->res.jsonValue["Links"]["Chassis"] =
+                        std::move(chassisArray);
                 });
 
             getLocationIndicatorActive(asyncResp);
@@ -3047,6 +3127,7 @@ inline void requestRoutesSystems(App& app)
             getHostState(asyncResp);
             getBootProperties(asyncResp);
             getBootProgress(asyncResp);
+            getBootProgressLastStateTime(asyncResp);
             getPCIeDeviceList(asyncResp, "PCIeDevices");
             getHostWatchdogTimer(asyncResp);
             getPowerRestorePolicy(asyncResp);
@@ -3059,136 +3140,146 @@ inline void requestRoutesSystems(App& app)
             getPowerMode(asyncResp);
             getIdlePowerSaver(asyncResp);
         });
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/")
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/")
         .privileges(redfish::privileges::patchComputerSystem)
-        .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                std::optional<bool> locationIndicatorActive;
-                std::optional<std::string> indicatorLed;
-                std::optional<nlohmann::json> bootProps;
-                std::optional<nlohmann::json> wdtTimerProps;
-                std::optional<std::string> assetTag;
-                std::optional<std::string> powerRestorePolicy;
-                std::optional<std::string> powerMode;
-                std::optional<nlohmann::json> ipsProps;
-                if (!json_util::readJson(
-                        req, asyncResp->res, "IndicatorLED", indicatorLed,
+        .methods(
+            boost::beast::http::verb::
+                patch)([&app](
+                           const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& systemName) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+            if (systemName != PLATFORMSYSTEMID)
+            {
+                messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                           systemName);
+                return;
+            }
+
+            asyncResp->res.addHeader(
+                boost::beast::http::field::link,
+                "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
+
+            std::optional<bool> locationIndicatorActive;
+            std::optional<std::string> indicatorLed;
+            std::optional<std::string> assetTag;
+            std::optional<std::string> powerRestorePolicy;
+            std::optional<std::string> powerMode;
+            std::optional<bool> wdtEnable;
+            std::optional<std::string> wdtTimeOutAction;
+            std::optional<std::string> bootSource;
+            std::optional<std::string> bootType;
+            std::optional<std::string> bootEnable;
+            std::optional<std::string> bootAutomaticRetry;
+            std::optional<bool> bootTrustedModuleRequired;
+            std::optional<bool> ipsEnable;
+            std::optional<uint8_t> ipsEnterUtil;
+            std::optional<uint64_t> ipsEnterTime;
+            std::optional<uint8_t> ipsExitUtil;
+            std::optional<uint64_t> ipsExitTime;
+
+            // clang-format off
+                if (!json_util::readJsonPatch(
+                        req, asyncResp->res,
+                        "IndicatorLED", indicatorLed,
                         "LocationIndicatorActive", locationIndicatorActive,
-                        "Boot", bootProps, "WatchdogTimer", wdtTimerProps,
-                        "PowerRestorePolicy", powerRestorePolicy, "AssetTag",
-                        assetTag, "PowerMode", powerMode, "IdlePowerSaver",
-                        ipsProps))
+                        "AssetTag", assetTag,
+                        "PowerRestorePolicy", powerRestorePolicy,
+                        "PowerMode", powerMode,
+                        "HostWatchdogTimer/FunctionEnabled", wdtEnable,
+                        "HostWatchdogTimer/TimeoutAction", wdtTimeOutAction,
+                        "Boot/BootSourceOverrideTarget", bootSource,
+                        "Boot/BootSourceOverrideMode", bootType,
+                        "Boot/BootSourceOverrideEnabled", bootEnable,
+                        "Boot/AutomaticRetryConfig", bootAutomaticRetry,
+                        "Boot/TrustedModuleRequiredToBoot", bootTrustedModuleRequired,
+                        "IdlePowerSaver/Enabled", ipsEnable,
+                        "IdlePowerSaver/EnterUtilizationPercent", ipsEnterUtil,
+                        "IdlePowerSaver/EnterDwellTimeSeconds", ipsEnterTime,
+                        "IdlePowerSaver/ExitUtilizationPercent", ipsExitUtil,
+                        "IdlePowerSaver/ExitDwellTimeSeconds", ipsExitTime))
                 {
                     return;
                 }
+            // clang-format on
 
-                asyncResp->res.result(boost::beast::http::status::no_content);
+            asyncResp->res.result(boost::beast::http::status::no_content);
 
-                if (assetTag)
-                {
-                    setAssetTag(asyncResp, *assetTag);
-                }
+            if (assetTag)
+            {
+                setAssetTag(asyncResp, *assetTag);
+            }
 
-                if (wdtTimerProps)
-                {
-                    std::optional<bool> wdtEnable;
-                    std::optional<std::string> wdtTimeOutAction;
+            if (wdtEnable || wdtTimeOutAction)
+            {
+                setWDTProperties(asyncResp, wdtEnable, wdtTimeOutAction);
+            }
 
-                    if (!json_util::readJson(*wdtTimerProps, asyncResp->res,
-                                             "FunctionEnabled", wdtEnable,
-                                             "TimeoutAction", wdtTimeOutAction))
-                    {
-                        return;
-                    }
-                    setWDTProperties(asyncResp, wdtEnable, wdtTimeOutAction);
-                }
+            if (bootSource || bootType || bootEnable)
+            {
+                setBootProperties(asyncResp, bootSource, bootType, bootEnable);
+            }
+            if (bootAutomaticRetry)
+            {
+                setAutomaticRetry(asyncResp, *bootAutomaticRetry);
+            }
 
-                if (bootProps)
-                {
-                    std::optional<std::string> bootSource;
-                    std::optional<std::string> bootType;
-                    std::optional<std::string> bootEnable;
-                    std::optional<std::string> automaticRetryConfig;
-                    std::optional<bool> trustedModuleRequiredToBoot;
+            if (bootTrustedModuleRequired)
+            {
+                setTrustedModuleRequiredToBoot(asyncResp,
+                                               *bootTrustedModuleRequired);
+            }
 
-                    if (!json_util::readJson(
-                            *bootProps, asyncResp->res,
-                            "BootSourceOverrideTarget", bootSource,
-                            "BootSourceOverrideMode", bootType,
-                            "BootSourceOverrideEnabled", bootEnable,
-                            "AutomaticRetryConfig", automaticRetryConfig,
-                            "TrustedModuleRequiredToBoot",
-                            trustedModuleRequiredToBoot))
-                    {
-                        return;
-                    }
+            if (locationIndicatorActive)
+            {
+                setLocationIndicatorActive(asyncResp, *locationIndicatorActive);
+            }
 
-                    if (bootSource || bootType || bootEnable)
-                    {
-                        setBootProperties(asyncResp, bootSource, bootType,
-                                          bootEnable);
-                    }
-                    if (automaticRetryConfig)
-                    {
-                        setAutomaticRetry(asyncResp, *automaticRetryConfig);
-                    }
+            // TODO (Gunnar): Remove IndicatorLED after enough time has
+            // passed
+            if (indicatorLed)
+            {
+                setIndicatorLedState(asyncResp, *indicatorLed);
+                asyncResp->res.addHeader(
+                    boost::beast::http::field::warning,
+                    "299 - \"IndicatorLED is deprecated. Use "
+                    "LocationIndicatorActive instead.\"");
+            }
 
-                    if (trustedModuleRequiredToBoot)
-                    {
-                        setTrustedModuleRequiredToBoot(
-                            asyncResp, *trustedModuleRequiredToBoot);
-                    }
-                }
+            if (powerRestorePolicy)
+            {
+                setPowerRestorePolicy(asyncResp, *powerRestorePolicy);
+            }
 
-                if (locationIndicatorActive)
-                {
-                    setLocationIndicatorActive(asyncResp,
-                                               *locationIndicatorActive);
-                }
+            if (powerMode)
+            {
+                setPowerMode(asyncResp, *powerMode);
+            }
 
-                // TODO (Gunnar): Remove IndicatorLED after enough time has
-                // passed
-                if (indicatorLed)
-                {
-                    setIndicatorLedState(asyncResp, *indicatorLed);
-                    asyncResp->res.addHeader(
-                        boost::beast::http::field::warning,
-                        "299 - \"IndicatorLED is deprecated. Use "
-                        "LocationIndicatorActive instead.\"");
-                }
+            if (ipsEnable || ipsEnterUtil || ipsEnterTime || ipsExitUtil ||
+                ipsExitTime)
+            {
+                setIdlePowerSaver(asyncResp, ipsEnable, ipsEnterUtil,
+                                  ipsEnterTime, ipsExitUtil, ipsExitTime);
+            }
+        });
+}
 
-                if (powerRestorePolicy)
-                {
-                    setPowerRestorePolicy(asyncResp, *powerRestorePolicy);
-                }
-
-                if (powerMode)
-                {
-                    setPowerMode(asyncResp, *powerMode);
-                }
-
-                if (ipsProps)
-                {
-                    std::optional<bool> ipsEnable;
-                    std::optional<uint8_t> ipsEnterUtil;
-                    std::optional<uint64_t> ipsEnterTime;
-                    std::optional<uint8_t> ipsExitUtil;
-                    std::optional<uint64_t> ipsExitTime;
-
-                    if (!json_util::readJson(
-                            *ipsProps, asyncResp->res, "Enabled", ipsEnable,
-                            "EnterUtilizationPercent", ipsEnterUtil,
-                            "EnterDwellTimeSeconds", ipsEnterTime,
-                            "ExitUtilizationPercent", ipsExitUtil,
-                            "ExitDwellTimeSeconds", ipsExitTime))
-                    {
-                        return;
-                    }
-                    setIdlePowerSaver(asyncResp, ipsEnable, ipsEnterUtil,
-                                      ipsEnterTime, ipsExitUtil, ipsExitTime);
-                }
-            });
+inline void handleSystemCollectionResetActionHead(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/ActionInfo/ActionInfo.json>; rel=describedby");
 }
 
 /**
@@ -3197,30 +3288,62 @@ inline void requestRoutesSystems(App& app)
  */
 inline void requestRoutesSystemResetActionInfo(App& app)
 {
-
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo/")
+        .privileges(redfish::privileges::headActionInfo)
+        .methods(boost::beast::http::verb::head)(std::bind_front(
+            handleSystemCollectionResetActionHead, std::ref(app)));
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/ResetActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                asyncResp->res.jsonValue = {
-                    {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
-                    {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                  "/ResetActionInfo"},
-                    {"Name", "Reset Action Info"},
-                    {"Id", "ResetActionInfo"},
-                    {"Parameters",
-                     {{{"Name", "ResetType"},
-                       {"Required", true},
-                       {"DataType", "String"},
-                       {"AllowableValues",
-                        {"On", "ForceOff", "ForceOn", "ForceRestart",
-                         "GracefulRestart", "GracefulShutdown", "PowerCycle",
-                         "Nmi"}}}}}};
-            });
+        .methods(
+            boost::beast::http::verb::
+                get)([&app](const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& systemName) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+            if (systemName != PLATFORMSYSTEMID)
+            {
+                messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                           systemName);
+                return;
+            }
+
+            asyncResp->res.addHeader(
+                boost::beast::http::field::link,
+                "</redfish/v1/JsonSchemas/ActionInfo/ActionInfo.json>; rel=describedby");
+
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#ActionInfo.v1_1_2.ActionInfo";
+            asyncResp->res.jsonValue["Name"] = "Reset Action Info";
+            asyncResp->res.jsonValue["Id"] = "ResetActionInfo";
+
+            nlohmann::json::array_t parameters;
+            nlohmann::json::object_t parameter;
+
+            parameter["Name"] = "ResetType";
+            parameter["Required"] = true;
+            parameter["DataType"] = "String";
+            nlohmann::json::array_t allowableValues;
+            allowableValues.emplace_back("On");
+            allowableValues.emplace_back("ForceOff");
+            allowableValues.emplace_back("ForceOn");
+            allowableValues.emplace_back("ForceRestart");
+            allowableValues.emplace_back("GracefulRestart");
+            allowableValues.emplace_back("GracefulShutdown");
+            allowableValues.emplace_back("PowerCycle");
+            allowableValues.emplace_back("Nmi");
+            parameter["AllowableValues"] = std::move(allowableValues);
+            parameters.emplace_back(std::move(parameter));
+
+            asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+        });
 }
 } // namespace redfish
