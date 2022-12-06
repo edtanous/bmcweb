@@ -594,7 +594,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                      finishCallback,
                  // 'critical' value used as an issue exposure
                  const health_state::Type* assumedHealthWhenMissing =
-                     &health_state::critical) :
+                     &health_state::ok) :
         rootHealth(&health_state::ok),
         globalHealth(&health_state::ok), state(INITIALIZED), devicesToVisit(),
         assumedHealthWhenMissing(assumedHealthWhenMissing),
