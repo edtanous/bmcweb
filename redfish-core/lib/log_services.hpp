@@ -4753,7 +4753,6 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                 // TODO Handle for specific error code
                                                 BMCWEB_LOG_ERROR << "getLogEntriesIfaceData resp_handler got error "
                                                     << ec.message();
-                                                asyncResp->res.jsonValue["Description"] += "" + ec.message();
                                                 messages::internalError(asyncResp->res);
                                                 return;
                                             }
@@ -4792,9 +4791,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                         nlohmann::json& entriesArray =
                                                             asyncResp->res.jsonValue["Members"];
 
-                                                        entriesArray.push_back({});
-                                                        nlohmann::json& thisEntry =
-                                                            entriesArray.back();
+                                                        nlohmann::json thisEntry = nlohmann::json::object();
 
                                                         const uint32_t* id = nullptr;
                                                         std::time_t timestamp{};
@@ -4963,6 +4960,9 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                 "Entries/" +
                                                                 std::to_string(*id) + "/attachment";
                                                         }
+                                                        entriesArray.push_back(thisEntry);
+                                                        asyncResp->res
+                                                        .jsonValue["Members@odata.count"] = entriesArray.size();
                                                     },
                                                     "xyz.openbmc_project.Logging",
                                                     entryID,
@@ -4981,9 +4981,6 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                         "GetAll",
                                         chassisName + "_XID",
                                         "xyz.openbmc_project.Logging.Entry.Level.Error");
-                                    asyncResp->res
-                                        .jsonValue["Members@odata.count"] =
-                                        asyncResp->res.jsonValue["Members"].size();
                                     return;
                                 });
                             return;
