@@ -786,6 +786,85 @@ inline void patchPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         std::variant<std::string>(powerModeStatus));
 }
 
+/**
+ * Handle the PATCH operation of the powerMode status property. Do basic
+ * validation of the input data, and then set the D-Bus property.
+ *
+ * @param[in,out]   asynResp         Async HTTP response.
+ * @param[in]       powerMode        New property value to apply.
+ * @param[in]       chassisId        Chassis Id.
+ */
+inline void
+    patchControlPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& controlMode,
+                          const std::string& chassisPath,
+                          const std::string& connectionName)
+{
+    std::string powerMode =
+        redfish::chassis_utils::convertToPowerModeType(controlMode);
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, connectionName,
+         powerMode](const boost::system::error_code& e,
+                    std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            for (const std::string& ctrlPath : *data)
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, powerMode](const boost::system::error_code ec2,
+                                           sdbusplus::message::message& msg) {
+                        if (!ec2)
+                        {
+                            BMCWEB_LOG_DEBUG
+                                << "Set power mode property succeeded";
+                            if (powerMode !=
+                                "xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM")
+                            {
+                                messages::success(asyncResp->res);
+                            }
+                            return;
+                        }
+
+                        // Read and convert dbus error message to
+                        // redfish error
+                        const sd_bus_error* dbusError = msg.get_error();
+                        if (dbusError == nullptr)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        if (strcmp(dbusError->name,
+                                   "xyz.openbmc_project.Common."
+                                   "Device.Error.WriteFailure") == 0)
+                        {
+                            // Service failed to change the config
+                            messages::operationFailed(asyncResp->res);
+                            return;
+                        }
+                        else
+                        {
+                            messages::internalError(asyncResp->res);
+                        }
+                    },
+                    connectionName, ctrlPath, "org.freedesktop.DBus.Properties",
+                    "Set", "xyz.openbmc_project.Control.Power.Mode",
+                    "PowerMode", dbus::utility::DbusVariantType(powerMode));
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", chassisPath + "/power_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void
@@ -1046,7 +1125,7 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                             "xyz.openbmc_project.Inventory.Item.Chassis"};
 
                         crow::connections::systemBus->async_method_call(
-                            [asyncResp, chassisId, powerMode](
+                            [asyncResp, chassisId, powerMode, powerLimit](
                                 const boost::system::error_code ec,
                                 const crow::openbmc_mapper::GetSubTreeType&
                                     subtree) {
@@ -1099,6 +1178,22 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                                                        *powerMode, objPath,
                                                        connectionName,
                                                        resourceType);
+                                    }
+                                    else
+                                    {
+                                        if ((*powerMode == "Custom") &&
+                                            !(powerLimit))
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "Set point value required ";
+                                            messages::propertyMissing(
+                                                asyncResp->res,
+                                                "PowerLimits Setpoint");
+                                            return;
+                                        }
+                                        patchControlPowerMode(
+                                            asyncResp, *powerMode, objPath,
+                                            connectionName);
                                     }
                                     return;
                                 }
