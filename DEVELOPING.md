@@ -126,112 +126,60 @@
    starting any openbmc development.
    [Common Errors](https://github.com/openbmc/bmcweb/blob/master/COMMON_ERRORS.md).
 
-14. ### Developing and Testing
-  There are a variety of ways to develop and test bmcweb software changes.
-  Here are the steps for using the SDK and QEMU.
+14. ### Commit messages
+   Project commit message formatting should be obeyed
+   [link](https://github.com/openbmc/docs/blob/master/CONTRIBUTING.md#formatting-commit-messages)
 
-  - Follow all [development environment setup](https://github.com/openbmc/docs/blob/master/development/dev-environment.md)
-  directions in the development environment setup document. This will get
-  QEMU started up and you in the SDK environment.
-  - Follow all of the [gerrit setup](https://github.com/openbmc/docs/blob/master/development/gerrit-setup.md)
-  directions in the gerrit setup document.
-  - Clone bmcweb from gerrit
-  ```
-  git clone ssh://openbmc.gerrit/openbmc/bmcweb/
-  ```
+   Commit messages should answer the following questions:
+   - Why are the changes useful?  Given that bmcweb is a user-facing daemon,
+      commits adding new functionality should include statements about how the
+      commit in question is useful to the user.
 
-  - Follow directions in [README.md](https://github.com/openbmc/bmcweb#configuration) to compile
+   - What changes would a user expect to see?  This includes new parameters, new
+     resources, and new or changed properties.  Any route changes should be
+     explicitly called out.
 
-  - Reduce binary size by stripping it when ready for testing
-  ```
-  arm-openbmc-linux-gnueabi-strip bmcweb
-  ```
-  **Note:** Stripping is not required and having the debug symbols could be
-  useful depending on your testing. Leaving them will drastically increase
-  your transfer time to the BMC.
+   - Are there compatibility concerns?  Is this change backward compatible for
+     clients?  If not, what commit would be broken, and how old is it?   Have
+     clients been warned? (ideally on the mailing list) link the discussion.
 
-  - Copy your bmcweb you want to test to /tmp/ in QEMU
-  ```
-  scp -P 2222 bmcweb root@127.0.0.1:/tmp/
-  ```
-  **Special Notes:**
-  The address and port shown here (127.0.0.1 and 2222) reaches the QEMU session
-  you set up in your development environment as described above.
+   Commit messages should be line wrapped 50/72.
 
-  - Stop bmcweb service within your QEMU session
-  ```
-  systemctl stop bmcweb
-  ```
-  **Note:** bmcweb supports being started directly in parallel with the bmcweb
-  running as a service. The standalone bmcweb will be available on port 18080.
-  An advantage of this is you can compare between the two easily for testing.
-  In QEMU you would need to open up port 18080 when starting QEMU. Your curl
-  commands would need to use 18080 to communicate.
+15. ### Compatibility
+   "Don't make your users mad" Greg K-H
+   [source](https://git.sr.ht/~gregkh/presentation-application_summit/tree/main/keep_users_happy.pdf)
 
-  - If running within a system that has read-only /usr/ filesystem, issue
-  the following commands one time per QEMU boot to make the filesystem
-  writeable
-  ```
-  mkdir -p /var/persist/usr
-  mkdir -p /var/persist/work/usr
-  mount -t overlay -o lowerdir=/usr,upperdir=/var/persist/usr,workdir=/var/persist/work/usr overlay /usr
-  ```
+   The kernel has very similar rules around compatibility that we should aspire
+   to follow in the footsteps of.
 
-  - Remove the existing bmcweb from the filesystem in QEMU
-  ```
-  rm /usr/bin/bmcweb
-  ```
+   To that end, bmcweb will do its' best to insulate clients from breaking api
+   changes.  Being explicit about this ensures that clients can upgrade their
+   OpenBMC version without issue, and resolves a significant bottleneck in
+   getting security patches deployed to users.  Any change that's visible to a
+   user is potentially a breaking change, but requiring _all_ visible changes to
+   be configurable would increase the software complexity, therefore bmcweb
+   makes exceptions for things which a client is reasonably expected to code
+   against:
+   - New items added to a collection
+   - Changes in UID for hypermedia resources (In line with Redfish spec)
+   - New properties added to a resource
+   - New versions of a given schema
 
-  - Link to your new bmcweb in /tmp/
-  ```
-  ln -sf /tmp/bmcweb /usr/bin/bmcweb
-  ```
+   Special note: Code exists in bmcweb that is missing upstream backends to
+   make it function.  Given that compatibility requires the ability to use and
+   test the feature in question, changes to these methods, including outright
+   removal, does not constitute a breaking change.
 
-  - Test your changes. bmcweb will be started automatically upon your
-  first REST or Redfish command
-  ```
-  curl -c cjar -b cjar -k -X POST https://127.0.0.1:2443/login -d "{\"data\": [ \"root\", \"0penBmc\" ] }"
-  curl -c cjar -b cjar -k -X GET https://127.0.0.1:2443/xyz/openbmc_project/state/bmc0
-  ```
-
-  - Stop the bmcweb service and scp new file over to /tmp/ each time you
-  want to retest a change.
-
-  See the [REST](https://github.com/openbmc/docs/blob/master/REST-cheatsheet.md)
-  and [Redfish](https://github.com/openbmc/docs/blob/master/REDFISH-cheatsheet.md) cheatsheets for valid commands.
-
-  Please test all Redfish changes with the
-  [Redfish Service Validator](https://github.com/DMTF/Redfish-Service-Validator).
-  Your change should not introduce any new validator errors. Please include
-  the Redfish Service Validator results as part of the commit message
-  ["Tested" field](https://github.com/openbmc/docs/blob/master/CONTRIBUTING.md#testing).
+   Security: There may be cases where maintainers make explicit breaking changes
+   in the best interest of security;  In these rare cases, the maintainers and
+   contributors will endeavor to avoid breaking clients as much as is
+   technically possible, but as with all security, impact will need to be
+   weighed against the security impact of not making changes, and judgement
+   calls will be made, with options to allow providing the old behavior.
 
 ## clang-tidy
 
 clang-tidy is a tool that can be used to identify coding style violations, bad
 design patterns, and bug prone constructs.  The checks are implemented in the
-.clang-tidy file in the root of bmcweb, and are expected to be passing.  To
-run, the best way is to run the checks in yocto.
-
-```
-# check out meta-clang in your openbmc root
-cd openbmc
-git clone https://github.com/kraj/meta-clang
-
-# add the meta-clang layer to BBLAYERS in $BBPATH/conf/bblayers.conf
-<path_to_your_build_dir>/meta-clang
-
-# Add this line to $BBPATH/conf/local.conf to build bmcweb with clang
-TOOLCHAIN_pn-bmcweb = "clang"
-
-# and build
-bitbake bmcweb
-
-# Open devshell (this will open a shell)
-bitbake -c devshell bmcweb
-
-# cd into the work dir
-cd oe-workdir/bmcweb-1.0+git999
-# run clang tidy
-clang-tidy --header-filter=".*" -p . $BBPATH/workspace/sources/bmcweb/src/webserver_main.cpp
-```
+.clang-tidy file in the root of bmcweb, and are expected to be passing.  [openbmc-build-scripts](https://github.com/openbmc/openbmc-build-scripts/blob/master/run-unit-test-docker.sh)
+implements clang-tidy checks and is the recommended way to run these checks

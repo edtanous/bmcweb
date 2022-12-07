@@ -1,106 +1,103 @@
 #pragma once
-#include "nlohmann/json.hpp"
 
+#include <bmcweb_config.h>
 #include <openssl/crypto.h>
 
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/callable_traits.hpp>
+#include <boost/url/url.hpp>
+#include <nlohmann/json.hpp>
 
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
-#include <cstring>
+#include <ctime>
 #include <functional>
-#include <regex>
+#include <iomanip>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
 
 namespace crow
 {
 namespace black_magic
 {
 
-constexpr unsigned findClosingTag(std::string_view s, unsigned p)
+enum class TypeCode : uint8_t
 {
-    return s[p] == '>' ? p : findClosingTag(s, p + 1);
-}
+    Unspecified = 0,
+    Integer = 1,
+    UnsignedInteger = 2,
+    Float = 3,
+    String = 4,
+    Path = 5,
+    Max = 6,
+};
 
-constexpr bool isInt(std::string_view s, unsigned i)
+// Remove when we have c++23
+template <typename E>
+constexpr typename std::underlying_type<E>::type toUnderlying(E e) noexcept
 {
-    return s.substr(i, 5) == "<int>";
-}
-
-constexpr bool isUint(std::string_view s, unsigned i)
-{
-    return s.substr(i, 6) == "<uint>";
-}
-
-constexpr bool isFloat(std::string_view s, unsigned i)
-{
-    return s.substr(i, 7) == "<float>" || s.substr(i, 8) == "<double>";
-}
-
-constexpr bool isStr(std::string_view s, unsigned i)
-{
-    return s.substr(i, 5) == "<str>" || s.substr(i, 8) == "<string>";
-}
-
-constexpr bool isPath(std::string_view s, unsigned i)
-{
-    return s.substr(i, 6) == "<path>";
+    return static_cast<typename std::underlying_type<E>::type>(e);
 }
 
 template <typename T>
-constexpr int getParameterTag()
+constexpr TypeCode getParameterTag()
 {
     if constexpr (std::is_same_v<int, T>)
     {
-        return 1;
+        return TypeCode::Integer;
     }
     if constexpr (std::is_same_v<char, T>)
     {
-        return 1;
+        return TypeCode::Integer;
     }
     if constexpr (std::is_same_v<short, T>)
     {
-        return 1;
+        return TypeCode::Integer;
     }
     if constexpr (std::is_same_v<long, T>)
     {
-        return 1;
+        return TypeCode::Integer;
     }
     if constexpr (std::is_same_v<long long, T>)
     {
-        return 1;
+        return TypeCode::Integer;
     }
     if constexpr (std::is_same_v<unsigned int, T>)
     {
-        return 2;
+        return TypeCode::UnsignedInteger;
     }
     if constexpr (std::is_same_v<unsigned char, T>)
     {
-        return 2;
+        return TypeCode::UnsignedInteger;
     }
     if constexpr (std::is_same_v<unsigned short, T>)
     {
-        return 2;
+        return TypeCode::UnsignedInteger;
     }
     if constexpr (std::is_same_v<unsigned long, T>)
     {
-        return 2;
+        return TypeCode::UnsignedInteger;
     }
     if constexpr (std::is_same_v<unsigned long long, T>)
     {
-        return 2;
+        return TypeCode::UnsignedInteger;
     }
     if constexpr (std::is_same_v<double, T>)
     {
-        return 3;
+        return TypeCode::Float;
     }
     if constexpr (std::is_same_v<std::string, T>)
     {
-        return 4;
+        return TypeCode::String;
     }
-    return 0;
+    return TypeCode::Unspecified;
 }
 
 template <typename... Args>
@@ -118,78 +115,117 @@ struct computeParameterTagFromArgsList<Arg, Args...>
     static constexpr int subValue =
         computeParameterTagFromArgsList<Args...>::value;
     static constexpr int value =
-        getParameterTag<typename std::decay<Arg>::type>()
-            ? subValue * 6 + getParameterTag<typename std::decay<Arg>::type>()
+        getParameterTag<typename std::decay<Arg>::type>() !=
+                TypeCode::Unspecified
+            ? static_cast<unsigned long>(subValue *
+                                         toUnderlying(TypeCode::Max)) +
+                  static_cast<uint64_t>(
+                      getParameterTag<typename std::decay<Arg>::type>())
             : subValue;
 };
 
 inline bool isParameterTagCompatible(uint64_t a, uint64_t b)
 {
+    while (true)
+    {
+        if (a == 0 && b == 0)
+        {
+            // Both tags were equivalent, parameters are compatible
+            return true;
+        }
+        if (a == 0 || b == 0)
+        {
+            // one of the tags had more parameters than the other
+            return false;
+        }
+        TypeCode sa = static_cast<TypeCode>(a % toUnderlying(TypeCode::Max));
+        TypeCode sb = static_cast<TypeCode>(b % toUnderlying(TypeCode::Max));
 
-    if (a == 0)
-    {
-        return b == 0;
+        if (sa == TypeCode::Path)
+        {
+            sa = TypeCode::String;
+        }
+        if (sb == TypeCode::Path)
+        {
+            sb = TypeCode::String;
+        }
+        if (sa != sb)
+        {
+            return false;
+        }
+        a /= toUnderlying(TypeCode::Max);
+        b /= toUnderlying(TypeCode::Max);
     }
-    if (b == 0)
-    {
-        return a == 0;
-    }
-    uint64_t sa = a % 6;
-    uint64_t sb = a % 6;
-    if (sa == 5)
-    {
-        sa = 4;
-    }
-    if (sb == 5)
-    {
-        sb = 4;
-    }
-    if (sa != sb)
-    {
-        return false;
-    }
-    return isParameterTagCompatible(a / 6, b / 6);
+    return false;
 }
 
-constexpr uint64_t getParameterTag(std::string_view s, unsigned p = 0)
+constexpr inline uint64_t getParameterTag(std::string_view url)
 {
+    uint64_t tagValue = 0;
+    size_t urlSegmentIndex = std::string_view::npos;
 
-    if (p == s.size())
+    size_t paramIndex = 0;
+
+    for (size_t urlIndex = 0; urlIndex < url.size(); urlIndex++)
+    {
+        char character = url[urlIndex];
+        if (character == '<')
+        {
+            if (urlSegmentIndex != std::string_view::npos)
+            {
+                return 0;
+            }
+            urlSegmentIndex = urlIndex;
+        }
+        if (character == '>')
+        {
+            if (urlSegmentIndex == std::string_view::npos)
+            {
+                return 0;
+            }
+            std::string_view tag =
+                url.substr(urlSegmentIndex, urlIndex + 1 - urlSegmentIndex);
+
+            // Note, this is a really lame way to do std::pow(6, paramIndex)
+            // std::pow doesn't work in constexpr in clang.
+            // Ideally in the future we'd move this to use a power of 2 packing
+            // (probably 8 instead of 6) so that these just become bit shifts
+            uint64_t insertIndex = 1;
+            for (size_t unused = 0; unused < paramIndex; unused++)
+            {
+                insertIndex *= 6;
+            }
+
+            if (tag == "<int>")
+            {
+                tagValue += insertIndex * toUnderlying(TypeCode::Integer);
+            }
+            if (tag == "<uint>")
+            {
+                tagValue +=
+                    insertIndex * toUnderlying(TypeCode::UnsignedInteger);
+            }
+            if (tag == "<float>" || tag == "<double>")
+            {
+                tagValue += insertIndex * toUnderlying(TypeCode::Float);
+            }
+            if (tag == "<str>" || tag == "<string>")
+            {
+                tagValue += insertIndex * toUnderlying(TypeCode::String);
+            }
+            if (tag == "<path>")
+            {
+                tagValue += insertIndex * toUnderlying(TypeCode::Path);
+            }
+            paramIndex++;
+            urlSegmentIndex = std::string_view::npos;
+        }
+    }
+    if (urlSegmentIndex != std::string_view::npos)
     {
         return 0;
     }
-
-    if (s[p] != '<')
-    {
-        return getParameterTag(s, p + 1);
-    }
-
-    if (isInt(s, p))
-    {
-        return getParameterTag(s, findClosingTag(s, p)) * 6 + 1;
-    }
-
-    if (isUint(s, p))
-    {
-        return getParameterTag(s, findClosingTag(s, p)) * 6 + 2;
-    }
-
-    if (isFloat(s, p))
-    {
-        return getParameterTag(s, findClosingTag(s, p)) * 6 + 3;
-    }
-
-    if (isStr(s, p))
-    {
-        return getParameterTag(s, findClosingTag(s, p)) * 6 + 4;
-    }
-
-    if (isPath(s, p))
-    {
-        return getParameterTag(s, findClosingTag(s, p)) * 6 + 5;
-    }
-
-    throw std::runtime_error("invalid parameter type");
+    return tagValue;
 }
 
 template <typename... T>
@@ -329,83 +365,14 @@ struct Promote<unsigned long long>
 
 } // namespace black_magic
 
-namespace detail
-{
-
-template <class T, std::size_t N, class... Args>
-struct GetIndexOfElementFromTupleByTypeImpl
-{
-    static constexpr std::size_t value = N;
-};
-
-template <class T, std::size_t N, class... Args>
-struct GetIndexOfElementFromTupleByTypeImpl<T, N, T, Args...>
-{
-    static constexpr std::size_t value = N;
-};
-
-template <class T, std::size_t N, class U, class... Args>
-struct GetIndexOfElementFromTupleByTypeImpl<T, N, U, Args...>
-{
-    static constexpr std::size_t value =
-        GetIndexOfElementFromTupleByTypeImpl<T, N + 1, Args...>::value;
-};
-
-} // namespace detail
-
 namespace utility
 {
-template <class T, class... Args>
-T& getElementByType(std::tuple<Args...>& t)
-{
-    return std::get<
-        detail::GetIndexOfElementFromTupleByTypeImpl<T, 0, Args...>::value>(t);
-}
 
 template <typename T>
-struct function_traits;
-
-template <typename T>
-struct function_traits : public function_traits<decltype(&T::operator())>
+struct FunctionTraits
 {
-    using parent_t = function_traits<decltype(&T::operator())>;
-    static const size_t arity = parent_t::arity;
-    using result_type = typename parent_t::result_type;
     template <size_t i>
-    using arg = typename parent_t::template arg<i>;
-};
-
-template <typename ClassType, typename r, typename... Args>
-struct function_traits<r (ClassType::*)(Args...) const>
-{
-    static const size_t arity = sizeof...(Args);
-
-    using result_type = r;
-
-    template <size_t i>
-    using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
-};
-
-template <typename ClassType, typename r, typename... Args>
-struct function_traits<r (ClassType::*)(Args...)>
-{
-    static const size_t arity = sizeof...(Args);
-
-    using result_type = r;
-
-    template <size_t i>
-    using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
-};
-
-template <typename r, typename... Args>
-struct function_traits<std::function<r(Args...)>>
-{
-    static const size_t arity = sizeof...(Args);
-
-    using result_type = r;
-
-    template <size_t i>
-    using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+    using arg = std::tuple_element_t<i, boost::callable_traits::args_t<T>>;
 };
 
 inline std::string base64encode(const std::string_view data)
@@ -572,65 +539,6 @@ inline bool base64Decode(const std::string_view input, std::string& output)
     return true;
 }
 
-namespace details
-{
-inline std::string getDateTime(boost::posix_time::milliseconds timeSinceEpoch)
-{
-    boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
-    boost::posix_time::ptime time = epoch + timeSinceEpoch;
-    // append zero offset to the end according to the Redfish spec for Date-Time
-    return boost::posix_time::to_iso_extended_string(time) + "+00:00";
-}
-} // namespace details
-
-inline std::string getDateTimeUint(uint64_t secondsSinceEpoch)
-{
-    boost::posix_time::seconds boostSeconds(secondsSinceEpoch);
-    return details::getDateTime(
-        boost::posix_time::milliseconds(boostSeconds.total_milliseconds()));
-}
-
-inline std::string getDateTimeUintMs(uint64_t millisSecondsSinceEpoch)
-{
-    return details::getDateTime(
-        boost::posix_time::milliseconds(millisSecondsSinceEpoch));
-}
-
-inline std::string getDateTimeStdtime(std::time_t secondsSinceEpoch)
-{
-    boost::posix_time::ptime time =
-        boost::posix_time::from_time_t(secondsSinceEpoch);
-    return boost::posix_time::to_iso_extended_string(time) + "+00:00";
-}
-
-/**
- * Returns the current Date, Time & the local Time Offset
- * infromation in a pair
- *
- * @param[in] None
- *
- * @return std::pair<std::string, std::string>, which consist
- * of current DateTime & the TimeOffset strings respectively.
- */
-inline std::pair<std::string, std::string> getDateTimeOffsetNow()
-{
-    std::time_t time = std::time(nullptr);
-    std::string dateTime = getDateTimeStdtime(time);
-
-    /* extract the local Time Offset value from the
-     * recevied dateTime string.
-     */
-    std::string timeOffset("Z00:00");
-    std::size_t lastPos = dateTime.size();
-    std::size_t len = timeOffset.size();
-    if (lastPos > len)
-    {
-        timeOffset = dateTime.substr(lastPos - len);
-    }
-
-    return std::make_pair(dateTime, timeOffset);
-}
-
 inline bool constantTimeStringCompare(const std::string_view a,
                                       const std::string_view b)
 {
@@ -651,15 +559,277 @@ struct ConstantTimeCompare
     }
 };
 
-inline std::time_t getTimestamp(uint64_t millisTimeStamp)
+namespace details
 {
-    // Retrieve Created property with format:
-    // yyyy-mm-ddThh:mm:ss
-    std::chrono::milliseconds chronoTimeStamp(millisTimeStamp);
-    return std::chrono::duration_cast<std::chrono::duration<int>>(
-               chronoTimeStamp)
-        .count();
+inline boost::urls::url
+    appendUrlPieces(boost::urls::url& url,
+                    const std::initializer_list<std::string_view> args)
+{
+    for (const std::string_view& arg : args)
+    {
+        url.segments().push_back(arg);
+    }
+    return url;
+}
+
+inline boost::urls::url
+    urlFromPiecesDetail(const std::initializer_list<std::string_view> args)
+{
+    boost::urls::url url("/");
+    appendUrlPieces(url, args);
+    return url;
+}
+} // namespace details
+
+class OrMorePaths
+{};
+
+template <typename... AV>
+inline boost::urls::url urlFromPieces(const AV... args)
+{
+    return details::urlFromPiecesDetail({args...});
+}
+
+template <typename... AV>
+inline void appendUrlPieces(boost::urls::url& url, const AV... args)
+{
+    details::appendUrlPieces(url, {args...});
+}
+
+namespace details
+{
+
+// std::reference_wrapper<std::string> - extracts segment to variable
+//                    std::string_view - checks if segment is equal to variable
+using UrlSegment = std::variant<std::reference_wrapper<std::string>,
+                                std::string_view, OrMorePaths>;
+
+enum class UrlParseResult
+{
+    Continue,
+    Fail,
+    Done,
+};
+
+class UrlSegmentMatcherVisitor
+{
+  public:
+    UrlParseResult operator()(std::string& output)
+    {
+        output = std::string_view(segment.data(), segment.size());
+        return UrlParseResult::Continue;
+    }
+
+    UrlParseResult operator()(std::string_view expected)
+    {
+        if (std::string_view(segment.data(), segment.size()) == expected)
+        {
+            return UrlParseResult::Continue;
+        }
+        return UrlParseResult::Fail;
+    }
+
+    UrlParseResult operator()(OrMorePaths /*unused*/)
+    {
+        return UrlParseResult::Done;
+    }
+
+    explicit UrlSegmentMatcherVisitor(
+        const boost::urls::string_value& segmentIn) :
+        segment(segmentIn)
+    {}
+
+  private:
+    const boost::urls::string_value& segment;
+};
+
+inline bool readUrlSegments(const boost::urls::url_view& urlView,
+                            std::initializer_list<UrlSegment>&& segments)
+{
+    const boost::urls::segments_view& urlSegments = urlView.segments();
+
+    if (!urlSegments.is_absolute())
+    {
+        return false;
+    }
+
+    boost::urls::segments_view::iterator it = urlSegments.begin();
+    boost::urls::segments_view::iterator end = urlSegments.end();
+
+    for (const auto& segment : segments)
+    {
+        if (it == end)
+        {
+            // If the request ends with an "any" path, this was successful
+            return std::holds_alternative<OrMorePaths>(segment);
+        }
+        UrlParseResult res = std::visit(UrlSegmentMatcherVisitor(*it), segment);
+        if (res == UrlParseResult::Done)
+        {
+            return true;
+        }
+        if (res == UrlParseResult::Fail)
+        {
+            return false;
+        }
+        it++;
+    }
+
+    // There will be an empty segment at the end if the URI ends with a "/"
+    // e.g. /redfish/v1/Chassis/
+    if ((it != end) && urlSegments.back().empty())
+    {
+        it++;
+    }
+    return it == end;
+}
+
+} // namespace details
+
+template <typename... Args>
+inline bool readUrlSegments(const boost::urls::url_view& urlView,
+                            Args&&... args)
+{
+    return details::readUrlSegments(urlView, {std::forward<Args>(args)...});
+}
+
+inline boost::urls::url replaceUrlSegment(const boost::urls::url_view& urlView,
+                                          const uint replaceLoc,
+                                          const std::string_view newSegment)
+{
+    const boost::urls::segments_view& urlSegments = urlView.segments();
+    boost::urls::url url("/");
+
+    if (!urlSegments.is_absolute())
+    {
+        return url;
+    }
+
+    boost::urls::segments_view::iterator it = urlSegments.begin();
+    boost::urls::segments_view::iterator end = urlSegments.end();
+
+    for (uint idx = 0; it != end; it++, idx++)
+    {
+        if (idx == replaceLoc)
+        {
+            url.segments().push_back(newSegment);
+        }
+        else
+        {
+            url.segments().push_back(*it);
+        }
+    }
+
+    return url;
+}
+
+inline std::string setProtocolDefaults(const boost::urls::url_view& url)
+{
+    if (url.scheme() == "https")
+    {
+        return "https";
+    }
+    if (url.scheme() == "http")
+    {
+        if (bmcwebInsecureEnableHttpPushStyleEventing)
+        {
+            return "http";
+        }
+        return "";
+    }
+    return "";
+}
+
+inline uint16_t setPortDefaults(const boost::urls::url_view& url)
+{
+    uint16_t port = url.port_number();
+    if (port != 0)
+    {
+        // user picked a port already.
+        return port;
+    }
+
+    // If the user hasn't explicitly stated a port, pick one explicitly for them
+    // based on the protocol defaults
+    if (url.scheme() == "http")
+    {
+        return 80;
+    }
+    if (url.scheme() == "https")
+    {
+        return 443;
+    }
+    return 0;
+}
+
+inline bool validateAndSplitUrl(std::string_view destUrl, std::string& urlProto,
+                                std::string& host, uint16_t& port,
+                                std::string& path)
+{
+    boost::string_view urlBoost(destUrl.data(), destUrl.size());
+    boost::urls::result<boost::urls::url_view> url =
+        boost::urls::parse_uri(urlBoost);
+    if (!url)
+    {
+        return false;
+    }
+    urlProto = setProtocolDefaults(url.value());
+    if (urlProto.empty())
+    {
+        return false;
+    }
+
+    port = setPortDefaults(url.value());
+
+    host = std::string_view(url->encoded_host().data(),
+                            url->encoded_host().size());
+
+    path = std::string_view(url->encoded_path().data(),
+                            url->encoded_path().size());
+    if (path.empty())
+    {
+        path = "/";
+    }
+    if (url->has_fragment())
+    {
+        path += '#';
+        path += std::string_view(url->encoded_fragment().data(),
+                                 url->encoded_fragment().size());
+    }
+
+    if (url->has_query())
+    {
+        path += '?';
+        path += std::string_view(url->encoded_query().data(),
+                                 url->encoded_query().size());
+    }
+
+    return true;
 }
 
 } // namespace utility
 } // namespace crow
+
+namespace nlohmann
+{
+template <>
+struct adl_serializer<boost::urls::url>
+{
+    // nlohmann requires a specific casing to look these up in adl
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    static void to_json(json& j, const boost::urls::url& url)
+    {
+        j = url.string();
+    }
+};
+
+template <>
+struct adl_serializer<boost::urls::url_view>
+{
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    static void to_json(json& j, const boost::urls::url_view& url)
+    {
+        j = url.string();
+    }
+};
+} // namespace nlohmann

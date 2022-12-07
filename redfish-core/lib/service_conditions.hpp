@@ -10,7 +10,7 @@ namespace redfish
 inline void requestRoutesServiceConditions(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/ServiceConditions/")
-        .privileges(redfish::privileges::getServiceConditions)
+        .privileges(redfish::privileges::privilegeSetLogin)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {

@@ -49,12 +49,12 @@ enum class SseConnState
 class ServerSentEvents : public std::enable_shared_from_this<ServerSentEvents>
 {
   private:
-    std::shared_ptr<boost::beast::tcp_stream> sseConn;
+    std::shared_ptr<boost::asio::ip::tcp::socket> sseConn;
     std::queue<std::pair<uint64_t, std::string>> requestDataQueue;
     std::string outBuffer;
-    SseConnState state;
-    int retryCount;
-    int maxRetryAttempts;
+    SseConnState state{SseConnState::startInit};
+    int retryCount{0};
+    int maxRetryAttempts{5};
 
     void sendEvent(const std::string& id, const std::string& msg)
     {
@@ -109,30 +109,30 @@ class ServerSentEvents : public std::enable_shared_from_this<ServerSentEvents>
             [self(shared_from_this())](
                 boost::beast::error_code ec,
                 [[maybe_unused]] const std::size_t& bytesTransferred) {
-                self->outBuffer.erase(0, bytesTransferred);
+            self->outBuffer.erase(0, bytesTransferred);
 
-                if (ec == boost::asio::error::eof)
-                {
-                    // Send is successful, Lets remove data from queue
-                    // check for next request data in queue.
-                    self->requestDataQueue.pop();
-                    self->state = SseConnState::idle;
-                    self->checkQueue();
-                    return;
-                }
+            if (ec == boost::asio::error::eof)
+            {
+                // Send is successful, Lets remove data from queue
+                // check for next request data in queue.
+                self->requestDataQueue.pop();
+                self->state = SseConnState::idle;
+                self->checkQueue();
+                return;
+            }
 
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "async_write_some() failed: "
-                                     << ec.message();
-                    self->state = SseConnState::sendFailed;
-                    self->checkQueue();
-                    return;
-                }
-                BMCWEB_LOG_DEBUG << "async_write_some() bytes transferred: "
-                                 << bytesTransferred;
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "async_write_some() failed: "
+                                 << ec.message();
+                self->state = SseConnState::sendFailed;
+                self->checkQueue();
+                return;
+            }
+            BMCWEB_LOG_DEBUG << "async_write_some() bytes transferred: "
+                             << bytesTransferred;
 
-                self->doWrite();
+            self->doWrite();
             });
     }
 
@@ -166,17 +166,17 @@ class ServerSentEvents : public std::enable_shared_from_this<ServerSentEvents>
             [this, response,
              serializer](const boost::beast::error_code& ec,
                          [[maybe_unused]] const std::size_t& bytesTransferred) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "Error sending header" << ec;
-                    state = SseConnState::initFailed;
-                    checkQueue();
-                    return;
-                }
-
-                BMCWEB_LOG_DEBUG << "startSSE  Header sent.";
-                state = SseConnState::initialized;
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Error sending header" << ec;
+                state = SseConnState::initFailed;
                 checkQueue();
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "startSSE  Header sent.";
+            state = SseConnState::initialized;
+            checkQueue();
             });
     }
 
@@ -248,8 +248,6 @@ class ServerSentEvents : public std::enable_shared_from_this<ServerSentEvents>
                 break;
             }
         }
-
-        return;
     }
 
   public:
@@ -258,9 +256,9 @@ class ServerSentEvents : public std::enable_shared_from_this<ServerSentEvents>
     ServerSentEvents(ServerSentEvents&&) = delete;
     ServerSentEvents& operator=(ServerSentEvents&&) = delete;
 
-    ServerSentEvents(const std::shared_ptr<boost::beast::tcp_stream>& adaptor) :
-        sseConn(adaptor), state(SseConnState::startInit), retryCount(0),
-        maxRetryAttempts(5)
+    explicit ServerSentEvents(
+        const std::shared_ptr<boost::asio::ip::tcp::socket>& adaptor) :
+        sseConn(adaptor)
     {
         startSSE();
     }

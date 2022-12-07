@@ -13,10 +13,11 @@
 #include <image_upload.hpp>
 #include <kvm_websocket.hpp>
 #include <login_routes.hpp>
+#include <nbd_proxy.hpp>
 #include <obmc_console.hpp>
 #include <openbmc_dbus_rest.hpp>
 #include <redfish.hpp>
-#include <redfish_v1.hpp>
+#include <redfish_aggregator.hpp>
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
@@ -25,12 +26,9 @@
 #include <vm_websocket.hpp>
 #include <webassets.hpp>
 
+#include <exception>
 #include <memory>
 #include <string>
-
-#ifdef BMCWEB_ENABLE_VM_NBDPROXY
-#include <nbd_proxy.hpp>
-#endif
 
 constexpr int defaultPort = 18080;
 
@@ -41,7 +39,7 @@ inline void setupSocket(crow::App& app)
     {
         BMCWEB_LOG_INFO << "attempting systemd socket activation";
         if (sd_is_socket_inet(SD_LISTEN_FDS_START, AF_UNSPEC, SOCK_STREAM, 1,
-                              0))
+                              0) != 0)
         {
             BMCWEB_LOG_INFO << "Starting webserver on socket handle "
                             << SD_LISTEN_FDS_START;
@@ -62,7 +60,7 @@ inline void setupSocket(crow::App& app)
     }
 }
 
-int run()
+static int run()
 {
     crow::Logger::setLogLevel(
         static_cast<crow::LogLevel>(bmcwebLogLevel));
@@ -70,8 +68,8 @@ int run()
     auto io = std::make_shared<boost::asio::io_context>();
     App app(io);
 
-    crow::connections::systemBus =
-        std::make_shared<sdbusplus::asio::connection>(*io);
+    sdbusplus::asio::connection systemBus(*io);
+    crow::connections::systemBus = &systemBus;
 
     // Static assets need to be initialized before Authorization, because auth
     // needs to build the whitelist from the static routes
@@ -85,11 +83,18 @@ int run()
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH
-    redfish::requestRoutes(app);
     redfish::RedfishService redfish(app);
+
+    // Create HttpClient instance and initialize Config
+    crow::HttpClient::getInstance();
 
     // Create EventServiceManager instance and initialize Config
     redfish::EventServiceManager::getInstance();
+
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    // Create RedfishAggregator instance and initialize Config
+    redfish::RedfishAggregator::getInstance();
+#endif
 #endif
 
 #ifdef BMCWEB_ENABLE_DBUS_REST
@@ -115,7 +120,7 @@ int run()
     crow::google_api::requestRoutes(app);
 #endif
 
-    if (bmcwebInsecureDisableXssPrevention)
+    if (bmcwebInsecureDisableXssPrevention != 0)
     {
         cors_preflight::requestRoutes(app);
     }
@@ -130,7 +135,7 @@ int run()
 
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
     int rc = redfish::EventServiceManager::startEventLogMonitor(*io);
-    if (rc)
+    if (rc != 0)
     {
         BMCWEB_LOG_ERROR << "Redfish event handler setup failed...";
         return rc;
@@ -152,7 +157,8 @@ int run()
     app.run();
     io->run();
 
-    crow::connections::systemBus.reset();
+    crow::connections::systemBus = nullptr;
+
     return 0;
 }
 
@@ -162,9 +168,14 @@ int main(int /*argc*/, char** /*argv*/)
     {
         return run();
     }
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_CRITICAL << "Threw exception to main: " << e.what();
+        return -1;
+    }
     catch (...)
     {
-        return -1;
         BMCWEB_LOG_CRITICAL << "Threw exception to main";
+        return -1;
     }
 }

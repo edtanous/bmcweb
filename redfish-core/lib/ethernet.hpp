@@ -15,12 +15,16 @@
 */
 #pragma once
 
+#include "utils/ip_utils.hpp"
+
 #include <app.hpp>
-#include <boost/container/flat_map.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <boost/container/flat_set.hpp>
 #include <dbus_singleton.hpp>
 #include <dbus_utility.hpp>
 #include <error_messages.hpp>
+#include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/json_utils.hpp>
 
@@ -29,13 +33,6 @@
 
 namespace redfish
 {
-
-/**
- * DBus types primitives for several generic DBus interfaces
- * TODO(Pawel) consider move this to separate file into boost::dbus
- */
-using PropertiesMapType =
-    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
 
 enum class LinkType
 {
@@ -85,20 +82,20 @@ struct IPv6AddressData
 struct EthernetInterfaceData
 {
     uint32_t speed;
-    bool auto_neg;
-    bool DNSEnabled;
-    bool NTPEnabled;
-    bool HostNameEnabled;
-    bool SendHostNameEnabled;
+    size_t mtuSize;
+    bool autoNeg;
+    bool dnsEnabled;
+    bool ntpEnabled;
+    bool hostNameEnabled;
     bool linkUp;
     bool nicEnabled;
-    std::string DHCPEnabled;
+    std::string dhcpEnabled;
     std::string operatingMode;
-    std::string hostname;
-    std::string default_gateway;
-    std::string ipv6_default_gateway;
-    std::string mac_address;
-    std::vector<std::uint32_t> vlan_id;
+    std::string hostName;
+    std::string defaultGateway;
+    std::string ipv6DefaultGateway;
+    std::string macAddress;
+    std::optional<uint32_t> vlanId;
     std::vector<std::string> nameServers;
     std::vector<std::string> staticNameServers;
     std::vector<std::string> domainnames;
@@ -107,9 +104,9 @@ struct EthernetInterfaceData
 struct DHCPParameters
 {
     std::optional<bool> dhcpv4Enabled;
-    std::optional<bool> useDNSServers;
-    std::optional<bool> useNTPServers;
-    std::optional<bool> useUseDomainName;
+    std::optional<bool> useDnsServers;
+    std::optional<bool> useNtpServers;
+    std::optional<bool> useDomainName;
     std::optional<std::string> dhcpv6OperatingMode;
 };
 
@@ -125,7 +122,7 @@ inline std::string getNetmask(unsigned int bits)
     return netmask;
 }
 
-inline bool translateDHCPEnabledToBool(const std::string& inputDHCP,
+inline bool translateDhcpEnabledToBool(const std::string& inputDHCP,
                                        bool isIPv4)
 {
     if (isIPv4)
@@ -190,15 +187,15 @@ inline std::string
     return "";
 }
 
-inline bool
-    extractEthernetInterfaceData(const std::string& ethifaceId,
-                                 dbus::utility::ManagedObjectType& dbusData,
-                                 EthernetInterfaceData& ethData)
+inline bool extractEthernetInterfaceData(
+    const std::string& ethifaceId,
+    const dbus::utility::ManagedObjectType& dbusData,
+    EthernetInterfaceData& ethData)
 {
     bool idFound = false;
-    for (auto& objpath : dbusData)
+    for (const auto& objpath : dbusData)
     {
-        for (auto& ifacePair : objpath.second)
+        for (const auto& ifacePair : objpath.second)
         {
             if (objpath.first == "/xyz/openbmc_project/network/" + ethifaceId)
             {
@@ -213,7 +210,7 @@ inline bool
                                 std::get_if<std::string>(&propertyPair.second);
                             if (mac != nullptr)
                             {
-                                ethData.mac_address = *mac;
+                                ethData.macAddress = *mac;
                             }
                         }
                     }
@@ -228,7 +225,7 @@ inline bool
                                 std::get_if<uint32_t>(&propertyPair.second);
                             if (id != nullptr)
                             {
-                                ethData.vlan_id.push_back(*id);
+                                ethData.vlanId = *id;
                             }
                         }
                     }
@@ -244,7 +241,7 @@ inline bool
                                 std::get_if<bool>(&propertyPair.second);
                             if (autoNeg != nullptr)
                             {
-                                ethData.auto_neg = *autoNeg;
+                                ethData.autoNeg = *autoNeg;
                             }
                         }
                         else if (propertyPair.first == "Speed")
@@ -254,6 +251,15 @@ inline bool
                             if (speed != nullptr)
                             {
                                 ethData.speed = *speed;
+                            }
+                        }
+                        else if (propertyPair.first == "MTU")
+                        {
+                            const uint32_t* mtuSize =
+                                std::get_if<uint32_t>(&propertyPair.second);
+                            if (mtuSize != nullptr)
+                            {
+                                ethData.mtuSize = *mtuSize;
                             }
                         }
                         else if (propertyPair.first == "LinkUp")
@@ -300,7 +306,7 @@ inline bool
                                 std::get_if<std::string>(&propertyPair.second);
                             if (dhcpEnabled != nullptr)
                             {
-                                ethData.DHCPEnabled = *dhcpEnabled;
+                                ethData.dhcpEnabled = *dhcpEnabled;
                             }
                         }
                         else if (propertyPair.first == "DomainName")
@@ -322,11 +328,11 @@ inline bool
                                 std::string defaultGatewayStr = *defaultGateway;
                                 if (defaultGatewayStr.empty())
                                 {
-                                    ethData.default_gateway = "0.0.0.0";
+                                    ethData.defaultGateway = "0.0.0.0";
                                 }
                                 else
                                 {
-                                    ethData.default_gateway = defaultGatewayStr;
+                                    ethData.defaultGateway = defaultGatewayStr;
                                 }
                             }
                         }
@@ -340,12 +346,12 @@ inline bool
                                     *defaultGateway6;
                                 if (defaultGateway6Str.empty())
                                 {
-                                    ethData.ipv6_default_gateway =
+                                    ethData.ipv6DefaultGateway =
                                         "0:0:0:0:0:0:0:0";
                                 }
                                 else
                                 {
-                                    ethData.ipv6_default_gateway =
+                                    ethData.ipv6DefaultGateway =
                                         defaultGateway6Str;
                                 }
                             }
@@ -367,7 +373,7 @@ inline bool
                                 std::get_if<bool>(&propertyPair.second);
                             if (dnsEnabled != nullptr)
                             {
-                                ethData.DNSEnabled = *dnsEnabled;
+                                ethData.dnsEnabled = *dnsEnabled;
                             }
                         }
                         else if (propertyPair.first == "NTPEnabled")
@@ -376,7 +382,7 @@ inline bool
                                 std::get_if<bool>(&propertyPair.second);
                             if (ntpEnabled != nullptr)
                             {
-                                ethData.NTPEnabled = *ntpEnabled;
+                                ethData.ntpEnabled = *ntpEnabled;
                             }
                         }
                         else if (propertyPair.first == "HostNameEnabled")
@@ -385,17 +391,7 @@ inline bool
                                 std::get_if<bool>(&propertyPair.second);
                             if (hostNameEnabled != nullptr)
                             {
-                                ethData.HostNameEnabled = *hostNameEnabled;
-                            }
-                        }
-                        else if (propertyPair.first == "SendHostNameEnabled")
-                        {
-                            const bool* sendHostNameEnabled =
-                                std::get_if<bool>(&propertyPair.second);
-                            if (sendHostNameEnabled != nullptr)
-                            {
-                                ethData.SendHostNameEnabled =
-                                    *sendHostNameEnabled;
+                                ethData.hostNameEnabled = *hostNameEnabled;
                             }
                         }
                     }
@@ -414,7 +410,7 @@ inline bool
                             std::get_if<std::string>(&propertyPair.second);
                         if (hostname != nullptr)
                         {
-                            ethData.hostname = *hostname;
+                            ethData.hostName = *hostname;
                         }
                     }
                 }
@@ -438,9 +434,9 @@ inline void
     for (const auto& objpath : dbusData)
     {
         // Check if proper pattern for object path appears
-        if (boost::starts_with(objpath.first.str, ipv6PathStart))
+        if (objpath.first.str.starts_with(ipv6PathStart))
         {
-            for (auto& interface : objpath.second)
+            for (const auto& interface : objpath.second)
             {
                 if (interface.first == "xyz.openbmc_project.Network.IP")
                 {
@@ -453,7 +449,7 @@ inline void
                     IPv6AddressData& ipv6Address = *it.first;
                     ipv6Address.id =
                         objpath.first.str.substr(ipv6PathStart.size());
-                    for (auto& property : interface.second)
+                    for (const auto& property : interface.second)
                     {
                         if (property.first == "Address")
                         {
@@ -516,9 +512,9 @@ inline void
     for (const auto& objpath : dbusData)
     {
         // Check if proper pattern for object path appears
-        if (boost::starts_with(objpath.first.str, ipv4PathStart))
+        if (objpath.first.str.starts_with(ipv4PathStart))
         {
-            for (auto& interface : objpath.second)
+            for (const auto& interface : objpath.second)
             {
                 if (interface.first == "xyz.openbmc_project.Network.IP")
                 {
@@ -531,7 +527,7 @@ inline void
                     IPv4AddressData& ipv4Address = *it.first;
                     ipv4Address.id =
                         objpath.first.str.substr(ipv4PathStart.size());
-                    for (auto& property : interface.second)
+                    for (const auto& property : interface.second)
                     {
                         if (property.first == "Address")
                         {
@@ -577,124 +573,13 @@ inline void
                     }
                     // Check if given address is local, or global
                     ipv4Address.linktype =
-                        boost::starts_with(ipv4Address.address, "169.254.")
+                        ipv4Address.address.starts_with("169.254.")
                             ? LinkType::Local
                             : LinkType::Global;
                 }
             }
         }
     }
-}
-
-/**
- * @brief Sets given Id on the given VLAN interface through D-Bus
- *
- * @param[in] ifaceId       Id of VLAN interface that should be modified
- * @param[in] inputVlanId   New ID of the VLAN
- * @param[in] callback      Function that will be called after the operation
- *
- * @return None.
- */
-template <typename CallbackFunc>
-void changeVlanId(const std::string& ifaceId, const uint32_t& inputVlanId,
-                  CallbackFunc&& callback)
-{
-    crow::connections::systemBus->async_method_call(
-        callback, "xyz.openbmc_project.Network",
-        std::string("/xyz/openbmc_project/network/") + ifaceId,
-        "org.freedesktop.DBus.Properties", "Set",
-        "xyz.openbmc_project.Network.VLAN", "Id",
-        dbus::utility::DbusVariantType(inputVlanId));
-}
-
-/**
- * @brief Helper function that verifies IP address to check if it is in
- *        proper format. If bits pointer is provided, also calculates active
- *        bit count for Subnet Mask.
- *
- * @param[in]  ip     IP that will be verified
- * @param[out] bits   Calculated mask in bits notation
- *
- * @return true in case of success, false otherwise
- */
-inline bool ipv4VerifyIpAndGetBitcount(const std::string& ip,
-                                       uint8_t* bits = nullptr)
-{
-    std::vector<std::string> bytesInMask;
-
-    boost::split(bytesInMask, ip, boost::is_any_of("."));
-
-    static const constexpr int ipV4AddressSectionsCount = 4;
-    if (bytesInMask.size() != ipV4AddressSectionsCount)
-    {
-        return false;
-    }
-
-    if (bits != nullptr)
-    {
-        *bits = 0;
-    }
-
-    char* endPtr = nullptr;
-    long previousValue = 255;
-    bool firstZeroInByteHit = false;
-    for (const std::string& byte : bytesInMask)
-    {
-        if (byte.empty())
-        {
-            return false;
-        }
-
-        // Use strtol instead of stroi to avoid exceptions
-        long value = std::strtol(byte.c_str(), &endPtr, 10);
-
-        // endPtr should point to the end of the string, otherwise given string
-        // is not 100% number
-        if (*endPtr != '\0')
-        {
-            return false;
-        }
-
-        // Value should be contained in byte
-        if (value < 0 || value > 255)
-        {
-            return false;
-        }
-
-        if (bits != nullptr)
-        {
-            // Mask has to be continuous between bytes
-            if (previousValue != 255 && value != 0)
-            {
-                return false;
-            }
-
-            // Mask has to be continuous inside bytes
-            firstZeroInByteHit = false;
-
-            // Count bits
-            for (long bitIdx = 7; bitIdx >= 0; bitIdx--)
-            {
-                if (value & (1L << bitIdx))
-                {
-                    if (firstZeroInByteHit)
-                    {
-                        // Continuity not preserved
-                        return false;
-                    }
-                    (*bits)++;
-                }
-                else
-                {
-                    firstZeroInByteHit = true;
-                }
-            }
-        }
-
-        previousValue = value;
-    }
-
-    return true;
 }
 
 /**
@@ -934,7 +819,7 @@ void getEthernetIfaceData(const std::string& ethifaceId,
         [ethifaceId{std::string{ethifaceId}},
          callback{std::forward<CallbackFunc>(callback)}](
             const boost::system::error_code errorCode,
-            dbus::utility::ManagedObjectType& resp) {
+            const dbus::utility::ManagedObjectType& resp) {
             EthernetInterfaceData ethData{};
             boost::container::flat_set<IPv4AddressData> ipv4Data;
             boost::container::flat_set<IPv6AddressData> ipv6Data;
@@ -961,7 +846,7 @@ void getEthernetIfaceData(const std::string& ethifaceId,
                      (ipv4.gateway == "0.0.0.0")) ||
                     (ipv4.origin == "DHCP") || (ipv4.origin == "Static"))
                 {
-                    ipv4.gateway = ethData.default_gateway;
+                    ipv4.gateway = ethData.defaultGateway;
                 }
             }
 
@@ -1050,6 +935,25 @@ inline void
 }
 
 inline void
+    handleMTUSizePatch(const std::string& ifaceId, const size_t mtuSize,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    sdbusplus::message::object_path objPath =
+        "/xyz/openbmc_project/network/" + ifaceId;
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+            }
+        },
+        "xyz.openbmc_project.Network", objPath,
+        "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Network.EthernetInterface", "MTU",
+        std::variant<size_t>(mtuSize));
+}
+
+inline void
     handleDomainnamePatch(const std::string& ifaceId,
                           const std::string& domainname,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
@@ -1133,10 +1037,25 @@ inline void
                           const std::string& macAddress,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+    static constexpr std::string_view dbusNotAllowedError =
+        "xyz.openbmc_project.Common.Error.NotAllowed";
+
     crow::connections::systemBus->async_method_call(
-        [asyncResp, macAddress](const boost::system::error_code ec) {
+        [asyncResp, macAddress](const boost::system::error_code ec,
+                                const sdbusplus::message::message& msg) {
             if (ec)
             {
+                const sd_bus_error* err = msg.get_error();
+                if (err == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                if (err->name == dbusNotAllowedError)
+                {
+                    messages::propertyNotWritable(asyncResp->res, "MACAddress");
+                    return;
+                }
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1217,8 +1136,8 @@ inline void handleDHCPPatch(const std::string& ifaceId,
                             const DHCPParameters& v6dhcpParms,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    bool ipv4Active = translateDHCPEnabledToBool(ethData.DHCPEnabled, true);
-    bool ipv6Active = translateDHCPEnabledToBool(ethData.DHCPEnabled, false);
+    bool ipv4Active = translateDhcpEnabledToBool(ethData.dhcpEnabled, true);
+    bool ipv6Active = translateDhcpEnabledToBool(ethData.dhcpEnabled, false);
 
     bool nextv4DHCPState =
         v4dhcpParms.dhcpv4Enabled ? *v4dhcpParms.dhcpv4Enabled : ipv4Active;
@@ -1243,72 +1162,72 @@ inline void handleDHCPPatch(const std::string& ifaceId,
     }
 
     bool nextDNS{};
-    if (v4dhcpParms.useDNSServers && v6dhcpParms.useDNSServers)
+    if (v4dhcpParms.useDnsServers && v6dhcpParms.useDnsServers)
     {
-        if (*v4dhcpParms.useDNSServers != *v6dhcpParms.useDNSServers)
+        if (*v4dhcpParms.useDnsServers != *v6dhcpParms.useDnsServers)
         {
             messages::generalError(asyncResp->res);
             return;
         }
-        nextDNS = *v4dhcpParms.useDNSServers;
+        nextDNS = *v4dhcpParms.useDnsServers;
     }
-    else if (v4dhcpParms.useDNSServers)
+    else if (v4dhcpParms.useDnsServers)
     {
-        nextDNS = *v4dhcpParms.useDNSServers;
+        nextDNS = *v4dhcpParms.useDnsServers;
     }
-    else if (v6dhcpParms.useDNSServers)
+    else if (v6dhcpParms.useDnsServers)
     {
-        nextDNS = *v6dhcpParms.useDNSServers;
+        nextDNS = *v6dhcpParms.useDnsServers;
     }
     else
     {
-        nextDNS = ethData.DNSEnabled;
+        nextDNS = ethData.dnsEnabled;
     }
 
     bool nextNTP{};
-    if (v4dhcpParms.useNTPServers && v6dhcpParms.useNTPServers)
+    if (v4dhcpParms.useNtpServers && v6dhcpParms.useNtpServers)
     {
-        if (*v4dhcpParms.useNTPServers != *v6dhcpParms.useNTPServers)
+        if (*v4dhcpParms.useNtpServers != *v6dhcpParms.useNtpServers)
         {
             messages::generalError(asyncResp->res);
             return;
         }
-        nextNTP = *v4dhcpParms.useNTPServers;
+        nextNTP = *v4dhcpParms.useNtpServers;
     }
-    else if (v4dhcpParms.useNTPServers)
+    else if (v4dhcpParms.useNtpServers)
     {
-        nextNTP = *v4dhcpParms.useNTPServers;
+        nextNTP = *v4dhcpParms.useNtpServers;
     }
-    else if (v6dhcpParms.useNTPServers)
+    else if (v6dhcpParms.useNtpServers)
     {
-        nextNTP = *v6dhcpParms.useNTPServers;
+        nextNTP = *v6dhcpParms.useNtpServers;
     }
     else
     {
-        nextNTP = ethData.NTPEnabled;
+        nextNTP = ethData.ntpEnabled;
     }
 
     bool nextUseDomain{};
-    if (v4dhcpParms.useUseDomainName && v6dhcpParms.useUseDomainName)
+    if (v4dhcpParms.useDomainName && v6dhcpParms.useDomainName)
     {
-        if (*v4dhcpParms.useUseDomainName != *v6dhcpParms.useUseDomainName)
+        if (*v4dhcpParms.useDomainName != *v6dhcpParms.useDomainName)
         {
             messages::generalError(asyncResp->res);
             return;
         }
-        nextUseDomain = *v4dhcpParms.useUseDomainName;
+        nextUseDomain = *v4dhcpParms.useDomainName;
     }
-    else if (v4dhcpParms.useUseDomainName)
+    else if (v4dhcpParms.useDomainName)
     {
-        nextUseDomain = *v4dhcpParms.useUseDomainName;
+        nextUseDomain = *v4dhcpParms.useDomainName;
     }
-    else if (v6dhcpParms.useUseDomainName)
+    else if (v6dhcpParms.useDomainName)
     {
-        nextUseDomain = *v6dhcpParms.useUseDomainName;
+        nextUseDomain = *v6dhcpParms.useDomainName;
     }
     else
     {
-        nextUseDomain = ethData.HostNameEnabled;
+        nextUseDomain = ethData.hostNameEnabled;
     }
 
     BMCWEB_LOG_DEBUG << "set DHCPEnabled...";
@@ -1397,7 +1316,7 @@ inline void handleIPv4StaticPatch(
             bool errorInEntry = false;
             if (address)
             {
-                if (ipv4VerifyIpAndGetBitcount(*address))
+                if (ip_util::ipv4VerifyIpAndGetBitcount(*address))
                 {
                     addr = &(*address);
                 }
@@ -1421,7 +1340,8 @@ inline void handleIPv4StaticPatch(
 
             if (subnetMask)
             {
-                if (!ipv4VerifyIpAndGetBitcount(*subnetMask, &prefixLength))
+                if (!ip_util::ipv4VerifyIpAndGetBitcount(*subnetMask,
+                                                         &prefixLength))
                 {
                     messages::propertyValueFormatError(
                         asyncResp->res, *subnetMask,
@@ -1431,8 +1351,8 @@ inline void handleIPv4StaticPatch(
             }
             else if (nicIpEntry != ipv4Data.cend())
             {
-                if (!ipv4VerifyIpAndGetBitcount(nicIpEntry->netmask,
-                                                &prefixLength))
+                if (!ip_util::ipv4VerifyIpAndGetBitcount(nicIpEntry->netmask,
+                                                         &prefixLength))
                 {
                     messages::propertyValueFormatError(
                         asyncResp->res, nicIpEntry->netmask,
@@ -1449,7 +1369,7 @@ inline void handleIPv4StaticPatch(
 
             if (gateway)
             {
-                if (ipv4VerifyIpAndGetBitcount(*gateway))
+                if (ip_util::ipv4VerifyIpAndGetBitcount(*gateway))
                 {
                     gw = &(*gateway);
                 }
@@ -1684,7 +1604,7 @@ inline void parseInterfaceData(
 
     crow::connections::systemBus->async_method_call(
         [health](const boost::system::error_code ec,
-                 const std::vector<std::string>& resp) {
+                 const dbus::utility::MapperGetSubTreePathsResponse& resp) {
             if (ec)
             {
                 return;
@@ -1712,28 +1632,29 @@ inline void parseInterfaceData(
 
     jsonResponse["LinkStatus"] = ethData.linkUp ? "LinkUp" : "LinkDown";
     jsonResponse["SpeedMbps"] = ethData.speed;
-    jsonResponse["MACAddress"] = ethData.mac_address;
+    jsonResponse["MTUSize"] = ethData.mtuSize;
+    jsonResponse["MACAddress"] = ethData.macAddress;
     jsonResponse["DHCPv4"]["DHCPEnabled"] =
-        translateDHCPEnabledToBool(ethData.DHCPEnabled, true);
-    jsonResponse["DHCPv4"]["UseNTPServers"] = ethData.NTPEnabled;
-    jsonResponse["DHCPv4"]["UseDNSServers"] = ethData.DNSEnabled;
-    jsonResponse["DHCPv4"]["UseDomainName"] = ethData.HostNameEnabled;
+        translateDhcpEnabledToBool(ethData.dhcpEnabled, true);
+    jsonResponse["DHCPv4"]["UseNTPServers"] = ethData.ntpEnabled;
+    jsonResponse["DHCPv4"]["UseDNSServers"] = ethData.dnsEnabled;
+    jsonResponse["DHCPv4"]["UseDomainName"] = ethData.hostNameEnabled;
 
     jsonResponse["DHCPv6"]["OperatingMode"] =
-        translateDHCPEnabledToBool(ethData.DHCPEnabled, false) ? "Stateful"
+        translateDhcpEnabledToBool(ethData.dhcpEnabled, false) ? "Stateful"
                                                                : "Disabled";
-    jsonResponse["DHCPv6"]["UseNTPServers"] = ethData.NTPEnabled;
-    jsonResponse["DHCPv6"]["UseDNSServers"] = ethData.DNSEnabled;
-    jsonResponse["DHCPv6"]["UseDomainName"] = ethData.HostNameEnabled;
+    jsonResponse["DHCPv6"]["UseNTPServers"] = ethData.ntpEnabled;
+    jsonResponse["DHCPv6"]["UseDNSServers"] = ethData.dnsEnabled;
+    jsonResponse["DHCPv6"]["UseDomainName"] = ethData.hostNameEnabled;
 
-    if (!ethData.hostname.empty())
+    if (!ethData.hostName.empty())
     {
-        jsonResponse["HostName"] = ethData.hostname;
+        jsonResponse["HostName"] = ethData.hostName;
 
         // When domain name is empty then it means, that it is a network
         // without domain names, and the host name itself must be treated as
         // FQDN
-        std::string fqdn = ethData.hostname;
+        std::string fqdn = ethData.hostName;
         if (!ethData.domainnames.empty())
         {
             fqdn += "." + ethData.domainnames[0];
@@ -1741,9 +1662,9 @@ inline void parseInterfaceData(
         jsonResponse["FQDN"] = fqdn;
     }
 
-    jsonResponse["VLANs"] = {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
-                                           "/EthernetInterfaces/" +
-                                               ifaceId + "/VLANs"}};
+    jsonResponse["VLANs"] = {
+        {"@odata.id",
+         "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" + ifaceId + "/VLANs"}};
 
     jsonResponse["NameServers"] = ethData.nameServers;
     jsonResponse["StaticNameServers"] = ethData.staticNameServers;
@@ -1752,7 +1673,7 @@ inline void parseInterfaceData(
     nlohmann::json& ipv4StaticArray = jsonResponse["IPv4StaticAddresses"];
     ipv4Array = nlohmann::json::array();
     ipv4StaticArray = nlohmann::json::array();
-    for (auto& ipv4Config : ipv4Data)
+    for (const auto& ipv4Config : ipv4Data)
     {
 
         std::string gatewayStr = ipv4Config.gateway;
@@ -1760,21 +1681,21 @@ inline void parseInterfaceData(
         {
             gatewayStr = "0.0.0.0";
         }
+        nlohmann::json::object_t ipv4;
+        ipv4["AddressOrigin"] = ipv4Config.origin;
+        ipv4["SubnetMask"] = ipv4Config.netmask;
+        ipv4["Address"] = ipv4Config.address;
+        ipv4["Gateway"] = gatewayStr;
 
-        ipv4Array.push_back({{"AddressOrigin", ipv4Config.origin},
-                             {"SubnetMask", ipv4Config.netmask},
-                             {"Address", ipv4Config.address},
-                             {"Gateway", gatewayStr}});
         if (ipv4Config.origin == "Static")
         {
-            ipv4StaticArray.push_back({{"AddressOrigin", ipv4Config.origin},
-                                       {"SubnetMask", ipv4Config.netmask},
-                                       {"Address", ipv4Config.address},
-                                       {"Gateway", gatewayStr}});
+            ipv4StaticArray.push_back(ipv4);
         }
+
+        ipv4Array.push_back(std::move(ipv4));
     }
 
-    std::string ipv6GatewayStr = ethData.ipv6_default_gateway;
+    std::string ipv6GatewayStr = ethData.ipv6DefaultGateway;
     if (ipv6GatewayStr.empty())
     {
         ipv6GatewayStr = "0:0:0:0:0:0:0:0";
@@ -1789,46 +1710,45 @@ inline void parseInterfaceData(
     nlohmann::json& ipv6AddrPolicyTable =
         jsonResponse["IPv6AddressPolicyTable"];
     ipv6AddrPolicyTable = nlohmann::json::array();
-    for (auto& ipv6Config : ipv6Data)
+    for (const auto& ipv6Config : ipv6Data)
     {
-        ipv6Array.push_back({{"Address", ipv6Config.address},
-                             {"PrefixLength", ipv6Config.prefixLength},
-                             {"AddressOrigin", ipv6Config.origin},
-                             {"AddressState", nullptr}});
+        nlohmann::json::object_t ipv6;
+        ipv6["Address"] = ipv6Config.address;
+        ipv6["PrefixLength"] = ipv6Config.prefixLength;
+        ipv6["AddressOrigin"] = ipv6Config.origin;
+        ipv6["AddressState"] = nullptr;
+        ipv6Array.push_back(std::move(ipv6));
         if (ipv6Config.origin == "Static")
         {
-            ipv6StaticArray.push_back(
-                {{"Address", ipv6Config.address},
-                 {"PrefixLength", ipv6Config.prefixLength}});
+            nlohmann::json::object_t ipv6Static;
+            ipv6Static["Address"] = ipv6Config.address;
+            ipv6Static["PrefixLength"] = ipv6Config.prefixLength;
+            ipv6StaticArray.push_back(std::move(ipv6Static));
         }
     }
 }
+// TODO: Clean up this code post testing
+// inline void parseInterfaceData(nlohmann::json& jsonResponse,
+//                                const std::string& parentIfaceId,
+//                                const std::string& ifaceId,
+//                                const EthernetInterfaceData& ethData)
+// {
+//     // Fill out obvious data...
+//     jsonResponse["Id"] = ifaceId;
+//     jsonResponse["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+//                                 "/EthernetInterfaces/" +
+//                                 parentIfaceId + "/VLANs/" + ifaceId;
 
-inline void parseInterfaceData(nlohmann::json& jsonResponse,
-                               const std::string& parentIfaceId,
-                               const std::string& ifaceId,
-                               const EthernetInterfaceData& ethData)
-{
-    // Fill out obvious data...
-    jsonResponse["Id"] = ifaceId;
-    jsonResponse["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                                "/EthernetInterfaces/" +
-                                parentIfaceId + "/VLANs/" + ifaceId;
-
-    jsonResponse["VLANEnable"] = true;
-    if (!ethData.vlan_id.empty())
-    {
-        jsonResponse["VLANId"] = ethData.vlan_id.back();
-    }
-}
+//     jsonResponse["VLANEnable"] = true;
+//     if (!ethData.vlan_id.empty())
+//     {
+//         jsonResponse["VLANId"] = ethData.vlan_id.back();
+//     }
+// }
 
 inline bool verifyNames(const std::string& parent, const std::string& iface)
 {
-    if (!boost::starts_with(iface, parent + "_"))
-    {
-        return false;
-    }
-    return true;
+    return iface.starts_with(parent + "_");
 }
 
 inline void requestEthernetInterfacesRoutes(App& app)
@@ -1837,8 +1757,13 @@ inline void requestEthernetInterfacesRoutes(App& app)
                  "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/")
         .privileges(redfish::privileges::getEthernetInterfaceCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#EthernetInterfaceCollection.EthernetInterfaceCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
@@ -1869,11 +1794,12 @@ inline void requestEthernetInterfacesRoutes(App& app)
                             std::size_t found = ifaceItem.find(tag);
                             if (found == std::string::npos)
                             {
-                                ifaceArray.push_back(
-                                    {{"@odata.id",
-                                      "/redfish/v1/Managers/" PLATFORMBMCID
-                                      "/EthernetInterfaces/" +
-                                          ifaceItem}});
+                                nlohmann::json::object_t iface;
+                                iface["@odata.id"] =
+                                    "/redfish/v1/Managers/" PLATFORMBMCID
+                                    "/EthernetInterfaces/" +
+                                    ifaceItem;
+                                ifaceArray.push_back(std::move(iface));
                             }
                         }
 
@@ -1889,9 +1815,13 @@ inline void requestEthernetInterfacesRoutes(App& app)
                       "/EthernetInterfaces/<str>/")
         .privileges(redfish::privileges::getEthernetInterface)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& ifaceId) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& ifaceId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 getEthernetIfaceData(
                     ifaceId,
                     [asyncResp,
@@ -1910,8 +1840,11 @@ inline void requestEthernetInterfacesRoutes(App& app)
                             return;
                         }
 
+                        // Keep using the v1.6.0 schema here as currently bmcweb
+                        // have to use "VLANs" property deprecated in v1.7.0 for
+                        // VLAN creation/deletion.
                         asyncResp->res.jsonValue["@odata.type"] =
-                            "#EthernetInterface.v1_4_1.EthernetInterface";
+                            "#EthernetInterface.v1_6_0.EthernetInterface";
                         asyncResp->res.jsonValue["Name"] =
                             "Manager Ethernet Interface";
                         asyncResp->res.jsonValue["Description"] =
@@ -1925,11 +1858,14 @@ inline void requestEthernetInterfacesRoutes(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/EthernetInterfaces/<str>/")
         .privileges(redfish::privileges::patchEthernetInterface)
-
         .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& ifaceId) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& ifaceId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 std::optional<std::string> hostname;
                 std::optional<std::string> fqdn;
                 std::optional<std::string> macAddress;
@@ -1940,17 +1876,19 @@ inline void requestEthernetInterfacesRoutes(App& app)
                 std::optional<nlohmann::json> dhcpv4;
                 std::optional<nlohmann::json> dhcpv6;
                 std::optional<bool> interfaceEnabled;
+                std::optional<size_t> mtuSize;
                 DHCPParameters v4dhcpParms;
                 DHCPParameters v6dhcpParms;
 
-                if (!json_util::readJson(
+                if (!json_util::readJsonPatch(
                         req, asyncResp->res, "HostName", hostname, "FQDN", fqdn,
                         "IPv4StaticAddresses", ipv4StaticAddresses,
                         "MACAddress", macAddress, "StaticNameServers",
                         staticNameServers, "IPv6DefaultGateway",
                         ipv6DefaultGateway, "IPv6StaticAddresses",
                         ipv6StaticAddresses, "DHCPv4", dhcpv4, "DHCPv6", dhcpv6,
-                        "InterfaceEnabled", interfaceEnabled))
+                        "MTUSize", mtuSize, "InterfaceEnabled",
+                        interfaceEnabled))
                 {
                     return;
                 }
@@ -1960,9 +1898,9 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     if (!json_util::readJson(
                             *dhcpv4, asyncResp->res, "DHCPEnabled",
                             v4dhcpParms.dhcpv4Enabled, "UseDNSServers",
-                            v4dhcpParms.useDNSServers, "UseNTPServers",
-                            v4dhcpParms.useNTPServers, "UseDomainName",
-                            v4dhcpParms.useUseDomainName))
+                            v4dhcpParms.useDnsServers, "UseNTPServers",
+                            v4dhcpParms.useNtpServers, "UseDomainName",
+                            v4dhcpParms.useDomainName))
                     {
                         return;
                     }
@@ -1978,9 +1916,9 @@ inline void requestEthernetInterfacesRoutes(App& app)
                     if (!json_util::readJson(
                             *dhcpv6, asyncResp->res, "OperatingMode",
                             v6dhcpParms.dhcpv6OperatingMode, "UseDNSServers",
-                            v6dhcpParms.useDNSServers, "UseNTPServers",
-                            v6dhcpParms.useNTPServers, "UseDomainName",
-                            v6dhcpParms.useUseDomainName))
+                            v6dhcpParms.useDnsServers, "UseNTPServers",
+                            v6dhcpParms.useNtpServers, "UseDomainName",
+                            v6dhcpParms.useDomainName))
                     {
                         return;
                     }
@@ -2001,7 +1939,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
                      ipv6StaticAddresses = std::move(ipv6StaticAddresses),
                      staticNameServers = std::move(staticNameServers),
                      dhcpv4 = std::move(dhcpv4), dhcpv6 = std::move(dhcpv6),
-                     v4dhcpParms = std::move(v4dhcpParms),
+                     mtuSize, v4dhcpParms = std::move(v4dhcpParms),
                      v6dhcpParms = std::move(v6dhcpParms), interfaceEnabled](
                         const bool& success,
                         const EthernetInterfaceData& ethData,
@@ -2015,7 +1953,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
                             // TODO(Pawel)consider distinguish between non
                             // existing object, and other errors
                             messages::resourceNotFound(
-                                asyncResp->res, "Ethernet Interface", ifaceId);
+                                asyncResp->res, "EthernetInterface", ifaceId);
                             return;
                         }
 
@@ -2069,7 +2007,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
                         if (ipv6StaticAddresses)
                         {
-                            nlohmann::json ipv6Static = *ipv6StaticAddresses;
+                            const nlohmann::json& ipv6Static =
+                                *ipv6StaticAddresses;
                             handleIPv6StaticAddressesPatch(ifaceId, ipv6Static,
                                                            ipv6Data, asyncResp);
                         }
@@ -2086,17 +2025,26 @@ inline void requestEthernetInterfacesRoutes(App& app)
                             return;
 #endif
                         }
+
+                        if (mtuSize)
+                        {
+                            handleMTUSizePatch(ifaceId, *mtuSize, asyncResp);
+                        }
                     });
             });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/EthernetInterfaces/<str>/VLANs/<str>/")
         .privileges(redfish::privileges::getVLanNetworkInterface)
-
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& /* req */,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& parentIfaceId, const std::string& ifaceId) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& parentIfaceId,
+                   const std::string& ifaceId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#VLanNetworkInterface.v1_1_0.VLanNetworkInterface";
                 asyncResp->res.jsonValue["Name"] = "VLAN Network Interface";
@@ -2115,10 +2063,17 @@ inline void requestEthernetInterfacesRoutes(App& app)
                         const EthernetInterfaceData& ethData,
                         const boost::container::flat_set<IPv4AddressData>&,
                         const boost::container::flat_set<IPv6AddressData>&) {
-                        if (success && ethData.vlan_id.size() != 0)
+                        if (success && ethData.vlanId)
                         {
-                            parseInterfaceData(asyncResp->res.jsonValue,
-                                               parentIfaceId, ifaceId, ethData);
+                            asyncResp->res.jsonValue["Id"] = ifaceId;
+                            asyncResp->res.jsonValue["@odata.id"] =
+                                "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" +
+                                parentIfaceId + "/VLANs/" + ifaceId;
+
+                            asyncResp->res.jsonValue["VLANEnable"] =
+                                ethData.nicEnabled;
+                            asyncResp->res.jsonValue["VLANId"] =
+                                *ethData.vlanId;
                         }
                         else
                         {
@@ -2126,7 +2081,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
                             // TODO(Pawel)consider distinguish between non
                             // existing object, and other errors
                             messages::resourceNotFound(asyncResp->res,
-                                                       "VLAN Network Interface",
+                                                       "VLanNetworkInterface",
                                                        ifaceId);
                         }
                     });
@@ -2134,99 +2089,96 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/EthernetInterfaces/<str>/VLANs/<str>/")
-        // This privilege is incorrect, it should be ConfigureManager
-        //.privileges(redfish::privileges::patchVLanNetworkInterface)
-        .privileges({{"ConfigureComponents"}})
-        .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& parentIfaceId, const std::string& ifaceId) {
-                if (!verifyNames(parentIfaceId, ifaceId))
-                {
-                    messages::resourceNotFound(
-                        asyncResp->res, "VLAN Network Interface", ifaceId);
-                    return;
-                }
+        .privileges(redfish::privileges::patchVLanNetworkInterface)
+        .methods(
+            boost::beast::http::verb::
+                patch)([&app](
+                           const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& parentIfaceId,
+                           const std::string& ifaceId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+            if (!verifyNames(parentIfaceId, ifaceId))
+            {
+                messages::resourceNotFound(asyncResp->res,
+                                           "VLanNetworkInterface", ifaceId);
+                return;
+            }
 
-                bool vlanEnable = false;
-                uint32_t vlanId = 0;
+            std::optional<bool> vlanEnable;
+            std::optional<uint32_t> vlanId;
 
-                if (!json_util::readJson(req, asyncResp->res, "VLANEnable",
-                                         vlanEnable, "VLANId", vlanId))
-                {
-                    return;
-                }
+            if (!json_util::readJsonPatch(req, asyncResp->res, "VLANEnable",
+                                          vlanEnable, "VLANId", vlanId))
+            {
+                return;
+            }
 
-                // Get single eth interface data, and call the below callback
-                // for JSON preparation
-                getEthernetIfaceData(
-                    ifaceId,
-                    [asyncResp, parentIfaceId, ifaceId, &vlanEnable, &vlanId](
-                        const bool& success,
-                        const EthernetInterfaceData& ethData,
-                        const boost::container::flat_set<IPv4AddressData>&,
-                        const boost::container::flat_set<IPv6AddressData>&) {
-                        if (success && !ethData.vlan_id.empty())
+            if (vlanId)
+            {
+                messages::propertyNotWritable(asyncResp->res, "VLANId");
+                return;
+            }
+
+            // Get single eth interface data, and call the below callback
+            // for JSON preparation
+            getEthernetIfaceData(
+                ifaceId,
+                [asyncResp, parentIfaceId, ifaceId, vlanEnable](
+                    const bool& success, const EthernetInterfaceData& ethData,
+                    const boost::container::flat_set<IPv4AddressData>&,
+                    const boost::container::flat_set<IPv6AddressData>&) {
+                    if (success && ethData.vlanId)
+                    {
+                        if (vlanEnable)
                         {
-                            auto callback =
+                            crow::connections::systemBus->async_method_call(
                                 [asyncResp](
                                     const boost::system::error_code ec) {
                                     if (ec)
                                     {
                                         messages::internalError(asyncResp->res);
+                                        return;
                                     }
-                                };
-
-                            if (vlanEnable == true)
-                            {
-                                crow::connections::systemBus->async_method_call(
-                                    std::move(callback),
-                                    "xyz.openbmc_project.Network",
-                                    "/xyz/openbmc_project/network/" + ifaceId,
-                                    "org.freedesktop.DBus.Properties", "Set",
-                                    "xyz.openbmc_project.Network.VLAN", "Id",
-                                    dbus::utility::DbusVariantType(vlanId));
-                            }
-                            else
-                            {
-                                BMCWEB_LOG_DEBUG
-                                    << "vlanEnable is false. Deleting the "
-                                       "vlan interface";
-                                crow::connections::systemBus->async_method_call(
-                                    std::move(callback),
-                                    "xyz.openbmc_project.Network",
-                                    std::string(
-                                        "/xyz/openbmc_project/network/") +
-                                        ifaceId,
-                                    "xyz.openbmc_project.Object.Delete",
-                                    "Delete");
-                            }
+                                },
+                                "xyz.openbmc_project.Network",
+                                "/xyz/openbmc_project/network/" + ifaceId,
+                                "org.freedesktop.DBus.Properties", "Set",
+                                "xyz.openbmc_project.Network.EthernetInterface",
+                                "NICEnabled",
+                                dbus::utility::DbusVariantType(*vlanEnable));
                         }
-                        else
-                        {
-                            // TODO(Pawel)consider distinguish between non
-                            // existing object, and other errors
-                            messages::resourceNotFound(asyncResp->res,
-                                                       "VLAN Network Interface",
-                                                       ifaceId);
-                            return;
-                        }
-                    });
-            });
+                    }
+                    else
+                    {
+                        // TODO(Pawel)consider distinguish between non
+                        // existing object, and other errors
+                        messages::resourceNotFound(
+                            asyncResp->res, "VLanNetworkInterface", ifaceId);
+                        return;
+                    }
+                });
+        });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/EthernetInterfaces/<str>/VLANs/<str>/")
-        // This privilege is incorrect, it should be ConfigureManager
-        //.privileges(redfish::privileges::deleteVLanNetworkInterface)
-        .privileges({{"ConfigureComponents"}})
+        .privileges(redfish::privileges::deleteVLanNetworkInterface)
         .methods(boost::beast::http::verb::delete_)(
-            [](const crow::Request& /* req */,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& parentIfaceId, const std::string& ifaceId) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& parentIfaceId,
+                   const std::string& ifaceId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 if (!verifyNames(parentIfaceId, ifaceId))
                 {
-                    messages::resourceNotFound(
-                        asyncResp->res, "VLAN Network Interface", ifaceId);
+                    messages::resourceNotFound(asyncResp->res,
+                                               "VLanNetworkInterface", ifaceId);
                     return;
                 }
 
@@ -2239,7 +2191,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
                         const EthernetInterfaceData& ethData,
                         const boost::container::flat_set<IPv4AddressData>&,
                         const boost::container::flat_set<IPv6AddressData>&) {
-                        if (success && !ethData.vlan_id.empty())
+                        if (success && ethData.vlanId)
                         {
                             auto callback =
                                 [asyncResp](
@@ -2262,7 +2214,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
                             // TODO(Pawel)consider distinguish between non
                             // existing object, and other errors
                             messages::resourceNotFound(asyncResp->res,
-                                                       "VLAN Network Interface",
+                                                       "VLanNetworkInterface",
                                                        ifaceId);
                         }
                     });
@@ -2272,80 +2224,88 @@ inline void requestEthernetInterfacesRoutes(App& app)
                       "/EthernetInterfaces/<str>/VLANs/")
 
         .privileges(redfish::privileges::getVLanNetworkInterfaceCollection)
-        .methods(
-            boost::beast::http::verb::
-                get)([](const crow::Request& /* req */,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::string& rootInterfaceName) {
-            // Get eth interface list, and call the below callback for JSON
-            // preparation
-            getEthernetIfaceList([asyncResp, rootInterfaceName](
-                                     const bool& success,
-                                     const boost::container::flat_set<
-                                         std::string>& ifaceList) {
-                if (!success)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& rootInterfaceName) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
-                    messages::internalError(asyncResp->res);
                     return;
                 }
-
-                if (ifaceList.find(rootInterfaceName) == ifaceList.end())
-                {
-                    messages::resourceNotFound(asyncResp->res,
-                                               "VLanNetworkInterfaceCollection",
-                                               rootInterfaceName);
-                    return;
-                }
-
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#VLanNetworkInterfaceCollection."
-                    "VLanNetworkInterfaceCollection";
-                asyncResp->res.jsonValue["Name"] =
-                    "VLAN Network Interface Collection";
-
-                nlohmann::json ifaceArray = nlohmann::json::array();
-
-                for (const std::string& ifaceItem : ifaceList)
-                {
-                    if (boost::starts_with(ifaceItem, rootInterfaceName + "_"))
+                // Get eth interface list, and call the below callback for JSON
+                // preparation
+                getEthernetIfaceList([asyncResp, rootInterfaceName](
+                                         const bool& success,
+                                         const boost::container::flat_set<
+                                             std::string>& ifaceList) {
+                    if (!success)
                     {
-                        std::string path = "/redfish/v1/Managers/" PLATFORMBMCID
-                                           "/EthernetInterfaces/";
-                        path += rootInterfaceName;
-                        path += "/VLANs/";
-                        path += ifaceItem;
-                        ifaceArray.push_back({{"@odata.id", std::move(path)}});
+                        messages::internalError(asyncResp->res);
+                        return;
                     }
-                }
 
-                asyncResp->res.jsonValue["Members@odata.count"] =
-                    ifaceArray.size();
-                asyncResp->res.jsonValue["Members"] = std::move(ifaceArray);
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/" PLATFORMBMCID
-                    "/EthernetInterfaces/" +
-                    rootInterfaceName + "/VLANs";
+                    if (ifaceList.find(rootInterfaceName) == ifaceList.end())
+                    {
+                        messages::resourceNotFound(
+                            asyncResp->res, "VLanNetworkInterfaceCollection",
+                            rootInterfaceName);
+                        return;
+                    }
+
+                    asyncResp->res.jsonValue["@odata.type"] =
+                        "#VLanNetworkInterfaceCollection."
+                        "VLanNetworkInterfaceCollection";
+                    asyncResp->res.jsonValue["Name"] =
+                        "VLAN Network Interface Collection";
+
+                    nlohmann::json ifaceArray = nlohmann::json::array();
+
+                    for (const std::string& ifaceItem : ifaceList)
+                    {
+                        if (ifaceItem.starts_with(rootInterfaceName + "_"))
+                        {
+                            std::string path =
+                                "/redfish/v1/Managers/" PLATFORMBMCID
+                                "/EthernetInterfaces/";
+                            path += rootInterfaceName;
+                            path += "/VLANs/";
+                            path += ifaceItem;
+                            nlohmann::json::object_t iface;
+                            iface["@odata.id"] = std::move(path);
+                            ifaceArray.push_back(std::move(iface));
+                        }
+                    }
+
+                    asyncResp->res.jsonValue["Members@odata.count"] =
+                        ifaceArray.size();
+                    asyncResp->res.jsonValue["Members"] = std::move(ifaceArray);
+                    asyncResp->res.jsonValue["@odata.id"] =
+                        "/redfish/v1/Managers/" PLATFORMBMCID
+                        "/EthernetInterfaces/" +
+                        rootInterfaceName + "/VLANs";
+                });
             });
-        });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/EthernetInterfaces/<str>/VLANs/")
-        // This privilege is wrong, it should be ConfigureManager
-        //.privileges(redfish::privileges::postVLanNetworkInterfaceCollection)
-        .privileges({{"ConfigureComponents"}})
+        .privileges(redfish::privileges::postVLanNetworkInterfaceCollection)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& rootInterfaceName) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& rootInterfaceName) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 bool vlanEnable = false;
                 uint32_t vlanId = 0;
-                if (!json_util::readJson(req, asyncResp->res, "VLANId", vlanId,
-                                         "VLANEnable", vlanEnable))
+                if (!json_util::readJsonPatch(req, asyncResp->res, "VLANId",
+                                              vlanId, "VLANEnable", vlanEnable))
                 {
                     return;
                 }
                 // Need both vlanId and vlanEnable to service this request
-                if (!vlanId)
+                if (vlanId == 0U)
                 {
                     messages::propertyMissing(asyncResp->res, "VLANId");
                 }

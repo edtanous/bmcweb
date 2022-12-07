@@ -1,8 +1,0 @@
-{
-    "$id": "/schemas/v1/JsonSchemas/NvidiaSwitch.json",
-    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
-    "copyright": "Copyright 2021-2022 NVIDIA. For the full NVIDIA copyright policy, see LICENSE.md",
-    "definitions": {},
-    "owningEntity": "NVIDIA",
-    "title": "#NvidiaSwitch"
-}

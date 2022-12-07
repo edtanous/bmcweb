@@ -1,8 +1,8 @@
 {
-    "$id": "http://redfish.dmtf.org/schemas/v1/Port.v1_4_0.json",
+    "$id": "http://redfish.dmtf.org/schemas/v1/Port.v1_7_0.json",
     "$ref": "#/definitions/Port",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
-    "copyright": "Copyright 2014-2021 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
+    "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
     "definitions": {
         "Actions": {
             "additionalProperties": false,
@@ -110,6 +110,16 @@
                     "type": "array",
                     "versionAdded": "v1_4_0"
                 },
+                "EEEEnabled": {
+                    "description": "Indicates whether IEEE 802.3az Energy-Efficient Ethernet (EEE) is enabled on this port.",
+                    "longDescription": "This property shall indicate whether IEEE 802.3az Energy-Efficient Ethernet (EEE) is enabled on this port.",
+                    "readonly": false,
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "versionAdded": "v1_5_0"
+                },
                 "FlowControlConfiguration": {
                     "anyOf": [
                         {
@@ -172,6 +182,7 @@
                     "versionAdded": "v1_4_0"
                 },
                 "SupportedEthernetCapabilities": {
+                    "deprecated": "This property has been deprecated in favor of individual fields for the various properties.",
                     "description": "The set of Ethernet capabilities that this port supports.",
                     "items": {
                         "anyOf": [
@@ -186,7 +197,18 @@
                     "longDescription": "This property shall contain an array of Ethernet capabilities supported by this port.",
                     "readonly": true,
                     "type": "array",
-                    "versionAdded": "v1_3_0"
+                    "versionAdded": "v1_3_0",
+                    "versionDeprecated": "v1_5_0"
+                },
+                "WakeOnLANEnabled": {
+                    "description": "Indicates whether Wake on LAN (WoL) is enabled on this port.",
+                    "longDescription": "This property shall indicate whether Wake on LAN (WoL) is enabled on this port.",
+                    "readonly": false,
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "versionAdded": "v1_5_0"
                 }
             },
             "type": "object"
@@ -435,6 +457,70 @@
             },
             "type": "string"
         },
+        "InfiniBandProperties": {
+            "additionalProperties": false,
+            "description": "InfiniBand-specific properties for a port.",
+            "longDescription": "This type shall contain InfiniBand-specific properties for a port.",
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "AssociatedNodeGUIDs": {
+                    "description": "An array of configured node GUIDs that are associated with this network port, including the programmed address of the lowest numbered network device function, the configured but not active address, if applicable, the address for hardware port teaming, or other network addresses.",
+                    "items": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "longDescription": "This property shall contain an array of configured node GUIDs that are associated with this network port, including the programmed address of the lowest numbered network device function, the configured but not active address if applicable, the address for hardware port teaming, or other network addresses.",
+                    "pattern": "^([0-9A-Fa-f]{4}[:-]){3}([0-9A-Fa-f]{4})$",
+                    "readonly": true,
+                    "type": "array",
+                    "versionAdded": "v1_6_0"
+                },
+                "AssociatedPortGUIDs": {
+                    "description": "An array of configured port GUIDs that are associated with this network port, including the programmed address of the lowest numbered network device function, the configured but not active address, if applicable, the address for hardware port teaming, or other network addresses.",
+                    "items": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "longDescription": "This property shall contain an array of configured port GUIDs that are associated with this network port, including the programmed address of the lowest numbered network device function, the configured but not active address if applicable, the address for hardware port teaming, or other network addresses.",
+                    "pattern": "^([0-9A-Fa-f]{4}[:-]){3}([0-9A-Fa-f]{4})$",
+                    "readonly": true,
+                    "type": "array",
+                    "versionAdded": "v1_6_0"
+                },
+                "AssociatedSystemGUIDs": {
+                    "description": "An array of configured system GUIDs that are associated with this network port, including the programmed address of the lowest numbered network device function, the configured but not active address, if applicable, the address for hardware port teaming, or other network addresses.",
+                    "items": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "longDescription": "This property shall contain an array of configured system GUIDs that are associated with this network port, including the programmed address of the lowest numbered network device function, the configured but not active address if applicable, the address for hardware port teaming, or other network addresses.",
+                    "pattern": "^([0-9A-Fa-f]{4}[:-]){3}([0-9A-Fa-f]{4})$",
+                    "readonly": true,
+                    "type": "array",
+                    "versionAdded": "v1_6_0"
+                }
+            },
+            "type": "object"
+        },
         "LLDPReceive": {
             "additionalProperties": false,
             "description": "Link Layer Data Protocol (LLDP) data received from the remote partner across this link.",
@@ -456,7 +542,7 @@
             "properties": {
                 "ChassisId": {
                     "description": "Link Layer Data Protocol (LLDP) chassis ID received from the remote partner across this link.",
-                    "longDescription": "This property shall contain the chassis ID received from the remote partner across this link.  If no such chassis ID has been received, this value shall be an empty string.",
+                    "longDescription": "This property shall contain the chassis ID received from the remote partner across this link.  If no such chassis ID has been received, this property should not be present.",
                     "readonly": true,
                     "type": [
                         "string",
@@ -474,13 +560,13 @@
                         }
                     ],
                     "description": "The type of identifier used for the chassis ID received from the remote partner across this link.",
-                    "longDescription": "This property shall contain the IEEE 802.1AB-2009 chassis ID subtype received from the remote partner across this link.  If no such chassis ID subtype has been received, this value shall be `NotTransmitted`.",
+                    "longDescription": "This property shall contain the IEEE 802.1AB-2009 chassis ID subtype received from the remote partner across this link.  If no such chassis ID subtype has been received, this property should not be present.",
                     "readonly": true,
                     "versionAdded": "v1_4_0"
                 },
                 "ManagementAddressIPv4": {
                     "description": "The IPv4 management address received from the remote partner across this link.",
-                    "longDescription": "This property shall contain the IPv4 management address received from the remote partner across this link.  If no such management address has been received, this value shall be an empty string.",
+                    "longDescription": "This property shall contain the IPv4 management address received from the remote partner across this link.  If no such management address has been received, this property should not be present.",
                     "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$",
                     "readonly": true,
                     "type": [
@@ -491,7 +577,7 @@
                 },
                 "ManagementAddressIPv6": {
                     "description": "The IPv6 management address received from the remote partner across this link.",
-                    "longDescription": "This property shall contain the IPv6 management address received from the remote partner across this link.  If no such management address has been received, this value shall be an empty string.",
+                    "longDescription": "This property shall contain the IPv6 management address received from the remote partner across this link.  If no such management address has been received, this property should not be present.",
                     "readonly": true,
                     "type": [
                         "string",
@@ -501,7 +587,7 @@
                 },
                 "ManagementAddressMAC": {
                     "description": "The management MAC address received from the remote partner across this link.",
-                    "longDescription": "This property shall contain the management MAC address received from the remote partner across this link.  If no such management address has been received, this value shall be an empty string.",
+                    "longDescription": "This property shall contain the management MAC address received from the remote partner across this link.  If no such management address has been received, this property should not be present.",
                     "pattern": "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$",
                     "readonly": true,
                     "type": [
@@ -512,7 +598,7 @@
                 },
                 "ManagementVlanId": {
                     "description": "The management VLAN ID received from the remote partner across this link.",
-                    "longDescription": "This property shall contain the management VLAN ID received from the remote partner across this link.  If no such management VLAN ID has been received, this value shall be `4095`.",
+                    "longDescription": "This property shall contain the management VLAN ID received from the remote partner across this link.  If no such management VLAN ID has been received, this property should not be present.",
                     "maximum": 4095,
                     "minimum": 0,
                     "readonly": true,
@@ -524,7 +610,7 @@
                 },
                 "PortId": {
                     "description": "A colon delimited string of hexadecimal octets identifying a port.",
-                    "longDescription": "This property shall contain a colon delimited string of hexadecimal octets identifying the port received from the remote partner across this link.  If no such port ID has been received, this value shall be an empty string.",
+                    "longDescription": "This property shall contain a colon delimited string of hexadecimal octets identifying the port received from the remote partner across this link.  If no such port ID has been received, this property should not be present.",
                     "pattern": "^([0-9A-F]{2})([:]([0-9A-F]){2}){0,63}$",
                     "readonly": true,
                     "type": [
@@ -543,7 +629,7 @@
                         }
                     ],
                     "description": "The port ID subtype received from the remote partner across this link.",
-                    "longDescription": "This property shall contain the port ID subtype from IEEE 802.1AB-2009 Table 8-3 received from the remote partner across this link.  If no such port ID subtype has been received, this value shall be `NotTransmitted`.",
+                    "longDescription": "This property shall contain the port ID subtype from IEEE 802.1AB-2009 Table 8-3 received from the remote partner across this link.  If no such port ID subtype has been received, this property should not be present.",
                     "readonly": true,
                     "versionAdded": "v1_4_0"
                 }
@@ -596,7 +682,7 @@
                 "ManagementAddressIPv4": {
                     "description": "The IPv4 management address to be transmitted from this endpoint.",
                     "longDescription": "This property shall contain the IPv4 management address to be transmitted from this endpoint.  If no such management address is to be transmitted, this value shall be an empty string.",
-                    "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$",
+                    "pattern": "(^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$)|(^$)",
                     "readonly": false,
                     "type": [
                         "string",
@@ -617,7 +703,7 @@
                 "ManagementAddressMAC": {
                     "description": "The management MAC address to be transmitted from this endpoint.",
                     "longDescription": "This property shall contain the management MAC address to be transmitted from this endpoint.  If no such management address is to be transmitted, this value shall be an empty string.",
-                    "pattern": "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$",
+                    "pattern": "(^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$)|(^$)",
                     "readonly": false,
                     "type": [
                         "string",
@@ -640,7 +726,7 @@
                 "PortId": {
                     "description": "A colon delimited string of hexadecimal octets identifying a port to be transmitted from this endpoint.",
                     "longDescription": "This property shall contain a colon delimited string of hexadecimal octets identifying the port for an LLDP endpoint.  If no such port ID is to be transmitted, this value shall be an empty string.",
-                    "pattern": "^([0-9A-F]{2})([:]([0-9A-F]){2}){0,63}$",
+                    "pattern": "(^([0-9A-F]{2})([:]([0-9A-F]){2}){0,63}$)|(^$)",
                     "readonly": false,
                     "type": [
                         "string",
@@ -800,23 +886,36 @@
             },
             "properties": {
                 "AssociatedEndpoints": {
-                    "description": "An array of links to the endpoints that connect through this port.",
+                    "description": "An array of links to the endpoints at the other end of the link.",
                     "items": {
                         "$ref": "http://redfish.dmtf.org/schemas/v1/Endpoint.json#/definitions/Endpoint"
                     },
-                    "longDescription": "This property shall contain an array of links to resources of type Endpoint with which this port is associated.",
+                    "longDescription": "This property shall contain an array of links to resources of type Endpoint that represent the endpoints to which this port is connected.",
                     "readonly": true,
                     "type": "array"
                 },
                 "AssociatedEndpoints@odata.count": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/count"
                 },
+                "Cables": {
+                    "description": "An array of links to the cables connected to this port.",
+                    "items": {
+                        "$ref": "http://redfish.dmtf.org/schemas/v1/Cable.json#/definitions/Cable"
+                    },
+                    "longDescription": "This property shall contain an array of links to resources of type Cable that represent the cables connected to this port.",
+                    "readonly": true,
+                    "type": "array",
+                    "versionAdded": "v1_5_0"
+                },
+                "Cables@odata.count": {
+                    "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/count"
+                },
                 "ConnectedPorts": {
-                    "description": "An array of links to the remote ports connected to this port.",
+                    "description": "An array of links to the remote device ports at the other end of the link.",
                     "items": {
                         "$ref": "http://redfish.dmtf.org/schemas/v1/Port.json#/definitions/Port"
                     },
-                    "longDescription": "This property shall contain an array of links to resources of type Port that represent the physical connections associated with this port.",
+                    "longDescription": "This property shall contain an array of links to resources of type Port that represent the remote device ports to which this port is connected.",
                     "readonly": true,
                     "type": "array",
                     "versionAdded": "v1_2_0"
@@ -825,11 +924,11 @@
                     "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/count"
                 },
                 "ConnectedSwitchPorts": {
-                    "description": "An array of links to the ports that connect to the switch through this port.",
+                    "description": "An array of links to the switch ports at the other end of the link.",
                     "items": {
                         "$ref": "http://redfish.dmtf.org/schemas/v1/Port.json#/definitions/Port"
                     },
-                    "longDescription": "This property shall contain an array of links to resources of type Port with which this port is associated.",
+                    "longDescription": "This property shall contain an array of links to resources of type Port that represent the switch ports to which this port is connected.",
                     "readonly": true,
                     "type": "array"
                 },
@@ -837,15 +936,28 @@
                     "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/count"
                 },
                 "ConnectedSwitches": {
-                    "description": "An array of links to the switches that connect to the device through this port.",
+                    "description": "An array of links to the switches at the other end of the link.",
                     "items": {
                         "$ref": "http://redfish.dmtf.org/schemas/v1/Switch.json#/definitions/Switch"
                     },
-                    "longDescription": "This property shall contain an array of links to resources of type Switch with which this port is associated.",
+                    "longDescription": "This property shall contain an array of links to resources of type Switch that represent the switches to which this port is connected.",
                     "readonly": true,
                     "type": "array"
                 },
                 "ConnectedSwitches@odata.count": {
+                    "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/count"
+                },
+                "EthernetInterfaces": {
+                    "description": "The links to the Ethernet interfaces this port provides.",
+                    "items": {
+                        "$ref": "http://redfish.dmtf.org/schemas/v1/EthernetInterface.json#/definitions/EthernetInterface"
+                    },
+                    "longDescription": "This property shall contain an array of links to resources of type EthernetInterface that represent the Ethernet interfaces this port provides.  This property shall not include Ethernet interfaces that are not directly associated to a physical port.",
+                    "readonly": true,
+                    "type": "array",
+                    "versionAdded": "v1_7_0"
+                },
+                "EthernetInterfaces@odata.count": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/count"
                 },
                 "Oem": {
@@ -1043,6 +1155,19 @@
                     "$ref": "http://redfish.dmtf.org/schemas/v1/Resource.json#/definitions/Id",
                     "readonly": true
                 },
+                "InfiniBand": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/InfiniBandProperties"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "description": "InfiniBand properties for this port.",
+                    "longDescription": "This property shall contain InfiniBand-specific properties of the port.",
+                    "versionAdded": "v1_6_0"
+                },
                 "InterfaceEnabled": {
                     "description": "An indication of whether the interface is enabled.",
                     "longDescription": "This property shall indicate whether the interface is enabled.",
@@ -1085,9 +1210,9 @@
                 },
                 "LinkStatus": {
                     "$ref": "#/definitions/LinkStatus",
-                    "description": "The desired link status for this interface.",
-                    "longDescription": "This property shall contain the desired link status for this interface.",
-                    "readonly": false,
+                    "description": "The link status for this interface.",
+                    "longDescription": "This property shall contain the link status for this interface.",
+                    "readonly": true,
                     "versionAdded": "v1_2_0"
                 },
                 "LinkTransitionIndicator": {
@@ -1265,16 +1390,48 @@
                 "PrivateLoop",
                 "PublicLoop",
                 "Generic",
-                "ExtenderFabric"
+                "ExtenderFabric",
+                "FPort",
+                "EPort",
+                "TEPort",
+                "NPPort",
+                "GPort",
+                "NLPort",
+                "FLPort",
+                "EXPort",
+                "UPort",
+                "DPort"
             ],
             "enumDescriptions": {
+                "DPort": "This port connection type is a diagnostic port.",
+                "EPort": "This port connection type is an extender fabric port.",
+                "EXPort": "This port connection type is an external fabric port.",
                 "ExtenderFabric": "This port connection type is an extender fabric port.",
+                "FLPort": "This port connects in a fabric loop configuration.",
+                "FPort": "This port connection type is a fabric port.",
+                "GPort": "This port connection type is a generic fabric port.",
                 "Generic": "This port connection type is a generic fabric port.",
+                "NLPort": "This port connects in a node loop configuration.",
+                "NPPort": "This port connection type is a proxy N port for N-Port virtualization.",
                 "NPort": "This port connects through an N-Port to a switch.",
                 "NotConnected": "This port is not connected.",
                 "PointToPoint": "This port connects in a Point-to-point configuration.",
                 "PrivateLoop": "This port connects in a private loop configuration.",
-                "PublicLoop": "This port connects in a public configuration."
+                "PublicLoop": "This port connects in a public configuration.",
+                "TEPort": "This port connection type is an trunking extender fabric port.",
+                "UPort": "This port connection type is unassigned."
+            },
+            "enumVersionAdded": {
+                "DPort": "v1_5_0",
+                "EPort": "v1_5_0",
+                "EXPort": "v1_5_0",
+                "FLPort": "v1_5_0",
+                "FPort": "v1_5_0",
+                "GPort": "v1_5_0",
+                "NLPort": "v1_5_0",
+                "NPPort": "v1_5_0",
+                "TEPort": "v1_5_0",
+                "UPort": "v1_5_0"
             },
             "type": "string"
         },
@@ -1505,6 +1662,6 @@
         }
     },
     "owningEntity": "DMTF",
-    "release": "2021.1",
-    "title": "#Port.v1_4_0.Port"
+    "release": "2022.2",
+    "title": "#Port.v1_7_0.Port"
 }

@@ -26,40 +26,40 @@ namespace redfish
 {
 namespace message_registries
 {
-inline std::span<const MessageEntry>
+inline std::span<const redfish::registries::MessageEntry>
     getRegistryFromPrefix(const std::string_view registryName)
 {
-    if (task_event::header.registryPrefix == registryName)
+    if (redfish::registries::task_event::header.registryPrefix == registryName)
     {
-        return std::span<const MessageEntry>{task_event::registry};
+        return std::span<const redfish::registries::MessageEntry>{redfish::registries::task_event::registry};
     }
-    if (openbmc::header.registryPrefix == registryName)
+    if (redfish::registries::openbmc::header.registryPrefix == registryName)
     {
-        return std::span<const MessageEntry>{openbmc::registry};
+        return std::span<const redfish::registries::MessageEntry>{redfish::registries::openbmc::registry};
     }
-    if (base::header.registryPrefix == registryName)
+    if (redfish::registries::base::header.registryPrefix == registryName)
     {
-        return std::span<const MessageEntry>{base::registry};
+        return std::span<const redfish::registries::MessageEntry>{redfish::registries::base::registry};
     }
-    if (resource_event::header.registryPrefix == registryName)
+    if (redfish::registries::resource_event::header.registryPrefix == registryName)
     {
-        return std::span<const MessageEntry>{resource_event::registry};
+        return std::span<const redfish::registries::MessageEntry>{redfish::registries::resource_event::registry};
     }
-    if (update_event::header.registryPrefix == registryName)
+    if (redfish::registries::update_event::header.registryPrefix == registryName)
     {
-        return std::span<const MessageEntry>{update_event::registry};
+        return std::span<const redfish::registries::MessageEntry>{redfish::registries::update_event::registry};
     }
 
     return {};
 }
 
-inline const Message*
+inline const redfish::registries::Message*
     getMessageFromRegistry(const std::string& messageKey,
-                           const std::span<const MessageEntry> registry)
+                           const std::span<const redfish::registries::MessageEntry> registry)
 {
-    std::span<const MessageEntry>::iterator messageIt = std::find_if(
+    std::span<const redfish::registries::MessageEntry>::iterator messageIt = std::find_if(
         registry.begin(), registry.end(),
-        [&messageKey](const MessageEntry& messageEntry) {
+        [&messageKey](const redfish::registries::MessageEntry& messageEntry) {
             return !std::strcmp(messageEntry.first, messageKey.c_str());
         });
     if (messageIt != registry.end())
@@ -76,7 +76,7 @@ inline std::string getPrefix(const std::string& messageID)
     return messageID.substr(0, pos);
 }
 
-inline const Message* getMessage(const std::string_view& messageID)
+inline const redfish::registries::Message* getMessage(const std::string_view& messageID)
 {
     // Redfish MessageIds are in the form
     // RegistryName.MajorVersion.MinorVersion.MessageKey, so parse it to
@@ -98,7 +98,7 @@ inline const Message* getMessage(const std::string_view& messageID)
 
 inline bool isMessageIdValid(const std::string_view messageId)
 {
-    const Message* msg = getMessage(messageId);
+    const redfish::registries::Message* msg = getMessage(messageId);
     (void)msg;
     return msg != nullptr;
 }

@@ -17,12 +17,13 @@
 
 #include "logging.hpp"
 
-#include <string>
-#include <chrono>
-#include <thread>
-#include <iostream>
-#include <boost/process.hpp>
 #include <boost/asio.hpp>
+#include <boost/process.hpp>
+
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <thread>
 
 enum class MctpVdmUtilCommand
 {
@@ -57,85 +58,79 @@ namespace bp = boost::process;
 
 class MctpVdmUtil
 {
-    public:
-        MctpVdmUtil(uint32_t endpointId, const int timeout = 10):
-            endpointId(endpointId),
-            timeout(timeout),
-            returnStatus(0),
-            stdOut(""),
-            stdErr(""),
-            killed(false),
-            stopped(false),
-            ioc(),
-            deadline_timer(ioc)    
-        {}
+  public:
+    MctpVdmUtil(uint32_t endpointId, const int timeout = 10) :
+        endpointId(endpointId), timeout(timeout), returnStatus(0), stdOut(""),
+        stdErr(""), killed(false), stopped(false), ioc(), deadline_timer(ioc)
+    {}
 
-        /**
-         *@brief Execute mctp-vdm-util tool command for
-         * relevant MCTP EID
-         * @param mctpVdmUtilcommand the enum with commands
-         * available for mctp-vdm-util tool 
-         * 
-         * @return none.
-         */
-        void run(MctpVdmUtilCommand mctpVdmUtilcommand);
+    /**
+     *@brief Execute mctp-vdm-util tool command for
+     * relevant MCTP EID
+     * @param mctpVdmUtilcommand the enum with commands
+     * available for mctp-vdm-util tool
+     *
+     * @return none.
+     */
+    void run(MctpVdmUtilCommand mctpVdmUtilcommand);
 
-        /**
-         *@brief Get the exit code of mctp-vdm-util
-         * The method 'run' must be executed before
-         * 
-         * @return exit code of mctp-vdm-util tool.
-         */
-        int getReturnStatus();
+    /**
+     *@brief Get the exit code of mctp-vdm-util
+     * The method 'run' must be executed before
+     *
+     * @return exit code of mctp-vdm-util tool.
+     */
+    int getReturnStatus();
 
-        /**
-         *@brief Get the standard output of mctp-vdm-util tool
-         * The method 'run' must be executed before
-         * 
-         * @return standard output of mctp-vdm-util tool.
-         */
-        std::string getStdOut();
+    /**
+     *@brief Get the standard output of mctp-vdm-util tool
+     * The method 'run' must be executed before
+     *
+     * @return standard output of mctp-vdm-util tool.
+     */
+    std::string getStdOut();
 
-        /**
-         *@brief Get the standard error of mctp-vdm-util tool
-         * The method 'run' must be executed before
-         * 
-         * @return standard error of mctp-vdm-util tool
-         */
-        std::string getStdErr();
+    /**
+     *@brief Get the standard error of mctp-vdm-util tool
+     * The method 'run' must be executed before
+     *
+     * @return standard error of mctp-vdm-util tool
+     */
+    std::string getStdErr();
 
-        /**
-         *@brief Get flag if mctp-vdm-util tool was terminated
-         * 
-         * @return true if mctp-vdm-util tool was terminated.
-         */
-        bool wasKilled();
+    /**
+     *@brief Get flag if mctp-vdm-util tool was terminated
+     *
+     * @return true if mctp-vdm-util tool was terminated.
+     */
+    bool wasKilled();
 
-    private:
-        void initLog();
-        void timeoutHandler(const boost::system::error_code& ec);
-        void kill();
-        void translateOperationToCommand(MctpVdmUtilCommand mctpVdmUtilcommand);
+  private:
+    void initLog();
+    void timeoutHandler(const boost::system::error_code& ec);
+    void kill();
+    void translateOperationToCommand(MctpVdmUtilCommand mctpVdmUtilcommand);
 
-        uint32_t endpointId = 0L;
+    uint32_t endpointId = 0L;
 
-        std::string command;
-        const int timeout;
-        int returnStatus;
-        std::string stdOut;
-        std::string stdErr;
-        bool killed;
-        bool stopped;
-        boost::process::group group;
-        boost::asio::io_context ioc;
-        boost::asio::deadline_timer deadline_timer;
+    std::string command;
+    const int timeout;
+    int returnStatus;
+    std::string stdOut;
+    std::string stdErr;
+    bool killed;
+    bool stopped;
+    boost::process::group group;
+    boost::asio::io_context ioc;
+    boost::asio::deadline_timer deadline_timer;
 };
 
-void MctpVdmUtil::translateOperationToCommand(MctpVdmUtilCommand mctpVdmUtilcommand)
+void MctpVdmUtil::translateOperationToCommand(
+    MctpVdmUtilCommand mctpVdmUtilcommand)
 {
     std::string cmd;
 
-    switch(mctpVdmUtilcommand)
+    switch (mctpVdmUtilcommand)
     {
         case MctpVdmUtilCommand::BACKGROUNDCOPY_INIT:
             cmd = "background_copy_init";
@@ -171,12 +166,10 @@ void MctpVdmUtil::translateOperationToCommand(MctpVdmUtilCommand mctpVdmUtilcomm
         case MctpVdmUtilCommand::INBAND_STATUS:
             cmd = "in_band_query_status";
             break;
-        
     }
 
-    command = "mctp-vdm-util -t " + std::to_string(endpointId)  + " -c " + cmd;
+    command = "mctp-vdm-util -t " + std::to_string(endpointId) + " -c " + cmd;
 }
-
 
 void MctpVdmUtil::timeoutHandler(const boost::system::error_code& ec)
 {
@@ -195,23 +188,17 @@ void MctpVdmUtil::run(MctpVdmUtilCommand mctpVdmUtilcommand)
 
     std::future<std::string> dataOut;
     std::future<std::string> dataErr;
-    bp::child c(command, bp::std_in.close(),
-        bp::std_out > dataOut,
-        bp::std_err > dataErr, ioc,
-        group,
-        bp::on_exit([=, this]
-            (int e, const std::error_code& ec) 
-            {
-                (void)ec;
-                deadline_timer.cancel();
-                returnStatus = e;
-            }));
+    bp::child c(command, bp::std_in.close(), bp::std_out > dataOut,
+                bp::std_err > dataErr, ioc, group,
+                bp::on_exit([=, this](int e, const std::error_code& ec) {
+                    (void)ec;
+                    deadline_timer.cancel();
+                    returnStatus = e;
+                }));
 
     deadline_timer.expires_from_now(boost::posix_time::seconds(timeout));
     deadline_timer.async_wait(
-        [this](const boost::system::error_code& ec) {
-            timeoutHandler(ec);
-        });
+        [this](const boost::system::error_code& ec) { timeoutHandler(ec); });
 
     ioc.run();
     c.wait();
@@ -238,7 +225,7 @@ void MctpVdmUtil::kill()
 {
     std::error_code ec;
     group.terminate(ec);
-    if(ec)
+    if (ec)
     {
         throw std::runtime_error(ec.message());
     }

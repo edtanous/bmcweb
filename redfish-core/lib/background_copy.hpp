@@ -20,10 +20,10 @@
 /**
  *@brief Checks whether the background copy is enabled
  *
- * @param endpointId the EID which is used 
+ * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
- * 
- * @return Object of MctpVdmUtilStatusResponse 
+ *
+ * @return Object of MctpVdmUtilStatusResponse
  * contains info:
  * whether the MCTP command was performed successfully and
  * whether background copy is enabled or not.
@@ -38,13 +38,14 @@ inline MctpVdmUtilStatusResponse isBackgroundCopyEnabled(uint32_t endpointId)
 
     mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_STATUS);
 
-    if(mctpVdmUtilWrapper.getReturnStatus() == 0)
+    if (mctpVdmUtilWrapper.getReturnStatus() == 0)
     {
         status.isSuccess = true;
 
         std::string rxTemplate = "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
 
-        if (std::regex_match(mctpVdmUtilWrapper.getStdOut(), std::regex(rxTemplate)))
+        if (std::regex_match(mctpVdmUtilWrapper.getStdOut(),
+                             std::regex(rxTemplate)))
         {
             status.enabled = true;
         }
@@ -56,10 +57,10 @@ inline MctpVdmUtilStatusResponse isBackgroundCopyEnabled(uint32_t endpointId)
 /**
  *@brief Checks whether status of background copy is pending
  *
- * @param endpointId the EID which is used 
+ * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
- * 
- * @return boolean value 
+ *
+ * @return boolean value
  * returns true when status is pending
  * otherwise returns false
  */
@@ -73,7 +74,7 @@ inline bool isBackgroundCopyStatusPending(uint32_t endpointId)
 
     mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_QUERY_PENDING);
 
-    if(mctpVdmUtilWrapper.getReturnStatus() == 0)
+    if (mctpVdmUtilWrapper.getReturnStatus() == 0)
     {
         std::string bgcResp = mctpVdmUtilWrapper.getStdOut();
 
@@ -89,15 +90,15 @@ inline bool isBackgroundCopyStatusPending(uint32_t endpointId)
 /**
  *@brief Checks status of background copy
  *
- * @param endpointId the EID which is used 
+ * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
- * 
- * @return Object of MctpVdmUtilProgressStatusResponse 
- * contains info: 
+ *
+ * @return Object of MctpVdmUtilProgressStatusResponse
+ * contains info:
  * whether the MCTP command was performed successfully and
  * the status of background copy.
  */
-inline MctpVdmUtilProgressStatusResponse 
+inline MctpVdmUtilProgressStatusResponse
     getBackgroundCopyStatus(uint32_t endpointId)
 {
     std::string rxTemplateCompleted = "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
@@ -111,7 +112,7 @@ inline MctpVdmUtilProgressStatusResponse
 
     mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_QUERY_PROGRESS);
 
-    if(mctpVdmUtilWrapper.getReturnStatus() == 0)
+    if (mctpVdmUtilWrapper.getReturnStatus() == 0)
     {
         status.isSuccess = true;
 
@@ -119,7 +120,7 @@ inline MctpVdmUtilProgressStatusResponse
 
         if (std::regex_match(bgcResp, std::regex(rxTemplateCompleted)))
         {
-            if(isBackgroundCopyStatusPending(endpointId))
+            if (isBackgroundCopyStatusPending(endpointId))
             {
                 status.status = "Pending";
             }
@@ -128,7 +129,7 @@ inline MctpVdmUtilProgressStatusResponse
                 status.status = "Completed";
             }
         }
-        else if(std::regex_match(bgcResp, std::regex(rxTemplateInProgress)))
+        else if (std::regex_match(bgcResp, std::regex(rxTemplateInProgress)))
         {
             status.status = "InProgress";
         }
@@ -140,21 +141,21 @@ inline MctpVdmUtilProgressStatusResponse
 /**
  *@brief Enable or Disable background copy
  *
- * @param endpointId the EID which is used 
+ * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
  * @param enabled Enable or disable the background copy
- * 
+ *
  * @return exit code form mctp-vdm-tool.
  */
 inline int enableBackgroundCopy(uint32_t endpointId, bool enabled)
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
 
-    if(enabled)
+    if (enabled)
     {
         mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_ENABLE);
-    } 
-    else 
+    }
+    else
     {
         mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_DISABLE);
     }

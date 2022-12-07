@@ -144,6 +144,19 @@ Fields common to all schemas
   - Shall be included if component contains temperature sensors, otherwise
     shall be omitted.
 
+#### /redfish/v1/Chassis/{ChassisId}/Drive/
+#### Drive
+- Members
+(This is dependent on a entity manager association from
+Chassis to Drives, The name of the association is "chassis<->drive")
+
+#### /redfish/v1/Chassis/{ChassisId}/Drive/{DriveId}/
+#### Drive
+- Drives
+- Drives@odata.count
+- Status
+(this is dependant on a entity manager association from Chassis to Drives)
+
 #### /redfish/v1/Chassis/{ChassisId}/Power/
 ##### Power
 - PowerControl
@@ -214,11 +227,14 @@ Fields common to all schemas
 
 ##### ThermalSubsystem
 - Status
+- ThermalMetrics
 
 #### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/ThermalMetrics/
 
 ##### ThermalMetrics
+
 - TemperatureReadingsCelsius
+
 
 #### /redfish/v1/Chassis/{ChassisId}/Power/
 ##### Power
@@ -676,6 +692,12 @@ the other.
 ##### Storage
 - Drives
 - Drives@odata.count
+- Status
+
+#### /redfish/v1/Systems/system/Storage/{StorageId}/Drive/{DriveId}/
+##### Storage
+- CapacityBytes
+- Links
 - Status
 
 #### /redfish/v1/TaskService/

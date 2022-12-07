@@ -20,11 +20,20 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/system/linux_error.hpp>
 #include <dbus_utility.hpp>
+#include <query.hpp>
 #include <registries/privilege_registry.hpp>
+#include <sdbusplus/asio/property.hpp>
+#include <sdbusplus/unpack_properties.hpp>
+#include <utils/dbus_utils.hpp>
 #include <utils/conditions_utils.hpp>
+#include <boost/format.hpp>
 
 namespace redfish
 {
+
+using GetSubTreeType = std::vector<
+    std::pair<std::string,
+              std::vector<std::pair<std::string, std::vector<std::string>>>>>;
 
 static constexpr char const* pcieService = "xyz.openbmc_project.PCIe";
 static constexpr char const* pciePath = "/xyz/openbmc_project/PCIe";
@@ -313,8 +322,7 @@ static inline void
                 asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 std::shared_ptr<HealthRollup> health =
-                    std::make_shared<HealthRollup>(
-                        crow::connections::systemBus, escapedPath,
+                    std::make_shared<HealthRollup>(escapedPath,
                         [asyncResp](const std::string& rootHealth,
                                     const std::string& healthRollup) {
                             asyncResp->res.jsonValue["Status"]["Health"] =
@@ -733,10 +741,13 @@ inline void requestRoutesSystemPCIeDeviceCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/")
         .privileges(redfish::privileges::getPCIeDeviceCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-
             {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue = {
                     {"@odata.type",
                      "#PCIeDeviceCollection.PCIeDeviceCollection"},
@@ -756,12 +767,15 @@ inline void requestRoutesSystemPCIeDevice(App& app)
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/<str>/")
         .privileges(redfish::privileges::getPCIeDevice)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& device)
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& device) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
 
-            {
-                asyncResp->res.jsonValue = {
+        asyncResp->res.jsonValue = {
                     {"@odata.type", "#PCIeDevice.v1_4_0.PCIeDevice"},
                     {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                   "/PCIeDevices/" +
@@ -773,7 +787,8 @@ inline void requestRoutesSystemPCIeDevice(App& app)
                                     "/PCIeDevices/" +
                                         device + "/PCIeFunctions"}}}};
                 getPCIeDevice(asyncResp, device);
-            });
+                   });
+
 }
 
 inline void requestRoutesSystemPCIeFunctionCollection(App& app)
@@ -785,12 +800,15 @@ inline void requestRoutesSystemPCIeFunctionCollection(App& app)
                       "/PCIeDevices/<str>/PCIeFunctions/")
         .privileges(redfish::privileges::getPCIeFunctionCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& device)
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& device) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
 
-            {
-                asyncResp->res.jsonValue = {
+        asyncResp->res.jsonValue = {
                     {"@odata.type",
                      "#PCIeFunctionCollection.PCIeFunctionCollection"},
                     {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -809,9 +827,13 @@ inline void requestRoutesSystemPCIeFunction(App& app)
                       "/PCIeDevices/<str>/PCIeFunctions/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& device, const std::string& function) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
                 getPCIeDeviceFunction(asyncResp, device, function);
             });
 }
@@ -824,10 +846,14 @@ inline void requestRoutesChassisPCIeDeviceCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/PCIeDevices/")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& chassisId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
             crow::connections::systemBus->async_method_call(
                 [asyncResp,
                  chassisId](const boost::system::error_code ec,
@@ -878,11 +904,16 @@ inline void requestRoutesChassisPCIeDevice(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/PCIeDevices/<str>/")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& chassisId,
-                                              const std::string& device) {
+                                              const std::string& device)
+        {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             crow::connections::systemBus->async_method_call(
                 [asyncResp, chassisId,
                  device](const boost::system::error_code ec,
@@ -916,7 +947,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             [asyncResp, device, chassisPCIePath, interface,
                              chassisId, chassisPCIeDevicePath](
                                 const boost::system::error_code ec,
-                                const crow::openbmc_mapper::GetSubTreeType&
+                                const GetSubTreeType&
                                     subtree) {
                                 if (ec)
                                 {
@@ -1062,11 +1093,15 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
                  "/redfish/v1/Chassis/<str>/PCIeDevices/<str>/PCIeFunctions/")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& chassisId,
                                               const std::string& device) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
             crow::connections::systemBus->async_method_call(
                 [asyncResp, chassisId,
                  device](const boost::system::error_code ec,
@@ -1114,7 +1149,7 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
                             [asyncResp, device, chassisPCIePath, interface,
                              chassisId, chassisPCIeDevicePath](
                                 const boost::system::error_code ec,
-                                const crow::openbmc_mapper::GetSubTreeType&
+                                const GetSubTreeType&
                                     subtree) {
                                 if (ec)
                                 {
@@ -1170,7 +1205,7 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
                 "/xyz/openbmc_project/inventory", 0,
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Inventory.Item.Chassis"});
-        });
+    });
 }
 
 inline void requestRoutesChassisPCIeFunction(App& app)
@@ -1179,12 +1214,16 @@ inline void requestRoutesChassisPCIeFunction(App& app)
         app, "/redfish/v1/Chassis/<str>/PCIeDevices/<str>/PCIeFunctions/<str>/")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& chassisId,
                                               const std::string& device,
                                               const std::string& function) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
             crow::connections::systemBus->async_method_call(
                 [asyncResp, chassisId, device,
                  function](const boost::system::error_code ec,
@@ -1218,7 +1257,7 @@ inline void requestRoutesChassisPCIeFunction(App& app)
                             [asyncResp, device, function, chassisPCIePath,
                              interface, chassisId, chassisPCIeDevicePath](
                                 const boost::system::error_code ec,
-                                const crow::openbmc_mapper::GetSubTreeType&
+                                const GetSubTreeType&
                                     subtree) {
                                 if (ec)
                                 {

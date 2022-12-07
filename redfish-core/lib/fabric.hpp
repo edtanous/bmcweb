@@ -15,6 +15,8 @@
 */
 #pragma once
 
+#include "redfish_util.hpp"
+
 #include <app.hpp>
 #include <boost/format.hpp>
 #include <utils/collection.hpp>
@@ -517,8 +519,7 @@ inline void
 
     // update switch health
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
-        crow::connections::systemBus, objPath,
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(objPath,
         [asyncResp](const std::string& rootHealth,
                     const std::string& healthRollup) {
             asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
@@ -1500,8 +1501,8 @@ inline void requestRoutesNVSwitchReset(App& app)
                          const std::string& fabricId,
                          const std::string& switchId) {
             std::optional<std::string> resetType;
-            if (!json_util::readJson(req, asyncResp->res, "ResetType",
-                                     resetType))
+            if (!redfish::json_util::readJsonAction(req, asyncResp->res, "ResetType",
+                                       resetType))
             {
                 return;
             }
@@ -2889,7 +2890,7 @@ inline void
                      fabricId % switchId % portId)
                         .str();
                 asyncResp->res.jsonValue = {
-                    {"@odata.type", "#PortMetrics.v1_2_0.PortMetrics"},
+                    {"@odata.type", "#PortMetrics.v1_3_0.PortMetrics"},
                     {"@odata.id", portMetricsURI},
                     {"Name", portId + " Port Metrics"},
                     {"Id", "Metrics"}};

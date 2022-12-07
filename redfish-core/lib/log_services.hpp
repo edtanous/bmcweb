@@ -20,15 +20,21 @@
 #include "http_utility.hpp"
 #include "human_sort.hpp"
 #include "task.hpp"
+#include "utils/time_utils.hpp"
 
 #include <systemd/sd-journal.h>
+#include <tinyxml2.h>
 #include <unistd.h>
 
 #include <app.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/asio.hpp>
+#include <openbmc_dbus_rest.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/beast/http/verb.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/process.hpp>
 #include <boost/process/async.hpp>
@@ -36,10 +42,15 @@
 #include <boost/system/linux_error.hpp>
 #include <dbus_utility.hpp>
 #include <error_messages.hpp>
+#include <query.hpp>
 #include <registries/privilege_registry.hpp>
+#include <sdbusplus/asio/property.hpp>
+#include <sdbusplus/unpack_properties.hpp>
 #include <utils/dbus_log_utils.hpp>
+#include <utils/dbus_utils.hpp>
 #include <utils/origin_utils.hpp>
 #include <utils/registry_utils.hpp>
+#include <utils/time_utils.hpp>
 
 #include <charconv>
 #include <filesystem>
@@ -62,8 +73,63 @@ constexpr char const* crashdumpOnDemandInterface =
 constexpr char const* crashdumpTelemetryInterface =
     "com.intel.crashdump.Telemetry";
 
+enum class DumpCreationProgress
+{
+    DUMP_CREATE_SUCCESS,
+    DUMP_CREATE_FAILED,
+    DUMP_CREATE_INPROGRESS
+};
+
+namespace registries
+{
+
+static const Message*
+    getMessageFromRegistry(const std::string& messageKey,
+                           const std::span<const MessageEntry> registry)
+{
+    std::span<const MessageEntry>::iterator messageIt = std::find_if(
+        registry.begin(), registry.end(),
+        [&messageKey](const MessageEntry& messageEntry) {
+            return std::strcmp(messageEntry.first, messageKey.c_str()) == 0;
+        });
+    if (messageIt != registry.end())
+    {
+        return &messageIt->second;
+    }
+
+    return nullptr;
+}
+
+static const Message* getMessage(const std::string_view& messageID)
+{
+    // Redfish MessageIds are in the form
+    // RegistryName.MajorVersion.MinorVersion.MessageKey, so parse it to find
+    // the right Message
+    std::vector<std::string> fields;
+    fields.reserve(4);
+    boost::split(fields, messageID, boost::is_any_of("."));
+    const std::string& registryName = fields[0];
+    const std::string& messageKey = fields[3];
+
+    // Find the right registry and check it for the MessageKey
+    if (std::string(base::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(base::registry));
+    }
+    if (std::string(openbmc::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(openbmc::registry));
+    }
+    return nullptr;
+}
+
+} // namespace registries
+
 namespace message_registries
 {
+
 static void generateMessageRegistry(
     nlohmann::json& logEntry,
     const std::string& odataId, /* e.g. /redfish/v1/Systems/system/LogServices/"
@@ -75,7 +141,7 @@ static void generateMessageRegistry(
     const std::string& severity = "")
 {
     BMCWEB_LOG_DEBUG << "Generating MessageRegitry for [" << messageId << "]";
-    const Message* msg = getMessage(messageId);
+    const registries::Message* msg = registries::getMessage(messageId);
 
     if (msg == nullptr)
     {
@@ -147,6 +213,30 @@ using GetManagedObjectsType = boost::container::flat_map<
     sdbusplus::message::object_path,
     boost::container::flat_map<std::string, GetManagedPropertyType>>;
 
+namespace fs = std::filesystem;
+
+inline std::string translateSeverityDbusToRedfish(const std::string& s)
+{
+    if ((s == "xyz.openbmc_project.Logging.Entry.Level.Alert") ||
+        (s == "xyz.openbmc_project.Logging.Entry.Level.Critical") ||
+        (s == "xyz.openbmc_project.Logging.Entry.Level.Emergency") ||
+        (s == "xyz.openbmc_project.Logging.Entry.Level.Error"))
+    {
+        return "Critical";
+    }
+    if ((s == "xyz.openbmc_project.Logging.Entry.Level.Debug") ||
+        (s == "xyz.openbmc_project.Logging.Entry.Level.Informational") ||
+        (s == "xyz.openbmc_project.Logging.Entry.Level.Notice"))
+    {
+        return "OK";
+    }
+    if (s == "xyz.openbmc_project.Logging.Entry.Level.Warning")
+    {
+        return "Warning";
+    }
+    return "";
+}
+
 inline static int getJournalMetadata(sd_journal* journal,
                                      const std::string_view& field,
                                      std::string_view& contents)
@@ -185,6 +275,54 @@ inline static int getJournalMetadata(sd_journal* journal,
     return ret;
 }
 
+// static bool getSkipParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+//                          const crow::Request& req, uint64_t& skip)
+// {
+//     boost::urls::query_params_view::iterator it = req.urlParams.find("$skip");
+//     if (it != req.urlParams.end())
+//     {
+//         std::string skipParam = it->value();
+//         char* ptr = nullptr;
+//         skip = std::strtoul(skipParam.c_str(), &ptr, 10);
+//         if (skipParam.empty() || *ptr != '\0')
+//         {
+
+//             messages::queryParameterValueTypeError(
+//                 asyncResp->res, std::string(skipParam), "$skip");
+//             return false;
+//         }
+//     }
+//     return true;
+// }
+
+// static constexpr const uint64_t maxEntriesPerPage = 1000;
+// static bool getTopParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+//                         const crow::Request& req, uint64_t& top)
+// {
+//     boost::urls::query_params_view::iterator it = req.urlParams.find("$top");
+//     if (it != req.urlParams.end())
+//     {
+//         std::string topParam = it->value();
+//         char* ptr = nullptr;
+//         top = std::strtoul(topParam.c_str(), &ptr, 10);
+//         if (topParam.empty() || *ptr != '\0')
+//         {
+//             messages::queryParameterValueTypeError(
+//                 asyncResp->res, std::string(topParam), "$top");
+//             return false;
+//         }
+//         if (top < 1U || top > maxEntriesPerPage)
+//         {
+
+//             messages::queryParameterOutOfRange(
+//                 asyncResp->res, std::to_string(top), "$top",
+//                 "1-" + std::to_string(maxEntriesPerPage));
+//             return false;
+//         }
+//     }
+//     return true;
+// }
+
 inline static bool getEntryTimestamp(sd_journal* journal,
                                      std::string& entryTimestamp)
 {
@@ -197,55 +335,8 @@ inline static bool getEntryTimestamp(sd_journal* journal,
                          << strerror(-ret);
         return false;
     }
-    entryTimestamp = crow::utility::getDateTimeUint(timestamp / 1000 / 1000);
-    return true;
-}
-
-static bool getSkipParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const crow::Request& req, uint64_t& skip)
-{
-    boost::urls::query_params_view::iterator it = req.urlParams.find("$skip");
-    if (it != req.urlParams.end())
-    {
-        std::string skipParam = it->value();
-        char* ptr = nullptr;
-        skip = std::strtoul(skipParam.c_str(), &ptr, 10);
-        if (skipParam.empty() || *ptr != '\0')
-        {
-
-            messages::queryParameterValueTypeError(
-                asyncResp->res, std::string(skipParam), "$skip");
-            return false;
-        }
-    }
-    return true;
-}
-
-static constexpr const uint64_t maxEntriesPerPage = 1000;
-static bool getTopParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const crow::Request& req, uint64_t& top)
-{
-    boost::urls::query_params_view::iterator it = req.urlParams.find("$top");
-    if (it != req.urlParams.end())
-    {
-        std::string topParam = it->value();
-        char* ptr = nullptr;
-        top = std::strtoul(topParam.c_str(), &ptr, 10);
-        if (topParam.empty() || *ptr != '\0')
-        {
-            messages::queryParameterValueTypeError(
-                asyncResp->res, std::string(topParam), "$top");
-            return false;
-        }
-        if (top < 1U || top > maxEntriesPerPage)
-        {
-
-            messages::queryParameterOutOfRange(
-                asyncResp->res, std::to_string(top), "$top",
-                "1-" + std::to_string(maxEntriesPerPage));
-            return false;
-        }
-    }
+    entryTimestamp =
+        redfish::time_utils::getDateTimeUint(timestamp / 1000 / 1000);
     return true;
 }
 
@@ -330,8 +421,7 @@ static bool getUniqueEntryID(const std::string& logEntry, std::string& entryID,
 }
 
 inline static bool
-    getTimestampFromID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const std::string& entryID, uint64_t& timestamp,
+    getTimestampFromID(const std::string& entryID, uint64_t& timestamp,
                        uint64_t& index)
 {
     if (entryID.empty())
@@ -342,7 +432,7 @@ inline static bool
     std::string_view tsStr(entryID);
 
     auto underscorePos = tsStr.find('_');
-    if (underscorePos != tsStr.npos)
+    if (underscorePos != std::string_view::npos)
     {
         // Timestamp has an index
         tsStr.remove_suffix(tsStr.size() - underscorePos);
@@ -352,7 +442,6 @@ inline static bool
             indexStr.data(), indexStr.data() + indexStr.size(), index);
         if (ec != std::errc())
         {
-            messages::resourceMissingAtURI(asyncResp->res, entryID);
             return false;
         }
     }
@@ -361,7 +450,6 @@ inline static bool
         std::from_chars(tsStr.data(), tsStr.data() + tsStr.size(), timestamp);
     if (ec != std::errc())
     {
-        messages::resourceMissingAtURI(asyncResp->res, entryID);
         return false;
     }
     return true;
@@ -379,7 +467,7 @@ static bool
     {
         // If we find a redfish log file, save the path
         std::string filename = dirEnt.path().filename();
-        if (boost::starts_with(filename, redfishLogFilename))
+        if (filename.starts_with(redfishLogFilename))
         {
             redfishLogFiles.emplace_back(redfishLogDir / filename);
         }
@@ -489,30 +577,111 @@ void deleteDbusSELEntry(std::string& entryID,
         "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
+inline void parseDumpEntryFromDbusObject(
+    const dbus::utility::ManagedObjectType::value_type& object,
+    std::string& dumpStatus, uint64_t& size, uint64_t& timestampUs,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    for (const auto& interfaceMap : object.second)
+    {
+        if (interfaceMap.first == "xyz.openbmc_project.Common.Progress")
+        {
+            for (const auto& propertyMap : interfaceMap.second)
+            {
+                if (propertyMap.first == "Status")
+                {
+                    const auto* status =
+                        std::get_if<std::string>(&propertyMap.second);
+                    if (status == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        break;
+                    }
+                    dumpStatus = *status;
+                }
+            }
+        }
+        else if (interfaceMap.first == "xyz.openbmc_project.Dump.Entry")
+        {
+            for (const auto& propertyMap : interfaceMap.second)
+            {
+                if (propertyMap.first == "Size")
+                {
+                    const auto* sizePtr =
+                        std::get_if<uint64_t>(&propertyMap.second);
+                    if (sizePtr == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        break;
+                    }
+                    size = *sizePtr;
+                    break;
+                }
+            }
+        }
+        else if (interfaceMap.first == "xyz.openbmc_project.Time.EpochTime")
+        {
+            for (const auto& propertyMap : interfaceMap.second)
+            {
+                if (propertyMap.first == "Elapsed")
+                {
+                    const uint64_t* usecsTimeStamp =
+                        std::get_if<uint64_t>(&propertyMap.second);
+                    if (usecsTimeStamp == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        break;
+                    }
+                    timestampUs = *usecsTimeStamp;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+static std::string getDumpEntriesPath(const std::string& dumpType)
+{
+    std::string entriesPath;
+
+    if (dumpType == "BMC")
+    {
+        entriesPath =
+            "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/Entries/";
+    }
+    else if (dumpType == "FaultLog")
+    {
+        entriesPath = "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/FaultLog/Entries/";
+    }
+    else if (dumpType == "System")
+    {
+        entriesPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/Dump/Entries/";
+    }
+    else
+    {
+        BMCWEB_LOG_ERROR << "getDumpEntriesPath() invalid dump type: "
+                         << dumpType;
+    }
+
+    // Returns empty string on error
+    return entriesPath;
+}
+
 inline void
     getDumpEntryCollection(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& dumpType)
 {
-    std::string dumpPath;
-    if (dumpType == "BMC")
+    std::string entriesPath = getDumpEntriesPath(dumpType);
+    if (entriesPath.empty())
     {
-        dumpPath =
-            "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/Entries/";
-    }
-    else if (dumpType == "System")
-    {
-        dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                   "/LogServices/Dump/Entries/";
-    }
-    else
-    {
-        BMCWEB_LOG_ERROR << "Invalid dump type" << dumpType;
         messages::internalError(asyncResp->res);
         return;
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, dumpPath,
+        [asyncResp, entriesPath,
          dumpType](const boost::system::error_code ec,
                    dbus::utility::ManagedObjectType& resp) {
             if (ec)
@@ -522,6 +691,20 @@ inline void
                 return;
             }
 
+            // Remove ending slash
+            std::string odataIdStr = entriesPath;
+            if (!odataIdStr.empty())
+            {
+                odataIdStr.pop_back();
+            }
+
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#LogEntryCollection.LogEntryCollection";
+            asyncResp->res.jsonValue["@odata.id"] = std::move(odataIdStr);
+            asyncResp->res.jsonValue["Name"] = dumpType + " Dump Entries";
+            asyncResp->res.jsonValue["Description"] =
+                "Collection of " + dumpType + " Dump Entries";
+
             nlohmann::json& entriesArray = asyncResp->res.jsonValue["Members"];
             entriesArray = nlohmann::json::array();
             std::string dumpEntryPath =
@@ -529,16 +712,22 @@ inline void
                 std::string(boost::algorithm::to_lower_copy(dumpType)) +
                 "/entry/";
 
+            std::sort(resp.begin(), resp.end(),
+                      [](const auto& l, const auto& r) {
+                          return AlphanumLess<std::string>()(
+                              l.first.filename(), r.first.filename());
+                      });
+
             for (auto& object : resp)
             {
                 if (object.first.str.find(dumpEntryPath) == std::string::npos)
                 {
                     continue;
                 }
-                uint64_t timestamp = 0;
+                uint64_t timestampUs = 0;
                 uint64_t size = 0;
                 std::string dumpStatus;
-                nlohmann::json thisEntry;
+                nlohmann::json::object_t thisEntry;
 
                 std::string entryID = object.first.filename();
                 if (entryID.empty())
@@ -546,67 +735,8 @@ inline void
                     continue;
                 }
 
-                for (auto& interfaceMap : object.second)
-                {
-                    if (interfaceMap.first ==
-                        "xyz.openbmc_project.Common.Progress")
-                    {
-                        for (auto& propertyMap : interfaceMap.second)
-                        {
-                            if (propertyMap.first == "Status")
-                            {
-                                auto status = std::get_if<std::string>(
-                                    &propertyMap.second);
-                                if (status == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    break;
-                                }
-                                dumpStatus = *status;
-                            }
-                        }
-                    }
-                    else if (interfaceMap.first ==
-                             "xyz.openbmc_project.Dump.Entry")
-                    {
-
-                        for (auto& propertyMap : interfaceMap.second)
-                        {
-                            if (propertyMap.first == "Size")
-                            {
-                                auto sizePtr =
-                                    std::get_if<uint64_t>(&propertyMap.second);
-                                if (sizePtr == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    break;
-                                }
-                                size = *sizePtr;
-                                break;
-                            }
-                        }
-                    }
-                    else if (interfaceMap.first ==
-                             "xyz.openbmc_project.Time.EpochTime")
-                    {
-
-                        for (auto& propertyMap : interfaceMap.second)
-                        {
-                            if (propertyMap.first == "Elapsed")
-                            {
-                                const uint64_t* epochTimeStamp =
-                                    std::get_if<uint64_t>(&propertyMap.second);
-                                if (epochTimeStamp == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    break;
-                                }
-                                timestamp = *epochTimeStamp;
-                                break;
-                            }
-                        }
-                    }
-                }
+                parseDumpEntryFromDbusObject(object, dumpStatus, size,
+                                             timestampUs, asyncResp);
 
                 if (dumpStatus !=
                         "xyz.openbmc_project.Common.Progress.OperationStatus.Completed" &&
@@ -616,32 +746,53 @@ inline void
                     continue;
                 }
 
-                thisEntry["@odata.type"] = "#LogEntry.v1_8_0.LogEntry";
-                thisEntry["@odata.id"] = dumpPath + entryID;
+                thisEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+                thisEntry["@odata.id"] = entriesPath + entryID;
                 thisEntry["Id"] = entryID;
                 thisEntry["EntryType"] = "Event";
-                thisEntry["Created"] =
-                    crow::utility::getDateTimeUint(timestamp);
                 thisEntry["Name"] = dumpType + " Dump Entry";
-
-                thisEntry["AdditionalDataSizeBytes"] = size;
 
                 if (dumpType == "BMC")
                 {
+                    thisEntry["Created"] = redfish::time_utils::getDateTimeUint(
+                        timestampUs / 1000 / 1000);
                     thisEntry["DiagnosticDataType"] = "Manager";
                     thisEntry["AdditionalDataURI"] =
-                        "/redfish/v1/Managers/" PLATFORMBMCID
-                        "/LogServices/Dump/Entries/" +
-                        entryID + "/attachment";
+                        entriesPath + entryID + "/attachment";
+                    thisEntry["AdditionalDataSizeBytes"] = size;
+                }
+                else if (dumpType == "FaultLog")
+                {
+                    thisEntry["Created"] =
+                        redfish::time_utils::getDateTimeUintUs(timestampUs);
                 }
                 else if (dumpType == "System")
                 {
+                    thisEntry["Created"] = redfish::time_utils::getDateTimeUint(
+                        timestampUs / 1000 / 1000);
                     thisEntry["DiagnosticDataType"] = "OEM";
                     thisEntry["OEMDiagnosticDataType"] = "System";
                     thisEntry["AdditionalDataURI"] =
-                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                        "/LogServices/Dump/Entries/" +
-                        entryID + "/attachment";
+                        entriesPath + entryID + "/attachment";
+                    thisEntry["AdditionalDataSizeBytes"] = size;
+
+                    if (dumpType == "BMC")
+                    {
+                        thisEntry["DiagnosticDataType"] = "Manager";
+                        thisEntry["AdditionalDataURI"] =
+                            "/redfish/v1/Managers/" PLATFORMBMCID
+                            "/LogServices/Dump/Entries/" +
+                            entryID + "/attachment";
+                    }
+                    else if (dumpType == "System")
+                    {
+                        thisEntry["DiagnosticDataType"] = "OEM";
+                        thisEntry["OEMDiagnosticDataType"] = "System";
+                        thisEntry["AdditionalDataURI"] =
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/LogServices/Dump/Entries/" +
+                            entryID + "/attachment";
+                    }
                 }
                 entriesArray.push_back(std::move(thisEntry));
             }
@@ -656,28 +807,17 @@ inline void
     getDumpEntryById(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& entryID, const std::string& dumpType)
 {
-    std::string dumpPath;
-    if (dumpType == "BMC")
+    std::string entriesPath = getDumpEntriesPath(dumpType);
+    if (entriesPath.empty())
     {
-        dumpPath =
-            "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/Entries/";
-    }
-    else if (dumpType == "System")
-    {
-        dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                   "/LogServices/Dump/Entries/";
-    }
-    else
-    {
-        BMCWEB_LOG_ERROR << "Invalid dump type" << dumpType;
         messages::internalError(asyncResp->res);
         return;
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, entryID, dumpPath,
-         dumpType](const boost::system::error_code ec,
-                   dbus::utility::ManagedObjectType& resp) {
+        [asyncResp, entryID, dumpType,
+         entriesPath](const boost::system::error_code ec,
+                      const dbus::utility::ManagedObjectType& resp) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "DumpEntry resp_handler got error " << ec;
@@ -691,7 +831,7 @@ inline void
                 std::string(boost::algorithm::to_lower_copy(dumpType)) +
                 "/entry/";
 
-            for (auto& objectPath : resp)
+            for (const auto& objectPath : resp)
             {
                 if (objectPath.first.str != dumpEntryPath + entryID)
                 {
@@ -699,69 +839,12 @@ inline void
                 }
 
                 foundDumpEntry = true;
-                uint64_t timestamp = 0;
+                uint64_t timestampUs = 0;
                 uint64_t size = 0;
                 std::string dumpStatus;
 
-                for (auto& interfaceMap : objectPath.second)
-                {
-                    if (interfaceMap.first ==
-                        "xyz.openbmc_project.Common.Progress")
-                    {
-                        for (auto& propertyMap : interfaceMap.second)
-                        {
-                            if (propertyMap.first == "Status")
-                            {
-                                auto status = std::get_if<std::string>(
-                                    &propertyMap.second);
-                                if (status == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    break;
-                                }
-                                dumpStatus = *status;
-                            }
-                        }
-                    }
-                    else if (interfaceMap.first ==
-                             "xyz.openbmc_project.Dump.Entry")
-                    {
-                        for (auto& propertyMap : interfaceMap.second)
-                        {
-                            if (propertyMap.first == "Size")
-                            {
-                                auto sizePtr =
-                                    std::get_if<uint64_t>(&propertyMap.second);
-                                if (sizePtr == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    break;
-                                }
-                                size = *sizePtr;
-                                break;
-                            }
-                        }
-                    }
-                    else if (interfaceMap.first ==
-                             "xyz.openbmc_project.Time.EpochTime")
-                    {
-                        for (auto& propertyMap : interfaceMap.second)
-                        {
-                            if (propertyMap.first == "Elapsed")
-                            {
-                                const uint64_t* epochTimeStamp =
-                                    std::get_if<uint64_t>(&propertyMap.second);
-                                if (epochTimeStamp == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    break;
-                                }
-                                timestamp = *epochTimeStamp;
-                                break;
-                            }
-                        }
-                    }
-                }
+                parseDumpEntryFromDbusObject(objectPath, dumpStatus, size,
+                                             timestampUs, asyncResp);
 
                 if (dumpStatus !=
                         "xyz.openbmc_project.Common.Progress.OperationStatus.Completed" &&
@@ -775,12 +858,10 @@ inline void
                 }
 
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogEntry.v1_8_0.LogEntry";
-                asyncResp->res.jsonValue["@odata.id"] = dumpPath + entryID;
+                    "#LogEntry.v1_9_0.LogEntry";
+                asyncResp->res.jsonValue["@odata.id"] = entriesPath + entryID;
                 asyncResp->res.jsonValue["Id"] = entryID;
                 asyncResp->res.jsonValue["EntryType"] = "Event";
-                asyncResp->res.jsonValue["Created"] =
-                    crow::utility::getDateTimeUint(timestamp);
                 asyncResp->res.jsonValue["Name"] = dumpType + " Dump Entry";
 
                 asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
@@ -804,11 +885,11 @@ inline void
                         entryID + "/attachment";
                 }
             }
-            if (foundDumpEntry == false)
+
+            if (!foundDumpEntry)
             {
                 BMCWEB_LOG_ERROR << "Can't find Dump Entry";
-                messages::resourceNotFound(asyncResp->res, "DumpEntry",
-                                           entryID);
+                messages::internalError(asyncResp->res);
                 return;
             }
         },
@@ -831,7 +912,7 @@ inline void deleteDumpEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 return;
             }
             BMCWEB_LOG_ERROR << "Dump (DBus) doDelete respHandler got error "
-                             << ec;
+                             << ec << " entryID=" << entryID;
             messages::internalError(asyncResp->res);
             return;
         }
@@ -844,114 +925,209 @@ inline void deleteDumpEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 
+inline DumpCreationProgress
+    mapDbusStatusToDumpProgress(const std::string& status)
+{
+    if (status ==
+            "xyz.openbmc_project.Common.Progress.OperationStatus.Failed" ||
+        status == "xyz.openbmc_project.Common.Progress.OperationStatus.Aborted")
+    {
+        return DumpCreationProgress::DUMP_CREATE_FAILED;
+    }
+    if (status ==
+        "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
+    {
+        return DumpCreationProgress::DUMP_CREATE_SUCCESS;
+    }
+    return DumpCreationProgress::DUMP_CREATE_INPROGRESS;
+}
+
+inline DumpCreationProgress
+    getDumpCompletionStatus(const dbus::utility::DBusPropertiesMap& values)
+{
+    for (const auto& [key, val] : values)
+    {
+        if (key == "Status")
+        {
+            const std::string* value = std::get_if<std::string>(&val);
+            if (value == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "Status property value is null";
+                return DumpCreationProgress::DUMP_CREATE_FAILED;
+            }
+            return mapDbusStatusToDumpProgress(*value);
+        }
+    }
+    return DumpCreationProgress::DUMP_CREATE_INPROGRESS;
+}
+
+inline std::string getDumpEntryPath(const std::string& dumpPath)
+{
+    if (dumpPath == "/xyz/openbmc_project/dump/bmc/entry")
+    {
+        return "/redfish/v1/Managers/" PLATFORMBMCID
+               "/LogServices/Dump/Entries/";
+    }
+    if (dumpPath == "/xyz/openbmc_project/dump/system/entry")
+    {
+        return "/redfish/v1/Systems/" PLATFORMSYSTEMID
+               "/LogServices/Dump/Entries/";
+    }
+    return "";
+}
+
 inline void createDumpTaskCallback(
-    const crow::Request& req,
+    task::Payload&& payload,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const sdbusplus::message::object_path& createdObjPath)
 {
-    const std::string& dumpPath = createdObjPath.parent_path().str;
-    const std::string& dumpId = createdObjPath.filename();
+    const std::string dumpPath = createdObjPath.parent_path().str;
+    const std::string dumpId = createdObjPath.filename();
 
-    if (dumpPath.empty() || dumpId.empty())
-    {
-        BMCWEB_LOG_ERROR << "Invalid path/Id received";
-        messages::internalError(asyncResp->res);
-        return;
-    }
+    std::string dumpEntryPath = getDumpEntryPath(dumpPath);
 
-    std::string dumpEntryPath;
-    if (dumpPath == "/xyz/openbmc_project/dump/bmc/entry")
-    {
-        dumpEntryPath = "/redfish/v1/Managers/" PLATFORMBMCID
-                        "/LogServices/Dump/Entries/" +
-                        dumpId;
-    }
-    else if (dumpPath == "/xyz/openbmc_project/dump/system/entry")
-    {
-        dumpEntryPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                        "/LogServices/Dump/Entries/" +
-                        dumpId;
-    }
-    else
+    if (dumpEntryPath.empty())
     {
         BMCWEB_LOG_ERROR << "Invalid dump type received";
         messages::internalError(asyncResp->res);
         return;
     }
 
-    std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-        [createdObjPath, dumpEntryPath](
-            boost::system::error_code err, sdbusplus::message::message& m,
-            const std::shared_ptr<task::TaskData>& taskData) {
-            if (err)
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, payload, createdObjPath,
+         dumpEntryPath{std::move(dumpEntryPath)},
+         dumpId](const boost::system::error_code ec,
+                 const std::string& introspectXml) {
+            if (ec)
             {
-                BMCWEB_LOG_ERROR << createdObjPath.str
-                                 << ": Error in creating dump";
-                taskData->messages.emplace_back(messages::internalError());
-                return task::completed;
+                BMCWEB_LOG_ERROR << "Introspect call failed with error: "
+                                 << ec.message();
+                messages::internalError(asyncResp->res);
+                return;
             }
-            std::vector<std::pair<
-                std::string, std::vector<std::pair<
-                                 std::string, dbus::utility::DbusVariantType>>>>
-                interfacesList;
 
-            std::vector<std::pair<std::string, std::variant<std::string>>>
-                values;
-            std::string prop;
-            m.read(prop, values);
+            // Check if the created dump object has implemented Progress
+            // interface to track dump completion. If yes, fetch the "Status"
+            // property of the interface, modify the task state accordingly.
+            // Else, return task completed.
+            tinyxml2::XMLDocument doc;
 
-            auto stateFound = std::find_if(
-                values.begin(), values.end(),
-                [](const std::pair<std::string, std::variant<std::string>>&
-                       statusProp) {
-                    if (statusProp.first == "Status")
+            doc.Parse(introspectXml.data(), introspectXml.size());
+            tinyxml2::XMLNode* pRoot = doc.FirstChildElement("node");
+            if (pRoot == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "XML document failed to parse";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            tinyxml2::XMLElement* interfaceNode =
+                pRoot->FirstChildElement("interface");
+
+            bool isProgressIntfPresent = false;
+            while (interfaceNode != nullptr)
+            {
+                const char* thisInterfaceName =
+                    interfaceNode->Attribute("name");
+                if (thisInterfaceName != nullptr)
+                {
+                    if (thisInterfaceName ==
+                        std::string_view("xyz.openbmc_project.Common.Progress"))
                     {
-                        return true;
+                        interfaceNode =
+                            interfaceNode->NextSiblingElement("interface");
+                        continue;
                     }
-                    return false;
-                });
-
-            if ((stateFound == std::end(values)) ||
-                (std::get<std::string>(stateFound->second) !=
-                 "xyz.openbmc_project.Common.Progress.OperationStatus."
-                 "Completed"))
-            {
-                BMCWEB_LOG_ERROR << createdObjPath.str
-                                 << ": Dump creation task not completed";
-                return !task::completed;
+                    isProgressIntfPresent = true;
+                    break;
+                }
+                interfaceNode = interfaceNode->NextSiblingElement("interface");
             }
 
-            nlohmann::json retMessage = messages::success();
-            taskData->messages.emplace_back(retMessage);
+            std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+                [createdObjPath, dumpEntryPath, dumpId, isProgressIntfPresent](
+                    boost::system::error_code err,
+                    sdbusplus::message::message& msg,
+                    const std::shared_ptr<task::TaskData>& taskData) {
+                    if (err)
+                    {
+                        BMCWEB_LOG_ERROR << createdObjPath.str
+                                         << ": Error in creating dump";
+                        taskData->messages.emplace_back(
+                            messages::internalError());
+                        taskData->state = "Cancelled";
+                        return task::completed;
+                    }
 
-            std::string headerLoc = "Location: " + dumpEntryPath + "/";
-            taskData->payload->httpHeaders.emplace_back(std::move(headerLoc));
+                    if (isProgressIntfPresent)
+                    {
+                        dbus::utility::DBusPropertiesMap values;
+                        std::string prop;
+                        msg.read(prop, values);
 
-            BMCWEB_LOG_DEBUG << createdObjPath.str
-                             << ": Dump creation task completed";
-            taskData->state = "Completed";
-            taskData->percentComplete = 100;
-            return task::completed;
+                        DumpCreationProgress dumpStatus =
+                            getDumpCompletionStatus(values);
+                        if (dumpStatus ==
+                            DumpCreationProgress::DUMP_CREATE_FAILED)
+                        {
+                            BMCWEB_LOG_ERROR << createdObjPath.str
+                                             << ": Error in creating dump";
+                            taskData->state = "Cancelled";
+                            return task::completed;
+                        }
+
+                        if (dumpStatus ==
+                            DumpCreationProgress::DUMP_CREATE_INPROGRESS)
+                        {
+                            BMCWEB_LOG_DEBUG
+                                << createdObjPath.str
+                                << ": Dump creation task is in progress";
+                            return !task::completed;
+                        }
+                    }
+
+                    nlohmann::json retMessage = messages::success();
+                    taskData->messages.emplace_back(retMessage);
+
+                    std::string headerLoc = "Location: " + dumpEntryPath +
+                                            http_helpers::urlEncode(dumpId);
+                    taskData->payload->httpHeaders.emplace_back(
+                        std::move(headerLoc));
+
+                    BMCWEB_LOG_DEBUG << createdObjPath.str
+                                     << ": Dump creation task completed";
+                    taskData->state = "Completed";
+                    taskData->percentComplete = 100;
+                    return task::completed;
+                },
+                "type='signal',interface='org.freedesktop.DBus.Properties',"
+                "member='PropertiesChanged',path='" +
+                    createdObjPath.str + "'");
+
+            // The task timer is set to max time limit within which the
+            // requested dump will be collected.
+            task->startTimer(std::chrono::minutes(6));
+            task->populateResp(asyncResp->res);
+            task->payload.emplace(payload);
         },
-        "type='signal',interface='org.freedesktop.DBus.Properties',"
-        "member='PropertiesChanged',path='" +
-            createdObjPath.str +
-            "',arg0='xyz.openbmc_project.Common.Progress'");
-
-    task->startTimer(std::chrono::minutes(20));
-    task->populateResp(asyncResp->res);
-    task->payload.emplace(req);
+        "xyz.openbmc_project.Dump.Manager", createdObjPath,
+        "org.freedesktop.DBus.Introspectable", "Introspect");
 }
 
 inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const crow::Request& req, const std::string& dumpType)
 {
+    std::string dumpPath = getDumpEntriesPath(dumpType);
+    if (dumpPath.empty())
+    {
+        messages::internalError(asyncResp->res);
+        return;
+    }
 
     std::optional<std::string> diagnosticDataType;
     std::optional<std::string> oemDiagnosticDataType;
     std::vector<std::pair<std::string, std::string>> createDumpParamVec;
 
-    if (!redfish::json_util::readJson(
+    if (!redfish::json_util::readJsonAction(
             req, asyncResp->res, "DiagnosticDataType", diagnosticDataType,
             "OEMDiagnosticDataType", oemDiagnosticDataType))
     {
@@ -965,9 +1141,8 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
         if (!oemDiagnosticDataType || !diagnosticDataType)
         {
-            BMCWEB_LOG_ERROR << "CreateDump action parameter "
-                                "'DiagnosticDataType'/"
-                                "'OEMDiagnosticDataType' value not found!";
+            BMCWEB_LOG_ERROR
+                << "CreateDump action parameter 'DiagnosticDataType'/'OEMDiagnosticDataType' value not found!";
             messages::actionParameterMissing(
                 asyncResp->res, "CollectDiagnosticData",
                 "DiagnosticDataType & OEMDiagnosticDataType");
@@ -977,10 +1152,10 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (*diagnosticDataType != "OEM")
         {
             BMCWEB_LOG_ERROR << "Wrong parameter values passed";
-            messages::invalidObject(asyncResp->res,
-                                    "System Dump creation parameters");
+            messages::internalError(asyncResp->res);
             return;
         }
+        dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/";
     }
     else if (dumpType == "BMC")
     {
@@ -996,46 +1171,78 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             BMCWEB_LOG_ERROR
                 << "Wrong parameter value passed for 'DiagnosticDataType'";
-            messages::invalidObject(asyncResp->res,
-                                    "BMC Dump creation parameters");
+            messages::internalError(asyncResp->res);
             return;
         }
+        dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/";
+    }
+    else
+    {
+        BMCWEB_LOG_ERROR << "CreateDump failed. Unknown dump type";
+        messages::internalError(asyncResp->res);
+        return;
     }
 
+    // std::vector<std::pair<std::string, std::variant<std::string, uint64_t>>>
+    //     createDumpParamVec;
+
     crow::connections::systemBus->async_method_call(
-        [asyncResp, req](const boost::system::error_code ec,
-                         sdbusplus::message::message& msg,
-                         const sdbusplus::message::object_path& objPath) {
+        [asyncResp, payload(task::Payload(req)),
+         dumpPath](const boost::system::error_code ec,
+                   const sdbusplus::message::message& msg,
+                   const sdbusplus::message::object_path& objPath) mutable {
             if (ec)
             {
-                const sd_bus_error* dbusError = msg.get_error();
-
                 BMCWEB_LOG_ERROR << "CreateDump resp_handler got error " << ec;
-
+                const sd_bus_error* dbusError = msg.get_error();
                 if (dbusError == nullptr)
                 {
                     messages::internalError(asyncResp->res);
                     return;
                 }
 
-                BMCWEB_LOG_ERROR << "Error message: " << dbusError->message;
-
-                if (strcmp(
-                        dbusError->name,
+                BMCWEB_LOG_ERROR << "CreateDump DBus error: " << dbusError->name
+                                 << " and error msg: " << dbusError->message;
+                if (std::string_view(
+                        "xyz.openbmc_project.Common.Error.NotAllowed") ==
+                    dbusError->name)
+                {
+                    messages::resourceInStandby(asyncResp->res);
+                    return;
+                }
+                if (std::string_view(
+                        "xyz.openbmc_project.Dump.Create.Error.Disabled") ==
+                    dbusError->name)
+                {
+                    messages::serviceDisabled(asyncResp->res, dumpPath);
+                    return;
+                }
+                if (std::string_view(
+                        "xyz.openbmc_project.Common.Error.Unavailable") ==
+                    dbusError->name)
+                {
+                    messages::resourceInUse(asyncResp->res);
+                    return;
+                }
+                if (std::string_view(
                         "xyz.openbmc_project.Dump.Create.Error.QuotaExceeded") ==
-                    0)
+                    dbusError->name)
                 {
                     messages::createLimitReachedForResource(asyncResp->res);
+                    return;
                 }
-                else
-                {
-                    messages::internalError(asyncResp->res);
-                }
-
+                // Other Dbus errors such as:
+                // xyz.openbmc_project.Common.Error.InvalidArgument &
+                // org.freedesktop.DBus.Error.InvalidArgs are all related to
+                // the dbus call that is made here in the bmcweb
+                // implementation and has nothing to do with the client's
+                // input in the request. Hence, returning internal error
+                // back to the client.
+                messages::internalError(asyncResp->res);
                 return;
             }
             BMCWEB_LOG_DEBUG << "Dump Created. Path: " << objPath.str;
-            createDumpTaskCallback(req, asyncResp, objPath);
+            createDumpTaskCallback(std::move(payload), asyncResp, objPath);
         },
         "xyz.openbmc_project.Dump.Manager",
         "/xyz/openbmc_project/dump/" +
@@ -1050,8 +1257,9 @@ inline void clearDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         std::string(boost::algorithm::to_lower_copy(dumpType));
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, dumpType](const boost::system::error_code ec,
-                              const std::vector<std::string>& subTreePaths) {
+        [asyncResp, dumpType](
+            const boost::system::error_code ec,
+            const dbus::utility::MapperGetSubTreePathsResponse& subTreePaths) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "resp_handler got error " << ec;
@@ -1078,40 +1286,37 @@ inline void clearDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                    dumpType});
 }
 
-inline static void parseCrashdumpParameters(
-    const std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>&
-        params,
-    std::string& filename, std::string& timestamp, std::string& logfile)
+inline static void
+    parseCrashdumpParameters(const dbus::utility::DBusPropertiesMap& params,
+                             std::string& filename, std::string& timestamp,
+                             std::string& logfile)
 {
-    for (auto property : params)
+    const std::string* filenamePtr = nullptr;
+    const std::string* timestampPtr = nullptr;
+    const std::string* logfilePtr = nullptr;
+
+    const bool success = sdbusplus::unpackPropertiesNoThrow(
+        dbus_utils::UnpackErrorPrinter(), params, "Timestamp", timestampPtr,
+        "Filename", filenamePtr, "Log", logfilePtr);
+
+    if (!success)
     {
-        if (property.first == "Timestamp")
-        {
-            const std::string* value =
-                std::get_if<std::string>(&property.second);
-            if (value != nullptr)
-            {
-                timestamp = *value;
-            }
-        }
-        else if (property.first == "Filename")
-        {
-            const std::string* value =
-                std::get_if<std::string>(&property.second);
-            if (value != nullptr)
-            {
-                filename = *value;
-            }
-        }
-        else if (property.first == "Log")
-        {
-            const std::string* value =
-                std::get_if<std::string>(&property.second);
-            if (value != nullptr)
-            {
-                logfile = *value;
-            }
-        }
+        return;
+    }
+
+    if (filenamePtr != nullptr)
+    {
+        filename = *filenamePtr;
+    }
+
+    if (timestampPtr != nullptr)
+    {
+        timestamp = *timestampPtr;
+    }
+
+    if (logfilePtr != nullptr)
+    {
+        logfile = *logfilePtr;
     }
 }
 
@@ -1141,67 +1346,75 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                 nlohmann::json& logServiceArray =
                     asyncResp->res.jsonValue["Members"];
                 logServiceArray = nlohmann::json::array();
-                logServiceArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/LogServices/EventLog"}});
-                logServiceArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/LogServices/SEL"}});
+                nlohmann::json::object_t eventLog;
+                eventLog["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                        "/LogServices/EventLog";
+                logServiceArray.push_back(std::move(eventLog));
+                nlohmann::json::object_t selLog;
+                selLog["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/SEL";
+                logServiceArray.push_back(std::move(selLog));
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
-                logServiceArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/LogServices/Dump"}});
+                nlohmann::json::object_t dumpLog;
+                dumpLog["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump";
+                logServiceArray.push_back(std::move(dumpLog));
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_CPU_LOG
-                logServiceArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/LogServices/Crashdump"}});
+                nlohmann::json::object_t crashdump;
+                crashdump["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                         "/LogServices/Crashdump";
+                logServiceArray.push_back(std::move(crashdump));
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_HOST_LOGGER
-                logServiceArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/LogServices/HostLogger"}});
+                nlohmann::json::object_t hostlogger;
+                hostlogger["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                    "/LogServices/HostLogger";
+                logServiceArray.push_back(std::move(hostlogger));
 #endif
-                logServiceArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/LogServices/DebugTokenService"}});
+                nlohmann::json::object_t debugToken;
+                debugToken["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                    "/LogServices/DebugTokenService";
+                logServiceArray.push_back(std::move(debugToken));
 
                 asyncResp->res.jsonValue["Members@odata.count"] =
                     logServiceArray.size();
 
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec,
-                                const std::vector<std::string>& subtreePath) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << ec;
-                            return;
-                        }
+                    [asyncResp](
+                        const boost::system::error_code ec,
+                        const dbus::utility::MapperGetSubTreePathsResponse&
+                            subtreePath) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << ec;
+                return;
+            }
 
-                        for (auto& pathStr : subtreePath)
-                        {
-                            if (pathStr.find("PostCode") != std::string::npos)
-                            {
-                                nlohmann::json& logServiceArrayLocal =
-                                    asyncResp->res.jsonValue["Members"];
-                                logServiceArrayLocal.push_back(
-                                    {{"@odata.id",
-                                      "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                      "/LogServices/PostCodes"}});
-                                asyncResp->res
-                                    .jsonValue["Members@odata.count"] =
-                                    logServiceArrayLocal.size();
-                                return;
-                            }
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/",
-                    0, std::array<const char*, 1>{postCodeIface});
-            });
+            for (const auto& pathStr : subtreePath)
+            {
+                if (pathStr.find("PostCode") != std::string::npos)
+                {
+                    nlohmann::json& logServiceArrayLocal =
+                        asyncResp->res.jsonValue["Members"];
+                    logServiceArrayLocal.push_back(
+                        {{"@odata.id",
+                          "/redfish/v1/Systems/system/LogServices/PostCodes"}});
+                    asyncResp->res.jsonValue["Members@odata.count"] =
+                        logServiceArrayLocal.size();
+                    return;
+                }
+            }
+            },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/", 0,
+            std::array<const char*, 1>{postCodeIface});
+        });
 }
 
 inline void requestRoutesEventLogService(App& app)
@@ -1210,8 +1423,12 @@ inline void requestRoutesEventLogService(App& app)
                       "/LogServices/EventLog/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID
                     "/LogServices/EventLog";
@@ -1224,7 +1441,7 @@ inline void requestRoutesEventLogService(App& app)
                 asyncResp->res.jsonValue["OverWritePolicy"] = "WrapsWhenFull";
 
                 std::pair<std::string, std::string> redfishDateTimeOffset =
-                    crow::utility::getDateTimeOffsetNow();
+                    redfish::time_utils::getDateTimeOffsetNow();
 
                 asyncResp->res.jsonValue["DateTime"] =
                     redfishDateTimeOffset.first;
@@ -1260,7 +1477,7 @@ inline void requestRoutesSELLogService(App& app)
                 asyncResp->res.jsonValue["OverWritePolicy"] = "WrapsWhenFull";
 
                 std::pair<std::string, std::string> redfishDateTimeOffset =
-                    crow::utility::getDateTimeOffsetNow();
+                    redfish::time_utils::getDateTimeOffsetNow();
 
                 asyncResp->res.jsonValue["DateTime"] =
                     redfishDateTimeOffset.first;
@@ -1285,8 +1502,12 @@ inline void requestRoutesJournalEventLogClear(App& app)
                       "LogService.ClearLog/")
         .privileges({{"ConfigureComponents"}})
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 // Clear the EventLog by deleting the log files
                 std::vector<std::filesystem::path> redfishLogFiles;
                 if (getRedfishLogFiles(redfishLogFiles))
@@ -1317,23 +1538,31 @@ inline void requestRoutesJournalEventLogClear(App& app)
             });
 }
 
-static int fillEventLogEntryJson(const std::string& logEntryID,
-                                 const std::string& logEntry,
-                                 nlohmann::json& logEntryJson)
+enum class LogParseError
+{
+    success,
+    parseFailed,
+    messageIdNotInRegistry,
+};
+
+static LogParseError
+    fillEventLogEntryJson(const std::string& logEntryID,
+                          const std::string& logEntry,
+                          nlohmann::json::object_t& logEntryJson)
 {
     // The redfish log format is "<Timestamp> <MessageId>,<MessageArgs>"
     // First get the Timestamp
     size_t space = logEntry.find_first_of(' ');
     if (space == std::string::npos)
     {
-        return 1;
+        return LogParseError::parseFailed;
     }
     std::string timestamp = logEntry.substr(0, space);
     // Then get the log contents
     size_t entryStart = logEntry.find_first_not_of(' ', space);
     if (entryStart == std::string::npos)
     {
-        return 1;
+        return LogParseError::parseFailed;
     }
     std::string_view entry(logEntry);
     entry.remove_prefix(entryStart);
@@ -1342,23 +1571,22 @@ static int fillEventLogEntryJson(const std::string& logEntryID,
     boost::split(logEntryFields, entry, boost::is_any_of(","),
                  boost::token_compress_on);
     // We need at least a MessageId to be valid
-    if (logEntryFields.size() < 1)
+    if (logEntryFields.empty())
     {
-        return 1;
+        return LogParseError::parseFailed;
     }
     std::string& messageID = logEntryFields[0];
 
     // Get the Message from the MessageRegistry
-    const message_registries::Message* message =
-        message_registries::getMessage(messageID);
+    const registries::Message* message = registries::getMessage(messageID);
 
-    std::string msg;
-    std::string severity;
-    if (message != nullptr)
+    if (message == nullptr)
     {
-        msg = message->message;
-        severity = message->severity;
+        BMCWEB_LOG_WARNING << "Log entry not found in registry: " << logEntry;
+        return LogParseError::messageIdNotInRegistry;
     }
+
+    std::string msg = message->message;
 
     // Get the MessageArgs from the log if there are any
     std::span<std::string> messageArgs;
@@ -1398,19 +1626,19 @@ static int fillEventLogEntryJson(const std::string& logEntryID,
     }
 
     // Fill in the log entry with the gathered data
-    logEntryJson = {{"@odata.type", "#LogEntry.v1_8_0.LogEntry"},
-                    {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                  "/LogServices/EventLog/Entries/" +
-                                      logEntryID},
-                    {"Name", "System Event Log Entry"},
-                    {"Id", logEntryID},
-                    {"Message", std::move(msg)},
-                    {"MessageId", std::move(messageID)},
-                    {"MessageArgs", messageArgs},
-                    {"EntryType", "Event"},
-                    {"Severity", std::move(severity)},
-                    {"Created", std::move(timestamp)}};
-    return 0;
+    logEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    logEntryJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/LogServices/EventLog/Entries/" +
+                                logEntryID;
+    logEntryJson["Name"] = "System Event Log Entry";
+    logEntryJson["Id"] = logEntryID;
+    logEntryJson["Message"] = std::move(msg);
+    logEntryJson["MessageId"] = std::move(messageID);
+    logEntryJson["MessageArgs"] = messageArgs;
+    logEntryJson["EntryType"] = "Event";
+    logEntryJson["Severity"] = message->messageSeverity;
+    logEntryJson["Created"] = std::move(timestamp);
+    return LogParseError::success;
 }
 
 inline void requestRoutesJournalEventLogEntryCollection(App& app)
@@ -1418,95 +1646,98 @@ inline void requestRoutesJournalEventLogEntryCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/EventLog/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                uint64_t skip = 0;
-                uint64_t top = maxEntriesPerPage; // Show max entries by default
-                if (!getSkipParam(asyncResp, req, skip))
-                {
-                    return;
-                }
-                if (!getTopParam(asyncResp, req, top))
-                {
-                    return;
-                }
-                // Collections don't include the static data added by SubRoute
-                // because it has a duplicate entry for members
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogEntryCollection.LogEntryCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                    "/LogServices/EventLog/Entries";
-                asyncResp->res.jsonValue["Name"] = "System Event Log Entries";
-                asyncResp->res.jsonValue["Description"] =
-                    "Collection of System Event Log Entries";
+        .methods(boost::beast::http::verb::get)([&app](const crow::Request& req,
+                                                       const std::shared_ptr<
+                                                           bmcweb::AsyncResp>&
+                                                           asyncResp) {
+            query_param::QueryCapabilities capabilities = {
+                .canDelegateTop = true,
+                .canDelegateSkip = true,
+            };
+            query_param::Query delegatedQuery;
+            if (!redfish::setUpRedfishRouteWithDelegation(
+                    app, req, asyncResp, delegatedQuery, capabilities))
+            {
+                return;
+            }
 
-                nlohmann::json& logEntryArray =
-                    asyncResp->res.jsonValue["Members"];
-                logEntryArray = nlohmann::json::array();
-                // Go through the log files and create a unique ID for each
-                // entry
-                std::vector<std::filesystem::path> redfishLogFiles;
-                getRedfishLogFiles(redfishLogFiles);
-                uint64_t entryCount = 0;
-                std::string logEntry;
+            size_t top =
+                delegatedQuery.top.value_or(query_param::Query::maxTop);
+            size_t skip = delegatedQuery.skip.value_or(0);
 
-                // Oldest logs are in the last file, so start there and loop
-                // backwards
-                for (auto it = redfishLogFiles.rbegin();
-                     it < redfishLogFiles.rend(); it++)
+            // Collections don't include the static data added by SubRoute
+            // because it has a duplicate entry for members
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#LogEntryCollection.LogEntryCollection";
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/EventLog/Entries";
+            asyncResp->res.jsonValue["Name"] = "System Event Log Entries";
+            asyncResp->res.jsonValue["Description"] =
+                "Collection of System Event Log Entries";
+
+            nlohmann::json& logEntryArray = asyncResp->res.jsonValue["Members"];
+            logEntryArray = nlohmann::json::array();
+            // Go through the log files and create a unique ID for each
+            // entry
+            std::vector<std::filesystem::path> redfishLogFiles;
+            getRedfishLogFiles(redfishLogFiles);
+            uint64_t entryCount = 0;
+            std::string logEntry;
+
+            // Oldest logs are in the last file, so start there and loop
+            // backwards
+            for (auto it = redfishLogFiles.rbegin();
+                 it < redfishLogFiles.rend(); it++)
+            {
+                std::ifstream logStream(*it);
+                if (!logStream.is_open())
                 {
-                    std::ifstream logStream(*it);
-                    if (!logStream.is_open())
+                    continue;
+                }
+
+                // Reset the unique ID on the first entry
+                bool firstEntry = true;
+                while (std::getline(logStream, logEntry))
+                {
+                    std::string idStr;
+                    if (!getUniqueEntryID(logEntry, idStr, firstEntry))
+                    {
+                        continue;
+                    }
+                    firstEntry = false;
+
+                    nlohmann::json::object_t bmcLogEntry;
+                    LogParseError status =
+                        fillEventLogEntryJson(idStr, logEntry, bmcLogEntry);
+                    if (status == LogParseError::messageIdNotInRegistry)
+                    {
+                        continue;
+                    }
+                    if (status != LogParseError::success)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    entryCount++;
+                    // Handle paging using skip (number of entries to skip from
+                    // the start) and top (number of entries to display)
+                    if (entryCount <= skip || entryCount > skip + top)
                     {
                         continue;
                     }
 
-                    // Reset the unique ID on the first entry
-                    bool firstEntry = true;
-                    while (std::getline(logStream, logEntry))
-                    {
-                        entryCount++;
-                        // Handle paging using skip (number of entries to skip
-                        // from the start) and top (number of entries to
-                        // display)
-                        if (entryCount <= skip || entryCount > skip + top)
-                        {
-                            continue;
-                        }
-
-                        std::string idStr;
-                        if (!getUniqueEntryID(logEntry, idStr, firstEntry))
-                        {
-                            continue;
-                        }
-
-                        if (firstEntry)
-                        {
-                            firstEntry = false;
-                        }
-
-                        logEntryArray.push_back({});
-                        nlohmann::json& bmcLogEntry = logEntryArray.back();
-                        if (fillEventLogEntryJson(idStr, logEntry,
-                                                  bmcLogEntry) != 0)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                    }
+                    logEntryArray.push_back(std::move(bmcLogEntry));
                 }
-                asyncResp->res.jsonValue["Members@odata.count"] = entryCount;
-                if (skip + top < entryCount)
-                {
-                    asyncResp->res.jsonValue["Members@odata.nextLink"] =
-                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                        "/LogServices/EventLog/"
-                        "Entries?$skip=" +
-                        std::to_string(skip + top);
-                }
-            });
+            }
+            asyncResp->res.jsonValue["Members@odata.count"] = entryCount;
+            if (skip + top < entryCount)
+            {
+                asyncResp->res.jsonValue["Members@odata.nextLink"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/EventLog/Entries?$skip=" +
+                    std::to_string(skip + top);
+            }
+        });
 }
 
 inline void requestRoutesJournalEventLogEntry(App& app)
@@ -1515,9 +1746,14 @@ inline void requestRoutesJournalEventLogEntry(App& app)
                       "/LogServices/EventLog/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
                 const std::string& targetID = param;
 
                 // Go through the log files and check the unique ID for each
@@ -1546,27 +1782,28 @@ inline void requestRoutesJournalEventLogEntry(App& app)
                         {
                             continue;
                         }
-
-                        if (firstEntry)
-                        {
-                            firstEntry = false;
-                        }
+                        firstEntry = false;
 
                         if (idStr == targetID)
                         {
-                            if (fillEventLogEntryJson(
-                                    idStr, logEntry,
-                                    asyncResp->res.jsonValue) != 0)
+                            nlohmann::json::object_t bmcLogEntry;
+                            LogParseError status = fillEventLogEntryJson(
+                                idStr, logEntry, bmcLogEntry);
+                            if (status != LogParseError::success)
                             {
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
+                            asyncResp->res.jsonValue.update(bmcLogEntry);
                             return;
                         }
                     }
                 }
                 // Requested ID was not found
-                messages::resourceMissingAtURI(asyncResp->res, targetID);
+                messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                    "redfish", "v1", "Systems",
+                    PLATFORMSYSTEMID,
+                    "LogServices", "EventLog", "Entries", targetID));
             });
 }
 
@@ -1575,17 +1812,21 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/EventLog/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
-        .methods(
-            boost::beast::http::verb::
-                get)([](const crow::Request&,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        .methods(boost::beast::http::verb::get)([&app](const crow::Request& req,
+                                                       const std::shared_ptr<
+                                                           bmcweb::AsyncResp>&
+                                                           asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+
             // Collections don't include the static data added by SubRoute
             // because it has a duplicate entry for members
             asyncResp->res.jsonValue["@odata.type"] =
                 "#LogEntryCollection.LogEntryCollection";
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                "/LogServices/EventLog/Entries";
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/EventLog/Entries";
             asyncResp->res.jsonValue["Name"] = "System Event Log Entries";
             asyncResp->res.jsonValue["Description"] =
                 "Collection of System Event Log Entries";
@@ -1638,9 +1879,8 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                                 &propertyMap.second);
                                         if (millisTimeStamp != nullptr)
                                         {
-                                            timestamp =
-                                                crow::utility::getTimestamp(
-                                                    *millisTimeStamp);
+                                            timestamp = redfish::time_utils::
+                                                getTimestamp(*millisTimeStamp);
                                         }
                                     }
                                     else if (propertyMap.first ==
@@ -1651,8 +1891,8 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                                 &propertyMap.second);
                                         if (millisTimeStamp != nullptr)
                                         {
-                                            updateTimestamp =
-                                                crow::utility::getTimestamp(
+                                            updateTimestamp = redfish::
+                                                time_utils::getTimestamp(
                                                     *millisTimeStamp);
                                         }
                                     }
@@ -1762,7 +2002,8 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                 "EventLog/Entries/",
                                 "v1_9_0", std::to_string(*id),
                                 "System Event Log Entry",
-                                crow::utility::getDateTimeStdtime(timestamp),
+                                redfish::time_utils::getDateTimeStdtime(
+                                    timestamp),
                                 messageId, messageArgs, *resolution, resolved,
                                 *severity);
 
@@ -1790,9 +2031,10 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                             thisEntry["Severity"] =
                                 translateSeverityDbusToRedfish(*severity);
                             thisEntry["Created"] =
-                                crow::utility::getDateTimeStdtime(timestamp);
+                                redfish::time_utils::getDateTimeStdtime(
+                                    timestamp);
                             thisEntry["Modified"] =
-                                crow::utility::getDateTimeStdtime(
+                                redfish::time_utils::getDateTimeStdtime(
                                     updateTimestamp);
                         }
                         if (filePath != nullptr)
@@ -1823,220 +2065,223 @@ inline void requestRoutesDBusEventLogEntry(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/EventLog/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param)
-
+        .methods(
+            boost::beast::http::verb::
+                get)([&app](const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& param) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
             {
-                std::string entryID = param;
-                dbus::utility::escapePathForDbus(entryID);
+                return;
+            }
 
-                // DBus implementation of EventLog/Entries
-                // Make call to Logging Service to find all log entry objects
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, entryID](const boost::system::error_code ec,
-                                         const GetManagedPropertyType& resp) {
-                        if (ec.value() == EBADR)
+            std::string entryID = param;
+            dbus::utility::escapePathForDbus(entryID);
+
+            // DBus implementation of EventLog/Entries
+            // Make call to Logging Service to find all log entry objects
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, entryID](const boost::system::error_code ec,
+                                     const GetManagedPropertyType& resp) {
+                    if (ec.value() == EBADR)
+                    {
+                        messages::resourceNotFound(asyncResp->res,
+                                                   "EventLogEntry", entryID);
+                        return;
+                    }
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "EventLogEntry (DBus) resp_handler got error "
+                            << ec;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    const uint32_t* id = nullptr;
+                    std::time_t timestamp{};
+                    std::time_t updateTimestamp{};
+                    const std::string* severity = nullptr;
+                    const std::string* message = nullptr;
+                    const std::string* filePath = nullptr;
+                    bool resolved = false;
+                    const std::string* resolution = nullptr;
+                    const std::vector<std::string>* additionalDataRaw = nullptr;
+
+                    for (auto& propertyMap : resp)
+                    {
+                        if (propertyMap.first == "Id")
                         {
-                            messages::resourceNotFound(
-                                asyncResp->res, "EventLogEntry", entryID);
-                            return;
+                            id = std::get_if<uint32_t>(&propertyMap.second);
                         }
-                        if (ec)
+                        else if (propertyMap.first == "Timestamp")
                         {
-                            BMCWEB_LOG_ERROR
-                                << "EventLogEntry (DBus) resp_handler got error "
-                                << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        const uint32_t* id = nullptr;
-                        std::time_t timestamp{};
-                        std::time_t updateTimestamp{};
-                        const std::string* severity = nullptr;
-                        const std::string* message = nullptr;
-                        const std::string* filePath = nullptr;
-                        bool resolved = false;
-                        const std::string* resolution = nullptr;
-                        const std::vector<std::string>* additionalDataRaw =
-                            nullptr;
-
-                        for (auto& propertyMap : resp)
-                        {
-                            if (propertyMap.first == "Id")
+                            const uint64_t* millisTimeStamp =
+                                std::get_if<uint64_t>(&propertyMap.second);
+                            if (millisTimeStamp != nullptr)
                             {
-                                id = std::get_if<uint32_t>(&propertyMap.second);
+                                timestamp = redfish::time_utils::getTimestamp(
+                                    *millisTimeStamp);
                             }
-                            else if (propertyMap.first == "Timestamp")
+                        }
+                        else if (propertyMap.first == "UpdateTimestamp")
+                        {
+                            const uint64_t* millisTimeStamp =
+                                std::get_if<uint64_t>(&propertyMap.second);
+                            if (millisTimeStamp != nullptr)
                             {
-                                const uint64_t* millisTimeStamp =
-                                    std::get_if<uint64_t>(&propertyMap.second);
-                                if (millisTimeStamp != nullptr)
-                                {
-                                    timestamp = crow::utility::getTimestamp(
+                                updateTimestamp =
+                                    redfish::time_utils::getTimestamp(
                                         *millisTimeStamp);
-                                }
                             }
-                            else if (propertyMap.first == "UpdateTimestamp")
+                        }
+                        else if (propertyMap.first == "Severity")
+                        {
+                            severity =
+                                std::get_if<std::string>(&propertyMap.second);
+                        }
+                        else if (propertyMap.first == "Message")
+                        {
+                            message =
+                                std::get_if<std::string>(&propertyMap.second);
+                        }
+                        else if (propertyMap.first == "Resolved")
+                        {
+                            const bool* resolveptr =
+                                std::get_if<bool>(&propertyMap.second);
+                            if (resolveptr == nullptr)
                             {
-                                const uint64_t* millisTimeStamp =
-                                    std::get_if<uint64_t>(&propertyMap.second);
-                                if (millisTimeStamp != nullptr)
-                                {
-                                    updateTimestamp =
-                                        crow::utility::getTimestamp(
-                                            *millisTimeStamp);
-                                }
+                                messages::internalError(asyncResp->res);
+                                return;
                             }
-                            else if (propertyMap.first == "Severity")
-                            {
-                                severity = std::get_if<std::string>(
+                            resolved = *resolveptr;
+                        }
+                        else if (propertyMap.first == "Resolution")
+                        {
+                            resolution =
+                                std::get_if<std::string>(&propertyMap.second);
+                        }
+                        else if (propertyMap.first == "AdditionalData")
+                        {
+                            additionalDataRaw =
+                                std::get_if<std::vector<std::string>>(
                                     &propertyMap.second);
-                            }
-                            else if (propertyMap.first == "Message")
-                            {
-                                message = std::get_if<std::string>(
-                                    &propertyMap.second);
-                            }
-                            else if (propertyMap.first == "Resolved")
-                            {
-                                const bool* resolveptr =
-                                    std::get_if<bool>(&propertyMap.second);
-                                if (resolveptr == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                resolved = *resolveptr;
-                            }
-                            else if (propertyMap.first == "Resolution")
-                            {
-                                resolution = std::get_if<std::string>(
-                                    &propertyMap.second);
-                            }
-                            else if (propertyMap.first == "AdditionalData")
-                            {
-                                additionalDataRaw =
-                                    std::get_if<std::vector<std::string>>(
-                                        &propertyMap.second);
-                            }
-                            else if (propertyMap.first == "Path")
-                            {
-                                filePath = std::get_if<std::string>(
-                                    &propertyMap.second);
-                            }
                         }
-                        if (id == nullptr || message == nullptr ||
-                            severity == nullptr)
+                        else if (propertyMap.first == "Path")
                         {
-                            messages::internalError(asyncResp->res);
-                            return;
+                            filePath =
+                                std::get_if<std::string>(&propertyMap.second);
                         }
+                    }
+                    if (id == nullptr || message == nullptr ||
+                        severity == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
 
-                        // Determine if it's a message registry format or not.
-                        bool isMessageRegistry = false;
-                        std::string messageId;
-                        std::string messageArgs;
-                        std::string originOfCondition;
-                        if (additionalDataRaw != nullptr)
+                    // Determine if it's a message registry format or not.
+                    bool isMessageRegistry = false;
+                    std::string messageId;
+                    std::string messageArgs;
+                    std::string originOfCondition;
+                    if (additionalDataRaw != nullptr)
+                    {
+                        AdditionalData additional(*additionalDataRaw);
+                        if (additional.count("REDFISH_MESSAGE_ID") > 0)
                         {
-                            AdditionalData additional(*additionalDataRaw);
-                            if (additional.count("REDFISH_MESSAGE_ID") > 0)
+                            isMessageRegistry = true;
+                            messageId = additional["REDFISH_MESSAGE_ID"];
+                            BMCWEB_LOG_DEBUG << "MessageId: [" << messageId
+                                             << "]";
+
+                            if (additional.count("REDFISH_MESSAGE_ARGS") > 0)
                             {
-                                isMessageRegistry = true;
-                                messageId = additional["REDFISH_MESSAGE_ID"];
-                                BMCWEB_LOG_DEBUG << "MessageId: [" << messageId
-                                                 << "]";
-
-                                if (additional.count("REDFISH_MESSAGE_ARGS") >
-                                    0)
-                                {
-                                    messageArgs =
-                                        additional["REDFISH_MESSAGE_ARGS"];
-                                }
-                            }
-                            if (additional.count(
-                                    "REDFISH_ORIGIN_OF_CONDITION") > 0)
-                            {
-                                originOfCondition =
-                                    additional["REDFISH_ORIGIN_OF_CONDITION"];
+                                messageArgs =
+                                    additional["REDFISH_MESSAGE_ARGS"];
                             }
                         }
-
-                        if (isMessageRegistry)
+                        if (additional.count("REDFISH_ORIGIN_OF_CONDITION") > 0)
                         {
-                            message_registries::generateMessageRegistry(
-                                asyncResp->res.jsonValue,
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/LogServices/"
-                                "EventLog/Entries/",
-                                "v1_9_0", std::to_string(*id),
-                                "System Event Log Entry",
-                                crow::utility::getDateTimeStdtime(timestamp),
-                                messageId, messageArgs, *resolution, resolved,
-                                *severity);
+                            originOfCondition =
+                                additional["REDFISH_ORIGIN_OF_CONDITION"];
+                        }
+                    }
 
-                            origin_utils::convertDbusObjectToOriginOfCondition(
-                                originOfCondition, asyncResp,
-                                std::to_string(*id));
-                        }
+                    if (isMessageRegistry)
+                    {
+                        message_registries::generateMessageRegistry(
+                            asyncResp->res.jsonValue,
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/LogServices/"
+                            "EventLog/Entries/",
+                            "v1_9_0", std::to_string(*id),
+                            "System Event Log Entry",
+                            redfish::time_utils::getDateTimeStdtime(timestamp),
+                            messageId, messageArgs, *resolution, resolved,
+                            *severity);
 
-                        // generateMessageRegistry will not create the entry if
-                        // the messageId can't be found in message registries.
-                        // So check the entry 'Id' anyway to cover that case.
-                        if (asyncResp->res.jsonValue["Id"].size() == 0)
-                        {
-                            asyncResp->res.jsonValue["@odata.type"] =
-                                "#LogEntry.v1_9_0.LogEntry";
-                            asyncResp->res.jsonValue["@odata.id"] =
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/LogServices/"
-                                "EventLog/"
-                                "Entries/" +
-                                std::to_string(*id);
-                            asyncResp->res.jsonValue["Name"] =
-                                "System Event Log Entry";
-                            asyncResp->res.jsonValue["Id"] =
-                                std::to_string(*id);
-                            asyncResp->res.jsonValue["Message"] = *message;
-                            asyncResp->res.jsonValue["Resolved"] = resolved;
-                            asyncResp->res.jsonValue["EntryType"] = "Event";
-                            asyncResp->res.jsonValue["Severity"] =
-                                translateSeverityDbusToRedfish(*severity);
-                            asyncResp->res.jsonValue["Created"] =
-                                crow::utility::getDateTimeStdtime(timestamp);
-                            asyncResp->res.jsonValue["Modified"] =
-                                crow::utility::getDateTimeStdtime(
-                                    updateTimestamp);
-                        }
-                        if (filePath != nullptr)
-                        {
-                            asyncResp->res.jsonValue["AdditionalDataURI"] =
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/LogServices/"
-                                "EventLog/"
-                                "Entries/" +
-                                std::to_string(*id) + "/attachment";
-                        }
-                    },
-                    "xyz.openbmc_project.Logging",
-                    "/xyz/openbmc_project/logging/entry/" + entryID,
-                    "org.freedesktop.DBus.Properties", "GetAll", "");
-            });
+                        origin_utils::convertDbusObjectToOriginOfCondition(
+                            originOfCondition, asyncResp, std::to_string(*id));
+                    }
+
+                    // generateMessageRegistry will not create the entry if
+                    // the messageId can't be found in message registries.
+                    // So check the entry 'Id' anyway to cover that case.
+                    if (asyncResp->res.jsonValue["Id"].size() == 0)
+                    {
+                        asyncResp->res.jsonValue["@odata.type"] =
+                            "#LogEntry.v1_9_0.LogEntry";
+                        asyncResp->res.jsonValue["@odata.id"] =
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/LogServices/"
+                            "EventLog/"
+                            "Entries/" +
+                            std::to_string(*id);
+                        asyncResp->res.jsonValue["Name"] =
+                            "System Event Log Entry";
+                        asyncResp->res.jsonValue["Id"] = std::to_string(*id);
+                        asyncResp->res.jsonValue["Message"] = *message;
+                        asyncResp->res.jsonValue["Resolved"] = resolved;
+                        asyncResp->res.jsonValue["EntryType"] = "Event";
+                        asyncResp->res.jsonValue["Severity"] =
+                            translateSeverityDbusToRedfish(*severity);
+                        asyncResp->res.jsonValue["Created"] =
+                            redfish::time_utils::getDateTimeStdtime(timestamp);
+                        asyncResp->res.jsonValue["Modified"] =
+                            redfish::time_utils::getDateTimeStdtime(
+                                updateTimestamp);
+                    }
+                    if (filePath != nullptr)
+                    {
+                        asyncResp->res.jsonValue["AdditionalDataURI"] =
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/LogServices/"
+                            "EventLog/"
+                            "Entries/" +
+                            std::to_string(*id) + "/attachment";
+                    }
+                },
+                "xyz.openbmc_project.Logging",
+                "/xyz/openbmc_project/logging/entry/" + entryID,
+                "org.freedesktop.DBus.Properties", "GetAll", "");
+        });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/EventLog/Entries/<str>/")
         .privileges(redfish::privileges::patchLogEntry)
         .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& entryId) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& entryId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 std::optional<bool> resolved;
 
-                if (!json_util::readJson(req, asyncResp->res, "Resolved",
-                                         resolved))
+                if (!json_util::readJsonPatch(req, asyncResp->res, "Resolved",
+                                              resolved))
                 {
                     return;
                 }
@@ -2062,49 +2307,52 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                       "/LogServices/EventLog/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
 
-        .methods(boost::beast::http::verb::delete_)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param)
-
+        .methods(boost::beast::http::verb::
+                     delete_)([&app](const crow::Request& req,
+                                     const std::shared_ptr<bmcweb::AsyncResp>&
+                                         asyncResp,
+                                     const std::string& param) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
             {
-                BMCWEB_LOG_DEBUG << "Do delete single event entries.";
+                return;
+            }
+            BMCWEB_LOG_DEBUG << "Do delete single event entries.";
 
-                std::string entryID = param;
+            std::string entryID = param;
 
-                dbus::utility::escapePathForDbus(entryID);
+            dbus::utility::escapePathForDbus(entryID);
 
-                // Process response from Logging service.
-                auto respHandler = [asyncResp, entryID](
-                                       const boost::system::error_code ec) {
-                    BMCWEB_LOG_DEBUG
-                        << "EventLogEntry (DBus) doDelete callback: Done";
-                    if (ec)
+            // Process response from Logging service.
+            auto respHandler = [asyncResp,
+                                entryID](const boost::system::error_code ec) {
+                BMCWEB_LOG_DEBUG
+                    << "EventLogEntry (DBus) doDelete callback: Done";
+                if (ec)
+                {
+                    if (ec.value() == EBADR)
                     {
-                        if (ec.value() == EBADR)
-                        {
-                            messages::resourceNotFound(asyncResp->res,
-                                                       "LogEntry", entryID);
-                            return;
-                        }
-                        // TODO Handle for specific error code
-                        BMCWEB_LOG_ERROR
-                            << "EventLogEntry (DBus) doDelete respHandler got error "
-                            << ec;
-                        asyncResp->res.result(
-                            boost::beast::http::status::internal_server_error);
+                        messages::resourceNotFound(asyncResp->res, "LogEntry",
+                                                   entryID);
                         return;
                     }
+                    // TODO Handle for specific error code
+                    BMCWEB_LOG_ERROR
+                        << "EventLogEntry (DBus) doDelete respHandler got error "
+                        << ec;
+                    asyncResp->res.result(
+                        boost::beast::http::status::internal_server_error);
+                    return;
+                }
 
-                    asyncResp->res.result(boost::beast::http::status::ok);
-                };
+                asyncResp->res.result(boost::beast::http::status::ok);
+            };
 
-                // Make call to Logging service to request Delete Log
-                crow::connections::systemBus->async_method_call(
-                    respHandler, "xyz.openbmc_project.Logging",
-                    "/xyz/openbmc_project/logging/entry/" + entryID,
-                    "xyz.openbmc_project.Object.Delete", "Delete");
-            });
+            // Make call to Logging service to request Delete Log
+            crow::connections::systemBus->async_method_call(
+                respHandler, "xyz.openbmc_project.Logging",
+                "/xyz/openbmc_project/logging/entry/" + entryID,
+                "xyz.openbmc_project.Object.Delete", "Delete");
+        });
 }
 
 inline void requestRoutesDBusEventLogEntryDownload(App& app)
@@ -2112,94 +2360,98 @@ inline void requestRoutesDBusEventLogEntryDownload(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/EventLog/Entries/<str>/attachment")
         .privileges(redfish::privileges::getLogEntry)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param)
-
+        .methods(
+            boost::beast::http::verb::
+                get)([&app](const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& param) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
             {
-                if (!http_helpers::isOctetAccepted(
-                        req.getHeaderValue("Accept")))
-                {
-                    asyncResp->res.result(
-                        boost::beast::http::status::bad_request);
-                    return;
-                }
+                return;
+            }
+            if (http_helpers::isContentTypeAllowed(
+                    req.getHeaderValue("Accept"),
+                    http_helpers::ContentType::OctetStream, true))
+            {
+                asyncResp->res.result(boost::beast::http::status::bad_request);
+                return;
+            }
 
-                std::string entryID = param;
-                dbus::utility::escapePathForDbus(entryID);
+            std::string entryID = param;
+            dbus::utility::escapePathForDbus(entryID);
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp,
-                     entryID](const boost::system::error_code ec,
-                              const sdbusplus::message::unix_fd& unixfd) {
-                        if (ec.value() == EBADR)
-                        {
-                            messages::resourceNotFound(
-                                asyncResp->res, "EventLogAttachment", entryID);
-                            return;
-                        }
-                        if (ec)
-                        {
-                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
+            crow::connections::systemBus->async_method_call(
+                [asyncResp,
+                 entryID](const boost::system::error_code ec,
+                          const sdbusplus::message::unix_fd& unixfd) {
+                    if (ec.value() == EBADR)
+                    {
+                        messages::resourceNotFound(
+                            asyncResp->res, "EventLogAttachment", entryID);
+                        return;
+                    }
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
 
-                        int fd = -1;
-                        fd = dup(unixfd);
-                        if (fd == -1)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
+                    int fd = -1;
+                    fd = dup(unixfd);
+                    if (fd == -1)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
 
-                        long long int size = lseek(fd, 0, SEEK_END);
-                        if (size == -1)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
+                    long long int size = lseek(fd, 0, SEEK_END);
+                    if (size == -1)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
 
-                        // Arbitrary max size of 64kb
-                        constexpr int maxFileSize = 65536;
-                        if (size > maxFileSize)
-                        {
-                            BMCWEB_LOG_ERROR
-                                << "File size exceeds maximum allowed size of "
-                                << maxFileSize;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        std::vector<char> data(static_cast<size_t>(size));
-                        long long int rc = lseek(fd, 0, SEEK_SET);
-                        if (rc == -1)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        rc = read(fd, data.data(), data.size());
-                        if ((rc == -1) || (rc != size))
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        close(fd);
+                    // Arbitrary max size of 64kb
+                    constexpr int maxFileSize = 65536;
+                    if (size > maxFileSize)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "File size exceeds maximum allowed size of "
+                            << maxFileSize;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    std::vector<char> data(static_cast<size_t>(size));
+                    long long int rc = lseek(fd, 0, SEEK_SET);
+                    if (rc == -1)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    rc = read(fd, data.data(), data.size());
+                    if ((rc == -1) || (rc != size))
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    close(fd);
 
-                        std::string_view strData(data.data(), data.size());
-                        std::string output =
-                            crow::utility::base64encode(strData);
+                    std::string_view strData(data.data(), data.size());
+                    std::string output = crow::utility::base64encode(strData);
 
-                        asyncResp->res.addHeader("Content-Type",
-                                                 "application/octet-stream");
-                        asyncResp->res.addHeader("Content-Transfer-Encoding",
-                                                 "Base64");
-                        asyncResp->res.body() = std::move(output);
-                    },
-                    "xyz.openbmc_project.Logging",
-                    "/xyz/openbmc_project/logging/entry/" + entryID,
-                    "xyz.openbmc_project.Logging.Entry", "GetEntry");
-            });
+                    asyncResp->res.addHeader(
+                        boost::beast::http::field::content_type,
+                        "application/octet-stream");
+                    asyncResp->res.addHeader(
+                        boost::beast::http::field::content_transfer_encoding,
+                        "Base64");
+                    asyncResp->res.body() = std::move(output);
+                },
+                "xyz.openbmc_project.Logging",
+                "/xyz/openbmc_project/logging/entry/" + entryID,
+                "xyz.openbmc_project.Logging.Entry", "GetEntry");
+        });
 }
 
 void populateRedfishSELEntry(GetManagedPropertyType& resp,
@@ -2227,7 +2479,7 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
                 std::get_if<uint64_t>(&propertyMap.second);
             if (millisTimeStamp != nullptr)
             {
-                timestamp = crow::utility::getTimestamp(*millisTimeStamp);
+                timestamp = redfish::time_utils::getTimestamp(*millisTimeStamp);
             }
         }
         else if (propertyMap.first == "UpdateTimestamp")
@@ -2236,7 +2488,8 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
                 std::get_if<uint64_t>(&propertyMap.second);
             if (millisTimeStamp != nullptr)
             {
-                updateTimestamp = crow::utility::getTimestamp(*millisTimeStamp);
+                updateTimestamp =
+                    redfish::time_utils::getTimestamp(*millisTimeStamp);
             }
         }
         else if (propertyMap.first == "Severity")
@@ -2335,8 +2588,9 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
     thisEntry["Resolved"] = resolved;
     thisEntry["EntryType"] = "SEL";
     thisEntry["Severity"] = translateSeverityDbusToRedfish(*severity);
-    thisEntry["Created"] = crow::utility::getDateTimeStdtime(timestamp);
-    thisEntry["Modified"] = crow::utility::getDateTimeStdtime(updateTimestamp);
+    thisEntry["Created"] = redfish::time_utils::getDateTimeStdtime(timestamp);
+    thisEntry["Modified"] =
+        redfish::time_utils::getDateTimeStdtime(updateTimestamp);
 }
 
 inline void requestRoutesDBusSELLogEntryCollection(App& app)
@@ -2581,10 +2835,9 @@ inline bool
     return true;
 }
 
-inline bool
-    getHostLoggerEntries(std::vector<std::filesystem::path>& hostLoggerFiles,
-                         uint64_t& skip, uint64_t& top,
-                         std::vector<std::string>& logEntries, size_t& logCount)
+inline bool getHostLoggerEntries(
+    const std::vector<std::filesystem::path>& hostLoggerFiles, uint64_t skip,
+    uint64_t top, std::vector<std::string>& logEntries, size_t& logCount)
 {
     GzFileReader logFile;
 
@@ -2612,19 +2865,19 @@ inline bool
 
 inline void fillHostLoggerEntryJson(const std::string& logEntryID,
                                     const std::string& msg,
-                                    nlohmann::json& logEntryJson)
+                                    nlohmann::json::object_t& logEntryJson)
 {
     // Fill in the log entry with the gathered data.
-    logEntryJson = {{"@odata.type", "#LogEntry.v1_4_0.LogEntry"},
-                    {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                  "/LogServices/HostLogger/Entries/" +
-                                      logEntryID},
-                    {"Name", "Host Logger Entry"},
-                    {"Id", logEntryID},
-                    {"Message", msg},
-                    {"EntryType", "Oem"},
-                    {"Severity", "OK"},
-                    {"OemRecordFormat", "Host Logger Entry"}};
+    logEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    logEntryJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/LogServices/HostLogger/Entries/" +
+                                logEntryID;
+    logEntryJson["Name"] = "Host Logger Entry";
+    logEntryJson["Id"] = logEntryID;
+    logEntryJson["Message"] = msg;
+    logEntryJson["EntryType"] = "Oem";
+    logEntryJson["Severity"] = "OK";
+    logEntryJson["OemRecordFormat"] = "Host Logger Entry";
 }
 
 inline void requestRoutesSystemHostLogger(App& app)
@@ -2633,8 +2886,12 @@ inline void requestRoutesSystemHostLogger(App& app)
                       "/LogServices/HostLogger/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID
                     "/LogServices/HostLogger";
@@ -2655,17 +2912,15 @@ inline void requestRoutesSystemHostLoggerCollection(App& app)
                       "/LogServices/HostLogger/Entries/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                uint64_t skip = 0;
-                uint64_t top = maxEntriesPerPage; // Show max 1000 entries by
-                                                  // default, allow range 1 to
-                                                  // 1000 entries per page.
-                if (!getSkipParam(asyncResp, req, skip))
-                {
-                    return;
-                }
-                if (!getTopParam(asyncResp, req, top))
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                query_param::QueryCapabilities capabilities = {
+                    .canDelegateTop = true,
+                    .canDelegateSkip = true,
+                };
+                query_param::Query delegatedQuery;
+                if (!redfish::setUpRedfishRouteWithDelegation(
+                        app, req, asyncResp, delegatedQuery, capabilities))
                 {
                     return;
                 }
@@ -2689,6 +2944,10 @@ inline void requestRoutesSystemHostLoggerCollection(App& app)
                     return;
                 }
 
+                // If we weren't provided top and skip limits, use the defaults.
+                size_t skip = delegatedQuery.skip.value_or(0);
+                size_t top =
+                    delegatedQuery.top.value_or(query_param::Query::maxTop);
                 size_t logCount = 0;
                 // This vector only store the entries we want to expose that
                 // control by skip and top.
@@ -2710,10 +2969,10 @@ inline void requestRoutesSystemHostLoggerCollection(App& app)
                 {
                     for (size_t i = 0; i < logEntries.size(); i++)
                     {
-                        logEntryArray.push_back({});
-                        nlohmann::json& hostLogEntry = logEntryArray.back();
+                        nlohmann::json::object_t hostLogEntry;
                         fillHostLoggerEntryJson(std::to_string(skip + i),
                                                 logEntries[i], hostLogEntry);
+                        logEntryArray.push_back(std::move(hostLogEntry));
                     }
 
                     asyncResp->res.jsonValue["Members@odata.count"] = logCount;
@@ -2734,9 +2993,13 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
                       "/LogServices/HostLogger/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 const std::string& targetID = param;
 
                 uint64_t idInt = 0;
@@ -2745,14 +3008,12 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
                 const char* end = targetID.data() + targetID.size();
 
                 auto [ptr, ec] = std::from_chars(targetID.data(), end, idInt);
-                if (ec == std::errc::invalid_argument)
+                if (ec == std::errc::invalid_argument ||
+                    ec == std::errc::result_out_of_range)
                 {
-                    messages::resourceMissingAtURI(asyncResp->res, targetID);
-                    return;
-                }
-                if (ec == std::errc::result_out_of_range)
-                {
-                    messages::resourceMissingAtURI(asyncResp->res, targetID);
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                        "LogServices", "HostLogger", "Entries", targetID));
                     return;
                 }
 
@@ -2764,7 +3025,7 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
                 }
 
                 size_t logCount = 0;
-                uint64_t top = 1;
+                size_t top = 1;
                 std::vector<std::string> logEntries;
                 // We can get specific entry by skip and top. For example, if we
                 // want to get nth entry, we can set skip = n-1 and top = 1 to
@@ -2778,14 +3039,94 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
 
                 if (!logEntries.empty())
                 {
+                    nlohmann::json::object_t hostLogEntry;
                     fillHostLoggerEntryJson(targetID, logEntries[0],
-                                            asyncResp->res.jsonValue);
+                                            hostLogEntry);
+                    asyncResp->res.jsonValue.update(hostLogEntry);
                     return;
                 }
 
                 // Requested ID was not found
-                messages::resourceMissingAtURI(asyncResp->res, targetID);
+                messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                        "LogServices", "HostLogger", "Entries", targetID));
             });
+}
+
+constexpr char const* dumpManagerIface =
+    "xyz.openbmc_project.Collection.DeleteAll";
+inline void handleBMCLogServicesCollectionGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    // Collections don't include the static data added by SubRoute
+    // because it has a duplicate entry for members
+    asyncResp->res.jsonValue["@odata.type"] =
+        "#LogServiceCollection.LogServiceCollection";
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices";
+    asyncResp->res.jsonValue["Name"] = "Open BMC Log Services Collection";
+    asyncResp->res.jsonValue["Description"] =
+        "Collection of LogServices for this Manager";
+    nlohmann::json& logServiceArray = asyncResp->res.jsonValue["Members"];
+    logServiceArray = nlohmann::json::array();
+
+#ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
+    logServiceArray.push_back(
+        {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Journal"}});
+#endif
+
+    asyncResp->res.jsonValue["Members@odata.count"] = logServiceArray.size();
+
+#ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
+    auto respHandler = [asyncResp](
+                           const boost::system::error_code ec,
+                           const dbus::utility::MapperGetSubTreePathsResponse&
+                               subTreePaths) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "handleBMCLogServicesCollectionGet respHandler got error "
+                << ec;
+            // Assume that getting an error simply means there are no dump
+            // LogServices. Return without adding any error response.
+            return;
+        }
+
+        nlohmann::json& logServiceArrayLocal =
+            asyncResp->res.jsonValue["Members"];
+
+        for (const std::string& path : subTreePaths)
+        {
+            if (path == "/xyz/openbmc_project/dump/bmc")
+            {
+                logServiceArrayLocal.push_back(
+                    {{"@odata.id",
+                      "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump"}});
+            }
+            else if (path == "/xyz/openbmc_project/dump/faultlog")
+            {
+                logServiceArrayLocal.push_back(
+                    {{"@odata.id",
+                      "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/FaultLog"}});
+            }
+        }
+
+        asyncResp->res.jsonValue["Members@odata.count"] =
+            logServiceArrayLocal.size();
+    };
+
+    crow::connections::systemBus->async_method_call(
+        respHandler, "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+        "/xyz/openbmc_project/dump", 0,
+        std::array<const char*, 1>{dumpManagerIface});
+#endif
 }
 
 inline void requestRoutesBMCLogServiceCollection(App& app)
@@ -2793,34 +3134,7 @@ inline void requestRoutesBMCLogServiceCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/")
         .privileges(redfish::privileges::getLogServiceCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                // Collections don't include the static data added by SubRoute
-                // because it has a duplicate entry for members
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogServiceCollection.LogServiceCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices";
-                asyncResp->res.jsonValue["Name"] =
-                    "Open BMC Log Services Collection";
-                asyncResp->res.jsonValue["Description"] =
-                    "Collection of LogServices for this Manager";
-                nlohmann::json& logServiceArray =
-                    asyncResp->res.jsonValue["Members"];
-                logServiceArray = nlohmann::json::array();
-#ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
-                logServiceArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
-                                   "/LogServices/Dump"}});
-#endif
-#ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
-                logServiceArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
-                                   "/LogServices/Journal"}});
-#endif
-                asyncResp->res.jsonValue["Members@odata.count"] =
-                    logServiceArray.size();
-            });
+            std::bind_front(handleBMCLogServicesCollectionGet, std::ref(app)));
 }
 
 inline void requestRoutesBMCJournalLogService(App& app)
@@ -2829,10 +3143,14 @@ inline void requestRoutesBMCJournalLogService(App& app)
                  "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Journal/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
             {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#LogService.v1_1_0.LogService";
                 asyncResp->res.jsonValue["@odata.id"] =
@@ -2846,7 +3164,7 @@ inline void requestRoutesBMCJournalLogService(App& app)
                 asyncResp->res.jsonValue["OverWritePolicy"] = "WrapsWhenFull";
 
                 std::pair<std::string, std::string> redfishDateTimeOffset =
-                    crow::utility::getDateTimeOffsetNow();
+                    redfish::time_utils::getDateTimeOffsetNow();
                 asyncResp->res.jsonValue["DateTime"] =
                     redfishDateTimeOffset.first;
                 asyncResp->res.jsonValue["DateTimeLocalOffset"] =
@@ -2858,9 +3176,10 @@ inline void requestRoutesBMCJournalLogService(App& app)
             });
 }
 
-static int fillBMCJournalLogEntryJson(const std::string& bmcJournalLogEntryID,
-                                      sd_journal* journal,
-                                      nlohmann::json& bmcJournalLogEntryJson)
+static int
+    fillBMCJournalLogEntryJson(const std::string& bmcJournalLogEntryID,
+                               sd_journal* journal,
+                               nlohmann::json::object_t& bmcJournalLogEntryJson)
 {
     // Get the Log Entry contents
     int ret = 0;
@@ -2903,19 +3222,18 @@ static int fillBMCJournalLogEntryJson(const std::string& bmcJournalLogEntryID,
     }
 
     // Fill in the log entry with the gathered data
-    bmcJournalLogEntryJson = {
-        {"@odata.type", "#LogEntry.v1_8_0.LogEntry"},
-        {"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/LogServices/Journal/Entries/" +
-                          bmcJournalLogEntryID},
-        {"Name", "BMC Journal Entry"},
-        {"Id", bmcJournalLogEntryID},
-        {"Message", std::move(message)},
-        {"EntryType", "Oem"},
-        {"Severity",
-         severity <= 2 ? "Critical" : severity <= 4 ? "Warning" : "OK"},
-        {"OemRecordFormat", "BMC Journal Entry"},
-        {"Created", std::move(entryTimeStr)}};
+    bmcJournalLogEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    bmcJournalLogEntryJson["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                                          "/LogServices/Journal/Entries/" +
+                                          bmcJournalLogEntryID;
+    bmcJournalLogEntryJson["Name"] = "BMC Journal Entry";
+    bmcJournalLogEntryJson["Id"] = bmcJournalLogEntryID;
+    bmcJournalLogEntryJson["Message"] = std::move(message);
+    bmcJournalLogEntryJson["EntryType"] = "Oem";
+    bmcJournalLogEntryJson["Severity"] =
+        severity <= 2 ? "Critical" : severity <= 4 ? "Warning" : "OK";
+    bmcJournalLogEntryJson["OemRecordFormat"] = "BMC Journal Entry";
+    bmcJournalLogEntryJson["Created"] = std::move(entryTimeStr);
     return 0;
 }
 
@@ -2925,19 +3243,23 @@ inline void requestRoutesBMCJournalLogEntryCollection(App& app)
                       "/LogServices/Journal/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                static constexpr const long maxEntriesPerPage = 1000;
-                uint64_t skip = 0;
-                uint64_t top = maxEntriesPerPage; // Show max entries by default
-                if (!getSkipParam(asyncResp, req, skip))
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                query_param::QueryCapabilities capabilities = {
+                    .canDelegateTop = true,
+                    .canDelegateSkip = true,
+                };
+                query_param::Query delegatedQuery;
+                if (!redfish::setUpRedfishRouteWithDelegation(
+                        app, req, asyncResp, delegatedQuery, capabilities))
                 {
                     return;
                 }
-                if (!getTopParam(asyncResp, req, top))
-                {
-                    return;
-                }
+
+                size_t skip = delegatedQuery.skip.value_or(0);
+                size_t top =
+                    delegatedQuery.top.value_or(query_param::Query::maxTop);
+
                 // Collections don't include the static data added by SubRoute
                 // because it has a duplicate entry for members
                 asyncResp->res.jsonValue["@odata.type"] =
@@ -2984,20 +3306,16 @@ inline void requestRoutesBMCJournalLogEntryCollection(App& app)
                     {
                         continue;
                     }
+                    firstEntry = false;
 
-                    if (firstEntry)
-                    {
-                        firstEntry = false;
-                    }
-
-                    logEntryArray.push_back({});
-                    nlohmann::json& bmcJournalLogEntry = logEntryArray.back();
+                    nlohmann::json::object_t bmcJournalLogEntry;
                     if (fillBMCJournalLogEntryJson(idStr, journal.get(),
                                                    bmcJournalLogEntry) != 0)
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
+                    logEntryArray.push_back(std::move(bmcJournalLogEntry));
                 }
                 asyncResp->res.jsonValue["Members@odata.count"] = entryCount;
                 if (skip + top < entryCount)
@@ -3012,18 +3330,26 @@ inline void requestRoutesBMCJournalLogEntryCollection(App& app)
 
 inline void requestRoutesBMCJournalLogEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/LogServices/Journal/Entries/<str>/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/" PLATFORMBMCID 
+                 "/LogServices/Journal/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& entryID) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& entryID) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 // Convert the unique ID back to a timestamp to find the entry
                 uint64_t ts = 0;
                 uint64_t index = 0;
-                if (!getTimestampFromID(asyncResp, entryID, ts, index))
+                if (!getTimestampFromID(entryID, ts, index))
                 {
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                                                                    "redfish", "v1", "Managers", PLATFORMBMCID,
+                                                                    "LogServices", "Journal", "Entries", entryID));
                     return;
                 }
 
@@ -3059,25 +3385,220 @@ inline void requestRoutesBMCJournalLogEntry(App& app)
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    if (firstEntry)
-                    {
-                        firstEntry = false;
-                    }
+                    firstEntry = false;
                 }
                 // Confirm that the entry ID matches what was requested
                 if (idStr != entryID)
                 {
-                    messages::resourceMissingAtURI(asyncResp->res, entryID);
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                                                                    "redfish", "v1", "Managers", PLATFORMBMCID,
+                                                                    "LogServices", "Journal", "Entries", entryID));
                     return;
                 }
 
+                nlohmann::json::object_t bmcJournalLogEntry;
                 if (fillBMCJournalLogEntryJson(entryID, journal.get(),
-                                               asyncResp->res.jsonValue) != 0)
+                                               bmcJournalLogEntry) != 0)
                 {
                     messages::internalError(asyncResp->res);
                     return;
                 }
+                asyncResp->res.jsonValue.update(bmcJournalLogEntry);
             });
+}
+
+inline void
+    getDumpServiceInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& dumpType)
+{
+    std::string dumpPath;
+    std::string overWritePolicy;
+    bool collectDiagnosticDataSupported = false;
+
+    if (dumpType == "BMC")
+    {
+        dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump";
+        overWritePolicy = "WrapsWhenFull";
+        collectDiagnosticDataSupported = true;
+    }
+    else if (dumpType == "FaultLog")
+    {
+        dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/FaultLog";
+        overWritePolicy = "Unknown";
+        collectDiagnosticDataSupported = false;
+    }
+    else if (dumpType == "System")
+    {
+        dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump";
+        overWritePolicy = "WrapsWhenFull";
+        collectDiagnosticDataSupported = true;
+    }
+    else
+    {
+        BMCWEB_LOG_ERROR << "getDumpServiceInfo() invalid dump type: "
+                         << dumpType;
+        messages::internalError(asyncResp->res);
+        return;
+    }
+
+    asyncResp->res.jsonValue["@odata.id"] = dumpPath;
+    asyncResp->res.jsonValue["@odata.type"] = "#LogService.v1_2_0.LogService";
+    asyncResp->res.jsonValue["Name"] = "Dump LogService";
+    asyncResp->res.jsonValue["Description"] = dumpType + " Dump LogService";
+    asyncResp->res.jsonValue["Id"] = std::filesystem::path(dumpPath).filename();
+    asyncResp->res.jsonValue["OverWritePolicy"] = std::move(overWritePolicy);
+
+    std::pair<std::string, std::string> redfishDateTimeOffset =
+        redfish::time_utils::getDateTimeOffsetNow();
+    asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
+    asyncResp->res.jsonValue["DateTimeLocalOffset"] =
+        redfishDateTimeOffset.second;
+
+    asyncResp->res.jsonValue["Entries"]["@odata.id"] = dumpPath + "/Entries";
+    asyncResp->res.jsonValue["Actions"]["#LogService.ClearLog"]["target"] =
+        dumpPath + "/Actions/LogService.ClearLog";
+
+    if (collectDiagnosticDataSupported)
+    {
+        asyncResp->res.jsonValue["Actions"]["#LogService.CollectDiagnosticData"]
+                                ["target"] =
+            dumpPath + "/Actions/LogService.CollectDiagnosticData";
+    }
+}
+
+inline void handleLogServicesDumpServiceGet(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    getDumpServiceInfo(asyncResp, dumpType);
+}
+
+inline void handleLogServicesDumpServiceComputerSystemGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    getDumpServiceInfo(asyncResp, "System");
+}
+
+inline void handleLogServicesDumpEntriesCollectionGet(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    getDumpEntryCollection(asyncResp, dumpType);
+}
+
+inline void handleLogServicesDumpEntriesCollectionComputerSystemGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    getDumpEntryCollection(asyncResp, "System");
+}
+
+inline void handleLogServicesDumpEntryGet(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& dumpId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    getDumpEntryById(asyncResp, dumpId, dumpType);
+}
+inline void handleLogServicesDumpEntryComputerSystemGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& dumpId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    getDumpEntryById(asyncResp, dumpId, "System");
+}
+
+inline void handleLogServicesDumpEntryDelete(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& dumpId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    deleteDumpEntry(asyncResp, dumpId, dumpType);
+}
+
+inline void handleLogServicesDumpEntryComputerSystemDelete(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& dumpId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    deleteDumpEntry(asyncResp, dumpId, "System");
+}
+
+inline void handleLogServicesDumpCollectDiagnosticDataPost(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    createDump(asyncResp, req, dumpType);
+}
+
+inline void handleLogServicesDumpCollectDiagnosticDataComputerSystemPost(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    createDump(asyncResp, req, "System");
+}
+
+inline void handleLogServicesDumpClearLogPost(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    clearDump(asyncResp, dumpType);
+}
+
+inline void handleLogServicesDumpClearLogComputerSystemPost(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    clearDump(asyncResp, "System");
 }
 
 inline void requestRoutesBMCDumpService(App& app)
@@ -3085,62 +3606,16 @@ inline void requestRoutesBMCDumpService(App& app)
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/")
         .privileges(redfish::privileges::getLogService)
-        .methods(
-            boost::beast::http::verb::
-                get)([](const crow::Request&,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-            asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump";
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#LogService.v1_2_0.LogService";
-            asyncResp->res.jsonValue["Name"] = "Dump LogService";
-            asyncResp->res.jsonValue["Description"] = "BMC Dump LogService";
-            asyncResp->res.jsonValue["Id"] = "Dump";
-            asyncResp->res.jsonValue["OverWritePolicy"] = "WrapsWhenFull";
-
-            std::pair<std::string, std::string> redfishDateTimeOffset =
-                crow::utility::getDateTimeOffsetNow();
-            asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
-            asyncResp->res.jsonValue["DateTimeLocalOffset"] =
-                redfishDateTimeOffset.second;
-
-            asyncResp->res.jsonValue["Entries"] = {
-                {"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
-                              "/LogServices/Dump/Entries"}};
-            asyncResp->res.jsonValue["Actions"] = {
-                {"#LogService.ClearLog",
-                 {{"target", "/redfish/v1/Managers/" PLATFORMBMCID
-                             "/LogServices/Dump/Actions/LogService.ClearLog"}}},
-                {"#LogService.CollectDiagnosticData",
-                 {{"target",
-                   "/redfish/v1/Managers/" PLATFORMBMCID
-                   "/LogServices/Dump/Actions/LogService.CollectDiagnosticData"}}}};
-        });
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpServiceGet, std::ref(app), "BMC"));
 }
 
 inline void requestRoutesBMCDumpEntryCollection(App& app)
 {
-
-    /**
-     * Functions triggers appropriate requests on DBus
-     */
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/LogServices/Dump/Entries/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogEntryCollection.LogEntryCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/" PLATFORMBMCID
-                    "/LogServices/Dump/Entries";
-                asyncResp->res.jsonValue["Name"] = "BMC Dump Entries";
-                asyncResp->res.jsonValue["Description"] =
-                    "Collection of BMC Dump Entries";
-
-                getDumpEntryCollection(asyncResp, "BMC");
-            });
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpEntriesCollectionGet, std::ref(app), "BMC"));
 }
 
 inline void requestRoutesBMCDumpEntry(App& app)
@@ -3148,21 +3623,14 @@ inline void requestRoutesBMCDumpEntry(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/LogServices/Dump/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
-                getDumpEntryById(asyncResp, param, "BMC");
-            });
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpEntryGet, std::ref(app), "BMC"));
+
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/LogServices/Dump/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
-        .methods(boost::beast::http::verb::delete_)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
-                deleteDumpEntry(asyncResp, param, "bmc");
-            });
+        .methods(boost::beast::http::verb::delete_)(std::bind_front(
+            handleLogServicesDumpEntryDelete, std::ref(app), "BMC"));
 }
 
 inline void requestRoutesBMCDumpCreate(App& app)
@@ -3173,10 +3641,8 @@ inline void requestRoutesBMCDumpCreate(App& app)
                  "/LogServices/Dump/Actions/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                createDump(asyncResp, req, "BMC");
-            });
+            std::bind_front(handleLogServicesDumpCollectDiagnosticDataPost,
+                            std::ref(app), "BMC"));
 }
 
 inline void requestRoutesBMCDumpClear(App& app)
@@ -3184,11 +3650,51 @@ inline void requestRoutesBMCDumpClear(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/LogServices/Dump/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
-        .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                clearDump(asyncResp, "BMC");
-            });
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleLogServicesDumpClearLogPost, std::ref(app), "BMC"));
+}
+
+inline void requestRoutesFaultLogDumpService(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMSYSTEMID
+                      "/LogServices/FaultLog/")
+        .privileges(redfish::privileges::getLogService)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpServiceGet, std::ref(app), "FaultLog"));
+}
+
+inline void requestRoutesFaultLogDumpEntryCollection(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMSYSTEMID
+                      "/LogServices/FaultLog/Entries/")
+        .privileges(redfish::privileges::getLogEntryCollection)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleLogServicesDumpEntriesCollectionGet,
+                            std::ref(app), "FaultLog"));
+}
+
+inline void requestRoutesFaultLogDumpEntry(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/FaultLog/Entries/<str>/")
+        .privileges(redfish::privileges::getLogEntry)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpEntryGet, std::ref(app), "FaultLog"));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/FaultLog/Entries/<str>/")
+        .privileges(redfish::privileges::deleteLogEntry)
+        .methods(boost::beast::http::verb::delete_)(std::bind_front(
+            handleLogServicesDumpEntryDelete, std::ref(app), "FaultLog"));
+}
+
+inline void requestRoutesFaultLogDumpClear(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/LogServices/FaultLog/Actions/LogService.ClearLog/")
+        .privileges(redfish::privileges::postLogService)
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleLogServicesDumpClearLogPost, std::ref(app), "FaultLog"));
 }
 
 inline void requestRoutesSystemDumpService(App& app)
@@ -3196,66 +3702,18 @@ inline void requestRoutesSystemDumpService(App& app)
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/")
         .privileges(redfish::privileges::getLogService)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-
-            {
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump";
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogService.v1_2_0.LogService";
-                asyncResp->res.jsonValue["Name"] = "Dump LogService";
-                asyncResp->res.jsonValue["Description"] =
-                    "System Dump LogService";
-                asyncResp->res.jsonValue["Id"] = "Dump";
-                asyncResp->res.jsonValue["OverWritePolicy"] = "WrapsWhenFull";
-
-                std::pair<std::string, std::string> redfishDateTimeOffset =
-                    crow::utility::getDateTimeOffsetNow();
-                asyncResp->res.jsonValue["DateTime"] =
-                    redfishDateTimeOffset.first;
-                asyncResp->res.jsonValue["DateTimeLocalOffset"] =
-                    redfishDateTimeOffset.second;
-
-                asyncResp->res.jsonValue["Entries"] = {
-                    {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                  "/LogServices/Dump/Entries"}};
-                asyncResp->res.jsonValue["Actions"] = {
-                    {"#LogService.ClearLog",
-                     {{"target",
-                       "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                       "/LogServices/Dump/Actions/LogService.ClearLog"}}},
-                    {"#LogService.CollectDiagnosticData",
-                     {{"target",
-                       "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                       "/LogServices/Dump/Actions/LogService.CollectDiagnosticData"}}}};
-            });
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpServiceComputerSystemGet, std::ref(app)));
 }
 
 inline void requestRoutesSystemDumpEntryCollection(App& app)
 {
-
-    /**
-     * Functions triggers appropriate requests on DBus
-     */
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/Dump/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogEntryCollection.LogEntryCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                    "/LogServices/Dump/Entries";
-                asyncResp->res.jsonValue["Name"] = "System Dump Entries";
-                asyncResp->res.jsonValue["Description"] =
-                    "Collection of System Dump Entries";
-
-                getDumpEntryCollection(asyncResp, "System");
-            });
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpEntriesCollectionComputerSystemGet,
+            std::ref(app)));
 }
 
 inline void requestRoutesSystemDumpEntry(App& app)
@@ -3263,23 +3721,14 @@ inline void requestRoutesSystemDumpEntry(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/Dump/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
-
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
-                getDumpEntryById(asyncResp, param, "System");
-            });
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpEntryComputerSystemGet, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/Dump/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
-        .methods(boost::beast::http::verb::delete_)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
-                deleteDumpEntry(asyncResp, param, "system");
-            });
+        .methods(boost::beast::http::verb::delete_)(std::bind_front(
+            handleLogServicesDumpEntryComputerSystemDelete, std::ref(app)));
 }
 
 inline void requestRoutesSystemDumpCreate(App& app)
@@ -3288,11 +3737,9 @@ inline void requestRoutesSystemDumpCreate(App& app)
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID
                  "/LogServices/Dump/Actions/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
-        .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-
-            { createDump(asyncResp, req, "System"); });
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleLogServicesDumpCollectDiagnosticDataComputerSystemPost,
+            std::ref(app)));
 }
 
 inline void requestRoutesSystemDumpClear(App& app)
@@ -3300,11 +3747,8 @@ inline void requestRoutesSystemDumpClear(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/Dump/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
-        .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-
-            { clearDump(asyncResp, "System"); });
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleLogServicesDumpClearLogComputerSystemPost, std::ref(app)));
 }
 
 inline void requestRoutesCrashdumpService(App& app)
@@ -3319,10 +3763,14 @@ inline void requestRoutesCrashdumpService(App& app)
         // This is incorrect, should be:
         //.privileges(redfish::privileges::getLogService)
         .privileges({{"ConfigureManager"}})
-        .methods(
-            boost::beast::http::verb::
-                get)([](const crow::Request&,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        .methods(boost::beast::http::verb::get)([&app](const crow::Request& req,
+                                                       const std::shared_ptr<
+                                                           bmcweb::AsyncResp>&
+                                                           asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             // Copy over the static data to include the entries added by
             // SubRoute
             asyncResp->res.jsonValue["@odata.id"] =
@@ -3337,7 +3785,7 @@ inline void requestRoutesCrashdumpService(App& app)
             asyncResp->res.jsonValue["MaxNumberOfRecords"] = 3;
 
             std::pair<std::string, std::string> redfishDateTimeOffset =
-                crow::utility::getDateTimeOffsetNow();
+                redfish::time_utils::getDateTimeOffsetNow();
             asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
             asyncResp->res.jsonValue["DateTimeLocalOffset"] =
                 redfishDateTimeOffset.second;
@@ -3365,8 +3813,12 @@ void inline requestRoutesCrashdumpClear(App& app)
         //.privileges(redfish::privileges::postLogService)
         .privileges({{"ConfigureComponents"}})
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 crow::connections::systemBus->async_method_call(
                     [asyncResp](const boost::system::error_code ec,
                                 const std::string&) {
@@ -3387,11 +3839,9 @@ static void
                       const std::string& logID, nlohmann::json& logEntryJson)
 {
     auto getStoredLogCallback =
-        [asyncResp, logID, &logEntryJson](
-            const boost::system::error_code ec,
-            const std::vector<
-                std::pair<std::string, dbus::utility::DbusVariantType>>&
-                params) {
+        [asyncResp, logID,
+         &logEntryJson](const boost::system::error_code ec,
+                        const dbus::utility::DBusPropertiesMap& params) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "failed to get log ec: " << ec.message();
@@ -3415,30 +3865,46 @@ static void
 
             if (filename.empty() || timestamp.empty())
             {
-                messages::resourceMissingAtURI(asyncResp->res, logID);
+                messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                                                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                            "LogServices", "Crashdump", "Entries", logID, filename));
                 return;
             }
 
             std::string crashdumpURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                        "/LogServices/Crashdump/Entries/" +
                                        logID + "/" + filename;
-            logEntryJson = {
-                {"@odata.type", "#LogEntry.v1_7_0.LogEntry"},
-                {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
-                              "LogServices/Crashdump/Entries/" +
-                                  logID},
-                {"Name", "CPU Crashdump"},
-                {"Id", logID},
-                {"EntryType", "Oem"},
-                {"AdditionalDataURI", std::move(crashdumpURI)},
-                {"DiagnosticDataType", "OEM"},
-                {"OEMDiagnosticDataType", "PECICrashdump"},
-                {"Created", std::move(timestamp)}};
+            nlohmann::json::object_t logEntry;
+            logEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+            logEntry["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Crashdump/Entries/" +
+                logID;
+            logEntry["Name"] = "CPU Crashdump";
+            logEntry["Id"] = logID;
+            logEntry["EntryType"] = "Oem";
+            logEntry["AdditionalDataURI"] = std::move(crashdumpURI);
+            logEntry["DiagnosticDataType"] = "OEM";
+            logEntry["OEMDiagnosticDataType"] = "PECICrashdump";
+            logEntry["Created"] = std::move(timestamp);
+
+            // If logEntryJson references an array of LogEntry resources
+            // ('Members' list), then push this as a new entry, otherwise set it
+            // directly
+            if (logEntryJson.is_array())
+            {
+                logEntryJson.push_back(logEntry);
+                asyncResp->res.jsonValue["Members@odata.count"] =
+                    logEntryJson.size();
+            }
+            else
+            {
+                logEntryJson.update(logEntry);
+            }
         };
-    crow::connections::systemBus->async_method_call(
-        std::move(getStoredLogCallback), crashdumpObject,
-        crashdumpPath + std::string("/") + logID,
-        "org.freedesktop.DBus.Properties", "GetAll", crashdumpInterface);
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, crashdumpObject,
+        crashdumpPath + std::string("/") + logID, crashdumpInterface,
+        std::move(getStoredLogCallback));
 }
 
 inline void requestRoutesCrashdumpEntryCollection(App& app)
@@ -3454,11 +3920,14 @@ inline void requestRoutesCrashdumpEntryCollection(App& app)
         //.privileges(redfish::privileges::postLogEntryCollection)
         .privileges({{"ConfigureComponents"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                // Collections don't include the static data added by SubRoute
-                // because it has a duplicate entry for members
-                auto getLogEntriesCallback =
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                crow::connections::systemBus->async_method_call(
                     [asyncResp](const boost::system::error_code ec,
                                 const std::vector<std::string>& resp) {
                         if (ec)
@@ -3481,39 +3950,25 @@ inline void requestRoutesCrashdumpEntryCollection(App& app)
                             "Open BMC Crashdump Entries";
                         asyncResp->res.jsonValue["Description"] =
                             "Collection of Crashdump Entries";
-                        nlohmann::json& logEntryArray =
-                            asyncResp->res.jsonValue["Members"];
-                        logEntryArray = nlohmann::json::array();
-                        std::vector<std::string> logIDs;
-                        // Get the list of log entries and build up an empty
-                        // array big enough to hold them
-                        for (const std::string& objpath : resp)
+                        asyncResp->res.jsonValue["Members"] =
+                            nlohmann::json::array();
+                        asyncResp->res.jsonValue["Members@odata.count"] = 0;
+
+                        for (const std::string& path : resp)
                         {
+                            const sdbusplus::message::object_path objPath(path);
                             // Get the log ID
-                            std::size_t lastPos = objpath.rfind('/');
-                            if (lastPos == std::string::npos)
+                            std::string logID = objPath.filename();
+                            if (logID.empty())
                             {
                                 continue;
                             }
-                            logIDs.emplace_back(objpath.substr(lastPos + 1));
-
-                            // Add a space for the log entry to the array
-                            logEntryArray.push_back({});
-                        }
-                        // Now go through and set up async calls to fill in the
-                        // entries
-                        size_t index = 0;
-                        for (const std::string& logID : logIDs)
-                        {
                             // Add the log entry to the array
-                            logCrashdumpEntry(asyncResp, logID,
-                                              logEntryArray[index++]);
+                            logCrashdumpEntry(
+                                asyncResp, logID,
+                                asyncResp->res.jsonValue["Members"]);
                         }
-                        asyncResp->res.jsonValue["Members@odata.count"] =
-                            logEntryArray.size();
-                    };
-                crow::connections::systemBus->async_method_call(
-                    std::move(getLogEntriesCallback),
+                    },
                     "xyz.openbmc_project.ObjectMapper",
                     "/xyz/openbmc_project/object_mapper",
                     "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "",
@@ -3532,9 +3987,13 @@ inline void requestRoutesCrashdumpEntry(App& app)
         // .privileges(redfish::privileges::getLogEntry)
         .privileges({{"ConfigureComponents"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 const std::string& logID = param;
                 logCrashdumpEntry(asyncResp, logID, asyncResp->res.jsonValue);
             });
@@ -3548,11 +4007,15 @@ inline void requestRoutesCrashdumpFile(App& app)
                       "/LogServices/Crashdump/Entries/<str>/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& logID, const std::string& fileName) {
+                // Do not call getRedfishRoute here since the crashdump file is
+                // not a Redfish resource.
+
                 auto getStoredLogCallback =
-                    [asyncResp, logID, fileName](
+                    [asyncResp, logID, fileName,
+                     url(boost::urls::url(req.urlView))](
                         const boost::system::error_code ec,
                         const std::vector<std::pair<
                             std::string, dbus::utility::DbusVariantType>>&
@@ -3576,7 +4039,10 @@ inline void requestRoutesCrashdumpFile(App& app)
                             dbusFilepath.empty())
                         {
                             messages::resourceMissingAtURI(asyncResp->res,
-                                                           fileName);
+                                                           crow::utility::urlFromPieces(
+                                                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                            "LogServices", "Crashdump", "Entries", logID, fileName));
+
                             return;
                         }
 
@@ -3584,14 +4050,20 @@ inline void requestRoutesCrashdumpFile(App& app)
                         if (fileName != dbusFilename)
                         {
                             messages::resourceMissingAtURI(asyncResp->res,
-                                                           fileName);
+                                                           crow::utility::urlFromPieces(
+                                                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                            "LogServices", "Crashdump", "Entries", logID, fileName));
+
                             return;
                         }
 
                         if (!std::filesystem::exists(dbusFilepath))
                         {
                             messages::resourceMissingAtURI(asyncResp->res,
-                                                           fileName);
+                                                           crow::utility::urlFromPieces(
+                                                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                            "LogServices", "Crashdump", "Entries", logID, fileName));
+
                             return;
                         }
                         std::ifstream ifs(dbusFilepath,
@@ -3601,15 +4073,37 @@ inline void requestRoutesCrashdumpFile(App& app)
 
                         // Configure this to be a file download when accessed
                         // from a browser
-                        asyncResp->res.addHeader("Content-Disposition",
-                                                 "attachment");
+                        asyncResp->res.addHeader(
+                            boost::beast::http::field::content_disposition,
+                            "attachment");
                     };
-                crow::connections::systemBus->async_method_call(
-                    std::move(getStoredLogCallback), crashdumpObject,
+                sdbusplus::asio::getAllProperties(
+                    *crow::connections::systemBus, crashdumpObject,
                     crashdumpPath + std::string("/") + logID,
-                    "org.freedesktop.DBus.Properties", "GetAll",
-                    crashdumpInterface);
+                    crashdumpInterface, std::move(getStoredLogCallback));
             });
+}
+
+enum class OEMDiagnosticType
+{
+    onDemand,
+    telemetry,
+    invalid,
+};
+
+inline OEMDiagnosticType
+    getOEMDiagnosticType(const std::string_view& oemDiagStr)
+{
+    if (oemDiagStr == "OnDemand")
+    {
+        return OEMDiagnosticType::onDemand;
+    }
+    if (oemDiagStr == "Telemetry")
+    {
+        return OEMDiagnosticType::telemetry;
+    }
+
+    return OEMDiagnosticType::invalid;
 }
 
 inline void requestRoutesCrashdumpCollect(App& app)
@@ -3624,11 +4118,17 @@ inline void requestRoutesCrashdumpCollect(App& app)
         .privileges({{"ConfigureComponents"}})
         .methods(
             boost::beast::http::verb::
-                post)([](const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                post)([&app](
+                          const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+
             std::string diagnosticDataType;
             std::string oemDiagnosticDataType;
-            if (!redfish::json_util::readJson(
+            if (!redfish::json_util::readJsonAction(
                     req, asyncResp->res, "DiagnosticDataType",
                     diagnosticDataType, "OEMDiagnosticDataType",
                     oemDiagnosticDataType))
@@ -3646,8 +4146,43 @@ inline void requestRoutesCrashdumpCollect(App& app)
                 return;
             }
 
+            OEMDiagnosticType oemDiagType =
+                getOEMDiagnosticType(oemDiagnosticDataType);
+
+            std::string iface;
+            std::string method;
+            std::string taskMatchStr;
+            if (oemDiagType == OEMDiagnosticType::onDemand)
+            {
+                iface = crashdumpOnDemandInterface;
+                method = "GenerateOnDemandLog";
+                taskMatchStr = "type='signal',"
+                               "interface='org.freedesktop.DBus.Properties',"
+                               "member='PropertiesChanged',"
+                               "arg0namespace='com.intel.crashdump'";
+            }
+            else if (oemDiagType == OEMDiagnosticType::telemetry)
+            {
+                iface = crashdumpTelemetryInterface;
+                method = "GenerateTelemetryLog";
+                taskMatchStr = "type='signal',"
+                               "interface='org.freedesktop.DBus.Properties',"
+                               "member='PropertiesChanged',"
+                               "arg0namespace='com.intel.crashdump'";
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Unsupported OEMDiagnosticDataType: "
+                                 << oemDiagnosticDataType;
+                messages::actionParameterValueFormatError(
+                    asyncResp->res, oemDiagnosticDataType,
+                    "OEMDiagnosticDataType", "CollectDiagnosticData");
+                return;
+            }
+
             auto collectCrashdumpCallback = [asyncResp,
-                                             payload(task::Payload(req))](
+                                             payload(task::Payload(req)),
+                                             taskMatchStr](
                                                 const boost::system::error_code
                                                     ec,
                                                 const std::string&) mutable {
@@ -3670,50 +4205,29 @@ inline void requestRoutesCrashdumpCollect(App& app)
                     }
                     return;
                 }
-                std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-                    [](boost::system::error_code err,
-                       sdbusplus::message::message&,
-                       const std::shared_ptr<task::TaskData>& taskData) {
-                        if (!err)
-                        {
-                            taskData->messages.emplace_back(
-                                messages::taskCompletedOK(
-                                    std::to_string(taskData->index)));
-                            taskData->state = "Completed";
-                        }
-                        return task::completed;
-                    },
-                    "type='signal',interface='org.freedesktop.DBus."
-                    "Properties',"
-                    "member='PropertiesChanged',arg0namespace='com.intel.crashdump'");
+                std::shared_ptr<task::TaskData> task =
+                    task::TaskData::createTask(
+                        [](boost::system::error_code err, sdbusplus::message_t&,
+                           const std::shared_ptr<task::TaskData>& taskData) {
+                            if (!err)
+                            {
+                                taskData->messages.emplace_back(
+                                    messages::taskCompletedOK(
+                                        std::to_string(taskData->index)));
+                                taskData->state = "Completed";
+                            }
+                            return task::completed;
+                        },
+                        taskMatchStr);
+
                 task->startTimer(std::chrono::minutes(5));
                 task->populateResp(asyncResp->res);
                 task->payload.emplace(std::move(payload));
             };
 
-            if (oemDiagnosticDataType == "OnDemand")
-            {
-                crow::connections::systemBus->async_method_call(
-                    std::move(collectCrashdumpCallback), crashdumpObject,
-                    crashdumpPath, crashdumpOnDemandInterface,
-                    "GenerateOnDemandLog");
-            }
-            else if (oemDiagnosticDataType == "Telemetry")
-            {
-                crow::connections::systemBus->async_method_call(
-                    std::move(collectCrashdumpCallback), crashdumpObject,
-                    crashdumpPath, crashdumpTelemetryInterface,
-                    "GenerateTelemetryLog");
-            }
-            else
-            {
-                BMCWEB_LOG_ERROR << "Unsupported OEMDiagnosticDataType: "
-                                 << oemDiagnosticDataType;
-                messages::actionParameterValueFormatError(
-                    asyncResp->res, oemDiagnosticDataType,
-                    "OEMDiagnosticDataType", "CollectDiagnosticData");
-                return;
-            }
+            crow::connections::systemBus->async_method_call(
+                std::move(collectCrashdumpCallback), crashdumpObject,
+                crashdumpPath, iface, method);
         });
 }
 
@@ -3732,8 +4246,12 @@ inline void requestRoutesDBusLogServiceActionsClear(App& app)
                       "/LogServices/EventLog/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 BMCWEB_LOG_DEBUG << "Do delete all entries.";
 
                 // Process response from Logging service.
@@ -3796,9 +4314,9 @@ static int copyMfgTestOutputFile(std::string& path)
     }
     else
     {
-        std::string filename = mfgTestPrefix +
-            std::to_string(scriptExecOutputFiles.size());
-        std::string targetPath = redfishLogDir +  filename;
+        std::string filename =
+            mfgTestPrefix + std::to_string(scriptExecOutputFiles.size());
+        std::string targetPath = redfishLogDir + filename;
         BMCWEB_LOG_DEBUG << "Copying output to " << targetPath;
         std::filesystem::copy(path, targetPath, ec);
         if (ec)
@@ -3841,8 +4359,8 @@ static void mfgTestProcExitHandler(int exitCode, const std::error_code& ec)
             if (id != -1)
             {
                 std::string path = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                    "/LogServices/EventLog/DiagnosticData/" +
-                    std::to_string(id);
+                                   "/LogServices/EventLog/DiagnosticData/" +
+                                   std::to_string(id);
                 std::string location = "Location: " + path + "/attachment";
                 t->payload->httpHeaders.emplace_back(std::move(location));
                 t->state = "Completed";
@@ -3880,13 +4398,13 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
         .methods(
             boost::beast::http::verb::
                 post)([&](const crow::Request& req,
-                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
             std::string diagnosticDataType;
             std::string oemDiagnosticDataType;
-            if (!redfish::json_util::readJson(
-                    req, asyncResp->res,
-                    "DiagnosticDataType", diagnosticDataType,
-                    "OEMDiagnosticDataType", oemDiagnosticDataType))
+            if (!redfish::json_util::readJsonAction(
+                    req, asyncResp->res, "DiagnosticDataType",
+                    diagnosticDataType, "OEMDiagnosticDataType",
+                    oemDiagnosticDataType))
             {
                 return;
             }
@@ -3905,10 +4423,10 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
             {
                 if (mfgTestTask == nullptr)
                 {
-                    mfgTestTask = task::TaskData::createTask([](
-                        boost::system::error_code,
-                        sdbusplus::message::message&,
-                        const std::shared_ptr<task::TaskData>& taskData) {
+                    mfgTestTask = task::TaskData::createTask(
+                        [](boost::system::error_code,
+                           sdbusplus::message::message&,
+                           const std::shared_ptr<task::TaskData>& taskData) {
                             mfgTestProc = nullptr;
                             mfgTestTask = nullptr;
                             if (taskData->percentComplete != 100)
@@ -3980,14 +4498,18 @@ inline void requestRoutesEventLogDiagnosticDataEntry(App& app)
                 if (files == 0 || id > files - 1)
                 {
                     messages::resourceMissingAtURI(asyncResp->res,
-                        std::to_string(id));
+                                                   crow::utility::urlFromPieces(
+                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                        "LogServices", "EventLog", "DiagnosticData", id, "attachment");
                     return;
                 }
                 std::ifstream file(scriptExecOutputFiles[id]);
                 if (!file.good())
                 {
                     messages::resourceMissingAtURI(asyncResp->res,
-                        std::to_string(id));
+                                                   crow::utility::urlFromPieces(
+                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                        "LogServices", "EventLog", "DiagnosticData", id, "attachment"));
                     return;
                 }
                 std::stringstream ss;
@@ -3995,9 +4517,8 @@ inline void requestRoutesEventLogDiagnosticDataEntry(App& app)
                 auto output = ss.str();
 
                 asyncResp->res.addHeader("Content-Type",
-                                            "application/octet-stream");
-                asyncResp->res.addHeader("Content-Transfer-Encoding",
-                                            "Binary");
+                                         "application/octet-stream");
+                asyncResp->res.addHeader("Content-Transfer-Encoding", "Binary");
                 asyncResp->res.body() = std::move(output);
             });
 }
@@ -4028,7 +4549,7 @@ inline void requestRoutesPostCodesLogService(App& app)
                                     "/LogServices/PostCodes/Entries"}}}};
 
                 std::pair<std::string, std::string> redfishDateTimeOffset =
-                    crow::utility::getDateTimeOffsetNow();
+                    redfish::time_utils::getDateTimeOffsetNow();
                 asyncResp->res.jsonValue["DateTime"] =
                     redfishDateTimeOffset.first;
                 asyncResp->res.jsonValue["DateTimeLocalOffset"] =
@@ -4049,8 +4570,12 @@ inline void requestRoutesPostCodesClear(App& app)
         //.privileges(redfish::privileges::postLogService)
         .privileges({{"ConfigureComponents"}})
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 BMCWEB_LOG_DEBUG << "Do delete all postcodes entries.";
 
                 // Make call to post-code service to request clear all
@@ -4082,8 +4607,8 @@ static void fillPostCodeEntry(
     const uint64_t skip = 0, const uint64_t top = 0)
 {
     // Get the Message from the MessageRegistry
-    const message_registries::Message* message =
-        message_registries::getMessage("OpenBMC.0.2.BIOSPOSTCode");
+    const registries::Message* message =
+        registries::getMessage("OpenBMC.0.2.BIOSPOSTCode");
 
     uint64_t currentCodeIndex = 0;
     nlohmann::json& logEntryArray = aResp->res.jsonValue["Members"];
@@ -4133,7 +4658,7 @@ static void fillPostCodeEntry(
         // Get the Created time from the timestamp
         std::string entryTimeStr;
         entryTimeStr =
-            crow::utility::getDateTimeUint(usecSinceEpoch / 1000 / 1000);
+            redfish::time_utils::getDateTimeUint(usecSinceEpoch / 1000 / 1000);
 
         // assemble messageArgs: BootIndex, TimeOffset(100us), PostCode(hex)
         std::ostringstream hexCode;
@@ -4181,24 +4706,24 @@ static void fillPostCodeEntry(
         std::string severity;
         if (message != nullptr)
         {
-            severity = message->severity;
+            severity = message->messageSeverity;
         }
 
         // add to AsyncResp
         logEntryArray.push_back({});
         nlohmann::json& bmcLogEntry = logEntryArray.back();
-        bmcLogEntry = {{"@odata.type", "#LogEntry.v1_8_0.LogEntry"},
-                       {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                     "/LogServices/PostCodes/Entries/" +
-                                         postcodeEntryID},
-                       {"Name", "POST Code Log Entry"},
-                       {"Id", postcodeEntryID},
-                       {"Message", std::move(msg)},
-                       {"MessageId", "OpenBMC.0.2.BIOSPOSTCode"},
-                       {"MessageArgs", std::move(messageArgs)},
-                       {"EntryType", "Event"},
-                       {"Severity", std::move(severity)},
-                       {"Created", entryTimeStr}};
+        bmcLogEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+        bmcLogEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                   "/LogServices/PostCodes/Entries/" +
+                                   postcodeEntryID;
+        bmcLogEntry["Name"] = "POST Code Log Entry";
+        bmcLogEntry["Id"] = postcodeEntryID;
+        bmcLogEntry["Message"] = std::move(msg);
+        bmcLogEntry["MessageId"] = "OpenBMC.0.2.BIOSPOSTCode";
+        bmcLogEntry["MessageArgs"] = std::move(messageArgs);
+        bmcLogEntry["EntryType"] = "Event";
+        bmcLogEntry["Severity"] = std::move(severity);
+        bmcLogEntry["Created"] = entryTimeStr;
         if (!std::get<std::vector<uint8_t>>(code.second).empty())
         {
             bmcLogEntry["AdditionalDataURI"] =
@@ -4302,7 +4827,7 @@ static void getPostCodeForBoot(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
 static void
     getCurrentBootNumber(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                         const uint64_t skip, const uint64_t top)
+                         size_t skip, size_t top)
 {
     uint64_t entryCount = 0;
     sdbusplus::asio::getProperty<uint16_t>(
@@ -4328,8 +4853,18 @@ inline void requestRoutesPostCodesEntryCollection(App& app)
                       "/LogServices/PostCodes/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                query_param::QueryCapabilities capabilities = {
+                    .canDelegateTop = true,
+                    .canDelegateSkip = true,
+                };
+                query_param::Query delegatedQuery;
+                if (!redfish::setUpRedfishRouteWithDelegation(
+                        app, req, asyncResp, delegatedQuery, capabilities))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#LogEntryCollection.LogEntryCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
@@ -4341,16 +4876,8 @@ inline void requestRoutesPostCodesEntryCollection(App& app)
                 asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
                 asyncResp->res.jsonValue["Members@odata.count"] = 0;
 
-                uint64_t skip = 0;
-                uint64_t top = maxEntriesPerPage; // Show max entries by default
-                if (!getSkipParam(asyncResp, req, skip))
-                {
-                    return;
-                }
-                if (!getTopParam(asyncResp, req, top))
-                {
-                    return;
-                }
+                size_t skip = delegatedQuery.skip.value_or(0);
+                size_t top = delegatedQuery.top.value_or(query_param::Query::maxTop);
                 getCurrentBootNumber(asyncResp, skip, top);
             });
 }
@@ -4408,8 +4935,9 @@ inline void requestRoutesPostCodesEntryAdditionalData(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& postCodeID) {
-                if (!http_helpers::isOctetAccepted(
-                        req.getHeaderValue("Accept")))
+                if (!http_helpers::isContentTypeAllowed(
+                req.getHeaderValue("Accept"),
+                http_helpers::ContentType::OctetStream, true))
                 {
                     asyncResp->res.result(
                         boost::beast::http::status::bad_request);
@@ -4493,7 +5021,9 @@ inline void requestRoutesPostCodesEntry(App& app)
                 if (!parsePostCode(targetID, codeIndex, bootIndex))
                 {
                     // Requested ID was not found
-                    messages::resourceMissingAtURI(asyncResp->res, targetID);
+                    messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(
+                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                        "LogServices", "PostCodes", "Entries", targetID));
                     return;
                 }
                 if (bootIndex == 0 || codeIndex == 0)
@@ -4517,7 +5047,7 @@ inline void requestRoutesPostCodesEntry(App& app)
             });
 }
 
-inline void requestRoutesChassisLogServiceCollection(App &app)
+inline void requestRoutesChassisLogServiceCollection(App& app)
 {
     /**
      * Functions triggers appropriate requests on DBus
@@ -4525,140 +5055,154 @@ inline void requestRoutesChassisLogServiceCollection(App &app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/LogServices/")
         .privileges(redfish::privileges::getLogServiceCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request &,
-                const std::shared_ptr<bmcweb::AsyncResp> &asyncResp,
-                const std::string &chassisId)
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisId)
 
             {
                 const std::array<const char*, 2> interfaces = {
-                "xyz.openbmc_project.Inventory.Item.Board",
-                "xyz.openbmc_project.Inventory.Item.Chassis"};
+                    "xyz.openbmc_project.Inventory.Item.Board",
+                    "xyz.openbmc_project.Inventory.Item.Chassis"};
 
                 crow::connections::systemBus->async_method_call(
-                [asyncResp, chassisId(std::string(chassisId))](
-                    const boost::system::error_code ec,
-                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                    if (ec)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    // Iterate over all retrieved ObjectPaths.
-                    for (const std::pair<std::string,
-                                        std::vector<std::pair<
-                                            std::string, std::vector<std::string>>>>&
-                            object : subtree)
-                    {
-                        const std::string& path = object.first;
-
-                        sdbusplus::message::object_path objPath(path);
-                        if (objPath.filename() != chassisId)
+                    [asyncResp, chassisId(std::string(chassisId))](
+                        const boost::system::error_code ec,
+                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                        if (ec)
                         {
-                            continue;
+                            messages::internalError(asyncResp->res);
+                            return;
                         }
-                        // Collections don't include the static data added by SubRoute
-                        // because it has a duplicate entry for members
-                        asyncResp->res.jsonValue["@odata.type"] =
-                            "#LogServiceCollection.LogServiceCollection";
-                        asyncResp->res.jsonValue["@odata.id"] =
-                            "/redfish/v1/Chassis/" + chassisId + "/LogServices";
-                        asyncResp->res.jsonValue["Name"] =
-                            "System Log Services Collection";
-                        asyncResp->res.jsonValue["Description"] =
-                            "Collection of LogServices for this Computer System";
-                        nlohmann::json &logServiceArray =
-                            asyncResp->res.jsonValue["Members"];
-                        logServiceArray = nlohmann::json::array();
+                        // Iterate over all retrieved ObjectPaths.
+                        for (const std::pair<
+                                 std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                                 object : subtree)
+                        {
+                            const std::string& path = object.first;
+
+                            sdbusplus::message::object_path objPath(path);
+                            if (objPath.filename() != chassisId)
+                            {
+                                continue;
+                            }
+                            // Collections don't include the static data added
+                            // by SubRoute because it has a duplicate entry for
+                            // members
+                            asyncResp->res.jsonValue["@odata.type"] =
+                                "#LogServiceCollection.LogServiceCollection";
+                            asyncResp->res.jsonValue["@odata.id"] =
+                                "/redfish/v1/Chassis/" + chassisId +
+                                "/LogServices";
+                            asyncResp->res.jsonValue["Name"] =
+                                "System Log Services Collection";
+                            asyncResp->res.jsonValue["Description"] =
+                                "Collection of LogServices for this Computer System";
+                            nlohmann::json& logServiceArray =
+                                asyncResp->res.jsonValue["Members"];
+                            logServiceArray = nlohmann::json::array();
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
-                        if (chassisId.find("GPU") != std::string::npos || chassisId.find("NVSwitch") != std::string::npos)
-                        {
-                            logServiceArray.push_back(
-                                {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                                "/LogServices/XID"}});
+                            if (chassisId.find("GPU") != std::string::npos ||
+                                chassisId.find("NVSwitch") != std::string::npos)
+                            {
+                                logServiceArray.push_back(
+                                    {{"@odata.id", "/redfish/v1/Chassis/" +
+                                                       chassisId +
+                                                       "/LogServices/XID"}});
+                            }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+                            asyncResp->res.jsonValue["Members@odata.count"] =
+                                logServiceArray.size();
+                            return;
                         }
-#endif //BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
-                        asyncResp->res.jsonValue["Members@odata.count"] =
-                            logServiceArray.size();
-                        return;
-                    }
-                    // Couldn't find an object with that name.  return an error
-                    messages::resourceNotFound(asyncResp->res,
-                                       "#Chassis.v1_16_0.Chassis", chassisId);
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                "/xyz/openbmc_project/inventory", 0, interfaces);
-
+                        // Couldn't find an object with that name.  return an
+                        // error
+                        messages::resourceNotFound(asyncResp->res,
+                                                   "#Chassis.v1_17_0.Chassis",
+                                                   chassisId);
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                    "/xyz/openbmc_project/inventory", 0, interfaces);
             });
 }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
-inline void requestRoutesChassisXIDLogService(App &app)
+inline void requestRoutesChassisXIDLogService(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/LogServices/XID/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request &,
-                const std::shared_ptr<bmcweb::AsyncResp> &asyncResp,
-                const std::string &chassisId)
-            {
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisId) {
                 const std::array<const char*, 2> interfaces = {
-                "xyz.openbmc_project.Inventory.Item.Board",
-                "xyz.openbmc_project.Inventory.Item.Chassis"};
+                    "xyz.openbmc_project.Inventory.Item.Board",
+                    "xyz.openbmc_project.Inventory.Item.Chassis"};
                 crow::connections::systemBus->async_method_call(
-                [asyncResp, chassisId(std::string(chassisId))](
-                    const boost::system::error_code ec,
-                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                    if (ec)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    // Iterate over all retrieved ObjectPaths.
-                    for (const std::pair<std::string,
-                                        std::vector<std::pair<
-                                            std::string, std::vector<std::string>>>>&
-                            object : subtree)
-                    {
-                        const std::string& path = object.first;
-
-                        sdbusplus::message::object_path objPath(path);
-                        if (objPath.filename() != chassisId)
+                    [asyncResp, chassisId(std::string(chassisId))](
+                        const boost::system::error_code ec,
+                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                        if (ec)
                         {
-                            continue;
+                            messages::internalError(asyncResp->res);
+                            return;
                         }
-                        asyncResp->res.jsonValue["@odata.id"] =
-                            "/redfish/v1/Chassis/" + chassisId + "/LogServices/XID";
-                        asyncResp->res.jsonValue["@odata.type"] =
-                            "#LogService.v1_1_0.LogService";
-                        asyncResp->res.jsonValue["Name"] = "XID Log Service";
-                        asyncResp->res.jsonValue["Description"] = "XID Log Service";
-                        asyncResp->res.jsonValue["Id"] = "XID";
-                        asyncResp->res.jsonValue["OverWritePolicy"] = "WrapsWhenFull";
+                        // Iterate over all retrieved ObjectPaths.
+                        for (const std::pair<
+                                 std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                                 object : subtree)
+                        {
+                            const std::string& path = object.first;
 
-                        std::pair<std::string, std::string> redfishDateTimeOffset =
-                            crow::utility::getDateTimeOffsetNow();
+                            sdbusplus::message::object_path objPath(path);
+                            if (objPath.filename() != chassisId)
+                            {
+                                continue;
+                            }
+                            asyncResp->res.jsonValue["@odata.id"] =
+                                "/redfish/v1/Chassis/" + chassisId +
+                                "/LogServices/XID";
+                            asyncResp->res.jsonValue["@odata.type"] =
+                                "#LogService.v1_1_0.LogService";
+                            asyncResp->res.jsonValue["Name"] =
+                                "XID Log Service";
+                            asyncResp->res.jsonValue["Description"] =
+                                "XID Log Service";
+                            asyncResp->res.jsonValue["Id"] = "XID";
+                            asyncResp->res.jsonValue["OverWritePolicy"] =
+                                "WrapsWhenFull";
 
-                        asyncResp->res.jsonValue["DateTime"] =
-                            redfishDateTimeOffset.first;
-                        asyncResp->res.jsonValue["DateTimeLocalOffset"] =
-                            redfishDateTimeOffset.second;
+                            std::pair<std::string, std::string>
+                                redfishDateTimeOffset =
+                                    redfish::time_utils::getDateTimeOffsetNow();
 
-                        asyncResp->res.jsonValue["Entries"] = {
-                            {"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                                "/LogServices/XID/Entries"}};
-                        return;
-                    }
-                    // Couldn't find an object with that name.  return an error
-                    messages::resourceNotFound(asyncResp->res,
-                                       "#Chassis.v1_16_0.Chassis", chassisId);
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                "/xyz/openbmc_project/inventory", 0, interfaces);
-        });
+                            asyncResp->res.jsonValue["DateTime"] =
+                                redfishDateTimeOffset.first;
+                            asyncResp->res.jsonValue["DateTimeLocalOffset"] =
+                                redfishDateTimeOffset.second;
+
+                            asyncResp->res.jsonValue["Entries"] = {
+                                {"@odata.id", "/redfish/v1/Chassis/" +
+                                                  chassisId +
+                                                  "/LogServices/XID/Entries"}};
+                            return;
+                        }
+                        // Couldn't find an object with that name.  return an
+                        // error
+                        messages::resourceNotFound(asyncResp->res,
+                                                   "#Chassis.v1_17_0.Chassis",
+                                                   chassisId);
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                    "/xyz/openbmc_project/inventory", 0, interfaces);
+            });
 }
 
 inline void requestRoutesChassisXIDLogEntryCollection(App& app)
@@ -4816,7 +5360,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                     std::get_if<uint64_t>(&propertyMap.second);
                                                                 if (millisTimeStamp != nullptr)
                                                                 {
-                                                                    timestamp = crow::utility::getTimestamp(
+                                                                    timestamp = redfish::time_utils::getTimestamp(
                                                                         *millisTimeStamp);
                                                                 }
                                                             }
@@ -4827,7 +5371,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                 if (millisTimeStamp != nullptr)
                                                                 {
                                                                     updateTimestamp =
-                                                                        crow::utility::getTimestamp(
+                                                                        redfish::time_utils::getTimestamp(
                                                                             *millisTimeStamp);
                                                                 }
                                                             }
@@ -4914,7 +5458,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                 "EventLog/Entries/",
                                                                 "v1_9_0", std::to_string(*id),
                                                                 "System Event Log Entry",
-                                                                crow::utility::getDateTimeStdtime(timestamp),
+                                                                redfish::time_utils::getDateTimeStdtime(timestamp),
                                                                 messageId, messageArgs, *resolution, resolved,
                                                                 *severity);
 
@@ -4946,9 +5490,9 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                             thisEntry["Severity"] =
                                                                 translateSeverityDbusToRedfish(*severity);
                                                             thisEntry["Created"] =
-                                                                crow::utility::getDateTimeStdtime(timestamp);
+                                                                redfish::time_utils::getDateTimeStdtime(timestamp);
                                                             thisEntry["Modified"] =
-                                                                crow::utility::getDateTimeStdtime(
+                                                                redfish::time_utils::getDateTimeStdtime(
                                                                     updateTimestamp);
                                                         }
                                                         if (filePath != nullptr)
@@ -4995,7 +5539,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                 "/xyz/openbmc_project/inventory", 0, interfaces);
         });
 }
-#endif //BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
 
 // vector containing debug token-related functionalities'
 // (GetDebugTokenRequest, GetDebugTokenStatus) output data
@@ -5020,7 +5564,7 @@ inline void requestRoutesDebugToken(App& app)
             asyncResp->res.jsonValue["Id"] = "Debug token";
 
             std::pair<std::string, std::string> redfishDateTimeOffset =
-                crow::utility::getDateTimeOffsetNow();
+                redfish::time_utils::getDateTimeOffsetNow();
             asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
             asyncResp->res.jsonValue["DateTimeLocalOffset"] =
                 redfishDateTimeOffset.second;
@@ -5037,46 +5581,42 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/DebugTokenService/CollectDiagnosticData")
         .privileges(redfish::privileges::getLogEntry)
-        .methods(
-            boost::beast::http::verb::
-                post)([](const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
                 std::string diagnosticDataType;
                 std::string oemDiagnosticDataType;
-                if (!redfish::json_util::readJson(
-                    req, asyncResp->res,
-                    "DiagnosticDataType", diagnosticDataType,
-                    "OEMDiagnosticDataType", oemDiagnosticDataType
-                    ))
+                if (!redfish::json_util::readJsonAction(
+                        req, asyncResp->res, "DiagnosticDataType",
+                        diagnosticDataType, "OEMDiagnosticDataType",
+                        oemDiagnosticDataType))
                 {
                     return;
                 }
 
                 if (diagnosticDataType != "OEM")
                 {
-                    BMCWEB_LOG_ERROR <<
-                        "Only OEM DiagnosticDataType supported "
-                            "for DebugTokenService";
+                    BMCWEB_LOG_ERROR << "Only OEM DiagnosticDataType supported "
+                                        "for DebugTokenService";
                     messages::actionParameterValueFormatError(
                         asyncResp->res, diagnosticDataType,
                         "DiagnosticDataType", "CollectDiagnosticData");
                     return;
                 }
 
-                auto callback =
-                    [](const std::shared_ptr<task::TaskData>& task,
-                        const std::string& output)
-                    {
-                        debugTokenData.push_back(output);
-                        std::string path = "/redfish/v1/Systems/"
-                            PLATFORMSYSTEMID "/LogServices/DebugTokenService/"
-                            "DiagnosticData/" +
-                            std::to_string(debugTokenData.size() - 1) +
-                            "/attachment";
-                        std::string location = "Location: " + path;
-                        task->payload->httpHeaders.emplace_back(
-                            std::move(location));
-                    };
+                auto callback = [](const std::shared_ptr<task::TaskData>& task,
+                                   const std::string& output) {
+                    debugTokenData.push_back(output);
+                    std::string path =
+                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                        "/LogServices/DebugTokenService/"
+                        "DiagnosticData/" +
+                        std::to_string(debugTokenData.size() - 1) +
+                        "/attachment";
+                    std::string location = "Location: " + path;
+                    task->payload->httpHeaders.emplace_back(
+                        std::move(location));
+                };
                 if (oemDiagnosticDataType == "GetDebugTokenRequest")
                 {
                     static std::shared_ptr<debug_token::Request> request;
@@ -5089,7 +5629,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     else
                     {
                         messages::serviceTemporarilyUnavailable(asyncResp->res,
-                            "60");
+                                                                "60");
                     }
                 }
                 else if (oemDiagnosticDataType == "DebugTokenStatus")
@@ -5104,13 +5644,13 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     else
                     {
                         messages::serviceTemporarilyUnavailable(asyncResp->res,
-                            "60");
+                                                                "60");
                     }
                 }
                 else
                 {
                     BMCWEB_LOG_ERROR << "Unsupported OEMDiagnosticDataType: "
-                                    << oemDiagnosticDataType;
+                                     << oemDiagnosticDataType;
                     messages::actionParameterValueFormatError(
                         asyncResp->res, oemDiagnosticDataType,
                         "OEMDiagnosticDataType", "CollectDiagnosticData");
@@ -5129,7 +5669,9 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const uint32_t& id) {
                 std::string_view accept = req.getHeaderValue("Accept");
-                if (!accept.empty() && !http_helpers::isOctetAccepted(accept))
+                if (!accept.empty() && !http_helpers::isContentTypeAllowed(
+                req.getHeaderValue("Accept"),
+                http_helpers::ContentType::OctetStream, true))
                 {
                     asyncResp->res.result(
                         boost::beast::http::status::bad_request);
@@ -5139,16 +5681,17 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
                 if (dataCount == 0 || id > dataCount - 1)
                 {
                     messages::resourceMissingAtURI(asyncResp->res,
-                        std::to_string(id));
+                                                   crow::utility::urlFromPieces(
+                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                                                        "LogServices", "DebugTokenService", "DiagnosticData", std::to_string(id), "attachment"));
                     asyncResp->res.result(
                         boost::beast::http::status::not_found);
                     return;
                 }
 
                 asyncResp->res.addHeader("Content-Type",
-                                            "application/octet-stream");
-                asyncResp->res.addHeader("Content-Transfer-Encoding",
-                                            "Binary");
+                                         "application/octet-stream");
+                asyncResp->res.addHeader("Content-Transfer-Encoding", "Binary");
                 asyncResp->res.body() = debugTokenData[id];
             });
 }

@@ -499,7 +499,7 @@ inline void getEDPpData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
             asyncResp->res
                 .jsonValue["Oem"]["Nvidia"]["EDPpPercent"]["@odata.type"] =
-                "#NvidiaEnvironmentMetrics.v1_0_0.NvidiaEnvironmentMetrics";
+                "#NvidiaEnvironmentMetrics.v1_0_0.EDPpPercent";
 
             for (const auto& [key, variant] : properties)
             {
@@ -907,8 +907,9 @@ inline void requestRoutesEnvironmentMetrics(App& app)
             std::optional<nlohmann::json> powerLimit;
             std::optional<nlohmann::json> oem;
             // Read json request
-            if (!json_util::readJson(req, asyncResp->res, "PowerLimitWatts",
-                                     powerLimit, "Oem", oem))
+            if (!json_util::readJsonAction(req, asyncResp->res,
+                                           "PowerLimitWatts", powerLimit, "Oem",
+                                           oem))
             {
                 return;
             }
@@ -916,50 +917,52 @@ inline void requestRoutesEnvironmentMetrics(App& app)
             if (powerLimit)
             {
                 std::optional<int> setPoint;
-                if (json_util::readJson(*powerLimit, asyncResp->res,
-                                                        "SetPoint", setPoint))
+                if (json_util::readJson(*powerLimit, asyncResp->res, "SetPoint",
+                                        setPoint))
                 {
                     const std::array<const char*, 1> interfaces = {
                         "xyz.openbmc_project.Inventory.Item.Chassis"};
 
                     crow::connections::systemBus->async_method_call(
-                        [asyncResp, chassisId, setPoint](
-                        const boost::system::error_code ec,
-                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                        if (ec)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        // Iterate over all retrieved ObjectPaths.
-                        for (const std::pair<
-                                 std::string,
-                                 std::vector<std::pair<
-                                     std::string, std::vector<std::string>>>>&
-                                 object : subtree)
-                        {
-                            const std::string& path = object.first;
-                            const std::vector<std::pair<
-                                std::string, std::vector<std::string>>>&
-                                connectionNames = object.second;
-
-                            sdbusplus::message::object_path objPath(path);
-                            if (objPath.filename() != chassisId)
+                        [asyncResp, chassisId,
+                         setPoint](const boost::system::error_code ec,
+                                   const crow::openbmc_mapper::GetSubTreeType&
+                                       subtree) {
+                            if (ec)
                             {
-                                continue;
+                                messages::internalError(asyncResp->res);
+                                return;
                             }
 
-                            if (connectionNames.size() < 1)
+                            // Iterate over all retrieved ObjectPaths.
+                            for (const std::pair<
+                                     std::string,
+                                     std::vector<
+                                         std::pair<std::string,
+                                                   std::vector<std::string>>>>&
+                                     object : subtree)
                             {
-                                BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                                continue;
-                            }
+                                const std::string& path = object.first;
+                                const std::vector<std::pair<
+                                    std::string, std::vector<std::string>>>&
+                                    connectionNames = object.second;
 
-                            const std::string& connectionName =
-                                connectionNames[0].first;
+                                sdbusplus::message::object_path objPath(path);
+                                if (objPath.filename() != chassisId)
+                                {
+                                    continue;
+                                }
 
-                            crow::connections::systemBus->async_method_call(
+                                if (connectionNames.size() < 1)
+                                {
+                                    BMCWEB_LOG_ERROR
+                                        << "Got 0 Connection names";
+                                    continue;
+                                }
+
+                                const std::string& connectionName =
+                                    connectionNames[0].first;
+                                crow::connections::systemBus->async_method_call(
                                 [asyncResp, connectionName, chassisId,
                                  setPoint](
                                     const boost::system::error_code& e,
@@ -991,19 +994,18 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                                 "org.freedesktop.DBus.Properties", "Get",
                                 "xyz.openbmc_project.Association", "endpoints");
 
-                            return;
-                        }
+                                return;
+                            }
 
-                        messages::resourceNotFound(asyncResp->res,
-                                                   "#Chassis.v1_15_0.Chassis",
-                                                   chassisId);
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                    "/xyz/openbmc_project/inventory", 0, interfaces);
-                 }
-
+                            messages::resourceNotFound(
+                                asyncResp->res, "#Chassis.v1_15_0.Chassis",
+                                chassisId);
+                        },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                        "/xyz/openbmc_project/inventory", 0, interfaces);
+                }
             }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             if (oem)
@@ -1119,19 +1121,23 @@ inline double joulesToKwh(const double& joules)
 
 inline void getSensorDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
-    const std::string& chassisId, const std::string& objPath)
+    const std::string& chassisId, const std::string& objPath, const std::string &resourceType)
 {
     BMCWEB_LOG_DEBUG << "Get sensor data.";
     using PropertyType =
         std::variant<std::string, double, uint64_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     crow::connections::systemBus->async_method_call(
-        [aResp, chassisId, objPath](const boost::system::error_code ec,
+        [aResp, chassisId, resourceType, objPath](const boost::system::error_code ec,
                                     const PropertiesMap& properties) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "Can't get sensor reading";
-                messages::internalError(aResp->res);
+                BMCWEB_LOG_DEBUG << "Can't get sensor reading for";
+                // Not reporting Internal Failure for services that dont host sensor path in case of Processor Env
+                // Eg: GpuOobRecovery in case of FPGA Processor
+                if (resourceType != "Processor"){
+                    messages::internalError(aResp->res);
+                }
                 return;
             }
             for (const auto& property : properties)
@@ -1199,12 +1205,12 @@ inline void getSensorDataByService(
 
 inline void getEnvironmentMetricsDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
-    const std::string& objPath)
+    const std::string& objPath, const std::string &resourceType)
 {
     BMCWEB_LOG_DEBUG << "Get environment metrics data.";
     // Get parent chassis for sensors URI
     crow::connections::systemBus->async_method_call(
-        [aResp, service,
+        [aResp, service, resourceType, 
          objPath](const boost::system::error_code ec,
                   std::variant<std::vector<std::string>>& resp) {
             if (ec)
@@ -1228,7 +1234,7 @@ inline void getEnvironmentMetricsDataByService(
             }
             const std::string& chassisId = chassisName;
             crow::connections::systemBus->async_method_call(
-                [aResp, service,
+                [aResp, service, resourceType,
                  chassisId](const boost::system::error_code& e,
                             std::variant<std::vector<std::string>>& resp) {
                     if (e)
@@ -1245,7 +1251,7 @@ inline void getEnvironmentMetricsDataByService(
                     for (const std::string& sensorPath : *data)
                     {
                         getSensorDataByService(aResp, service, chassisId,
-                                               sensorPath);
+                                               sensorPath, resourceType);
                     }
                 },
                 "xyz.openbmc_project.ObjectMapper",
@@ -1276,6 +1282,7 @@ inline void
 
                 return;
             }
+            const std::string resourceType="Processor";
             for (const auto& [path, object] : subtree)
             {
                 if (!boost::ends_with(path, processorId))
@@ -1312,7 +1319,7 @@ inline void
                     }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-                    getEnvironmentMetricsDataByService(aResp, service, path);
+                    getEnvironmentMetricsDataByService(aResp, service, path, resourceType);
                 }
                 return;
             }
@@ -1372,8 +1379,9 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
             std::optional<nlohmann::json> oemObject;
 
             // Read json request
-            if (!json_util::readJson(req, asyncResp->res, "PowerLimitWatts",
-                                     powerLimit, "Oem", oemObject))
+            if (!json_util::readJsonAction(req, asyncResp->res,
+                                           "PowerLimitWatts", powerLimit, "Oem",
+                                           oemObject))
             {
                 return;
             }
@@ -1444,74 +1452,77 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
             if (powerLimit)
             {
                 std::optional<int> setPoint;
-                if (json_util::readJson(*powerLimit, asyncResp->res,
-                                                        "SetPoint", setPoint))
+                if (json_util::readJson(*powerLimit, asyncResp->res, "SetPoint",
+                                        setPoint))
                 {
                     const std::array<const char*, 2> interfaces = {
                         "xyz.openbmc_project.Inventory.Item.Cpu",
                         "xyz.openbmc_project.Inventory.Item.Accelerator"};
 
                     crow::connections::systemBus->async_method_call(
-                        [asyncResp, processorId, setPoint](
-                        const boost::system::error_code ec,
-                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                        if (ec)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        // Iterate over all retrieved ObjectPaths.
-                        for (const std::pair<
-                                 std::string,
-                                 std::vector<std::pair<
-                                     std::string, std::vector<std::string>>>>&
-                                 object : subtree)
-                        {
-                            const std::string& path = object.first;
-                            const std::vector<std::pair<
-                                std::string, std::vector<std::string>>>&
-                                connectionNames = object.second;
-
-                            sdbusplus::message::object_path objPath(path);
-                            if (objPath.filename() != processorId)
+                        [asyncResp, processorId,
+                         setPoint](const boost::system::error_code ec,
+                                   const crow::openbmc_mapper::GetSubTreeType&
+                                       subtree) {
+                            if (ec)
                             {
-                                continue;
+                                messages::internalError(asyncResp->res);
+                                return;
                             }
 
-                            if (connectionNames.size() < 1)
+                            // Iterate over all retrieved ObjectPaths.
+                            for (const std::pair<
+                                     std::string,
+                                     std::vector<
+                                         std::pair<std::string,
+                                                   std::vector<std::string>>>>&
+                                     object : subtree)
                             {
-                                BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                                continue;
+                                const std::string& path = object.first;
+                                const std::vector<std::pair<
+                                    std::string, std::vector<std::string>>>&
+                                    connectionNames = object.second;
+
+                                sdbusplus::message::object_path objPath(path);
+                                if (objPath.filename() != processorId)
+                                {
+                                    continue;
+                                }
+
+                                if (connectionNames.size() < 1)
+                                {
+                                    BMCWEB_LOG_ERROR
+                                        << "Got 0 Connection names";
+                                    continue;
+                                }
+
+                                const std::string& connectionName =
+                                    connectionNames[0].first;
+                                const std::vector<std::string>& interfaces =
+                                    connectionNames[0].second;
+
+                                if (std::find(
+                                        interfaces.begin(), interfaces.end(),
+                                        "xyz.openbmc_project.Control.Power.Cap") !=
+                                    interfaces.end())
+                                {
+                                    std::string resourceType = "Processors";
+                                    patchPowerLimit(
+                                        asyncResp, processorId, *setPoint,
+                                        objPath, connectionName, resourceType);
+                                }
+
+                                return;
                             }
 
-                            const std::string& connectionName =
-                                connectionNames[0].first;
-                            const std::vector<std::string>& interfaces =
-                                connectionNames[0].second;
-
-                            if (std::find(
-                                    interfaces.begin(), interfaces.end(),
-                                    "xyz.openbmc_project.Control.Power.Cap") !=
-                                interfaces.end())
-                            {
-                                std::string resourceType = "Processors";
-                                patchPowerLimit(asyncResp, processorId,
-                                                *setPoint, objPath,
-                                                connectionName, resourceType);
-                            }
-
-                            return;
-                        }
-
-                        messages::resourceNotFound(
-                            asyncResp->res, "#Processor.v1_13_0.Processor",
-                            processorId);
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                    "/xyz/openbmc_project/inventory", 0, interfaces);
+                            messages::resourceNotFound(
+                                asyncResp->res, "#Processor.v1_13_0.Processor",
+                                processorId);
+                        },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                        "/xyz/openbmc_project/inventory", 0, interfaces);
                 }
             }
         });
@@ -1536,6 +1547,7 @@ inline void
 
                 return;
             }
+            const std::string resourceType="Memory";
             for (const auto& [path, object] : subtree)
             {
                 if (!boost::ends_with(path, dimmId))
@@ -1544,7 +1556,7 @@ inline void
                 }
                 for (const auto& [service, interfaces] : object)
                 {
-                    getEnvironmentMetricsDataByService(aResp, service, path);
+                    getEnvironmentMetricsDataByService(aResp, service, path, resourceType);
                 }
                 return;
             }
