@@ -3,9 +3,13 @@
 
 #include "sensors.hpp"
 #include "utils/dbus_utils.hpp"
+#include "utils/time_utils.hpp"
 
 namespace redfish
 {
+using GetSubTreeType = std::vector<
+    std::pair<std::string,
+              std::vector<std::pair<std::string, std::vector<std::string>>>>>;
 
 inline void processSensorsValue(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -105,18 +109,21 @@ inline void processSensorsValue(
                             .append(sensorName);
                     objectJson["DeviceName"] = sensorName;
 
-                    auto sensorDeviceNamedProperties =
-                    interfacesDict.find("xyz.openbmc_project.Inventory.Item");
+                    auto sensorDeviceNamedProperties = interfacesDict.find(
+                        "xyz.openbmc_project.Inventory.Item");
                     const std::string* deviceName = nullptr;
                     if (sensorDeviceNamedProperties != interfacesDict.end())
                     {
                         auto sensorDeviceName =
-                            sensorDeviceNamedProperties->second.find("PrettyName");
-                        if (sensorDeviceName != sensorDeviceNamedProperties->second.end())
+                            sensorDeviceNamedProperties->second.find(
+                                "PrettyName");
+                        if (sensorDeviceName !=
+                            sensorDeviceNamedProperties->second.end())
                         {
                             const dbus::utility::DbusVariantType& valueVariant =
                                 sensorDeviceName->second;
-                            deviceName = std::get_if<std::string>(&valueVariant);
+                            deviceName =
+                                std::get_if<std::string>(&valueVariant);
                             objectJson["DeviceName"] = *deviceName;
                         }
                     }
@@ -159,7 +166,7 @@ inline void processSensorsValue(
                             if (metricUpdatetimestamp != nullptr)
                             {
                                 thisMetric["Timestamp"] =
-                                    crow::utility::getDateTimeUintMs(
+                                    redfish::time_utils::getDateTimeUintMs(
                                         *metricUpdatetimestamp);
                             }
                             else
@@ -351,7 +358,7 @@ inline void processSensorServices(
     auto getAllSensors =
         [asyncResp, chassisPath, sensingInterval, requestTimestamp,
          metricsType](const boost::system::error_code ec,
-                      const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                      const GetSubTreeType& subtree) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR

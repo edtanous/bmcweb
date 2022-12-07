@@ -15,11 +15,26 @@
  */
 #pragma once
 
-#include <sdbusplus/message.hpp>
-#include <sdbusplus/utility/dedup_variant.hpp>
+#include "dbus_singleton.hpp"
 
+#include <boost/system/error_code.hpp> // IWYU pragma: keep
+#include <sdbusplus/message/native_types.hpp>
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <variant>
+#include <vector>
+
+// IWYU pragma: no_include <stddef.h>
+// IWYU pragma: no_include <stdint.h>
+// IWYU pragma: no_include <boost/system/detail/error_code.hpp>
 
 namespace dbus
 {
@@ -28,7 +43,7 @@ namespace utility
 {
 
 // clang-format off
-using DbusVariantType = sdbusplus::utility::dedup_variant_t<
+using DbusVariantType = std::variant<
     std::vector<std::tuple<std::string, std::string, std::string>>,
     std::vector<std::string>,
     std::vector<double>,
@@ -42,7 +57,6 @@ using DbusVariantType = sdbusplus::utility::dedup_variant_t<
     uint16_t,
     uint8_t,
     bool,
-    size_t,
     sdbusplus::message::unix_fd,
     std::vector<uint32_t>,
     std::vector<uint16_t>,
@@ -66,10 +80,22 @@ using DBusInteracesMap = std::vector<std::pair<std::string, DBusPropertiesMap>>;
 using ManagedObjectType =
     std::vector<std::pair<sdbusplus::message::object_path, DBusInteracesMap>>;
 
-using ManagedItem = std::pair<
-    sdbusplus::message::object_path,
-    boost::container::flat_map<
-        std::string, boost::container::flat_map<std::string, DbusVariantType>>>;
+// Map of service name to list of interfaces
+using MapperServiceMap =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
+
+// Map of object paths to MapperServiceMaps
+using MapperGetSubTreeResponse =
+    std::vector<std::pair<std::string, MapperServiceMap>>;
+
+using MapperGetObject =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
+
+using MapperGetAncestorsResponse = std::vector<
+    std::pair<std::string,
+              std::vector<std::pair<std::string, std::vector<std::string>>>>>;
+
+using MapperGetSubTreePathsResponse = std::vector<std::string>;
 
 inline void escapePathForDbus(std::string& path)
 {
@@ -101,25 +127,17 @@ inline bool getNthStringFromPath(const std::string& path, int index,
             }
         }
     }
-    if (count < index)
-    {
-        return false;
-    }
-
-    return true;
+    return count >= index;
 }
 
 template <typename Callback>
 inline void checkDbusPathExists(const std::string& path, Callback&& callback)
 {
-    using GetObjectType =
-        std::vector<std::pair<std::string, std::vector<std::string>>>;
-
     crow::connections::systemBus->async_method_call(
         [callback{std::forward<Callback>(callback)}](
             const boost::system::error_code ec,
-            const GetObjectType& objectNames) {
-            callback(!ec && objectNames.size() != 0);
+            const dbus::utility::MapperGetObject& objectNames) {
+        callback(!ec && !objectNames.empty());
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",

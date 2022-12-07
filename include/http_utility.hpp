@@ -1,47 +1,112 @@
 #pragma once
-#include "http_request.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/constants.hpp>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/type_index/type_index_facade.hpp>
+
+#include <cctype>
+#include <iomanip>
+#include <ostream>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+// IWYU pragma: no_include <ctype.h>
 
 namespace http_helpers
 {
-inline std::vector<std::string> parseAccept(std::string_view header)
-{
-    std::vector<std::string> encodings;
-    // chrome currently sends 6 accepts headers, firefox sends 4.
-    encodings.reserve(6);
-    boost::split(encodings, header, boost::is_any_of(", "),
-                 boost::token_compress_on);
 
-    return encodings;
+enum class ContentType
+{
+    NoMatch,
+    ANY, // Accepts: */*
+    CBOR,
+    HTML,
+    JSON,
+    OctetStream,
+};
+
+struct ContentTypePair
+{
+    std::string_view contentTypeString;
+    ContentType contentTypeEnum;
+};
+
+constexpr std::array<ContentTypePair, 4> contentTypes{{
+    {"application/cbor", ContentType::CBOR},
+    {"application/json", ContentType::JSON},
+    {"application/octet-stream", ContentType::OctetStream},
+    {"text/html", ContentType::HTML},
+}};
+
+inline ContentType getPreferedContentType(std::string_view header,
+                                          std::span<ContentType> preferedOrder)
+{
+    size_t index = 0;
+    size_t lastIndex = 0;
+    while (lastIndex < header.size() + 1)
+    {
+        index = header.find(',', lastIndex);
+        if (index == std::string_view::npos)
+        {
+            index = header.size();
+        }
+        std::string_view encoding = header.substr(lastIndex, index);
+
+        if (!header.empty())
+        {
+            header.remove_prefix(1);
+        }
+        lastIndex = index + 1;
+        // ignore any q-factor weighting (;q=)
+        std::size_t separator = encoding.find(";q=");
+
+        if (separator != std::string_view::npos)
+        {
+            encoding = encoding.substr(0, separator);
+        }
+        // If the client allows any encoding, given them the first one on the
+        // servers list
+        if (encoding == "*/*")
+        {
+            return ContentType::ANY;
+        }
+        const auto* knownContentType =
+            std::find_if(contentTypes.begin(), contentTypes.end(),
+                         [encoding](const ContentTypePair& pair) {
+            return pair.contentTypeString == encoding;
+            });
+
+        if (knownContentType == contentTypes.end())
+        {
+            // not able to find content type in list
+            continue;
+        }
+
+        // Not one of the types requested
+        if (std::find(preferedOrder.begin(), preferedOrder.end(),
+                      knownContentType->contentTypeEnum) == preferedOrder.end())
+        {
+            continue;
+        }
+        return knownContentType->contentTypeEnum;
+    }
+    return ContentType::NoMatch;
 }
 
-inline bool requestPrefersHtml(std::string_view header)
+inline bool isContentTypeAllowed(std::string_view header, ContentType type,
+                                 bool allowWildcard)
 {
-    for (const std::string& encoding : parseAccept(header))
+    auto types = std::to_array({type});
+    ContentType allowed = getPreferedContentType(header, types);
+    if (allowed == ContentType::ANY)
     {
-        if (encoding == "text/html")
-        {
-            return true;
-        }
-        if (encoding == "application/json")
-        {
-            return false;
-        }
+        return allowWildcard;
     }
-    return false;
-}
 
-inline bool isOctetAccepted(std::string_view header)
-{
-    for (const std::string& encoding : parseAccept(header))
-    {
-        if (encoding == "*/*" || encoding == "application/octet-stream")
-        {
-            return true;
-        }
-    }
-    return false;
+    return type == allowed;
 }
 
 inline std::string urlEncode(const std::string_view value)
@@ -53,7 +118,7 @@ inline std::string urlEncode(const std::string_view value)
     for (const char c : value)
     {
         // Keep alphanumeric and other accepted characters intact
-        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+        if ((isalnum(c) != 0) || c == '-' || c == '_' || c == '.' || c == '~')
         {
             escaped << c;
             continue;

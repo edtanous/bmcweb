@@ -20,10 +20,10 @@
 /**
  *@brief Checks whether the in-band is enabled
  *
- * @param endpointId the EID which is used 
+ * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
- * 
- * @return Object of MctpVdmUtilStatusResponse 
+ *
+ * @return Object of MctpVdmUtilStatusResponse
  * contains info:
  * whether the MCTP command was performed successfully and
  * whether in-band is enabled or not.
@@ -38,13 +38,14 @@ inline MctpVdmUtilStatusResponse isInBandEnabled(uint32_t endpointId)
 
     mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_STATUS);
 
-    if(mctpVdmUtilWrapper.getReturnStatus() == 0)
+    if (mctpVdmUtilWrapper.getReturnStatus() == 0)
     {
         status.isSuccess = true;
 
         std::string rxTemplate = "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
 
-        if (std::regex_match(mctpVdmUtilWrapper.getStdOut(), std::regex(rxTemplate)))
+        if (std::regex_match(mctpVdmUtilWrapper.getStdOut(),
+                             std::regex(rxTemplate)))
         {
             status.enabled = true;
         }
@@ -56,21 +57,21 @@ inline MctpVdmUtilStatusResponse isInBandEnabled(uint32_t endpointId)
 /**
  *@brief Enabled or Disabled in-band
  *
- * @param endpointId the EID which is used 
+ * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
  * @param enabled Enable or disable the in-band
- * 
+ *
  * @return exit code form mctp-vdm-tool.
  */
 inline int enableInBand(uint32_t endpointId, bool enabled)
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
 
-    if(enabled)
+    if (enabled)
     {
         mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_ENABLE);
-    } 
-    else 
+    }
+    else
     {
         mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_DISABLE);
     }

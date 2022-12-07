@@ -442,7 +442,7 @@ inline void requestRoutesChassisControlsCollection(App& app)
                         return;
                     }
                     asyncResp->res.jsonValue = {
-                        {"@odata.type", "#Controls"},
+                        {"@odata.type", "#ControlCollection.ControlCollection"},
                         {"@odata.id",
                          "/redfish/v1/Chassis/" + chassisID + "/Controls"},
                         {"Name", "Controls"},
@@ -597,7 +597,7 @@ inline void requestRoutesChassisControls(App& app)
                                         std::string mode;
                                         std::optional<uint32_t> setpoint;
                                         std::string controlMode;
-                                        if (!json_util::readJson(
+                                        if (!json_util::readJsonAction(
                                                 req, asyncResp->res,
                                                 "ControlMode", mode, "SetPoint",
                                                 setpoint))

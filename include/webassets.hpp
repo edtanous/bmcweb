@@ -57,7 +57,7 @@ inline void requestRoutes(App& app)
     std::filesystem::recursive_directory_iterator dirIter(rootpath, ec);
     if (ec)
     {
-        BMCWEB_LOG_ERROR << "Unable to find or open " << rootpath
+        BMCWEB_LOG_ERROR << "Unable to find or open " << rootpath.string()
                          << " static file hosting disabled";
         return;
     }
@@ -79,7 +79,7 @@ inline void requestRoutes(App& app)
         if (std::filesystem::is_directory(dir))
         {
             // don't recurse into hidden directories or symlinks
-            if (boost::starts_with(dir.path().filename().string(), ".") ||
+            if (dir.path().filename().string().starts_with(".") ||
                 std::filesystem::is_symlink(dir))
             {
                 dirIter.disable_recursion_pending();
@@ -99,11 +99,10 @@ inline void requestRoutes(App& app)
                 contentEncoding = "gzip";
             }
 
-            if (boost::starts_with(webpath.filename().string(), "index."))
+            if (webpath.filename().string().starts_with("index."))
             {
                 webpath = webpath.parent_path();
-                if (webpath.string().size() == 0 ||
-                    webpath.string().back() != '/')
+                if (webpath.string().empty() || webpath.string().back() != '/')
                 {
                     // insert the non-directory version of this path
                     webroutes::routes.insert(webpath);
@@ -118,7 +117,7 @@ inline void requestRoutes(App& app)
             {
                 // Got a duplicated path.  This is expected in certain
                 // situations
-                BMCWEB_LOG_DEBUG << "Got duplicated path " << webpath;
+                BMCWEB_LOG_DEBUG << "Got duplicated path " << webpath.string();
                 continue;
             }
             const char* contentType = nullptr;
@@ -138,7 +137,7 @@ inline void requestRoutes(App& app)
             if (contentType == nullptr)
             {
                 BMCWEB_LOG_ERROR << "Cannot determine content-type for "
-                                 << absolutePath << " with extension "
+                                 << absolutePath.string() << " with extension "
                                  << extension;
             }
 
@@ -151,31 +150,32 @@ inline void requestRoutes(App& app)
                 [absolutePath, contentType, contentEncoding](
                     const crow::Request&,
                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                    if (contentType != nullptr)
-                    {
-                        asyncResp->res.addHeader("Content-Type", contentType);
-                    }
+                if (contentType != nullptr)
+                {
+                    asyncResp->res.addHeader(
+                        boost::beast::http::field::content_type, contentType);
+                }
 
-                    if (contentEncoding != nullptr)
-                    {
-                        asyncResp->res.addHeader("Content-Encoding",
-                                                 contentEncoding);
-                    }
+                if (contentEncoding != nullptr)
+                {
+                    asyncResp->res.addHeader(
+                        boost::beast::http::field::content_encoding,
+                        contentEncoding);
+                }
 
-                    // res.set_header("Cache-Control", "public, max-age=86400");
-                    std::ifstream inf(absolutePath);
-                    if (!inf)
-                    {
-                        BMCWEB_LOG_DEBUG << "failed to read file";
-                        asyncResp->res.result(
-                            boost::beast::http::status::internal_server_error);
-                        return;
-                    }
+                // res.set_header("Cache-Control", "public, max-age=86400");
+                std::ifstream inf(absolutePath);
+                if (!inf)
+                {
+                    BMCWEB_LOG_DEBUG << "failed to read file";
+                    asyncResp->res.result(
+                        boost::beast::http::status::internal_server_error);
+                    return;
+                }
 
-                    asyncResp->res.body() = {
-                        std::istreambuf_iterator<char>(inf),
-                        std::istreambuf_iterator<char>()};
-                });
+                asyncResp->res.body() = {std::istreambuf_iterator<char>(inf),
+                                         std::istreambuf_iterator<char>()};
+            });
         }
     }
 }

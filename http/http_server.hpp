@@ -32,7 +32,7 @@ class Server
   public:
     Server(Handler* handlerIn,
            std::unique_ptr<boost::asio::ip::tcp::acceptor>&& acceptorIn,
-           std::shared_ptr<boost::asio::ssl::context> adaptorCtx,
+           [[maybe_unused]] std::shared_ptr<boost::asio::ssl::context> adaptorCtxIn,
            std::shared_ptr<boost::asio::io_context> io =
                std::make_shared<boost::asio::io_context>()) :
         ioService(std::move(io)),
@@ -43,24 +43,24 @@ class Server
     {}
 
     Server(Handler* handlerIn, const std::string& bindaddr, uint16_t port,
-           const std::shared_ptr<boost::asio::ssl::context>& adaptorCtx,
+           const std::shared_ptr<boost::asio::ssl::context>& adaptorCtxIn,
            const std::shared_ptr<boost::asio::io_context>& io =
                std::make_shared<boost::asio::io_context>()) :
         Server(handlerIn,
                std::make_unique<boost::asio::ip::tcp::acceptor>(
                    *io, boost::asio::ip::tcp::endpoint(
                             boost::asio::ip::make_address(bindaddr), port)),
-               adaptorCtx, io)
+               adaptorCtxIn, io)
     {}
 
     Server(Handler* handlerIn, int existingSocket,
-           const std::shared_ptr<boost::asio::ssl::context>& adaptorCtx,
+           const std::shared_ptr<boost::asio::ssl::context>& adaptorCtxIn,
            const std::shared_ptr<boost::asio::io_context>& io =
                std::make_shared<boost::asio::io_context>()) :
         Server(handlerIn,
                std::make_unique<boost::asio::ip::tcp::acceptor>(
                    *io, boost::asio::ip::tcp::v6(), existingSocket),
-               adaptorCtx, io)
+               adaptorCtxIn, io)
     {}
 
     void updateDateStr()
@@ -96,7 +96,7 @@ class Server
         };
 
         BMCWEB_LOG_INFO << "bmcweb server is running, local endpoint "
-                        << acceptor->local_endpoint();
+                        << acceptor->local_endpoint().address().to_string();
         startAsyncWaitForSignal();
         doAccept();
     }
@@ -176,8 +176,8 @@ class Server
 
     void startAsyncWaitForSignal()
     {
-        signals.async_wait([this](const boost::system::error_code& ec,
-                                  int signalNo) {
+        signals.async_wait(
+            [this](const boost::system::error_code& ec, int signalNo) {
             if (ec)
             { 
                 BMCWEB_LOG_INFO << "Error in signal handler" << ec.message();
@@ -232,12 +232,12 @@ class Server
         acceptor->async_accept(
             boost::beast::get_lowest_layer(connection->socket()),
             [this, connection](boost::system::error_code ec) {
-                if (!ec)
-                {
-                    boost::asio::post(*this->ioService,
-                                      [connection] { connection->start(); });
-                }
-                doAccept();
+            if (!ec)
+            {
+                boost::asio::post(*this->ioService,
+                                  [connection] { connection->start(); });
+            }
+            doAccept();
             });
     }
 
@@ -253,9 +253,6 @@ class Server
 
     Handler* handler;
 
-#ifdef BMCWEB_ENABLE_SSL
-    bool useSsl{false};
-#endif
     std::shared_ptr<boost::asio::ssl::context> adaptorCtx;
 };
 } // namespace crow
