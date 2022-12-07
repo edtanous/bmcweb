@@ -52,7 +52,10 @@ inline void handleMessageRegistryFileCollectionGet(
         {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
         {{"@odata.id", "/redfish/v1/Registries/ResourceEvent"}},
         {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}},
-        {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}}};
+#ifdef BMCWEB_ENABLE_BIOS
+        {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}},
+#endif
+    };
 }
 
 inline void requestRoutesMessageRegistryFileCollection(App& app)
