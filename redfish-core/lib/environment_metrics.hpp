@@ -963,36 +963,41 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                                 const std::string& connectionName =
                                     connectionNames[0].first;
                                 crow::connections::systemBus->async_method_call(
-                                [asyncResp, connectionName, chassisId,
-                                 setPoint](
-                                    const boost::system::error_code& e,
-                                    std::variant<std::vector<std::string>>&
-                                        resp) {
-                                    if (e)
-                                    {
-                                        messages::internalError(asyncResp->res);
-                                        return;
-                                    }
-                                    std::vector<std::string>* data =
-                                        std::get_if<std::vector<std::string>>(
-                                            &resp);
-                                    if (data == nullptr)
-                                    {
-                                        return;
-                                    }
-                                    for (const std::string& ctrlPath : *data)
-                                    {
-                                        std::string resourceType = "Chassis";
-                                        patchPowerLimit(asyncResp, chassisId,
-                                                        *setPoint, ctrlPath,
-                                                        connectionName,
-                                                        resourceType);
-                                    }
-                                },
-                                "xyz.openbmc_project.ObjectMapper",
-                                path + "/power_controls",
-                                "org.freedesktop.DBus.Properties", "Get",
-                                "xyz.openbmc_project.Association", "endpoints");
+                                    [asyncResp, connectionName, chassisId,
+                                     setPoint](
+                                        const boost::system::error_code& e,
+                                        std::variant<std::vector<std::string>>&
+                                            resp) {
+                                        if (e)
+                                        {
+                                            messages::internalError(
+                                                asyncResp->res);
+                                            return;
+                                        }
+                                        std::vector<std::string>* data =
+                                            std::get_if<
+                                                std::vector<std::string>>(
+                                                &resp);
+                                        if (data == nullptr)
+                                        {
+                                            return;
+                                        }
+                                        for (const std::string& ctrlPath :
+                                             *data)
+                                        {
+                                            std::string resourceType =
+                                                "Chassis";
+                                            patchPowerLimit(
+                                                asyncResp, chassisId, *setPoint,
+                                                ctrlPath, connectionName,
+                                                resourceType);
+                                        }
+                                    },
+                                    "xyz.openbmc_project.ObjectMapper",
+                                    path + "/power_controls",
+                                    "org.freedesktop.DBus.Properties", "Get",
+                                    "xyz.openbmc_project.Association",
+                                    "endpoints");
 
                                 return;
                             }
@@ -1121,21 +1126,25 @@ inline double joulesToKwh(const double& joules)
 
 inline void getSensorDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
-    const std::string& chassisId, const std::string& objPath, const std::string &resourceType)
+    const std::string& chassisId, const std::string& objPath,
+    const std::string& resourceType)
 {
     BMCWEB_LOG_DEBUG << "Get sensor data.";
     using PropertyType =
         std::variant<std::string, double, uint64_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     crow::connections::systemBus->async_method_call(
-        [aResp, chassisId, resourceType, objPath](const boost::system::error_code ec,
-                                    const PropertiesMap& properties) {
+        [aResp, chassisId, resourceType,
+         objPath](const boost::system::error_code ec,
+                  const PropertiesMap& properties) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "Can't get sensor reading for";
-                // Not reporting Internal Failure for services that dont host sensor path in case of Processor Env
-                // Eg: GpuOobRecovery in case of FPGA Processor
-                if (resourceType != "Processor"){
+                // Not reporting Internal Failure for services that dont host
+                // sensor path in case of Processor Env Eg: GpuOobRecovery in
+                // case of FPGA Processor
+                if (resourceType != "Processor")
+                {
                     messages::internalError(aResp->res);
                 }
                 return;
@@ -1184,8 +1193,10 @@ inline void getSensorDataByService(
                             {"Reading", *attributeValue},
                             {"DataSourceUri", sensorURI},
                         };
-                        // TODO: section as pick reading from sensor association.
-                        aResp->res.jsonValue["PowerLimitWatts"]["Reading"] = *attributeValue;
+                        // TODO: section as pick reading from sensor
+                        // association.
+                        aResp->res.jsonValue["PowerLimitWatts"]["Reading"] =
+                            *attributeValue;
                     }
                     else if (sensorType == "energy")
                     {
@@ -1205,12 +1216,12 @@ inline void getSensorDataByService(
 
 inline void getEnvironmentMetricsDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
-    const std::string& objPath, const std::string &resourceType)
+    const std::string& objPath, const std::string& resourceType)
 {
     BMCWEB_LOG_DEBUG << "Get environment metrics data.";
     // Get parent chassis for sensors URI
     crow::connections::systemBus->async_method_call(
-        [aResp, service, resourceType, 
+        [aResp, service, resourceType,
          objPath](const boost::system::error_code ec,
                   std::variant<std::vector<std::string>>& resp) {
             if (ec)
@@ -1282,7 +1293,7 @@ inline void
 
                 return;
             }
-            const std::string resourceType="Processor";
+            const std::string resourceType = "Processor";
             for (const auto& [path, object] : subtree)
             {
                 if (!boost::ends_with(path, processorId))
@@ -1319,7 +1330,8 @@ inline void
                     }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-                    getEnvironmentMetricsDataByService(aResp, service, path, resourceType);
+                    getEnvironmentMetricsDataByService(aResp, service, path,
+                                                       resourceType);
                 }
                 return;
             }
@@ -1547,7 +1559,7 @@ inline void
 
                 return;
             }
-            const std::string resourceType="Memory";
+            const std::string resourceType = "Memory";
             for (const auto& [path, object] : subtree)
             {
                 if (!boost::ends_with(path, dimmId))
@@ -1556,7 +1568,8 @@ inline void
                 }
                 for (const auto& [service, interfaces] : object)
                 {
-                    getEnvironmentMetricsDataByService(aResp, service, path, resourceType);
+                    getEnvironmentMetricsDataByService(aResp, service, path,
+                                                       resourceType);
                 }
                 return;
             }

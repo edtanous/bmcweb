@@ -15,34 +15,35 @@
 */
 #pragma once
 
+#include <nlohmann/json.hpp>
+
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
-#include <fstream>
-#include <filesystem>
-
-#include <nlohmann/json.hpp>
 
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
 
 struct CommitImageValueEntry
 {
-    public:
-        std::string inventoryUri;
-        uint32_t mctpEndpointId = {};
+  public:
+    std::string inventoryUri;
+    uint32_t mctpEndpointId = {};
 
-        friend bool operator== ( const CommitImageValueEntry &c1, const std::string &c2 )
-        {
-            return c1.inventoryUri == c2;
-        }
+    friend bool operator==(const CommitImageValueEntry& c1,
+                           const std::string& c2)
+    {
+        return c1.inventoryUri == c2;
+    }
 };
 
 std::vector<CommitImageValueEntry> getAllowableValues()
 {
-    
+
     static std::vector<CommitImageValueEntry> allowableValues;
-    
-    if(allowableValues.empty() == false)
+
+    if (allowableValues.empty() == false)
     {
         return allowableValues;
     }
@@ -73,7 +74,8 @@ std::vector<CommitImageValueEntry> getAllowableValues()
             CommitImageValueEntry allowableVal;
 
             allowableVal.inventoryUri = element.key();
-            allowableVal.mctpEndpointId = static_cast<uint32_t>(element.value());            
+            allowableVal.mctpEndpointId =
+                static_cast<uint32_t>(element.value());
 
             allowableValues.push_back(allowableVal);
         }

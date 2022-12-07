@@ -618,9 +618,9 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                  const std::string& objPath)
 {
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(objPath,
-        [aResp](const std::string& rootHealth,
-                const std::string& healthRollup) {
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        objPath, [aResp](const std::string& rootHealth,
+                         const std::string& healthRollup) {
             aResp->res.jsonValue["Status"]["Health"] = rootHealth;
             aResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
         });
@@ -925,7 +925,8 @@ inline void requestRoutesMemoryCollection(App& app)
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
 
                 collection_util::getCollectionMembers(
-                    asyncResp, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory",
+                    asyncResp,
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory",
                     {"xyz.openbmc_project.Inventory.Item.Dimm"});
             });
 }

@@ -189,7 +189,7 @@ inline void onMapperAssociationDone(
         "xyz.openbmc_project.Inventory.Item.PCIeSlot",
         [asyncResp](const boost::system::error_code ec,
                     const dbus::utility::DBusPropertiesMap& propertiesList) {
-        onPcieSlotGetAllDone(asyncResp, ec, propertiesList);
+            onPcieSlotGetAllDone(asyncResp, ec, propertiesList);
         });
 }
 
@@ -237,8 +237,8 @@ inline void
                 [asyncResp, chassisID, pcieSlotPath, connectionName](
                     const boost::system::error_code ec,
                     const std::variant<std::vector<std::string>>& endpoints) {
-                onMapperAssociationDone(asyncResp, chassisID, pcieSlotPath,
-                                        connectionName, ec, endpoints);
+                    onMapperAssociationDone(asyncResp, chassisID, pcieSlotPath,
+                                            connectionName, ec, endpoints);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 std::string{pcieSlotAssociationPath},
@@ -262,7 +262,7 @@ inline void handlePCIeSlotCollectionGet(
         [asyncResp,
          chassisID](const boost::system::error_code ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
-        onMapperSubtreeDone(asyncResp, chassisID, ec, subtree);
+            onMapperSubtreeDone(asyncResp, chassisID, ec, subtree);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",

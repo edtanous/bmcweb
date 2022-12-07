@@ -148,8 +148,9 @@ inline void getSensorMap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             std::chrono::steady_clock::now().time_since_epoch())
                             .count()) +
                     sensorUpdatetimeSteadyClock;
-                thisMetric["Timestamp"] = redfish::time_utils::getDateTimeUintMs(
-                    sensorUpdatetimeSystemClock);
+                thisMetric["Timestamp"] =
+                    redfish::time_utils::getDateTimeUintMs(
+                        sensorUpdatetimeSystemClock);
                 sdbusplus::message::object_path chassisPath = std::get<2>(data);
                 std::string sensorUri = "/redfish/v1/Chassis/";
                 sensorUri += chassisPath.filename();

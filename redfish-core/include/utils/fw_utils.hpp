@@ -388,8 +388,8 @@ inline void getFwWriteProtectedStatus(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::shared_ptr<std::string>& swId, const std::string& dbusSvc)
 {
-    BMCWEB_LOG_DEBUG << "getFwWriteProtectedStatus: swId " << *swId << " serviceName "
-                     << dbusSvc;
+    BMCWEB_LOG_DEBUG << "getFwWriteProtectedStatus: swId " << *swId
+                     << " serviceName " << dbusSvc;
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, swId](
@@ -441,11 +441,11 @@ inline void patchFwWriteProtectedStatus(
     const std::shared_ptr<std::string>& swId, const std::string& dbusSvc,
     const bool writeProtected)
 {
-    BMCWEB_LOG_DEBUG << "patchFwWriteProtectedStatus: swId " << *swId << " serviceName "
-                     << dbusSvc;
+    BMCWEB_LOG_DEBUG << "patchFwWriteProtectedStatus: swId " << *swId
+                     << " serviceName " << dbusSvc;
     crow::connections::systemBus->async_method_call(
         [asyncResp, swId](const boost::system::error_code ec,
-                                        sdbusplus::message::message& msg) {
+                          sdbusplus::message::message& msg) {
             if (!ec)
             {
                 BMCWEB_LOG_DEBUG << "Set WriteProtect succeeded";
@@ -473,7 +473,6 @@ inline void patchFwWriteProtectedStatus(
             {
                 messages::internalError(asyncResp->res);
             }
-
         },
         dbusSvc, "/xyz/openbmc_project/software/" + *swId,
         "org.freedesktop.DBus.Properties", "Set",

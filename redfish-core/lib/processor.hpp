@@ -605,12 +605,14 @@ inline void getParentChassisPCIeDeviceLink(
  */
 inline void
     getProcessorChassisLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                            const std::string& objPath, const std::string& service)
+                            const std::string& objPath,
+                            const std::string& service)
 {
     BMCWEB_LOG_DEBUG << "Get parent chassis link";
     crow::connections::systemBus->async_method_call(
-        [aResp, objPath, service](const boost::system::error_code ec,
-                         std::variant<std::vector<std::string>>& resp) {
+        [aResp, objPath,
+         service](const boost::system::error_code ec,
+                  std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
                 return; // no chassis = no failures
@@ -635,47 +637,47 @@ inline void
 
             // Get PCIeDevice on this chassis
             crow::connections::systemBus->async_method_call(
-                [aResp, chassisName, chassisPath,  
-                service](const boost::system::error_code ec,
-                        std::variant<std::vector<std::string>>& resp) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
-                    return; // no pciedevices = no failures
-                }
-                std::vector<std::string>* data =
-                    std::get_if<std::vector<std::string>>(&resp);
-                if (data == nullptr && data->size() > 1)
-                {
-                    // Chassis must have single pciedevice
-                    BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
-                    return;
-                }
-                const std::string& pcieDevicePath = data->front();
-                sdbusplus::message::object_path objectPath(pcieDevicePath);
-                std::string pcieDeviceName = objectPath.filename();
-                if (pcieDeviceName.empty())
-                {
-                    BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                            std::string pcieDeviceLink = "/redfish/v1/Chassis/";
-                            pcieDeviceLink += chassisName;
-                            pcieDeviceLink += "/PCIeDevices/";
-                            pcieDeviceLink += pcieDeviceName;
-                            aResp->res.jsonValue["Links"]["PCIeDevice"] = {
-                                {"@odata.id", pcieDeviceLink}};
+                [aResp, chassisName, chassisPath,
+                 service](const boost::system::error_code ec,
+                          std::variant<std::vector<std::string>>& resp) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "Chassis has no connected PCIe devices";
+                        return; // no pciedevices = no failures
+                    }
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr && data->size() > 1)
+                    {
+                        // Chassis must have single pciedevice
+                        BMCWEB_LOG_ERROR
+                            << "chassis must have single pciedevice";
+                        return;
+                    }
+                    const std::string& pcieDevicePath = data->front();
+                    sdbusplus::message::object_path objectPath(pcieDevicePath);
+                    std::string pcieDeviceName = objectPath.filename();
+                    if (pcieDeviceName.empty())
+                    {
+                        BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    std::string pcieDeviceLink = "/redfish/v1/Chassis/";
+                    pcieDeviceLink += chassisName;
+                    pcieDeviceLink += "/PCIeDevices/";
+                    pcieDeviceLink += pcieDeviceName;
+                    aResp->res.jsonValue["Links"]["PCIeDevice"] = {
+                        {"@odata.id", pcieDeviceLink}};
 
-                // Get PCIeFunctions Link
-                getProcessorPCIeFunctionsLinks(
-                       aResp, service, pcieDevicePath, pcieDeviceLink);
-
+                    // Get PCIeFunctions Link
+                    getProcessorPCIeFunctionsLinks(
+                        aResp, service, pcieDevicePath, pcieDeviceLink);
                 },
                 "xyz.openbmc_project.ObjectMapper", chassisPath + "/pciedevice",
                 "org.freedesktop.DBus.Properties", "Get",
                 "xyz.openbmc_project.Association", "endpoints");
-
         },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
@@ -719,8 +721,8 @@ inline void getProcessorUUID(std::shared_ptr<bmcweb::AsyncResp> aResp,
  * @param[in]       objPath     D-Bus object to query.
  */
 inline void getFpgaTypeData(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                             const std::string& service,
-                             const std::string& objPath)
+                            const std::string& service,
+                            const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get Processor fpgatype";
     sdbusplus::asio::getProperty<std::string>(
@@ -1114,9 +1116,9 @@ inline void getAcceleratorDataByService(
         << "Get available system Accelerator resources by service.";
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(objPath,
-        [aResp](const std::string& rootHealth,
-                const std::string& healthRollup) {
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        objPath, [aResp](const std::string& rootHealth,
+                         const std::string& healthRollup) {
             aResp->res.jsonValue["Status"]["Health"] = rootHealth;
             aResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
         });
@@ -1458,7 +1460,7 @@ inline void
             }
 
             using SpeedConfigProperty = std::tuple<bool, uint32_t>;
-            const SpeedConfigProperty* speedConfig;
+            const SpeedConfigProperty* speedConfig = nullptr;
             const size_t* availableCoreCount = nullptr;
             const uint32_t* baseSpeed = nullptr;
             const uint32_t* maxJunctionTemperature = nullptr;
@@ -1662,9 +1664,9 @@ inline void getProcessorEccModeData(
     getEccModeData(aResp, cpuId, service, objPath);
 }
 
-inline void getProcessorResetTypeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& cpuId, const std::string& service,
-                           const std::string& objPath)
+inline void getProcessorResetTypeData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
+    const std::string& service, const std::string& objPath)
 {
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](const boost::system::error_code ec,
@@ -1684,16 +1686,19 @@ inline void getProcessorResetTypeData(const std::shared_ptr<bmcweb::AsyncResp>& 
                         std::get_if<std::string>(&property.second);
                     if (processorResetType == nullptr)
                     {
-                        BMCWEB_LOG_DEBUG << "Property processorResetType is null";
+                        BMCWEB_LOG_DEBUG
+                            << "Property processorResetType is null";
                         messages::internalError(aResp->res);
                         return;
                     }
                     const std::string processorResetTypeValue =
                         getProcessorResetType(*processorResetType);
                     aResp->res.jsonValue["Actions"]["#Processor.Reset"] = {
-                        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/"
-                            + cpuId + "/Actions/Processor.Reset"},
-                        {"ResetType@Redfish.AllowableValues", {processorResetTypeValue}}};
+                        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                   "/Processors/" +
+                                       cpuId + "/Actions/Processor.Reset"},
+                        {"ResetType@Redfish.AllowableValues",
+                         {processorResetTypeValue}}};
                 }
             }
         },
@@ -1882,7 +1887,7 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             else if (interface == "xyz.openbmc_project.Control.Processor.Reset")
             {
                 getProcessorResetTypeData(aResp, processorId, serviceName,
-                                        objectPath);
+                                          objectPath);
             }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
@@ -4145,16 +4150,16 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                         getPortMetricsData(asyncResp, service,
                                                            portPath);
 
-                                        
-                                        if (std::find(interfaces.begin(), 
-                                         interfaces.end(),
-                                         "xyz.openbmc_project.PCIe.PCIeECC") !=
-                                         interfaces.end())
+                                        if (std::find(
+                                                interfaces.begin(),
+                                                interfaces.end(),
+                                                "xyz.openbmc_project.PCIe.PCIeECC") !=
+                                            interfaces.end())
                                         {
                                             redfish::processor_utils::
-                                                    getPCIeErrorData(
-                                                    asyncResp, service, 
-                                                     portPath);
+                                                getPCIeErrorData(asyncResp,
+                                                                 service,
+                                                                 portPath);
                                         }
                                     }
 

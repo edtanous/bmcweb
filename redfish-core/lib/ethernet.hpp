@@ -1662,9 +1662,9 @@ inline void parseInterfaceData(
         jsonResponse["FQDN"] = fqdn;
     }
 
-    jsonResponse["VLANs"] = {
-        {"@odata.id",
-         "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" + ifaceId + "/VLANs"}};
+    jsonResponse["VLANs"] = {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                                           "/EthernetInterfaces/" +
+                                               ifaceId + "/VLANs"}};
 
     jsonResponse["NameServers"] = ethData.nameServers;
     jsonResponse["StaticNameServers"] = ethData.staticNameServers;
@@ -2067,7 +2067,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
                         {
                             asyncResp->res.jsonValue["Id"] = ifaceId;
                             asyncResp->res.jsonValue["@odata.id"] =
-                                "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" +
+                                "/redfish/v1/Managers/" PLATFORMBMCID
+                                "/EthernetInterfaces/" +
                                 parentIfaceId + "/VLANs/" + ifaceId;
 
                             asyncResp->res.jsonValue["VLANEnable"] =

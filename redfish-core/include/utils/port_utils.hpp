@@ -191,8 +191,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& service, const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get Port Data";
-    using PropertyType =
-        std::variant<std::string, bool, uint8_t, uint16_t, size_t, std::vector<std::string>>;
+    using PropertyType = std::variant<std::string, bool, uint8_t, uint16_t,
+                                      size_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     // Get interface properties
     crow::connections::systemBus->async_method_call(
@@ -205,8 +205,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                                        "#NvidiaPort.v1_0_0.NvidiaPort";
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                "#NvidiaPort.v1_0_0.NvidiaPort";
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             for (const auto& property : properties)
             {
                 const std::string& propertyName = property.first;
@@ -227,7 +227,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 else if (propertyName == "TXWidth")
                 {
-                    const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                    const uint16_t* value =
+                        std::get_if<uint16_t>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
@@ -236,12 +237,13 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         return;
                     }
 
-
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["TXWidth"] = *value;
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["TXWidth"] =
+                        *value;
                 }
                 else if (propertyName == "RXWidth")
                 {
-                    const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                    const uint16_t* value =
+                        std::get_if<uint16_t>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
@@ -249,9 +251,10 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXWidth"] = *value;
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXWidth"] =
+                        *value;
                 }
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES               
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 else if (propertyName == "Protocol")
                 {
                     const std::string* value =
@@ -318,7 +321,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     }
                     asyncResp->res.jsonValue["MaxSpeedGbps"] = *value;
                 }
-                else if ((propertyName == "Width") || (propertyName == "ActiveWidth"))
+                else if ((propertyName == "Width") ||
+                         (propertyName == "ActiveWidth"))
                 {
                     const size_t* value = std::get_if<size_t>(&property.second);
                     if (value == nullptr)
@@ -350,26 +354,20 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
-        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-        asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+    asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+    asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
 
-        // update port health
+    // update port health
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                        std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(objPath,
-                                [asyncResp](const std::string& rootHealth,
-                                            const std::string& healthRollup) {
-                                    asyncResp->res
-                                        .jsonValue["Status"]["Health"] =
-                                        rootHealth;
-                                    asyncResp->res
-                                        .jsonValue["Status"]["HealthRollup"] =
-                                        healthRollup;
-                                });
-                        health->start();
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        objPath, [asyncResp](const std::string& rootHealth,
+                             const std::string& healthRollup) {
+            asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+            asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+        });
+    health->start();
 
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-
 }
 
 } // namespace port_utils

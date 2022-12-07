@@ -617,6 +617,5 @@ bool getValueFromJsonObject(nlohmann::json& jsonData, const std::string& key,
     return details::unpackValue(*it, key, value);
 }
 
-
 } // namespace json_util
 } // namespace redfish

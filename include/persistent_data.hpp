@@ -26,7 +26,8 @@ class ConfigFile
 
   public:
     // todo(ed) should read this from a fixed location somewhere, not CWD
-    static constexpr const char* filename = "/var/lib/bmcweb/bmcweb_persistent_data.json";
+    static constexpr const char* filename =
+        "/var/lib/bmcweb/bmcweb_persistent_data.json";
 
     ConfigFile()
     {
@@ -54,14 +55,14 @@ class ConfigFile
         tlsAuthToWrite = true;
         writeData();
     }
-    
+
     bool isTLSAuthEnabled() const
     {
         return tlsAuth;
     }
 #else
-    // If BMCWEB_ENABLE_TLS_AUTH_OPT_IN is not enabled then the runtime check is always true,
-    // and the enablement depends on the various #ifdef checks.
+    // If BMCWEB_ENABLE_TLS_AUTH_OPT_IN is not enabled then the runtime check is
+    // always true, and the enablement depends on the various #ifdef checks.
     constexpr bool isTLSAuthEnabled()
     {
         return true;
@@ -267,7 +268,7 @@ class ConfigFile
             eventServiceConfig.retryTimeoutInterval;
 
         data["system_uuid"] = systemUuid;
-	data["tls_auth_enabled"] = tlsAuthToWrite;
+        data["tls_auth_enabled"] = tlsAuthToWrite;
         data["revision"] = jsonRevision;
         data["timeout"] = SessionStore::getInstance().getTimeoutInSeconds();
 
@@ -303,7 +304,7 @@ class ConfigFile
                     << "The subscription type is SSE, so skipping.";
                 continue;
             }
-	    nlohmann::json::object_t headers;
+            nlohmann::json::object_t headers;
             for (const boost::beast::http::fields::value_type& header :
                  subValue->httpHeaders)
             {

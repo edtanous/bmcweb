@@ -982,8 +982,8 @@ inline void objectPropertiesToJson(
             "xyz.openbmc_project.Sensor.Threshold.HardShutdown",
             "HardShutdownHigh", "/Thresholds/UpperFatal/Reading"_json_pointer);
         properties.emplace_back(
-            "xyz.openbmc_project.Sensor.Threshold.HardShutdown", "HardShutdownLow",
-            "/Thresholds/LowerFatal/Reading"_json_pointer);
+            "xyz.openbmc_project.Sensor.Threshold.HardShutdown",
+            "HardShutdownLow", "/Thresholds/LowerFatal/Reading"_json_pointer);
     }
     else if (sensorType != "power")
     {
@@ -1068,9 +1068,10 @@ inline void objectPropertiesToJson(
                 std::get_if<std::string>(&valueVariant);
             if (doubleValue != nullptr)
             {
-                if (valueName == "MaxAllowableValue" || valueName == "MinAllowableValue")
+                if (valueName == "MaxAllowableValue" ||
+                    valueName == "MinAllowableValue")
                 {
-                    forceToInt=true;
+                    forceToInt = true;
                 }
                 if (forceToInt)
                 {
@@ -3025,9 +3026,8 @@ inline void getChassisCallback(
         type.erase(std::remove(type.begin(), type.end(), '_'), type.end());
 
         nlohmann::json::object_t member;
-        std::string id = sensorName;
         member["@odata.id"] = crow::utility::urlFromPieces(
-            "redfish", "v1", "Chassis", chassisId, chassisSubNode, id);
+            "redfish", "v1", "Chassis", chassisId, chassisSubNode, sensorName);
 
         entriesArray.push_back(std::move(member));
     }
@@ -3327,7 +3327,8 @@ inline void
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 std::shared_ptr<HealthRollup> health =
-                    std::make_shared<HealthRollup>(sensorPath,
+                    std::make_shared<HealthRollup>(
+                        sensorPath,
                         [asyncResp](const std::string& rootHealth,
                                     const std::string& healthRollup) {
                             asyncResp->res.jsonValue["Status"]["Health"] =

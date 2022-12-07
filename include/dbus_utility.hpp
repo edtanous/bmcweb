@@ -137,7 +137,7 @@ inline void checkDbusPathExists(const std::string& path, Callback&& callback)
         [callback{std::forward<Callback>(callback)}](
             const boost::system::error_code ec,
             const dbus::utility::MapperGetObject& objectNames) {
-        callback(!ec && !objectNames.empty());
+            callback(!ec && !objectNames.empty());
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -149,8 +149,9 @@ template <typename Callback>
 inline void findAssociations(const std::string& path, Callback&& callback)
 {
     crow::connections::systemBus->async_method_call(
-        [callback{std::forward<Callback>(callback)}](const boost::system::error_code ec,
-                std::variant<std::vector<std::string>>& resp) {
+        [callback{std::forward<Callback>(callback)}](
+            const boost::system::error_code ec,
+            std::variant<std::vector<std::string>>& resp) {
             callback(ec, resp);
         },
         "xyz.openbmc_project.ObjectMapper", path,
@@ -160,8 +161,8 @@ inline void findAssociations(const std::string& path, Callback&& callback)
 
 inline void systemdReload()
 {
-    auto method = crow::connections::systemBus->new_method_call("org.freedesktop.systemd1",
-        "/org/freedesktop/systemd1",
+    auto method = crow::connections::systemBus->new_method_call(
+        "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
         "org.freedesktop.systemd1.Manager", "Reload");
 
     crow::connections::systemBus->call_noreply(method);
@@ -171,7 +172,8 @@ inline void systemdRestartUnit(const std::string_view unit, const char* mode)
 {
     std::string path("/org/freedesktop/systemd1/unit/");
     path.append(unit);
-    auto method = crow::connections::systemBus->new_method_call("org.freedesktop.systemd1", path.c_str(),
+    auto method = crow::connections::systemBus->new_method_call(
+        "org.freedesktop.systemd1", path.c_str(),
         "org.freedesktop.systemd1.Unit", "Restart");
 
     method.append(mode);

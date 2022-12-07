@@ -1,8 +1,7 @@
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <vector>
+#include "component_integrity.hpp"
+#include "task.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
@@ -11,26 +10,29 @@
 #include <boost/process/child.hpp>
 #include <openbmc_dbus_rest.hpp>
 #include <utils/dbus_utils.hpp>
-#include "component_integrity.hpp"
 
-#include "task.hpp"
+#include <functional>
+#include <memory>
+#include <vector>
 
-namespace redfish {
+namespace redfish
+{
 
-namespace debug_token {
+namespace debug_token
+{
 
 // mctp-vdm-util's stdout output has 131 characters
 // rounded up to 256
 constexpr const size_t statusSubprocOutputSize = 256;
 
-constexpr const char * mctpEndpointIf = "xyz.openbmc_project.MCTP.Endpoint";
+constexpr const char* mctpEndpointIf = "xyz.openbmc_project.MCTP.Endpoint";
 constexpr const uint8_t mctpSpdmMessageType = 5;
 
-using FinishCallback = std::function<
-    void(const std::shared_ptr<task::TaskData>&, const std::string&)>;
-using TaskCallback = std::function<bool(boost::system::error_code,
-    sdbusplus::message::message&,
-    const std::shared_ptr<task::TaskData>&)>;
+using FinishCallback = std::function<void(
+    const std::shared_ptr<task::TaskData>&, const std::string&)>;
+using TaskCallback =
+    std::function<bool(boost::system::error_code, sdbusplus::message::message&,
+                       const std::shared_ptr<task::TaskData>&)>;
 
 class DebugTokenBase
 {
@@ -46,16 +48,13 @@ class DebugTokenBase
     DebugTokenBase& operator=(const DebugTokenBase&&) = delete;
 
   protected:
-    DebugTokenBase(
-        const std::string& interface,
-        const std::string& taskMatchString,
-        FinishCallback&& finishCallback) :
+    DebugTokenBase(const std::string& interface,
+                   const std::string& taskMatchString,
+                   FinishCallback&& finishCallback) :
         interface(interface),
-        match(taskMatchString),
-        enumeratedEntries(0),
+        match(taskMatchString), enumeratedEntries(0),
         finishCallback(std::move(finishCallback))
-    {
-    }
+    {}
     virtual ~DebugTokenBase() = default;
 
     struct Entry
@@ -79,7 +78,7 @@ class DebugTokenBase
 
     virtual void processState() = 0;
     virtual bool run(const crow::Request& req,
-        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) = 0;
+                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) = 0;
 
     bool isValid() const
     {
@@ -91,14 +90,14 @@ class DebugTokenBase
         task->state = "Stopping";
         task->status = status;
         task->messages.emplace_back(
-            messages::taskAborted(
-                std::to_string(task->index)));
+            messages::taskAborted(std::to_string(task->index)));
     }
 
     void addError(const std::string& desc, const std::string& err)
     {
         BMCWEB_LOG_ERROR << desc << " error: " << err;
-        if (task) {
+        if (task)
+        {
             task->messages.emplace_back(
                 messages::resourceErrorsDetectedFormatError(desc, err));
         }
@@ -131,8 +130,7 @@ class DebugTokenBase
         crow::connections::systemBus->async_method_call(
             [this, desc, callback{std::forward<EnumerateCallback>(callback)}](
                 const boost::system::error_code ec,
-                const crow::openbmc_mapper::GetSubTreeType& subtree)
-            {
+                const crow::openbmc_mapper::GetSubTreeType& subtree) {
                 if (!isValid())
                 {
                     addError(desc, "state invalid");
@@ -153,8 +151,8 @@ class DebugTokenBase
                     entries.reserve(subtree.size());
                     for (const auto& object : subtree)
                     {
-                        entries.emplace_back(
-                            object.first, object.second[0].first);
+                        entries.emplace_back(object.first,
+                                             object.second[0].first);
                     }
                     if (callback)
                     {
@@ -198,15 +196,14 @@ class DebugTokenBase
     bool areItemsPending() const
     {
         return std::find_if(entries.begin(), entries.end(),
-            [](const Entry &entry)
-            {
-                return entry.valid && entry.data.empty();
-            }) != entries.end();
+                            [](const Entry& entry) {
+                                return entry.valid && entry.data.empty();
+                            }) != entries.end();
     }
 
     bool setup(const crow::Request& req,
-        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-        TaskCallback&& taskCallback)
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               TaskCallback&& taskCallback)
     {
         if (task != nullptr)
         {
@@ -225,47 +222,43 @@ class StatusQuery :
 {
   public:
     explicit StatusQuery(FinishCallback&& finishCallback) :
-        DebugTokenBase(
-            std::string(mctpEndpointIf),
-            "0",
-            std::forward<FinishCallback>(finishCallback)),
+        DebugTokenBase(std::string(mctpEndpointIf), "0",
+                       std::forward<FinishCallback>(finishCallback)),
         currentEntry(nullptr)
-    {
-    }
+    {}
 
     bool run(const crow::Request& req,
-        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) override
+             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) override
     {
         if (setup(req, asyncResp,
-                [this, self(shared_from_this())](
-                    boost::system::error_code ec,
-                    sdbusplus::message::message&,
-                    const std::shared_ptr<task::TaskData>&)
-                {
-                    const std::string desc = "Debug token status query task";
-                    BMCWEB_LOG_DEBUG << desc;
-                    if (!self->isRunning())
-                    {
-                        return task::completed;
-                    }
-                    if (ec)
-                    {
-                        if (ec != boost::asio::error::operation_aborted)
-                        {
-                            addError(desc, ec.message());
-                        }
-                        finish();
-                        return task::completed;
-                    }
-                    return areItemsPending() ?
-                        !task::completed : task::completed;
-                }))
+                  [this, self(shared_from_this())](
+                      boost::system::error_code ec,
+                      sdbusplus::message::message&,
+                      const std::shared_ptr<task::TaskData>&) {
+                      const std::string desc = "Debug token status query task";
+                      BMCWEB_LOG_DEBUG << desc;
+                      if (!self->isRunning())
+                      {
+                          return task::completed;
+                      }
+                      if (ec)
+                      {
+                          if (ec != boost::asio::error::operation_aborted)
+                          {
+                              addError(desc, ec.message());
+                          }
+                          finish();
+                          return task::completed;
+                      }
+                      return areItemsPending() ? !task::completed
+                                               : task::completed;
+                  }))
         {
             subprocessOutput.resize(statusSubprocOutputSize);
             task->startTimer(std::chrono::minutes(3));
             // NOLINTNEXTLINE(modernize-avoid-bind)
-            enumerate(std::bind(
-                &StatusQuery::enumerateCallback, this, std::placeholders::_1));
+            enumerate(std::bind(&StatusQuery::enumerateCallback, this,
+                                std::placeholders::_1));
             return true;
         }
         return false;
@@ -278,7 +271,7 @@ class StatusQuery :
     ~StatusQuery() override = default;
 
   private:
-    Entry *currentEntry;
+    Entry* currentEntry;
     std::unique_ptr<boost::process::child> subprocess;
     std::unique_ptr<boost::asio::steady_timer> subprocessTimer;
     std::vector<char> subprocessOutput;
@@ -295,8 +288,7 @@ class StatusQuery :
 
     void enumerateCallback(Entry& entry)
     {
-        const std::string desc =
-            "Getting EID for DBus object " + entry.object;
+        const std::string desc = "Getting EID for DBus object " + entry.object;
         BMCWEB_LOG_DEBUG << desc;
         if (!isValid())
         {
@@ -304,9 +296,10 @@ class StatusQuery :
             return;
         }
         crow::connections::systemBus->async_method_call(
-            [this, &entry, desc](const boost::system::error_code ec,
-                const boost::container::flat_map<
-                    std::string, dbus::utility::DbusVariantType>& props) {
+            [this, &entry,
+             desc](const boost::system::error_code ec,
+                   const boost::container::flat_map<
+                       std::string, dbus::utility::DbusVariantType>& props) {
                 if (ec)
                 {
                     addError(desc, ec.message());
@@ -329,16 +322,15 @@ class StatusQuery :
                         if (eid != nullptr && types != nullptr)
                         {
                             if (std::find(types->begin(), types->end(),
-                                    mctpSpdmMessageType) !=
-                                    types->end())
+                                          mctpSpdmMessageType) != types->end())
                             {
                                 entry.object = std::to_string(*eid);
                             }
                             else
                             {
-                                BMCWEB_LOG_DEBUG <<
-                                    "Message type " << mctpSpdmMessageType <<
-                                    " not supported for " << entry.object;
+                                BMCWEB_LOG_DEBUG
+                                    << "Message type " << mctpSpdmMessageType
+                                    << " not supported for " << entry.object;
                                 entry.object = std::string("-1");
                             }
                         }
@@ -354,8 +346,10 @@ class StatusQuery :
                     // remove endpoints not supporting debug token,
                     // otherwise they would cause errors to be reported
                     entries.erase(std::remove_if(entries.begin(), entries.end(),
-                        [](const Entry &e) { return e.object == "-1"; }),
-                        entries.end());
+                                                 [](const Entry& e) {
+                                                     return e.object == "-1";
+                                                 }),
+                                  entries.end());
                     processState();
                 }
             },
@@ -400,14 +394,14 @@ class StatusQuery :
             {
                 if (line.rfind("RX: ", 0) == 0)
                 {
-                    BMCWEB_LOG_DEBUG << "EID: " << currentEntry->object <<
-                        " " << line;
+                    BMCWEB_LOG_DEBUG << "EID: " << currentEntry->object << " "
+                                     << line;
                     rxLine = line.substr(4);
                 }
                 else if (line.rfind("TX: ", 0) == 0)
                 {
-                    BMCWEB_LOG_DEBUG << "EID: " << currentEntry->object <<
-                        " " << line;
+                    BMCWEB_LOG_DEBUG << "EID: " << currentEntry->object << " "
+                                     << line;
                     txLine = line.substr(4);
                 }
             }
@@ -448,8 +442,7 @@ class StatusQuery :
                 crow::connections::systemBus->get_io_context());
             subprocessTimer->expires_after(std::chrono::seconds(3));
             subprocessTimer->async_wait(
-                [this, desc](const boost::system::error_code ec)
-                {
+                [this, desc](const boost::system::error_code ec) {
                     if (ec && ec != boost::asio::error::operation_aborted)
                     {
                         addError("Subprocess delay timer", ec.message());
@@ -459,8 +452,8 @@ class StatusQuery :
         }
         else
         {
-            BMCWEB_LOG_ERROR <<
-                "Process exit handler called after task timeout";
+            BMCWEB_LOG_ERROR
+                << "Process exit handler called after task timeout";
         }
     }
 
@@ -470,11 +463,10 @@ class StatusQuery :
             "mctp-vdm-util execution for EID " + currentEntry->object;
         BMCWEB_LOG_DEBUG << desc;
         subprocessTimer = std::make_unique<boost::asio::steady_timer>(
-                crow::connections::systemBus->get_io_context());
+            crow::connections::systemBus->get_io_context());
         subprocessTimer->expires_after(std::chrono::seconds(15));
         subprocessTimer->async_wait(
-            [this, desc](const boost::system::error_code ec)
-            {
+            [this, desc](const boost::system::error_code ec) {
                 if (ec && ec != boost::asio::error::operation_aborted)
                 {
                     if (subprocess)
@@ -486,24 +478,18 @@ class StatusQuery :
                 }
             });
 
-        BMCWEB_LOG_DEBUG << "mctp-vdm-util -c debug_token_query -t " <<
-            currentEntry->object;
-        std::vector<std::string> args =
-        {
-            "-c", "debug_token_query",
-            "-t", currentEntry->object
-        };
+        BMCWEB_LOG_DEBUG << "mctp-vdm-util -c debug_token_query -t "
+                         << currentEntry->object;
+        std::vector<std::string> args = {"-c", "debug_token_query", "-t",
+                                         currentEntry->object};
         try
         {
             // NOLINTNEXTLINE(modernize-avoid-bind)
-            auto callback = std::bind(
-                &StatusQuery::subprocessExitCallback, this,
-                std::placeholders::_1, std::placeholders::_2);
+            auto callback = std::bind(&StatusQuery::subprocessExitCallback, this, std::placeholders::_1, std::placeholders::_2);
             subprocess = std::make_unique<boost::process::child>(
                 "/usr/bin/mctp-vdm-util", args,
                 boost::process::std_err > boost::process::null,
-                boost::process::std_out >
-                    boost::asio::buffer(subprocessOutput),
+                boost::process::std_out > boost::asio::buffer(subprocessOutput),
                 crow::connections::systemBus->get_io_context(),
                 boost::process::on_exit = std::move(callback));
         }
@@ -517,8 +503,7 @@ class StatusQuery :
 
     void processState() override
     {
-        const std::string desc =
-            "Debug token query data processing";
+        const std::string desc = "Debug token query data processing";
         BMCWEB_LOG_DEBUG << desc;
         if (!isValid())
         {
@@ -585,9 +570,8 @@ class StatusQuery :
             {
                 task->state = "Exception";
                 task->status = "Invalid response for EIDs:" + eidErrors;
-                task->messages.emplace_back(
-                    messages::taskCompletedWarning(
-                        std::to_string(task->index)));
+                task->messages.emplace_back(messages::taskCompletedWarning(
+                    std::to_string(task->index)));
             }
             if (finishCallback)
             {
@@ -615,18 +599,17 @@ class Request :
             "member='PropertiesChanged',"
             "path_namespace='/xyz/openbmc_project/SPDM'",
             std::forward<FinishCallback>(finishCallback))
-    {
-    }
+    {}
 
     bool run(const crow::Request& req,
-        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) override
+             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) override
     {
-        if (setup(req, asyncResp,
+        if (setup(
+                req, asyncResp,
                 [this, self(shared_from_this())](
                     boost::system::error_code ec,
                     sdbusplus::message::message& msg,
-                    const std::shared_ptr<task::TaskData>&)
-                {
+                    const std::shared_ptr<task::TaskData>&) {
                     const std::string desc = "Debug token request task";
                     BMCWEB_LOG_DEBUG << desc;
                     if (!self->isRunning())
@@ -659,14 +642,14 @@ class Request :
                             }
                         }
                     }
-                    return areItemsPending() ?
-                        !task::completed : task::completed;
+                    return areItemsPending() ? !task::completed
+                                             : task::completed;
                 }))
         {
             task->startTimer(std::chrono::minutes(1));
             // NOLINTNEXTLINE(modernize-avoid-bind)
-            enumerate(std::bind(
-                &Request::enumerateCallback, this, std::placeholders::_1));
+            enumerate(std::bind(&Request::enumerateCallback, this,
+                                std::placeholders::_1));
             return true;
         }
 
@@ -680,7 +663,7 @@ class Request :
     ~Request() override = default;
 
   private:
-    #pragma pack(1)
+#pragma pack(1)
     struct ServerRequestHeader
     {
         /* Versioning for token request structure (0x0001) */
@@ -690,9 +673,9 @@ class Request :
         /* Signed Transcript of the debug token measurement request */
         std::array<uint8_t, 218> measurementTranscript;
     };
-    #pragma pack()
+#pragma pack()
 
-    #pragma pack(1)
+#pragma pack(1)
     struct FileHeader
     {
         static constexpr uint8_t typeTokenRequest = 1;
@@ -712,12 +695,11 @@ class Request :
         /* Padding */
         std::array<uint8_t, 6> reserved;
     };
-    #pragma pack()
+#pragma pack()
 
     void enumerateCallback(Entry& entry)
     {
-        const std::string desc =
-            "Refresh call for " + entry.object + " object";
+        const std::string desc = "Refresh call for " + entry.object + " object";
         BMCWEB_LOG_DEBUG << desc;
         if (!isValid())
         {
@@ -726,8 +708,7 @@ class Request :
         }
         std::vector<uint8_t> indices{50};
         crow::connections::systemBus->async_method_call(
-            [this, &entry, desc](const boost::system::error_code ec)
-            {
+            [this, &entry, desc](const boost::system::error_code ec) {
                 BMCWEB_LOG_DEBUG << "Object: " << entry.object;
                 if (ec)
                 {
@@ -742,19 +723,16 @@ class Request :
 
     void update(const std::string& object, const std::string& status)
     {
-        const std::string desc =
-            "Update of " + object + " object";
+        const std::string desc = "Update of " + object + " object";
         BMCWEB_LOG_DEBUG << desc;
         if (!isValid())
         {
             addError(desc, "state invalid");
             return;
         }
-        auto entry = std::find_if(entries.begin(), entries.end(),
-            [object](const Entry &entry)
-            {
-                return entry.object == object;
-            });
+        auto entry = std::find_if(
+            entries.begin(), entries.end(),
+            [object](const Entry& entry) { return entry.object == object; });
         if (entry == entries.end())
         {
             addError(desc, "unknown object");
@@ -770,14 +748,13 @@ class Request :
             BMCWEB_LOG_INFO << desc << " data already present";
         }
         else if (status ==
-            "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Success")
+                 "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Success")
         {
             crow::connections::systemBus->async_method_call(
                 [this, entry](
                     const boost::system::error_code ec,
                     const boost::container::flat_map<
-                        std::string, dbus::utility::DbusVariantType>& props)
-                {
+                        std::string, dbus::utility::DbusVariantType>& props) {
                     const std::string desc =
                         "Reading properties of " + entry->object + " object";
                     BMCWEB_LOG_DEBUG << desc;
@@ -798,11 +775,11 @@ class Request :
                         addError(desc, "cannot find property");
                         return;
                     }
-                    auto sign = std::get_if<
-                        std::vector<uint8_t>>(&itSign->second);
+                    auto sign =
+                        std::get_if<std::vector<uint8_t>>(&itSign->second);
                     auto cert = std::get_if<
                         std::vector<std::tuple<uint8_t, std::string>>>(
-                            &itCert->second);
+                        &itCert->second);
                     if (!sign || !cert)
                     {
                         addError(desc, "cannot decode property");
@@ -810,10 +787,7 @@ class Request :
                     }
                     auto certSlot = std::find_if(
                         cert->begin(), cert->end(),
-                        [](const auto& e)
-                        {
-                            return std::get<0>(e) == 0;
-                        });
+                        [](const auto& e) { return std::get<0>(e) == 0; });
                     if (certSlot == cert->end())
                     {
                         addError(desc, "cannot find certificate for slot 0");
@@ -823,7 +797,7 @@ class Request :
                         sizeof(ServerRequestHeader::measurementTranscript))
                     {
                         addError(desc, "wrong SignedMeasurements size: " +
-                            std::to_string(sign->size()));
+                                           std::to_string(sign->size()));
                         return;
                     }
                     const std::string& pem = std::get<1>(*certSlot);
@@ -832,20 +806,21 @@ class Request :
                     header->version = 0x0001;
                     header->size = static_cast<uint16_t>(size);
                     std::copy(sign->begin(), sign->end(),
-                        header->measurementTranscript.begin());
+                              header->measurementTranscript.begin());
                     entry->data.reserve(size);
                     entry->data.resize(sizeof(ServerRequestHeader));
                     std::memcpy(entry->data.data(), header.get(),
-                        sizeof(ServerRequestHeader));
-                    entry->data.insert(entry->data.end(),
-                        pem.begin(), pem.end());
+                                sizeof(ServerRequestHeader));
+                    entry->data.insert(entry->data.end(), pem.begin(),
+                                       pem.end());
                     processState();
                 },
                 spdmBusName, object, "org.freedesktop.DBus.Properties",
                 "GetAll", spdmResponderIntf);
         }
         else if (startsWithPrefix(
-            status, "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_"))
+                     status,
+                     "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_"))
         {
             addError(desc, status);
             entry->valid = false;
@@ -855,8 +830,7 @@ class Request :
 
     void processState() override
     {
-        const std::string desc =
-            "Debug token request data processing";
+        const std::string desc = "Debug token request data processing";
         BMCWEB_LOG_DEBUG << desc;
         if (!isValid())
         {
@@ -911,8 +885,8 @@ class Request :
             {
                 if (entry.valid && entry.data.size() != 0)
                 {
-                    output.insert(output.end(),
-                        entry.data.begin(), entry.data.end());
+                    output.insert(output.end(), entry.data.begin(),
+                                  entry.data.end());
                 }
             }
 
@@ -927,8 +901,8 @@ class Request :
             {
                 task->state = "Exception";
                 task->status = "Warning";
-                task->messages.emplace_back(
-                    messages::taskCompletedWarning(std::to_string(task->index)));
+                task->messages.emplace_back(messages::taskCompletedWarning(
+                    std::to_string(task->index)));
             }
             if (finishCallback)
             {
@@ -944,6 +918,6 @@ class Request :
     }
 };
 
-}
+} // namespace debug_token
 
-}
+} // namespace redfish

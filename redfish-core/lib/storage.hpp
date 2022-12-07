@@ -94,9 +94,9 @@ inline void getDrives(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
 
                 nlohmann::json::object_t driveJson;
-                driveJson["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/" +
-                    object.filename();
+                driveJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                         "/Storage/1/Drives/" +
+                                         object.filename();
                 driveArray.push_back(std::move(driveJson));
             }
 
@@ -154,7 +154,8 @@ inline void
                 storageController["@odata.type"] =
                     "#Storage.v1_7_0.StorageController";
                 storageController["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1#/StorageControllers/" +
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                    "/Storage/1#/StorageControllers/" +
                     std::to_string(index);
                 storageController["Name"] = id;
                 storageController["MemberId"] = id;

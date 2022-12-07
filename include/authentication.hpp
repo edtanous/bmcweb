@@ -271,7 +271,8 @@ static std::shared_ptr<persistent_data::UserSession>
 
     std::shared_ptr<persistent_data::UserSession> sessionOut = nullptr;
 #ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-    if (persistent_data::getConfig().isTLSAuthEnabled() && authMethodsConfig.tls)
+    if (persistent_data::getConfig().isTLSAuthEnabled() &&
+        authMethodsConfig.tls)
     {
         sessionOut = performTLSAuth(res, reqHeader, session);
     }

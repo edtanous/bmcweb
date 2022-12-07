@@ -117,7 +117,7 @@ constexpr std::array registry = {
                      "Indicates that At-Scale Debug service is started.",
                      "At-Scale Debug service is started.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -137,7 +137,7 @@ constexpr std::array registry = {
                      "Indicates At-Scale Debug connection has been established",
                      "At-Scale Debug service is now connected %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "None.",
@@ -157,7 +157,7 @@ constexpr std::array registry = {
                      "Indicates At-Scale Debug connection aborted/failed",
                      "At-Scale Debug connection aborted/failed",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -167,7 +167,7 @@ constexpr std::array registry = {
                      "Indicates that special user is enabled.",
                      "At-Scale Debug special user is enabled",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -233,7 +233,7 @@ constexpr std::array registry = {
                      "Indicates BIOS firmware encountered resilience error.",
                      "BIOS firmware resiliency error. Error reason: %1.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {
                          "string",
@@ -323,7 +323,7 @@ constexpr std::array registry = {
                      "Indicates BMC firmware encountered resilience error.",
                      "BMC firmware resiliency error. Error reason: %1.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {
                          "string",
@@ -402,7 +402,7 @@ constexpr std::array registry = {
                      "Indicates CPLD firmware encountered resilience error.",
                      "CPLD firmware resiliency error. Error reason: %1.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {
                          "string",
@@ -415,7 +415,7 @@ constexpr std::array registry = {
                      "the specified type or cause.",
                      "CPU Error Occurred: %1.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "None.",
@@ -426,7 +426,7 @@ constexpr std::array registry = {
                      "rating is incompatible with the board.",
                      "CPU %1 Mismatch.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"number"},
                      "Install the supported CPU.",
@@ -437,7 +437,7 @@ constexpr std::array registry = {
                      "trip has been asserted.",
                      "CPU %1 Thermal Trip.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"number"},
                      "None.",
@@ -561,7 +561,7 @@ constexpr std::array registry = {
                      "Indicates firmware encountered resilience error.",
                      "Firmware resiliency error. Error reason: %1.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {
                          "string",
@@ -758,7 +758,7 @@ constexpr std::array registry = {
                      "Indicates a Legacy PCI SERR.",
                      "Legacy PCI SERR. Bus=%1 Device=%2 Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
                      {
                          "number",
@@ -773,7 +773,7 @@ constexpr std::array registry = {
                      "or Manufacturing mode.",
                      "Entered Manufacturing Mode.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -797,7 +797,7 @@ constexpr std::array registry = {
                      "monitoring, limiting and HW protection features might "
                      "be unavailable. Failure reason: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "Ensure that Intel ME configuration for power "
@@ -824,7 +824,7 @@ constexpr std::array registry = {
                      "Intel ME has detected following issue with Intel Boot "
                      "Guard: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "None.",
@@ -939,7 +939,7 @@ constexpr std::array registry = {
                      "Indicates ME firmware encountered resilience error.",
                      "ME firmware resiliency error. Error reason: %1.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {
                          "string",
@@ -954,7 +954,7 @@ constexpr std::array registry = {
                      "Intel ME has encountered an error during Flash erasure "
                      "procedure probably due to Flash part corruption.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "The Flash device must be replaced.",
@@ -966,7 +966,7 @@ constexpr std::array registry = {
                      "Intel ME has encountered problem during IO to flash "
                      "device. Reason: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "If flash wear-out protection occurred wait until it "
@@ -992,7 +992,7 @@ constexpr std::array registry = {
                      "Intel ME has detected invalid flash descriptor region. "
                      "Following error is detected: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "Flash Descriptor Region must be created correctly.",
@@ -1049,7 +1049,7 @@ constexpr std::array registry = {
                      "Wrong manufacturing configuration detected by Intel ME "
                      "Firmware. Unable to start operational mode. Reason: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      " If error is persistent the Flash device must be "
@@ -1065,7 +1065,7 @@ constexpr std::array registry = {
                      "when MCTP was not configured by BIOS or a defect which "
                      "may need a Host reset to recover from. Details: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "Recovery via CPU Host reset or platform reset. If error "
@@ -1095,7 +1095,7 @@ constexpr std::array registry = {
                      "Memory ECC uncorrectable error. Socket=%1 Channel=%2 "
                      "DIMM=%3 Rank=%4.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      4,
 
                      {
@@ -1112,7 +1112,7 @@ constexpr std::array registry = {
                      "Command and Address parity error. Socket=%1 Channel=%2 "
                      "DIMM=%3 ChannelValid=%4 DIMMValid=%5.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      5,
 
                      {
@@ -1130,7 +1130,7 @@ constexpr std::array registry = {
                      "Memory parity error. Socket=%1 Channel=%2 "
                      "DIMM=%3 ChannelValid=%4 DIMMValid=%5.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      5,
 
                      {
@@ -1202,7 +1202,7 @@ constexpr std::array registry = {
                      "by the specified component.",
                      "Memory ThermTrip asserted: %1.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "None.",
@@ -1213,7 +1213,7 @@ constexpr std::array registry = {
                      "problems in initializing Multi-PCH mode.",
                      "Intel ME error in Multi-PCH mode: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "None.",
@@ -1268,7 +1268,7 @@ constexpr std::array registry = {
                      "Indicates events related to Intel ME restricted mode.",
                      "Intel ME restricted mode information: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "None.",
@@ -1308,7 +1308,7 @@ constexpr std::array registry = {
                      "Feature not supported in current segment detected by "
                      "Intel ME Firmware. Details: %1",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"string"},
                      "Proper FW configuration must be updated or use the "
@@ -1356,7 +1356,7 @@ constexpr std::array registry = {
                      "Indicates that the NMI button was pressed.",
                      "NMI Button Pressed.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -1367,7 +1367,7 @@ constexpr std::array registry = {
                      "Interrupt has been generated.",
                      "NMI Diagnostic Interrupt.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -1538,7 +1538,7 @@ constexpr std::array registry = {
 
                      "PCIe Fatal ACS Violation. Bus=%1 Device=%2 Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1554,7 +1554,7 @@ constexpr std::array registry = {
                      "PCIe Fatal Atomic Egress Blocked. Bus=%1 Device=%2 "
                      "Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1621,7 +1621,7 @@ constexpr std::array registry = {
                      "Indicates a PCIe ECRC Error.",
                      "PCIe Fatal ECRC Error. Bus=%1 Device=%2 Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1638,7 +1638,7 @@ constexpr std::array registry = {
                      "PCIe Fatal Flow Control Protocol Error. Bus=%1 Device=%2 "
                      "Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1671,7 +1671,7 @@ constexpr std::array registry = {
                      "PCIe Fatal MC Blocked TLP Error. Bus=%1 "
                      "Device=%2 Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1704,7 +1704,7 @@ constexpr std::array registry = {
                      "PCIe Fatal Receiver Buffer Overflow. Bus=%1 Device=%2 "
                      "Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1740,7 +1740,7 @@ constexpr std::array registry = {
                      "PCIe Fatal Received Fatal Message From Downstream. "
                      "Bus=%1 Device=%2 Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1756,7 +1756,7 @@ constexpr std::array registry = {
                      "PCIe Fatal Surprise Link Down Error. Bus=%1 Device=%2 "
                      "Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1772,7 +1772,7 @@ constexpr std::array registry = {
                      "PCIe Fatal TLP Prefix Blocked Error. Bus=%1 Device=%2 "
                      "Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1806,7 +1806,7 @@ constexpr std::array registry = {
                      "PCIe Fatal Unexpected Completion. Bus=%1 Device=%2 "
                      "Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1822,7 +1822,7 @@ constexpr std::array registry = {
                      "PCIe Fatal Unspecified Non-AER Fatal Error. Bus=%1 "
                      "Device=%2 Function=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
 
                      {
@@ -1951,7 +1951,7 @@ constexpr std::array registry = {
                      "Power supply power good failed to assert within %1 "
                      "milliseconds.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"number"},
                      "None.",
@@ -2059,7 +2059,7 @@ constexpr std::array registry = {
                      "power to support redundancy.",
                      "Power Unit NonRedundant and has insufficient resource.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2112,7 +2112,7 @@ constexpr std::array registry = {
                      "Indicates that the BMC 2nd boot flash is enabled.",
                      "BMC 2nd boot flash is enabled.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2122,7 +2122,7 @@ constexpr std::array registry = {
                      "Indicates that the P2A bridge is enabled.",
                      "P2A(PCIe to AHB) bridge is enabled.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2132,7 +2132,7 @@ constexpr std::array registry = {
                      "Indicates that the uart port debug is enabled.",
                      "Uart port debug is enabled.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2154,7 +2154,7 @@ constexpr std::array registry = {
                      "Indicates that non root user assigned with user ID zero.",
                      "User ID Zero is assigned with non-root user.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2175,7 +2175,7 @@ constexpr std::array registry = {
                      "Indicates that system root user is enabled.",
                      "User root is enabled.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2196,7 +2196,7 @@ constexpr std::array registry = {
                      "Indicates that unsupported shell is enabled.",
                      "Unsupported shell is enabled.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2243,7 +2243,7 @@ constexpr std::array registry = {
                      "%1 sensor crossed a critical high threshold going "
                      "high. Reading=%2 Threshold=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
                      {"string", "number", "number"},
                      "Check the sensor or subsystem for errors.",
@@ -2279,7 +2279,7 @@ constexpr std::array registry = {
                      "%1 sensor crossed a critical low threshold going low. "
                      "Reading=%2 Threshold=%3.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      3,
                      {"string", "number", "number"},
                      "Check the sensor or subsystem for errors.",
@@ -2394,7 +2394,7 @@ constexpr std::array registry = {
                      "Indicates that an SSB Thermal trip has been asserted.",
                      "SSB Thermal trip.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2419,7 +2419,7 @@ constexpr std::array registry = {
                      "execute through the system interface.",
                      "The system interface is in the unprovisioned state.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2444,7 +2444,7 @@ constexpr std::array registry = {
                      "System power good failed to assert within %1 "
                      "milliseconds (VR failure).",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      1,
                      {"number"},
                      "None.",
@@ -2455,7 +2455,7 @@ constexpr std::array registry = {
                      "system was powered on.",
                      "System Power Lost.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2465,7 +2465,7 @@ constexpr std::array registry = {
                      "Indicates that the system failed to power off.",
                      "System Power-Off Failed.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",
@@ -2475,7 +2475,7 @@ constexpr std::array registry = {
                      "Indicates that the system failed to power on.",
                      "System Power-On Failed.",
                      "Critical",
-                     "Critical", 
+                     "Critical",
                      0,
                      {},
                      "None.",

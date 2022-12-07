@@ -229,7 +229,7 @@ inline uint8_t toSMPBIPrivilegeType(const std::string& privilegeType)
         return 0x00;
     }
 }
-#endif //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace dbus_utils
 } // namespace redfish

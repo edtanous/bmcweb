@@ -355,46 +355,45 @@ inline void processSensorServices(
         "xyz.openbmc_project.Sensor.Value"};
 
     // Get all sensors on the system
-    auto getAllSensors =
-        [asyncResp, chassisPath, sensingInterval, requestTimestamp,
-         metricsType](const boost::system::error_code ec,
-                      const GetSubTreeType& subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "processSensorServices: Error in getting DBUS sensors: "
-                    << ec;
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            if (subtree.empty())
-            {
-                BMCWEB_LOG_ERROR
-                    << "processSensorServices: Empty sensors subtree";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+    auto getAllSensors = [asyncResp, chassisPath, sensingInterval,
+                          requestTimestamp,
+                          metricsType](const boost::system::error_code ec,
+                                       const GetSubTreeType& subtree) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "processSensorServices: Error in getting DBUS sensors: "
+                << ec;
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        if (subtree.empty())
+        {
+            BMCWEB_LOG_ERROR << "processSensorServices: Empty sensors subtree";
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            // Identify unique services for GetManagedObjects
-            std::set<std::string> sensorServices;
-            for (const auto& [objectPath, serviceMap] : subtree)
+        // Identify unique services for GetManagedObjects
+        std::set<std::string> sensorServices;
+        for (const auto& [objectPath, serviceMap] : subtree)
+        {
+            if (serviceMap.size() < 1)
             {
-                if (serviceMap.size() < 1)
-                {
-                    BMCWEB_LOG_DEBUG << "Got 0 service names for sensorpath:"
-                                     << objectPath;
-                    continue;
-                }
-                sensorServices.insert(serviceMap[0].first);
+                BMCWEB_LOG_DEBUG << "Got 0 service names for sensorpath:"
+                                 << objectPath;
+                continue;
             }
-            // Collect all GetManagedObjects for services
-            for (const std::string& connection : sensorServices)
-            {
-                getServiceManagedObjects(asyncResp, connection, chassisPath,
-                                         metricsType, sensingInterval,
-                                         requestTimestamp);
-            }
-        };
+            sensorServices.insert(serviceMap[0].first);
+        }
+        // Collect all GetManagedObjects for services
+        for (const std::string& connection : sensorServices)
+        {
+            getServiceManagedObjects(asyncResp, connection, chassisPath,
+                                     metricsType, sensingInterval,
+                                     requestTimestamp);
+        }
+    };
     crow::connections::systemBus->async_method_call(
         getAllSensors, "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",

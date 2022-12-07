@@ -797,7 +797,7 @@ inline std::string
                 {
                     // BootProgressOem is an optional object so just do nothing
                     // if not found
-		    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
                     return;
                 }
 
@@ -903,7 +903,7 @@ inline void getBootProgress(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
                     {
                         aResp->res.jsonValue["BootProgress"]["LastState"] =
                             dbusToRfBootProgress(aResp, *bootProgressStr);
-		    }
+                    }
                 }
                 else if (property.first == "BootProgressLastUpdate")
                 {
@@ -915,7 +915,7 @@ inline void getBootProgress(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
                         aResp->res.jsonValue["BootProgress"]["LastStateTime"] =
                             redfish::time_utils::getDateTimeUintMs(
                                 lastResetTimeStamp);
-		    }
+                    }
                 }
             }
         },
@@ -982,9 +982,10 @@ inline void getBootOverrideType(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
             BMCWEB_LOG_DEBUG << "Boot type: " << bootType;
 
-        aResp->res.jsonValue["Boot"]
-                            ["BootSourceOverrideMode@Redfish.AllowableValues"] =
-            {"Legacy", "UEFI"};
+            aResp->res
+                .jsonValue["Boot"]
+                          ["BootSourceOverrideMode@Redfish.AllowableValues"] = {
+                "Legacy", "UEFI"};
 
             auto rfType = dbusToRfBootType(bootType);
             if (rfType.empty())
@@ -3039,7 +3040,8 @@ inline void requestRoutesSystems(App& app)
 
             asyncResp->res
                 .jsonValue["Actions"]["#ComputerSystem.Reset"]["target"] =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Actions/ComputerSystem.Reset";
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/Actions/ComputerSystem.Reset";
             asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"]
                                     ["@Redfish.ActionInfo"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
@@ -3074,12 +3076,13 @@ inline void requestRoutesSystems(App& app)
                 "Press ~. to exit console";
 
 #ifdef BMCWEB_ENABLE_KVM
-        // Fill in GraphicalConsole info
-        asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] = true;
-        asyncResp->res.jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] =
-            4;
-        asyncResp->res
-            .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] = {"KVMIP"};
+            // Fill in GraphicalConsole info
+            asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
+                true;
+            asyncResp->res
+                .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
+            asyncResp->res.jsonValue["GraphicalConsole"]
+                                    ["ConnectTypesSupported"] = {"KVMIP"};
 
 #endif // BMCWEB_ENABLE_KVM
             constexpr const std::array<const char*, 4> inventoryForSystems = {

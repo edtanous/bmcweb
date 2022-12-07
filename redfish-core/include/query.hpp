@@ -87,8 +87,8 @@ namespace redfish
     asyncResp->res.setCompleteRequestHandler(
         [&app, handler(std::move(handler)),
          query{std::move(*queryOpt)}](crow::Response& resIn) mutable {
-        processAllParams(app, query, handler, resIn);
-    });
+            processAllParams(app, query, handler, resIn);
+        });
 
     return needToCallHandlers;
 }

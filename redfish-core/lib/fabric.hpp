@@ -519,9 +519,9 @@ inline void
 
     // update switch health
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(objPath,
-        [asyncResp](const std::string& rootHealth,
-                    const std::string& healthRollup) {
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        objPath, [asyncResp](const std::string& rootHealth,
+                             const std::string& healthRollup) {
             asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
             asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
         });
@@ -886,40 +886,42 @@ inline void
 
             // Get PCIeDevice on this chassis
             crow::connections::systemBus->async_method_call(
-                [aResp, chassisName]
-                (const boost::system::error_code ec,
-                        std::variant<std::vector<std::string>>& resp) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
-                    return; // no pciedevices = no failures
-                }
-                std::vector<std::string>* data =
-                    std::get_if<std::vector<std::string>>(&resp);
-                if (data == nullptr && data->size() > 1)
-                {
-                    // Chassis must have single pciedevice
-                    BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
-                    return;
-                }
-
-                for(const std::string& pcieDevicePath : *data)
-                {
-                    sdbusplus::message::object_path objectPath(pcieDevicePath);
-                    std::string pcieDeviceName = objectPath.filename();
-                    if (pcieDeviceName.empty())
+                [aResp,
+                 chassisName](const boost::system::error_code ec,
+                              std::variant<std::vector<std::string>>& resp) {
+                    if (ec)
                     {
-                        BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                        BMCWEB_LOG_ERROR
+                            << "Chassis has no connected PCIe devices";
+                        return; // no pciedevices = no failures
+                    }
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr && data->size() > 1)
+                    {
+                        // Chassis must have single pciedevice
+                        BMCWEB_LOG_ERROR
+                            << "chassis must have single pciedevice";
                         return;
                     }
-                    std::string pcieDeviceLink = "/redfish/v1/Chassis/";
-                    pcieDeviceLink += chassisName;
-                    pcieDeviceLink += "/PCIeDevices/";
-                    pcieDeviceLink += pcieDeviceName;
-                    aResp->res.jsonValue["Links"]["PCIeDevice"] = {
-                        {"@odata.id", pcieDeviceLink}};
-                }
 
+                    for (const std::string& pcieDevicePath : *data)
+                    {
+                        sdbusplus::message::object_path objectPath(
+                            pcieDevicePath);
+                        std::string pcieDeviceName = objectPath.filename();
+                        if (pcieDeviceName.empty())
+                        {
+                            BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                            return;
+                        }
+                        std::string pcieDeviceLink = "/redfish/v1/Chassis/";
+                        pcieDeviceLink += chassisName;
+                        pcieDeviceLink += "/PCIeDevices/";
+                        pcieDeviceLink += pcieDeviceName;
+                        aResp->res.jsonValue["Links"]["PCIeDevice"] = {
+                            {"@odata.id", pcieDeviceLink}};
+                    }
                 },
                 "xyz.openbmc_project.ObjectMapper", chassisPath + "/pciedevice",
                 "org.freedesktop.DBus.Properties", "Get",
@@ -1501,8 +1503,8 @@ inline void requestRoutesNVSwitchReset(App& app)
                          const std::string& fabricId,
                          const std::string& switchId) {
             std::optional<std::string> resetType;
-            if (!redfish::json_util::readJsonAction(req, asyncResp->res, "ResetType",
-                                       resetType))
+            if (!redfish::json_util::readJsonAction(req, asyncResp->res,
+                                                    "ResetType", resetType))
             {
                 return;
             }
@@ -2244,42 +2246,42 @@ inline void getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
             crow::connections::systemBus->async_method_call(
                 [aResp, processorPath, serviceName,
-                entityLink](const boost::system::error_code ec,
-                        std::variant<std::vector<std::string>>& resp) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
-                    return; // no pciedevices = no failures
-                }
-                std::vector<std::string>* data =
-                    std::get_if<std::vector<std::string>>(&resp);
-                if (data == nullptr && data->size() > 1)
-                {
-                    // Chassis must have single pciedevice
-                    BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
-                    return;
-                 }
-                const std::string& pcieDevicePath = data->front();
-                sdbusplus::message::object_path objectPath(pcieDevicePath);
-                std::string pcieDeviceName = objectPath.filename();
-                if (pcieDeviceName.empty())
-                {
-                    BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                // Get PCIeDevice Data
-                getProcessorPCIeDeviceData(aResp, serviceName,
-                                    pcieDevicePath, entityLink);
-                // Update processor health
-                getProcessorEndpointHealth(aResp, serviceName,
-                                    processorPath);
-
+                 entityLink](const boost::system::error_code ec,
+                             std::variant<std::vector<std::string>>& resp) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "Chassis has no connected PCIe devices";
+                        return; // no pciedevices = no failures
+                    }
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr && data->size() > 1)
+                    {
+                        // Chassis must have single pciedevice
+                        BMCWEB_LOG_ERROR
+                            << "chassis must have single pciedevice";
+                        return;
+                    }
+                    const std::string& pcieDevicePath = data->front();
+                    sdbusplus::message::object_path objectPath(pcieDevicePath);
+                    std::string pcieDeviceName = objectPath.filename();
+                    if (pcieDeviceName.empty())
+                    {
+                        BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    // Get PCIeDevice Data
+                    getProcessorPCIeDeviceData(aResp, serviceName,
+                                               pcieDevicePath, entityLink);
+                    // Update processor health
+                    getProcessorEndpointHealth(aResp, serviceName,
+                                               processorPath);
                 },
                 "xyz.openbmc_project.ObjectMapper", chassisPath + "/pciedevice",
                 "org.freedesktop.DBus.Properties", "Get",
                 "xyz.openbmc_project.Association", "endpoints");
-
         },
         "xyz.openbmc_project.ObjectMapper", processorPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
@@ -2645,7 +2647,8 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                     "/Processors/" +
                                     objectPath.filename();
                                 // Get processor PCIe device data
-                                getEndpointData(aResp, entityPath, entityLink, servName);
+                                getEndpointData(aResp, entityPath, entityLink,
+                                                servName);
                                 // Get port endpoint data
                                 getEndpointPortData(aResp, objPath, entityPath,
                                                     fabricId);
@@ -2666,8 +2669,8 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 std::string entityName = objectPath.filename();
                                 // get switch type endpint
                                 crow::connections::systemBus->async_method_call(
-                                    [aResp, objPath, entityPath, entityName, servName,
-                                     fabricId](
+                                    [aResp, objPath, entityPath, entityName,
+                                     servName, fabricId](
                                         const boost::system::error_code ec,
                                         std::variant<std::vector<std::string>>&
                                             resp) {
@@ -2897,13 +2900,13 @@ inline void
 
                 const std::string& connectionName = connectionNames[0].first;
                 const std::vector<std::string>& interfaces =
-                                        connectionNames[0].second;
+                    connectionNames[0].second;
                 if (std::find(interfaces.begin(), interfaces.end(),
-                                            "xyz.openbmc_project.PCIe.PCIeECC") 
-                                             != interfaces.end())
+                              "xyz.openbmc_project.PCIe.PCIeECC") !=
+                    interfaces.end())
                 {
-                    redfish::processor_utils::
-                        getPCIeErrorData(asyncResp, connectionName, path);
+                    redfish::processor_utils::getPCIeErrorData(
+                        asyncResp, connectionName, path);
                 }
                 crow::connections::systemBus->async_method_call(
                     [asyncResp](const boost::system::error_code ec,

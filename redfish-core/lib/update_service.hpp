@@ -16,8 +16,9 @@
 #pragma once
 
 #include "bmcweb_config.h"
-#include "commit_image.hpp"
+
 #include "background_copy.hpp"
+#include "commit_image.hpp"
 
 #include <app.hpp>
 #include <boost/algorithm/string.hpp>
@@ -170,8 +171,7 @@ static void preTaskLoggingHandler(sdbusplus::message_t& m)
 // then no asyncResp updates will occur
 static void
     softwareInterfaceAdded(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           sdbusplus::message_t& m,
-                           task::Payload&& payload)
+                           sdbusplus::message_t& m, task::Payload&& payload)
 {
     dbus::utility::DBusInteracesMap interfacesProperties;
 
@@ -476,8 +476,7 @@ static bool monitorForSoftwareAvailable(
         });
 
     task::Payload payload(req);
-    auto callback = [asyncResp,
-                     payload](sdbusplus::message_t& m) mutable {
+    auto callback = [asyncResp, payload](sdbusplus::message_t& m) mutable {
         BMCWEB_LOG_DEBUG << "Match fired";
         softwareInterfaceAdded(asyncResp, m, std::move(payload));
     };
@@ -508,121 +507,123 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
     BMCWEB_ROUTE(
         app, "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate/")
         .privileges(redfish::privileges::postUpdateService)
-        .methods(
-            boost::beast::http::verb::
-                post)([&app](
-                          const crow::Request& req,
-                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-            {
-                return;
-            }
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
 
-            std::optional<std::string> transferProtocol;
-            std::string imageURI;
+                std::optional<std::string> transferProtocol;
+                std::string imageURI;
 
-            BMCWEB_LOG_DEBUG << "Enter UpdateService.SimpleUpdate doPost";
+                BMCWEB_LOG_DEBUG << "Enter UpdateService.SimpleUpdate doPost";
 
-            // User can pass in both TransferProtocol and ImageURI parameters or
-            // they can pass in just the ImageURI with the transfer protocol
-            // embedded within it.
-            // 1) TransferProtocol:TFTP ImageURI:1.1.1.1/myfile.bin
-            // 2) ImageURI:tftp://1.1.1.1/myfile.bin
+                // User can pass in both TransferProtocol and ImageURI
+                // parameters or they can pass in just the ImageURI with the
+                // transfer protocol embedded within it. 1)
+                // TransferProtocol:TFTP ImageURI:1.1.1.1/myfile.bin 2)
+                // ImageURI:tftp://1.1.1.1/myfile.bin
 
-            if (!json_util::readJsonAction(req, asyncResp->res, "TransferProtocol",
-                                     transferProtocol, "ImageURI", imageURI))
-            {
-                BMCWEB_LOG_DEBUG
-                    << "Missing TransferProtocol or ImageURI parameter";
-                return;
-            }
-            if (!transferProtocol)
-            {
-                // Must be option 2
-                // Verify ImageURI has transfer protocol in it
-                size_t separator = imageURI.find(':');
+                if (!json_util::readJsonAction(
+                        req, asyncResp->res, "TransferProtocol",
+                        transferProtocol, "ImageURI", imageURI))
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "Missing TransferProtocol or ImageURI parameter";
+                    return;
+                }
+                if (!transferProtocol)
+                {
+                    // Must be option 2
+                    // Verify ImageURI has transfer protocol in it
+                    size_t separator = imageURI.find(':');
+                    if ((separator == std::string::npos) ||
+                        ((separator + 1) > imageURI.size()))
+                    {
+                        messages::actionParameterValueTypeError(
+                            asyncResp->res, imageURI, "ImageURI",
+                            "UpdateService.SimpleUpdate");
+                        BMCWEB_LOG_ERROR
+                            << "ImageURI missing transfer protocol: "
+                            << imageURI;
+                        return;
+                    }
+                    transferProtocol = imageURI.substr(0, separator);
+                    // Ensure protocol is upper case for a common comparison
+                    // path below
+                    boost::to_upper(*transferProtocol);
+                    BMCWEB_LOG_DEBUG << "Encoded transfer protocol "
+                                     << *transferProtocol;
+
+                    // Adjust imageURI to not have the protocol on it for
+                    // parsing below ex. tftp://1.1.1.1/myfile.bin
+                    // -> 1.1.1.1/myfile.bin
+                    imageURI = imageURI.substr(separator + 3);
+                    BMCWEB_LOG_DEBUG << "Adjusted imageUri " << imageURI;
+                }
+                // OpenBMC currently only supports TFTP
+                if (*transferProtocol != "TFTP")
+                {
+                    messages::actionParameterNotSupported(
+                        asyncResp->res, "TransferProtocol",
+                        "UpdateService.SimpleUpdate");
+                    BMCWEB_LOG_ERROR << "Request incorrect protocol parameter: "
+                                     << *transferProtocol;
+                    return;
+                }
+
+                // Format should be <IP or Hostname>/<file> for imageURI
+                size_t separator = imageURI.find('/');
                 if ((separator == std::string::npos) ||
                     ((separator + 1) > imageURI.size()))
                 {
                     messages::actionParameterValueTypeError(
                         asyncResp->res, imageURI, "ImageURI",
                         "UpdateService.SimpleUpdate");
-                    BMCWEB_LOG_ERROR << "ImageURI missing transfer protocol: "
-                                     << imageURI;
+                    BMCWEB_LOG_ERROR << "Invalid ImageURI: " << imageURI;
                     return;
                 }
-                transferProtocol = imageURI.substr(0, separator);
-                // Ensure protocol is upper case for a common comparison path
-                // below
-                boost::to_upper(*transferProtocol);
-                BMCWEB_LOG_DEBUG << "Encoded transfer protocol "
-                                 << *transferProtocol;
 
-                // Adjust imageURI to not have the protocol on it for parsing
-                // below
-                // ex. tftp://1.1.1.1/myfile.bin -> 1.1.1.1/myfile.bin
-                imageURI = imageURI.substr(separator + 3);
-                BMCWEB_LOG_DEBUG << "Adjusted imageUri " << imageURI;
-            }
-            // OpenBMC currently only supports TFTP
-            if (*transferProtocol != "TFTP")
-            {
-                messages::actionParameterNotSupported(
-                    asyncResp->res, "TransferProtocol",
-                    "UpdateService.SimpleUpdate");
-                BMCWEB_LOG_ERROR << "Request incorrect protocol parameter: "
-                                 << *transferProtocol;
-                return;
-            }
+                std::string tftpServer = imageURI.substr(0, separator);
+                std::string fwFile = imageURI.substr(separator + 1);
+                BMCWEB_LOG_DEBUG
+                    << "Server: " << tftpServer + " File: " << fwFile;
 
-            // Format should be <IP or Hostname>/<file> for imageURI
-            size_t separator = imageURI.find('/');
-            if ((separator == std::string::npos) ||
-                ((separator + 1) > imageURI.size()))
-            {
-                messages::actionParameterValueTypeError(
-                    asyncResp->res, imageURI, "ImageURI",
-                    "UpdateService.SimpleUpdate");
-                BMCWEB_LOG_ERROR << "Invalid ImageURI: " << imageURI;
-                return;
-            }
+                // Setup callback for when new software detected
+                // Give TFTP 10 minutes to complete
+                (void)monitorForSoftwareAvailable(asyncResp, req, 600);
 
-            std::string tftpServer = imageURI.substr(0, separator);
-            std::string fwFile = imageURI.substr(separator + 1);
-            BMCWEB_LOG_DEBUG << "Server: " << tftpServer + " File: " << fwFile;
+                // TFTP can take up to 10 minutes depending on image size and
+                // connection speed. Return to caller as soon as the TFTP
+                // operation has been started. The callback above will ensure
+                // the activate is started once the download has completed
+                redfish::messages::success(asyncResp->res);
 
-            // Setup callback for when new software detected
-            // Give TFTP 10 minutes to complete
-            (void)monitorForSoftwareAvailable(asyncResp, req, 600);
+                // Call TFTP service
+                crow::connections::systemBus->async_method_call(
+                    [](const boost::system::error_code ec) {
+                        if (ec)
+                        {
+                            // messages::internalError(asyncResp->res);
+                            cleanUp();
+                            BMCWEB_LOG_DEBUG << "error_code = " << ec;
+                            BMCWEB_LOG_DEBUG << "error msg = " << ec.message();
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_DEBUG
+                                << "Call to DownloaViaTFTP Success";
+                        }
+                    },
+                    "xyz.openbmc_project.Software.Download",
+                    "/xyz/openbmc_project/software",
+                    "xyz.openbmc_project.Common.TFTP", "DownloadViaTFTP",
+                    fwFile, tftpServer);
 
-            // TFTP can take up to 10 minutes depending on image size and
-            // connection speed. Return to caller as soon as the TFTP operation
-            // has been started. The callback above will ensure the activate
-            // is started once the download has completed
-            redfish::messages::success(asyncResp->res);
-
-            // Call TFTP service
-            crow::connections::systemBus->async_method_call(
-                [](const boost::system::error_code ec) {
-                    if (ec)
-                    {
-                        // messages::internalError(asyncResp->res);
-                        cleanUp();
-                        BMCWEB_LOG_DEBUG << "error_code = " << ec;
-                        BMCWEB_LOG_DEBUG << "error msg = " << ec.message();
-                    }
-                    else
-                    {
-                        BMCWEB_LOG_DEBUG << "Call to DownloaViaTFTP Success";
-                    }
-                },
-                "xyz.openbmc_project.Software.Download",
-                "/xyz/openbmc_project/software",
-                "xyz.openbmc_project.Common.TFTP", "DownloadViaTFTP", fwFile,
-                tftpServer);
-
-            BMCWEB_LOG_DEBUG << "Exit UpdateService.SimpleUpdate doPost";
-        });
+                BMCWEB_LOG_DEBUG << "Exit UpdateService.SimpleUpdate doPost";
+            });
 }
 
 inline void
@@ -641,13 +642,13 @@ inline void
         {
             BMCWEB_LOG_ERROR << "Large image size: " << req.body.size();
             std::string resolution =
-                            "Firmware package size is greater than allowed "
-                            "size. Make sure package size is less than "
-                            "UpdateService.MaxImageSizeBytes property and "
-                            "retry the firmware update operation.";
+                "Firmware package size is greater than allowed "
+                "size. Make sure package size is less than "
+                "UpdateService.MaxImageSizeBytes property and "
+                "retry the firmware update operation.";
 
-            messages::resourceExhaustion(asyncResp->res,
-                                         "/redfish/v1/UpdateService/", resolution);
+            messages::resourceExhaustion(
+                asyncResp->res, "/redfish/v1/UpdateService/", resolution);
         }
         return;
     }
@@ -712,9 +713,12 @@ inline void requestRoutesUpdateService(App& app)
             // Get the MaxImageSizeBytes
             asyncResp->res.jsonValue["MaxImageSizeBytes"] =
                 firmwareImageLimitBytes;
-            asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]["#NvidiaUpdateService.CommitImage"]= {
-                {"target", "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage"},
-                {"@Redfish.ActionInfo", "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo"}};
+            asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]
+                                    ["#NvidiaUpdateService.CommitImage"] = {
+                {"target",
+                 "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage"},
+                {"@Redfish.ActionInfo",
+                 "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo"}};
 
 #ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
             // Update Actions object.
@@ -874,9 +878,9 @@ inline void requestRoutesUpdateService(App& app)
 
             std::optional<nlohmann::json> pushUriOptions;
             std::optional<std::vector<std::string>> imgTargets;
-            if (!json_util::readJsonPatch(req, asyncResp->res, "HttpPushUriOptions",
-                                     pushUriOptions, "HttpPushUriTargets",
-                                     imgTargets))
+            if (!json_util::readJsonPatch(req, asyncResp->res,
+                                          "HttpPushUriOptions", pushUriOptions,
+                                          "HttpPushUriTargets", imgTargets))
             {
                 BMCWEB_LOG_ERROR
                     << "UpdateService doPatch: Invalid request body";
@@ -889,7 +893,7 @@ inline void requestRoutesUpdateService(App& app)
                 std::optional<nlohmann::json> pushUriApplyTime;
                 if (!json_util::readJson(
                         *pushUriOptions, asyncResp->res, "HttpPushUriApplyTime",
-                        pushUriApplyTime/*, "ForceUpdate", forceUpdate*/))
+                        pushUriApplyTime /*, "ForceUpdate", forceUpdate*/))
                 {
                     return;
                 }
@@ -979,8 +983,8 @@ inline void requestRoutesUpdateService(App& app)
                             }
                             crow::connections::systemBus->async_method_call(
                                 [asyncResp](
-                                    const boost::system::error_code errCodePolicy) {
-                                    if (errCodePolicy)
+                                    const boost::system::error_code
+                errCodePolicy) { if (errCodePolicy)
                                     {
                                         BMCWEB_LOG_ERROR << "error_code = "
                                                          << errCodePolicy;
@@ -1060,8 +1064,10 @@ inline void requestRoutesUpdateService(App& app)
                             {
                                 BMCWEB_LOG_ERROR
                                     << "Targetted Device not Found!!";
-                                messages::invalidObject(asyncResp->res,
-                                    crow::utility::urlFromPieces("HttpPushUriTargets"));
+                                messages::invalidObject(
+                                    asyncResp->res,
+                                    crow::utility::urlFromPieces(
+                                        "HttpPushUriTargets"));
                                 return;
                             }
                             // return HTTP200 - Success with errors
@@ -1391,9 +1397,10 @@ inline static void getRelatedItemsStorageController(
                 sdbusplus::message::object_path path(object);
 
                 crow::connections::systemBus->async_method_call(
-                    [aResp, objPath, path](
-                        const boost::system::error_code errCodeController,
-                        const dbus::utility::MapperGetSubTreeResponse& subtree) {
+                    [aResp, objPath,
+                     path](const boost::system::error_code errCodeController,
+                           const dbus::utility::MapperGetSubTreeResponse&
+                               subtree) {
                         if (errCodeController || !subtree.size())
                         {
                             return;
@@ -2068,7 +2075,8 @@ inline void requestRoutesSoftwareInventory(App& app)
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(objPath,
+                            std::make_shared<HealthRollup>(
+                                objPath,
                                 [asyncResp](const std::string& rootHealth,
                                             const std::string& healthRollup) {
                                     asyncResp->res
@@ -2091,9 +2099,10 @@ inline void requestRoutesSoftwareInventory(App& app)
                         BMCWEB_LOG_ERROR
                             << "Input swID " + *swId + " not found!";
                         messages::resourceMissingAtURI(
-                            asyncResp->res, crow::utility::urlFromPieces(
-                            "redfish", "v1", "UpdateService", "FirmwareInventory",
-                            *swId));
+                            asyncResp->res,
+                            crow::utility::urlFromPieces(
+                                "redfish", "v1", "UpdateService",
+                                "FirmwareInventory", *swId));
                         return;
                     }
                     asyncResp->res.jsonValue["@odata.type"] =
@@ -2167,7 +2176,8 @@ inline void requestRoutesInventorySoftware(App& app)
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(path,
+                            std::make_shared<HealthRollup>(
+                                path,
                                 [asyncResp](const std::string& rootHealth,
                                             const std::string& healthRollup) {
                                     asyncResp->res
@@ -2291,7 +2301,7 @@ inline void requestRoutesInventorySoftware(App& app)
 
             std::optional<bool> writeProtected;
             if (!json_util::readJsonPatch(req, asyncResp->res, "WriteProtected",
-                                     writeProtected))
+                                          writeProtected))
             {
                 return;
             }
@@ -2354,13 +2364,13 @@ inline void requestRoutesInventorySoftware(App& app)
 }
 
 /**
- * @brief Check whether firmware inventory is allowable 
- * The function gets allowable values from config file 
+ * @brief Check whether firmware inventory is allowable
+ * The function gets allowable values from config file
  * /usr/share/bmcweb/fw_mctp_mapping.json.
  * and check if the firmware inventory is in this collection
- * 
+ *
  * @param[in] inventoryPath - firmware inventory path.
- * @returns boolean value indicates whether firmware inventory 
+ * @returns boolean value indicates whether firmware inventory
  * is allowable.
  */
 inline bool isInventoryAllowableValue(const std::string_view inventoryPath)
@@ -2368,8 +2378,9 @@ inline bool isInventoryAllowableValue(const std::string_view inventoryPath)
     bool isAllowable = false;
 
     std::vector<CommitImageValueEntry> allowableValues = getAllowableValues();
-    std::vector<CommitImageValueEntry>::iterator it 
-     = find(allowableValues.begin(), allowableValues.end(), static_cast<std::string>(inventoryPath));
+    std::vector<CommitImageValueEntry>::iterator it =
+        find(allowableValues.begin(), allowableValues.end(),
+             static_cast<std::string>(inventoryPath));
 
     if (it != allowableValues.end())
     {
@@ -2383,25 +2394,26 @@ inline bool isInventoryAllowableValue(const std::string_view inventoryPath)
     return isAllowable;
 }
 
-
 /**
- * @brief Get allowable value for particular firmware inventory 
- * The function gets allowable values from config file 
+ * @brief Get allowable value for particular firmware inventory
+ * The function gets allowable values from config file
  * /usr/share/bmcweb/fw_mctp_mapping.json.
  * and returns the allowable value if exists in the collection
- * 
+ *
  * @param[in] inventoryPath - firmware inventory path.
- * @returns Pair of boolean value if the allowable value exists 
- * and the object of AllowableValue who contains inventory path 
+ * @returns Pair of boolean value if the allowable value exists
+ * and the object of AllowableValue who contains inventory path
  * and assigned to its MCTP EID.
  */
-inline std::pair<bool, CommitImageValueEntry> getAllowableValue(const std::string_view inventoryPath)
+inline std::pair<bool, CommitImageValueEntry>
+    getAllowableValue(const std::string_view inventoryPath)
 {
     std::pair<bool, CommitImageValueEntry> result;
 
     std::vector<CommitImageValueEntry> allowableValues = getAllowableValues();
-    std::vector<CommitImageValueEntry>::iterator it 
-     = find(allowableValues.begin(), allowableValues.end(), static_cast<std::string>(inventoryPath));
+    std::vector<CommitImageValueEntry>::iterator it =
+        find(allowableValues.begin(), allowableValues.end(),
+             static_cast<std::string>(inventoryPath));
 
     if (it != allowableValues.end())
     {
@@ -2420,18 +2432,17 @@ inline std::pair<bool, CommitImageValueEntry> getAllowableValue(const std::strin
  * @brief Update parameters for GET Method CommitImageInfo
  *
  * @param[in] asyncResp Shared pointer to the response message
- * @param[in] subtree  Collection of objectmappers for 
+ * @param[in] subtree  Collection of objectmappers for
  * "/xyz/openbmc_project/software"
- * 
+ *
  * @return None
  */
-inline void
-    updateParametersForCommitImageInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                const std::vector<
-                std::pair<std::string,
-                    std::vector<std::pair<
-                    std::string, std::vector<std::string>>>>>&
-                subtree)
+inline void updateParametersForCommitImageInfo(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::vector<std::pair<
+        std::string,
+        std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+        subtree)
 {
     asyncResp->res.jsonValue["Parameters"] = nlohmann::json::array();
     nlohmann::json& parameters = asyncResp->res.jsonValue["Parameters"];
@@ -2455,9 +2466,10 @@ inline void
             return;
         }
 
-        if(isInventoryAllowableValue(obj.first))
+        if (isInventoryAllowableValue(obj.first))
         {
-            allowableValues.push_back("/redfish/v1/UpdateService/FirmwareInventory/" + fwId);
+            allowableValues.push_back(
+                "/redfish/v1/UpdateService/FirmwareInventory/" + fwId);
         }
     }
 
@@ -2465,55 +2477,56 @@ inline void
 }
 
 /**
- * @brief Handles request POST 
+ * @brief Handles request POST
  * The function triggers Commit Image action
  * for the list of delivered in the body of request
  * firmware inventories
- * 
+ *
  * @param resp Async HTTP response.
  * @param asyncResp Pointer to object holding response data
- * @param[in] subtree  Collection of objectmappers for 
+ * @param[in] subtree  Collection of objectmappers for
  * "/xyz/openbmc_project/software"
- * 
+ *
  * @return None
  */
-inline void handleCommitImagePost( const crow::Request& req,
-                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                const std::vector<
-                std::pair<std::string,
-                    std::vector<std::pair<
-                    std::string, std::vector<std::string>>>>>&
-                subtree)
+inline void handleCommitImagePost(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::vector<std::pair<
+        std::string,
+        std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+        subtree)
 {
     std::optional<std::vector<std::string>> targets;
-    json_util::readJsonAction(req, asyncResp->res,
-                        "Targets", targets);
+    json_util::readJsonAction(req, asyncResp->res, "Targets", targets);
 
     bool hasTargets = false;
     bool hasError = false;
 
-    if(targets && targets.value().empty() == false)
+    if (targets && targets.value().empty() == false)
     {
         hasTargets = true;
     }
 
-    if(hasTargets)
+    if (hasTargets)
     {
         std::vector<std::string> targetsCollection = targets.value();
 
         for (auto& target : targetsCollection)
         {
-            std::pair<bool, CommitImageValueEntry> result = getAllowableValue(target);
+            std::pair<bool, CommitImageValueEntry> result =
+                getAllowableValue(target);
             if (result.first == true)
             {
                 uint32_t eid = result.second.mctpEndpointId;
 
-                if(initBackgroundCopy(eid) != 0)
+                if (initBackgroundCopy(eid) != 0)
                 {
-                    BMCWEB_LOG_DEBUG << "mctp-vdm-util could not execute backgroundcopy_init.";
+                    BMCWEB_LOG_DEBUG
+                        << "mctp-vdm-util could not execute backgroundcopy_init.";
 
-                    messages::resourceErrorsDetectedFormatError(asyncResp->res,
-                        result.second.inventoryUri,
+                    messages::resourceErrorsDetectedFormatError(
+                        asyncResp->res, result.second.inventoryUri,
                         "backgroundCopy_init");
 
                     hasError = true;
@@ -2521,8 +2534,10 @@ inline void handleCommitImagePost( const crow::Request& req,
             }
             else
             {
-                BMCWEB_LOG_DEBUG << "Cannot find firmware inventory in allowable values";
-                messages::resourceMissingAtURI(asyncResp->res, crow::utility::urlFromPieces(target));
+                BMCWEB_LOG_DEBUG
+                    << "Cannot find firmware inventory in allowable values";
+                messages::resourceMissingAtURI(
+                    asyncResp->res, crow::utility::urlFromPieces(target));
 
                 hasError = true;
             }
@@ -2531,28 +2546,30 @@ inline void handleCommitImagePost( const crow::Request& req,
     else
     {
         for (auto& obj : subtree)
-        {       
-            std::pair<bool, CommitImageValueEntry> result = getAllowableValue(obj.first);
+        {
+            std::pair<bool, CommitImageValueEntry> result =
+                getAllowableValue(obj.first);
 
             if (result.first == true)
             {
                 uint32_t eid = result.second.mctpEndpointId;
-                
-                if(initBackgroundCopy(eid) != 0)
-                {
-                    BMCWEB_LOG_DEBUG << "mctp-vdm-util could not execute backgroundcopy_init.";
 
-                    messages::resourceErrorsDetectedFormatError(asyncResp->res,
-                        result.second.inventoryUri,
+                if (initBackgroundCopy(eid) != 0)
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "mctp-vdm-util could not execute backgroundcopy_init.";
+
+                    messages::resourceErrorsDetectedFormatError(
+                        asyncResp->res, result.second.inventoryUri,
                         "backgroundCopy_init");
 
                     hasError = true;
                 }
             }
         }
-    }   
+    }
 
-    if(hasError == false)
+    if (hasError == false)
     {
         messages::success(asyncResp->res);
     }
@@ -2560,21 +2577,20 @@ inline void handleCommitImagePost( const crow::Request& req,
 
 /**
  * @brief Register Web Api endpoints for Commit Image functionality
- * 
+ *
  * @return None
  */
 inline void requestRoutesUpdateServiceCommitImage(App& app)
 {
-    BMCWEB_ROUTE(app, 
-        "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo")
         .privileges(redfish::privileges::getSoftwareInventoryCollection)
         .methods(
             boost::beast::http::verb::
                 get)([](const crow::Request&,
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-
             asyncResp->res.jsonValue["@odata.type"] =
-               "#ActionInfo.v1_2_0.ActionInfo";
+                "#ActionInfo.v1_2_0.ActionInfo";
             asyncResp->res.jsonValue["@odata.id"] =
                 "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo";
             asyncResp->res.jsonValue["Name"] = "CommitImage Action Info";
@@ -2609,23 +2625,25 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
                     "xyz.openbmc_project.Software.Version"});
         });
 
-    BMCWEB_ROUTE(app,
+    BMCWEB_ROUTE(
+        app,
         "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage")
         .privileges(redfish::privileges::postUpdateService)
-        .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                
+        .methods(
+            boost::beast::http::verb::
+                post)([](const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
             BMCWEB_LOG_DEBUG << "doPost...";
 
             if (fwUpdateInProgress == true)
             {
                 redfish::messages::updateInProgressMsg(
-                    asyncResp->res, 
+                    asyncResp->res,
                     "Retry the operation once firmware update operation is complete.");
 
                 // don't copy the image, update already in progress.
-                BMCWEB_LOG_ERROR << "Cannot execute commit image. Update firmware is in progress.";
+                BMCWEB_LOG_ERROR
+                    << "Cannot execute commit image. Update firmware is in progress.";
 
                 return;
             }
@@ -2645,7 +2663,6 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
                     }
 
                     handleCommitImagePost(req, asyncResp, subtree);
-
                 },
                 // Note that only firmware levels associated with a device
                 // are stored under /xyz/openbmc_project/software therefore
@@ -2658,7 +2675,6 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
                 "/xyz/openbmc_project/software", static_cast<int32_t>(0),
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.Version"});
-
         });
 }
 

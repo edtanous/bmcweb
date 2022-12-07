@@ -1,25 +1,28 @@
-#include <openssl/bio.h>
 #include <openssl/asn1.h>
+#include <openssl/bio.h>
 #include <openssl/ssl.h>
-#include <string>
-#include <cstring>
-#include <logging.hpp>
-#include <span>
 
-namespace asn1 
+#include <logging.hpp>
+
+#include <cstring>
+#include <span>
+#include <string>
+
+namespace asn1
 {
 
 /**
  * @brief Auxiliary function for safe pointers arithemtic
- * 
+ *
  * @param[in] span initial buffer pointer with its maximum size
  * @param[in] offset to move initial pointer
- * 
+ *
  * @return Return:
  *  destination pointer value
  */
 template <typename T>
-inline const T* safePtrArithmeticConst(std::span<const T> safeBuf, size_t offset)
+inline const T* safePtrArithmeticConst(std::span<const T> safeBuf,
+                                       size_t offset)
 {
     const T* ret = static_cast<const T*>(&safeBuf[offset]);
     return ret;
@@ -33,63 +36,59 @@ inline T* safePtrArithmetic(std::span<T> safeBuf, size_t offset)
 }
 
 /* Internal auxiliary function used for PBES and PBKDF searching purposes */
-inline int checkAsn1Object(
-    const unsigned char *buf,
-    size_t length,
-    bool *pbes,
-    bool *pbkdf)
+inline int checkAsn1Object(const unsigned char* buf, size_t length, bool* pbes,
+                           bool* pbkdf)
 {
-    const std::array<char, 4> pbesid = { 'P', 'B', 'E', 'S' };
-    const std::array<char, 5> pbkdfid = { 'P', 'B', 'K', 'D', 'F' };
-    ASN1_OBJECT *o = nullptr;
-    auto *mem = BIO_new(BIO_s_mem());
-    std::array<char, 128> membuf = { 0 };
+    const std::array<char, 4> pbesid = {'P', 'B', 'E', 'S'};
+    const std::array<char, 5> pbkdfid = {'P', 'B', 'K', 'D', 'F'};
+    ASN1_OBJECT* o = nullptr;
+    auto* mem = BIO_new(BIO_s_mem());
+    std::array<char, 128> membuf = {0};
     auto ret = 0;
 
-    if (d2i_ASN1_OBJECT(&o, &buf, static_cast<long>(length)) != nullptr) 
+    if (d2i_ASN1_OBJECT(&o, &buf, static_cast<long>(length)) != nullptr)
     {
         i2a_ASN1_OBJECT(mem, o);
         BIO_read(mem, static_cast<void*>(membuf.data()), membuf.size());
-        if (std::equal(std::begin(pbesid), std::end(pbesid), std::begin(membuf)))
+        if (std::equal(std::begin(pbesid), std::end(pbesid),
+                       std::begin(membuf)))
         {
             *pbes = true;
         }
-        else if (std::equal(std::begin(pbkdfid), std::end(pbkdfid), std::begin(membuf)))
+        else if (std::equal(std::begin(pbkdfid), std::end(pbkdfid),
+                            std::begin(membuf)))
         {
             *pbkdf = true;
         }
 
-        if (*pbes && *pbkdf) 
+        if (*pbes && *pbkdf)
         {
             ret = 2137;
         }
 
         BIO_free(mem);
         ASN1_OBJECT_free(o);
-    } 
-    
+    }
+
     return ret;
 }
 
 /**
  * Recursively iterates over an ASN.1 structure to find PBES and PBKDF.
- * 
+ *
  * @param[in] pp Pointer to ASN.1 buffer.
  * @param[in] length Buffer length.
  * @param[in] offset Offset at which to start iterating.
  * @param[out] pbes Has PBES.
  * @param[out] pbkdf Has PBKDF.
- * 
- * @return Return value greater or equal 0 means success, lesser than 0 failure. 
+ *
+ * @return Return value greater or equal 0 means success, lesser than 0 failure.
  */
-inline int hasPbesPbkdf(
-    const unsigned char **pp,
-    size_t length,
-    int offset, 
-    bool *pbes,
-    bool *pbkdf)
+inline int hasPbesPbkdf(const unsigned char** pp, size_t length, int offset,
+                        bool* pbes, bool* pbkdf)
 {
-    const unsigned char *p = nullptr, *ep = nullptr, *tot = nullptr, *op = nullptr;
+    const unsigned char *p = nullptr, *ep = nullptr, *tot = nullptr,
+                        *op = nullptr;
     long len = 0;
     size_t hl = 0;
     int r = 0;
@@ -98,24 +97,29 @@ inline int hasPbesPbkdf(
     int asn1ObjectClass = 0;
     int asn1ObjectType = 0;
 
-    if (pbes == nullptr || pbkdf == nullptr) 
+    if (pbes == nullptr || pbkdf == nullptr)
     {
         return -1;
     }
 
-    if (offset == 0) {
+    if (offset == 0)
+    {
         *pbes = false;
         *pbkdf = false;
     }
 
     p = *pp;
     // tot = p + length;
-    tot = safePtrArithmeticConst<unsigned char>( { p, (length+1) }, length);
+    tot = safePtrArithmeticConst<unsigned char>({p, (length + 1)}, length);
 
-    while (length > 0) {
+    while (length > 0)
+    {
         op = p;
-        asn1ObjectType = ASN1_get_object(&p, &len, &asn1ObjectTag, &asn1ObjectClass, static_cast<long>(length));
-        if (asn1ObjectType & 0x80) {
+        asn1ObjectType =
+            ASN1_get_object(&p, &len, &asn1ObjectTag, &asn1ObjectClass,
+                            static_cast<long>(length));
+        if (asn1ObjectType & 0x80)
+        {
             ret = -1;
             break;
         }
@@ -123,55 +127,51 @@ inline int hasPbesPbkdf(
         hl = static_cast<size_t>(p - op);
         length -= hl;
 
-        if (asn1ObjectType & V_ASN1_CONSTRUCTED) {
-            const unsigned char *sp = p;
+        if (asn1ObjectType & V_ASN1_CONSTRUCTED)
+        {
+            const unsigned char* sp = p;
             // ep = p + len;
-            ep = safePtrArithmeticConst<unsigned char>( { p, (length+1) }, static_cast<size_t>(len));
+            ep = safePtrArithmeticConst<unsigned char>(
+                {p, (length + 1)}, static_cast<size_t>(len));
 
-            if (static_cast<size_t>(len) > length) 
+            if (static_cast<size_t>(len) > length)
             {
                 break;
             }
 
-            if ((asn1ObjectType == 0x21) && (len == 0)) 
+            if ((asn1ObjectType == 0x21) && (len == 0))
             {
-                for (;;) 
+                for (;;)
                 {
-                    r = asn1::hasPbesPbkdf(
-                        &p,
-                        static_cast<size_t>(tot - p), 
-                        offset + static_cast<int>(p - *pp),
-                        pbes, 
-                        pbkdf);
+                    r = asn1::hasPbesPbkdf(&p, static_cast<size_t>(tot - p),
+                                           offset + static_cast<int>(p - *pp),
+                                           pbes, pbkdf);
 
-                    if (r == 0 || r == -1) 
+                    if (r == 0 || r == -1)
                     {
                         ret = r;
                         break;
                     }
 
-                    if ((r == 2) || (p >= tot)) 
+                    if ((r == 2) || (p >= tot))
                     {
                         len = p - sp;
                         break;
                     }
                 }
-            } 
-            else 
+            }
+            else
             {
                 long tmp = len;
 
-                while (p < ep) 
+                while (p < ep)
                 {
                     sp = p;
-                    r = asn1::hasPbesPbkdf(
-                        &p, 
-                        static_cast<size_t>(tmp), 
-                        offset + static_cast<int>(p - *pp),
-                        pbes, 
-                        pbkdf);
+                    r = asn1::hasPbesPbkdf(&p, static_cast<size_t>(tmp),
+                                           offset + static_cast<int>(p - *pp),
+                                           pbes, pbkdf);
 
-                    if (r == 0 || r == -1 || r == 2137) 
+                    if (r == 0 || r == -1 || r == 2137)
                     {
                         ret = r;
                         break;
@@ -180,12 +180,13 @@ inline int hasPbesPbkdf(
                     tmp -= p - sp;
                 }
             }
-        } 
-        else 
+        }
+        else
         {
-            if (asn1ObjectTag == V_ASN1_OBJECT) 
+            if (asn1ObjectTag == V_ASN1_OBJECT)
             {
-                ret = checkAsn1Object(op, (static_cast<size_t>(len)+hl), pbes, pbkdf);
+                ret = checkAsn1Object(op, (static_cast<size_t>(len) + hl), pbes,
+                                      pbkdf);
                 if (ret == 2137)
                 {
                     break;
@@ -193,16 +194,17 @@ inline int hasPbesPbkdf(
             }
 
             // p += len;
-            p = safePtrArithmeticConst<unsigned char>( { p, (length+1) }, static_cast<size_t>(len));
+            p = safePtrArithmeticConst<unsigned char>({p, (length + 1)},
+                                                      static_cast<size_t>(len));
 
-            if ((asn1ObjectTag == V_ASN1_EOC) && (asn1ObjectClass == 0)) 
+            if ((asn1ObjectTag == V_ASN1_EOC) && (asn1ObjectClass == 0))
             {
                 ret = 2;
                 break;
             }
         }
 
-        if (ret == 2137) 
+        if (ret == 2137)
         {
             break;
         }
@@ -214,7 +216,7 @@ inline int hasPbesPbkdf(
     return ret;
 }
 
-inline int pemPkeyIsEncrypted(const std::string &filename, bool *encrypted)
+inline int pemPkeyIsEncrypted(const std::string& filename, bool* encrypted)
 {
     BIO *in = nullptr, *inB64 = nullptr;
     BUF_MEM* buf = nullptr;
@@ -222,11 +224,11 @@ inline int pemPkeyIsEncrypted(const std::string &filename, bool *encrypted)
     bool pbes = false, pbkdf = false;
     int i = 0;
     size_t len = 0;
-    int ret = 0; 
+    int ret = 0;
 
     BMCWEB_LOG_INFO << "Checking if " << filename << " is encrypted.\n";
 
-    if ((in = BIO_new_file(filename.c_str(), "r")) == nullptr) 
+    if ((in = BIO_new_file(filename.c_str(), "r")) == nullptr)
     {
         BMCWEB_LOG_ERROR << "Error opening PEM file BIO.\n";
         return -1;
@@ -239,7 +241,7 @@ inline int pemPkeyIsEncrypted(const std::string &filename, bool *encrypted)
         return -2;
     }
 
-    if ((inB64 = BIO_new(BIO_f_base64())) == nullptr) 
+    if ((inB64 = BIO_new(BIO_f_base64())) == nullptr)
     {
         BMCWEB_LOG_ERROR << "Error creating base64 BIO.\n";
         BUF_MEM_free(buf);
@@ -249,10 +251,10 @@ inline int pemPkeyIsEncrypted(const std::string &filename, bool *encrypted)
 
     BIO_push(inB64, in);
 
-    for (;;) 
+    for (;;)
     {
         size_t templen = len + BUFSIZ;
-        if (!BUF_MEM_grow(buf, templen)) 
+        if (!BUF_MEM_grow(buf, templen))
         {
             BMCWEB_LOG_ERROR << "Error expanding BIO buffer.\n";
             BIO_free(inB64);
@@ -261,9 +263,9 @@ inline int pemPkeyIsEncrypted(const std::string &filename, bool *encrypted)
             return -2;
         }
 
-        char *bufBegin = safePtrArithmetic<char>( { buf->data, buf->max } , len);
+        char* bufBegin = safePtrArithmetic<char>({buf->data, buf->max}, len);
         i = BIO_read(inB64, bufBegin, static_cast<size_t>(BUFSIZ));
-        if (i <= 0) 
+        if (i <= 0)
         {
             break;
         }
@@ -271,18 +273,18 @@ inline int pemPkeyIsEncrypted(const std::string &filename, bool *encrypted)
         len += static_cast<size_t>(i);
     }
 
-    str = static_cast<const unsigned char*>(static_cast<void *>(buf->data));
-    if ((ret = asn1::hasPbesPbkdf(&str, len, 0, &pbes, &pbkdf)) < 0) 
+    str = static_cast<const unsigned char*>(static_cast<void*>(buf->data));
+    if ((ret = asn1::hasPbesPbkdf(&str, len, 0, &pbes, &pbkdf)) < 0)
     {
-        BMCWEB_LOG_ERROR << "Error while processing ASN.1 structures at " << filename 
-            << " return value: " << ret << "\n";
+        BMCWEB_LOG_ERROR << "Error while processing ASN.1 structures at "
+                         << filename << " return value: " << ret << "\n";
         BIO_free(inB64);
         BUF_MEM_free(buf);
         BIO_free(in);
         return -2;
     }
 
-    if (encrypted != nullptr) 
+    if (encrypted != nullptr)
     {
         *encrypted = pbes && pbkdf;
     }
@@ -293,4 +295,4 @@ inline int pemPkeyIsEncrypted(const std::string &filename, bool *encrypted)
     return ret;
 }
 
-}
+} // namespace asn1

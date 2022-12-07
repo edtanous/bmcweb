@@ -77,19 +77,22 @@ class RedfishService
      */
     explicit RedfishService(App& app)
     {
-        if (persistent_data::getConfig().isTLSAuthEnabled()) {
-                requestAccountServiceRoutes(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            requestAccountServiceRoutes(app);
         }
         requestAssemblyRoutes(app);
         requestPcieSlotsRoutes(app);
-        if (persistent_data::getConfig().isTLSAuthEnabled()) {
-                requestRoutesRoles(app);
-                requestRoutesRoleCollection(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            requestRoutesRoles(app);
+            requestRoutesRoleCollection(app);
         }
         requestRoutesServiceRoot(app);
         requestRoutesNetworkProtocol(app);
-        if (persistent_data::getConfig().isTLSAuthEnabled()) {
-                requestRoutesSession(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            requestRoutesSession(app);
         }
         requestEthernetInterfacesRoutes(app);
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
@@ -108,7 +111,7 @@ class RedfishService
         requestRoutesManagerResetAction(app);
         requestRoutesManagerResetActionInfo(app);
         requestRoutesManagerResetToDefaultsAction(app);
-        //requestRoutesManagerDiagnosticData(app);
+        // requestRoutesManagerDiagnosticData(app);
         requestRoutesChassisCollection(app);
         requestRoutesChassis(app);
         requestRoutesChassisResetAction(app);
@@ -212,7 +215,7 @@ class RedfishService
         requestRouteAsyncRawOobCommand(app);
         requestRoutesNvidiaAsyncOOBRawCommandActionInfo(app);
         requestRoutesNvidiaSyncOOBRawCommandActionInfo(app);
-#endif  //BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesProcessorPortCollection(app);
         requestRoutesProcessorPort(app);
         requestRoutesProcessorPortMetrics(app);
@@ -259,11 +262,12 @@ class RedfishService
         requestRoutesMessageRegistryFileCollection(app);
         requestRoutesMessageRegistryFile(app);
         requestRoutesMessageRegistry(app);
-        if (persistent_data::getConfig().isTLSAuthEnabled()) {
-                requestRoutesCertificateService(app);
-                requestRoutesHTTPSCertificate(app);
-                requestRoutesLDAPCertificate(app);
-                requestRoutesTrustStoreCertificate(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            requestRoutesCertificateService(app);
+            requestRoutesHTTPSCertificate(app);
+            requestRoutesLDAPCertificate(app);
+            requestRoutesTrustStoreCertificate(app);
         }
         requestRoutesSystemPCIeFunctionCollection(app);
         requestRoutesSystemPCIeFunction(app);

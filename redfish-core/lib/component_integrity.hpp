@@ -22,9 +22,9 @@
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <task.hpp>
+#include <utils/chassis_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/stl_utils.hpp>
-#include <utils/chassis_utils.hpp>
 
 namespace redfish
 {
@@ -209,8 +209,9 @@ inline void handleSPDMGETSignedMeasurement(
     std::string body = req.body;
     body.erase(std::remove_if(body.begin(), body.end(), isspace), body.end());
     if (!body.empty() && body != "{}" &&
-            !json_util::readJsonAction(req, asyncResp->res, "Nonce", nonce,
-                "SlotId", slotID, "MeasurementIndices", indices))
+        !json_util::readJsonAction(req, asyncResp->res, "Nonce", nonce,
+                                   "SlotId", slotID, "MeasurementIndices",
+                                   indices))
     {
         messages::unrecognizedRequestBody(asyncResp->res);
         return;

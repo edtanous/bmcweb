@@ -1070,7 +1070,6 @@ nlohmann::json mutualExclusiveProperties(const std::string& arg1,
 void mutualExclusiveProperties(crow::Response& res, const std::string& arg1,
                                const std::string& arg2);
 
-
 /**
  * @brief Formats InsufficientStorage message into JSON
  * Message body: "Insufficent storage or memory available to complete the

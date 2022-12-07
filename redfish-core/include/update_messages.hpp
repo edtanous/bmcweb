@@ -203,10 +203,12 @@ inline nlohmann::json getUpdateMessage(const std::string& msgId,
 {
     std::string arg0 = "";
     std::string arg1 = "";
-    if (args.size() >= 1) {
+    if (args.size() >= 1)
+    {
         arg0 = args[0];
     }
-    if (args.size() >= 2) {
+    if (args.size() >= 2)
+    {
         arg1 = args[1];
     }
 

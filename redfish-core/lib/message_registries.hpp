@@ -206,8 +206,7 @@ inline void handleMessageRegistryGet(
     else if (registry == "BiosAttributeRegistry")
     {
         header = &registries::bios::header;
-        for (const registries::MessageEntry& entry :
-             registries::bios::registry)
+        for (const registries::MessageEntry& entry : registries::bios::registry)
         {
             registryEntries.emplace_back(&entry);
         }
