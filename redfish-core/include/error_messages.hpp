@@ -1077,7 +1077,29 @@ void mutualExclusiveProperties(crow::Response& res, const std::string& arg1,
  * @returns Message InsufficientStorage formatted to JSON */
 nlohmann::json insufficientStorage();
 
-void insufficientStorage(crow::Response& res);
+/**
+ * @brief error message for insufficient storage
+ *
+ * @param[in] res - response
+ * @param[in] resolution - optional resolution
+ */
+void insufficientStorage(crow::Response& res,
+                         const std::string& resolution = {});
+
+/**
+ * @brief Formats PayloadTooLarge message into JSON
+ *
+ * @returns Message PayloadTooLarge formatted to JSON
+ */
+nlohmann::json payloadTooLarge();
+
+/**
+ * @brief error message for payloadTooLarge
+ *
+ * @param[in] res - response
+ * @param[in] resolution - optional resolution
+ */
+void payloadTooLarge(crow::Response& res, const std::string& resolution = {});
 
 /**
  * @brief Formats OperationNotAllowed message into JSON

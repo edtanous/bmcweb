@@ -646,11 +646,25 @@ inline void
                 "size. Make sure package size is less than "
                 "UpdateService.MaxImageSizeBytes property and "
                 "retry the firmware update operation.";
-
-            messages::resourceExhaustion(
-                asyncResp->res, "/redfish/v1/UpdateService/", resolution);
+            messages::payloadTooLarge(asyncResp->res, resolution);
         }
         return;
+    }
+    std::error_code spaceInfoError;
+    const std::filesystem::space_info spaceInfo =
+        std::filesystem::space(updateServiceImageLocation, spaceInfoError);
+    if (!spaceInfoError)
+    {
+        if (spaceInfo.free < req.body.size())
+        {
+            BMCWEB_LOG_ERROR
+                << "Insufficient storage space. Required: " << req.body.size()
+                << " Available: " << spaceInfo.free;
+            std::string resolution =
+                "Reset the baseboard and retry the operation.";
+            messages::insufficientStorage(asyncResp->res, resolution);
+            return;
+        }
     }
     // Setup callback for when new software detected
     if (monitorForSoftwareAvailable(asyncResp, req))

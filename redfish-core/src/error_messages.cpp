@@ -1799,10 +1799,31 @@ nlohmann::json insufficientStorage()
     return getLog(redfish::registries::base::Index::insufficientStorage, {});
 }
 
-void insufficientStorage(crow::Response& res)
+void insufficientStorage(crow::Response& res, const std::string& resolution)
 {
-    res.result(boost::beast::http::status::insufficient_storage);
-    addMessageToErrorJson(res.jsonValue, insufficientStorage());
+    res.result(boost::beast::http::status::bad_request);
+    nlohmann::json responseMessage = insufficientStorage();
+    if (!resolution.empty())
+    {
+        responseMessage["Resolution"] = resolution;
+    }
+    addMessageToErrorJson(res.jsonValue, responseMessage);
+}
+
+nlohmann::json payloadTooLarge()
+{
+    return getLog(redfish::registries::base::Index::payloadTooLarge, {});
+}
+
+void payloadTooLarge(crow::Response& res, const std::string& resolution)
+{
+    res.result(boost::beast::http::status::bad_request);
+    nlohmann::json responseMessage = payloadTooLarge();
+    if (!resolution.empty())
+    {
+        responseMessage["Resolution"] = resolution;
+    }
+    addMessageToErrorJson(res.jsonValue, responseMessage);
 }
 
 /**
