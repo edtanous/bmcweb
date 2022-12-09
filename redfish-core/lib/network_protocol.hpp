@@ -146,11 +146,13 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
     asyncResp->res.jsonValue["HostName"] = hostName;
 
+#ifdef BMCWEB_ENABLE_NTP
     getNTPProtocolEnabled(asyncResp);
+#endif
 
     getEthernetIfaceData([hostName, asyncResp](
                              const bool& success,
-                             const std::vector<std::string>& ntpServers,
+                             [[maybe_unused]] const std::vector<std::string>& ntpServers,
                              const std::vector<std::string>& domainNames) {
         if (!success)
         {
@@ -158,7 +160,10 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                        "NetworkProtocol");
             return;
         }
+
+#ifdef BMCWEB_ENABLE_NTP
         asyncResp->res.jsonValue["NTP"]["NTPServers"] = ntpServers;
+#endif
         if (!hostName.empty())
         {
             std::string fqdn = hostName;
@@ -197,6 +202,13 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
 #else
         if (protocolName == "HTTPS")
+        {
+            continue;
+        }
+#endif
+
+#ifndef BMCWEB_ENABLE_IPMI
+        if (protocolName == "IPMI")
         {
             continue;
         }
@@ -509,7 +521,10 @@ inline void requestRoutesNetworkProtocol(App& app)
                 }
                 std::optional<std::string> newHostName;
                 std::optional<std::vector<nlohmann::json>> ntpServerObjects;
+#ifdef BMCWEB_ENABLE_NTP
                 std::optional<bool> ntpEnabled;
+#endif
+
 #ifdef BMCWEB_ENABLE_IPMI
                 std::optional<bool> ipmiEnabled;
 #endif
@@ -519,9 +534,13 @@ inline void requestRoutesNetworkProtocol(App& app)
                 // clang-format off
         if (!json_util::readJsonPatch(
                 req, asyncResp->res,
-                "HostName", newHostName,
+                "HostName", newHostName
+#ifdef BMCWEB_ENABLE_NTP
+		,
                 "NTP/NTPServers", ntpServerObjects,
                 "NTP/ProtocolEnabled", ntpEnabled
+#endif
+
 #ifdef BMCWEB_ENABLE_IPMI
                  ,
                 "IPMI/ProtocolEnabled", ipmiEnabled
@@ -543,6 +562,7 @@ inline void requestRoutesNetworkProtocol(App& app)
                     return;
                 }
 
+#ifdef BMCWEB_ENABLE_NTP
                 if (ntpEnabled)
                 {
                     handleNTPProtocolEnabled(*ntpEnabled, asyncResp);
@@ -563,6 +583,8 @@ inline void requestRoutesNetworkProtocol(App& app)
                                                   std::move(currentNtpServers));
                         });
                 }
+#endif
+
 #ifdef BMCWEB_ENABLE_IPMI
                 if (ipmiEnabled)
                 {

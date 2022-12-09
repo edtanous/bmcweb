@@ -102,6 +102,7 @@ feature_map = {
   'array-bootprogress'                          : '-DBMCWEB_ARRAY_BOOT_PROGRESS',
   'bios'                                        : '-DBMCWEB_ENABLE_BIOS',
   'ipmi'                                        : '-DBMCWEB_ENABLE_IPMI',
+  'ntp'                                         : '-DBMCWEB_ENABLE_NTP',
   'patch-ssh'                                   : '-DBMCWEB_ENABLE_PATCH_SSH',
   'dhcp-configuration-update'                   : '-DBMCWEB_DHCP_CONFIGURATION_UPDATE',
   'host-os-features'                            : '-DBMCWEB_ENABLE_HOST_OS_FEATURE',

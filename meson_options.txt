@@ -354,6 +354,7 @@ option ('host-iface-channel', type : 'string', value : 'usb0', description : 'Ho
 
 option('bios', type: 'feature', value : 'enabled', description : 'Enable the BIOS Redfish API.')
 option('ipmi', type : 'feature', value : 'enabled', description : 'Enable/disable ipmi feature.')
+option('ntp', type : 'feature', value : 'enabled', description : 'Enable/disable ntp feature.')
 option('patch-ssh', type : 'feature', value : 'enabled', description : 'Enable/disable ssh service support')
 option('dhcp-configuration-update', type : 'feature', value : 'enabled', description : 'Enable/disable dhcp configuration support.')
 option('nic-configuration-update', type : 'feature', value : 'enabled', description : 'Enable/disable nic configuration support.')
