@@ -273,6 +273,7 @@ option ('platform-power-control-sensor-name', type : 'string', value : 'total_po
 option ('platform-metrics-id', type : 'string', value : 'PlatformMetrics', description : 'Platform specific telemetry service metric reports id')
 
 option ('tls-auth-opt-in', type : 'feature', value : 'disabled', description : 'Enables feature to opt-in to TLS-Authentication at runtime.')
+option ('host-os-features', type : 'feature', value : 'enabled', description : 'Enables feature specific to host os')
 
 
 # Insecure options. Every option that starts with a `insecure` flag should

@@ -104,6 +104,7 @@ feature_map = {
   'ipmi'                                        : '-DBMCWEB_ENABLE_IPMI',
   'patch-ssh'                                   : '-DBMCWEB_ENABLE_PATCH_SSH',
   'dhcp-configuration-update'                   : '-DBMCWEB_DHCP_CONFIGURATION_UPDATE',
+  'host-os-features'                            : '-DBMCWEB_ENABLE_HOST_OS_FEATURE',
   'nic-configuration-update'                    : '-DBMCWEB_NIC_CONFIGURATION_UPDATE',  
 }
 
