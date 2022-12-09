@@ -28,6 +28,128 @@
 namespace redfish
 {
 
+using propertyTypes = std::variant<
+    int, std::string, uint32_t, bool,
+    std::vector<std::tuple<std::string, std::string, std::string>>>;
+
+inline std::string dbusSlotTypesToRedfish(const std::string& slotType)
+{
+    if (slotType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.FullLength")
+    {
+        return "FullLength";
+    }
+    if (slotType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.HalfLength")
+    {
+        return "HalfLength";
+    }
+    if (slotType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.LowProfile")
+    {
+        return "LowProfile";
+    }
+    if (slotType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.Mini")
+    {
+        return "Mini";
+    }
+    if (slotType == "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.M_2")
+    {
+        return "M2";
+    }
+    if (slotType == "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM")
+    {
+        return "OEM";
+    }
+    if (slotType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OCP3Small")
+    {
+        return "OCP3Small";
+    }
+    if (slotType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OCP3Large")
+    {
+        return "OCP3Large";
+    }
+    if (slotType == "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.U_2")
+    {
+        return "U2";
+    }
+
+    // Unknown or others
+    return "";
+}
+
+inline std::string dbusPcieTypesToRedfish(const std::string& pcieType)
+{
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen1")
+    {
+        return "Gen1";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen2")
+    {
+        return "Gen2";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen3")
+    {
+        return "Gen3";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen4")
+    {
+        return "Gen4";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen5")
+    {
+        return "Gen5";
+    }
+
+    // Unknown or others
+    return "";
+}
+
+/**
+ * @brief Fill properties into json object
+ *
+ * @param[in,out]   json           Json object
+ * @param[in]       dbusProperties Properties of Slot.
+ */
+inline void
+    fillProperties(nlohmann::json& json,
+                   const std::map<std::string, propertyTypes>& dbusProperties)
+{
+    for (auto const& [key, val] : dbusProperties)
+    {
+        if (key.compare("ServiceLabel") == 0 &&
+            std::holds_alternative<std::string>(val))
+        {
+            json["Location"]["PartLocation"]["ServiceLabel"] =
+                std::get<std::string>(val);
+        }
+        else if (std::holds_alternative<uint32_t>(val))
+        {
+            json[key] = std::get<uint32_t>(val);
+        }
+        else if (std::holds_alternative<int>(val))
+        {
+            json[key] = std::get<int>(val);
+        }
+        else if (std::holds_alternative<std::string>(val))
+        {
+            json[key] = std::get<std::string>(val);
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR << "Unknwon value type for key " << key;
+        }
+    }
+}
+
 /**
  * @brief Get all pcieslot  processor links info by requesting data
  * from the given D-Bus object.
@@ -39,7 +161,7 @@ namespace redfish
  */
 inline void updatePCIeSlotsProcessorLinks(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    std::map<std::string, std::variant<int, std::string>>& dbusProperties,
+    const std::map<std::string, propertyTypes>& dbusProperties,
     const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "updatePCIeSlotsPrcoessorLinks ";
@@ -86,17 +208,7 @@ inline void updatePCIeSlotsProcessorLinks(
                         }
 
                         nlohmann::json pcieSlotRes;
-                        for (auto const& [key, val] : dbusProperties)
-                        {
-                            if (key == "Lanes")
-                            {
-                                pcieSlotRes[key] = std::get<int>(val);
-                            }
-                            else
-                            {
-                                pcieSlotRes[key] = std::get<std::string>(val);
-                            }
-                        }
+                        fillProperties(pcieSlotRes, dbusProperties);
 
                         // declaring processors array
                         nlohmann::json& prcoessorsLinkArray =
@@ -160,7 +272,7 @@ inline void updatePCIeSlotsProcessorLinks(
  */
 inline void updatePCIeSlotsSwitchLinks(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    std::map<std::string, std::variant<int, std::string>>& dbusProperties,
+    const std::map<std::string, propertyTypes>& dbusProperties,
     const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "updatePCIeSlotsSwitchLinks ";
@@ -243,20 +355,7 @@ inline void updatePCIeSlotsSwitchLinks(
                                     }
 
                                     // update dbus properties to json object
-                                    for (auto const& [key, val] :
-                                         dbusProperties)
-                                    {
-                                        if (key == "Lanes")
-                                        {
-                                            pcieSlotRes[key] =
-                                                std::get<int>(val);
-                                        }
-                                        else
-                                        {
-                                            pcieSlotRes[key] =
-                                                std::get<std::string>(val);
-                                        }
-                                    }
+                                    fillProperties(pcieSlotRes, dbusProperties);
 
                                     pcieSlotRes
                                         ["Links"]["Oem"]["Nvidia"]
@@ -309,6 +408,25 @@ inline void updatePCIeSlotsSwitchLinks(
 }
 
 /**
+ * @brief Add Slot without links into Slots array of Resp
+ *
+ * @param[in,out]   asyncResp      Async HTTP response.
+ * @param[in]       dbusProperties Properties of Slot.
+ */
+inline void updatePCIeSlotsNoLinks(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::map<std::string, propertyTypes>& dbusProperties)
+{
+    BMCWEB_LOG_DEBUG << "updatePCIeSlotsNoLinks ";
+
+    nlohmann::json pcieSlotRes;
+    fillProperties(pcieSlotRes, dbusProperties);
+
+    nlohmann::json& jResp = asyncResp->res.jsonValue["Slots"];
+    jResp.push_back(pcieSlotRes);
+}
+
+/**
  * @brief Get all cpieslot info by requesting data
  * from the given D-Bus object.
  *
@@ -326,10 +444,10 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
     // Get interface properties
     crow::connections::systemBus->async_method_call(
-        [asyncResp{asyncResp}, chassisId, objPath](
-            const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string, std::variant<std::string, int>>>& propertiesList) {
+        [asyncResp{asyncResp}, chassisId,
+         objPath](const boost::system::error_code ec,
+                  const std::vector<std::pair<std::string, propertyTypes>>&
+                      propertiesList) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR
@@ -338,11 +456,11 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 return;
             }
 
-            std::map<std::string, std::variant<int, std::string>>
+            std::map<std::string, propertyTypes>
                 dbusProperties; // map of all pcislot dbus properties
             // pcieslots  data
-            for (const std::pair<std::string, std::variant<std::string, int>>&
-                     property : propertiesList)
+            for (const std::pair<std::string, propertyTypes>& property :
+                 propertiesList)
             {
                 // Store DBus properties that are also Redfish
                 // properties with same name and a string value
@@ -358,9 +476,18 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    dbusProperties.insert(
-                        std::pair<std::string, std::variant<int, std::string>>(
-                            "PCIeType", *value));
+                    std::string pcieType = *value;
+                    if (pcieType.starts_with(
+                            "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations"))
+                    {
+                        pcieType = dbusPcieTypesToRedfish(pcieType);
+                    }
+                    if (!pcieType.empty())
+                    {
+                        dbusProperties.insert(
+                            std::pair<std::string, propertyTypes>("PCIeType",
+                                                                  pcieType));
+                    }
                 }
                 else if (propertyName == "SlotType")
                 {
@@ -373,31 +500,97 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    dbusProperties.insert(
-                        std::pair<std::string, std::variant<int, std::string>>(
-                            propertyName, *value));
+                    std::string slotType = *value;
+                    if (slotType.starts_with(
+                            "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes"))
+                    {
+                        slotType = dbusSlotTypesToRedfish(slotType);
+                    }
+                    if (!slotType.empty())
+                    {
+                        dbusProperties.insert(
+                            std::pair<std::string, propertyTypes>(propertyName,
+                                                                  slotType));
+                    }
                 }
                 else if (propertyName == "Lanes")
                 {
-                    const int* value = std::get_if<int>(&property.second);
-                    if (value == nullptr)
+                    if (std::holds_alternative<uint32_t>(property.second))
+                    {
+                        const uint32_t* value =
+                            std::get_if<uint32_t>(&property.second);
+                        dbusProperties.insert(
+                            std::pair<std::string, propertyTypes>(propertyName,
+                                                                  *value));
+                    }
+                    else if (std::holds_alternative<int>(property.second))
+                    {
+                        const int* value = std::get_if<int>(&property.second);
+                        dbusProperties.insert(
+                            std::pair<std::string, propertyTypes>(propertyName,
+                                                                  *value));
+                    }
+                    else
                     {
                         BMCWEB_LOG_ERROR << "Null value returned "
                                             "for Lanes";
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    dbusProperties.insert(
-                        std::pair<std::string, std::variant<int, std::string>>(
-                            propertyName, *value));
+                }
+                else if (propertyName == "LocationCode")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for LocationCode";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    dbusProperties.insert(std::pair<std::string, propertyTypes>(
+                        "ServiceLabel", *value));
                 }
             }
 
-            // update processor links
-            updatePCIeSlotsProcessorLinks(asyncResp, dbusProperties, objPath);
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, objPath,
+                 dbusProperties](const boost::system::error_code ec,
+                                 std::vector<std::string>& resp) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "errno = " << ec << ", \""
+                                         << ec.message() << "\"";
+                        return; // no links found for this pcie slot
+                    }
 
-            // Update switch links
-            updatePCIeSlotsSwitchLinks(asyncResp, dbusProperties, objPath);
+                    for (auto& linkPash : resp)
+                    {
+                        if (linkPash == (objPath + "/processor_link"))
+                        {
+                            // update processor links
+                            updatePCIeSlotsProcessorLinks(
+                                asyncResp, dbusProperties, objPath);
+                            return;
+                        }
+                        if (linkPash == (objPath + "/fabric_link"))
+                        {
+                            // Update switch links
+                            updatePCIeSlotsSwitchLinks(asyncResp,
+                                                       dbusProperties, objPath);
+                            return;
+                        }
+                    }
+
+                    // No link found
+                    updatePCIeSlotsNoLinks(asyncResp, dbusProperties);
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", objPath,
+                1, std::array<const char*, 0>{});
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
@@ -439,20 +632,11 @@ inline void requestPcieSlotsRoutes(App& app)
                              object : subtree)
                     {
                         const std::string& path = object.first;
-                        const std::vector<
-                            std::pair<std::string, std::vector<std::string>>>&
-                            connectionNames = object.second;
                         sdbusplus::message::object_path objPath(path);
                         if (objPath.filename() != chassisId)
                         {
                             continue;
                         }
-                        if (connectionNames.size() < 1)
-                        {
-                            continue;
-                        }
-                        const std::string& connectionName =
-                            connectionNames[0].first;
                         // Chassis pcieslot properties
                         asyncResp->res.jsonValue["@odata.type"] =
                             "#PCIeSlots.v1_5_0.PCIeSlots";
@@ -463,10 +647,10 @@ inline void requestPcieSlotsRoutes(App& app)
                             "PCIeSlots for " + chassisId;
                         // Get chassis pcieSlots
                         crow::connections::systemBus->async_method_call(
-                            [asyncResp, chassisId(std::string(chassisId)),
-                             connectionName](
+                            [asyncResp, chassisId(std::string(chassisId))](
                                 const boost::system::error_code ec,
-                                const std::vector<std::string>& pcieSlotList) {
+                                const crow::openbmc_mapper::GetSubTreeType&
+                                    pcieSlotSubtree) {
                                 if (ec)
                                 {
                                     BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -474,16 +658,31 @@ inline void requestPcieSlotsRoutes(App& app)
                                     return;
                                 }
                                 // Update the pcieslots
-                                for (const std::string& pcieslot : pcieSlotList)
+                                for (const std::pair<
+                                         std::string,
+                                         std::vector<std::pair<
+                                             std::string,
+                                             std::vector<std::string>>>>&
+                                         object : pcieSlotSubtree)
                                 {
+                                    const std::string& pcieslot = object.first;
+                                    const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>&
+                                        connectionNames = object.second;
+                                    if (connectionNames.size() < 1)
+                                    {
+                                        continue;
+                                    }
+                                    const std::string& connectionName =
+                                        connectionNames[0].first;
                                     updatePCIeSlots(asyncResp, connectionName,
                                                     pcieslot, chassisId);
                                 }
                             },
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
-                            "xyz.openbmc_project.ObjectMapper",
-                            "GetSubTreePaths", path + "/", 0, pcieslotIntf);
+                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                            path + "/", 0, pcieslotIntf);
                         return;
                     }
                     // Couldn't find an object with that name. return an error
