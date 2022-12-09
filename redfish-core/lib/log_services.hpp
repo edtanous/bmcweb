@@ -1349,10 +1349,12 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                 eventLog["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                         "/LogServices/EventLog";
                 logServiceArray.push_back(std::move(eventLog));
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
                 nlohmann::json::object_t selLog;
                 selLog["@odata.id"] =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/SEL";
                 logServiceArray.push_back(std::move(selLog));
+#endif
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
                 nlohmann::json::object_t dumpLog;
                 dumpLog["@odata.id"] =

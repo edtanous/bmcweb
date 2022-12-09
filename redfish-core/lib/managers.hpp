@@ -3877,7 +3877,7 @@ inline void requestRoutesManagerCollection(App& app)
                     {
                         sdbusplus::message::object_path path(object);
                         std::string leaf = path.filename();
-                        if (leaf.empty())
+                        if (leaf.empty() || leaf == PLATFORMBMCID)
                         {
                             continue;
                         }
