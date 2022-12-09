@@ -3021,7 +3021,9 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.jsonValue["Id"] = PLATFORMSYSTEMID;
             asyncResp->res.jsonValue["SystemType"] = "Physical";
             asyncResp->res.jsonValue["Description"] = "Computer System";
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["ProcessorSummary"]["Count"] = 0;
+#endif //#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["ProcessorSummary"]["Status"]["State"] =
                 "Disabled";
             asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] =
@@ -3035,6 +3037,7 @@ inline void requestRoutesSystems(App& app)
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors";
             asyncResp->res.jsonValue["Memory"]["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["Storage"]["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
 
@@ -3045,6 +3048,7 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"]
                                     ["@Redfish.ActionInfo"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
+#endif
 
             asyncResp->res.jsonValue["LogServices"]["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices";
@@ -3062,6 +3066,7 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
             // Fill in SerialConsole info
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
                 15;
             asyncResp->res
@@ -3074,6 +3079,7 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res
                 .jsonValue["SerialConsole"]["SSH"]["HotKeySequenceDisplay"] =
                 "Press ~. to exit console";
+#endif // BMCWEB_ENABLE_HOST_OS_FEATURE
 
 #ifdef BMCWEB_ENABLE_KVM
             // Fill in GraphicalConsole info
@@ -3125,18 +3131,24 @@ inline void requestRoutesSystems(App& app)
             getIndicatorLedState(asyncResp);
             getComputerSystem(asyncResp, health);
             getHostState(asyncResp);
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             getBootProperties(asyncResp);
             getBootProgress(asyncResp);
             getBootProgressLastStateTime(asyncResp);
+#endif //BMCWEB_ENABLE_HOST_OS_FEATURE
             getPCIeDeviceList(asyncResp, "PCIeDevices");
             getHostWatchdogTimer(asyncResp);
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             getPowerRestorePolicy(asyncResp);
             getAutomaticRetry(asyncResp);
+#endif //BMCWEB_ENABLE_HOST_OS_FEATURE
             getLastResetTime(asyncResp);
 #ifdef BMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE
             getProvisioningStatus(asyncResp);
-#endif
+#endif //BMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             getTrustedModuleRequiredToBoot(asyncResp);
+#endif
             getPowerMode(asyncResp);
             getIdlePowerSaver(asyncResp);
         });
@@ -3188,7 +3200,9 @@ inline void requestRoutesSystems(App& app)
                         "IndicatorLED", indicatorLed,
                         "LocationIndicatorActive", locationIndicatorActive,
                         "AssetTag", assetTag,
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
                         "PowerRestorePolicy", powerRestorePolicy,
+#endif
                         "PowerMode", powerMode,
                         "HostWatchdogTimer/FunctionEnabled", wdtEnable,
                         "HostWatchdogTimer/TimeoutAction", wdtTimeOutAction,
@@ -3249,11 +3263,12 @@ inline void requestRoutesSystems(App& app)
                     "299 - \"IndicatorLED is deprecated. Use "
                     "LocationIndicatorActive instead.\"");
             }
-
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             if (powerRestorePolicy)
             {
                 setPowerRestorePolicy(asyncResp, *powerRestorePolicy);
             }
+#endif
 
             if (powerMode)
             {
