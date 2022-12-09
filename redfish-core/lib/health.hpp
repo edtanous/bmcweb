@@ -919,18 +919,16 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
         ServiceQueryingResult nextMove = SERVICE_ERROR_STOP;
         if (ec)
         {
-            BMCWEB_LOG_ERROR
+            BMCWEB_LOG_WARNING
                 << "Failed to get manager service for object path '" << objPath
-                << "' implementing the interface '" << interface << "', ";
-            printErrno(ec);
+                << "' implementing the interface '" << interface << "'";
             nextMove = SERVICE_ERROR_SKIP;
         }
         else if (result.size() == 0)
         {
-            // TODO: behave appropriately depending on the state
-            BMCWEB_LOG_ERROR << "No managers found for object path '" << objPath
-                             << "' implementing the interface '"
-                             << interface << "'";
+            BMCWEB_LOG_WARNING << "No managers found for object path '"
+                               << objPath << "' implementing the interface '"
+                               << interface << "'";
             nextMove = SERVICE_ERROR_SKIP;
         }
         else if (result.size() > 1)
@@ -1114,7 +1112,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                     {
                         self->state = ROOT_Q_HEALTH;
                         self->proceedWithCurrentNodeHealth(
-                            self->assumedHealthWhenMissing);
+                            self->assumedHealthWhenMissing, objPath);
                     }
                     else if (self->state == ROOT_Q_ASSOCS_SERVICE)
                     {
