@@ -122,6 +122,11 @@ static const Message* getMessage(const std::string_view& messageID)
         return getMessageFromRegistry(
             messageKey, std::span<const MessageEntry>(openbmc::registry));
     }
+    if (std::string(resource_event::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(resource_event::registry));
+    }
     return nullptr;
 }
 
@@ -5427,13 +5432,12 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                         "XID Log Entries";
                                     asyncResp->res.jsonValue["Description"] =
                                         "Collection of XID Log Entries";
+                                    asyncResp->res.jsonValue["Members@odata.count"] = 0;
 
                                     BMCWEB_LOG_DEBUG
                                         << "Namespace: " << chassisName
                                         << "_XID";
 
-                                    using GetObjectType =
-                                        std::vector<std::string>;
 
                                     // DBus implementation of EventLog/Entries
                                     // Make call to Logging Service to find all
@@ -5442,8 +5446,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                         [asyncResp,
                                          chassisId(std::string(chassisId))](
                                             const boost::system::error_code ec,
-                                            const GetObjectType&
-                                                entryCollection) {
+                                            const GetManagedObjectsType& resp) {
                                             if (ec)
                                             {
                                                 // TODO Handle for specific
@@ -5456,397 +5459,214 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                 return;
                                             }
 
+                                            const uint32_t*id = nullptr;
+                                            std::time_t timestamp{};
+                                            std::time_t updateTimestamp{};
+                                            const std::string* severity = nullptr;
+                                            const std::string* message = nullptr;
+                                            const std::string* filePath = nullptr;
+                                            bool resolved = false;
+                                            const std::string* resolution = nullptr;
+                                            const std::vector< std:: string>* additionalDataRaw = nullptr;
+
                                             nlohmann::json& entriesArray =
                                                 asyncResp->res
                                                     .jsonValue["Members"];
                                             entriesArray =
                                                 nlohmann::json::array();
 
-                                            for (const std::string& entryID :
-                                                 entryCollection)
+                                            for (auto& objectPath : resp)
                                             {
+                                                nlohmann::json thisEntry = nlohmann::json::object();
 
-                                                BMCWEB_LOG_DEBUG
-                                                    << "Found XID log entry: "
-                                                    << entryID;
+                                                for (auto& interfaceMap : objectPath.second)
+                                                {
+                                                    if (interfaceMap.first ==
+                                                        "xyz.openbmc_project.Logging.Entry")
+                                                        {
+                                                            nlohmann::json thisEntry = nlohmann::json::object();
 
-                                                // DBus implementation of
-                                                // EventLog/Entries Make call to
-                                                // Logging Service to find all
-                                                // log entry objects
-                                                crow::connections::
-                                                    systemBus
-                                                        ->async_method_call(
-                                                            [asyncResp, entryID](const boost::
-                                                                                     system::error_code
-                                                                                         ec,
-                                                                                 const GetManagedPropertyType&
-                                                                                     resp) {
-                                                                if (ec.value() ==
-                                                                    EBADR)
+                                                            for (auto& propertyMap : interfaceMap.second)
+                                                            {
+                                                                if (propertyMap.first == "Id")
                                                                 {
-                                                                    BMCWEB_LOG_ERROR
-                                                                        << "EventLogEntry (DBus) resp_handler got error "
-                                                                        << ec;
-                                                                    messages::resourceNotFound(
-                                                                        asyncResp
-                                                                            ->res,
-                                                                        "EventLogEntry",
-                                                                        entryID);
-                                                                    return;
+                                                                    id = std::get_if<uint32_t>(&propertyMap.second);
                                                                 }
-                                                                if (ec)
+                                                                else if (
+                                                                    propertyMap.first =="Timestamp")
                                                                 {
-                                                                    BMCWEB_LOG_ERROR
-                                                                        << "EventLogEntry (DBus) resp_handler got error "
-                                                                        << ec;
-                                                                    messages::internalError(
-                                                                        asyncResp
-                                                                            ->res);
-                                                                    return;
-                                                                }
-
-                                                                nlohmann::json&
-                                                                    entriesArray =
-                                                                        asyncResp
-                                                                            ->res
-                                                                            .jsonValue
-                                                                                ["Members"];
-
-                                                                nlohmann::json thisEntry =
-                                                                    nlohmann::json::
-                                                                        object();
-
-                                                                const uint32_t*
-                                                                    id =
-                                                                        nullptr;
-                                                                std::time_t
-                                                                    timestamp{};
-                                                                std::time_t
-                                                                    updateTimestamp{};
-                                                                const std::string*
-                                                                    severity =
-                                                                        nullptr;
-                                                                const std::string*
-                                                                    message =
-                                                                        nullptr;
-                                                                const std::string*
-                                                                    filePath =
-                                                                        nullptr;
-                                                                bool resolved =
-                                                                    false;
-                                                                const std::string*
-                                                                    resolution =
-                                                                        nullptr;
-                                                                const std::vector<
-                                                                    std::
-                                                                        string>*
-                                                                    additionalDataRaw =
-                                                                        nullptr;
-
-                                                                for (
-                                                                    auto&
-                                                                        propertyMap :
-                                                                    resp)
-                                                                {
-                                                                    if (propertyMap
-                                                                            .first ==
-                                                                        "Id")
-                                                                    {
-                                                                        id = std::get_if<
-                                                                            uint32_t>(
-                                                                            &propertyMap
-                                                                                 .second);
-                                                                    }
-                                                                    else if (
-                                                                        propertyMap
-                                                                            .first ==
-                                                                        "Timestamp")
-                                                                    {
-                                                                        const uint64_t* millisTimeStamp =
-                                                                            std::get_if<
-                                                                                uint64_t>(
-                                                                                &propertyMap
-                                                                                     .second);
-                                                                        if (millisTimeStamp !=
-                                                                            nullptr)
-                                                                        {
-                                                                            timestamp = redfish::
-                                                                                time_utils::getTimestamp(
-                                                                                    *millisTimeStamp);
-                                                                        }
-                                                                    }
-                                                                    else if (
-                                                                        propertyMap
-                                                                            .first ==
-                                                                        "UpdateTimestamp")
-                                                                    {
-                                                                        const uint64_t* millisTimeStamp =
-                                                                            std::get_if<
-                                                                                uint64_t>(
-                                                                                &propertyMap
-                                                                                     .second);
-                                                                        if (millisTimeStamp !=
-                                                                            nullptr)
-                                                                        {
-                                                                            updateTimestamp =
-                                                                                redfish::time_utils::
-                                                                                    getTimestamp(
-                                                                                        *millisTimeStamp);
-                                                                        }
-                                                                    }
-                                                                    else if (
-                                                                        propertyMap
-                                                                            .first ==
-                                                                        "Severity")
-                                                                    {
-                                                                        severity = std::get_if<
-                                                                            std::
-                                                                                string>(
-                                                                            &propertyMap
-                                                                                 .second);
-                                                                    }
-                                                                    else if (
-                                                                        propertyMap
-                                                                            .first ==
-                                                                        "Message")
-                                                                    {
-                                                                        message = std::get_if<
-                                                                            std::
-                                                                                string>(
-                                                                            &propertyMap
-                                                                                 .second);
-                                                                    }
-                                                                    else if (
-                                                                        propertyMap
-                                                                            .first ==
-                                                                        "Resolved")
-                                                                    {
-                                                                        const bool* resolveptr =
-                                                                            std::get_if<
-                                                                                bool>(
-                                                                                &propertyMap
-                                                                                     .second);
-                                                                        if (resolveptr ==
-                                                                            nullptr)
-                                                                        {
-                                                                            messages::internalError(
-                                                                                asyncResp
-                                                                                    ->res);
-                                                                            return;
-                                                                        }
-                                                                        resolved =
-                                                                            *resolveptr;
-                                                                    }
-                                                                    else if (
-                                                                        propertyMap
-                                                                            .first ==
-                                                                        "Resolution")
-                                                                    {
-                                                                        resolution = std::get_if<
-                                                                            std::
-                                                                                string>(
-                                                                            &propertyMap
-                                                                                 .second);
-                                                                    }
-                                                                    else if (
-                                                                        propertyMap
-                                                                            .first ==
-                                                                        "AdditionalData")
-                                                                    {
-                                                                        additionalDataRaw =
-                                                                            std::get_if<
-                                                                                std::vector<
-                                                                                    std::
-                                                                                        string>>(
-                                                                                &propertyMap
-                                                                                     .second);
-                                                                    }
-                                                                    else if (
-                                                                        propertyMap
-                                                                            .first ==
-                                                                        "Path")
-                                                                    {
-                                                                        filePath = std::get_if<
-                                                                            std::
-                                                                                string>(
-                                                                            &propertyMap
-                                                                                 .second);
-                                                                    }
-                                                                }
-                                                                if (id ==
-                                                                        nullptr ||
-                                                                    message ==
-                                                                        nullptr ||
-                                                                    severity ==
+                                                                    const uint64_t* millisTimeStamp =
+                                                                        std::get_if<uint64_t>(&propertyMap.second);
+                                                                    if (millisTimeStamp !=
                                                                         nullptr)
-                                                                {
-                                                                    messages::internalError(
-                                                                        asyncResp
-                                                                            ->res);
-                                                                    return;
-                                                                }
-
-                                                                // Determine if
-                                                                // it's a
-                                                                // message
-                                                                // registry
-                                                                // format or
-                                                                // not.
-                                                                bool
-                                                                    isMessageRegistry =
-                                                                        false;
-                                                                std::string
-                                                                    messageId;
-                                                                std::string
-                                                                    messageArgs;
-                                                                std::string
-                                                                    originOfCondition;
-                                                                if (additionalDataRaw !=
-                                                                    nullptr)
-                                                                {
-                                                                    AdditionalData
-                                                                        additional(
-                                                                            *additionalDataRaw);
-                                                                    if (additional
-                                                                            .count(
-                                                                                "REDFISH_MESSAGE_ID") >
-                                                                        0)
                                                                     {
-                                                                        isMessageRegistry =
-                                                                            true;
-                                                                        messageId = additional
-                                                                            ["REDFISH_MESSAGE_ID"];
-                                                                        BMCWEB_LOG_DEBUG
-                                                                            << "MessageId: ["
-                                                                            << messageId
-                                                                            << "]";
-
-                                                                        if (additional
-                                                                                .count(
-                                                                                    "REDFISH_MESSAGE_ARGS") >
-                                                                            0)
-                                                                        {
-                                                                            messageArgs = additional
-                                                                                ["REDFISH_MESSAGE_ARGS"];
-                                                                        }
-                                                                    }
-                                                                    if (additional
-                                                                            .count(
-                                                                                "REDFISH_ORIGIN_OF_CONDITION") >
-                                                                        0)
-                                                                    {
-                                                                        originOfCondition =
-                                                                            additional
-                                                                                ["REDFISH_ORIGIN_OF_CONDITION"];
+                                                                        timestamp = 
+                                                                            redfish::time_utils::getTimestamp(*millisTimeStamp);
                                                                     }
                                                                 }
-                                                                if (isMessageRegistry)
+                                                                else if (propertyMap .first == "UpdateTimestamp")
                                                                 {
-                                                                    message_registries::generateMessageRegistry(
-                                                                        thisEntry,
-                                                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                                                        "/LogServices/"
-                                                                        "EventLog/Entries/",
-                                                                        "v1_9_0",
-                                                                        std::to_string(
-                                                                            *id),
-                                                                        "System Event Log Entry",
-                                                                        redfish::time_utils::
-                                                                            getDateTimeStdtime(
-                                                                                timestamp),
-                                                                        messageId,
-                                                                        messageArgs,
-                                                                        *resolution,
-                                                                        resolved,
-                                                                        *severity);
-
-                                                                    origin_utils::convertDbusObjectToOriginOfCondition(
-                                                                        originOfCondition,
-                                                                        asyncResp,
-                                                                        std::to_string(
-                                                                            *id));
+                                                                    const uint64_t* millisTimeStamp = 
+                                                                        std::get_if<uint64_t>(&propertyMap.second);
+                                                                    if (millisTimeStamp != nullptr)
+                                                                    {
+                                                                        updateTimestamp =
+                                                                            redfish::time_utils::getTimestamp(*millisTimeStamp);
+                                                                    }
                                                                 }
+                                                                else if (propertyMap.first == "Severity")
+                                                                {
+                                                                    severity = std::get_if<std::string>(&propertyMap.second);
+                                                                }
+                                                                else if (propertyMap.first == "Message")
+                                                                {
+                                                                    message = std::get_if<std::string>(&propertyMap.second);
+                                                                }
+                                                                else if (
+                                                                    propertyMap.first == "Resolved")
+                                                                {
+                                                                    const bool* resolveptr = std::get_if<bool>(&propertyMap.second);
+                                                                    if (resolveptr == nullptr)
+                                                                    {
+                                                                        messages::internalError(asyncResp->res);
+                                                                        return;
+                                                                    }
+                                                                    resolved = *resolveptr;
+                                                                }
+                                                                else if (
+                                                                    propertyMap.first == "Resolution")
+                                                                {
+                                                                    resolution = std::get_if<std::string>(&propertyMap.second);
+                                                                }
+                                                                else if (
+                                                                    propertyMap.first == "AdditionalData")
+                                                                {
+                                                                    additionalDataRaw = std::get_if<std::vector<std::string>>(&propertyMap.second);
+                                                                }
+                                                                else if (propertyMap.first == "Path")
+                                                                {
+                                                                    filePath = std::get_if< std:: string>( &propertyMap .second);
+                                                                }
+                                                            }
+                                                            if (id == nullptr ||
+                                                                message == nullptr ||
+                                                                severity == nullptr)
+                                                            {
+                                                                messages::internalError(asyncResp ->res);
+                                                                return;
+                                                            }
 
-                                                                // generateMessageRegistry
-                                                                // will not
-                                                                // create the
-                                                                // entry if the
-                                                                // messageId
-                                                                // can't be
-                                                                // found in
-                                                                // message
-                                                                // registries.
-                                                                // So check the
-                                                                // entry 'Id'
-                                                                // anyway to
-                                                                // cover that
-                                                                // case.
-                                                                if (thisEntry["Id"]
-                                                                        .size() ==
+                                                            // Determine if
+                                                            // it's a
+                                                            // message
+                                                            // registry
+                                                            // format or
+                                                            // not.
+                                                            bool isMessageRegistry = false;
+                                                            std::string messageId;
+                                                            std::string messageArgs;
+                                                            std::string originOfCondition;
+                                                            if (additionalDataRaw != nullptr)
+                                                            {
+                                                                AdditionalData additional(*additionalDataRaw);
+                                                                if (additional.count("REDFISH_MESSAGE_ID") > 0)
+                                                                {
+                                                                    isMessageRegistry = true;
+                                                                    messageId = additional["REDFISH_MESSAGE_ID"];
+                                                                    BMCWEB_LOG_DEBUG << "MessageId: [" << messageId << "]";
+
+                                                                    if (additional
+                                                                            .count(
+                                                                                "REDFISH_MESSAGE_ARGS") >
+                                                                        0)
+                                                                    {
+                                                                        messageArgs = additional
+                                                                            ["REDFISH_MESSAGE_ARGS"];
+                                                                    }
+                                                                }
+                                                                if (additional
+                                                                        .count(
+                                                                            "REDFISH_ORIGIN_OF_CONDITION") >
                                                                     0)
                                                                 {
-                                                                    thisEntry
-                                                                        ["@odata.type"] =
-                                                                            "#LogEntry.v1_9_0.LogEntry";
-                                                                    thisEntry["@odata.id"] =
-                                                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                                                        "/LogServices/"
-                                                                        "EventLog/"
-                                                                        "Entries/" +
-                                                                        std::to_string(
-                                                                            *id);
-                                                                    thisEntry
-                                                                        ["Name"] =
-                                                                            "System Event Log Entry";
-                                                                    thisEntry["Id"] =
-                                                                        std::to_string(
-                                                                            *id);
-                                                                    thisEntry
-                                                                        ["Message"] =
-                                                                            *message;
-                                                                    thisEntry
-                                                                        ["Resolved"] =
-                                                                            resolved;
-                                                                    thisEntry
-                                                                        ["EntryType"] =
-                                                                            "Event";
-                                                                    thisEntry["Severity"] =
-                                                                        translateSeverityDbusToRedfish(
-                                                                            *severity);
-                                                                    thisEntry["Created"] =
-                                                                        redfish::time_utils::
-                                                                            getDateTimeStdtime(
-                                                                                timestamp);
-                                                                    thisEntry["Modified"] =
-                                                                        redfish::time_utils::
-                                                                            getDateTimeStdtime(
-                                                                                updateTimestamp);
+                                                                    originOfCondition =
+                                                                        additional
+                                                                            ["REDFISH_ORIGIN_OF_CONDITION"];
                                                                 }
-                                                                if (filePath !=
-                                                                    nullptr)
-                                                                {
-                                                                    thisEntry["AdditionalDataURI"] =
-                                                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                                                        "/LogServices/"
-                                                                        "EventLog/"
-                                                                        "Entries/" +
-                                                                        std::to_string(
-                                                                            *id) +
-                                                                        "/attachment";
-                                                                }
-                                                                entriesArray
-                                                                    .push_back(
-                                                                        thisEntry);
-                                                                asyncResp->res.jsonValue
-                                                                    ["Members@odata.count"] =
-                                                                    entriesArray
-                                                                        .size();
-                                                            },
-                                                            "xyz.openbmc_project.Logging",
-                                                            entryID,
-                                                            "org.freedesktop.DBus.Properties",
-                                                            "GetAll", "");
+                                                            }
+                                                            if (isMessageRegistry)
+                                                            {
+                                                                message_registries::generateMessageRegistry(
+                                                                    thisEntry,
+                                                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                                                    "/LogServices/"
+                                                                    "EventLog/Entries/",
+                                                                    "v1_9_0",
+                                                                    std::to_string(
+                                                                        *id),
+                                                                    "System Event Log Entry",
+                                                                    redfish::time_utils::
+                                                                        getDateTimeStdtime(
+                                                                            timestamp),
+                                                                    messageId,
+                                                                    messageArgs,
+                                                                    *resolution,
+                                                                    resolved,
+                                                                    *severity);
+
+                                                                origin_utils::convertDbusObjectToOriginOfCondition(
+                                                                    originOfCondition,
+                                                                    asyncResp,
+                                                                    std::to_string(*id));
+                                                            }
+
+                                                            // generateMessageRegistry
+                                                            // will not
+                                                            // create the
+                                                            // entry if the
+                                                            // messageId
+                                                            // can't be
+                                                            // found in
+                                                            // message
+                                                            // registries.
+                                                            // So check the
+                                                            // entry 'Id'
+                                                            // anyway to
+                                                            // cover that
+                                                            // case.
+                                                            if (thisEntry["Id"].size() == 0)
+                                                            {
+                                                                thisEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+                                                                thisEntry["@odata.id"] =
+                                                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                                                    "/LogServices/"
+                                                                    "EventLog/"
+                                                                    "Entries/" +
+                                                                    std::to_string(*id);
+                                                                thisEntry["Name"] = "System Event Log Entry";
+                                                                thisEntry["Id"] = std::to_string(*id);
+                                                                thisEntry["Message"] = *message;
+                                                                thisEntry["Resolved"] = resolved;
+                                                                thisEntry["EntryType"] = "Event";
+                                                                thisEntry["Severity"] = translateSeverityDbusToRedfish(*severity);
+                                                                thisEntry["Created"] = redfish::time_utils::getDateTimeStdtime(timestamp);
+                                                                thisEntry["Modified"] = redfish::time_utils::getDateTimeStdtime(updateTimestamp);
+                                                            }
+                                                            if (filePath != nullptr)
+                                                            {
+                                                                thisEntry["AdditionalDataURI"] =
+                                                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                                                    "/LogServices/"
+                                                                    "EventLog/"
+                                                                    "Entries/" +
+                                                                    std::to_string(
+                                                                        *id) +
+                                                                    "/attachment";
+                                                            }
+                                                            entriesArray .push_back(thisEntry);
+                                                            asyncResp->res.jsonValue["Members@odata.count"] = entriesArray.size();
+                                                        }
+                                                }
                                             }
                                             std::sort(
                                                 entriesArray.begin(),
@@ -5862,7 +5682,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                         "/xyz/openbmc_project/logging",
                                         "xyz.openbmc_project.Logging.Namespace",
                                         "GetAll", chassisName + "_XID",
-                                        "xyz.openbmc_project.Logging.Entry.Level.Error");
+                                        "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Both");
                                     return;
                                 });
                             return;
