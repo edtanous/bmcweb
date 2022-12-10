@@ -811,11 +811,13 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["Name"] = chassisId;
     asyncResp->res.jsonValue["Id"] = chassisId;
     asyncResp->res.jsonValue["ChassisType"] = "RackMount";
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Actions"]["#Chassis.Reset"]["target"] =
         "/redfish/v1/Chassis/" + chassisId + "/Actions/Chassis.Reset";
     asyncResp->res
         .jsonValue["Actions"]["#Chassis.Reset"]["@Redfish.ActionInfo"] =
         "/redfish/v1/Chassis/" + chassisId + "/ResetActionInfo";
+#endif
     asyncResp->res.jsonValue["PCIeDevices"] = {
         {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/PCIeDevices"}};
 

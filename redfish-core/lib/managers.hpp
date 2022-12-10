@@ -3401,6 +3401,30 @@ inline void requestRoutesManager(App& app)
                 "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
             resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+            nlohmann::json& oemActions =
+                asyncResp->res.jsonValue["Actions"]["Oem"];
+            nlohmann::json& oemActionsNvidia = oemActions["Nvidia"];
+
+            oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["target"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Actions/Oem/NvidiaManager.SyncOOBRawCommand";
+            oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]
+                            ["@Redfish.ActionInfo"] =
+                                "/redfish/v1/Managers/" PLATFORMBMCID
+                                "/Oem/Nvidia/SyncOOBRawCommandActionInfo";
+
+            oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]["target"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand";
+            oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]
+                            ["@Redfish.ActionInfo"] =
+                                "/redfish/v1/Managers/" PLATFORMBMCID
+                                "/Oem/Nvidia/AsyncOOBRawCommandActionInfo";
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
             std::pair<std::string, std::string> redfishDateTimeOffset =
                 redfish::time_utils::getDateTimeOffsetNow();
 

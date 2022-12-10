@@ -114,8 +114,10 @@ class RedfishService
         // requestRoutesManagerDiagnosticData(app);
         requestRoutesChassisCollection(app);
         requestRoutesChassis(app);
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesChassisResetAction(app);
         requestRoutesChassisResetActionInfo(app);
+#endif
         requestRoutesEnvironmentMetrics(app);
         requestRoutesProcessorEnvironmentMetrics(app);
         requestRoutesMemoryEnvironmentMetrics(app);
@@ -225,8 +227,10 @@ class RedfishService
 
         requestRoutesSystemsCollection(app);
         requestRoutesSystems(app);
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesSystemActionsReset(app);
         requestRoutesSystemResetActionInfo(app);
+#endif
 #ifdef BMCWEB_ENABLE_BIOS
         requestRoutesBiosService(app);
         requestRoutesBiosSettings(app);
