@@ -3284,6 +3284,7 @@ inline void requestRoutesManager(App& app)
 
             // default oem data
             nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             nlohmann::json& oemOpenbmc = oem["OpenBmc"];
             oem["@odata.type"] = "#OemManager.Oem";
             oem["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "/Oem";
@@ -3294,6 +3295,7 @@ inline void requestRoutesManager(App& app)
             oemOpenbmc["Certificates"] = {{"@odata.id",
                                            "/redfish/v1/Managers/" PLATFORMBMCID
                                            "/Truststore/Certificates"}};
+#endif
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
