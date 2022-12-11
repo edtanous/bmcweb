@@ -358,3 +358,4 @@ option('ntp', type : 'feature', value : 'enabled', description : 'Enable/disable
 option('patch-ssh', type : 'feature', value : 'enabled', description : 'Enable/disable ssh service support')
 option('dhcp-configuration-update', type : 'feature', value : 'enabled', description : 'Enable/disable dhcp configuration support.')
 option('nic-configuration-update', type : 'feature', value : 'enabled', description : 'Enable/disable nic configuration support.')
+option('command-shell', type : 'feature', value : 'disabled', description : 'Enable/disable IPMI SOL.')

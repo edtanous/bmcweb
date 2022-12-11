@@ -98,7 +98,7 @@ feature_map = {
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
   'tls-auth-opt-in'                             : '-DBMCWEB_ENABLE_TLS_AUTH_OPT_IN',
   'manufacturing-test'                          : '-DBMCWEB_ENABLE_MFG_TEST_API',
-  'host-iface'                          	: '-DBMCWEB_ENABLE_HOST_IFACE',
+  'host-iface'                                	: '-DBMCWEB_ENABLE_HOST_IFACE',
   'array-bootprogress'                          : '-DBMCWEB_ARRAY_BOOT_PROGRESS',
   'bios'                                        : '-DBMCWEB_ENABLE_BIOS',
   'ipmi'                                        : '-DBMCWEB_ENABLE_IPMI',
@@ -107,6 +107,7 @@ feature_map = {
   'dhcp-configuration-update'                   : '-DBMCWEB_DHCP_CONFIGURATION_UPDATE',
   'host-os-features'                            : '-DBMCWEB_ENABLE_HOST_OS_FEATURE',
   'nic-configuration-update'                    : '-DBMCWEB_NIC_CONFIGURATION_UPDATE',  
+  'command-shell'                               : '-DBMCWEB_ENABLE_IPMI_SOL',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

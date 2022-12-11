@@ -3101,6 +3101,25 @@ inline void
 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
+inline void getIsCommandShellEnable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    sdbusplus::asio::getProperty<bool>(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings", 
+        "/xyz/openbmc_project/ipmi/sol/eth0",
+        "xyz.openbmc_project.Ipmi.SOL", "Enable",
+        [asyncResp](const boost::system::error_code ec,
+                    const bool& isEnable) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for getIsCommandShellEnable";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res
+                .jsonValue["CommandShell"]["ServiceEnabled"] = isEnable;
+    });
+}
+
 inline void requestRoutesManager(App& app)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
@@ -3422,7 +3441,14 @@ inline void requestRoutesManager(App& app)
             auto health = std::make_shared<HealthPopulate>(asyncResp);
             health->isManagersHealth = true;
             health->populate();
+#ifdef BMCWEB_ENABLE_IPMI_SOL
+            asyncResp->res.jsonValue["CommandShell"]["MaxConcurrentSessions"] =
+                1;
+            asyncResp->res.jsonValue["CommandShell"]["ConnectTypesSupported"] =
+                {"SSH"};
 
+            getIsCommandShellEnable(asyncResp);
+#endif
             sw_util::populateSoftwareInformation(asyncResp, sw_util::bmcPurpose,
                                                  "FirmwareVersion", true);
 
