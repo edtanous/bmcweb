@@ -201,17 +201,21 @@ def version_sort_key(key):
     # Decription of this class calls it "Version numbering for anarchists and
     # software realists.".  That seems like exactly what we need here.
 
-    if not any(char.isdigit() for char in key):
-        split_tup = os.path.splitext(key)
-        key = split_tup[0] + ".v0_0_0" + split_tup[1]
-
     # special case some files that don't seem to follow the naming convention,
     # and cause sort problems.  These need brought up with DMTF TODO(Ed)
     if key == "odata.4.0.0.json":
         key = "odata.v4_0_0.json"
     if key == "redfish-schema.1.0.0.json":
         key = "redfish-schema.v1_0_0.json"
-
+    
+    if not any(char.isdigit() for char in key):
+        key = "v0.0.0"
+    else:
+        split_tup = key.split(".")
+        if len(split_tup) > 2:
+            key = split_tup[1].replace("_", ".")
+        else:
+            key = "v0.0.0"
     return parse(key)
 
 
@@ -268,13 +272,13 @@ for zip_filepath in zip_ref.namelist():
 # sort the json files by version
 for key, value in json_schema_files.items():
     value.sort(key=version_sort_key, reverse=True)
-
 # Create a dictionary ordered by schema name
 json_schema_files = OrderedDict(
-    sorted(json_schema_files.items(), key=lambda x: version_sort_key(x[0]))
+    # sorted(json_schema_files.items(), key=lambda x: version_sort_key(x[0]))
+    sorted(json_schema_files.items())
 )
-
-csdl_filenames.sort(key=version_sort_key)
+# csdl_filenames.sort(key=version_sort_key)
+csdl_filenames.sort()
 with open(metadata_index_path, "w") as metadata_index:
 
     metadata_index.write('<?xml version="1.0" encoding="UTF-8"?>\n')
