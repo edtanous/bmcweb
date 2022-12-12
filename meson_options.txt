@@ -380,12 +380,12 @@ option('min-digits',
 
 option('min-special-characters',
     type: 'integer',
-    value: 1,
+    value: 0,
     description: 'Minimum number of special characters in the password',
 )
 
 option('min-password-length',
     type: 'integer',
-    value: 1,
+    value: 7,
     description: 'Min password Length',
 )

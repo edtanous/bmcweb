@@ -1203,7 +1203,6 @@ inline void updateUserProperties(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
             if (password)
             {
                 int retval = pamUpdatePassword(username, *password);
-
                 if (retval == PAM_USER_UNKNOWN)
                 {
                     messages::resourceNotFound(asyncResp->res, "ManagerAccount",
@@ -1214,6 +1213,22 @@ inline void updateUserProperties(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                     // If password is invalid
                     messages::propertyValueFormatError(asyncResp->res,
                                                        *password, "Password");
+
+                    std::string resolution =
+                        " Password should be " +
+                        std::to_string(minPasswordLength) +
+                        " character long including " +
+                        std::to_string(minUcaseCharacters) +
+                        " uppercase character, " +
+                        std::to_string(minLcaseCharacters) +
+                        " lower case character, " + std::to_string(minDigits) +
+                        " digit" + " and " + std::to_string(minSpecCharacters) +
+                        " special character.";
+
+                    // update the resolution message and add the password
+                    // policy
+                    redfish::message_registries::updateResolution(
+                        asyncResp, "Password", resolution);
                     BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
                 }
                 else if (retval != PAM_SUCCESS)
@@ -1692,8 +1707,38 @@ inline void handleAccountCollectionPost(
                         return;
                     }
 
-                    if (pamUpdatePassword(username, password) != PAM_SUCCESS)
+                    int retval = pamUpdatePassword(username, password);
+                    BMCWEB_LOG_DEBUG << "pamUpdatePassword retval=" << retval;
+
+                    if (retval != PAM_SUCCESS)
                     {
+                        // Password Invalid
+                        messages::propertyValueFormatError(
+                            asyncResp->res, password, "Password");
+
+                        if (retval == PAM_AUTHTOK_ERR)
+                        {
+
+                            std::string resolution =
+                                "Password should be " +
+                                std::to_string(minPasswordLength) +
+                                " character long including " +
+                                std::to_string(minUcaseCharacters) +
+                                " uppercase character, " +
+                                std::to_string(minLcaseCharacters) +
+                                " lower case character, " +
+                                std::to_string(minDigits) + " digit and " +
+                                std::to_string(minSpecCharacters) +
+                                " special character.";
+
+                            // update the resolution message and add the
+                            // password policy too
+                            redfish::message_registries::updateResolution(
+                                asyncResp, "Password", resolution);
+
+                            BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
+                        }
+
                         // At this point we have a user that's been
                         // created, but the password set
                         // failed.Something is wrong, so delete the user
@@ -1711,10 +1756,6 @@ inline void handleAccountCollectionPost(
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
-
-                                // If password is invalid
-                                messages::propertyValueFormatError(
-                                    asyncResp->res, password, "Password");
                             },
                             "xyz.openbmc_project.User.Manager", userPath,
                             "xyz.openbmc_project.Object.Delete", "Delete");

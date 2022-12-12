@@ -112,5 +112,20 @@ inline bool isMessageIdValid(const std::string_view messageId)
     (void)msg;
     return msg != nullptr;
 }
+
+inline void
+    updateResolution(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                     const std::string& property, std::string resolution)
+{
+    std::string extendInfo = property + "@Message.ExtendedInfo";
+    auto& extendedInfoArr = asyncResp->res.jsonValue[extendInfo];
+    if (extendedInfoArr.size() > 0)
+    {
+        std::string oldResolution = extendedInfoArr[0]["Resolution"];
+        resolution = oldResolution + resolution;
+        extendedInfoArr[0]["Resolution"] = resolution;
+    }
+}
+
 } // namespace message_registries
 } // namespace redfish
