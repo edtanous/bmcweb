@@ -22,9 +22,20 @@ namespace conditions_utils
 
 inline void populateServiceConditions(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    std::string_view chassisId)
+    const std::string& chassisId)
 {
-    bool isDevice = !chassisId.empty();
+    BMCWEB_LOG_DEBUG << "Populating service conditions for device " << chassisId
+                     << "\n";
+    BMCWEB_LOG_DEBUG << "ON REDFISH URI " << asyncResp->res.jsonValue["@odata.id"] << "\n";
+
+    std::string chasId = chassisId;
+    std::string pref = "HGX_";
+    if (boost::starts_with(chassisId, pref))
+    {
+        chasId = chassisId.substr(pref.length());
+    }
+    bool isDevice = !chasId.empty();
+
     if (isDevice)
     {
         if (!asyncResp->res.jsonValue["Status"].contains("Conditions"))
@@ -41,7 +52,7 @@ inline void populateServiceConditions(
         }
     }
     crow::connections::systemBus->async_method_call(
-        [asyncResp{asyncResp}, chassisId(std::string(chassisId)),
+        [asyncResp{asyncResp}, chasId(std::string(chasId)),
          isDevice](const boost::system::error_code ec,
                    const dbus::utility::ManagedObjectType& resp) {
             if (ec)
@@ -135,7 +146,7 @@ inline void populateServiceConditions(
                     {
                         if ((*severity == criticalSev ||
                              *severity == warningSev) &&
-                            messageArgs.find(chassisId) != std::string::npos)
+                            messageArgs.find(chasId) != std::string::npos)
                         {
 
                             origin_utils::convertDbusObjectToOriginOfCondition(
@@ -168,7 +179,8 @@ inline void populateServiceConditions(
             }
         },
         "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        "xyz.openbmc_project.Logging.Namespace", "GetAll", 
+        chasId, "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Both");
 }
 
 } // namespace conditions_utils

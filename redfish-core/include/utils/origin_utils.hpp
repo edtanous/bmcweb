@@ -115,7 +115,7 @@ static void asyncPathConversionChassisAssoc(
     std::string name = objPath.filename();
     if (name.empty())
     {
-        BMCWEB_LOG_ERROR << "File name empty for dbus path: " << path << "\n";
+        BMCWEB_LOG_DEBUG << "File name empty for dbus path: " << path << "\n";
         return;
     }
 
@@ -127,7 +127,10 @@ static void asyncPathConversionChassisAssoc(
                    std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Failed: " << ec << "\n";
+                BMCWEB_LOG_DEBUG << "Failed: " << ec << "\n";
+                BMCWEB_LOG_DEBUG
+                    << "Get Chassis Association failed for path: " << path
+                    << "\n";
                 return;
             }
             std::vector<std::string>* data =
@@ -180,7 +183,9 @@ inline void convertDbusObjectToOriginOfCondition(
     std::string name = objPath.filename();
     if (name.empty())
     {
-        BMCWEB_LOG_ERROR << "File name empty for dbus path: " << path << "\n";
+        BMCWEB_LOG_DEBUG
+            << "Empty OriginOfCondition provided to convertDbusObjectToOriginOfCondition"
+            << "For path: " << path << "\n";
         return;
     }
 
@@ -200,7 +205,8 @@ inline void convertDbusObjectToOriginOfCondition(
                 objects) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Failed: " << ec << "\n";
+                BMCWEB_LOG_DEBUG << "ObjectMapper GetObject Failed on path: " << path << "\n";
+                BMCWEB_LOG_DEBUG << "Failed: " << ec << "\n";
                 return;
             }
             if (objects.empty())
@@ -249,13 +255,7 @@ inline void convertDbusObjectToOriginOfCondition(
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", path,
-        std::array<const char*, 6>{
-            "xyz.openbmc_project.Inventory.Item.Accelerator",
-            "xyz.openbmc_project.Inventory.Item.PCIeDevice",
-            "xyz.openbmc_project.Inventory.Item.Cpu",
-            "xyz.openbmc_project.Inventory.Item.Board",
-            "xyz.openbmc_project.Inventory.Item.Chassis",
-            "xyz.openbmc_project.Inventory.Item.Dimm"});
+        std::array<const char*, 0>());
 }
 
 } // namespace origin_utils

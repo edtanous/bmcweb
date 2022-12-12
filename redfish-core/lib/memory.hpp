@@ -403,7 +403,8 @@ inline void
 #ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     aResp->res.jsonValue[jsonPtr]["Status"]["Health"] = "OK";
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    redfish::conditions_utils::populateServiceConditions(aResp, dimmId);
+    std::string dimmIdStr{dimmId};
+    redfish::conditions_utils::populateServiceConditions(aResp, dimmIdStr);
     const uint16_t* memoryDataWidth = nullptr;
     const size_t* memorySizeInKB = nullptr;
     const std::string* partNumber = nullptr;

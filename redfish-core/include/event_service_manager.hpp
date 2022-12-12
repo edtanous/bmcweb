@@ -1793,11 +1793,6 @@ class EventServiceManager
      */
     void sendEventWithOOC(const std::string& ooc, Event& event)
     {
-        if (ooc.empty())
-        {
-            BMCWEB_LOG_ERROR << "Invalid OriginOfCondition "
-                             << "in AdditionalData property\n";
-        }
         event.originOfCondition = ooc;
         sendEvent(event);
     }
@@ -1828,7 +1823,8 @@ class EventServiceManager
                     std::variant<std::vector<std::string>>& resp) mutable {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "Failed: " << ec << "\n";
+                    BMCWEB_LOG_DEBUG << "Get Association endpoints call failed on path: " << path << "\n";
+                    BMCWEB_LOG_DEBUG << "Failed: " << ec << "\n";
                     return;
                 }
                 std::vector<std::string>* data =
@@ -1894,7 +1890,8 @@ class EventServiceManager
                     std::string, std::vector<std::string>>>& objects) mutable {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "Failed: " << ec << "\n";
+                    BMCWEB_LOG_DEBUG << "GetObject call failed on path: " << path << "\n";
+                    BMCWEB_LOG_DEBUG << "Failed: " << ec << "\n";
                     return;
                 }
                 if (objects.empty())
@@ -1944,13 +1941,7 @@ class EventServiceManager
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetObject", path,
-            std::array<const char*, 6>{
-                "xyz.openbmc_project.Inventory.Item.Accelerator",
-                "xyz.openbmc_project.Inventory.Item.PCIeDevice",
-                "xyz.openbmc_project.Inventory.Item.Cpu",
-                "xyz.openbmc_project.Inventory.Item.Board",
-                "xyz.openbmc_project.Inventory.Item.Chassis",
-                "xyz.openbmc_project.Inventory.Item.Dimm"});
+            std::array<const char*, 0>());
     }
 
     void registerDbusLoggingSignal()
@@ -2130,12 +2121,6 @@ class EventServiceManager
                 {
                     eventServiceOOC(additional["REDFISH_ORIGIN_OF_CONDITION"],
                                     event);
-                }
-                else
-                {
-                    BMCWEB_LOG_ERROR << "No OriginOfCondition provided"
-                                     << "in AdditionalData property\n";
-                    eventServiceOOC(std::string(""), event);
                 }
             }
         };
