@@ -1449,6 +1449,29 @@ inline void requestRoutesEventLogService(App& app)
                     redfishDateTimeOffset.first;
                 asyncResp->res.jsonValue["DateTimeLocalOffset"] =
                     redfishDateTimeOffset.second;
+                
+                // Call Phosphor-logging GetStats method to get
+                // LatestEntryTimestamp and LatestEntryID
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](
+                        const boost::system::error_code ec,
+                            const std::tuple<uint32_t, uint64_t>& reqData) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_ERROR << "Failed to get Data from xyz.openbmc_project.Logging GetStats: "
+                                                    << ec;
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                auto lastTimeStamp = redfish::time_utils::getTimestamp(
+                                                    std::get<1>(reqData));
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] = std::get<0>(reqData);
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryTimeStamp"] = redfish::time_utils::getDateTimeStdtime(lastTimeStamp);
+                            },
+                            "xyz.openbmc_project.Logging",
+                            "/xyz/openbmc_project/logging",
+                            "xyz.openbmc_project.Logging.Namespace",
+                            "GetStats", "all");
 
                 asyncResp->res.jsonValue["Entries"] = {
                     {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -3435,6 +3458,28 @@ inline void
         dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump";
         overWritePolicy = "WrapsWhenFull";
         collectDiagnosticDataSupported = true;
+        // Call Phosphor-logging GetStats method to get
+        // LatestEntryTimestamp and LatestEntryID
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](
+                const boost::system::error_code ec,
+                    const std::tuple<uint32_t, uint64_t>& reqData) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Failed to get Data from xyz.openbmc_project.Logging GetStats: "
+                                            << ec;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        auto lastTimeStamp = redfish::time_utils::getTimestamp(
+                                            std::get<1>(reqData));
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] = std::get<0>(reqData);
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryTimeStamp"] = redfish::time_utils::getDateTimeStdtime(lastTimeStamp);
+                    },
+                    "xyz.openbmc_project.Dump.Manager",
+                    "/xyz/openbmc_project/dump/bmc",
+                    "xyz.openbmc_project.Dump.Misc",
+                    "GetStats");
     }
     else if (dumpType == "FaultLog")
     {
@@ -3448,6 +3493,28 @@ inline void
         dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump";
         overWritePolicy = "WrapsWhenFull";
         collectDiagnosticDataSupported = true;
+        // Call Phosphor-logging GetStats method to get
+        // LatestEntryTimestamp and LatestEntryID
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](
+                const boost::system::error_code ec,
+                    const std::tuple<uint32_t, uint64_t>& reqData) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Failed to get Data from xyz.openbmc_project.Logging GetStats: "
+                                            << ec;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        auto lastTimeStamp = redfish::time_utils::getTimestamp(
+                                            std::get<1>(reqData));
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] = std::get<0>(reqData);
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryTimeStamp"] = redfish::time_utils::getDateTimeStdtime(lastTimeStamp);
+                    },
+                    "xyz.openbmc_project.Dump.Manager",
+                    "/xyz/openbmc_project/dump/system",
+                    "xyz.openbmc_project.Dump.Misc",
+                    "GetStats");
     }
     else
     {
@@ -5189,6 +5256,11 @@ inline void requestRoutesChassisXIDLogService(App& app)
                                  object : subtree)
                         {
                             const std::string& path = object.first;
+                            const std::vector<
+                            std::pair<std::string, std::vector<std::string>>>&
+                            connectionNames = object.second;
+
+                            const std::string& connectionName = connectionNames[0].first;
 
                             sdbusplus::message::object_path objPath(path);
                             if (objPath.filename() != chassisId)
@@ -5216,6 +5288,46 @@ inline void requestRoutesChassisXIDLogService(App& app)
                                 redfishDateTimeOffset.first;
                             asyncResp->res.jsonValue["DateTimeLocalOffset"] =
                                 redfishDateTimeOffset.second;
+                            
+                            const std::string inventoryItemInterface =
+                            "xyz.openbmc_project.Inventory.Item";
+                        
+                        sdbusplus::asio::getProperty<std::string>(
+                                *crow::connections::systemBus, connectionName, path,
+                                inventoryItemInterface, "PrettyName",
+                                [asyncResp, chassisId(std::string(chassisId))](
+                                    const boost::system::error_code ec,
+                                    const std::string& chassisName) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "DBus response error for PrettyName";
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    // Call Phosphor-logging GetStats method to get
+                                    // LatestEntryTimestamp and LatestEntryID
+                                    crow::connections::systemBus->async_method_call(
+                                        [asyncResp](
+                                            const boost::system::error_code ec,
+                                                const std::tuple<uint32_t, uint64_t>& reqData) {
+                                                    if (ec)
+                                                    {
+                                                        BMCWEB_LOG_ERROR << "Failed to get Data from xyz.openbmc_project.Logging GetStats: "
+                                                                        << ec;
+                                                        messages::internalError(asyncResp->res);
+                                                        return;
+                                                    }
+                                                    auto lastTimeStamp = redfish::time_utils::getTimestamp(
+                                                                        std::get<1>(reqData));
+                                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] = std::get<0>(reqData);
+                                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryTimeStamp"] = redfish::time_utils::getDateTimeStdtime(lastTimeStamp);
+                                                },
+                                                "xyz.openbmc_project.Logging",
+                                                "/xyz/openbmc_project/logging",
+                                                "xyz.openbmc_project.Logging.Namespace",
+                                                "GetStats", chassisName + "_XID");
+                                    });
 
                             asyncResp->res.jsonValue["Entries"] = {
                                 {"@odata.id", "/redfish/v1/Chassis/" +

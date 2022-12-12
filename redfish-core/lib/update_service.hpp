@@ -1992,6 +1992,28 @@ inline void requestRoutesSoftwareInventory(App& app)
                                     return;
                                 }
 
+
+                                it = propertiesList.find("Manufacturer");
+                                if (it != propertiesList.end())
+                                {
+                                    const std::string* manufacturer =
+                                        std::get_if<std::string>(
+                                            &it->second);
+
+                                    if (manufacturer == nullptr)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "Can't find property \"Manufacturer\"!";
+                                        messages::internalError(
+                                            asyncResp->res);
+                                        return;
+                                    }
+                                    asyncResp->res
+                                        .jsonValue["Manufacturer"] =
+                                        *manufacturer;
+                                }
+
+
                                 it = propertiesList.find("SoftwareId");
                                 if (it != propertiesList.end())
                                 {
@@ -2036,56 +2058,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                                                 *swInvPurpose);
                             },
                             obj.second[0].first, obj.first,
-                            "org.freedesktop.DBus.Properties", "GetAll",
-                            "xyz.openbmc_project.Software.Version");
-
-                        const std::vector<std::string>& interfaces2 =
-                            obj.second[0].second;
-                        const std::string assetIntf =
-                            "xyz.openbmc_project.Inventory.Decorator.Asset";
-                        if (std::find(interfaces2.begin(), interfaces2.end(),
-                                      assetIntf) != interfaces2.end())
-                        {
-                            crow::connections::systemBus->async_method_call(
-                                [asyncResp, swId](
-                                    const boost::system::error_code errorCode,
-                                    const boost::container::flat_map<
-                                        std::string,
-                                        dbus::utility::DbusVariantType>&
-                                        propertiesList) {
-                                    if (errorCode)
-                                    {
-                                        messages::internalError(asyncResp->res);
-                                        return;
-                                    }
-                                    boost::container::flat_map<
-                                        std::string,
-                                        dbus::utility::DbusVariantType>::
-                                        const_iterator it =
-                                            propertiesList.find("Manufacturer");
-                                    if (it != propertiesList.end())
-                                    {
-                                        const std::string* manufacturer =
-                                            std::get_if<std::string>(
-                                                &it->second);
-
-                                        if (manufacturer == nullptr)
-                                        {
-                                            BMCWEB_LOG_ERROR
-                                                << "Can't find property \"Manufacturer\"!";
-                                            messages::internalError(
-                                                asyncResp->res);
-                                            return;
-                                        }
-                                        asyncResp->res
-                                            .jsonValue["Manufacturer"] =
-                                            *manufacturer;
-                                    }
-                                },
-                                obj.second[0].first, obj.first,
-                                "org.freedesktop.DBus.Properties", "GetAll",
-                                "xyz.openbmc_project.Inventory.Decorator.Asset");
-                        }
+                            "org.freedesktop.DBus.Properties", "GetAll","");
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         std::shared_ptr<HealthRollup> health =
@@ -2128,7 +2101,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/xyz/openbmc_project/software/",
                 static_cast<int32_t>(0),
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.Version"});
@@ -2369,7 +2342,7 @@ inline void requestRoutesInventorySoftware(App& app)
                     },
                     "xyz.openbmc_project.ObjectMapper",
                     "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/xyz/openbmc_project/software/",
                     static_cast<int32_t>(0),
                     std::array<const char*, 1>{
                         "xyz.openbmc_project.Software.Version"});
