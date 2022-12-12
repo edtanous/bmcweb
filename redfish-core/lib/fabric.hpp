@@ -603,8 +603,12 @@ inline void requestRoutesFabricCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#FabricCollection.FabricCollection";
                 asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Fabrics";
@@ -624,10 +628,14 @@ inline void requestRoutesFabric(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& fabricId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             crow::connections::systemBus->async_method_call(
                 [asyncResp, fabricId(std::string(fabricId))](
                     const boost::system::error_code ec,
@@ -743,9 +751,13 @@ inline void requestRoutesSwitchCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& fabricId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#SwitchCollection.SwitchCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
@@ -1085,11 +1097,15 @@ inline void requestRoutesSwitch(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& fabricId,
                                               const std::string& switchId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             crow::connections::systemBus->async_method_call(
                 [asyncResp, fabricId,
                  switchId](const boost::system::error_code ec,
@@ -1272,11 +1288,15 @@ inline void requestRoutesSwitchMetrics(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/SwitchMetrics")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& fabricId,
                                               const std::string& switchId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             crow::connections::systemBus->async_method_call(
                 [asyncResp, fabricId,
                  switchId](const boost::system::error_code ec,
@@ -1619,11 +1639,15 @@ inline void requestRoutesPortCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& fabricId,
                                               const std::string& switchId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string portsURI = "/redfish/v1/Fabrics/";
             portsURI += fabricId;
             portsURI += "/Switches/";
@@ -1709,10 +1733,14 @@ inline void requestRoutesPort(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& fabricId, const std::string& switchId,
                const std::string& portId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 getFabricsPortObject(asyncResp, fabricId, switchId, portId);
             });
 }
@@ -1722,9 +1750,13 @@ inline void requestRoutesZoneCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Zones/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& fabricId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#ZoneCollection.ZoneCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
@@ -1774,11 +1806,15 @@ inline void requestRoutesZone(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Zones/<str>")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& fabricId,
                                               const std::string& zoneId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             crow::connections::systemBus->async_method_call(
                 [asyncResp, fabricId,
                  zoneId](const boost::system::error_code ec,
@@ -1888,9 +1924,13 @@ inline void requestRoutesEndpointCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Endpoints/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& fabricId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#EndpointCollection.EndpointCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
@@ -2694,9 +2734,13 @@ inline void requestRoutesEndpoint(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Endpoints/<str>")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& fabricId, const std::string& endpointId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, fabricId,
                      endpointId](const boost::system::error_code ec,
@@ -3101,12 +3145,16 @@ inline void requestRoutesPortMetrics(App& app)
                  "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Metrics")
         .privileges({{"Login"}})
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& fabricId,
                                               const std::string& switchId,
                                               const std::string& portId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string objPath = std::string(inventoryRootPath);
             objPath += std::string(inventoryFabricStr) + fabricId;
             objPath += std::string(inventorySwitchStr) + switchId;

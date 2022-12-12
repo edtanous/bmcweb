@@ -3036,9 +3036,13 @@ inline void requestRoutesProcessorMetrics(App& app)
                       "/Processors/<str>/ProcessorMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 getProcessorMetricsData(asyncResp, processorId);
             });
 }
@@ -3312,9 +3316,13 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
                  "MemorySummary/MemoryMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 getProcessorMemoryMetricsData(asyncResp, processorId);
             });
 }
@@ -3503,9 +3511,13 @@ inline void requestRoutesProcessorSettings(App& app)
                  "Settings")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 getProcessorSettingsData(asyncResp, processorId);
             });
 
@@ -3664,9 +3676,13 @@ inline void requestRoutesProcessorPortCollection(App& app)
                  "Ports")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 BMCWEB_LOG_DEBUG << "Get available system processor resource";
                 crow::connections::systemBus->async_method_call(
                     [processorId,
@@ -3876,11 +3892,15 @@ inline void requestRoutesProcessorPort(App& app)
                  "Ports/<str>")
         .privileges(redfish::privileges::getProcessor)
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& processorId,
                                               const std::string& port) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             BMCWEB_LOG_DEBUG << "Get available system processor resource";
             crow::connections::systemBus->async_method_call(
                 [processorId, port, asyncResp](
@@ -4269,11 +4289,15 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                  "Ports/<str>/Metrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& processorId,
                                               const std::string& port) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             BMCWEB_LOG_DEBUG << "Get available system processor resource";
             crow::connections::systemBus->async_method_call(
                 [processorId, port, asyncResp](
