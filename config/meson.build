@@ -23,6 +23,7 @@ conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-
 conf_data.set('UPDATE_SERVICE_TASK_TIMEOUT', get_option('update-service-task-timeout'))
 conf_data.set('MFG_TEST_TIMEOUT', get_option('manufacturing-test-timeout'))
 conf_data.set_quoted('PLATFORM_SYSTEM_ID', get_option('platform-system-id'))
+conf_data.set_quoted('PLATFORM_DEVICE_PREFIX', get_option('platform-device-prefix'))
 conf_data.set_quoted('PLATFORM_BMC_ID', get_option('platform-bmc-id'))
 conf_data.set_quoted('PLATFORM_TOTAL_POWER_SENSOR_NAME', get_option('platform-total-power-sensor-name'))
 conf_data.set_quoted('PLATFORM_POWER_CONTOL_SENSOR_NAME', get_option('platform-power-control-sensor-name'))

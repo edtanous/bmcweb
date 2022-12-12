@@ -271,6 +271,7 @@ option ('platform-bmc-id', type : 'string', value : 'bmc', description : 'Platfo
 option ('platform-total-power-sensor-name', type : 'string', value : 'total_power', description : 'Platform specific total power sensor name, which has system power watts readings')
 option ('platform-power-control-sensor-name', type : 'string', value : 'total_power', description : 'Platform specific total power control sensor name, which has system current power watts readings')
 option ('platform-metrics-id', type : 'string', value : 'PlatformMetrics', description : 'Platform specific telemetry service metric reports id')
+option ('platform-device-prefix', type : 'string', value : '', description : 'Platform specific device name prefix')
 
 option ('tls-auth-opt-in', type : 'feature', value : 'disabled', description : 'Enables feature to opt-in to TLS-Authentication at runtime.')
 option ('host-os-features', type : 'feature', value : 'enabled', description : 'Enables feature specific to host os.')

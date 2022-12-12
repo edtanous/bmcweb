@@ -3322,22 +3322,6 @@ inline void
                 handleSensorGet(asyncResp, chassisId, sensorId, sensorPath);
                 // Add related item data
                 getRelatedItemData(asyncResp, std::string(sensorPath));
-                redfish::conditions_utils::populateServiceConditions(
-                    asyncResp, sensorName);
-
-#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                std::shared_ptr<HealthRollup> health =
-                    std::make_shared<HealthRollup>(
-                        sensorPath,
-                        [asyncResp](const std::string& rootHealth,
-                                    const std::string& healthRollup) {
-                            asyncResp->res.jsonValue["Status"]["Health"] =
-                                rootHealth;
-                            asyncResp->res.jsonValue["Status"]["HealthRollup"] =
-                                healthRollup;
-                        });
-                health->start();
-#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 return;
             }
             messages::resourceNotFound(asyncResp->res, "Sensor", sensorName);

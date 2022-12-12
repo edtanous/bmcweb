@@ -3972,10 +3972,6 @@ inline void requestRoutesProcessorPort(App& app)
                                             asyncResp, portPath, processorId,
                                             port);
                                     }
-
-                                    redfish::conditions_utils::
-                                        populateServiceConditions(asyncResp,
-                                                                  port);
                                     return;
                                 }
                                 // Object not found

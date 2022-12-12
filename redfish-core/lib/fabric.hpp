@@ -291,8 +291,6 @@ inline void
                 redfish::port_utils::getPortData(asyncResp, connectionName,
                                                  objPath);
                 updatePortLinks(asyncResp, objPath, fabricId);
-                redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                                     portId);
                 return;
             }
             // Couldn't find an object with that name.

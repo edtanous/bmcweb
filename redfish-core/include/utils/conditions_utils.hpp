@@ -27,15 +27,18 @@ inline void populateServiceConditions(
     BMCWEB_LOG_DEBUG << "Populating service conditions for device " << chassisId
                      << "\n";
     BMCWEB_LOG_DEBUG << "ON REDFISH URI " << asyncResp->res.jsonValue["@odata.id"] << "\n";
+    BMCWEB_LOG_DEBUG << "PLATFORM DEVICE PREFIX IS " << PLATFORMDEVICEPREFIX << "\n";
 
     std::string chasId = chassisId;
-    std::string pref = "HGX_";
-    if (boost::starts_with(chassisId, pref))
+    if (strlen(PLATFORMDEVICEPREFIX) > 0)
     {
-        chasId = chassisId.substr(pref.length());
+        if (boost::starts_with(chassisId, PLATFORMDEVICEPREFIX))
+        {
+            chasId = chassisId.substr(strlen(PLATFORMDEVICEPREFIX));
+        }
     }
     bool isDevice = !chasId.empty();
-
+    
     if (isDevice)
     {
         if (!asyncResp->res.jsonValue["Status"].contains("Conditions"))

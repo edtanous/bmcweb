@@ -2060,26 +2060,9 @@ inline void requestRoutesSoftwareInventory(App& app)
                             obj.second[0].first, obj.first,
                             "org.freedesktop.DBus.Properties", "GetAll","");
 
-#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                        std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(
-                                objPath,
-                                [asyncResp](const std::string& rootHealth,
-                                            const std::string& healthRollup) {
-                                    asyncResp->res
-                                        .jsonValue["Status"]["Health"] =
-                                        rootHealth;
-                                    asyncResp->res
-                                        .jsonValue["Status"]["HealthRollup"] =
-                                        healthRollup;
-                                },
-                                &health_state::ok);
-                        health->start();
-#else  // BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                         asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                             "OK";
-#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                     }
                     if (!found)
                     {
@@ -2161,23 +2144,6 @@ inline void requestRoutesInventorySoftware(App& app)
                         asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                             "OK";
 
-#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                        std::shared_ptr<HealthRollup> health =
-                            std::make_shared<HealthRollup>(
-                                path,
-                                [asyncResp](const std::string& rootHealth,
-                                            const std::string& healthRollup) {
-                                    asyncResp->res
-                                        .jsonValue["Status"]["Health"] =
-                                        rootHealth;
-                                    asyncResp->res
-                                        .jsonValue["Status"]["HealthRollup"] =
-                                        healthRollup;
-                                });
-                        health->start();
-
-#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, swId, path, searchPath](
                                 const boost::system::error_code errorCode,
@@ -2257,8 +2223,6 @@ inline void requestRoutesInventorySoftware(App& app)
                         asyncResp->res.jsonValue["@odata.type"] =
                             "#SoftwareInventory.v1_4_0.SoftwareInventory";
                         asyncResp->res.jsonValue["Name"] = "Software Inventory";
-                        redfish::conditions_utils::populateServiceConditions(
-                            asyncResp, *swId);
                         return;
                     }
                     // Couldn't find an object with that name.  return an error
