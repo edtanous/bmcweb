@@ -33,7 +33,11 @@ conf_data.set_quoted('FW_MCTP_MAPPING_JSON', join_paths(package_datadir, 'fw_mct
 conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
 conf_data.set('OTP_PROVISIONING_STATUS_FILE_PATH', get_option('otp-provisioning-status-file-path'))
 conf_data.set('BMCWEB_LOG_LEVEL', get_option('bmcweb-logging-log-level'))
-
+conf_data.set('MIN_UCASE_CHRS', get_option('min-ucase-characters'))
+conf_data.set('MIN_LCASE_CHRS', get_option('min-lcase-characters'))
+conf_data.set('MIN_DIGITS', get_option('min-digits'))
+conf_data.set('MIN_SPEC_CHRS', get_option('min-special-characters'))
+conf_data.set('MIN_PASSWORD_LENGTH', get_option('min-password-length'))
 conf_h_dep = declare_dependency(
     include_directories: include_directories('.'),
     sources: configure_file(

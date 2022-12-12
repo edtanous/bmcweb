@@ -44,4 +44,12 @@ constexpr const char* platformPowerControlSensorName = @PLATFORM_POWER_CONTOL_SE
 constexpr const bool bmcwebInsecureEnableHttpPushStyleEventing = @BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING@ == 1;
 
 constexpr const uint8_t bmcwebLogLevel = @BMCWEB_LOG_LEVEL@;
+
+constexpr const uint8_t minUcaseCharacters = @MIN_UCASE_CHRS@;
+constexpr const uint8_t minLcaseCharacters = @MIN_LCASE_CHRS@;
+constexpr const uint8_t minSpecCharacters = @MIN_SPEC_CHRS@;
+constexpr const uint8_t minDigits = @MIN_DIGITS@;
+constexpr const uint8_t minPasswordLength = @MIN_PASSWORD_LENGTH@;
+
+
 // clang-format on
