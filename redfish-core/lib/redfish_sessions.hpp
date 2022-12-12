@@ -220,9 +220,7 @@ inline void handleSessionCollectionPost(
     bool isConfigureSelfOnly = pamrc == PAM_NEW_AUTHTOK_REQD;
     if ((pamrc != PAM_SUCCESS) && !isConfigureSelfOnly)
     {
-        messages::resourceAtUriUnauthorized(asyncResp->res, req.urlView,
-                                            "Invalid username or password");
-        return;
+        handleAccountLocked(username, asyncResp, req);
     }
 #ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
     if (oemObject)

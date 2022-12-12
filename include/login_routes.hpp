@@ -8,6 +8,7 @@
 #include <http_request.hpp>
 #include <http_response.hpp>
 #include <pam_authenticate.hpp>
+#include <redfish_util.hpp>
 #include <webassets.hpp>
 
 #include <random>
@@ -180,8 +181,7 @@ inline void requestRoutes(App& app)
                 bool isConfigureSelfOnly = pamrc == PAM_NEW_AUTHTOK_REQD;
                 if ((pamrc != PAM_SUCCESS) && !isConfigureSelfOnly)
                 {
-                    asyncResp->res.result(
-                        boost::beast::http::status::unauthorized);
+                    redfish::handleAccountLocked(username, asyncResp, req);
                 }
                 else
                 {
