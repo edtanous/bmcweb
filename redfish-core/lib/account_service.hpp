@@ -1625,6 +1625,10 @@ inline void handleAccountCollectionGet(
                 if (userCanSeeAllAccounts ||
                     (thisUser == user && userCanSeeSelf))
                 {
+                    if (user == "service")
+                    {
+                        continue;
+                    }
                     nlohmann::json::object_t member;
                     member["@odata.id"] =
                         "/redfish/v1/AccountService/Accounts/" + user;
