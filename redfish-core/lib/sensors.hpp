@@ -850,10 +850,10 @@ inline void objectPropertiesToJson(
         // including power sensors.
         subNodeEscaped += '_';
         subNodeEscaped += sensorName;
-        sensorJson["Id"] = std::move(subNodeEscaped);
 
         std::string sensorNameEs(sensorName);
         std::replace(sensorNameEs.begin(), sensorNameEs.end(), '_', ' ');
+        sensorJson["Id"] = sensorName;
         sensorJson["Name"] = std::move(sensorNameEs);
     }
     else if (sensorType != "power")
