@@ -3257,8 +3257,6 @@ inline void requestRoutesManager(App& app)
             // NvidiaManager
             nlohmann::json& oemNvidia = oem["Nvidia"];
             oemNvidia["@odata.type"] = "#OemManager.Nvidia";
-            oemNvidia["@odata.id"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia";
             nlohmann::json& oemResetToDefaults =
                 asyncResp->res.jsonValue["Actions"]["Oem"]
                                         ["#NvidiaManager.ResetToDefaults"];
