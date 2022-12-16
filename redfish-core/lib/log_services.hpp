@@ -127,6 +127,21 @@ static const Message* getMessage(const std::string_view& messageID)
         return getMessageFromRegistry(
             messageKey, std::span<const MessageEntry>(resource_event::registry));
     }
+    if (std::string(update_event::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(update_event::registry));
+    }
+    if (std::string(bios::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(bios::registry));
+    }
+    if (std::string(task_event::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(task_event::registry));
+    }
     return nullptr;
 }
 
