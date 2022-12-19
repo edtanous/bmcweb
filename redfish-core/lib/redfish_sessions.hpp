@@ -221,6 +221,7 @@ inline void handleSessionCollectionPost(
     if ((pamrc != PAM_SUCCESS) && !isConfigureSelfOnly)
     {
         handleAccountLocked(username, asyncResp, req);
+        return;
     }
 #ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
     if (oemObject)

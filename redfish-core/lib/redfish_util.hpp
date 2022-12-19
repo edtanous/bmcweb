@@ -238,6 +238,9 @@ inline void
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "GetUserInfo failed...";
+                messages::resourceAtUriUnauthorized(
+                    asyncResp->res, req.urlView,
+                    "Invalid username or password");
                 return;
             }
             bool userLocked = false;
