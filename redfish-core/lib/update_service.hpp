@@ -2449,7 +2449,12 @@ inline void handleCommitImagePost(
         subtree)
 {
     std::optional<std::vector<std::string>> targets;
-    json_util::readJsonAction(req, asyncResp->res, "Targets", targets);
+
+    if (!json_util::readJsonAction(req, asyncResp->res,
+        "Targets", targets))
+    {
+        return;
+    }
 
     bool hasTargets = false;
     bool hasError = false;

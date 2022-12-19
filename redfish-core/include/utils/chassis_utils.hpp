@@ -438,7 +438,10 @@ inline void setBackgroundCopyEnabled(
                 }
                 else
                 {
-                    messages::success(asyncResp->res);
+                    if (asyncResp->res.jsonValue.empty())
+                    {
+                        messages::success(asyncResp->res);
+                    }
                 }
             }
             else
@@ -564,7 +567,10 @@ inline void
                 }
                 else
                 {
-                    messages::success(asyncResp->res);
+                    if (asyncResp->res.jsonValue.empty())
+                    {
+                        messages::success(asyncResp->res);
+                    }
                 }
             }
             else
