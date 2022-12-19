@@ -1996,23 +1996,16 @@ class EventServiceManager
                             messageId = additional["REDFISH_MESSAGE_ID"];
                             if (additional.count("REDFISH_MESSAGE_ARGS") == 1)
                             {
-                                std::string argDelimiter = ", ";
-                                size_t cur = 0, delimPos;
-                                std::string arg;
                                 std::string args =
                                     additional["REDFISH_MESSAGE_ARGS"];
-
-                                while (
-                                    (delimPos = args.substr(cur, args.length())
-                                                    .find(argDelimiter)) !=
-                                    std::string::npos)
+                                boost::split(messageArgs, args,
+                                             boost::is_any_of(","));
+                                // Trim leading and tailing whitespace of each
+                                // argument
+                                for (auto& msgArg : messageArgs)
                                 {
-                                    arg = args.substr(cur, cur + delimPos);
-                                    messageArgs.push_back(arg);
-                                    cur += delimPos + argDelimiter.length();
+                                    boost::trim(msgArg);
                                 }
-                                messageArgs.push_back(
-                                    args.substr(cur, args.length()));
                             }
                             else if (additional.count("REDFISH_MESSAGE_ARGS") >
                                      0)
