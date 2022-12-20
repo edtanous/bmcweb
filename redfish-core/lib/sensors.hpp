@@ -3407,12 +3407,198 @@ inline void requestRoutesSensorCollection(App& app)
             std::bind_front(sensors::handleSensorCollectionGet, std::ref(app)));
 }
 
+inline void setThresholdReadingProperty(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const double readingValue,
+    const std::string& interfaceName, const std::string& propertyName,
+    const std::string& serviceName, const std::string& objectPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, serviceName, objectPath, interfaceName, propertyName,
+         readingValue](const boost::system::error_code ec) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            messages::success(asyncResp->res);
+        },
+        serviceName, objectPath, "org.freedesktop.DBus.Properties", "Set",
+        interfaceName, propertyName, std::variant<double>(readingValue));
+}
+
+inline void processSensorThresholdValues(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& serviceName, const std::string& objectPath)
+{
+    const boost::system::error_code ec;
+    std::optional<nlohmann::json> thresholdsObj;
+
+    if (!json_util::readJsonAction(req, asyncResp->res, "Thresholds",
+                                   thresholdsObj))
+    {
+        return;
+    }
+    if (thresholdsObj)
+    {
+        std::optional<nlohmann::json> lowerCritical;
+        std::optional<nlohmann::json> upperCritical;
+        std::optional<nlohmann::json> upperCaution;
+        std::optional<nlohmann::json> lowerCaution;
+
+        if (!redfish::json_util::readJson(
+                *thresholdsObj, asyncResp->res, "LowerCritical", lowerCritical,
+                "UpperCritical", upperCritical, "UpperCaution", upperCaution,
+                "LowerCaution", lowerCaution))
+        {
+            return;
+        }
+        if (lowerCritical)
+        {
+            std::optional<double> readingValue;
+            if (redfish::json_util::readJson(*lowerCritical, asyncResp->res,
+                                             "Reading", readingValue))
+            {
+                if (readingValue)
+                {
+                    setThresholdReadingProperty(
+                        asyncResp, *readingValue,
+                        "xyz.openbmc_project.Sensor.Threshold.Critical",
+                        "CriticalLow", serviceName, objectPath);
+                }
+            }
+        }
+        if (upperCritical)
+        {
+            std::optional<double> readingValue;
+            if (redfish::json_util::readJson(*upperCritical, asyncResp->res,
+                                             "Reading", readingValue))
+            {
+                if (readingValue)
+                {
+                    setThresholdReadingProperty(
+                        asyncResp, *readingValue,
+                        "xyz.openbmc_project.Sensor.Threshold.Critical",
+                        "CriticalHigh", serviceName, objectPath);
+                }
+            }
+        }
+        if (upperCaution)
+        {
+            std::optional<double> readingValue;
+            if (redfish::json_util::readJson(*upperCaution, asyncResp->res,
+                                             "Reading", readingValue))
+            {
+                if (readingValue)
+                {
+                    setThresholdReadingProperty(
+                        asyncResp, *readingValue,
+                        "xyz.openbmc_project.Sensor.Threshold.Warning",
+                        "WarningHigh", serviceName, objectPath);
+                }
+            }
+        }
+        if (lowerCaution)
+        {
+            std::optional<double> readingValue;
+            if (redfish::json_util::readJson(*lowerCaution, asyncResp->res,
+                                             "Reading", readingValue))
+            {
+                if (readingValue)
+                {
+                    setThresholdReadingProperty(
+                        asyncResp, *readingValue,
+                        "xyz.openbmc_project.Sensor.Threshold.Warning",
+                        "WarningLow", serviceName, objectPath);
+                }
+            }
+        }
+    }
+}
+
 inline void requestRoutesSensor(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Sensors/<str>/")
         .privileges(redfish::privileges::getSensor)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             sensors::handleSensorGetWithChassisValidation, std::ref(app)));
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Sensors/<str>/")
+        .privileges(redfish::privileges::patchSensor)
+        .methods(boost::beast::http::verb::patch)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisId, const std::string& sensorId) {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, chassisId, sensorId,
+                     req](const boost::system::error_code ec,
+                          const std::vector<std::string>& objects) {
+                        if (ec)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        for (const std::string& object : objects)
+                        {
+                            if (!boost::ends_with(object, chassisId))
+                            {
+                                continue;
+                            }
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp,sensorId,
+                                 req](const boost::system::error_code ec,
+                                      const std::vector<std::pair<
+                                          std::string,
+                                          std::vector<std::pair<
+                                              std::string,
+                                              std::vector<std::string>>>>>&
+                                          subtree) {
+                                    if (ec)
+                                    {
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    std::string str;
+                                    size_t found = 0;
+                                    for (const auto& object : subtree)
+                                    {
+                                        str = object.first;
+                                        found = str.find(sensorId);
+                                        if (found != std::string::npos)
+                                        {
+                                            for (const auto& service :
+                                                 object.second)
+                                            {
+                                                processSensorThresholdValues(
+                                                    req, asyncResp,
+                                                    service.first,
+                                                    object.first);
+                                                return;
+                                            }
+                                        }
+                                    }
+                                    messages::resourceNotFound(
+                                        asyncResp->res, "Sensor", sensorId);
+                                },
+                                "xyz.openbmc_project.ObjectMapper",
+                                "/xyz/openbmc_project/object_mapper",
+                                "xyz.openbmc_project.ObjectMapper",
+                                "GetSubTree", "/xyz/openbmc_project/sensors", 2,
+                                std::array<const char*, 1>{
+                                    "xyz.openbmc_project.Sensor.Value"});
+
+                            return;
+                        }
+                        messages::resourceNotFound(asyncResp->res, "#Chassis",
+                                                   chassisId);
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                    "/xyz/openbmc_project/inventory", 0,
+                    std::array<const char*, 1>{
+                        "xyz.openbmc_project.Inventory.Item.Chassis"});
+                return;
+            });
 }
 
 } // namespace redfish
