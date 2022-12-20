@@ -3726,6 +3726,7 @@ inline void requestRoutesManager(App& app)
                         pid->run();
                     }
 #endif
+		}
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     if (nvidia)
                     {
@@ -3808,7 +3809,7 @@ inline void requestRoutesManager(App& app)
                     }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 }
-            }
+
             if (links)
             {
                 std::optional<nlohmann::json> activeSoftwareImage;
