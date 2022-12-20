@@ -28,13 +28,13 @@
 #include <dbus_utility.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
+#include <utils/chassis_utils.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/fw_utils.hpp>
 #include <utils/hex_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/systemd_utils.hpp>
-#include <utils/chassis_utils.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -2572,7 +2572,8 @@ inline void getManagerState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         messages::internalError(aResp->res);
                         return;
                     }
-                    std::string state = redfish::chassis_utils::getPowerStateType(*value);
+                    std::string state =
+                        redfish::chassis_utils::getPowerStateType(*value);
                     aResp->res.jsonValue["Status"]["State"] = state;
                     if (state == "Enabled")
                     {
@@ -3056,23 +3057,24 @@ inline void
 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-inline void getIsCommandShellEnable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void
+    getIsCommandShellEnable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     sdbusplus::asio::getProperty<bool>(
-        *crow::connections::systemBus, "xyz.openbmc_project.Settings", 
-        "/xyz/openbmc_project/ipmi/sol/eth0",
-        "xyz.openbmc_project.Ipmi.SOL", "Enable",
-        [asyncResp](const boost::system::error_code ec,
-                    const bool& isEnable) {
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/ipmi/sol/eth0", "xyz.openbmc_project.Ipmi.SOL",
+        "Enable",
+        [asyncResp](const boost::system::error_code ec, const bool& isEnable) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error for getIsCommandShellEnable";
+                BMCWEB_LOG_DEBUG
+                    << "DBUS response error for getIsCommandShellEnable";
                 messages::internalError(asyncResp->res);
                 return;
             }
-            asyncResp->res
-                .jsonValue["CommandShell"]["ServiceEnabled"] = isEnable;
-    });
+            asyncResp->res.jsonValue["CommandShell"]["ServiceEnabled"] =
+                isEnable;
+        });
 }
 
 inline void requestRoutesManager(App& app)
@@ -3423,8 +3425,8 @@ inline void requestRoutesManager(App& app)
 #ifdef BMCWEB_ENABLE_IPMI_SOL
             asyncResp->res.jsonValue["CommandShell"]["MaxConcurrentSessions"] =
                 1;
-            asyncResp->res.jsonValue["CommandShell"]["ConnectTypesSupported"] =
-                {"SSH"};
+            asyncResp->res
+                .jsonValue["CommandShell"]["ConnectTypesSupported"] = {"SSH"};
 
             getIsCommandShellEnable(asyncResp);
 #endif
