@@ -96,6 +96,7 @@ feature_map = {
   'xtoken-auth'                                 : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
   'health-rollup-alternative'                   : '-DBMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE',
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
+  'rmedia'                	                    : '-DBMCWEB_ENABLE_RMEDIA',
   'tls-auth-opt-in'                             : '-DBMCWEB_ENABLE_TLS_AUTH_OPT_IN',
   'manufacturing-test'                          : '-DBMCWEB_ENABLE_MFG_TEST_API',
   'host-iface'                                	: '-DBMCWEB_ENABLE_HOST_IFACE',

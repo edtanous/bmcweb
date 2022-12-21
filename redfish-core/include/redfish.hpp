@@ -244,9 +244,9 @@ class RedfishService
         requestHostInterfacesRoutes(app);
 #endif
 
-#ifdef BMCWEB_ENABLE_VM_NBDPROXY
+#ifdef BMCWEB_ENABLE_RMEDIA
         requestNBDVirtualMediaRoutes(app);
-#endif // BMCWEB_ENABLE_VM_NBDPROXY
+#endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
         requestRoutesDBusLogServiceActionsClear(app);
