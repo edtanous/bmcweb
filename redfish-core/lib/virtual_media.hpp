@@ -167,7 +167,6 @@ inline nlohmann::json vmItemTemplate(const std::string& name,
     item["@odata.type"] = "#VirtualMedia.v1_3_0.VirtualMedia";
     item["Name"] = "Virtual Removable Media";
     item["Id"] = resName;
-    item["WriteProtected"] = true;
     item["MediaTypes"] = {"CD", "USBStick"};
     item["TransferMethod"] = "Stream";
     item["Oem"]["OpenBMC"]["@odata.type"] =
