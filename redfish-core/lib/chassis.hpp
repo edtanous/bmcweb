@@ -839,8 +839,10 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {"@odata.id",
          "/redfish/v1/Chassis/" + chassisId + "/EnvironmentMetrics"}};
     // Power object
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Power"]["@odata.id"] =
         "/redfish/v1/Chassis/" + chassisId + "/Power";
+#endif
 
 #endif
 #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM

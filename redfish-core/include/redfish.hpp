@@ -97,7 +97,9 @@ class RedfishService
         requestEthernetInterfacesRoutes(app);
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
         requestRoutesThermal(app);
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesPower(app);
+#endif
 #endif
         requestRoutesThermalSubsystem(app);
         requestRoutesThermalMetrics(app);
