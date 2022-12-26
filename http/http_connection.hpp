@@ -409,7 +409,7 @@ class Connection :
             handler->handleUpgrade(thisReq, res, std::move(adaptor));
             // delete lambda with self shared_ptr
             // to enable connection destruction
-            res.completeRequestHandler = nullptr;
+            asyncResp->res.setCompleteRequestHandler(nullptr);
             return;
         }
 
