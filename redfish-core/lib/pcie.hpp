@@ -441,14 +441,30 @@ static inline void
                         asyncResp->res.jsonValue[propertyName] = *value;
                     }
                 }
-                else if ((propertyName == "LanesInUse") ||
-                         (propertyName == "MaxLanes"))
+                else if (propertyName == "MaxLanes")
                 {
                     const size_t* value = std::get_if<size_t>(&property.second);
                     if (value != nullptr)
                     {
                         asyncResp->res
                             .jsonValue["PCIeInterface"][propertyName] = *value;
+                    }
+                }
+                else if (propertyName == "LanesInUse")
+                {
+                    const size_t* value = std::get_if<size_t>(&property.second);
+                    if (value != nullptr)
+                    {
+			if(*value == INT_MAX)
+			{
+                                asyncResp->res
+                                        .jsonValue["PCIeInterface"][propertyName] = 0;
+			}
+			else
+			{
+				asyncResp->res
+					.jsonValue["PCIeInterface"][propertyName] = *value;
+			}
                     }
                 }
                 else if ((propertyName == "PCIeType") ||

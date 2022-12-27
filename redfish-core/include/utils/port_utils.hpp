@@ -332,7 +332,14 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue[propertyName] = *value;
+		    if(*value == INT_MAX)
+		    {
+			    asyncResp->res.jsonValue[propertyName] = 0;
+		    }
+	            else
+		    {
+			    asyncResp->res.jsonValue[propertyName] = *value;
+		    }
                 }
                 else if (propertyName == "CurrentPowerState")
                 {
