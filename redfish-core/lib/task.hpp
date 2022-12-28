@@ -149,9 +149,10 @@ struct TaskData : std::enable_shared_from_this<TaskData>
             {
                 // Completed task is the first completed task initially. When
                 // there are multiple completed tasks, oldest completed task
-                // will be choosen for removal
+                // will be choosen for removal based on end time.
                 if (completedTask == tasks.end() ||
-                    (*completedTask)->startTime > (*currentTask)->startTime)
+                    ((*currentTask)->endTime && ((*(*completedTask)->endTime) >
+                                                 (*(*currentTask)->endTime))))
                 {
                     completedTask = currentTask;
                 }
