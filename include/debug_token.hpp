@@ -34,6 +34,31 @@ using TaskCallback =
     std::function<bool(boost::system::error_code, sdbusplus::message::message&,
                        const std::shared_ptr<task::TaskData>&)>;
 
+#ifdef BMCWEB_ENABLE_DOT
+std::vector<std::pair<std::string, uint8_t>> debugTokenServiceValues{
+    {"GetDebugTokenRequest", 50},
+    {"GetDOTCAKUnlockTokenRequest", 58},
+    {"GetDOTEnableTokenRequest", 59},
+    {"GetDOTOverrideTokenRequest", 61}};
+#else
+std::vector<std::pair<std::string, uint8_t>> debugTokenServiceValues{
+    {"GetDebugTokenRequest", 50}};
+#endif
+
+inline int getMeasurementIndex(const std::string_view tokenType)
+{
+    auto it = std::find_if(
+        debugTokenServiceValues.begin(), debugTokenServiceValues.end(),
+        [tokenType](const std::pair<std::string, uint8_t>& value) {
+            return value.first == tokenType;
+        });
+    if (it != debugTokenServiceValues.end())
+    {
+        return it->second;
+    }
+    return -1;
+}
+
 class DebugTokenBase
 {
   public:
@@ -608,13 +633,15 @@ class Request :
     public std::enable_shared_from_this<Request>
 {
   public:
-    explicit Request(FinishCallback&& finishCallback) :
+    explicit Request(uint8_t measurementIndex,
+                     FinishCallback&& finishCallback) :
         DebugTokenBase(
             std::string(spdmResponderIntf),
             "type='signal',interface='org.freedesktop.DBus.Properties',"
             "member='PropertiesChanged',"
             "path_namespace='/xyz/openbmc_project/SPDM'",
-            std::forward<FinishCallback>(finishCallback))
+            std::forward<FinishCallback>(finishCallback)),
+        spdmMeasurementIndex(measurementIndex)
     {}
 
     bool run(const crow::Request& req,
@@ -679,6 +706,7 @@ class Request :
     ~Request() override = default;
 
   private:
+    uint8_t spdmMeasurementIndex;
 #pragma pack(1)
     struct ServerRequestHeader
     {
@@ -722,7 +750,8 @@ class Request :
             addError(desc, "state invalid");
             return;
         }
-        std::vector<uint8_t> indices{50};
+        std::vector<uint8_t> indices{0};
+        indices[0] = spdmMeasurementIndex;
         crow::connections::systemBus->async_method_call(
             [this, &entry, desc](const boost::system::error_code ec) {
                 BMCWEB_LOG_DEBUG << "Object: " << entry.object;

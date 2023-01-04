@@ -5925,22 +5925,8 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     task->payload->httpHeaders.emplace_back(
                         std::move(location));
                 };
-                if (oemDiagnosticDataType == "GetDebugTokenRequest")
-                {
-                    static std::shared_ptr<debug_token::Request> request;
-                    if (!request || !request->isRunning())
-                    {
-                        request = std::make_shared<debug_token::Request>(
-                            std::move(callback));
-                        request->run(req, asyncResp);
-                    }
-                    else
-                    {
-                        messages::serviceTemporarilyUnavailable(asyncResp->res,
-                                                                "60");
-                    }
-                }
-                else if (oemDiagnosticDataType == "DebugTokenStatus")
+
+                if (oemDiagnosticDataType == "DebugTokenStatus")
                 {
                     static std::shared_ptr<debug_token::StatusQuery> query;
                     if (!query || !query->isRunning())
@@ -5957,11 +5943,33 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "Unsupported OEMDiagnosticDataType: "
-                                     << oemDiagnosticDataType;
-                    messages::actionParameterValueFormatError(
-                        asyncResp->res, oemDiagnosticDataType,
-                        "OEMDiagnosticDataType", "CollectDiagnosticData");
+                    auto index = redfish::debug_token::getMeasurementIndex(
+                        oemDiagnosticDataType);
+                    if (index >= 0)
+                    {
+                        static std::shared_ptr<debug_token::Request> request;
+                        if (!request || !request->isRunning())
+                        {
+                            request = std::make_shared<debug_token::Request>(
+                                index, std::move(callback));
+                            request->run(req, asyncResp);
+                        }
+                        else
+                        {
+                            messages::serviceTemporarilyUnavailable(
+                                asyncResp->res, "60");
+                        }
+                    }
+                    else
+                    {
+
+                        BMCWEB_LOG_ERROR
+                            << "Unsupported OEMDiagnosticDataType: "
+                            << oemDiagnosticDataType;
+                        messages::actionParameterValueFormatError(
+                            asyncResp->res, oemDiagnosticDataType,
+                            "OEMDiagnosticDataType", "CollectDiagnosticData");
+                    }
                 }
             });
 }

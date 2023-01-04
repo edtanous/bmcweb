@@ -112,6 +112,7 @@ feature_map = {
   'command-shell'                               : '-DBMCWEB_ENABLE_IPMI_SOL',
   'redfish-system-faultlog-dump-log'            : '-DBMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG',
   'reset-bios-by-clear-nonvolatile'             : '-DBMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE',
+  'dot-support'                                 : '-DBMCWEB_ENABLE_DOT',
 }
 
 if(get_option('tls-auth-opt-in').enabled())
