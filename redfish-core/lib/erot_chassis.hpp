@@ -198,11 +198,11 @@ inline void getChassisOEMComponentProtected(
             // HMC and PcieSwitch
             // if we don't get the association
             // assumption is, it is hmc.
-            asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+            asyncResp->res.jsonValue["Links"]["Oem"]["Nvidia"]["@odata.type"] =
                 "#NvidiaChassis.v1_0_0.NvidiaChassis";
             nlohmann::json& componentsProtectedArray =
                 asyncResp->res
-                    .jsonValue["Oem"]["Nvidia"]["ComponentsProtected"];
+                    .jsonValue["Links"]["Oem"]["Nvidia"]["ComponentsProtected"];
             componentsProtectedArray = nlohmann::json::array();
             componentsProtectedArray.push_back({nlohmann::json::array(
                 {"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID})});
@@ -225,11 +225,11 @@ inline void getChassisOEMComponentProtected(
                             std::string("/redfish/v1/Managers/" PLATFORMBMCID);
                     }
                 }
-                asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                asyncResp->res.jsonValue["Links"]["Oem"]["Nvidia"]["@odata.type"] =
                     "#NvidiaChassis.v1_0_0.NvidiaChassis";
                 nlohmann::json& componentsProtectedArray =
                     asyncResp->res
-                        .jsonValue["Oem"]["Nvidia"]["ComponentsProtected"];
+                        .jsonValue["Links"]["Oem"]["Nvidia"]["ComponentsProtected"];
                 componentsProtectedArray = nlohmann::json::array();
                 componentsProtectedArray.push_back(
                     {nlohmann::json::array({"@odata.id", redfishURL})});
