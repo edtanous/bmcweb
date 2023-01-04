@@ -440,7 +440,7 @@ inline void
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& chassisId)
 {
-    
+
     if (chassisId.empty())
     {
         return;
@@ -448,16 +448,15 @@ inline void
 
     std::optional<nlohmann::json> oemObject;
 
-    if (!json_util::readJsonPatch(req, asyncResp->res,
-        "Oem", oemObject))
+    if (!json_util::readJsonPatch(req, asyncResp->res, "Oem", oemObject))
     {
         return;
     }
 
     std::optional<nlohmann::json> oemNvidiaObject;
 
-    if (!json_util::readJson(*oemObject, asyncResp->res,
-        "Nvidia", oemNvidiaObject))
+    if (!json_util::readJson(*oemObject, asyncResp->res, "Nvidia",
+                             oemNvidiaObject))
     {
         return;
     }
@@ -465,13 +464,12 @@ inline void
     std::optional<bool> backgroundCopyEnabled;
     std::optional<bool> inBandEnabled;
 
-    if (!json_util::readJson(*oemNvidiaObject, asyncResp->res,
-        "AutomaticBackgroundCopyEnabled", backgroundCopyEnabled, 
-        "InbandUpdatePolicyEnabled", inBandEnabled))
-	{
+    if (!json_util::readJson(
+            *oemNvidiaObject, asyncResp->res, "AutomaticBackgroundCopyEnabled",
+            backgroundCopyEnabled, "InbandUpdatePolicyEnabled", inBandEnabled))
+    {
         return;
     }
-    
 
     const std::array<const char*, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
