@@ -1511,6 +1511,12 @@ inline void
     asyncResp->res.jsonValue["Actions"]["#Bios.ResetBios"] = {
         {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
                    "/Bios/Actions/Bios.ResetBios"}};
+    nlohmann::json biosSettings;
+    biosSettings["@odata.type"] = "#Settings.v1_3_5.Settings";
+    biosSettings["SettingsObject"] = {{"@odata.id",
+                                       "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                       "/Bios/Settings"}};
+    asyncResp->res.jsonValue["@Redfish.Settings"] = biosSettings;
 
     // Get the ActiveSoftwareImage and SoftwareImages
     sw_util::populateSoftwareInformation(asyncResp, sw_util::biosPurpose, "",
