@@ -614,6 +614,9 @@ inline void requestRoutesNetworkProtocol(App& app)
                     return;
                 }
                 getNetworkData(asyncResp, req);
+                asyncResp->res.addHeader(
+                        boost::beast::http::field::link,
+                        "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/ManagerNetworkProtocol.json>; rel=describedby");
             });
 }
 
