@@ -766,9 +766,9 @@ inline bool validateAndSplitUrl(std::string_view destUrl, std::string& urlProto,
                                 std::string& host, uint16_t& port,
                                 std::string& path)
 {
-    boost::string_view urlBoost(destUrl.data(), destUrl.size());
+    auto imageUrl = std::string(destUrl.begin(), destUrl.end());
     boost::urls::result<boost::urls::url_view> url =
-        boost::urls::parse_uri(urlBoost);
+        boost::urls::parse_uri(boost::string_view(imageUrl));
     if (!url)
     {
         return false;
