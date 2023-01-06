@@ -153,8 +153,7 @@ inline void populateServiceConditions(
                         {
 
                             origin_utils::convertDbusObjectToOriginOfCondition(
-                                originOfCondition, asyncResp,
-                                std::string("conditions"),
+                                originOfCondition, asyncResp, asyncResp->res.jsonValue,
                                 (*severity).substr(prefix.length()));
 
                             return;
@@ -172,8 +171,7 @@ inline void populateServiceConditions(
 
                                 origin_utils::
                                     convertDbusObjectToOriginOfCondition(
-                                        originOfCondition, asyncResp,
-                                        std::string("conditions"),
+                                        originOfCondition, asyncResp, asyncResp->res.jsonValue,
                                         (*severity).substr(prefix.length()));
                             }
                         }

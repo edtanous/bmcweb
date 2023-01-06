@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include <app.hpp>
+#include <chrono> 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -2045,8 +2046,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         {
                             continue;
                         }
-                        entriesArray.push_back({});
-                        nlohmann::json& thisEntry = entriesArray.back();
+                        nlohmann::json thisEntry = nlohmann::json::object();
 
                         // Determine if it's a message registry format or not.
                         bool isMessageRegistry = false;
@@ -2077,9 +2077,9 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                     additional["REDFISH_ORIGIN_OF_CONDITION"];
                             }
                         }
-
                         if (isMessageRegistry)
                         {
+
                             message_registries::generateMessageRegistry(
                                 thisEntry,
                                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -2093,8 +2093,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                 *severity);
 
                             origin_utils::convertDbusObjectToOriginOfCondition(
-                                originOfCondition, asyncResp,
-                                std::to_string(*id));
+                                originOfCondition, asyncResp, thisEntry);
                         }
 
                         // generateMessageRegistry will not create the entry if
@@ -2131,12 +2130,14 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                 "Entries/" +
                                 std::to_string(*id) + "/attachment";
                         }
+                        entriesArray.push_back(thisEntry);
                     }
                     std::sort(entriesArray.begin(), entriesArray.end(),
                               [](const nlohmann::json& left,
                                  const nlohmann::json& right) {
                                   return (left["Id"] <= right["Id"]);
                               });
+                    
                     asyncResp->res.jsonValue["Members@odata.count"] =
                         entriesArray.size();
                 },
@@ -2307,7 +2308,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             *severity);
 
                         origin_utils::convertDbusObjectToOriginOfCondition(
-                            originOfCondition, asyncResp, std::to_string(*id));
+                            originOfCondition, asyncResp, asyncResp->res.jsonValue);
                     }
 
                     // generateMessageRegistry will not create the entry if
@@ -5759,8 +5760,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
 
                                                                 origin_utils::convertDbusObjectToOriginOfCondition(
                                                                     originOfCondition,
-                                                                    asyncResp,
-                                                                    std::to_string(*id));
+                                                                    asyncResp, thisEntry);
                                                             }
 
                                                             // generateMessageRegistry
@@ -5806,7 +5806,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                         *id) +
                                                                     "/attachment";
                                                             }
-                                                            entriesArray .push_back(thisEntry);
+                                                            entriesArray.push_back(thisEntry);
                                                             asyncResp->res.jsonValue["Members@odata.count"] = entriesArray.size();
                                                         }
                                                 }
