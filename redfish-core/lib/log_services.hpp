@@ -1521,7 +1521,8 @@ inline void requestRoutesEventLogService(App& app)
                                 }
                                 auto lastTimeStamp = redfish::time_utils::getTimestamp(
                                                     std::get<1>(reqData));
-                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] = std::get<0>(reqData);
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaLogService.v1_0_0.NvidiaLogService";
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] = std::to_string(std::get<0>(reqData));
                                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryTimeStamp"] = redfish::time_utils::getDateTimeStdtime(lastTimeStamp);
                             },
                             "xyz.openbmc_project.Logging",
@@ -5469,7 +5470,8 @@ inline void requestRoutesChassisXIDLogService(App& app)
                                                     }
                                                     auto lastTimeStamp = redfish::time_utils::getTimestamp(
                                                                         std::get<1>(reqData));
-                                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] = std::get<0>(reqData);
+                                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaLogService.v1_0_0.NvidiaLogService";
+                                                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] = std::to_string(std::get<0>(reqData));
                                                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryTimeStamp"] = redfish::time_utils::getDateTimeStdtime(lastTimeStamp);
                                                 },
                                                 "xyz.openbmc_project.Logging",
