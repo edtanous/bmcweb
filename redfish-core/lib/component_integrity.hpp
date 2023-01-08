@@ -185,11 +185,11 @@ inline void asyncGetSPDMMeasurementData(const std::string& objectPath,
             {
                 BMCWEB_LOG_ERROR << "Get all function failed for object = "
                                  << objectPath;
-                callback(std::move(config), true);
+                callback(std::move(config), ec);
                 return;
             }
             config = parseSPDMInterfaceProperties(resp);
-            callback(std::move(config), true);
+            callback(std::move(config), ec);
         },
         "xyz.openbmc_project.SPDM", objectPath,
         "org.freedesktop.DBus.Properties", "GetAll", "");
@@ -442,10 +442,19 @@ inline void requestRoutesComponentIntegrity(App& app)
             asyncGetSPDMMeasurementData(objectPath, [asyncResp, id, objectPath](
                                                         const SPDMMeasurementData&
                                                             data,
-                                                        bool gotData) {
-                if (!gotData)
+                                                        const boost::system::
+                                                            error_code ec) {
+                if (ec)
                 {
-                    messages::internalError(asyncResp->res);
+                    if (ec.value() == EBADR)
+                    {
+                        messages::resourceNotFound(asyncResp->res,
+                                                   "ComponentIntegrity", id);
+                    }
+                    else
+                    {
+                        messages::internalError(asyncResp->res);
+                    }
                     return;
                 }
 
@@ -567,12 +576,20 @@ inline void requestRoutesComponentIntegrity(App& app)
                 const std::string objPath =
                     std::string(rootSPDMDbusPath) + "/" + id;
                 asyncGetSPDMMeasurementData(
-                    objPath,
-                    [asyncResp, id, objPath](const SPDMMeasurementData& config,
-                                             bool gotData) {
-                        if (!gotData)
+                    objPath, [asyncResp, id,
+                              objPath](const SPDMMeasurementData& config,
+                                       const boost::system::error_code ec) {
+                        if (ec)
                         {
-                            messages::internalError(asyncResp->res);
+                            if (ec.value() == EBADR)
+                            {
+                                messages::resourceNotFound(
+                                    asyncResp->res, "ComponentIntegrity", id);
+                            }
+                            else
+                            {
+                                messages::internalError(asyncResp->res);
+                            }
                             return;
                         }
 
