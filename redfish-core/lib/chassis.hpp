@@ -830,8 +830,10 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
 
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Thermal"]["@odata.id"] =
         "/redfish/v1/Chassis/" + chassisId + "/Thermal";
+#endif
     asyncResp->res.jsonValue["ThermalSubsystem"]["@odata.id"] =
         crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
                                      "ThermalSubsystem");

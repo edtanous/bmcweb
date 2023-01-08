@@ -31,8 +31,10 @@ inline void handleTelemetryServiceGet(
         "/redfish/v1/TelemetryService/MetricReportDefinitions";
     asyncResp->res.jsonValue["MetricReports"]["@odata.id"] =
         "/redfish/v1/TelemetryService/MetricReports";
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Triggers"]["@odata.id"] =
         "/redfish/v1/TelemetryService/Triggers";
+#endif
 
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, telemetry::service,

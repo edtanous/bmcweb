@@ -96,8 +96,8 @@ class RedfishService
         }
         requestEthernetInterfacesRoutes(app);
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
-        requestRoutesThermal(app);
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+        requestRoutesThermal(app);
         requestRoutesPower(app);
 #endif
 #endif
@@ -130,8 +130,10 @@ class RedfishService
         requestRoutesStorageCollection(app);
         requestRoutesStorage(app);
         requestRoutesDrive(app);
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesCable(app);
         requestRoutesCableCollection(app);
+#endif
 #ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
         requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
@@ -324,8 +326,10 @@ class RedfishService
         requestRoutesZoneCollection(app);
         requestRoutesZone(app);
 
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);
+#endif
         requestRoutesEROTChassisCertificate(app);
         requestRoutesComponentIntegrity(app);
         requestRoutesServiceConditions(app);
