@@ -191,7 +191,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& service, const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG << "Get Port Data";
-    using PropertyType = std::variant<std::string, bool, uint8_t, uint16_t,
+    using PropertyType = std::variant<std::string, bool, uint8_t, uint16_t, double,
                                       size_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     // Get interface properties
@@ -299,7 +299,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
                 else if (propertyName == "CurrentSpeed")
                 {
-                    const size_t* value = std::get_if<size_t>(&property.second);
+                    const double* value = std::get_if<double>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
@@ -311,7 +311,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
                 else if (propertyName == "MaxSpeed")
                 {
-                    const size_t* value = std::get_if<size_t>(&property.second);
+                    const double* value = std::get_if<double>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
