@@ -2977,9 +2977,21 @@ inline void requestRoutesProcessor(App& app)
             {
                 return;
             }
+            // speedlimit is required property for patching speedlocked
+            if (!speedLimit && speedLocked)
+            {
+                BMCWEB_LOG_ERROR << "SpeedLimit value required ";
+                messages::propertyMissing(asyncResp->res, "SpeedLimit");
+            }
 
+            // speedlocked is required property for patching speedlimit
+            else if (!speedLocked && speedLimit)
+            {
+                BMCWEB_LOG_ERROR << "SpeedLocked value required ";
+                messages::propertyMissing(asyncResp->res, "SpeedLocked");
+            }
             // Update speed limit
-            if (speedLimit && speedLocked)
+            else if (speedLimit && speedLocked)
             {
                 std::tuple<bool, uint32_t> reqSpeedConfig;
                 reqSpeedConfig = std::make_tuple(
@@ -2994,33 +3006,6 @@ inline void requestRoutesProcessor(App& app)
                         patchSpeedConfig(asyncResp1, processorId1,
                                          reqSpeedConfig, objectPath,
                                          serviceMap);
-                    });
-            }
-            else if (speedLimit)
-            {
-                redfish::processor_utils::getProcessorObject(
-                    asyncResp, processorId,
-                    [speedLimit](
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
-                        const std::string& processorId1,
-                        const std::string& objectPath,
-                        const MapperServiceMap& serviceMap) {
-                        patchSpeedLimit(asyncResp1, processorId1, *speedLimit,
-                                        objectPath, serviceMap);
-                    });
-            }
-            else if (speedLocked)
-            {
-                // Update speed locked
-                redfish::processor_utils::getProcessorObject(
-                    asyncResp, processorId,
-                    [speedLocked](
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
-                        const std::string& processorId1,
-                        const std::string& objectPath,
-                        const MapperServiceMap& serviceMap) {
-                        patchSpeedLocked(asyncResp1, processorId1, *speedLocked,
-                                         objectPath, serviceMap);
                     });
             }
 
