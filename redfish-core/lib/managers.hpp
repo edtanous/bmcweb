@@ -69,26 +69,26 @@ const int invalidDataOutSizeErr = 0x116;
 inline void enableTLSAuth()
 {
     BMCWEB_LOG_DEBUG << "Processing AuthenticationTLSRequired Enable.";
+    std::filesystem::path dropinConf = "bmcweb-socket-tls.conf";
+    std::filesystem::path dropinDir = "/etc/systemd/system/bmcweb.socket.d";
+    std::filesystem::path confPath = dropinDir / dropinConf;
 
-    const char* socket_path = "/lib/systemd/system/bmcweb.socket";
-    const char* tmp_path = "/lib/systemd/system/bmcweb.tmp";
+    try
     {
-        std::ifstream in(socket_path);
-        std::ofstream out(tmp_path);
-        std::string line;
-        while (getline(in, line))
+        if (!std::filesystem::exists(dropinDir))
         {
-            if (line == "ListenStream=80")
-            {
-                out << "ListenStream=443" << std::endl;
-            }
-            else
-            {
-                out << line << std::endl;
-            }
+            std::filesystem::create_directory(dropinDir);
         }
+        std::ofstream out(confPath.string());
+        out << "[Socket]" << std::endl;
+        out << "ListenStream=" << std::endl; // disable port 80
+        out << "ListenStream=443" << std::endl; // enable port 443
     }
-    std::filesystem::rename(tmp_path, socket_path);
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_ERROR << "TLSAuthEnable drop-in socket configuration file: "
+                         << e.what();
+    }
     persistent_data::getConfig().enableTLSAuth();
 
     // restart procedure
