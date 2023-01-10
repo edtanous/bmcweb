@@ -238,7 +238,7 @@ static std::string getBiosDefaultSettingsMode(const std::string& biosMode)
  *
  * @return None.
  */
-static void
+[[maybe_unused]] static void
     setResetBiosSettings(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const bool& resetBiosToDefaultsPending)
 {
@@ -1465,34 +1465,6 @@ inline void
 }
 
 /**
- * BiosService class supports handle patch method for bios.
- */
-inline void
-    handleBiosServicePatch(crow::App& app, const crow::Request& req,
-                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-    {
-        return;
-    }
-    std::optional<bool> resetBiosToDefaultsPending;
-    if (!json_util::readJsonAction(req, asyncResp->res,
-                                   "ResetBiosToDefaultsPending",
-                                   resetBiosToDefaultsPending))
-    {
-        BMCWEB_LOG_ERROR << "No 'ResetBiosToDefaultsPending' found";
-        messages::unrecognizedRequestBody(asyncResp->res);
-        return;
-    }
-
-    if (resetBiosToDefaultsPending)
-    {
-        // set the ResetBiosToDefaultsPending
-        bios::setResetBiosSettings(asyncResp, *resetBiosToDefaultsPending);
-    }
-}
-
-/**
  * BiosService class supports handle get method for bios.
  */
 inline void
@@ -1537,11 +1509,6 @@ inline void requestRoutesBiosService(App& app)
         .privileges(redfish::privileges::getBios)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleBiosServiceGet, std::ref(app)));
-
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/")
-        .privileges(redfish::privileges::patchBios)
-        .methods(boost::beast::http::verb::patch)(
-            std::bind_front(handleBiosServicePatch, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/")
         .privileges(redfish::privileges::putBios)
@@ -1694,6 +1661,9 @@ inline void
     {
         return;
     }
+
+    // set the ResetBiosToDefaultsPending
+    bios::setResetBiosSettings(aResp, true);
 
     crow::connections::systemBus->async_method_call(
         [aResp](boost::system::error_code ec,
