@@ -1,6 +1,7 @@
 #pragma once
 
 #include <app.hpp>
+#include <dbus_utility.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/sw_utils.hpp>
@@ -1638,13 +1639,109 @@ inline void
         "xyz.openbmc_project.Common.FactoryReset", "Reset");
 }
 
+#ifdef BMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE
+/**
+ * Set ClearNonVolatileVariables.Clear to requested value
+ */
+inline void setClearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                              const std::string service, const std::string path,
+                              const bool requestToClear)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, path, service,
+         requestToClear](const boost::system::error_code ec,
+                         sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG << "Set ClearUefiVariable successed";
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "Set ClearUefiVariable failed: " << ec.what();
+
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(aResp->res);
+            }
+            else
+            {
+                messages::internalError(aResp->res);
+            }
+        },
+        service, path, "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables", "Clear",
+        std::variant<bool>(requestToClear));
+}
+
+/**
+ * Nvidia BiosReset class supports handle POST method for Reset bios.
+ */
+inline void
+    handleNvidiaBiosResetPost(crow::App& app, const crow::Request& req,
+                              const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, aResp))
+    {
+        return;
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [aResp](boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
+            {
+                // No state sensors attached.
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            // find objects which has ClearNonVolatileVariables and also
+            // belongs objPath
+            for (const auto& [path, mapperService] : subtree)
+            {
+                if (mapperService.size() != 1)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "Number of ClearNonVolatileVariables provider is not 1. size="
+                        << mapperService.size();
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                const auto& service = mapperService[0].first;
+                setClearVariables(aResp, service, path, true);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/control", 0,
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables"});
+}
+#endif
+
 inline void requestRoutesBiosReset(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/Bios/Actions/Bios.ResetBios/")
         .privileges(redfish::privileges::postBios)
         .methods(boost::beast::http::verb::post)(
-            std::bind_front(handleBiosResetPost, std::ref(app)));
+#if BMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE
+            std::bind_front(handleNvidiaBiosResetPost, std::ref(app))
+#else
+            std::bind_front(handleBiosResetPost, std::ref(app))
+#endif
+        );
 }
 
 /**
