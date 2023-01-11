@@ -20,7 +20,10 @@ inline void requestRoutesServiceConditions(App& app)
                      "#ServiceConditions.v1_0_0.ServiceConditions"},
                     {"@odata.id", "/redfish/v1/ServiceConditions"},
                     {"Id", "ServiceConditions"},
-                    {"Name", "Redfish Service Conditions"}};
+                    {"Name", "Redfish Service Conditions"},
+                    {"HealthRollup", "OK"}};
+
+                asyncResp->res.jsonValue["Oem"] =  nlohmann::json::object();
 
                 redfish::conditions_utils::populateServiceConditions(
                     asyncResp, std::string(""));

@@ -2094,7 +2094,8 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                 *severity);
 
                             origin_utils::convertDbusObjectToOriginOfCondition(
-                                originOfCondition, asyncResp, thisEntry);
+                                originOfCondition, std::to_string(*id),
+                                asyncResp, thisEntry);
                         }
 
                         // generateMessageRegistry will not create the entry if
@@ -2309,7 +2310,8 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             *severity);
 
                         origin_utils::convertDbusObjectToOriginOfCondition(
-                            originOfCondition, asyncResp, asyncResp->res.jsonValue);
+                            originOfCondition, std::to_string(*id), asyncResp,
+                            asyncResp->res.jsonValue);
                     }
 
                     // generateMessageRegistry will not create the entry if
@@ -5761,8 +5763,11 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                     *severity);
 
                                                                 origin_utils::convertDbusObjectToOriginOfCondition(
-                                                                    originOfCondition,
-                                                                    asyncResp, thisEntry);
+                                                                        originOfCondition,
+                                                                        std::to_string(
+                                                                            *id),
+                                                                        asyncResp,
+                                                                        thisEntry);
                                                             }
 
                                                             // generateMessageRegistry
