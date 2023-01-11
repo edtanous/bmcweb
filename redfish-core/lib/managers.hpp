@@ -3208,7 +3208,7 @@ inline void requestRoutesManager(App& app)
             asyncResp->res.jsonValue["Description"] =
                 "Baseboard Management Controller";
             asyncResp->res.jsonValue["PowerState"] = "On";
-            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+            asyncResp->res.jsonValue["Status"]["State"] = "Starting";
             asyncResp->res.jsonValue["Status"]["Health"] = "OK";
 
             asyncResp->res.jsonValue["ManagerType"] = "BMC";
@@ -3471,29 +3471,12 @@ inline void requestRoutesManager(App& app)
                         subtree) {
                     if (ec)
                     {
-                        sdbusplus::asio::getProperty<double>(
-                            *crow::connections::systemBus,
-                            "org.freedesktop.systemd1",
-                            "/org/freedesktop/systemd1",
-                            "org.freedesktop.systemd1.Manager", "Progress",
-                            [asyncResp](const boost::system::error_code ec,
-                                        const double& val) {
-                                if (ec)
-                                {
-                                    BMCWEB_LOG_ERROR
-                                        << "Error while getting progress";
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                if (val < 1.0)
-                                {
-                                    asyncResp->res
-                                        .jsonValue["Status"]["State"] =
-                                        "Starting";
-                                }
-                            });
+                        BMCWEB_LOG_ERROR
+                            << "Error while getting manager service state";
+                        messages::internalError(asyncResp->res);
+                        return;
                     }
-                    else if (!subtree.empty())
+                    if (!subtree.empty())
                     {
                         // Iterate over all retrieved ObjectPaths.
                         for (const std::pair<
