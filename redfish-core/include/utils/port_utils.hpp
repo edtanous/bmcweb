@@ -6,57 +6,39 @@ namespace port_utils
 {
 
 // Get PCIe device link speed generation
-inline std::string getLinkSpeedGeneration(size_t speed)
+inline std::string getLinkSpeedGeneration(double currentSpeed, size_t width)
 {
-    if (speed == 1)
-    {
-        return "Gen1";
-    }
-    if (speed == 2)
-    {
-        return "Gen2";
-    }
-    if (speed == 3)
-    {
-        return "Gen3";
-    }
-    if (speed == 4)
-    {
-        return "Gen4";
-    }
-    if (speed == 5)
-    {
-        return "Gen5";
-    }
-    // Unknown or others
-    return "";
-}
 
-// PCIe device link width
-inline size_t getLinkWidth(size_t width)
-{
-    if (width == 1)
+    std::string speedGen;
+
+    // validate width
+    if ((width == INT_MAX) || (width == 0))
     {
-        return 1;
+        BMCWEB_LOG_DEBUG << "Invalid width data";
+        return speedGen;
     }
-    if (width == 2)
+
+    // speed per lane
+    auto speed = currentSpeed / static_cast<double>(width);
+
+    /* PCIe Link Speed Caluculation
+    https://en.wikipedia.org/wiki/PCI_Express#cite_note-both-directions-51(pciegenx
+    transfer rates) Gen1 Gbps = 2.5 * (8/10) Gen2 Gbps = 5 * (8/10) Gen3 Gbps =
+    8 * (128/130) Gen4 Gbps = 16 * (128/130) Gen5 Gbps = 32 * (128/130) Gen6
+    Gbps = 64 * (242/256)*/
+
+    // pcie speeds and generation map
+    std::map<double, std::string> pcieSpeedGenMap = {
+        {2, "Gen1"},      {4, "Gen2"},      {7.877, "Gen3"},
+        {15.754, "Gen4"}, {31.508, "Gen5"}, {60.5, "Gen6"},
+    };
+
+    if ((pcieSpeedGenMap.find(speed) != pcieSpeedGenMap.end()))
     {
-        return 2;
+        speedGen = pcieSpeedGenMap[speed];
     }
-    if (width == 3)
-    {
-        return 4;
-    }
-    if (width == 4)
-    {
-        return 8;
-    }
-    if (width == 5)
-    {
-        return 16;
-    }
-    // Unknown or others
-    return 0;
+
+    return speedGen;
 }
 
 inline std::string getLinkStatusType(const std::string& linkStatusType)

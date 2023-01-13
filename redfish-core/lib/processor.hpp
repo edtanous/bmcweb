@@ -164,9 +164,11 @@ inline void getSystemPCIeInterfaceProperties(
                 return;
             }
             // Get all properties
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code ec,
-                            GetManagedPropertyType& resp) {
+            sdbusplus::asio::getAllProperties(
+                *crow::connections::systemBus, objInfo[0].first, objPath, "",
+                [objPath, asyncResp](
+                    const boost::system::error_code ec,
+                    const dbus::utility::DBusPropertiesMap& properties) {
                     if (ec)
                     {
                         BMCWEB_LOG_ERROR << "error_code = " << ec;
@@ -175,47 +177,46 @@ inline void getSystemPCIeInterfaceProperties(
                         return;
                     }
 
+                    const double* currentSpeed = nullptr;
+                    const size_t* activeWidth = nullptr;
+
+                    const bool success = sdbusplus::unpackPropertiesNoThrow(
+                        dbus_utils::UnpackErrorPrinter(), properties,
+                        "CurrentSpeed", currentSpeed, "ActiveWidth",
+                        activeWidth);
+
                     asyncResp->res
                         .jsonValue["SystemInterface"]["InterfaceType"] = "PCIe";
-                    for (auto& property : resp)
+
+                    if (!success)
                     {
-                        const std::string& propertyName = property.first;
-                        if (propertyName == "CurrentSpeed")
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    if ((currentSpeed != nullptr) && (activeWidth != nullptr))
+                    {
+                        asyncResp->res
+                            .jsonValue["SystemInterface"]["PCIe"]["PCIeType"] =
+                            redfish::port_utils::getLinkSpeedGeneration(
+                                *currentSpeed, *activeWidth);
+                    }
+                    if (activeWidth != nullptr)
+                    {
+                        if (*activeWidth == INT_MAX)
                         {
-                            const size_t* value =
-                                std::get_if<size_t>(&property.second);
-                            if (value == nullptr)
-                            {
-                                BMCWEB_LOG_DEBUG << "Null value returned "
-                                                    "for CurrentSpeed";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
                             asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
-                                                    ["PCIeType"] =
-                                redfish::port_utils::getLinkSpeedGeneration(
-                                    *value);
+                                                    ["LanesInUse"] = 0;
                         }
-                        else if (propertyName == "ActiveWidth")
+                        else
                         {
-                            const size_t* value =
-                                std::get_if<size_t>(&property.second);
-                            if (value == nullptr)
-                            {
-                                BMCWEB_LOG_DEBUG << "Null value returned "
-                                                    "for Width";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
                             asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
                                                     ["LanesInUse"] =
-                                redfish::port_utils::getLinkWidth(*value);
+                                *activeWidth;
                         }
                     }
-                    return;
-                },
-                objInfo[0].first, objPath, "org.freedesktop.DBus.Properties",
-                "GetAll", "");
+                });
+
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -260,9 +261,11 @@ inline void getFPGAPCIeInterfaceProperties(
                 return;
             }
             // Get all properties
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code ec,
-                            GetManagedPropertyType& resp) {
+            sdbusplus::asio::getAllProperties(
+                *crow::connections::systemBus, objInfo[0].first, objPath, "",
+                [objPath, asyncResp](
+                    const boost::system::error_code ec,
+                    const dbus::utility::DBusPropertiesMap& properties) {
                     if (ec)
                     {
                         BMCWEB_LOG_ERROR << "error_code = " << ec;
@@ -270,39 +273,31 @@ inline void getFPGAPCIeInterfaceProperties(
                         messages::internalError(asyncResp->res);
                         return;
                     }
-
                     std::string speed;
                     size_t width = 0;
-                    for (auto& property : resp)
+
+                    const double* currentSpeed = nullptr;
+                    const size_t* activeWidth = nullptr;
+
+                    const bool success = sdbusplus::unpackPropertiesNoThrow(
+                        dbus_utils::UnpackErrorPrinter(), properties,
+                        "CurrentSpeed", currentSpeed, "ActiveWidth",
+                        activeWidth);
+
+                    if (!success)
                     {
-                        const std::string& propertyName = property.first;
-                        if (propertyName == "CurrentSpeed")
-                        {
-                            const size_t* value =
-                                std::get_if<size_t>(&property.second);
-                            if (value == nullptr)
-                            {
-                                BMCWEB_LOG_DEBUG << "Null value returned "
-                                                    "for CurrentSpeed";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            speed = redfish::port_utils::getLinkSpeedGeneration(
-                                *value);
-                        }
-                        else if (propertyName == "Width")
-                        {
-                            const size_t* value =
-                                std::get_if<size_t>(&property.second);
-                            if (value == nullptr)
-                            {
-                                BMCWEB_LOG_DEBUG << "Null value returned "
-                                                    "for Width";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            width = redfish::port_utils::getLinkWidth(*value);
-                        }
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    if ((currentSpeed != nullptr) && (activeWidth != nullptr))
+                    {
+                        speed = redfish::port_utils::getLinkSpeedGeneration(
+                            *currentSpeed, *activeWidth);
+                    }
+                    if ((activeWidth != nullptr) && (*activeWidth != INT_MAX))
+                    {
+                        width = *activeWidth;
                     }
                     nlohmann::json& fpgaIfaceArray =
                         asyncResp->res.jsonValue["FPGA"]["ExternalInterfaces"];
@@ -312,9 +307,7 @@ inline void getFPGAPCIeInterfaceProperties(
                          {"PCIe",
                           {{"PCIeType", speed}, {"LanesInUse", width}}}});
                     return;
-                },
-                objInfo[0].first, objPath, "org.freedesktop.DBus.Properties",
-                "GetAll", "");
+                });
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
