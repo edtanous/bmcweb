@@ -108,14 +108,16 @@ struct TaskData : std::enable_shared_from_this<TaskData>
         const std::string& matchIn, size_t idx,
         std::function<nlohmann::json(std::string_view, size_t)>&&
             getMsgHandler) :
-        getMsgCallback(getMsgHandler),
-        callback(std::move(handler)), matchStr(matchIn), index(idx),
+        status("OK"),
+        getMsgCallback(getMsgHandler), callback(std::move(handler)),
+        matchStr(matchIn), index(idx),
         startTime(std::chrono::system_clock::to_time_t(
             std::chrono::system_clock::now())),
-        status("OK"), state("Running"), messages(nlohmann::json::array()),
+        state("Running"), messages(nlohmann::json::array()),
         timer(crow::connections::systemBus->get_io_context())
 
     {}
+    std::string status;
 
   public:
     TaskData() = delete;
@@ -200,6 +202,52 @@ struct TaskData : std::enable_shared_from_this<TaskData>
             std::move(handler), match, lastTask++, getMsgHandler));
     }
 
+    /**
+     * @brief Get the Task Status
+     *
+     * @return const std::string&
+     */
+    const std::string& getTaskStatus()
+    {
+        return status;
+    }
+
+    /**
+     * @brief Set the Task Status. Order of severity is Critical > Warning > OK.
+     * Default is OK.
+     *
+     * @param[in] newStatus
+     */
+    void setTaskStatus()
+    {
+        for (const auto& message : messages)
+        {
+            std::string severity;
+            if (message.contains("Severity"))
+            {
+                // Severity is deprecated but there are still providers that
+                // use 1.0 schema.
+                severity = message["Severity"];
+            }
+            else if (message.contains("MessageSeverity"))
+            {
+                severity = message["MessageSeverity"];
+            }
+            if (!severity.empty())
+            {
+                if (severity == "Critical")
+                {
+                    status = "Critical";
+                    break;
+                }
+                if (severity == "Warning" && status != "Critical")
+                {
+                    status = "Warning";
+                }
+            }
+        }
+    }
+
     void populateResp(crow::Response& res, size_t retryAfterSeconds = 30)
     {
         if (!endTime)
@@ -211,7 +259,6 @@ struct TaskData : std::enable_shared_from_this<TaskData>
             res.jsonValue["@odata.type"] = "#Task.v1_4_3.Task";
             res.jsonValue["Id"] = strIdx;
             res.jsonValue["TaskState"] = state;
-            res.jsonValue["TaskStatus"] = status;
             res.addHeader(boost::beast::http::field::location,
                           uri + "/Monitor");
             res.addHeader(boost::beast::http::field::retry_after,
@@ -227,6 +274,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
     {
         endTime = std::chrono::system_clock::to_time_t(
             std::chrono::system_clock::now());
+        setTaskStatus();
     }
 
     void extendTimer(const std::chrono::seconds& timeout)
@@ -245,11 +293,10 @@ struct TaskData : std::enable_shared_from_this<TaskData>
                 }
                 self->match.reset();
                 sdbusplus::message_t msg;
-                self->finishTask();
                 self->state = "Cancelled";
-                self->status = "Warning";
                 self->messages.emplace_back(
                     self->getMsgCallback("Aborted", self->index));
+                self->finishTask();
                 // Send event :TaskAborted
                 self->sendTaskEvent(self->state, self->index);
                 self->callback(ec, msg, self);
@@ -372,7 +419,6 @@ struct TaskData : std::enable_shared_from_this<TaskData>
     std::string matchStr;
     size_t index;
     time_t startTime;
-    std::string status;
     std::string state;
     nlohmann::json messages;
     boost::asio::steady_timer timer;
@@ -496,8 +542,9 @@ inline void requestRoutesTask(App& app)
                     asyncResp->res.jsonValue["EndTime"] =
                         redfish::time_utils::getDateTimeStdtime(
                             *(ptr->endTime));
+                    asyncResp->res.jsonValue["TaskStatus"] =
+                        ptr->getTaskStatus();
                 }
-                asyncResp->res.jsonValue["TaskStatus"] = ptr->status;
                 asyncResp->res.jsonValue["Messages"] = ptr->messages;
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/TaskService/Tasks/" + strParam;

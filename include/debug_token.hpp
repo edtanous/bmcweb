@@ -88,7 +88,7 @@ class DebugTokenBase
     void abort(const std::string& status)
     {
         task->state = "Stopping";
-        task->status = status;
+        BMCWEB_LOG_ERROR << "Task Aborted with error: " << status;
         task->messages.emplace_back(
             messages::taskAborted(std::to_string(task->index)));
     }
@@ -579,14 +579,13 @@ class StatusQuery :
             if (completedEntries == totalEntries)
             {
                 task->state = "Completed";
-                task->status = "OK";
                 task->messages.emplace_back(
                     messages::taskCompletedOK(std::to_string(task->index)));
             }
             else
             {
                 task->state = "Exception";
-                task->status = "Invalid response for EIDs:" + eidErrors;
+                BMCWEB_LOG_ERROR << "Invalid response for EIDs:" << eidErrors;
                 task->messages.emplace_back(messages::taskCompletedWarning(
                     std::to_string(task->index)));
             }
@@ -910,14 +909,12 @@ class Request :
             if (completedEntries == totalEntries)
             {
                 task->state = "Completed";
-                task->status = "OK";
                 task->messages.emplace_back(
                     messages::taskCompletedOK(std::to_string(task->index)));
             }
             else
             {
                 task->state = "Exception";
-                task->status = "Warning";
                 task->messages.emplace_back(messages::taskCompletedWarning(
                     std::to_string(task->index)));
             }

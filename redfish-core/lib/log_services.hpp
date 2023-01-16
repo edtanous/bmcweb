@@ -4613,7 +4613,8 @@ static void mfgTestProcExitHandler(int exitCode, const std::error_code& ec)
             else
             {
                 t->state = "Exception";
-                t->status = "Output file error";
+                BMCWEB_LOG_ERROR
+                    << "CopyMfgTestOutputFile failed with Output file error";
                 t->messages.emplace_back(
                     messages::taskAborted(std::to_string(t->index)));
             }
@@ -4621,7 +4622,8 @@ static void mfgTestProcExitHandler(int exitCode, const std::error_code& ec)
         else
         {
             t->state = "Exception";
-            t->status = "Exit code: " + std::to_string(exitCode);
+            BMCWEB_LOG_ERROR << "Mfg Script failed with exit code: "
+                             << exitCode;
             t->messages.emplace_back(
                 messages::taskAborted(std::to_string(t->index)));
         }
@@ -4674,7 +4676,6 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
                             if (taskData->percentComplete != 100)
                             {
                                 taskData->state = "Exception";
-                                taskData->status = "Timeout";
                                 taskData->messages.emplace_back(
                                     messages::taskAborted(
                                         std::to_string(taskData->index)));
@@ -4698,7 +4699,9 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
                     catch (const std::runtime_error& e)
                     {
                         mfgTestTask->state = "Exception";
-                        mfgTestTask->status = e.what();
+                        BMCWEB_LOG_ERROR
+                            << "Manufacturing script failed with error: "
+                            << e.what();
                         mfgTestTask->messages.emplace_back(
                             messages::taskAborted(
                                 std::to_string(mfgTestTask->index)));

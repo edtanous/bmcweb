@@ -30,6 +30,7 @@
 #include <sdbusplus/unpack_properties.hpp>
 #include <update_messages.hpp>
 #include <utils/conditions_utils.hpp>
+#include <utils/dbus_log_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/fw_utils.hpp>
 #include <utils/sw_utils.hpp>
@@ -111,7 +112,7 @@ static void handleLogMatchCallback(sdbusplus::message_t& m,
                         }
                     }
                 }
-                if (propertyMap.first == "Resolution")
+                else if (propertyMap.first == "Resolution")
                 {
                     const std::string* value =
                         std::get_if<std::string>(&propertyMap.second);
@@ -305,7 +306,6 @@ static void
                                             boost::ends_with(*state, "Failed"))
                                         {
                                             taskData->state = "Exception";
-                                            taskData->status = "Warning";
                                             taskData->messages.emplace_back(
                                                 messages::taskAborted(index));
                                             fwUpdateInProgress = false;
