@@ -188,6 +188,16 @@ static std::string getBiosBoundValType(const std::string& boundValType)
     {
         type = "OneOf";
     }
+    else if (boundValType ==
+             "xyz.openbmc_project.BIOSConfig.Manager.BoundType.MinStringLength")
+    {
+        type = "MinStringLength";
+    }
+    else if (boundValType ==
+             "xyz.openbmc_project.BIOSConfig.Manager.BoundType.MaxStringLength")
+    {
+        type = "MaxStringLength";
+    }
     else
     {
         type = "UNKNOWN";
@@ -502,46 +512,154 @@ static void
 static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const nlohmann::json& attrJson)
 {
-    std::vector<std::string> keys{
-        "AttributeName", "CurrentValue", "DefaultValue",
-        "DisplayName",   "Description",  "MenuPath",
-        "ReadOnly",      "Type",         "Values"};
-    std::vector<std::string> boundKeys{"LowerBound", "UpperBound",
-                                       "ScalarIncrement"};
+    const std::vector<std::string> stringRequired{
+        "AttributeName", "DisplayName", "Description", "MenuPath", "Type"};
+    const std::vector<std::string> booleanRequired{"ReadOnly"};
+    const std::vector<std::string> valueTypeRequired{"CurrentValue",
+                                                     "DefaultValue"};
+    const std::vector<std::string> integerAddition{"LowerBound", "UpperBound",
+                                                   "ScalarIncrement"};
+    const std::vector<std::string> stringAddition{"MinLength", "MaxLength"};
+    const std::string enumerationAddition{"Values"};
 
-    for (const auto& key : keys)
+    // checking existence of required keys
+    for (const auto& key : stringRequired)
     {
         if (!attrJson.contains(key))
         {
-            if (key == "Values")
+            messages::propertyMissing(asyncResp->res, key);
+            BMCWEB_LOG_ERROR << "Required propery missing in req!";
+            return false;
+        }
+        if (!attrJson[key].is_string())
+        {
+            messages::propertyValueTypeError(asyncResp->res,
+                                             attrJson[key].dump(), key);
+            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            return false;
+        }
+    }
+
+    for (const auto& key : booleanRequired)
+    {
+        if (!attrJson.contains(key))
+        {
+            messages::propertyMissing(asyncResp->res, key);
+            BMCWEB_LOG_ERROR << "Required propery missing in req!";
+            return false;
+        }
+        if (!attrJson[key].is_boolean())
+        {
+            messages::propertyValueTypeError(asyncResp->res,
+                                             attrJson[key].dump(), key);
+            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            return false;
+        }
+    }
+
+    for (const auto& key : valueTypeRequired)
+    {
+        if (!attrJson.contains(key))
+        {
+            messages::propertyMissing(asyncResp->res, key);
+            BMCWEB_LOG_ERROR << "Required propery missing in req!";
+            return false;
+        }
+
+        bool propertyValueTypeValid = false;
+        if ((attrJson["Type"] == "Enumeration" && attrJson[key].is_string()) ||
+            (attrJson["Type"] == "String" && attrJson[key].is_string()) ||
+            (attrJson["Type"] == "Integer" && attrJson[key].is_number()) ||
+            (attrJson["Type"] == "Boolean" && attrJson[key].is_boolean()))
+        {
+            propertyValueTypeValid = true;
+        }
+
+        if (propertyValueTypeValid == false)
+        {
+            messages::propertyValueTypeError(asyncResp->res,
+                                             attrJson[key].dump(), key);
+            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            return false;
+        }
+    }
+
+    if (attrJson["Type"] == "Integer")
+    {
+        for (const auto& key : integerAddition)
+        {
+            if (!attrJson.contains(key))
             {
-                // If Type is Integer, then check for the bound values
-                if (attrJson[keys.at(7)] == "Integer")
-                {
-                    for (const auto& boundKey : boundKeys)
-                    {
-                        if (!attrJson.contains(boundKey))
-                        {
-                            messages::propertyMissing(asyncResp->res, boundKey);
-                            BMCWEB_LOG_ERROR
-                                << "Required propery missing in req!";
-                            return false;
-                        }
-                    }
-                }
-                else
-                {
-                    messages::propertyMissing(asyncResp->res, key);
-                    BMCWEB_LOG_ERROR << "Required propery missing in req!";
-                    return false;
-                }
+                messages::propertyMissing(asyncResp->res, key);
+                BMCWEB_LOG_ERROR << "Required propery missing in req!";
+                return false;
+            }
+            if (!attrJson[key].is_number())
+            {
+                messages::propertyValueTypeError(asyncResp->res,
+                                                 attrJson[key].dump(), key);
+                BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+                return false;
             }
         }
     }
 
-    if (attrJson[keys.at(0)] == "")
+    if (attrJson["Type"] == "String")
     {
-        messages::propertyValueIncorrect(asyncResp->res, keys.at(0), "empty");
+        for (const auto& key : stringAddition)
+        {
+            if (!attrJson.contains(key))
+            {
+                messages::propertyMissing(asyncResp->res, key);
+                BMCWEB_LOG_ERROR << "Required propery missing in req!";
+                return false;
+            }
+            if (!attrJson[key].is_number())
+            {
+                messages::propertyValueTypeError(asyncResp->res,
+                                                 attrJson[key].dump(), key);
+                BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+                return false;
+            }
+        }
+    }
+
+    if (attrJson["Type"] == "Enumeration")
+    {
+        const auto& key = enumerationAddition;
+        if (!attrJson.contains(key))
+        {
+            messages::propertyMissing(asyncResp->res, key);
+            BMCWEB_LOG_ERROR << "Required propery missing in req!";
+            return false;
+        }
+        if (!attrJson[key].is_array())
+        {
+            messages::propertyValueTypeError(asyncResp->res,
+                                             attrJson[key].dump(), key);
+            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            return false;
+        }
+        if (attrJson[key].empty())
+        {
+            messages::propertyValueIncorrect(asyncResp->res, key,
+                                             attrJson[key].dump());
+            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            return false;
+        }
+        if (!attrJson[key][0].is_string())
+        {
+            messages::propertyValueIncorrect(asyncResp->res, key,
+                                             attrJson[key].dump());
+            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            return false;
+        }
+    }
+
+    if (attrJson["AttributeName"].empty())
+    {
+        messages::propertyValueIncorrect(asyncResp->res, "AttributeName",
+                                         "empty");
         BMCWEB_LOG_ERROR << "AttributeName is not valid in req!";
         return false;
     }
@@ -593,12 +711,26 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 attrJson["DefaultValue"].get<std::string>();
 
             // read and update the bound values
-            for (const auto& value :
-                 attrJson["Values"].get<std::vector<std::string>>())
+            if (attrType == "Enumeration")
             {
+                for (const auto& value :
+                     attrJson["Values"].get<std::vector<std::string>>())
+                {
+                    attrValues.emplace_back(
+                        "xyz.openbmc_project.BIOSConfig.Manager.BoundType.OneOf",
+                        value);
+                }
+            }
+            else if (attrType == "String")
+            {
+                const auto& minLength = attrJson["MinLength"].get<int64_t>();
                 attrValues.emplace_back(
-                    "xyz.openbmc_project.BIOSConfig.Manager.BoundType.OneOf",
-                    value);
+                    "xyz.openbmc_project.BIOSConfig.Manager.BoundType.MinStringLength",
+                    minLength);
+                const auto& maxLength = attrJson["MaxLength"].get<int64_t>();
+                attrValues.emplace_back(
+                    "xyz.openbmc_project.BIOSConfig.Manager.BoundType.MaxStringLength",
+                    maxLength);
             }
             attrType = getDbusBiosAttrType(attrType);
             baseBiosTable.insert(std::make_pair(
@@ -637,14 +769,6 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             int64_t defaultVal =
                 static_cast<int64_t>(attrJson["DefaultValue"].get<bool>());
 
-            // read and update the bound values
-            for (const auto& value :
-                 attrJson["Values"].get<std::vector<bool>>())
-            {
-                attrValues.emplace_back(
-                    "xyz.openbmc_project.BIOSConfig.Manager.BoundType.OneOf",
-                    (value == true ? 1 : 0));
-            }
             attrType = getDbusBiosAttrType(attrType);
             baseBiosTable.insert(std::make_pair(
                 attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
@@ -875,57 +999,145 @@ static void
                         if ((attrType == "String") ||
                             (attrType == "Enumeration"))
                         {
-
-                            std::string attrReqVal = pendingAttrIt.value();
-                            // read the bound values for the attribute
-                            const std::vector<AttrBoundType> boundValues =
-                                std::get<
-                                    BaseBiosTableIndex::baseBiosBoundValues>(
-                                    attrIt->second);
-                            bool found = false;
-
-                            for (const AttrBoundType& boundValueIt :
-                                 boundValues)
-                            {
-                                // read the bound value type at 0th field
-                                // and convert from dbus to string format
-                                std::string boundValType = getBiosBoundValType(
-                                    std::string(std::get<BaseBiosBoundIndex::
-                                                             baseBiosBoundType>(
-                                        boundValueIt)));
-
-                                if (boundValType == "OneOf")
-                                {
-                                    // read the bound value  at 1st field
-                                    // for each entry
-                                    const std::string* currBoundVal =
-                                        std::get_if<std::string>(
-                                            &std::get<BaseBiosBoundIndex::
-                                                          baseBiosBoundValue>(
-                                                boundValueIt));
-                                    if (currBoundVal == nullptr)
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "Bound Value not found";
-                                        continue;
-                                    }
-                                    if (attrReqVal == *currBoundVal)
-                                    {
-                                        found = true;
-                                    }
-                                }
-                                else
-                                {
-                                    continue;
-                                }
-                            }
-
-                            if (!found)
+                            if (!pendingAttrIt.value().is_string())
                             {
                                 BMCWEB_LOG_ERROR
                                     << "Requested Attribute Value invalid";
-                                messages::internalError(asyncResp->res);
+                                messages::propertyValueTypeError(
+                                    asyncResp->res,
+                                    std::string(pendingAttrIt.value()),
+                                    pendingAttrIt.key());
                                 return;
+                            }
+                            std::string attrReqVal = pendingAttrIt.value();
+
+                            if (attrType == "Enumeration")
+                            {
+                                // read the bound values for the attribute
+                                const std::vector<AttrBoundType> boundValues =
+                                    std::get<BaseBiosTableIndex::
+                                                 baseBiosBoundValues>(
+                                        attrIt->second);
+                                bool found = false;
+
+                                for (const AttrBoundType& boundValueIt :
+                                     boundValues)
+                                {
+                                    // read the bound value type at 0th field
+                                    // and convert from dbus to string format
+                                    std::string boundValType =
+                                        getBiosBoundValType(std::string(
+                                            std::get<BaseBiosBoundIndex::
+                                                         baseBiosBoundType>(
+                                                boundValueIt)));
+
+                                    if (boundValType == "OneOf")
+                                    {
+                                        // read the bound value  at 1st field
+                                        // for each entry
+                                        const std::string* currBoundVal =
+                                            std::get_if<std::string>(
+                                                &std::get<
+                                                    BaseBiosBoundIndex::
+                                                        baseBiosBoundValue>(
+                                                    boundValueIt));
+                                        if (currBoundVal == nullptr)
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "Bound Value not found";
+                                            continue;
+                                        }
+                                        if (attrReqVal == *currBoundVal)
+                                        {
+                                            found = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        continue;
+                                    }
+                                }
+
+                                if (!found)
+                                {
+                                    BMCWEB_LOG_ERROR
+                                        << "Requested Attribute Value invalid";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                            }
+                            else if (attrType == "String")
+                            {
+                                const std::vector<AttrBoundType> boundValues =
+                                    std::get<BaseBiosTableIndex::
+                                                 baseBiosBoundValues>(
+                                        attrIt->second);
+                                bool valid = true;
+
+                                for (const AttrBoundType& boundValueIt :
+                                     boundValues)
+                                {
+                                    // read the bound value type at 0th field
+                                    // and convert from dbus to string format
+                                    std::string boundValType =
+                                        getBiosBoundValType(std::string(
+                                            std::get<BaseBiosBoundIndex::
+                                                         baseBiosBoundType>(
+                                                boundValueIt)));
+
+                                    if (boundValType == "MinStringLength")
+                                    {
+                                        const int64_t* currBoundVal =
+                                            std::get_if<int64_t>(
+                                                &std::get<
+                                                    BaseBiosBoundIndex::
+                                                        baseBiosBoundValue>(
+                                                    boundValueIt));
+                                        if (currBoundVal == nullptr)
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "Bound Value not found";
+                                            continue;
+                                        }
+                                        if (static_cast<int64_t>(attrReqVal.size()) < *currBoundVal)
+                                        {
+                                            valid = false;
+                                        }
+                                    }
+                                    else if (boundValType == "MaxStringLength")
+                                    {
+                                        const int64_t* currBoundVal =
+                                            std::get_if<int64_t>(
+                                                &std::get<
+                                                    BaseBiosBoundIndex::
+                                                        baseBiosBoundValue>(
+                                                    boundValueIt));
+                                        if (currBoundVal == nullptr)
+                                        {
+                                            BMCWEB_LOG_ERROR
+                                                << "Bound Value not found";
+                                            continue;
+                                        }
+                                        if (static_cast<int64_t>(attrReqVal.size()) > *currBoundVal)
+                                        {
+                                            valid = false;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        continue;
+                                    }
+                                }
+
+                                if (!valid)
+                                {
+                                    BMCWEB_LOG_ERROR
+                                        << "Requested Attribute Value invalid";
+                                    messages::propertyValueOutOfRange(
+                                        asyncResp->res, attrReqVal,
+                                        pendingAttrIt.key());
+                                    return;
+                                }
                             }
                             pendingAttrs.insert(std::make_pair(
                                 pendingAttrIt.key(),
@@ -933,67 +1145,34 @@ static void
                         }
                         else if (attrType == "Boolean")
                         {
-
-                            int64_t attrReqVal = static_cast<int64_t>(
-                                pendingAttrIt.value().get<bool>());
-                            // read the bound values for the attribute
-                            const std::vector<AttrBoundType> boundValues =
-                                std::get<
-                                    BaseBiosTableIndex::baseBiosBoundValues>(
-                                    attrIt->second);
-
-                            bool found = false;
-                            for (const AttrBoundType& boundValueIt :
-                                 boundValues)
-                            {
-                                // read the bound value type at 0th field
-                                // and convert from dbus to string format
-                                std::string boundValType = getBiosBoundValType(
-                                    std::string(std::get<BaseBiosBoundIndex::
-                                                             baseBiosBoundType>(
-                                        boundValueIt)));
-
-                                if (boundValType == "OneOf")
-                                {
-                                    // read the bound value  at 1st field
-                                    // for each entry
-                                    const int64_t* currBoundVal =
-                                        std::get_if<int64_t>(
-                                            &std::get<BaseBiosBoundIndex::
-                                                          baseBiosBoundValue>(
-                                                boundValueIt));
-
-                                    if (currBoundVal == nullptr)
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "Bound Value not found";
-                                        continue;
-                                    }
-
-                                    if (attrReqVal == *currBoundVal)
-                                    {
-                                        found = true;
-                                    }
-                                }
-                                else
-                                {
-                                    continue;
-                                }
-                            }
-
-                            if (!found)
+                            if (!pendingAttrIt.value().is_boolean())
                             {
                                 BMCWEB_LOG_ERROR
                                     << "Requested Attribute Value invalid";
-                                messages::internalError(asyncResp->res);
+                                messages::propertyValueTypeError(
+                                    asyncResp->res,
+                                    std::string(pendingAttrIt.value()),
+                                    pendingAttrIt.key());
                                 return;
                             }
+                            int64_t attrReqVal = static_cast<int64_t>(
+                                pendingAttrIt.value().get<bool>());
                             pendingAttrs.insert(std::make_pair(
                                 pendingAttrIt.key(),
                                 std::make_tuple(attrItType, attrReqVal)));
                         }
                         else if (attrType == "Integer")
                         {
+                            if (!pendingAttrIt.value().is_number())
+                            {
+                                BMCWEB_LOG_ERROR
+                                    << "Requested Attribute Value invalid";
+                                messages::propertyValueTypeError(
+                                    asyncResp->res,
+                                    std::string(pendingAttrIt.value()),
+                                    pendingAttrIt.key());
+                                return;
+                            }
                             int64_t attrReqVal = pendingAttrIt.value();
                             pendingAttrs.emplace(
                                 pendingAttrIt.key(),
@@ -1351,6 +1530,38 @@ static void getBiosAttributeRegistry(
                                     attributeIt["ScalarIncrement"] = 0;
                                 }
                             }
+                            else if (boundValType == "MinStringLength")
+                            {
+                                const int64_t* currBoundVal = std::get_if<
+                                    int64_t>(
+                                    &std::get<
+                                        BaseBiosBoundIndex::baseBiosBoundValue>(
+                                        boundValueIt));
+                                if (currBoundVal != nullptr)
+                                {
+                                    attributeIt["MinLength"] = *currBoundVal;
+                                }
+                                else
+                                {
+                                    attributeIt["MinLength"] = 0;
+                                }
+                            }
+                            else if (boundValType == "MaxStringLength")
+                            {
+                                const int64_t* currBoundVal = std::get_if<
+                                    int64_t>(
+                                    &std::get<
+                                        BaseBiosBoundIndex::baseBiosBoundValue>(
+                                        boundValueIt));
+                                if (currBoundVal != nullptr)
+                                {
+                                    attributeIt["MaxLength"] = *currBoundVal;
+                                }
+                                else
+                                {
+                                    attributeIt["MaxLength"] = 0;
+                                }
+                            }
                             else
                             {
                                 // read the bound value  at 1st field
@@ -1372,12 +1583,12 @@ static void getBiosAttributeRegistry(
                             boundValArray.push_back(boundValJson);
                         }
 
-                        if (boundValArray.empty())
+                        if (attrType == "Enumeration" && boundValArray.empty())
                         {
                             BMCWEB_LOG_ERROR << "Bound Values Array is empty";
                             continue;
                         }
-                        if (attrType != "Integer")
+                        if (attrType == "Enumeration")
                         {
                             attributeIt["Value"] = boundValArray;
                         }
