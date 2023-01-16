@@ -3737,6 +3737,7 @@ inline void requestRoutesManager(App& app)
                         }
                         if (privilege)
                         {
+#ifdef BMCWEB_ENABLE_FENCING_PRIVILEGE
                             crow::connections::systemBus->async_method_call(
                                 [asyncResp, privilege](
                                     const boost::system::error_code ec,
@@ -3771,6 +3772,11 @@ inline void requestRoutesManager(App& app)
                                 "GetSubTree", "/", int32_t(0),
                                 std::array<const char*, 1>{
                                     "xyz.openbmc_project.GpuOobRecovery.Server"});
+#else // BMCWEB_ENABLE_FENCING_PRIVILEGE -> Throw error for bad request
+                            asyncResp->res.result(
+                                boost::beast::http::status::bad_request);
+                            return;
+#endif // BMCWEB_ENABLE_FENCING_PRIVILEGE
                         }
 
 #ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN

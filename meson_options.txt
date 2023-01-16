@@ -277,6 +277,7 @@ option ('tls-auth-opt-in', type : 'feature', value : 'disabled', description : '
 option ('host-os-features', type : 'feature', value : 'enabled', description : 'Enables feature specific to host os.')
 option ('redfish-system-faultlog-dump-log', type : 'feature', value : 'disabled', description : 'Enable Redfish System faultlog dump log services.')
 option ('reset-bios-by-clear-nonvolatile', type : 'feature', value : 'disabled', description : 'Enable using DBUS xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables for Bios.ResetBios action.')
+option ('fencing-privilege', type : 'feature', value : 'disabled', description : 'Enables feature to set/unset the fencing privilege to satelite BMC.')
 
 # Insecure options. Every option that starts with a `insecure` flag should
 # not be enabled by default for any platform, unless the author fully comprehends
