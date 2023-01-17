@@ -6,6 +6,7 @@
 
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
+#include <boost/regex.hpp>
 #include <dbus_utility.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
@@ -627,6 +628,37 @@ inline void
             tmpPath += PLATFORMDEVICEPREFIX;
             tmpPath += dupSensorName;
         }
+        else if (chassisId.find("ProcessorModule") != std::string::npos)
+        {
+            boost::replace_all(dupSensorName, chassisId, "ProcessorModule_{PMWild}");
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += "ProcessorModule_{PMWild}";
+            tmpPath += "/Sensors/";
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += dupSensorName;
+        }
+        else if (chassisId.find("CPU") != std::string::npos)
+        {
+            if((dupSensorName.find("Temp")==std::string::npos) &&
+                (dupSensorName.find("Energy")==std::string::npos) &&
+                (dupSensorName.find("Power")==std::string::npos))
+            {
+                continue;
+            }
+
+            boost::regex expProcessorModule{"ProcessorModule_\\d"};
+            dupSensorName = boost::regex_replace(dupSensorName, expProcessorModule, "ProcessorModule_{PMWild}");
+
+            boost::regex expCpu{"CPU_\\d"};
+            dupSensorName = boost::regex_replace(dupSensorName, expCpu, "CPU_{CWild}");
+
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += "CPU_{CWild}";
+            tmpPath += "/Sensors/";
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += dupSensorName;
+        }
+
         if (std::find(metricProperties.begin(), metricProperties.end(),
                       tmpPath) == metricProperties.end())
         {
@@ -640,11 +672,11 @@ inline void
 
 inline void processChassisSensorsMetric(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisPath)
+    const std::string& chassisPath, bool recursive=false)
 {
     auto getAllChassisHandler =
         [asyncResp,
-         chassisPath](const boost::system::error_code ec,
+         chassisPath, recursive](const boost::system::error_code ec,
                       std::variant<std::vector<std::string>>& chassisLinks) {
             std::vector<std::string> chassisPaths;
             if (ec)
@@ -653,7 +685,9 @@ inline void processChassisSensorsMetric(
                 BMCWEB_LOG_ERROR << "getAllChassisSensors DBUS error: " << ec;
             }
             // Add parent chassis to the list
-            chassisPaths.emplace_back(chassisPath);
+            if(!recursive) {
+                chassisPaths.emplace_back(chassisPath);
+            }
             // Add underneath chassis paths
             std::vector<std::string>* chassisData =
                 std::get_if<std::vector<std::string>>(&chassisLinks);
@@ -662,6 +696,8 @@ inline void processChassisSensorsMetric(
                 for (const std::string& path : *chassisData)
                 {
                     chassisPaths.emplace_back(path);
+                    //process nest chassis. e.g CPU and GPU under ProcessorModule chassis
+                    processChassisSensorsMetric(asyncResp, path, true);
                 }
             }
             // Sort the chassis for sensors paths
@@ -707,7 +743,9 @@ inline void processChassisSensorsMetric(
 
                             if((name == "NWild" && chassisId.find("NVSwitch") != std::string::npos) ||
                             (name == "PRWild" && chassisId.find("PCIeRetimer") != std::string::npos) ||
-                            (name == "PSWild" && chassisId.find("PCIeSwitch") != std::string::npos))
+                            (name == "PSWild" && chassisId.find("PCIeSwitch") != std::string::npos) ||
+                            (name == "PMWild" && chassisId.find("ProcessorModule") != std::string::npos) ||
+                            (name == "CWild" && chassisId.find("CPU") != std::string::npos))
                             {
                                 size_t v = itemObj["Values"].size();
                                 itemObj["Values"].push_back(std::to_string(v));
@@ -799,7 +837,10 @@ inline void getPlatformMetricReportDefinition(
     nlohmann::json metricNVSwitchCount = nlohmann::json::array();
     nlohmann::json metricPCIeSwitchCount = nlohmann::json::array();
     nlohmann::json metricPCIeRetimerCount = nlohmann::json::array();
-    nlohmann::json metricBaseboarSensorArray = nlohmann::json::array();
+    nlohmann::json metricFPGACount = nlohmann::json::array();
+    nlohmann::json metricBaseboardSensorArray = nlohmann::json::array();
+    nlohmann::json metricProcessorModuleCountArray = nlohmann::json::array();
+    nlohmann::json metricCpuCountArray = nlohmann::json::array();
 
     nlohmann::json wildCards = nlohmann::json::array();
     wildCards.push_back({
@@ -821,9 +862,25 @@ inline void getPlatformMetricReportDefinition(
         {"Name", "PSWild"},
         {"Values", metricPCIeSwitchCount},
     });
+
     wildCards.push_back({
         {"Name", "FWild"},
-        {"Values", metricBaseboarSensorArray},
+        {"Values", metricFPGACount},
+    });
+
+    wildCards.push_back({
+        {"Name", "BSWild"},
+        {"Values", metricBaseboardSensorArray},
+    });
+
+    wildCards.push_back({
+        {"Name", "PMWild"},
+        {"Values", metricProcessorModuleCountArray},
+    });
+
+    wildCards.push_back({
+        {"Name", "CWild"},
+        {"Values", metricCpuCountArray},
     });
 
     asyncResp->res.jsonValue["MetricProperties"] = metricPropertiesAray;
