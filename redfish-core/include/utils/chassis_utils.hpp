@@ -679,6 +679,7 @@ inline void getBackgroundCopyAndInBandInfo(
             {
 
                 nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
 
                 MctpVdmUtilStatusResponse inBandStatusResp =
                     isInBandEnabled(*eid);
