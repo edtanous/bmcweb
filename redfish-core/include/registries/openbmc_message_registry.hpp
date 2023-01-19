@@ -65,12 +65,12 @@ namespace redfish::registries::openbmc
 const Header header = {
     "Copyright 2022 OpenBMC. All rights reserved.",
     "#MessageRegistry.v1_4_0.MessageRegistry",
-    "OpenBMC.0.4.0",
+    "OpenBMC.0.4.1",
     "OpenBMC Message Registry",
     "en",
     "This registry defines the base messages for OpenBMC.",
     "OpenBMC",
-    "0.4.0",
+    "0.4.1",
     "OpenBMC",
 };
 constexpr std::array registry = {
@@ -294,6 +294,16 @@ constexpr std::array registry = {
                      },
                      "None.",
                  }},
+    MessageEntry{"BMCFactoryReset",
+                 {
+                     "Indicates that BMC factory reset was performed.",
+                     "BMC factory reset was performed.",
+                     "OK",
+                     "OK",
+                     0,
+                     {},
+                     "None.",
+                 }},                 
     MessageEntry{"BMCFirmwarePanicReason",
                  {
                      "Indicates the reason for last BMC firmware panic.",
@@ -340,6 +350,28 @@ constexpr std::array registry = {
                      {},
                      "None.",
                  }},
+    MessageEntry{"BMCLogsErased",
+                 {
+                     "Indicates that BMC log erase was performed.",
+                     "BMC log erase was performed.",
+                     "OK",
+                     "OK",
+                     0,
+                     {},
+                     "None.",
+                 }},                    
+    MessageEntry{"BMCRebootReason",
+                 {
+                     "Indicates BMC firmware rebooted.",
+                     "BMC firmware rebooted due to reason %1.",
+                     "OK",
+                     "OK",
+                     1,
+                     {
+                         "string",
+                     },
+                     "None.",
+                 }},                 
     MessageEntry{"ChassisIntrusionDetected",
                  {
                      "Indicates that a physical security event "
