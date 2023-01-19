@@ -181,16 +181,33 @@ class DebugTokenBase
             {
                 abort("Operation timed out");
             }
-            // task timer timeout callback already did everything
+            // cleanup the task if there was no timeout
             if (task->state != "Cancelled")
             {
-                task->finishTask();
-                task->match.reset();
                 task->timer.cancel();
+                task->finishTask();
                 task->sendTaskEvent(task->state, task->index);
             }
+            // if the match is still active, it should be deleted asynchronously
+            // to avoid trying to delete it from inside its callback
+            if (task->match != nullptr)
+            {
+                boost::asio::post(
+                    crow::connections::systemBus->get_io_context(),
+                    [this] {
+                        task->match.reset();
+                        cleanup();
+                    });
+            }
+            else
+            {
+                cleanup();
+            }
         }
-        cleanup();
+        else
+        {
+            cleanup();
+        }
     }
 
     bool areItemsPending() const
