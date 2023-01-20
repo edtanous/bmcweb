@@ -772,7 +772,7 @@ inline void
                 {
                     continue;
                 }
-                uint64_t timestampUs = 0;
+                uint64_t timestampS = 0;
                 uint64_t size = 0;
                 std::string dumpStatus;
                 nlohmann::json::object_t thisEntry;
@@ -785,7 +785,7 @@ inline void
                 }
 
                 parseDumpEntryFromDbusObject(
-                    object, dumpStatus, size, timestampUs,
+                    object, dumpStatus, size, timestampS,
                     faultLogDiagnosticDataType, asyncResp);
 
                 if (dumpStatus !=
@@ -804,8 +804,7 @@ inline void
 
                 if (dumpType == "BMC")
                 {
-                    thisEntry["Created"] = redfish::time_utils::getDateTimeUint(
-                        timestampUs / 1000 / 1000);
+                    thisEntry["Created"] = redfish::time_utils::getDateTimeUint(timestampS);
                     thisEntry["DiagnosticDataType"] = "Manager";
                     thisEntry["AdditionalDataURI"] =
                         entriesPath + entryID + "/attachment";
@@ -813,8 +812,7 @@ inline void
                 }
                 else if (dumpType == "System")
                 {
-                    thisEntry["Created"] = redfish::time_utils::getDateTimeUint(
-                        timestampUs / 1000 / 1000);
+                    thisEntry["Created"] = redfish::time_utils::getDateTimeUint(timestampS);
                     thisEntry["DiagnosticDataType"] = "OEM";
                     thisEntry["OEMDiagnosticDataType"] = "System";
                     thisEntry["AdditionalDataURI"] =
@@ -823,8 +821,7 @@ inline void
                 }
                 else if (dumpType == "FaultLog")
                 {
-                    thisEntry["Created"] = redfish::time_utils::getDateTimeUint(
-                        timestampUs / 1000 / 1000);
+                    thisEntry["Created"] = redfish::time_utils::getDateTimeUint(timestampS);
                     thisEntry["DiagnosticDataType"] =
                         faultLogDiagnosticDataType;
                     thisEntry["AdditionalDataURI"] =
