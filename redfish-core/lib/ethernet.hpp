@@ -31,6 +31,8 @@
 #include <optional>
 #include <regex>
 
+#define MAC_STRING_SIZE 17
+
 namespace redfish
 {
 
@@ -1037,6 +1039,13 @@ inline void
                           const std::string& macAddress,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+    if (macAddress.size() > MAC_STRING_SIZE)
+    {
+        messages::propertyValueFormatError(asyncResp->res, macAddress,
+                                           "MACAddress");
+        return;
+    }
+
     static constexpr std::string_view dbusNotAllowedError =
         "xyz.openbmc_project.Common.Error.NotAllowed";
 
