@@ -3290,17 +3290,25 @@ inline void requestRoutesManager(App& app)
                 {
                     buildType = "ProvisioningDebug";
                 }
-                if (descriptionContent.rfind("prod-prov", 0) == 0)
+                else if (descriptionContent.rfind("prod-prov", 0) == 0)
                 {
                     buildType = "ProvisioningProduction";
                 }
-                if (descriptionContent.rfind("debug-platform", 0) == 0)
+                else if (descriptionContent.rfind("dev-prov", 0) == 0)
+                {
+                    buildType = "ProvisioningDevelopment";
+                }
+                else if (descriptionContent.rfind("debug-platform", 0) == 0)
                 {
                     buildType = "PlatformDebug";
                 }
-                if (descriptionContent.rfind("prod-platform", 0) == 0)
+                else if (descriptionContent.rfind("prod-platform", 0) == 0)
                 {
                     buildType = "PlatformProduction";
+                }
+                else if (descriptionContent.rfind("dev-platform", 0) == 0)
+                {
+                    buildType = "PlatformDevelopment";
                 }
             }
 
