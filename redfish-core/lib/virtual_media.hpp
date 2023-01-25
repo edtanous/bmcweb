@@ -169,6 +169,9 @@ inline nlohmann::json vmItemTemplate(const std::string& name,
     item["Id"] = resName;
     item["MediaTypes"] = {"CD", "USBStick"};
     item["TransferMethod"] = "Stream";
+    item["Oem"]["OpenBMC"]["@odata.id"] = "/redfish/v1/Managers/" + name +
+                                          "/VirtualMedia/" + resName +
+                                           "#/Oem/OpenBMC";
     item["Oem"]["OpenBMC"]["@odata.type"] =
         "#OemVirtualMedia.v1_0_0.VirtualMedia";
 
