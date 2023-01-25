@@ -554,8 +554,8 @@ inline void handleReplaceCertificateAction(
     std::shared_ptr<CertificateFile> certFile =
         std::make_shared<CertificateFile>(certificate);
     crow::connections::systemBus->async_method_call(
-        [asyncResp, certFile, objectPath, service, url{*parsedUrl}, id,
-         name](const boost::system::error_code ec) {
+        [asyncResp, certFile, objectPath, service, url{*parsedUrl}, id, name,
+         certURI](const boost::system::error_code ec) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
@@ -569,10 +569,11 @@ inline void handleReplaceCertificateAction(
                 messages::internalError(asyncResp->res);
                 return;
             }
-            getCertificateProperties(asyncResp, objectPath, service, id, url,
-                                     name);
             BMCWEB_LOG_DEBUG << "HTTPS certificate install file="
                              << certFile->getCertFilePath();
+            asyncResp->res.addHeader(boost::beast::http::field::location,
+                                     certURI);
+            asyncResp->res.result(boost::beast::http::status::no_content);
         },
         service, objectPath, certs::certReplaceIntf, "Replace",
         certFile->getCertFilePath());
