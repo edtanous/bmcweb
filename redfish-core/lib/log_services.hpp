@@ -1117,6 +1117,9 @@ inline void createDumpTaskCallback(
                             BMCWEB_LOG_ERROR << createdObjPath.str
                                              << ": Error in creating dump";
                             taskData->state = "Cancelled";
+                            nlohmann::json retMessage =
+                                messages::operationFailed();
+                            taskData->messages.emplace_back(retMessage);
                             return task::completed;
                         }
 
@@ -1232,10 +1235,11 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     //     createDumpParamVec;
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, payload(task::Payload(req)),
-         dumpPath](const boost::system::error_code ec,
-                   const sdbusplus::message::message& msg,
-                   const sdbusplus::message::object_path& objPath) mutable {
+        [asyncResp, payload(task::Payload(req)), dumpPath,
+         oemDiagnosticDataType](
+            const boost::system::error_code ec,
+            const sdbusplus::message::message& msg,
+            const sdbusplus::message::object_path& objPath) mutable {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "CreateDump resp_handler got error " << ec;
@@ -1248,6 +1252,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
                 BMCWEB_LOG_ERROR << "CreateDump DBus error: " << dbusError->name
                                  << " and error msg: " << dbusError->message;
+
                 if (std::string_view(
                         "xyz.openbmc_project.Common.Error.NotAllowed") ==
                     dbusError->name)
@@ -1274,6 +1279,15 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     dbusError->name)
                 {
                     messages::createLimitReachedForResource(asyncResp->res);
+                    return;
+                }
+                if (std::string_view(
+                        "xyz.openbmc_project.Common.Error.InvalidArgument") ==
+                    dbusError->name)
+                {
+                    messages::propertyValueIncorrect(asyncResp->res,
+                                                     "DiagnosticType",
+                                                     *oemDiagnosticDataType);
                     return;
                 }
                 // Other Dbus errors such as:
