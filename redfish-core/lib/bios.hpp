@@ -570,7 +570,8 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if ((attrJson["Type"] == "Enumeration" && attrJson[key].is_string()) ||
             (attrJson["Type"] == "String" && attrJson[key].is_string()) ||
             (attrJson["Type"] == "Integer" && attrJson[key].is_number()) ||
-            (attrJson["Type"] == "Boolean" && attrJson[key].is_boolean()))
+            (attrJson["Type"] == "Boolean" && attrJson[key].is_boolean()) ||
+            (key == "DefaultValue" && attrJson[key].is_null()))
         {
             propertyValueTypeValid = true;
         }
@@ -707,8 +708,6 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if ((attrType == "String") || (attrType == "Enumeration"))
         {
             std::string currVal = attrJson["CurrentValue"].get<std::string>();
-            std::string defaultVal =
-                attrJson["DefaultValue"].get<std::string>();
 
             // read and update the bound values
             if (attrType == "Enumeration")
@@ -733,15 +732,28 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     maxLength);
             }
             attrType = getDbusBiosAttrType(attrType);
-            baseBiosTable.insert(std::make_pair(
-                attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
-                                      attrDescr, attrMenuPath, currVal,
-                                      defaultVal, attrValues)));
+            if (attrJson["DefaultValue"].is_null())
+            {
+                // put a incorrect type to indicate null
+                int64_t defaultVal = 0;
+                baseBiosTable.insert(std::make_pair(
+                    attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
+                                          attrDescr, attrMenuPath, currVal,
+                                          defaultVal, attrValues)));
+            }
+            else
+            {
+                std::string defaultVal =
+                    attrJson["DefaultValue"].get<std::string>();
+                baseBiosTable.insert(std::make_pair(
+                    attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
+                                          attrDescr, attrMenuPath, currVal,
+                                          defaultVal, attrValues)));
+            }
         }
         else if (attrType == "Integer")
         {
             int64_t currVal = attrJson["CurrentValue"].get<int64_t>();
-            int64_t defaultVal = attrJson["DefaultValue"].get<int64_t>();
 
             // read and update the bound values
             attrValues.emplace_back(
@@ -755,10 +767,23 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 attrJson["ScalarIncrement"].get<int64_t>());
 
             attrType = getDbusBiosAttrType(attrType);
-            baseBiosTable.insert(std::make_pair(
-                attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
-                                      attrDescr, attrMenuPath, currVal,
-                                      defaultVal, attrValues)));
+            if (attrJson["DefaultValue"].is_null())
+            {
+                // put a incorrect type to indicate null
+                std::string defaultVal;
+                baseBiosTable.insert(std::make_pair(
+                    attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
+                                          attrDescr, attrMenuPath, currVal,
+                                          defaultVal, attrValues)));
+            }
+            else
+            {
+                int64_t defaultVal = attrJson["DefaultValue"].get<int64_t>();
+                baseBiosTable.insert(std::make_pair(
+                    attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
+                                          attrDescr, attrMenuPath, currVal,
+                                          defaultVal, attrValues)));
+            }
         }
         else if (attrType == "Boolean")
         {
@@ -766,14 +791,26 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             // in the int64_t type
             int64_t currVal =
                 static_cast<int64_t>(attrJson["CurrentValue"].get<bool>());
-            int64_t defaultVal =
-                static_cast<int64_t>(attrJson["DefaultValue"].get<bool>());
 
             attrType = getDbusBiosAttrType(attrType);
-            baseBiosTable.insert(std::make_pair(
-                attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
-                                      attrDescr, attrMenuPath, currVal,
-                                      defaultVal, attrValues)));
+            if (attrJson["DefaultValue"].is_null())
+            {
+                // put a incorrect type to indicate null
+                std::string defaultVal;
+                baseBiosTable.insert(std::make_pair(
+                    attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
+                                          attrDescr, attrMenuPath, currVal,
+                                          defaultVal, attrValues)));
+            }
+            else
+            {
+                int64_t defaultVal =
+                    static_cast<int64_t>(attrJson["DefaultValue"].get<bool>());
+                baseBiosTable.insert(std::make_pair(
+                    attr, std::make_tuple(attrType, attrReadOnly, attrDispName,
+                                          attrDescr, attrMenuPath, currVal,
+                                          defaultVal, attrValues)));
+            }
         }
         else
         {
@@ -1099,7 +1136,9 @@ static void
                                                 << "Bound Value not found";
                                             continue;
                                         }
-                                        if (static_cast<int64_t>(attrReqVal.size()) < *currBoundVal)
+                                        if (static_cast<int64_t>(
+                                                attrReqVal.size()) <
+                                            *currBoundVal)
                                         {
                                             valid = false;
                                         }
@@ -1118,7 +1157,9 @@ static void
                                                 << "Bound Value not found";
                                             continue;
                                         }
-                                        if (static_cast<int64_t>(attrReqVal.size()) > *currBoundVal)
+                                        if (static_cast<int64_t>(
+                                                attrReqVal.size()) >
+                                            *currBoundVal)
                                         {
                                             valid = false;
                                         }
@@ -1308,7 +1349,7 @@ static void getBiosAttributeRegistry(
                             }
                             else
                             {
-                                attributeIt["CurrentValue"] = "";
+                                attributeIt["CurrentValue"] = nullptr;
                             }
 
                             // read the default value of attribute at 6th field
@@ -1323,7 +1364,7 @@ static void getBiosAttributeRegistry(
                             }
                             else
                             {
-                                attributeIt["DefaultValue"] = "";
+                                attributeIt["DefaultValue"] = nullptr;
                             }
                         }
                         else if ((attrType == "Integer") ||
@@ -1355,14 +1396,7 @@ static void getBiosAttributeRegistry(
                             }
                             else
                             {
-                                if (attrType == "Boolean")
-                                {
-                                    attributeIt["CurrentValue"] = false;
-                                }
-                                else
-                                {
-                                    attributeIt["CurrentValue"] = 0;
-                                }
+                                attributeIt["CurrentValue"] = nullptr;
                             }
 
                             // read the current value of attribute at 6th field
@@ -1392,14 +1426,7 @@ static void getBiosAttributeRegistry(
                             }
                             else
                             {
-                                if (attrType == "Boolean")
-                                {
-                                    attributeIt["DefaultValue"] = false;
-                                }
-                                else
-                                {
-                                    attributeIt["DefaultValue"] = 0;
-                                }
+                                attributeIt["DefaultValue"] = nullptr;
                             }
                         }
 
