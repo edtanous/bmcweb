@@ -171,15 +171,16 @@ inline void
                                     return;
                                 }
 
-                                if (version == nullptr || version->empty())
-                                {
-                                    messages::internalError(aResp->res);
-                                    return;
-                                }
                                 if (swInvPurpose == nullptr ||
                                     *swInvPurpose != swVersionPurpose)
                                 {
                                     // Not purpose we're looking for
+                                    return;
+                                }
+
+                                if (version == nullptr || version->empty())
+                                {
+                                    messages::internalError(aResp->res);
                                     return;
                                 }
 
