@@ -1791,7 +1791,7 @@ inline void
     }
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/Settings";
-    asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_1_0.Bios";
+    asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_2_0.Bios";
     asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
     asyncResp->res.jsonValue["Description"] = "BIOS Settings";
     asyncResp->res.jsonValue["Id"] = "BIOS_Settings";
