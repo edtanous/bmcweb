@@ -430,23 +430,10 @@ static void
 
 // Note that asyncResp can be either a valid pointer or nullptr. If nullptr
 // then no asyncResp updates will occur
-static bool monitorForSoftwareAvailable(
+static void monitorForSoftwareAvailable(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const crow::Request& req, int timeoutTimeSeconds = 10)
 {
-    // Only allow one FW update at a time
-    if (fwUpdateInProgress != false)
-    {
-        if (asyncResp)
-        {
-            std::string resolution =
-                "Another update is in progress. Retry"
-                " the update operation once it is complete.";
-            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
-        }
-        return true;
-    }
-
     fwAvailableTimer =
         std::make_unique<boost::asio::steady_timer>(*req.ioService);
 
@@ -495,7 +482,6 @@ static bool monitorForSoftwareAvailable(
         "member='InterfacesAdded',"
         "path='/xyz/openbmc_project/logging'",
         preTaskLoggingHandler);
-    return false;
 }
 
 /**
@@ -591,9 +577,22 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                 BMCWEB_LOG_DEBUG
                     << "Server: " << tftpServer + " File: " << fwFile;
 
+
+                if (fwUpdateInProgress != false)
+                {
+                    if (asyncResp)
+                    {
+                        std::string resolution =
+                            "Another update is in progress. Retry"
+                            " the update operation once it is complete.";
+                        redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+                    }
+                    return;
+                }
+
                 // Setup callback for when new software detected
                 // Give TFTP 10 minutes to complete
-                (void)monitorForSoftwareAvailable(asyncResp, req, 600);
+                monitorForSoftwareAvailable(asyncResp, req, 600);
 
                 // TFTP can take up to 10 minutes depending on image size and
                 // connection speed. Return to caller as soon as the TFTP
@@ -650,6 +649,22 @@ inline void
         }
         return;
     }
+
+    // Only allow one FW update at a time
+    if (fwUpdateInProgress != false)
+    {
+        if (asyncResp)
+        {
+            // don't copy the image, update already in progress.
+            std::string resolution =
+                "Another update is in progress. Retry"
+                " the update operation once it is complete.";
+            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+            BMCWEB_LOG_ERROR << "Update already in progress.";
+        }
+        return;
+    }
+
     std::error_code spaceInfoError;
     const std::filesystem::space_info spaceInfo =
         std::filesystem::space(updateServiceImageLocation, spaceInfoError);
@@ -665,25 +680,20 @@ inline void
             messages::insufficientStorage(asyncResp->res, resolution);
             return;
         }
-    }
-    // Setup callback for when new software detected
-    if (monitorForSoftwareAvailable(asyncResp, req))
-    {
-        // don't copy the image, update already in progress.
-        BMCWEB_LOG_ERROR << "Update already in progress.";
-    }
-    else
-    {
-        std::string filepath(
-            updateServiceImageLocation +
-            boost::uuids::to_string(boost::uuids::random_generator()()));
-        BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
-        std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
-                                        std::ofstream::trunc);
-        out << req.body;
-        out.close();
-        BMCWEB_LOG_DEBUG << "file upload complete!!";
-    }
+    }   
+
+    monitorForSoftwareAvailable(asyncResp, req);
+
+    std::string filepath(
+        updateServiceImageLocation +
+        boost::uuids::to_string(boost::uuids::random_generator()()));
+    BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
+    std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
+                                    std::ofstream::trunc);
+    out << req.body;
+    out.close();
+    BMCWEB_LOG_DEBUG << "file upload complete!!";
+
 }
 
 inline void requestRoutesUpdateService(App& app)
