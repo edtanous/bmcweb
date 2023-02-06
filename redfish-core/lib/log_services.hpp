@@ -2455,7 +2455,7 @@ inline void requestRoutesDBusEventLogEntryDownload(App& app)
             {
                 return;
             }
-            if (http_helpers::isContentTypeAllowed(
+            if (!http_helpers::isContentTypeAllowed(
                     req.getHeaderValue("Accept"),
                     http_helpers::ContentType::OctetStream, true))
             {
