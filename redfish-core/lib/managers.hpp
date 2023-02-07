@@ -3501,6 +3501,40 @@ inline void requestRoutesManager(App& app)
                             {
                                 continue;
                             }
+
+                            // At /redfish/v1/Managers/HGX_BMC_0, we want       
+                            // "ManagerInChassis" to point to "root" Chassis rather than 
+                            // another Chassis that is contained by the "root" Chassis.
+                            //we want to identify the "root" Chassis of the HMC by making 
+                            //only two queries and without having to attempt to parse the 
+                            //Topology.
+                            sdbusplus::asio::getProperty<std::vector<std::string>>(
+                            *crow::connections::systemBus,
+                            "xyz.openbmc_project.ObjectMapper",
+                            path + "/chassis" , 
+                            "xyz.openbmc_project.Association",
+                            "endpoints",
+                            [asyncResp](const boost::system::error_code ec,
+                                const std::vector<std::string>& property) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                                    return; // no chassis = no failures
+                                }
+
+                                //single entry will be present
+                                for (const std::string& p : property)
+                                {
+                                    sdbusplus::message::object_path objPath(p);
+                                    const std::string& chassisId = objPath.filename();
+                                    asyncResp->res.jsonValue["Links"] 
+                                    ["ManagerInChassis"]["@odata.id"] = 
+                                    "/redfish/v1/Chassis/" + chassisId;
+                                }
+                                asyncResp->res.jsonValue["Links"]    
+                                    ["ManagerInChassis@odata.count"] = 1;
+                            });
+
                             const std::string& connectionName =
                                 connectionNames[0].first;
                             const std::vector<std::string>& interfaces =
