@@ -246,8 +246,8 @@ static void
                 if (objPath.parent_path() == certs::httpsObjectPath)
                 {
                     certURL = crow::utility::urlFromPieces(
-                        "redfish", "v1", "Managers", "bmc", "NetworkProtocol",
-                        "HTTPS", "Certificates", certId);
+                        "redfish", "v1", "Managers", PLATFORMBMCID,
+                        "NetworkProtocol", "HTTPS", "Certificates", certId);
                 }
                 else if (objPath.parent_path() == certs::ldapObjectPath)
                 {
@@ -258,8 +258,8 @@ static void
                 else if (objPath.parent_path() == certs::authorityObjectPath)
                 {
                     certURL = crow::utility::urlFromPieces(
-                        "redfish", "v1", "Managers", "bmc", "Truststore",
-                        "Certificates", certId);
+                        "redfish", "v1", "Managers", PLATFORMBMCID,
+                        "Truststore", "Certificates", certId);
                 }
                 else
                 {
@@ -518,8 +518,8 @@ inline void handleReplaceCertificateAction(
     std::string name;
     std::string service;
     if (crow::utility::readUrlSegments(*parsedUrl, "redfish", "v1", "Managers",
-                                       "bmc", "NetworkProtocol", "HTTPS",
-                                       "Certificates", std::ref(id)))
+                                       PLATFORMBMCID, "NetworkProtocol",
+                                       "HTTPS", "Certificates", std::ref(id)))
     {
         objectPath =
             sdbusplus::message::object_path(certs::httpsObjectPath) / id;
@@ -535,9 +535,9 @@ inline void handleReplaceCertificateAction(
         name = "LDAP certificate";
         service = certs::ldapServiceName;
     }
-    else if (crow::utility::readUrlSegments(*parsedUrl, "redfish", "v1",
-                                            "Managers", "bmc", "Truststore",
-                                            "Certificates", std::ref(id)))
+    else if (crow::utility::readUrlSegments(
+                 *parsedUrl, "redfish", "v1", "Managers", PLATFORMBMCID,
+                 "Truststore", "Certificates", std::ref(id)))
     {
         objectPath =
             sdbusplus::message::object_path(certs::authorityObjectPath) / id;
@@ -939,8 +939,8 @@ inline void handleHTTPSCertificateCollectionPost(
             sdbusplus::message::object_path path(objectPath);
             std::string certId = path.filename();
             const boost::urls::url certURL = crow::utility::urlFromPieces(
-                "redfish", "v1", "Managers", "bmc", "NetworkProtocol", "HTTPS",
-                "Certificates", certId);
+                "redfish", "v1", "Managers", PLATFORMBMCID, "NetworkProtocol",
+                "HTTPS", "Certificates", certId);
             getCertificateProperties(asyncResp, objectPath,
                                      certs::httpsServiceName, certId, certURL,
                                      "HTTPS Certificate");
@@ -962,7 +962,7 @@ inline void handleHTTPSCertificateGet(
 
     BMCWEB_LOG_DEBUG << "HTTPS Certificate ID=" << id;
     const boost::urls::url certURL = crow::utility::urlFromPieces(
-        "redfish", "v1", "Managers", "bmc", "NetworkProtocol", "HTTPS",
+        "redfish", "v1", "Managers", PLATFORMBMCID, "NetworkProtocol", "HTTPS",
         "Certificates", id);
     std::string objPath =
         sdbusplus::message::object_path(certs::httpsObjectPath) / id;
@@ -1169,7 +1169,7 @@ inline void handleTrustStoreCertificateCollectionPost(
             sdbusplus::message::object_path path(objectPath);
             std::string certId = path.filename();
             const boost::urls::url certURL = crow::utility::urlFromPieces(
-                "redfish", "v1", "Managers", "bmc", "Truststore",
+                "redfish", "v1", "Managers", PLATFORMBMCID, "Truststore",
                 "Certificates", certId);
             getCertificateProperties(asyncResp, objectPath,
                                      certs::authorityServiceName, certId,
@@ -1191,8 +1191,9 @@ inline void handleTrustStoreCertificateGet(
     }
 
     BMCWEB_LOG_DEBUG << "Truststore Certificate ID=" << id;
-    const boost::urls::url certURL = crow::utility::urlFromPieces(
-        "redfish", "v1", "Managers", "bmc", "Truststore", "Certificates", id);
+    const boost::urls::url certURL =
+        crow::utility::urlFromPieces("redfish", "v1", "Managers", PLATFORMBMCID,
+                                     "Truststore", "Certificates", id);
     std::string objPath =
         sdbusplus::message::object_path(certs::authorityObjectPath) / id;
     getCertificateProperties(asyncResp, objPath, certs::authorityServiceName,
