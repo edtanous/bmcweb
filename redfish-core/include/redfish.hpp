@@ -57,6 +57,7 @@
 #include "thermal.hpp"
 #include "thermal_subsystem.hpp"
 #include "trigger.hpp"
+#include "trusted_components.hpp"
 #include "update_service.hpp"
 #include "virtual_media.hpp"
 
@@ -184,7 +185,7 @@ class RedfishService
         requestRoutesSystemFaultLogEntryCollection(app);
         requestRoutesSystemFaultLogEntry(app);
         requestRoutesSystemFaultLogClear(app);
-#endif //BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
+#endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
 
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
         requestRoutesJournalEventLogEntryCollection(app);
@@ -337,6 +338,7 @@ class RedfishService
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
         requestRoutesUpdateServiceCommitImage(app);
+        requestRoutesTrustedComponents(app);
         // Note, this must be the last route registered
         requestRoutesRedfish(app);
     }

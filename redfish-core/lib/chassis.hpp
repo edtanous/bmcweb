@@ -807,7 +807,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& chassisId,
                            const bool operationalStatusPresent)
 {
-    asyncResp->res.jsonValue["@odata.type"] = "#Chassis.v1_17_0.Chassis";
+    asyncResp->res.jsonValue["@odata.type"] = "#Chassis.v1_21_0.Chassis";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" + chassisId;
     asyncResp->res.jsonValue["Name"] = chassisId;
     asyncResp->res.jsonValue["Id"] = chassisId;
@@ -865,6 +865,11 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["PCIeSlots"] = {
         {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/PCIeSlots"}};
 
+    // TrustedComponent collection
+    asyncResp->res.jsonValue["TrustedComponents"] = {
+        {"@odata.id",
+         "/redfish/v1/Chassis/" + chassisId + "/TrustedComponents"}};
+
     // Controls Collection
     asyncResp->res.jsonValue["Controls"] = {
         {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/Controls"}};
@@ -876,9 +881,9 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
         {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}};
 
-
     using GetManagedPropertyType = boost::container::flat_map<
-        std::string, std::variant<std::string, bool, double, uint64_t, uint32_t>>;
+        std::string,
+        std::variant<std::string, bool, double, uint64_t, uint32_t>>;
     crow::connections::systemBus->async_method_call(
         [asyncResp,
          operationalStatusPresent](const boost::system::error_code ec,
@@ -1334,7 +1339,7 @@ inline void
                     }
                     // Couldn't find an object with that name.  return an error
                     messages::resourceNotFound(
-                        asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                        asyncResp->res, "#Chassis.v1_21_0.Chassis", chassisId);
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
