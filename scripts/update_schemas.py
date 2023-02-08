@@ -142,6 +142,8 @@ include_list = [
     "ThermalSubsystem",
     "Triggers",
     "TriggersCollection",
+    "TrustedComponent",
+    "TrustedComponentCollection",
     "UpdateService",
     "VLanNetworkInterfaceCollection",
     "VLanNetworkInterface",
