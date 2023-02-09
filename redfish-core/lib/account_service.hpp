@@ -341,6 +341,14 @@ inline void handleRoleMapPatch(
                 // If "LocalRole" info is provided
                 if (localRole)
                 {
+                    std::string role =
+                        getPrivilegeFromRoleId(std::move(*localRole));
+                    if (role.empty())
+                    {
+                        BMCWEB_LOG_ERROR << "Invalid privilege";
+                        messages::insufficientPrivilege(asyncResp->res);
+                        return;
+                    }
                     crow::connections::systemBus->async_method_call(
                         [asyncResp, roleMapObjData, serverType, index,
                          localRole](const boost::system::error_code ec) {
@@ -358,9 +366,7 @@ inline void handleRoleMapPatch(
                         ldapDbusService, roleMapObjData[index].first,
                         propertyInterface, "Set",
                         "xyz.openbmc_project.User.PrivilegeMapperEntry",
-                        "Privilege",
-                        dbus::utility::DbusVariantType(
-                            getPrivilegeFromRoleId(std::move(*localRole))));
+                        "Privilege", role);
                 }
             }
             // Create a new RoleMapping Object.
@@ -397,26 +403,37 @@ inline void handleRoleMapPatch(
                 BMCWEB_LOG_DEBUG << "Remote Group=" << *remoteGroup
                                  << ",LocalRole=" << *localRole;
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, serverType, localRole,
-                     remoteGroup](const boost::system::error_code ec) {
-                        if (ec)
+                        std::string role =
+                            getPrivilegeFromRoleId(std::move(*localRole));
+                        if (role.empty())
                         {
-                            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
-                            messages::internalError(asyncResp->res);
+                            BMCWEB_LOG_ERROR << "Invalid privilege";
+                            messages::insufficientPrivilege(asyncResp->res);
                             return;
                         }
-                        nlohmann::json& remoteRoleJson =
-                            asyncResp->res
-                                .jsonValue[serverType]["RemoteRoleMapping"];
-                        nlohmann::json::object_t roleMapEntry;
-                        roleMapEntry["LocalRole"] = *localRole;
-                        roleMapEntry["RemoteGroup"] = *remoteGroup;
-                        remoteRoleJson.push_back(std::move(roleMapEntry));
-                    },
-                    ldapDbusService, dbusObjectPath, ldapPrivMapperInterface,
-                    "Create", *remoteGroup,
-                    getPrivilegeFromRoleId(std::move(*localRole)));
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, serverType, localRole,
+                             remoteGroup](const boost::system::error_code ec) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_ERROR << "DBUS response error: "
+                                                     << ec;
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                nlohmann::json& remoteRoleJson =
+                                    asyncResp->res
+                                        .jsonValue[serverType]
+                                                  ["RemoteRoleMapping"];
+                                nlohmann::json::object_t roleMapEntry;
+                                roleMapEntry["LocalRole"] = *localRole;
+                                roleMapEntry["RemoteGroup"] = *remoteGroup;
+                                remoteRoleJson.push_back(
+                                    std::move(roleMapEntry));
+                            },
+                            ldapDbusService, dbusObjectPath,
+                            ldapPrivMapperInterface, "Create", *remoteGroup,
+                            role);
             }
         }
     }
