@@ -318,32 +318,6 @@ inline std::string getPowerModeType(const std::string& dbusAction)
     return "";
 }
 
-/**
- *@brief Translates PowerMode from Redfish to DBUS property value.
- *
- *@param[in] powerMode The powerMode value(MaxP, MaxQ, Custom) in Redfish.
- *
- *@return Returns as a string as expected by dbus.
- *If translation cannot be done, returns an empty string.
- */
-
-inline std::string convertToPowerModeType(const std::string& powerMode)
-{
-    if (powerMode == "MaxP")
-    {
-        return "xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance";
-    }
-    if (powerMode == "MaxQ")
-    {
-        return "xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving";
-    }
-    if (powerMode == "Custom")
-    {
-        return "xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM";
-    }
-
-    return "";
-}
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 /**

@@ -466,59 +466,6 @@ inline void getCpuPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         });
 }
 
-inline void changemode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const std::string& path, const std::string& controlMode)
-{
-    crow::connections::systemBus->async_method_call(
-        [asyncResp, controlMode, path](
-            const boost::system::error_code errorno,
-            const std::vector<std::pair<std::string, std::vector<std::string>>>&
-                objInfo) {
-            if (errorno)
-            {
-                BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                                 << errorno;
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            for (const auto& element : objInfo)
-            {
-                for (const auto& interface : element.second)
-                {
-                    if (interface == "xyz.openbmc_project.Control.Power.Mode")
-                    {
-                        crow::connections::systemBus->async_method_call(
-                            [asyncResp, path, controlMode,
-                             objInfo](const boost::system::error_code ec2) {
-                                if (ec2)
-                                {
-                                    BMCWEB_LOG_ERROR << "DBUS response error "
-                                                     << ec2;
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                if (controlMode !=
-                                    "xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM")
-                                {
-                                    messages::success(asyncResp->res);
-                                }
-                                return;
-                            },
-                            element.first, path,
-                            "org.freedesktop.DBus.Properties", "Set",
-                            "xyz.openbmc_project.Control.Power.Mode",
-                            "PowerMode",
-                            dbus::utility::DbusVariantType(controlMode));
-                    }
-                }
-            }
-        },
-
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetObject", path,
-        std::array<const char*, 1>{"xyz.openbmc_project.Control.Power.Mode"});
-}
 inline void changepowercap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& path, size_t setpoint)
 {
@@ -937,52 +884,19 @@ inline void requestRoutesChassisControls(App& app)
                                 validendpoint = true;
                                 std::string mode;
                                 std::optional<uint32_t> setpoint;
-                                std::string controlMode;
+
                                 if (!json_util::readJsonAction(
-                                        req, asyncResp->res, "ControlMode",
-                                        mode, "SetPoint", setpoint))
+                                        req, asyncResp->res, "SetPoint",
+                                        setpoint))
                                 {
                                     return;
                                 }
+                                if (setpoint)
+                                {
+                                    changepowercap(asyncResp, object,
+                                                   *setpoint);
+                                }
 
-                                for (auto& itr : modes)
-                                {
-                                    if (itr.second == mode)
-                                    {
-                                        controlMode = itr.first;
-                                        break;
-                                    }
-                                }
-                                if ((mode == "Automatic") || (mode == "Manual"))
-                                {
-                                    changemode(asyncResp, object, controlMode);
-                                }
-                                else if (mode == "Override")
-                                {
-                                    if (setpoint)
-                                    {
-                                        changemode(asyncResp, object,
-                                                   controlMode);
-
-                                        changepowercap(asyncResp, object,
-                                                       *setpoint);
-                                    }
-                                    else
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "Invalid Set point ";
-                                        messages::actionParameterMissing(
-                                            asyncResp->res, "Override mode",
-                                            "SetPoint");
-                                        return;
-                                    }
-                                }
-                                else
-                                {
-                                    BMCWEB_LOG_ERROR << "invalid input";
-                                    messages::actionParameterUnknown(
-                                        asyncResp->res, "ControlMode", mode);
-                                }
                                 break;
                             }
                         }

@@ -722,151 +722,6 @@ inline void
         "/xyz/openbmc_project/inventory", 0, interfaces);
 }
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-/**
- * Handle the PATCH operation of the powerMode status property. Do basic
- * validation of the input data, and then set the D-Bus property.
- *
- * @param[in,out]   resp             Async HTTP response.
- * @param[in]       resourceId       Resource Id.
- * @param[in]       powerMode        New property value to apply.
- * @param[in]       objectPath       Path of resource object to modify.
- * @param[in]       serviceName      Service for resource object.
- */
-inline void patchPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
-                           const std::string& resourceId,
-                           const std::optional<std::string>& powerMode,
-                           const std::string& objectPath,
-                           const std::string& serviceName,
-                           const std::string& resourceType)
-{
-    std::string powerModeStatus =
-        redfish::chassis_utils::convertToPowerModeType(*powerMode);
-    if (powerModeStatus.empty())
-    {
-        // Invalid value
-        messages::propertyValueIncorrect(resp->res, "PowerMode", *powerMode);
-        BMCWEB_LOG_DEBUG << "Set power mode property failed"
-                         << ":"
-                         << "incorrect property value given";
-        return;
-    }
-    // Set the property, with handler to check error responses
-    crow::connections::systemBus->async_method_call(
-        [resp, resourceId, powerMode, resourceType](
-            boost::system::error_code ec, sdbusplus::message::message& msg) {
-            if (!ec)
-            {
-                BMCWEB_LOG_DEBUG << "Set power mode property succeeded";
-                return;
-            }
-
-            BMCWEB_LOG_ERROR << resourceType << ": " << resourceId
-                             << " set power mode property failed: " << ec;
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
-                messages::internalError(resp->res);
-                return;
-            }
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(resp->res);
-            }
-            else
-            {
-                messages::internalError(resp->res);
-            }
-        },
-        serviceName, objectPath, "org.freedesktop.DBus.Properties", "Set",
-        "xyz.openbmc_project.Control.Power.Mode", "PowerMode",
-        std::variant<std::string>(powerModeStatus));
-}
-
-/**
- * Handle the PATCH operation of the powerMode status property. Do basic
- * validation of the input data, and then set the D-Bus property.
- *
- * @param[in,out]   asynResp         Async HTTP response.
- * @param[in]       powerMode        New property value to apply.
- * @param[in]       chassisId        Chassis Id.
- */
-inline void
-    patchControlPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const std::string& controlMode,
-                          const std::string& chassisPath,
-                          const std::string& connectionName)
-{
-    std::string powerMode =
-        redfish::chassis_utils::convertToPowerModeType(controlMode);
-
-    crow::connections::systemBus->async_method_call(
-        [asyncResp, connectionName,
-         powerMode](const boost::system::error_code& e,
-                    std::variant<std::vector<std::string>>& resp) {
-            if (e)
-            {
-                return;
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                return;
-            }
-            for (const std::string& ctrlPath : *data)
-            {
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, powerMode](const boost::system::error_code ec2,
-                                           sdbusplus::message::message& msg) {
-                        if (!ec2)
-                        {
-                            BMCWEB_LOG_DEBUG
-                                << "Set power mode property succeeded";
-                            if (powerMode !=
-                                "xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM")
-                            {
-                                messages::success(asyncResp->res);
-                            }
-                            return;
-                        }
-
-                        // Read and convert dbus error message to
-                        // redfish error
-                        const sd_bus_error* dbusError = msg.get_error();
-                        if (dbusError == nullptr)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        if (strcmp(dbusError->name,
-                                   "xyz.openbmc_project.Common."
-                                   "Device.Error.WriteFailure") == 0)
-                        {
-                            // Service failed to change the config
-                            messages::operationFailed(asyncResp->res);
-                            return;
-                        }
-                        else
-                        {
-                            messages::internalError(asyncResp->res);
-                        }
-                    },
-                    connectionName, ctrlPath, "org.freedesktop.DBus.Properties",
-                    "Set", "xyz.openbmc_project.Control.Power.Mode",
-                    "PowerMode", dbus::utility::DbusVariantType(powerMode));
-            }
-        },
-        "xyz.openbmc_project.ObjectMapper", chassisPath + "/power_controls",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
-}
-
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
 inline void
     getEnvironmentMetrics(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& chassisID)
@@ -1092,120 +947,21 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                 }
             }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
             if (oem)
             {
                 std::optional<nlohmann::json> nvidiaObj;
-                if (!redfish::json_util::readJson(*oem, asyncResp->res,
-                                                  "Nvidia", nvidiaObj))
-                {
-                    BMCWEB_LOG_ERROR
-                        << "Illegal Property "
-                        << oem->dump(2, ' ', true,
-                                     nlohmann::json::error_handler_t::replace);
-                    return;
-                }
+                redfish::json_util::readJson(*oem, asyncResp->res, "Nvidia",
+                                             nvidiaObj);
                 if (nvidiaObj)
                 {
                     std::optional<std::string> powerMode;
-                    if (!redfish::json_util::readJson(
-                            *nvidiaObj, asyncResp->res, "PowerMode", powerMode))
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Illegal Property "
-                            << nvidiaObj->dump(
-                                   2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace);
-                        return;
-                    }
-
-                    // Update power Mode
+                    redfish::json_util::readJson(*nvidiaObj, asyncResp->res,
+                                                 "PowerMode", powerMode);
                     if (powerMode)
                     {
-                        const std::array<const char*, 1> interfaces = {
-                            "xyz.openbmc_project.Inventory.Item.Chassis"};
-
-                        crow::connections::systemBus->async_method_call(
-                            [asyncResp, chassisId, powerMode, powerLimit](
-                                const boost::system::error_code ec,
-                                const crow::openbmc_mapper::GetSubTreeType&
-                                    subtree) {
-                                if (ec)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-
-                                // Iterate over all retrieved ObjectPaths.
-                                for (const std::pair<
-                                         std::string,
-                                         std::vector<std::pair<
-                                             std::string,
-                                             std::vector<std::string>>>>&
-                                         object : subtree)
-                                {
-                                    const std::string& path = object.first;
-                                    const std::vector<std::pair<
-                                        std::string, std::vector<std::string>>>&
-                                        connectionNames = object.second;
-
-                                    sdbusplus::message::object_path objPath(
-                                        path);
-                                    if (objPath.filename() != chassisId)
-                                    {
-                                        continue;
-                                    }
-
-                                    if (connectionNames.size() < 1)
-                                    {
-                                        BMCWEB_LOG_ERROR
-                                            << "Got 0 Connection names";
-                                        continue;
-                                    }
-
-                                    const std::string& connectionName =
-                                        connectionNames[0].first;
-                                    const std::vector<std::string>& interfaces =
-                                        connectionNames[0].second;
-
-                                    if (std::find(
-                                            interfaces.begin(),
-                                            interfaces.end(),
-                                            "xyz.openbmc_project.Control.Power.Mode") !=
-                                        interfaces.end())
-                                    {
-                                        std::string resourceType = "Chassis";
-                                        patchPowerMode(asyncResp, chassisId,
-                                                       *powerMode, objPath,
-                                                       connectionName,
-                                                       resourceType);
-                                    }
-                                    else
-                                    {
-                                        if ((*powerMode == "Custom") &&
-                                            !(powerLimit))
-                                        {
-                                            BMCWEB_LOG_ERROR
-                                                << "Set point value required ";
-                                            messages::propertyMissing(
-                                                asyncResp->res,
-                                                "PowerLimits Setpoint");
-                                            return;
-                                        }
-                                        patchControlPowerMode(
-                                            asyncResp, *powerMode, objPath,
-                                            connectionName);
-                                    }
-                                    return;
-                                }
-
-                                messages::resourceNotFound(
-                                    asyncResp->res, "#Chassis.v1_15_0.Chassis",
-                                    chassisId);
-                            },
-                            "xyz.openbmc_project.ObjectMapper",
-                            "/xyz/openbmc_project/object_mapper",
-                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                            "/xyz/openbmc_project/inventory", 0, interfaces);
+                        messages::propertyNotWritable(asyncResp->res,
+                                                      "PowerMode");
                     }
                 }
             }
