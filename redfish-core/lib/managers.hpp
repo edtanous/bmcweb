@@ -657,7 +657,7 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                           uint8_t id, uint8_t opCode, uint8_t arg1,
                           uint8_t arg2, uint32_t dataIn, uint32_t extDataIn)
 {
-    BMCWEB_LOG_DEBUG << "executeRawAsynCommand fn";
+    BMCWEB_LOG_DEBUG << "executeRawSynCommand fn";
     crow::connections::systemBus->async_method_call(
         [resp, Type,
          id](boost::system::error_code ec, sdbusplus::message::message& msg,
@@ -667,11 +667,13 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 int rc = get<0>(res);
                 if (rc != 0)
                 {
-                    BMCWEB_LOG_ERROR << "asynccommand failed with rc:" << rc;
+                    BMCWEB_LOG_ERROR << "synccommand failed with rc:" << rc;
                     messages::operationFailed(resp->res);
                     return;
                 }
 
+                resp->res.jsonValue["@odata.type"] =
+                    "#NvidiaManager.v1_0_0.NvidiaManager";
                 resp->res.jsonValue["StatusRegister"] =
                     intToHexByteArray(get<1>(res));
                 resp->res.jsonValue["DataOut"] = intToHexByteArray(get<2>(res));
@@ -919,6 +921,8 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                     messages::operationFailed(resp->res);
                     return;
                 }
+                resp->res.jsonValue["@odata.type"] =
+                    "#NvidiaManager.v1_0_0.NvidiaManager";
 
                 resp->res.jsonValue["StatusRegister"] =
                     intToHexByteArray(get<1>(res));
