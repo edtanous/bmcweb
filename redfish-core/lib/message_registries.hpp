@@ -46,7 +46,6 @@ inline void handleMessageRegistryFileCollectionGet(
     asyncResp->res.jsonValue["Name"] = "MessageRegistryFile Collection";
     asyncResp->res.jsonValue["Description"] =
         "Collection of MessageRegistryFiles";
-    asyncResp->res.jsonValue["Members@odata.count"] = 4;
     asyncResp->res.jsonValue["Members"] = {
         {{"@odata.id", "/redfish/v1/Registries/Base"}},
         {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
@@ -56,6 +55,8 @@ inline void handleMessageRegistryFileCollectionGet(
         {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}},
 #endif
     };
+    asyncResp->res.jsonValue["Members@odata.count"] =
+        asyncResp->res.jsonValue["Members"].size();
 }
 
 inline void requestRoutesMessageRegistryFileCollection(App& app)

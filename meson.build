@@ -102,6 +102,7 @@ feature_map = {
   'host-iface'                                	: '-DBMCWEB_ENABLE_HOST_IFACE',
   'array-bootprogress'                          : '-DBMCWEB_ARRAY_BOOT_PROGRESS',
   'bios'                                        : '-DBMCWEB_ENABLE_BIOS',
+  'dpu-bios'                                    : '-DBMCWEB_ENABLE_DPU_BIOS',
   'ipmi'                                        : '-DBMCWEB_ENABLE_IPMI',
   'ntp'                                         : '-DBMCWEB_ENABLE_NTP',
   'patch-ssh'                                   : '-DBMCWEB_ENABLE_PATCH_SSH',
