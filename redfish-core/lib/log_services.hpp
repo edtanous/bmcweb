@@ -1129,6 +1129,30 @@ inline void createDumpTaskCallback(
                             BMCWEB_LOG_DEBUG
                                 << createdObjPath.str
                                 << ": Dump creation task is in progress";
+
+                            auto valuesIter = std::find_if(
+                                values.begin(), values.end(),
+                                [](const std::pair<std::string,
+                                                   dbus::utility::DbusVariantType>& property)
+                                    -> bool {
+                                    return property.first == "Progress";
+                                });
+
+                            if (valuesIter != values.end())
+                            {
+                                const uint8_t* progress = std::get_if<uint8_t>(
+                                    &(valuesIter->second));
+                                if (progress != nullptr)
+                                {
+                                    taskData->percentComplete =
+                                        static_cast<int>(*progress);
+                                    taskData->messages.emplace_back(
+                                        messages::taskProgressChanged(
+                                            std::to_string(taskData->index),
+                                            static_cast<size_t>(*progress)));
+                                }
+                            }
+
                             return !task::completed;
                         }
                     }
