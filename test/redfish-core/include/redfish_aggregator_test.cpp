@@ -380,7 +380,7 @@ TEST(processCollectionResponse, bothExist)
 
     bool foundLocal = false;
     bool foundSat = false;
-    for (auto& member : asyncResp->res.jsonValue["Members"])
+    for (const auto& member : asyncResp->res.jsonValue["Members"])
     {
         if (member["@odata.id"] == "/redfish/v1/Systems/system")
         {
