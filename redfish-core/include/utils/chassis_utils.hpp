@@ -211,6 +211,11 @@ inline std::string getChassisType(const std::string& chassisType)
         return "StandAlone";
     }
     if (chassisType ==
+        "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.Card")
+    {
+        return "Card";
+    }
+    if (chassisType ==
         "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.Zone")
     {
         return "Zone";
