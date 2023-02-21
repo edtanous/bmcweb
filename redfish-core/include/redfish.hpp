@@ -56,6 +56,7 @@
 #include "telemetry_service.hpp"
 #include "thermal.hpp"
 #include "thermal_subsystem.hpp"
+#include "network_adapters.hpp"
 #include "trigger.hpp"
 #include "trusted_components.hpp"
 #include "update_service.hpp"
@@ -104,6 +105,13 @@ class RedfishService
 #endif
         requestRoutesThermalSubsystem(app);
         requestRoutesThermalMetrics(app);
+
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
+        requestRoutesNetworkAdapters(app);
+        requestRoutesNetworkDeviceFunctions(app);
+        requestRoutesACDPort(app);
+#endif
+
 #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
         requestRoutesPowerSubsystem(app);
         requestRoutesPowerSupplyCollection(app);

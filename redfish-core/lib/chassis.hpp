@@ -861,6 +861,12 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["Assembly"] = {
         {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/Assembly"}};
 
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
+    // NetworkAdapters collection
+    asyncResp->res.jsonValue["NetworkAdapters"] = {
+        {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
+#endif
+
     // PCIeSlots collection
     asyncResp->res.jsonValue["PCIeSlots"] = {
         {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/PCIeSlots"}};
