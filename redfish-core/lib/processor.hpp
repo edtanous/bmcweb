@@ -2264,6 +2264,28 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 // Service failed to change the config
                 messages::operationFailed(resp->res);
             }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
             else
             {
                 messages::internalError(resp->res);
@@ -2467,11 +2489,31 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 uint32_t speedLimit = std::get<1>(reqSpeedConfig);
                 messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
                                                  std::to_string(speedLimit));
-                return;
             }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
+            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                             "Device.Error.WriteFailure") == 0)
             {
                 // Service failed to change the config
                 messages::operationFailed(resp->res);
@@ -3999,6 +4041,28 @@ inline void patchEccMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             {
                 // Service failed to change the config
                 messages::operationFailed(resp->res);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
             }
             else
             {

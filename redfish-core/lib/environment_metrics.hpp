@@ -192,6 +192,25 @@ inline void patchEdppSetPoint(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 messages::propertyValueIncorrect(resp->res, "setPoint",
                                                  std::to_string(setPoint));
             }
+	    else if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.Unavailable") == 0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
             else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
                                              "Device.Error.WriteFailure") == 0)
             {
@@ -788,6 +807,28 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 // Invalid value
                 messages::propertyValueIncorrect(resp->res, "powerLimit",
                                                  std::to_string(powerLimit));
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
             }
             else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
                                              "Device.Error.WriteFailure") == 0)

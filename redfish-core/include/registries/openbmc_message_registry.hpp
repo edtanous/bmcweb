@@ -303,7 +303,7 @@ constexpr std::array registry = {
                      0,
                      {},
                      "None.",
-                 }},                 
+                 }},
     MessageEntry{"BMCFirmwarePanicReason",
                  {
                      "Indicates the reason for last BMC firmware panic.",
@@ -359,7 +359,7 @@ constexpr std::array registry = {
                      0,
                      {},
                      "None.",
-                 }},                    
+                 }},
     MessageEntry{"BMCRebootReason",
                  {
                      "Indicates BMC firmware rebooted.",
@@ -371,7 +371,7 @@ constexpr std::array registry = {
                          "string",
                      },
                      "None.",
-                 }},                 
+                 }},
     MessageEntry{"ChassisIntrusionDetected",
                  {
                      "Indicates that a physical security event "
@@ -2523,6 +2523,18 @@ constexpr std::array registry = {
             {"string"},
             "None.",
         }},
-
+    MessageEntry{"AsyncError",
+                 {
+                     "Indicates that the SMBPBI Async Command Failed",
+                     "%1 Respresents Error Code",
+                     "Warning",
+                     "Warning",
+                     2,
+                     {
+                         "string",
+                         "string",
+                     },
+                     "%2",
+                 }},
 };
 } // namespace redfish::registries::openbmc
