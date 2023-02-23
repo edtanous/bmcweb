@@ -218,8 +218,7 @@ class DebugTokenBase
             if (task->match != nullptr)
             {
                 boost::asio::post(
-                    crow::connections::systemBus->get_io_context(),
-                    [this] {
+                    crow::connections::systemBus->get_io_context(), [this] {
                         task->match.reset();
                         cleanup();
                     });
@@ -707,6 +706,7 @@ class Request :
 
   private:
     uint8_t spdmMeasurementIndex;
+
 #pragma pack(1)
     struct ServerRequestHeader
     {
@@ -714,8 +714,6 @@ class Request :
         uint16_t version;
         /* Size of the token request structure */
         uint16_t size;
-        /* Signed Transcript of the debug token measurement request */
-        std::array<uint8_t, 218> measurementTranscript;
     };
 #pragma pack()
 
@@ -733,8 +731,8 @@ class Request :
         uint16_t numberOfRecords;
         /* Equal to sizeof(struct FileHeader) for version 0x01. */
         uint16_t offsetToListOfStructs;
-        /* Equal to sum of sizes of a given structure type + sizeof(struct
-         * FileHeader) */
+        /* Equal to sum of sizes of a given structure type +
+         * sizeof(struct FileHeader) */
         uint32_t fileSize;
         /* Padding */
         std::array<uint8_t, 6> reserved;
@@ -838,24 +836,18 @@ class Request :
                         addError(desc, "cannot find certificate for slot 0");
                         return;
                     }
-                    if (sign->size() !=
-                        sizeof(ServerRequestHeader::measurementTranscript))
-                    {
-                        addError(desc, "wrong SignedMeasurements size: " +
-                                           std::to_string(sign->size()));
-                        return;
-                    }
                     const std::string& pem = std::get<1>(*certSlot);
-                    size_t size = sizeof(ServerRequestHeader) + pem.size();
+                    size_t size =
+                        sizeof(ServerRequestHeader) + sign->size() + pem.size();
                     auto header = std::make_unique<ServerRequestHeader>();
                     header->version = 0x0001;
                     header->size = static_cast<uint16_t>(size);
-                    std::copy(sign->begin(), sign->end(),
-                              header->measurementTranscript.begin());
                     entry->data.reserve(size);
                     entry->data.resize(sizeof(ServerRequestHeader));
                     std::memcpy(entry->data.data(), header.get(),
                                 sizeof(ServerRequestHeader));
+                    entry->data.insert(entry->data.end(), sign->begin(),
+                                       sign->end());
                     entry->data.insert(entry->data.end(), pem.begin(),
                                        pem.end());
                     processState();
