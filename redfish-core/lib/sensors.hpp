@@ -85,7 +85,8 @@ static auto sensorPaths = std::to_array<std::string_view>({
     "/xyz/openbmc_project/sensors/altitude",
     "/xyz/openbmc_project/sensors/energy",
 #endif
-    "/xyz/openbmc_project/sensors/utilization"
+    "/xyz/openbmc_project/sensors/utilization",
+    "/xyz/openbmc_project/sensors/frequency"
 });
 
 static auto thermalPaths = std::to_array<std::string_view>({
@@ -145,6 +146,10 @@ inline std::string_view toReadingType(std::string_view sensorType)
     {
         return "EnergyJoules";
     }
+    if (sensorType == "frequency")
+    {
+        return "Frequency";
+    }
     return "";
 }
 
@@ -186,6 +191,10 @@ inline std::string_view toReadingUnits(std::string_view sensorType)
     if (sensorType == "energy")
     {
         return "J";
+    }
+    if (sensorType == "frequency")
+    {
+        return "Hz";
     }
     return "";
 }
@@ -3115,8 +3124,8 @@ inline void
             std::string name = path.filename();
             path = path.parent_path();
             std::string type = path.filename();
-            objectPropertiesToJson(name, type, sensors::node::sensors,
-                                   " ",  valuesDict, asyncResp->res.jsonValue,
+            objectPropertiesToJson(name, type, sensors::node::sensors, " ",
+                                   valuesDict, asyncResp->res.jsonValue,
                                    nullptr);
         });
 }
@@ -3408,9 +3417,10 @@ inline void requestRoutesSensorCollection(App& app)
 }
 
 inline void setThresholdReadingProperty(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const double readingValue,
-    const std::string& interfaceName, const std::string& propertyName,
-    const std::string& serviceName, const std::string& objectPath)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const double readingValue, const std::string& interfaceName,
+    const std::string& propertyName, const std::string& serviceName,
+    const std::string& objectPath)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, serviceName, objectPath, interfaceName, propertyName,
@@ -3544,7 +3554,7 @@ inline void requestRoutesSensor(App& app)
                                 continue;
                             }
                             crow::connections::systemBus->async_method_call(
-                                [asyncResp,sensorId,
+                                [asyncResp, sensorId,
                                  req](const boost::system::error_code ec,
                                       const std::vector<std::pair<
                                           std::string,
