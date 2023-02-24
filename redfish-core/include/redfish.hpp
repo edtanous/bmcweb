@@ -243,6 +243,7 @@ class RedfishService
         requestRoutesBiosService(app);
         requestRoutesBiosSettings(app);
         requestRoutesBiosReset(app);
+        requestRoutesBiosChangePassword(app);
         requestRoutesBiosAttrRegistryService(app);
 #endif
 

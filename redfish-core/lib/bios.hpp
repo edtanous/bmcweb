@@ -1811,7 +1811,12 @@ inline void
     asyncResp->res.jsonValue["Id"] = "BIOS";
     asyncResp->res.jsonValue["Actions"]["#Bios.ResetBios"] = {
         {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                   "/Bios/Actions/Bios.ResetBios"}};
+                   "/Bios/Actions/Bios.ResetBios"},
+    };
+    asyncResp->res.jsonValue["Actions"]["#Bios.ChangePassword"] = {
+        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                   "/Bios/Actions/Bios.ChangePassword"},
+    };
     nlohmann::json biosSettings;
     biosSettings["@odata.type"] = "#Settings.v1_3_5.Settings";
     biosSettings["SettingsObject"] = {{"@odata.id",
@@ -2114,6 +2119,98 @@ inline void requestRoutesBiosReset(App& app)
             std::bind_front(handleBiosResetPost, std::ref(app))
 #endif
         );
+}
+
+/**
+ * ChangePassword class supports handle POST method for bios.
+ * The class retrieves and sends data directly to D-Bus.
+ *
+ * Function handles POST method request.
+ * Analyzes POST body message before sends ChangePassword request data to D-Bus.
+ */
+inline void handleBiosChangePasswordPost(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    std::string passwordName;
+    std::string oldPassword;
+    std::string newPassword;
+    if (!redfish::json_util::readJsonAction(
+            req, asyncResp->res, "PasswordName", passwordName, "OldPassword",
+            oldPassword, "NewPassword", newPassword))
+    {
+        return;
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, passwordName, oldPassword,
+         newPassword](boost::system::error_code ec,
+                      const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec || subtree.size() != 1)
+            {
+                BMCWEB_LOG_ERROR << "Failed to find BIOS Password object: "
+                                 << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            const auto& [path, services] = subtree[0];
+
+            if (services.size() != 1)
+            {
+                BMCWEB_LOG_ERROR << "Failed to find BIOS Password object: "
+                                 << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            const auto& [service, interfaces] = services[0];
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](boost::system::error_code ec,
+                            sdbusplus::message_t& msg) {
+                    if (ec)
+                    {
+                        const auto error = msg.get_error();
+                        if (sd_bus_error_has_name(
+                                error,
+                                "xyz.openbmc_project.BIOSConfig.Common.Error.InvalidCurrentPassword"))
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Failed to change password message: "
+                                << error->name;
+                            messages::actionParameterValueError(
+                                asyncResp->res, "OldPassword",
+                                "ChangePassword");
+                            return;
+                        }
+
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    messages::success(asyncResp->res);
+                    return;
+                },
+                service, path, "xyz.openbmc_project.BIOSConfig.Password",
+                "ChangePassword", passwordName, oldPassword, newPassword);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project", 0,
+        std::array<const char*, 1>{"xyz.openbmc_project.BIOSConfig.Password"});
+}
+
+inline void requestRoutesBiosChangePassword(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Bios/Actions/Bios.ChangePassword/")
+        .privileges(redfish::privileges::postBios)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleBiosChangePasswordPost, std::ref(app)));
 }
 
 /**
