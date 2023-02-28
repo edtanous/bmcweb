@@ -22,6 +22,7 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/url/url_view.hpp>
 #include <json_html_serializer.hpp>
+#include <redfish_util.hpp>
 #include <security_headers.hpp>
 #include <ssl_key_handler.hpp>
 
@@ -375,7 +376,15 @@ class Connection :
                 forward_unauthorized::sendUnauthorized(
                     req->url, req->getHeaderValue("X-Requested-With"),
                     req->getHeaderValue("Accept"), res);
-                completeRequest(res);
+
+                std::string user = getUser(*req);
+                auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
+                BMCWEB_LOG_DEBUG << "Setting completion handler";
+                asyncResp->res.setCompleteRequestHandler(
+                    [self(shared_from_this())](crow::Response& thisRes) {
+                        self->completeRequest(thisRes);
+                    });
+                redfish::handleAccountLocked(user, asyncResp, *req);
                 return;
             }
         }
@@ -407,7 +416,7 @@ class Connection :
         {
             dumpPos = url.rfind("FaultLog");
         }
-#endif //BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
+#endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
 
         std::size_t attachmentPos = url.rfind("attachment");
         if ((dumpPos != std::string::npos) &&
@@ -776,6 +785,38 @@ class Connection :
         });
 
         BMCWEB_LOG_DEBUG << this << " timer started";
+    }
+
+    std::string getUser(crow::Request& req)
+    {
+        std::string_view authHeader = req.getHeaderValue("Authorization");
+        if (!authHeader.starts_with("Basic "))
+        {
+            return {};
+        }
+
+        std::string_view param = authHeader.substr(strlen("Basic "));
+        std::string authData;
+
+        if (!crow::utility::base64Decode(param, authData))
+        {
+            return {};
+        }
+        std::size_t separator = authData.find(':');
+        if (separator == std::string::npos)
+        {
+            return {};
+        }
+
+        std::string user = authData.substr(0, separator);
+        separator += 1;
+        if (separator > authData.size())
+        {
+            return {};
+        }
+
+        BMCWEB_LOG_DEBUG << "[AuthMiddleware] Authenticating user: " << user;
+        return user;
     }
 
     Adaptor adaptor;
