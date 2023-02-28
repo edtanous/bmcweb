@@ -52,6 +52,7 @@
 #include <fstream>
 #include <memory>
 #include <span>
+#include <unordered_map>
 
 namespace redfish
 {
@@ -614,7 +615,15 @@ class Subscription : public persistent_data::UserSubscription
             return false;
         }
 
-        bool useSSL = (uriProto == "https");
+#if !defined(BMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION)
+        bool useSSL = (uriProto == "https"); // depends on subscription
+#else
+        bool useSSL =  false; // forcing insecure http protocol
+#endif
+
+        BMCWEB_LOG_DEBUG << "uriProto=" << uriProto << " host=" << host
+                         << " port=" << port << " useSSL=" << useSSL;
+
         // A connection pool will be created if one does not already exist
         crow::HttpClient::getInstance().sendData(
             msg, id, host, port, path, useSSL, httpHeaders,
@@ -1777,6 +1786,36 @@ class EventServiceManager
     }
 
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+    const std::string inventorySubTree = "/xyz/openbmc_project/inventory";
+    const std::string sensorSubTree = "/xyz/openbmc_project/sensors";
+    const std::string chassisPrefixDbus =
+        "/xyz/openbmc_project/inventory/system/chassis/";
+    const std::string chassisPrefix = "/redfish/v1/Chassis/";
+    const std::string fabricsPrefixDbus =
+        "/xyz/openbmc_project/inventory/system/fabrics/";
+    const std::string fabricsPrefix = "/redfish/v1/Fabrics/";
+    const std::string memoryPrefixDbus =
+        "/xyz/openbmc_project/inventory/system/memory/";
+    const std::string memoryPrefix =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
+    const std::string processorPrefixDbus =
+        "/xyz/openbmc_project/inventory/system/processors/";
+    const std::string processorPrefix =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+    const std::string softwarePrefixDbus = "/xyz/openbmc_project/software/";
+    const std::string firmwarePrefix =
+        "/redfish/v1/UpdateService/FirmwareInventory/";
+
+    /**
+     *  @brief Table used to find OriginOfCondition
+     */
+    std::unordered_map<std::string, std::string> dBusToRedfishURI = {
+        {chassisPrefixDbus, chassisPrefix},
+        {fabricsPrefixDbus, fabricsPrefix},
+        {processorPrefixDbus, processorPrefix},
+        {memoryPrefixDbus, memoryPrefix},
+        {softwarePrefixDbus, firmwarePrefix}};
+
     void unregisterDbusLoggingSignal()
     {
         if (matchDbusLogging)
@@ -1795,153 +1834,6 @@ class EventServiceManager
     {
         event.originOfCondition = ooc;
         sendEvent(event);
-    }
-
-    /**
-     * Looks up the chassis required in redfish URI
-     * for a particular dbus path so OOC can be
-     * populated correctly for an event
-     */
-    void chassisLookupOOC(const std::string& path,
-                          const std::string& redfishPrefix,
-                          const std::string& endpointType, Event& event)
-    {
-
-        sdbusplus::message::object_path objPath(path);
-        std::string name = objPath.filename();
-        if (name.empty())
-        {
-            BMCWEB_LOG_ERROR << "File name empty for dbus path: " << path
-                             << "\n";
-            return;
-        }
-
-        const std::string& deviceName = name;
-        crow::connections::systemBus->async_method_call(
-            [this, redfishPrefix, deviceName, path, endpointType,
-             event](const boost::system::error_code ec,
-                    std::variant<std::vector<std::string>>& resp) mutable {
-                if (ec)
-                {
-                    BMCWEB_LOG_DEBUG << "Get Association endpoints call failed on path: " << path << "\n";
-                    BMCWEB_LOG_DEBUG << "Failed: " << ec << "\n";
-                    return;
-                }
-                std::vector<std::string>* data =
-                    std::get_if<std::vector<std::string>>(&resp);
-                if (data == nullptr)
-                {
-                    return;
-                }
-                std::vector<std::string> paths = *data;
-                std::string chassisPath;
-                if (paths.size() > 0)
-                {
-                    chassisPath = paths[0];
-                }
-                else
-                {
-                    BMCWEB_LOG_ERROR << "Empty chassis paths for " << path
-                                     << "\n";
-                    return;
-                }
-                sdbusplus::message::object_path objPath(chassisPath);
-                std::string chassisName = objPath.filename();
-                std::string oocDevice = redfishPrefix;
-                oocDevice.append(chassisName);
-                oocDevice.append(endpointType);
-                oocDevice.append(deviceName);
-                sendEventWithOOC(oocDevice, event);
-            },
-            "xyz.openbmc_project.ObjectMapper", path + "/chassis",
-            "org.freedesktop.DBus.Properties", "Get",
-            "xyz.openbmc_project.Association", "endpoints");
-    }
-
-    /**
-     * Calculates origin of condition redfish URI
-     * for a dbus path and populates an event of the
-     * event service manager with it
-     */
-    void eventServiceOOC(const std::string& path, Event& event)
-    {
-        if (path.empty())
-        {
-            sendEventWithOOC(path, event);
-        }
-        sdbusplus::message::object_path objPath(path);
-        std::string name = objPath.filename();
-        if (name.empty())
-        {
-            BMCWEB_LOG_ERROR << "File name empty for dbus path: " << path
-                             << "\n";
-            return;
-        }
-        if (boost::starts_with(path, "/xyz/openbmc_project/sensors"))
-        {
-            chassisLookupOOC(path, "/redfish/v1/Chassis/", "/Sensors/", event);
-            return;
-        }
-        const std::string& deviceName = name;
-        crow::connections::systemBus->async_method_call(
-            [this, deviceName, path, event](
-                const boost::system::error_code ec,
-                const std::vector<std::pair<
-                    std::string, std::vector<std::string>>>& objects) mutable {
-                if (ec)
-                {
-                    BMCWEB_LOG_DEBUG << "GetObject call failed on path: " << path << "\n";
-                    BMCWEB_LOG_DEBUG << "Failed: " << ec << "\n";
-                    return;
-                }
-                if (objects.empty())
-                {
-                    BMCWEB_LOG_ERROR << "Objects empty!\n";
-                    return;
-                }
-
-                for (const auto& object : objects)
-                {
-                    for (const auto& interfaces : object.second)
-                    {
-                        if (interfaces ==
-                            "xyz.openbmc_project.Inventory.Item.PCIeDevice")
-                        {
-                            chassisLookupOOC(path, "/redfish/v1/Chassis/",
-                                             "/PCIeDevices/", event);
-                            return;
-                        }
-                        if (interfaces ==
-                                "xyz.openbmc_project.Inventory.Item.Accelerator" ||
-                            interfaces ==
-                                "xyz.openbmc_project.Inventory.Item.Cpu")
-                        {
-                            sendEventWithOOC(
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/Processors/" +
-                                    deviceName,
-                                event);
-                            return;
-                        }
-                        if (interfaces ==
-                            "xyz.openbmc_project.Inventory.Item.Dimm")
-                        {
-                            sendEventWithOOC(
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/Memory/" +
-                                    deviceName,
-                                event);
-                            return;
-                        }
-                        sendEventWithOOC("/redfish/v1/Chassis/" + deviceName,
-                                         event);
-                    }
-                }
-            },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetObject", path,
-            std::array<const char*, 0>());
     }
 
     void registerDbusLoggingSignal()
@@ -2120,6 +2012,42 @@ class EventServiceManager
 
         matchDbusLogging = std::make_shared<sdbusplus::bus::match_t>(
             *crow::connections::systemBus, matchStr, signalHandler);
+    }
+
+    /**
+     * @brief Finds the right OriginOfCondition for @a path and sends the Event
+     *        The map @a dBusToRedfishURI is used for that purpose
+     * @param path  orginal path that came from Phosphor Logging
+     * @param event  the event to be sent out
+     */
+    inline void eventServiceOOC(const std::string& path, Event& event)
+    {
+        sdbusplus::message::object_path objPath(path);
+        std::string deviceName = objPath.filename();
+        if (deviceName.empty())
+        {
+            BMCWEB_LOG_DEBUG
+                << "Empty OriginOfCondition provided to convertDbusObjectToOriginOfCondition"
+                << " For path: " << path;
+            return;
+        }
+
+        for (auto& it : dBusToRedfishURI)
+        {
+            if (path.find(it.first) != std::string::npos)
+            {
+                std::string newPath =
+                    path.substr(it.first.length(), path.length());
+                sendEventWithOOC(it.second + newPath, event);
+                return;
+            }
+        }
+
+        BMCWEB_LOG_ERROR
+            << "No Matching prefix found for OriginOfCondition DBus object Path: "
+            << path << " sending this DBus object Path as OriginOfCondition";
+
+        sendEventWithOOC(path, event);
     }
 #endif
 
