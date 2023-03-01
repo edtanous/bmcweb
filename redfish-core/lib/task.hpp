@@ -82,6 +82,21 @@ struct Payload
     nlohmann::json jsonBody;
 };
 
+/**
+ * @brief Container to hold result of the operation for long running task. Once
+ * task completes task response should be set, which will be returned by the
+ * task monitor URI
+ *
+ */
+struct TaskResponse
+{
+    explicit TaskResponse(const nlohmann::json& jsonResp) :
+        jsonResponse(jsonResp)
+    {}
+    TaskResponse() = delete;
+    nlohmann::json jsonResponse;
+};
+
 static nlohmann::json getMessage(const std::string_view state, size_t index)
 {
     if (state == "Started")
@@ -425,6 +440,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
     std::unique_ptr<sdbusplus::bus::match_t> match;
     std::optional<time_t> endTime;
     std::optional<Payload> payload;
+    std::optional<TaskResponse> taskResponse;
     bool taskComplete = false;
     int percentComplete = 0;
     std::unique_ptr<sdbusplus::bus::match_t> loggingMatch;
@@ -465,6 +481,15 @@ inline void requestRoutesTaskMonitor(App& app)
                 }
                 std::shared_ptr<task::TaskData>& ptr = *find;
                 ptr->populateResp(asyncResp->res);
+                // If Task is completed and success, task monitor URI should
+                // return result of the operation
+                if (ptr->getTaskStatus() == "OK" && ptr->state == "Completed" &&
+                    ptr->taskResponse)
+                {
+                    const task::TaskResponse& taskResp = *(ptr->taskResponse);
+                    asyncResp->res.jsonValue = taskResp.jsonResponse;
+                    return;
+                }
                 // monitor expires after taskcomplete
                 if (ptr->taskComplete)
                 {

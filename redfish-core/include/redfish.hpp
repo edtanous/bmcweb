@@ -339,6 +339,9 @@ class RedfishService
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
         requestRoutesUpdateServiceCommitImage(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesComputeDigestPost(app);
+#endif
         requestRoutesTrustedComponents(app);
         // Note, this must be the last route registered
         requestRoutesRedfish(app);
