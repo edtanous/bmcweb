@@ -2024,30 +2024,25 @@ class EventServiceManager
     {
         sdbusplus::message::object_path objPath(path);
         std::string deviceName = objPath.filename();
-        if (deviceName.empty())
+        if (false == deviceName.empty())
         {
-            BMCWEB_LOG_DEBUG
-                << "Empty OriginOfCondition provided to convertDbusObjectToOriginOfCondition"
-                << " For path: " << path;
-            return;
-        }
-
-        for (auto& it : dBusToRedfishURI)
-        {
-            if (path.find(it.first) != std::string::npos)
+            for (auto& it : dBusToRedfishURI)
             {
-                std::string newPath =
-                    path.substr(it.first.length(), path.length());
-                sendEventWithOOC(it.second + newPath, event);
-                return;
+                if (path.find(it.first) != std::string::npos)
+                {
+                    std::string newPath =
+                            path.substr(it.first.length(), path.length());
+                    sendEventWithOOC(it.second + newPath, event);
+                    return;
+                }
             }
         }
 
         BMCWEB_LOG_ERROR
-            << "No Matching prefix found for OriginOfCondition DBus object Path: "
-            << path << " sending this DBus object Path as OriginOfCondition";
+            << "No Matching prefix found for OriginOfCondition Object Path: '"
+            << path << "' sending empty OriginOfCondition";
 
-        sendEventWithOOC(path, event);
+        sendEventWithOOC(std::string{""}, event);
     }
 #endif
 
