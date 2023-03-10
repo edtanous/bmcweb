@@ -427,6 +427,8 @@ inline void
     const std::string* model = nullptr;
     const std::string* locationCode = nullptr;
     const std::string* locationType = nullptr;
+    const bool* rowMappingFailureState = nullptr;
+    const bool* rowMappingPendingState = nullptr;
 
     const bool success = sdbusplus::unpackPropertiesNoThrow(
         dbus_utils::UnpackErrorPrinter(), properties, "MemoryDataWidth",
@@ -439,7 +441,9 @@ inline void
         memoryConfiguredSpeedInMhz, "MemoryType", memoryType, "Channel",
         channel, "MemoryController", memoryController, "Slot", slot, "Socket",
         socket, "SparePartNumber", sparePartNumber, "Model", model,
-        "LocationCode", locationCode, "LocationType", locationType);
+        "LocationCode", locationCode, "LocationType", locationType,
+        "RowRemappingFailureState", rowMappingFailureState,
+        "RowRemappingPendingState", rowMappingPendingState);
 
     if (!success)
     {
@@ -609,6 +613,20 @@ inline void
             .jsonValue[jsonPtr]["Location"]["PartLocation"]["LocationType"] =
             redfish::dbus_utils::toLocationType(*locationType);
     }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    if (rowMappingFailureState != nullptr)
+    {
+        aResp->res.jsonValue[jsonPtr]["Oem"]["Nvidia"]["RowRemappingFailed"] =
+            *rowMappingFailureState;
+    }
+    if (rowMappingPendingState != nullptr)
+    {
+        aResp->res.jsonValue[jsonPtr]["Oem"]["Nvidia"]["RowRemappingPending"] =
+            *rowMappingPendingState;
+    }
+    aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+        "#NvidiaMemory.v1_0_0.NvidiaMemory";
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
     getPersistentMemoryProperties(aResp, properties, jsonPtr);
 }
