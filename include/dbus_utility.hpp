@@ -71,7 +71,8 @@ using DbusVariantType = std::variant<
     std::vector<uint8_t>,
     std::vector<std::tuple<uint8_t, std::string>>,
     std::tuple<size_t, bool>,
-    std::tuple<bool, uint32_t>
+    std::tuple<bool, uint32_t>,
+    std::map<std::string, uint64_t>
  >;
 
 // clang-format on

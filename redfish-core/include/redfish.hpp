@@ -310,10 +310,10 @@ class RedfishService
         requestRoutesMetricReportCollection(app);
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
         requestRoutesPlatformMetricReportDefinition(app);
-        requestRoutesPlatformMetricReport(app);
+        //requestRoutesPlatformMetricReport(app);
+        requestRoutesMetricReport(app);
 #else
         requestRoutesMetricReportDefinition(app);
-        requestRoutesMetricReport(app);
 #endif
         requestRoutesFabricCollection(app);
         requestRoutesFabric(app);
