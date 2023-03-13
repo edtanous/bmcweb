@@ -199,7 +199,7 @@ inline void getSystemPCIeInterfaceProperties(
                         asyncResp->res
                             .jsonValue["SystemInterface"]["PCIe"]["PCIeType"] =
                             redfish::port_utils::getLinkSpeedGeneration(
-                                *currentSpeed, *activeWidth);
+                                *currentSpeed);
                     }
                     if (activeWidth != nullptr)
                     {
@@ -293,7 +293,7 @@ inline void getFPGAPCIeInterfaceProperties(
                     if ((currentSpeed != nullptr) && (activeWidth != nullptr))
                     {
                         speed = redfish::port_utils::getLinkSpeedGeneration(
-                            *currentSpeed, *activeWidth);
+                            *currentSpeed);
                     }
                     if ((activeWidth != nullptr) && (*activeWidth != INT_MAX))
                     {

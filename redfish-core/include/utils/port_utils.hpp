@@ -6,7 +6,7 @@ namespace port_utils
 {
 
 // Get PCIe device link speed generation
-inline std::string getLinkSpeedGeneration(double currentSpeed, size_t width)
+/*inline std::string getLinkSpeedGeneration(double currentSpeed, size_t width)
 {
 
     std::string speedGen;
@@ -21,11 +21,12 @@ inline std::string getLinkSpeedGeneration(double currentSpeed, size_t width)
     // speed per lane
     auto speed = currentSpeed / static_cast<double>(width);
 
-    /* PCIe Link Speed Caluculation
-    https://en.wikipedia.org/wiki/PCI_Express#cite_note-both-directions-51(pciegenx
-    transfer rates) Gen1 Gbps = 2.5 * (8/10) Gen2 Gbps = 5 * (8/10) Gen3 Gbps =
-    8 * (128/130) Gen4 Gbps = 16 * (128/130) Gen5 Gbps = 32 * (128/130) Gen6
-    Gbps = 64 * (242/256)*/
+    // PCIe Link Speed Caluculation
+    //https://en.wikipedia.org/wiki/PCI_Express#cite_note-both-directions-51(pciegenx
+    //transfer rates) Gen1 Gbps = 2.5 * (8/10) Gen2 Gbps = 5 * (8/10) Gen3 Gbps
+=
+    //8 * (128/130) Gen4 Gbps = 16 * (128/130) Gen5 Gbps = 32 * (128/130) Gen6
+    //Gbps = 64 * (242/256)
 
     // pcie speeds and generation map
     std::map<double, std::string> pcieSpeedGenMap = {
@@ -39,6 +40,37 @@ inline std::string getLinkSpeedGeneration(double currentSpeed, size_t width)
     }
 
     return speedGen;
+}*/
+
+// Get PCIe device link speed generation
+inline std::string getLinkSpeedGeneration(double speed)
+{
+    if (speed == 2.5)
+    {
+        return "Gen1";
+    }
+    if (speed == 5)
+    {
+        return "Gen2";
+    }
+    if (speed == 8)
+    {
+        return "Gen3";
+    }
+    if (speed == 16)
+    {
+        return "Gen4";
+    }
+    if (speed == 32)
+    {
+        return "Gen5";
+    }
+    if (speed == 64)
+    {
+        return "Gen6";
+    }
+    // Unknown or others
+    return "";
 }
 
 inline std::string getLinkStatusType(const std::string& linkStatusType)
