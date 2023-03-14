@@ -366,7 +366,7 @@ inline void handleRoleMapPatch(
                         ldapDbusService, roleMapObjData[index].first,
                         propertyInterface, "Set",
                         "xyz.openbmc_project.User.PrivilegeMapperEntry",
-                        "Privilege", role);
+                        "Privilege", dbus::utility::DbusVariantType(role));
                 }
             }
             // Create a new RoleMapping Object.
