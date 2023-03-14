@@ -274,6 +274,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
             res.jsonValue["@odata.type"] = "#Task.v1_4_3.Task";
             res.jsonValue["Id"] = strIdx;
             res.jsonValue["TaskState"] = state;
+            res.jsonValue["TaskStatus"] = getTaskStatus();
             res.addHeader(boost::beast::http::field::location,
                           uri + "/Monitor");
             res.addHeader(boost::beast::http::field::retry_after,
@@ -567,9 +568,8 @@ inline void requestRoutesTask(App& app)
                     asyncResp->res.jsonValue["EndTime"] =
                         redfish::time_utils::getDateTimeStdtime(
                             *(ptr->endTime));
-                    asyncResp->res.jsonValue["TaskStatus"] =
-                        ptr->getTaskStatus();
                 }
+                asyncResp->res.jsonValue["TaskStatus"] = ptr->getTaskStatus();
                 asyncResp->res.jsonValue["Messages"] = ptr->messages;
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/TaskService/Tasks/" + strParam;
