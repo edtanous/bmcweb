@@ -3342,6 +3342,12 @@ inline void
                 sensorList->emplace(sensorPath);
                 processSensorList(asyncResp, sensorList);
                 */
+
+                asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+                asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+                asyncResp->res.jsonValue["Status"]["Conditions"] =
+                    nlohmann::json::array();
+
                 handleSensorGet(asyncResp, chassisId, sensorId, sensorPath);
                 // Add related item data
                 getRelatedItemData(asyncResp, std::string(sensorPath));
