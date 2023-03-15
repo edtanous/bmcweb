@@ -1495,7 +1495,8 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                                     asyncResp->res.jsonValue["Members"];
                                 logServiceArrayLocal.push_back(
                                     {{"@odata.id",
-                                      "/redfish/v1/Systems/system/LogServices/PostCodes"}});
+                                      "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                      "/LogServices/PostCodes"}});
                                 asyncResp->res
                                     .jsonValue["Members@odata.count"] =
                                     logServiceArrayLocal.size();
