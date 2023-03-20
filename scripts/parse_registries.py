@@ -226,7 +226,7 @@ def main():
     files = []
 
     if "base" in registries:
-        files.append(make_getter('Base.1.13.0.json',
+        files.append(make_getter('Base.1.15.0.json',
                                  'base_message_registry.hpp',
                                  'base'))
     if "task_event" in registries:
@@ -234,7 +234,7 @@ def main():
                                  'task_event_message_registry.hpp',
                                  'task_event'))
     if "resource_event" in registries:
-        files.append(make_getter('ResourceEvent.1.0.3.json',
+        files.append(make_getter('ResourceEvent.1.2.1.json',
                                  'resource_event_message_registry.hpp',
                                  'resource_event'))
     if "update_event" in registries:
