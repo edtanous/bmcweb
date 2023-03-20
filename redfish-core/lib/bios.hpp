@@ -2150,6 +2150,13 @@ inline void
 }
 
 #ifdef BMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE
+enum class SecureSelector
+{
+    nonSecure = 0,
+    secure = 1,
+    both = 2
+};
+
 /**
  * Set ClearNonVolatileVariables.Clear to requested value
  */
@@ -2193,6 +2200,140 @@ inline void setClearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         std::variant<bool>(requestToClear));
 }
 
+inline void handleClearSecureStateSubtree(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const SecureSelector secure, const bool requestToClear,
+    const dbus::utility::MapperGetSubTreeResponse clearSubtree,
+    const dbus::utility::MapperGetSubTreeResponse secureSubtree)
+{
+    for (const auto& [clearPath, clearServices] : clearSubtree)
+    {
+        if (clearServices.size() != 1)
+        {
+            BMCWEB_LOG_ERROR
+                << "Number of ClearNonVolatileVariables provider is not 1. size="
+                << clearServices.size();
+            messages::internalError(aResp->res);
+            return;
+        }
+        const auto& clearService = clearServices[0].first;
+
+        if (secure == SecureSelector::both)
+        {
+            setClearVariables(aResp, clearService, clearPath, requestToClear);
+        }
+        else
+        {
+            std::string closestSecurePath;
+            std::string secureService;
+            for (const auto& [securePath, secureServices] : secureSubtree)
+            {
+                if (!clearPath.starts_with(securePath))
+                {
+                    // not a parent path of the ClearNonVolatileVariables
+                    continue;
+                }
+                if (securePath.length() > closestSecurePath.length())
+                {
+                    closestSecurePath = securePath;
+                    secureService = secureServices[0].first;
+                }
+            }
+
+            crow::connections::systemBus->async_method_call(
+                [aResp, secure, requestToClear, clearService,
+                 clearPath](const boost::system::error_code ec,
+                            const std::variant<bool>& resp) {
+                    if (ec)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    const bool* secureState = std::get_if<bool>(&resp);
+                    if (!secureState)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    if ((*secureState == true &&
+                         secure == SecureSelector::secure) ||
+                        (*secureState == false &&
+                         secure == SecureSelector::nonSecure))
+                    {
+                        setClearVariables(aResp, clearService, clearPath,
+                                          requestToClear);
+                    }
+                },
+                secureService, closestSecurePath,
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.State.Decorator.SecureState", "secure");
+        }
+    }
+}
+
+inline void handleClearNonVolatileVariablesSubtree(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const SecureSelector secure, const bool requestToClear,
+    const dbus::utility::MapperGetSubTreeResponse clearSubtree)
+{
+    if (secure == SecureSelector::both)
+    {
+        handleClearSecureStateSubtree(
+            aResp, secure, requestToClear, clearSubtree,
+            dbus::utility::MapperGetSubTreeResponse());
+        return;
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, secure, requestToClear,
+         clearSubtree](boost::system::error_code ec,
+                       const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
+            {
+                // No state sensors attached.
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            handleClearSecureStateSubtree(aResp, secure, requestToClear,
+                                          clearSubtree, subtree);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/control", 0,
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.State.Decorator.SecureState"});
+}
+
+inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const SecureSelector secure,
+                           const bool requestToClear)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, secure, requestToClear](
+            boost::system::error_code ec,
+            const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
+            {
+                // No state sensors attached.
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            handleClearNonVolatileVariablesSubtree(aResp, secure,
+                                                   requestToClear, subtree);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/control", 0,
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables"});
+}
+
 /**
  * Nvidia BiosReset class supports handle POST method for Reset bios.
  */
@@ -2208,38 +2349,7 @@ inline void
     // set the ResetBiosToDefaultsPending
     bios::setResetBiosSettings(aResp, true);
 
-    crow::connections::systemBus->async_method_call(
-        [aResp](boost::system::error_code ec,
-                const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
-            {
-                // No state sensors attached.
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            // find objects which has ClearNonVolatileVariables and also
-            // belongs objPath
-            for (const auto& [path, mapperService] : subtree)
-            {
-                if (mapperService.size() != 1)
-                {
-                    BMCWEB_LOG_ERROR
-                        << "Number of ClearNonVolatileVariables provider is not 1. size="
-                        << mapperService.size();
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                const auto& service = mapperService[0].first;
-                setClearVariables(aResp, service, path, true);
-            }
-        },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-        "/xyz/openbmc_project/control", 0,
-        std::array<const char*, 1>{
-            "xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables"});
+    clearVariables(aResp, SecureSelector::nonSecure, true);
 }
 #endif
 
