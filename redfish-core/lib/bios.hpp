@@ -1,13 +1,15 @@
 #pragma once
 
+#include "nlohmann/json.hpp"
+
 #include <app.hpp>
 #include <dbus_utility.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/sw_utils.hpp>
-#include "nlohmann/json.hpp"
-#include <iostream>
+
 #include <fstream>
+#include <iostream>
 
 namespace redfish
 {
@@ -1743,8 +1745,8 @@ static void setBiosServicCurrentAttr(
  * @return None.
  */
 #ifdef BMCWEB_ENABLE_DPU_BIOS
-static void updateBiosAttrRegistry(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+static void
+    updateBiosAttrRegistry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
@@ -1778,45 +1780,63 @@ static void updateBiosAttrRegistry(
                         return;
                     }
 
-                    auto& attributes = redfish::bios::BiosRegistryJson["RegistryEntries"]["Attributes"];
+                    auto& attributes =
+                        redfish::bios::BiosRegistryJson["RegistryEntries"]
+                                                       ["Attributes"];
 
                     for (const BaseBIOSTableItem& attrIt : *baseBiosTable)
                     {
-                        std::string attrType = getBiosAttrType(std::string(std::get<BaseBiosTableIndex::baseBiosAttrType>(attrIt.second)));
+                        std::string attrType = getBiosAttrType(std::string(
+                            std::get<BaseBiosTableIndex::baseBiosAttrType>(
+                                attrIt.second)));
 
-                        auto it = std::find_if(attributes.begin(), attributes.end(),
+                        auto it = std::find_if(
+                            attributes.begin(), attributes.end(),
                             [&](const nlohmann::json& attr) {
                                 return attr["AttributeName"] == attrIt.first;
-                        });
+                            });
 
-                        if ((attrType == "String") || (attrType == "Enumeration"))
+                        if ((attrType == "String") ||
+                            (attrType == "Enumeration"))
                         {
-                            const std::string* attrCurrValue =std::get_if<std::string>
-                                (&std::get<BaseBiosTableIndex::baseBiosCurrValue>(attrIt.second));
+                            const std::string* attrCurrValue =
+                                std::get_if<std::string>(
+                                    &std::get<
+                                        BaseBiosTableIndex::baseBiosCurrValue>(
+                                        attrIt.second));
 
-                            if (it != attributes.end()) {
-                                (*it)["CurrentValue"] =  nlohmann::json(*attrCurrValue);
+                            if (it != attributes.end())
+                            {
+                                (*it)["CurrentValue"] =
+                                    nlohmann::json(*attrCurrValue);
                             }
                         }
-                        else if ((attrType == "Integer") || (attrType == "Boolean"))
+                        else if ((attrType == "Integer") ||
+                                 (attrType == "Boolean"))
                         {
-                            const int64_t* attrCurrValue = std::get_if<int64_t>
-                                (&std::get<BaseBiosTableIndex::baseBiosCurrValue>(attrIt.second));
-                            if (it != attributes.end()) {
+                            const int64_t* attrCurrValue = std::get_if<int64_t>(
+                                &std::get<
+                                    BaseBiosTableIndex::baseBiosCurrValue>(
+                                    attrIt.second));
+                            if (it != attributes.end())
+                            {
                                 if (attrType == "Boolean")
                                 {
                                     if (*attrCurrValue)
                                     {
-                                        (*it)["CurrentValue"] =  nlohmann::json(true);
+                                        (*it)["CurrentValue"] =
+                                            nlohmann::json(true);
                                     }
                                     else
                                     {
-                                        (*it)["CurrentValue"] =  nlohmann::json(false);
+                                        (*it)["CurrentValue"] =
+                                            nlohmann::json(false);
                                     }
                                 }
                                 else
                                 {
-                                    (*it)["CurrentValue"] =  nlohmann::json(*attrCurrValue);
+                                    (*it)["CurrentValue"] =
+                                        nlohmann::json(*attrCurrValue);
                                 }
                             }
                         }
@@ -2345,15 +2365,16 @@ inline void handleBiosAttrRegistryGet(
     std::ifstream inputFile(redfish::bios::BiosRegistryJsonFileName);
     if (!inputFile.is_open())
     {
-        BMCWEB_LOG_DEBUG << "Can't opening file for reading: " <<
-            redfish::bios::BiosRegistryJsonFileName;
+        BMCWEB_LOG_DEBUG << "Can't opening file for reading: "
+                         << redfish::bios::BiosRegistryJsonFileName;
 
         // Return empty json object if file not found
         redfish::bios::BiosRegistryJson = nlohmann::json();
     }
     else
     {
-        std::string contents{std::istreambuf_iterator<char>{inputFile}, std::istreambuf_iterator<char>{}};
+        std::string contents{std::istreambuf_iterator<char>{inputFile},
+                             std::istreambuf_iterator<char>{}};
         inputFile.close();
         redfish::bios::BiosRegistryJson = nlohmann::json::parse(contents);
         bios::updateBiosAttrRegistry(asyncResp);
@@ -2383,9 +2404,9 @@ inline void handleBiosAttrRegistryGet(
 /**
  * BiosAttributeRegistry class supports handle put method for bios.
  */
-inline void
-    handleBiosAttrRegistryPut(crow::App& app, const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void handleBiosAttrRegistryPut(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -2407,8 +2428,8 @@ inline void
             auto userInfoIter = userInfo.find("UserGroups");
             if (userInfoIter != userInfo.end())
             {
-                userGroupPtr = std::get_if<std::vector<std::string>>
-                    (&userInfoIter->second);
+                userGroupPtr = std::get_if<std::vector<std::string>>(
+                    &userInfoIter->second);
             }
 
             if (userGroupPtr == nullptr)
@@ -2433,41 +2454,48 @@ inline void
                 return;
             }
 
-            if (!json_util::processJsonFromRequest(asyncResp->res, req, redfish::bios::BiosRegistryJson))
+            if (!json_util::processJsonFromRequest(
+                    asyncResp->res, req, redfish::bios::BiosRegistryJson))
             {
                 BMCWEB_LOG_ERROR << "Json value not readable";
                 return;
             }
 
             // Save BiosRegistryJson into file
-            std::ofstream outputFile(redfish::bios::BiosRegistryJsonFileName, std::ios::trunc);
+            std::ofstream outputFile(redfish::bios::BiosRegistryJsonFileName,
+                                     std::ios::trunc);
             if (!outputFile.is_open())
             {
-                BMCWEB_LOG_ERROR << "Error opening file for writing: " <<
-                            redfish::bios::BiosRegistryJsonFileName;
+                BMCWEB_LOG_ERROR << "Error opening file for writing: "
+                                 << redfish::bios::BiosRegistryJsonFileName;
                 return;
             }
             outputFile << redfish::bios::BiosRegistryJson.dump();
             outputFile.close();
 
-
-            auto attributes = redfish::bios::BiosRegistryJson["RegistryEntries"]["Attributes"];
+            auto attributes = redfish::bios::BiosRegistryJson["RegistryEntries"]
+                                                             ["Attributes"];
 
             // Loop over the "Attributes" array
-            for (auto& attr : attributes) {
-                //replace "HelpText" with "description"
-                if (attr.find("HelpText") != attr.end()) {
+            for (auto& attr : attributes)
+            {
+                // replace "HelpText" with "description"
+                if (attr.find("HelpText") != attr.end())
+                {
                     attr["Description"] = attr["HelpText"];
                     attr.erase("HelpText");
                 }
-                //Add default value
-                if (attr.find("DefaultValue") == attr.end()) {
+                // Add default value
+                if (attr.find("DefaultValue") == attr.end())
+                {
                     attr["DefaultValue"] = nullptr;
                 }
             }
             std::vector<nlohmann::json> baseBiosTableJson;
-            // Iterate over the 'Attributes' array and add each object to the vector
-            for (const auto& attribute : attributes) {
+            // Iterate over the 'Attributes' array and add each object to the
+            // vector
+            for (const auto& attribute : attributes)
+            {
                 baseBiosTableJson.push_back(attribute);
             }
 
