@@ -392,6 +392,8 @@ void getMetricValue(const std::string& deviceType,
             metricProp += "/";
             metricProp += std::to_string(i);
             thisMetric["MetricProperty"] = metricProp;
+            thisMetric["Timestamp"] = redfish::time_utils::getDateTimeUintMs(
+                sensorUpdatetimeSystemClock);
             resArray.push_back(thisMetric);
             i++;
         }

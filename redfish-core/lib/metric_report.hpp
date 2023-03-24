@@ -452,7 +452,8 @@ inline void getAggregatedSubDeviceMetrics(
 inline void getManagedObjectForMetrics(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& objPath, const std::string& serviceName,
-    const std::string& metricId, const std::string& metricfname)
+    const std::string& metricId, const std::string& metricfname,
+    std::vector<std::string>& supportedMetricIds)
 {
     BMCWEB_LOG_DEBUG<< metricId;
     std::string deviceType;
@@ -497,6 +498,7 @@ inline void getManagedObjectForMetrics(
     else{
         return;
     }
+    supportedMetricIds.emplace_back(metricId);
     asyncResp->res.jsonValue["@odata.type"] =
         "#MetricReport.v1_3_0.MetricReport";
     std::string metricUri = "/redfish/v1/TelemetryService/MetricReports/";
@@ -569,6 +571,20 @@ inline void getManagedObjectForMetrics(
         "GetManagedObjects");
 }
 
+inline bool
+    isMetricIdSupported(const std::string& requestedMetricId,
+                        const std::vector<std::string>& supportedMetricIds)
+{
+    bool supported = true;
+    // If metricId not found in supportedMetricId list
+    if (std::find(supportedMetricIds.begin(), supportedMetricIds.end(),
+                  requestedMetricId) == supportedMetricIds.end())
+    {
+        supported = false;
+    }
+    return supported;
+}
+
 inline void
     getPlatforMetrics(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       const std::string& metricId,
@@ -591,7 +607,8 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-
+            // list of metric Ids supported
+            std::vector<std::string> supportedMetricIds;
             for (const auto& [path, serviceMap] : subtree)
             {
                 const std::string objectPath = path;
@@ -604,6 +621,7 @@ inline void
                     {
                         if (metricfname == "platformmetrics")
                         {
+                            supportedMetricIds.emplace_back(PLATFORMMETRICSID);
                             getPlatforMetricsFromSensorMap(
                                 asyncResp, objectPath, serviceName, metricId,
                                 requestTimestamp);
@@ -613,11 +631,16 @@ inline void
                              metricfname == "processors" ||
                              metricfname == "Switches")
                     {
-                        getManagedObjectForMetrics(asyncResp, objectPath,
-                                                   serviceName, metricId,
-                                                   metricfname);
+                        getManagedObjectForMetrics(
+                            asyncResp, objectPath, serviceName, metricId,
+                            metricfname, supportedMetricIds);
                     }
                 }
+            }
+            if (!isMetricIdSupported(metricId, supportedMetricIds))
+            {
+                messages::resourceNotFound(asyncResp->res, "MetricReport",
+                                           metricId);
             }
         },
         "xyz.openbmc_project.ObjectMapper",
