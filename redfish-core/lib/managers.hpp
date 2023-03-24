@@ -607,7 +607,9 @@ inline void requestRoutesNvidiaAsyncOOBRawCommandActionInfo(App& app)
                        {"DataType", "StringArray"}},
                       {{"Name", "RequestedDataOutBytes"},
                        {"Required", true},
-                       {"DataType", "number"}}}}};
+                       {"DataType", "Number"},
+		       {"MinimumValue", 0},
+		       {"MaximumValue", 1024}}}}};
             });
 }
 
