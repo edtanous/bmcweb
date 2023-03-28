@@ -2268,6 +2268,28 @@ constexpr std::array registry = {
                      },
                      "None.",
                  }},
+    MessageEntry{"SensorCableStatusEnable",
+                 {
+                     "Indicates that a cable sensor moved from "
+                     "error status to enable status .",
+                     "%1 sensor is now enabled.",
+                     "OK",
+                     "OK",
+                     1,
+                     {"string"},
+                     "Check the sensor or subsystem for errors.",
+                 }},
+    MessageEntry{"SensorCableStatusError",
+                 {
+                     "Indicates that a cable sensor moved from "
+                     "enable status to error status .",
+                     "%1 sensor is now in error.",
+                     "Critical",
+                     "Critical",
+                     1,
+                     {"string"},
+                     "Check the sensor or subsystem for errors.",
+                 }},
     MessageEntry{"SensorThresholdCriticalHighGoingHigh",
                  {
                      "Indicates that a threshold sensor has crossed a "
