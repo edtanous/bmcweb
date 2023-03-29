@@ -61,6 +61,14 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         {
             suffix = "#/LinkStatus";
         }
+        else if (metricName == "TXWidth")
+        {
+            suffix = "#/Oem/Nvidia/TXWidth";
+        }
+        else if (metricName == "RXWidth")
+        {
+            suffix = "#/Oem/Nvidia/RXWidth";
+        }
     }
     else if (ifaceName == "xyz.openbmc_project.State.ProcessorPerformance")
     {
@@ -169,7 +177,7 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         }
         else if (metricName == "RowRemappingFailureState")
         {
-            suffix = "/Oem/Nvidia/RowRemapping/RowRemappingFailed";
+            suffix = "/Oem/Nvidia/RowRemappingFailed";
         }
     }
     else

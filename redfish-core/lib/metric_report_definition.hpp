@@ -368,11 +368,81 @@ inline void requestRoutesMetricReportDefinitionCollection(App& app)
                 telemetry::metricReportDefinitionUri;
             asyncResp->res.jsonValue["Name"] = "Metric Definition Collection";
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
-            nlohmann::json& addMembers = asyncResp->res.jsonValue["Members"];
-            addMembers.push_back(
-                {{"@odata.id",
-                  "/redfish/v1/TelemetryService/MetricReportDefinitions/" PLATFORMMETRICSID}});
-            asyncResp->res.jsonValue["Members@odata.count"] = addMembers.size();
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](
+                    boost::system::error_code ec,
+                    const std::vector<std::string>& metricPaths) mutable {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    nlohmann::json& addMembers =
+                        asyncResp->res.jsonValue["Members"];
+
+                    for (const std::string& object : metricPaths)
+                    {
+                        // Get the metric object
+                        std::string metricReportDefUriPath =
+                            "/redfish/v1/TelemetryService/MetricReportDefinitions/";
+                        if (boost::ends_with(object, "platformmetrics"))
+                        {
+                            addMembers.push_back(
+                                {{"@odata.id",
+                                  "/redfish/v1/TelemetryService/MetricReportDefinitions/" PLATFORMMETRICSID}});
+                        }
+                        else if (boost::ends_with(object, "memory"))
+                        {
+                            std::string memoryMetricId =
+                                PLATFORMDEVICEPREFIX "MemoryMetrics";
+                            memoryMetricId += "_0";
+                            std::string uripath =
+                                metricReportDefUriPath + memoryMetricId;
+                            addMembers.push_back({{"@odata.id", uripath}});
+                        }
+                        else if (boost::ends_with(object, "processors"))
+                        {
+                            std::string processorMetricId =
+                                PLATFORMDEVICEPREFIX "ProcessorMetrics";
+                            processorMetricId += "_0";
+                            std::string uripath =
+                                metricReportDefUriPath + processorMetricId;
+                            addMembers.push_back({{"@odata.id", uripath}});
+
+                            std::string processorPortMetricId =
+                                PLATFORMDEVICEPREFIX "ProcessorPortMetrics";
+                            processorPortMetricId += "_0";
+                            uripath =
+                                metricReportDefUriPath + processorPortMetricId;
+                            addMembers.push_back({{"@odata.id", uripath}});
+                        }
+                        else if (boost::ends_with(object, "Switches"))
+                        {
+                            std::string switchMetricId =
+                                PLATFORMDEVICEPREFIX "NVSwitchMetrics";
+                            switchMetricId += "_0";
+                            std::string uripath =
+                                metricReportDefUriPath + switchMetricId;
+                            addMembers.push_back({{"@odata.id", uripath}});
+
+                            std::string switchPortMetricId =
+                                PLATFORMDEVICEPREFIX "NVSwitchPortMetrics";
+                            switchPortMetricId += "_0";
+                            uripath =
+                                metricReportDefUriPath + switchPortMetricId;
+                            addMembers.push_back({{"@odata.id", uripath}});
+                        }
+                    }
+                    asyncResp->res.jsonValue["Members@odata.count"] =
+                        addMembers.size();
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                "/xyz/openbmc_project/inventory", 0,
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.Sensor.Aggregation"});
             return;
 #endif
             const std::vector<const char*> interfaces{
