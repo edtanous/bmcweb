@@ -60,8 +60,7 @@ namespace node
 {
 static constexpr std::string_view power = "Power";
 static constexpr std::string_view sensors = "Sensors";
-static constexpr std::string_view thermal = "ThermalSubsystem";
-
+static constexpr std::string_view thermal = "Thermal";
 } // namespace node
 
 // clang-format off
@@ -528,7 +527,7 @@ inline void populateChassisNode(nlohmann::json& jsonValue,
     }
     else if (chassisSubNode == sensors::node::thermal)
     {
-        jsonValue["@odata.type"] = "#ThermalSubsystem.v1_0_0.ThermalSubsystem";
+        jsonValue["@odata.type"] = "#Thermal.v1_4_0.Thermal";
         jsonValue["Fans"] = nlohmann::json::array();
         jsonValue["Temperatures"] = nlohmann::json::array();
     }
@@ -845,11 +844,10 @@ inline void setLedState(nlohmann::json& sensorJson,
  */
 inline void objectPropertiesToJson(
     std::string_view sensorName, std::string_view sensorType,
-    std::string_view chassisSubNode, std::string_view chassisId,
+    std::string_view chassisSubNode,
     const dbus::utility::DBusPropertiesMap& propertiesDict,
     nlohmann::json& sensorJson, InventoryItem* inventoryItem)
 {
-    std::string sensorUri;
     if (chassisSubNode == sensors::node::sensors)
     {
         std::string subNodeEscaped(chassisSubNode);
@@ -872,11 +870,8 @@ inline void objectPropertiesToJson(
         // Set MemberId and Name for non-power sensors.  For PowerSupplies and
         // PowerControl, those properties have more general values because
         // multiple sensors can be stored in the same JSON object.
-        std::string sensorNameEs(sensorName);
-        std::string chassisIdStr(chassisId);
-        sensorUri =
-            "/redfish/v1/Chassis/" + chassisIdStr + "/Sensors/" + sensorNameEs;
         sensorJson["MemberId"] = sensorName;
+        std::string sensorNameEs(sensorName);
         std::replace(sensorNameEs.begin(), sensorNameEs.end(), '_', ' ');
         sensorJson["Name"] = std::move(sensorNameEs);
     }
@@ -929,9 +924,6 @@ inline void objectPropertiesToJson(
         unit = "/Reading"_json_pointer;
         sensorJson["ReadingUnits"] = "RPM";
         sensorJson["@odata.type"] = "#Thermal.v1_7_1.Fan";
-        sensorJson["SpeedPercent"]["@odata.id"] = sensorUri;
-        sensorJson["SpeedPercent"]["DataSourceUri"] = sensorUri;
-        sensorJson["@odata.type"] = "#Fan.v1_1_0.Fan";
         setLedState(sensorJson, inventoryItem);
         forceToInt = true;
     }
@@ -940,9 +932,6 @@ inline void objectPropertiesToJson(
         unit = "/Reading"_json_pointer;
         sensorJson["ReadingUnits"] = "Percent";
         sensorJson["@odata.type"] = "#Thermal.v1_7_1.Fan";
-        sensorJson["SpeedPercent"]["@odata.id"] = sensorUri;
-        sensorJson["SpeedPercent"]["DataSourceUri"] = sensorUri;
-        sensorJson["@odata.type"] = "#Fan.v1_1_0.Fan";
         setLedState(sensorJson, inventoryItem);
         forceToInt = true;
     }
@@ -1147,15 +1136,13 @@ inline void objectInterfacesToJson(
     const std::string& sensorName, const std::string& sensorType,
     const std::string& chassisSubNode,
     const dbus::utility::DBusInteracesMap& interfacesDict,
-    nlohmann::json& sensorJson, InventoryItem* inventoryItem,
-    const std::string& chassisId)
+    nlohmann::json& sensorJson, InventoryItem* inventoryItem)
 {
 
     for (const auto& [interface, valuesDict] : interfacesDict)
     {
         objectPropertiesToJson(sensorName, sensorType, chassisSubNode,
-                               chassisId, valuesDict, sensorJson,
-                               inventoryItem);
+                               valuesDict, sensorJson, inventoryItem);
     }
     BMCWEB_LOG_DEBUG << "Added sensor " << sensorName;
 }
@@ -2693,8 +2680,7 @@ inline void getSensorData(
                     objectInterfacesToJson(sensorName, sensorType,
                                            sensorsAsyncResp->chassisSubNode,
                                            objDictEntry.second, *sensorJson,
-                                           inventoryItem,
-                                           sensorsAsyncResp->chassisId);
+                                           inventoryItem);
 
                     std::string path = "/xyz/openbmc_project/sensors/";
                     path += sensorType;
@@ -3124,7 +3110,7 @@ inline void
             std::string name = path.filename();
             path = path.parent_path();
             std::string type = path.filename();
-            objectPropertiesToJson(name, type, sensors::node::sensors, " ",
+            objectPropertiesToJson(name, type, sensors::node::sensors,
                                    valuesDict, asyncResp->res.jsonValue,
                                    nullptr);
         });
