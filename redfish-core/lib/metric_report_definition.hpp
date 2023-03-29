@@ -749,19 +749,459 @@ inline void getPlatformMetricReportDefinition(
     asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
     getPlatformMetricsProperties(asyncResp, "HGX_Chassis_0");
 }
-
-inline void requestRoutesPlatformMetricReportDefinition(App& app)
+inline void populateMetricProperties(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& deviceType)
 {
-    BMCWEB_ROUTE(
-        app,
-        "/redfish/v1/TelemetryService/MetricReportDefinitions/" PLATFORMMETRICSID
-        "/")
-        .privileges(redfish::privileges::getMetricReportDefinition)
-        .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                getPlatformMetricReportDefinition(asyncResp, PLATFORMMETRICSID);
+    nlohmann::json metricPropertiesAray = nlohmann::json::array();
+    if (deviceType == "MemoryMetrics")
+    {
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_{GpuId}_DRAM_0#/Oem/Nvidia/RowRemappingFailed");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/OperatingSpeedMHz");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/BandwidthPercent");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/LifeTime/CorrectableECCErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/LifeTime/UncorrectableECCErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/Oem/Nvidia/RowRemapping/CorrectableRowRemappingCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/Oem/Nvidia/RowRemapping/UncorrectableRowRemappingCount");
+    }
+    else if (deviceType == "ProcessorMetrics")
+    {
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}#/Status/State");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}#/SystemInterface/PCIe/PCIeType");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}#/SystemInterface/PCIe/MaxLanes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/OperatingSpeedMHz");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/BandwidthPercent");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/CacheMetricsTotal/LifeTime/CorrectableECCErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/CacheMetricsTotal/LifeTime/UncorrectableECCErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/CorrectableErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/NonFatalErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/FatalErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/L0ToRecoveryCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/ReplayCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/ReplayRolloverCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/NAKSentCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/NAKReceivedCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/ThrottleReasons");
+    }
+    else if (deviceType == "NVSwitchMetrics")
+    {
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/InternalMemoryMetrics/LifeTime/CorrectableECCErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/InternalMemoryMetrics/LifeTime/UncorrectableECCErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/PCIeErrors/CorrectableErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/PCIeErrors/NonFatalErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/PCIeErrors/FatalErrorCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/PCIeErrors/L0ToRecoveryCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/PCIeErrors/ReplayCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/PCIeErrors/ReplayRolloverCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/PCIeErrors/NAKSentCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/SwitchMetrics#/PCIeErrors/NAKReceivedCount");
+    }
+    else if (deviceType == "ProcessorPortMetrics")
+    {
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}#/CurrentSpeedGbps");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/TXBytes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/RXBytes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/TXNoProtocolBytes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/RXNoProtocolBytes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RuntimeError");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/TrainingError");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/ReplayCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RecoveryCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/FlitCRCCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/DataCRCCount");
+    }
+    else if (deviceType == "NVSwitchPortMetrics")
+    {
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/CurrentSpeedGbps");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/MaxSpeedGbps");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/Oem/Nvidia/TXWidth");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/Oem/Nvidia/RXWidth");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/LinkStatus");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/TXBytes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/RXBytes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/TXNoProtocolBytes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/RXNoProtocolBytes");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RuntimeError");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/TrainingError");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/ReplayCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RecoveryCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/FlitCRCCount");
+        metricPropertiesAray.push_back(
+            "/redfish/v1/Fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/DataCRCCount");
+    }
+    asyncResp->res.jsonValue["MetricProperties"] = metricPropertiesAray;
+}
+
+inline std::string getWildCardDevId(const std::string& deviceType)
+{
+    std::string wildCardId;
+    if (deviceType == "MemoryMetrics" || deviceType == "ProcessorMetrics" ||
+        deviceType == "ProcessorPortMetrics")
+    {
+        wildCardId = "GpuId";
+    }
+    else if (deviceType == "NVSwitchMetrics" ||
+             deviceType == "NVSwitchPortMetrics")
+    {
+        wildCardId = "NVSwitchId";
+    }
+    return wildCardId;
+}
+inline std::string getWildCardSubDevId(const std::string& deviceType)
+{
+    std::string wildCardId;
+    if (deviceType == "ProcessorPortMetrics" ||
+        deviceType == "NVSwitchPortMetrics")
+    {
+        wildCardId = "NvlinkId";
+    }
+    return wildCardId;
+}
+
+inline void populateMetricPropertiesAndWildcards(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& deviceType)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp,
+         deviceType](boost::system::error_code ec,
+                     const std::vector<std::string>& objPaths) mutable {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            populateMetricProperties(asyncResp, deviceType);
+            nlohmann::json wildCards = nlohmann::json::array();
+            int wildCardMinForDevice = -1;
+            int wildCardMaxForDevice = -1;
+            int wildCardMinForSubDevice = -1;
+            int wildCardMaxForSubDevice = -1;
+            // "deviceIdentifier" defined to count number of no of subdevices on one device
+            std::string deviceIdentifier;
+            std::string wildCardDeviceId = getWildCardDevId(deviceType);
+            std::string wildCardSubDeviceId = getWildCardSubDevId(deviceType);
+            for (const std::string& object : objPaths)
+            {
+                sdbusplus::message::object_path path(object);
+                const std::string& deviceName = path.filename();
+                const std::string& parentName = path.parent_path().filename();
+                const std::string& grandParentName =
+                    path.parent_path().parent_path().filename();
+                const std::string& devTypeOnDbus =
+                    path.parent_path().parent_path().parent_path().filename();
+                if (parentName == "memory" )
+                {
+                    if (deviceType == "MemoryMetrics")
+                    {
+                        if (wildCardMinForDevice == -1)
+                        {
+                            // Index start with 1 for memory devices
+                            wildCardMinForDevice = 1;
+                            wildCardMaxForDevice = 1;
+                        }
+                        else
+                        {
+                            wildCardMaxForDevice++;
+                        }
+                    }
+                }
+                else if (parentName == "processors")
+                {
+                    if (deviceType == "ProcessorMetrics" ||
+                        deviceType == "ProcessorPortMetrics")
+                    {
+                        if (wildCardMinForDevice == -1)
+                        {
+                            // Index start with 1 for gpu processor devices
+                            wildCardMinForDevice = 1;
+                            wildCardMaxForDevice = 1;
+                        }
+                        else
+                        {
+                            wildCardMaxForDevice++;
+                        }
+                    }
+                }
+                else if (parentName == "Switches")
+                {
+                    if (deviceType == "NVSwitchMetrics" ||
+                        deviceType == "NVSwitchPortMetrics")
+                    {
+                        if (wildCardMinForDevice == -1)
+                        {
+                            // Index start with 0 for switches devices
+                            wildCardMinForDevice = 0;
+                            wildCardMaxForDevice = 0;
+                        }
+                        else
+                        {
+                            wildCardMaxForDevice++;
+                        }
+                    }
+                }
+                else if (parentName == "Ports")
+                {
+                    if (devTypeOnDbus == "processors" &&
+                        deviceType == "ProcessorPortMetrics")
+                    {
+                        if (wildCardMinForSubDevice == -1)
+                        {
+                            // Index start with 0 for GPU NVLink devices
+                            deviceIdentifier = grandParentName;
+                            wildCardMinForSubDevice = 0;
+                            wildCardMaxForSubDevice = 0;
+                        }
+                        else if(deviceIdentifier == grandParentName)
+                        {
+                            wildCardMaxForSubDevice++;
+                        }
+                    }
+                    else if (devTypeOnDbus == "Switches" &&
+                             deviceType == "NVSwitchPortMetrics")
+                    {
+                        if (wildCardMinForSubDevice == -1)
+                        {
+                            // Index start with 0 for NVSwitch NVLink devices
+                            wildCardMinForSubDevice = 0;
+                            wildCardMaxForSubDevice = 0;
+                            deviceIdentifier = grandParentName;
+                        }
+                        else if (deviceIdentifier == grandParentName)
+                        {
+                            // Count sub devices on a particular device
+                            wildCardMaxForSubDevice++;
+                        }
+                    }
+                }
+            }
+            nlohmann::json devCount = nlohmann::json::array();
+            for (int i = wildCardMinForDevice; i <= wildCardMaxForDevice; i++)
+            {
+                devCount.push_back(std::to_string(i));
+            }
+            wildCards.push_back({
+                {"Name", wildCardDeviceId},
+                {"Values", devCount},
             });
+            if (deviceType == "ProcessorPortMetrics" ||
+                deviceType == "NVSwitchPortMetrics")
+            {
+                nlohmann::json subDevCount = nlohmann::json::array();
+                for (int i = wildCardMinForSubDevice;
+                     i <= wildCardMaxForSubDevice; i++)
+                {
+                    subDevCount.push_back(std::to_string(i));
+                }
+                wildCards.push_back({
+                    {"Name", wildCardSubDeviceId},
+                    {"Values", subDevCount},
+                });
+            }
+            asyncResp->res.jsonValue["Wildcards"] = wildCards;
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 1>{"oem.nvidia.Timestamp"});
+}
+
+inline void getMetricReportDefForAggregatedMetrics(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id,
+    const std::string& deviceType)
+{
+    if (deviceType != "MemoryMetrics" && deviceType != "ProcessorMetrics" &&
+        deviceType != "NVSwitchMetrics" &&
+        deviceType != "ProcessorPortMetrics" &&
+        deviceType != "NVSwitchPortMetrics")
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.id"] =
+        telemetry::metricReportDefinitionUri + std::string("/") + id;
+    asyncResp->res.jsonValue["@odata.type"] =
+        "#MetricReportDefinition.v1_3_0.MetricReportDefinition";
+    asyncResp->res.jsonValue["Id"] = id;
+    asyncResp->res.jsonValue["Name"] = id;
+    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+    asyncResp->res.jsonValue["MetricReportDefinitionType"] = "OnRequest";
+    std::vector<std::string> redfishReportActions;
+    redfishReportActions.emplace_back("LogToMetricReportsCollection");
+    asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
+    asyncResp->res.jsonValue["ReportUpdates"] = "Overwrite";
+    asyncResp->res.jsonValue["MetricReport"]["@odata.id"] =
+        telemetry::metricReportUri + std::string("/") + id;
+    populateMetricPropertiesAndWildcards(asyncResp, deviceType);
+}
+
+
+inline void validateAndGetMetricReportDefinition(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+{
+    using MapperServiceMap =
+        std::vector<std::pair<std::string, std::vector<std::string>>>;
+
+    // Map of object paths to MapperServiceMaps
+    using MapperGetSubTreeResponse =
+        std::vector<std::pair<std::string, MapperServiceMap>>;
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, id](boost::system::error_code ec,
+                        const MapperGetSubTreeResponse& subtree) mutable {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            bool validMetricId = false;
+            std::string deviceType;
+            std::string serviceName;
+            for (const auto& [path, serviceMap] : subtree)
+            {
+                const std::string objectPath = path;
+                for (const auto& [conName, interfaceList] : serviceMap)
+                {
+                    if (boost::ends_with(objectPath, "platformmetrics"))
+                    {
+                        if (id == PLATFORMMETRICSID)
+                        {
+                            validMetricId = true;
+                        }
+                    }
+                    else if (boost::ends_with(objectPath, "memory"))
+                    {
+                        std::string memoryMetricId =
+                            PLATFORMDEVICEPREFIX "MemoryMetrics_0";
+                        if (id == memoryMetricId)
+                        {
+                            serviceName = conName;
+                            validMetricId = true;
+                            deviceType = "MemoryMetrics";
+                        }
+                    }
+                    else if (boost::ends_with(objectPath, "processors"))
+                    {
+                        std::string processorMetricId =
+                            PLATFORMDEVICEPREFIX "ProcessorMetrics_0";
+                        std::string processorPortMetricId =
+                            PLATFORMDEVICEPREFIX "ProcessorPortMetrics_0";
+                        if (id == processorMetricId)
+                        {
+                            serviceName = conName;
+                            validMetricId = true;
+                            deviceType = "ProcessorMetrics";
+                        }
+                        else if (id == processorPortMetricId)
+                        {
+                            serviceName = conName;
+                            validMetricId = true;
+                            deviceType = "ProcessorPortMetrics";
+                        }
+                    }
+                    else if (boost::ends_with(objectPath, "Switches"))
+                    {
+                        std::string nvSwitchMetricId =
+                            PLATFORMDEVICEPREFIX "NVSwitchMetrics_0";
+                        std::string nvSwitchPortMetricId =
+                            PLATFORMDEVICEPREFIX "NVSwitchPortMetrics_0";
+                        if (id == nvSwitchMetricId)
+                        {
+                            serviceName = conName;
+                            validMetricId = true;
+                            deviceType = "NVSwitchMetrics";
+                        }
+                        else if (id == nvSwitchPortMetricId)
+                        {
+                            serviceName = conName;
+                            validMetricId = true;
+                            deviceType = "NVSwitchPortMetrics";
+                        }
+                    }
+                }
+            }
+            if (!validMetricId)
+            {
+                messages::resourceNotFound(asyncResp->res,
+                                           "MetricReportDefinition", id);
+            }
+            else
+            {
+                if (id == PLATFORMMETRICSID)
+                {
+                    getPlatformMetricReportDefinition(asyncResp, id);
+                }
+                else
+                {
+                    getMetricReportDefForAggregatedMetrics(asyncResp, id,
+                                                           deviceType);
+                }
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 1>{"xyz.openbmc_project.Sensor.Aggregation"});
 }
 #endif
 
@@ -778,7 +1218,9 @@ inline void requestRoutesMetricReportDefinition(App& app)
                 {
                     return;
                 }
-
+#ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+                validateAndGetMetricReportDefinition(asyncResp, id);
+#else
                 sdbusplus::asio::getAllProperties(
                     *crow::connections::systemBus, telemetry::service,
                     telemetry::getDbusReportPath(id),
@@ -804,6 +1246,7 @@ inline void requestRoutesMetricReportDefinition(App& app)
 
                         telemetry::fillReportDefinition(asyncResp, id, ret);
                     });
+#endif
             });
     BMCWEB_ROUTE(app,
                  "/redfish/v1/TelemetryService/MetricReportDefinitions/<str>/")

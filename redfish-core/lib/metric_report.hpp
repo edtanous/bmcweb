@@ -358,9 +358,6 @@ inline void getAggregatedDeviceMetrics(
         return;
     }
     nlohmann::json& resArray = asyncResp->res.jsonValue["MetricValues"];
-    // BMCWEB_LOG_ERROR << deviceType;
-    // BMCWEB_LOG_ERROR << deviceName;
-    // asyncResp->res.jsonValue["Name"] = "abc";
     auto timestampIterator = std::find_if(
         portInterfacesProperties.begin(), portInterfacesProperties.end(),
         [](const auto& i) { return i.first == "oem.nvidia.Timestamp"; });
