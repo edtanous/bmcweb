@@ -482,7 +482,7 @@ static void monitorForSoftwareAvailable(
     fwUpdateMatcher = std::make_unique<sdbusplus::bus::match::match>(
         *crow::connections::systemBus,
         "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
-        "member='InterfacesAdded',path='/'",
+        "member='InterfacesAdded',path='/xyz/openbmc_project/software'",
         callback);
 
     loggingMatch = std::make_unique<sdbusplus::bus::match::match>(
