@@ -43,6 +43,7 @@ inline void handleDeviceServiceConditions(
 
             for (auto& objectPath : resp)
             {
+                additionalDataRaw = nullptr;
                 for (auto& interfaceMap : objectPath.second)
                 {
                     if (interfaceMap.first ==
@@ -142,6 +143,7 @@ inline void handleDeviceServiceConditions(
         "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Both");
 }
 
+
 inline void handleServiceConditionsURI(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
@@ -165,11 +167,10 @@ inline void handleServiceConditionsURI(
                 "xyz.openbmc_project.Logging.Entry.Level.";
             const std::string criticalSev = prefix + "Critical";
             const std::string warningSev = prefix + "Warning";
-            bool resolved = false;
             std::time_t timestamp{};
-
             for (auto& objectPath : resp)
             {
+                additionalDataRaw = nullptr;
                 for (auto& interfaceMap : objectPath.second)
                 {
                     if (interfaceMap.first ==
@@ -196,17 +197,6 @@ inline void handleServiceConditionsURI(
                                 additionalDataRaw =
                                     std::get_if<std::vector<std::string>>(
                                         &propertyMap.second);
-                            }
-                            else if (propertyMap.first == "Resolved")
-                            {
-                                const bool* resolveptr =
-                                    std::get_if<bool>(&propertyMap.second);
-                                if (resolveptr == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                resolved = *resolveptr;
                             }
                             else if (propertyMap.first == "Timestamp")
                             {
@@ -235,7 +225,7 @@ inline void handleServiceConditionsURI(
                 std::string messageArgs;
                 std::string messageId;
 
-                if (!resolved && additionalDataRaw != nullptr)
+                if (additionalDataRaw != nullptr)
                 {
                     AdditionalData additional(*additionalDataRaw);
                     if (additional.count("REDFISH_ORIGIN_OF_CONDITION") > 0)
@@ -277,8 +267,10 @@ inline void handleServiceConditionsURI(
             }
         },
         "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        "xyz.openbmc_project.Logging.Namespace", "GetAll", "Namespace.All",
+        "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Both");
 }
+
 
 /**
  * Utility function for populating Conditions

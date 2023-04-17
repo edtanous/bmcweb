@@ -6,6 +6,7 @@
 #pragma once
 
 #include <boost/algorithm/string.hpp>
+#include <utils/registry_utils.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -97,57 +98,58 @@ static void oocUtilServiceConditions(
     const std::string& messageId)
 {
     nlohmann::json j;
-    std::string arg0 = messageArgs.substr(0, messageArgs.find(','));
-    std::string arg1 =
-        messageArgs.substr(messageArgs.find(',') + 1, messageArgs.length());
-    boost::trim(arg0);
-    boost::trim(arg1);
-    j["MessageArgs"] = nlohmann::json::array();
-    j["MessageArgs"].push_back(arg0);
-    j["MessageArgs"].push_back(arg1);
-    j["MessageId"] = messageId;
-    if (messageId == "ResourceEvent.1.0.ResourceErrorThresholdExceeded")
+    BMCWEB_LOG_DEBUG << "Generating MessageRegistry for [" << messageId << "]";
+    const redfish::registries::Message* msg =
+        redfish::message_registries::getMessage(messageId);
+
+    if (msg == nullptr)
     {
-        j["Message"] = "The resource property " + arg0 +
-                       " has exceeded error threshold of value " + arg1 + ". ";
+        BMCWEB_LOG_ERROR << "Failed to lookup the message for MessageId["
+                         << messageId << "]";
+        return;
     }
-    else
+
+    std::vector<std::string> fields;
+    fields.reserve(msg->numberOfArgs);
+    boost::split(fields, messageArgs, boost::is_any_of(","));
+
+    for (auto& f : fields)
     {
-        j["Message"] = "The resource property " + arg0 +
-                       " has detected errors of type '" + arg1 + "'.";
+        boost::trim(f);
     }
-    j["Timestamp"] = timestamp;
-    j["Severity"] = severity;
-    j["OriginOfCondition"]["@odata.id"] = ooc;
-    j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
-                                 "LogServices/EventLog/Entries/" +
-                                 id;
+    std::span<std::string> msgArgs;
+    msgArgs = {&fields[0], fields.size()};
+
+    std::string message = msg->message;
+    int i = 0;
+    for (auto& arg : msgArgs)
+    {
+        std::string argStr = "%" + std::to_string(++i);
+        size_t argPos = message.find(argStr);
+        if (argPos != std::string::npos)
+        {
+            message.replace(argPos, argStr.length(), arg);
+        }
+    }
 
     BMCWEB_LOG_DEBUG << "Populating service conditions with ooc " << ooc
                      << "\n";
+    j = {{"Severity", severity},
+         {"Timestamp", timestamp},
+         {"Message", message},
+         {"MessageId", messageId},
+         {"MessageArgs", msgArgs}};
+    j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
+                                 "LogServices/EventLog/Entries/" +
+                                 id;
+    j["OriginOfCondition"]["@odata.id"] = ooc;
 
     if (asyncResp->res.jsonValue.contains("Conditions"))
     {
-        for (auto& elem : asyncResp->res.jsonValue["Conditions"])
-        {
-            if (elem.contains("LogEntry") &&
-                elem["LogEntry"]["@odata.id"] == j["LogEntry"]["@odata.id"])
-            {
-                return;
-            }
-        }
         asyncResp->res.jsonValue["Conditions"].push_back(j);
     }
     else
     {
-        for (auto& elem : asyncResp->res.jsonValue["Status"]["Conditions"])
-        {
-            if (elem.contains("LogEntry") &&
-                elem["LogEntry"]["@odata.id"] == j["LogEntry"]["@odata.id"])
-            {
-                return;
-            }
-        }
         asyncResp->res.jsonValue["Status"]["Conditions"].push_back(j);
     }
 }
