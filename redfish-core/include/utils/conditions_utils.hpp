@@ -108,6 +108,7 @@ inline void handleDeviceServiceConditions(
                 std::string originOfCondition;
                 std::string messageArgs;
                 std::string messageId;
+                std::string deviceName;
 
                 if (!resolved && additionalDataRaw != nullptr)
                 {
@@ -125,12 +126,16 @@ inline void handleDeviceServiceConditions(
                     {
                         messageId = additional["REDFISH_MESSAGE_ID"];
                     }
+                    if (additional.count("DEVICE_NAME") > 0)
+                    {
+                        deviceName = additional["DEVICE_NAME"];
+                    }
                     if ((*severity == criticalSev || *severity == warningSev) &&
                         messageArgs.find(chassisId) != std::string::npos)
                     {
                         origin_utils::convertDbusObjectToOriginOfCondition(
                             originOfCondition, std::to_string(*id), asyncResp,
-                            asyncResp->res.jsonValue,
+                            asyncResp->res.jsonValue, deviceName,
                             (*severity).substr(prefix.length()), messageArgs,
                             redfish::time_utils::getDateTimeStdtime(timestamp),
                             messageId);
@@ -224,6 +229,7 @@ inline void handleServiceConditionsURI(
                 std::string originOfCondition;
                 std::string messageArgs;
                 std::string messageId;
+                std::string deviceName;
 
                 if (additionalDataRaw != nullptr)
                 {
@@ -241,11 +247,15 @@ inline void handleServiceConditionsURI(
                     {
                         messageId = additional["REDFISH_MESSAGE_ID"];
                     }
+                    if (additional.count("DEVICE_NAME") > 0)
+                    {
+                        deviceName = additional["DEVICE_NAME"];
+                    }
                     if (*severity == criticalSev || *severity == warningSev)
                     {
                         origin_utils::convertDbusObjectToOriginOfCondition(
                             originOfCondition, std::to_string(*id), asyncResp,
-                            asyncResp->res.jsonValue,
+                            asyncResp->res.jsonValue, deviceName,
                             (*severity).substr(prefix.length()), messageArgs,
                             redfish::time_utils::getDateTimeStdtime(timestamp),
                             messageId);

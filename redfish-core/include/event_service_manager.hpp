@@ -618,7 +618,7 @@ class Subscription : public persistent_data::UserSubscription
 #if !defined(BMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION)
         bool useSSL = (uriProto == "https"); // depends on subscription
 #else
-        bool useSSL =  false; // forcing insecure http protocol
+        bool useSSL = false; // forcing insecure http protocol
 #endif
 
         BMCWEB_LOG_DEBUG << "uriProto=" << uriProto << " host=" << host
@@ -1814,7 +1814,8 @@ class EventServiceManager
         {fabricsPrefixDbus, fabricsPrefix},
         {processorPrefixDbus, processorPrefix},
         {memoryPrefixDbus, memoryPrefix},
-        {softwarePrefixDbus, firmwarePrefix}};
+        {softwarePrefixDbus, firmwarePrefix},
+        {sensorSubTree, chassisPrefix}};
 
     void unregisterDbusLoggingSignal()
     {
@@ -1869,6 +1870,7 @@ class EventServiceManager
             std::string timestamp = "";
             std::string originOfCondition = "";
             std::string message;
+            std::string deviceName;
             std::vector<std::string> messageArgs = {};
             const std::vector<std::string>* additionalDataPtr;
 
@@ -1883,6 +1885,10 @@ class EventServiceManager
                     if (additionalDataPtr != nullptr)
                     {
                         AdditionalData additional(*additionalDataPtr);
+                        if (additional.count("DEVICE_NAME") > 0)
+                        {
+                            deviceName = additional["DEVICE_NAME"];
+                        }
                         if (additional.count("REDFISH_MESSAGE_ID") == 1)
                         {
                             messageId = additional["REDFISH_MESSAGE_ID"];
@@ -2005,7 +2011,7 @@ class EventServiceManager
                 if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
                 {
                     eventServiceOOC(additional["REDFISH_ORIGIN_OF_CONDITION"],
-                                    event);
+                                    deviceName, event);
                 }
             }
         };
@@ -2020,7 +2026,8 @@ class EventServiceManager
      * @param path  orginal path that came from Phosphor Logging
      * @param event  the event to be sent out
      */
-    inline void eventServiceOOC(const std::string& path, Event& event)
+    inline void eventServiceOOC(const std::string& path,
+                                const std::string& devName, Event& event)
     {
         sdbusplus::message::object_path objPath(path);
         std::string deviceName = objPath.filename();
@@ -2030,8 +2037,21 @@ class EventServiceManager
             {
                 if (path.find(it.first) != std::string::npos)
                 {
-                    std::string newPath =
-                            path.substr(it.first.length(), path.length());
+                    std::string newPath;
+                    if (it.first == sensorSubTree)
+                    {
+                        std::string chassisName =
+                            PLATFORMDEVICEPREFIX + devName;
+                        std::string sensorName;
+                        dbus::utility::getNthStringFromPath(path, 4,
+                                                            sensorName);
+                        newPath = chassisName + "/Sensors/";
+                        newPath += sensorName;
+                    }
+                    else
+                    {
+                        newPath = path.substr(it.first.length(), path.length());
+                    }
                     sendEventWithOOC(it.second + newPath, event);
                     return;
                 }

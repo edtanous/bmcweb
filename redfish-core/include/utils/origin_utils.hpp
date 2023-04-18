@@ -7,6 +7,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <utils/registry_utils.hpp>
+#include <dbus_utility.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -79,11 +80,9 @@ const std::string firmwarePrefix =
     "/redfish/v1/UpdateService/FirmwareInventory/";
 
 std::map<std::string, std::string> dBusToRedfishURI = {
-    {chassisPrefixDbus, chassisPrefix},
-    {fabricsPrefixDbus, fabricsPrefix},
-    {processorPrefixDbus, processorPrefix},
-    {memoryPrefixDbus, memoryPrefix},
-    {softwarePrefixDbus, firmwarePrefix}};
+    {chassisPrefixDbus, chassisPrefix},     {fabricsPrefixDbus, fabricsPrefix},
+    {processorPrefixDbus, processorPrefix}, {memoryPrefixDbus, memoryPrefix},
+    {softwarePrefixDbus, firmwarePrefix},   {sensorSubTree, chassisPrefix}};
 
 /**
  * Utility function for populating async response with
@@ -193,13 +192,13 @@ static void oocUtil(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 inline void convertDbusObjectToOriginOfCondition(
     const std::string& path, const std::string& id,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    nlohmann::json& logEntry, const std::string& severity = "",
-    const std::string& messageArgs = "", const std::string& timestamp = "",
-    const std::string& messageId = "")
+    nlohmann::json& logEntry, const std::string& deviceName,
+    const std::string& severity = "", const std::string& messageArgs = "",
+    const std::string& timestamp = "", const std::string& messageId = "")
 {
     sdbusplus::message::object_path objPath(path);
-    std::string deviceName = objPath.filename();
-    if (deviceName.empty())
+    std::string devName = objPath.filename();
+    if (devName.empty())
     {
         BMCWEB_LOG_DEBUG
             << "Empty OriginOfCondition provided to convertDbusObjectToOriginOfCondition"
@@ -211,7 +210,20 @@ inline void convertDbusObjectToOriginOfCondition(
     {
         if (path.find(it.first) != std::string::npos)
         {
-            std::string newPath = path.substr(it.first.length(), path.length());
+            std::string newPath;
+            if (it.first == sensorSubTree)
+            {
+                std::string chassisName = PLATFORMDEVICEPREFIX + deviceName;
+                std::string sensorName;
+                dbus::utility::getNthStringFromPath(path, 4, sensorName);
+                newPath = chassisName + "/Sensors/";
+                newPath += sensorName;
+            }
+            else
+            {
+                newPath = path.substr(it.first.length(), path.length());
+            }
+
             oocUtil(asyncResp, logEntry, id, it.second + newPath, severity,
                     messageArgs, timestamp, messageId);
             return;
