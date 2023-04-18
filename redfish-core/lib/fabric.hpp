@@ -286,6 +286,8 @@ inline void
                 std::string portMetricsURI = portURI + "/Metrics";
                 asyncResp->res.jsonValue["Metrics"]["@odata.id"] =
                     portMetricsURI;
+                asyncResp->res.jsonValue["Status"]["Conditions"] =
+                    nlohmann::json::array();
 
                 const std::string& connectionName = connectionNames[0].first;
                 redfish::port_utils::getPortData(asyncResp, connectionName,

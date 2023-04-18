@@ -4736,6 +4736,10 @@ inline void requestRoutesProcessorPort(App& app)
                                                 .jsonValue["Metrics"]
                                                           ["@odata.id"] =
                                                 metricsURI;
+                                            asyncResp->res
+                                                .jsonValue["Status"]
+                                                          ["Conditions"] =
+                                                nlohmann::json::array();
                                             for (const auto& [service,
                                                               interfaces] :
                                                  object1)

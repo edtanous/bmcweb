@@ -2445,6 +2445,8 @@ inline void requestRoutesSoftwareInventory(App& app)
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                         asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                             "OK";
+                        asyncResp->res.jsonValue["Status"]["Conditions"] =
+                            nlohmann::json::array();
                     }
                     if (!found)
                     {
@@ -2528,6 +2530,8 @@ inline void requestRoutesInventorySoftware(App& app)
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                         asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                             "OK";
+                        asyncResp->res.jsonValue["Status"]["Conditions"] =
+                            nlohmann::json::array();
 
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, swId, path, searchPath](
