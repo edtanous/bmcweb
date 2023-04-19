@@ -21,9 +21,9 @@
 #include <boost/process.hpp>
 
 #include <chrono>
+#include <functional>
 #include <iostream>
 #include <string>
-#include <thread>
 
 enum class MctpVdmUtilCommand
 {
@@ -55,74 +55,38 @@ struct MctpVdmUtilProgressStatusResponse
 };
 
 namespace bp = boost::process;
+using ResponseCallback = std::function<void(
+    const crow::Request&, const std::shared_ptr<bmcweb::AsyncResp>&,
+    uint32_t /* endpointId */, const std::string& /* stdOut*/,
+    const std::string& /* stdErr*/, const boost::system::error_code& /* ec */,
+    int /*errorCode */)>;
 
-class MctpVdmUtil
+struct MctpVdmUtil
 {
   public:
-    MctpVdmUtil(uint32_t endpointId, const int timeout = 10) :
-        endpointId(endpointId), timeout(timeout), returnStatus(0), stdOut(""),
-        stdErr(""), killed(false), stopped(false), ioc(), deadline_timer(ioc)
+    MctpVdmUtil(uint32_t endpointId) : endpointId(endpointId)
     {}
 
     /**
      *@brief Execute mctp-vdm-util tool command for
      * relevant MCTP EID
-     * @param mctpVdmUtilcommand the enum with commands
-     * available for mctp-vdm-util tool
+     * @param mctpVdmUtilcommand the enum with commands available for
+     *mctp-vdm-util tool.
+     * @param req - Pointer to object holding request data.
+     * @param asyncResp - Pointer to object holding response data.
+     * @param responseCallback - callback function to handle the response.
      *
      * @return none.
      */
-    void run(MctpVdmUtilCommand mctpVdmUtilcommand);
-
-    /**
-     *@brief Get the exit code of mctp-vdm-util
-     * The method 'run' must be executed before
-     *
-     * @return exit code of mctp-vdm-util tool.
-     */
-    int getReturnStatus();
-
-    /**
-     *@brief Get the standard output of mctp-vdm-util tool
-     * The method 'run' must be executed before
-     *
-     * @return standard output of mctp-vdm-util tool.
-     */
-    std::string getStdOut();
-
-    /**
-     *@brief Get the standard error of mctp-vdm-util tool
-     * The method 'run' must be executed before
-     *
-     * @return standard error of mctp-vdm-util tool
-     */
-    std::string getStdErr();
-
-    /**
-     *@brief Get flag if mctp-vdm-util tool was terminated
-     *
-     * @return true if mctp-vdm-util tool was terminated.
-     */
-    bool wasKilled();
+    void run(MctpVdmUtilCommand mctpVdmUtilcommand, const crow::Request& req,
+             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+             ResponseCallback responseCallback);
 
   private:
-    void initLog();
-    void timeoutHandler(const boost::system::error_code& ec);
-    void kill();
     void translateOperationToCommand(MctpVdmUtilCommand mctpVdmUtilcommand);
-
     uint32_t endpointId = 0L;
 
     std::string command;
-    const int timeout;
-    int returnStatus;
-    std::string stdOut;
-    std::string stdErr;
-    bool killed;
-    bool stopped;
-    boost::process::group group;
-    boost::asio::io_context ioc;
-    boost::asio::deadline_timer deadline_timer;
 };
 
 void MctpVdmUtil::translateOperationToCommand(
@@ -171,70 +135,51 @@ void MctpVdmUtil::translateOperationToCommand(
     command = "mctp-vdm-util -t " + std::to_string(endpointId) + " -c " + cmd;
 }
 
-void MctpVdmUtil::timeoutHandler(const boost::system::error_code& ec)
-{
-    if (stopped || ec == boost::asio::error::operation_aborted)
-    {
-        return;
-    }
-
-    kill();
-    deadline_timer.expires_at(boost::posix_time::pos_infin);
-}
-
-void MctpVdmUtil::run(MctpVdmUtilCommand mctpVdmUtilcommand)
+void MctpVdmUtil::run(MctpVdmUtilCommand mctpVdmUtilcommand,
+                      const crow::Request& req,
+                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                      ResponseCallback responseCallback)
 {
     translateOperationToCommand(mctpVdmUtilcommand);
-
-    std::future<std::string> dataOut;
-    std::future<std::string> dataErr;
-    bp::child c(command, bp::std_in.close(), bp::std_out > dataOut,
-                bp::std_err > dataErr, ioc, group,
-                bp::on_exit([=, this](int e, const std::error_code& ec) {
-                    (void)ec;
-                    deadline_timer.cancel();
-                    returnStatus = e;
-                }));
-
-    deadline_timer.expires_from_now(boost::posix_time::seconds(timeout));
-    deadline_timer.async_wait(
-        [this](const boost::system::error_code& ec) { timeoutHandler(ec); });
-
-    ioc.run();
-    c.wait();
-    stdOut = dataOut.get();
-    stdErr = dataErr.get();
-}
-
-int MctpVdmUtil::getReturnStatus()
-{
-    return returnStatus;
-}
-
-std::string MctpVdmUtil::getStdOut()
-{
-    return stdOut;
-}
-
-std::string MctpVdmUtil::getStdErr()
-{
-    return stdErr;
-}
-
-void MctpVdmUtil::kill()
-{
-    std::error_code ec;
-    group.terminate(ec);
-    if (ec)
-    {
-        throw std::runtime_error(ec.message());
-    }
-
-    killed = true;
-    stopped = true;
-}
-
-bool MctpVdmUtil::wasKilled()
-{
-    return killed;
+    auto dataOut = std::make_shared<boost::process::ipstream>();
+    auto dataErr = std::make_shared<boost::process::ipstream>();
+    auto exitCallback = [req, asyncResp, dataOut, dataErr,
+                         respCallback = std::move(responseCallback),
+                         endpointId = this->endpointId,
+                         command =
+                             this->command](const boost::system::error_code& ec,
+                                            int errorCode) mutable {
+        std::string stdOut;
+        while (*dataOut)
+        {
+            std::string line;
+            std::getline(*dataOut, line);
+            stdOut += line + "\n";
+        }
+        dataOut->close();
+        std::string stdErr;
+        while (*dataErr)
+        {
+            std::string line;
+            std::getline(*dataErr, line);
+            stdErr += line + "\n";
+        }
+        dataErr->close();
+        if (ec || errorCode)
+        {
+            BMCWEB_LOG_ERROR << "Error while executing command: " << command
+                             << " Error Code: " << errorCode;
+            BMCWEB_LOG_ERROR << "MCTP VDM Error Response: " << stdErr;
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Error while executing command: " << command
+                                 << " Message: " << ec.message();
+            }
+        }
+        respCallback(req, asyncResp, endpointId, stdOut, stdErr, ec, errorCode);
+        return;
+    };
+    bp::async_system(*req.ioService, std::move(exitCallback), command,
+                     bp::std_in.close(), bp::std_out > *dataOut,
+                     bp::std_err > *dataErr);
 }

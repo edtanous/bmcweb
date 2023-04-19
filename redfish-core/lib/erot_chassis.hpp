@@ -244,7 +244,14 @@ inline void getChassisOEMComponentProtected(
     });
 }
 
-inline void getEROTChassis(const crow::Request&,
+/**
+ * @brief handler for ERoT chassis resource.
+ *
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
+ * @param chassisId - chassis id
+ */
+inline void getEROTChassis(const crow::Request& req,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& chassisId)
 {
@@ -252,7 +259,7 @@ inline void getEROTChassis(const crow::Request&,
         "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisId(std::string(chassisId))](
+        [req, asyncResp, chassisId(std::string(chassisId))](
             const boost::system::error_code ec,
             const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)
@@ -329,7 +336,7 @@ inline void getEROTChassis(const crow::Request&,
                     certsObject;
 
                 redfish::chassis_utils::getChassisUUID(
-                    asyncResp, connectionNames[0].first, path, true);
+                    req, asyncResp, connectionNames[0].first, path, true);
 
                 redfish::chassis_utils::getChassisLocationType(
                     asyncResp, connectionNames[0].first, path);
@@ -482,7 +489,7 @@ inline void
         "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisId(std::string(chassisId)), backgroundCopyEnabled,
+        [req, asyncResp, chassisId(std::string(chassisId)), backgroundCopyEnabled,
          inBandEnabled](const boost::system::error_code ec,
                         const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)
@@ -512,7 +519,7 @@ inline void
                 sdbusplus::asio::getProperty<std::string>(
                     *crow::connections::systemBus, connectionName, path,
                     "xyz.openbmc_project.Common.UUID", "UUID",
-                    [asyncResp, chassisId(std::string(chassisId)),
+                    [req, asyncResp, chassisId(std::string(chassisId)),
                      backgroundCopyEnabled,
                      inBandEnabled](const boost::system::error_code ec,
                                     const std::string& chassisUUID) {
@@ -526,14 +533,14 @@ inline void
                         if (backgroundCopyEnabled.has_value())
                         {
                             redfish::chassis_utils::setBackgroundCopyEnabled(
-                                asyncResp, chassisId, chassisUUID,
+                                req, asyncResp, chassisId, chassisUUID,
                                 backgroundCopyEnabled.value());
                         }
 
                         if (inBandEnabled.has_value())
                         {
                             redfish::chassis_utils::setInBandEnabled(
-                                asyncResp, chassisId, chassisUUID,
+                                req, asyncResp, chassisId, chassisUUID,
                                 inBandEnabled.value());
                         }
                     });

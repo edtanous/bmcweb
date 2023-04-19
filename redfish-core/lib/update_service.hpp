@@ -2889,7 +2889,6 @@ inline void handleCommitImagePost(
     }
 
     bool hasTargets = false;
-    bool hasError = false;
 
     if (targets && targets.value().empty() == false)
     {
@@ -2902,23 +2901,16 @@ inline void handleCommitImagePost(
 
         for (auto& target : targetsCollection)
         {
+            sdbusplus::message::object_path objectPath(target);
+            std::string inventoryPath =
+                "/xyz/openbmc_project/software/" + objectPath.filename();
             std::pair<bool, CommitImageValueEntry> result =
-                getAllowableValue(target);
+                getAllowableValue(inventoryPath);
             if (result.first == true)
             {
                 uint32_t eid = result.second.mctpEndpointId;
 
-                if (initBackgroundCopy(eid) != 0)
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute backgroundcopy_init.";
-
-                    messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, result.second.inventoryUri,
-                        "backgroundCopy_init");
-
-                    hasError = true;
-                }
+                initBackgroundCopy(req, asyncResp, eid, result.second.inventoryUri);
             }
             else
             {
@@ -2926,8 +2918,6 @@ inline void handleCommitImagePost(
                     << "Cannot find firmware inventory in allowable values";
                 messages::resourceMissingAtURI(
                     asyncResp->res, crow::utility::urlFromPieces(target));
-
-                hasError = true;
             }
         }
     }
@@ -2942,24 +2932,9 @@ inline void handleCommitImagePost(
             {
                 uint32_t eid = result.second.mctpEndpointId;
 
-                if (initBackgroundCopy(eid) != 0)
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute backgroundcopy_init.";
-
-                    messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, result.second.inventoryUri,
-                        "backgroundCopy_init");
-
-                    hasError = true;
-                }
+                initBackgroundCopy(req, asyncResp, eid, result.second.inventoryUri);
             }
         }
-    }
-
-    if (hasError == false)
-    {
-        messages::success(asyncResp->res);
     }
 }
 

@@ -15,166 +15,257 @@
 */
 #pragma once
 
+#include "error_messages.hpp"
 #include "mctp_vdm_util_wrapper.hpp"
 
 /**
- *@brief Checks whether the background copy is enabled
+ *@brief updates AutomaticBackgroundCopyEnabled property
  *
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
  *
- * @return Object of MctpVdmUtilStatusResponse
- * contains info:
- * whether the MCTP command was performed successfully and
- * whether background copy is enabled or not.
+ * @return
  */
-inline MctpVdmUtilStatusResponse isBackgroundCopyEnabled(uint32_t endpointId)
+inline void updateBackgroundCopyEnabled(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId)
 {
-    MctpVdmUtilStatusResponse status;
-    status.isSuccess = false;
-    status.enabled = false;
-
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
 
-    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_STATUS);
-
-    if (mctpVdmUtilWrapper.getReturnStatus() == 0)
-    {
-        status.isSuccess = true;
+    auto responseCallback =
+        []([[maybe_unused]] const crow::Request& req,
+           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+           [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
+           [[maybe_unused]] const std::string& stdErr,
+           const boost::system::error_code& ec, int errorCode) -> void {
+        if (ec || errorCode)
+        {
+            redfish::messages::internalError(asyncResp->res);
+            return;
+        }
+        nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
 
         std::string rxTemplate = "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
-
-        if (std::regex_match(mctpVdmUtilWrapper.getStdOut(),
-                             std::regex(rxTemplate)))
+        if (std::regex_match(stdOut, std::regex(rxTemplate)))
         {
-            status.enabled = true;
+            oem["AutomaticBackgroundCopyEnabled"] = true;
         }
-    }
+        else
+        {
+            oem["AutomaticBackgroundCopyEnabled"] = false;
+        }
+        return;
+    };
 
-    return status;
+    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_STATUS, req,
+                           asyncResp, responseCallback);
 }
 
 /**
- *@brief Checks whether status of background copy is pending
+ *@brief Updates status of background copy property pending or completed.
  *
- * @param endpointId the EID which is used
- * by mctp-vdm-util tool to call request on MCTP
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
+ * @param endpointId the EID which is used by mctp-vdm-util tool to call request
+ *on MCTP
  *
- * @return boolean value
- * returns true when status is pending
- * otherwise returns false
+ * @return
  */
-inline bool isBackgroundCopyStatusPending(uint32_t endpointId)
+inline void updateBackgroundCopyStatusPending(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId)
 {
-    bool isPending = false;
-
-    std::string rxTemplatePending = "(.|\n)*RX:( \\d\\d){9} 02(.|\n)*";
-
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
-
-    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_QUERY_PENDING);
-
-    if (mctpVdmUtilWrapper.getReturnStatus() == 0)
-    {
-        std::string bgcResp = mctpVdmUtilWrapper.getStdOut();
-
-        if (std::regex_match(bgcResp, std::regex(rxTemplatePending)))
+    auto bgCopyQueryResponseCallback =
+        []([[maybe_unused]] const crow::Request& req,
+           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+           [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
+           [[maybe_unused]] const std::string& stdErr,
+           const boost::system::error_code& ec, int errorCode) -> void {
+        if (ec || errorCode)
         {
-            isPending = true;
+            redfish::messages::internalError(asyncResp->res);
+            return;
         }
-    }
+        std::string rxTemplatePending = "(.|\n)*RX:( \\d\\d){9} 02(.|\n)*";
+        nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+        if (std::regex_match(stdOut, std::regex(rxTemplatePending)))
+        {
+            oem["BackgroundCopyStatus"] = "Pending";
+        }
+        else
+        {
+            oem["BackgroundCopyStatus"] = "Completed";
+        }
+        return;
+    };
 
-    return isPending;
+    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_QUERY_PENDING,
+                           req, asyncResp,
+                           std::move(bgCopyQueryResponseCallback));
+    return;
 }
 
 /**
- *@brief Checks status of background copy
+ *@brief Updates status of background copy property
  *
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
  *
- * @return Object of MctpVdmUtilProgressStatusResponse
- * contains info:
- * whether the MCTP command was performed successfully and
- * the status of background copy.
+ * @return
  */
-inline MctpVdmUtilProgressStatusResponse
-    getBackgroundCopyStatus(uint32_t endpointId)
+inline void updateBackgroundCopyStatus(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId)
 {
-    std::string rxTemplateCompleted = "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
-    std::string rxTemplateInProgress = "(.|\n)*RX:( \\d\\d){9} 02(.|\n)*";
-
-    MctpVdmUtilProgressStatusResponse status;
-    status.isSuccess = false;
-    status.status = "Unknown";
-
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
-
-    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_QUERY_PROGRESS);
-
-    if (mctpVdmUtilWrapper.getReturnStatus() == 0)
-    {
-        status.isSuccess = true;
-
-        std::string bgcResp = mctpVdmUtilWrapper.getStdOut();
-
-        if (std::regex_match(bgcResp, std::regex(rxTemplateCompleted)))
+    auto bgCopyQueryResponseCallback =
+        []([[maybe_unused]] const crow::Request& req,
+           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+           [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
+           [[maybe_unused]] const std::string& stdErr,
+           const boost::system::error_code& ec, int errorCode) -> void {
+        if (ec || errorCode)
         {
-            if (isBackgroundCopyStatusPending(endpointId))
-            {
-                status.status = "Pending";
-            }
-            else
-            {
-                status.status = "Completed";
-            }
+            redfish::messages::internalError(asyncResp->res);
+            return;
         }
-        else if (std::regex_match(bgcResp, std::regex(rxTemplateInProgress)))
-        {
-            status.status = "InProgress";
-        }
-    }
 
-    return status;
+        std::string rxTemplateCompleted = "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
+        std::string rxTemplateInProgress = "(.|\n)*RX:( \\d\\d){9} 02(.|\n)*";
+        if (std::regex_match(stdOut, std::regex(rxTemplateCompleted)))
+        {
+            updateBackgroundCopyStatusPending(req, asyncResp, endpointId);
+        }
+        else if (std::regex_match(stdOut, std::regex(rxTemplateInProgress)))
+        {
+            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+            oem["BackgroundCopyStatus"] = "InProgress";
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR
+                << "Invalid response for background_copy_query_progress: "
+                << stdOut;
+        }
+        return;
+    };
+
+    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_QUERY_PROGRESS,
+                           req, asyncResp, bgCopyQueryResponseCallback);
+    return;
 }
 
 /**
  *@brief Enable or Disable background copy
  *
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
  * @param enabled Enable or disable the background copy
+ * @param chassisID Chassis Id
  *
  * @return exit code form mctp-vdm-tool.
  */
-inline int enableBackgroundCopy(uint32_t endpointId, bool enabled)
+inline void
+    enableBackgroundCopy(const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         uint32_t endpointId, bool enabled,
+                         const std::string& chassisId)
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
 
+    auto responseCallback =
+        [enabled, chassisId](
+            [[maybe_unused]] const crow::Request& req,
+            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+            [[maybe_unused]] uint32_t endpointId,
+            [[maybe_unused]] const std::string& stdOut,
+            [[maybe_unused]] const std::string& stdErr,
+            const boost::system::error_code& ec, int errorCode) -> void {
+        if (ec || errorCode)
+        {
+            const std::string errorMessage =
+                (enabled == true)
+                    ? "MCTP Command Failure: Background Copy Enable"
+                    : "MCTP Command Failure: Background Copy Disable";
+
+            redfish::messages::resourceErrorsDetectedFormatError(
+                asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
+                errorMessage);
+            return;
+        }
+        if (asyncResp->res.jsonValue.empty())
+        {
+            redfish::messages::success(asyncResp->res);
+        }
+    };
+
     if (enabled)
     {
-        mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_ENABLE);
+        mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_ENABLE, req,
+                               asyncResp, responseCallback);
     }
     else
     {
-        mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_DISABLE);
+        mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_DISABLE, req,
+                               asyncResp, responseCallback);
     }
-
-    return mctpVdmUtilWrapper.getReturnStatus();
+    return;
 }
 
 /**
  *@brief Execute backgroundcopy_init command
  *
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used
+ * @param inventoryURI - inventory uri
  * by mctp-vdm-util tool to call request on MCTP
  *
  * @return exit code form mctp-vdm-tool.
  */
-inline int initBackgroundCopy(uint32_t endpointId)
+inline void
+    initBackgroundCopy(const crow::Request& req,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       uint32_t endpointId, const std::string& inventoryURI)
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
-    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_INIT);
-
-    return mctpVdmUtilWrapper.getReturnStatus();
+    auto responseCallback =
+        [inventoryURI]([[maybe_unused]] const crow::Request& req,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       [[maybe_unused]] uint32_t endpointId,
+                       [[maybe_unused]] const std::string& stdOut,
+                       [[maybe_unused]] const std::string& stdErr,
+                       const boost::system::error_code& ec,
+                       int errorCode) -> void {
+        if (ec || errorCode)
+        {
+            redfish::messages::resourceErrorsDetectedFormatError(
+                asyncResp->res, inventoryURI,
+                "MCTP Command Failure: Background Copy Init");
+            // remove ExtendedInfo messages which contains success message entry
+            // in the response
+            if (asyncResp->res.jsonValue.contains("@Message.ExtendedInfo"))
+            {
+                asyncResp->res.jsonValue.erase("@Message.ExtendedInfo");
+            }
+            return;
+        }
+        // update success if message is response is not filled
+        if (asyncResp->res.jsonValue.empty())
+        {
+            redfish::messages::success(asyncResp->res);
+        }
+    };
+    BMCWEB_LOG_INFO << "Initializing background init for inventoryURI:"
+                    << inventoryURI;
+    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_INIT, req,
+                           asyncResp, responseCallback);
+    return;
 }

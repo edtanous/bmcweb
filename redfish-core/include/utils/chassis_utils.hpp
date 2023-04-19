@@ -323,6 +323,7 @@ inline std::string getPowerModeType(const std::string& dbusAction)
 /**
  *@brief Sets the background copy for particular chassis
  *
+ * @param req   Pointer to object holding request data
  * @param asyncResp   Pointer to object holding response data
  * @param chassisUUID  Chassis ID
  * @param enabled Enable or disable the background copy
@@ -337,6 +338,7 @@ inline std::string getPowerModeType(const std::string& dbusAction)
  * @return None.
  */
 inline void setBackgroundCopyEnabled(
+    const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisId, const std::string& chassisUUID, bool enabled,
     bool isPCIe = true)
@@ -348,7 +350,7 @@ inline void setBackgroundCopyEnabled(
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisId, chassisUUID, enabled,
+        [req, asyncResp, chassisId, chassisUUID, enabled,
          isPCIe](const boost::system::error_code ec,
                  const dbus::utility::ManagedObjectType& resp) {
             if (ec)
@@ -401,34 +403,14 @@ inline void setBackgroundCopyEnabled(
 
             if (foundEID)
             {
-                if (enableBackgroundCopy(*eid, enabled) != 0)
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute command ...";
-
-                    const std::string errorMessage =
-                        (enabled == true)
-                            ? "MCTP Command Failure: Background Copy Enable"
-                            : "MCTP Command Failure: Background Copy Disable";
-
-                    messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
-                        errorMessage);
-                }
-                else
-                {
-                    if (asyncResp->res.jsonValue.empty())
-                    {
-                        messages::success(asyncResp->res);
-                    }
-                }
+                enableBackgroundCopy(req, asyncResp, *eid, enabled, chassisId);
             }
             else
             {
                 if (isPCIe)
                 {
-                    setBackgroundCopyEnabled(asyncResp, chassisId, chassisUUID,
-                                             enabled, false);
+                    setBackgroundCopyEnabled(req, asyncResp, chassisId,
+                                             chassisUUID, enabled, false);
                 }
                 else
                 {
@@ -451,6 +433,7 @@ inline void setBackgroundCopyEnabled(
 /**
  *@brief Sets in-band for particular chassis
  *
+ * @param req   Pointer to object holding request data
  * @param asyncResp   Pointer to object holding response data
  * @param chassisUUID  Chassis ID
  * @param enabled Enable or disable the in-band
@@ -465,7 +448,8 @@ inline void setBackgroundCopyEnabled(
  * @return None.
  */
 inline void
-    setInBandEnabled(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    setInBandEnabled(const crow::Request& req,
+                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& chassisId,
                      const std::string& chassisUUID, bool enabled,
                      bool isPCIe = true)
@@ -477,7 +461,7 @@ inline void
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisId, chassisUUID, enabled,
+        [req, asyncResp, chassisId, chassisUUID, enabled,
          isPCIe](const boost::system::error_code ec,
                  const dbus::utility::ManagedObjectType& resp) {
             if (ec)
@@ -530,34 +514,14 @@ inline void
 
             if (foundEID)
             {
-                if (enableInBand(*eid, enabled) != 0)
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute command ...";
-
-                    const std::string errorMessage =
-                        (enabled == true)
-                            ? "MCTP Command Failure: In-Band Enable"
-                            : "MCTP Command Failure: In-Band Disable";
-
-                    messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
-                        errorMessage);
-                }
-                else
-                {
-                    if (asyncResp->res.jsonValue.empty())
-                    {
-                        messages::success(asyncResp->res);
-                    }
-                }
+                enableInBand(req, asyncResp, *eid, enabled, chassisId);
             }
             else
             {
                 if (isPCIe)
                 {
-                    setInBandEnabled(asyncResp, chassisId, chassisUUID, enabled,
-                                     false);
+                    setInBandEnabled(req, asyncResp, chassisId, chassisUUID,
+                                     enabled, false);
                 }
                 else
                 {
@@ -579,6 +543,7 @@ inline void
 /**
  *@brief Gets background copy and in-band info for particular chassis
  *
+ * @param req   Pointer to object holding request data
  * @param asyncResp   Pointer to object holding response data
  * @param chassisUUID  Chassis ID
  * @param isPCIe If true then sets service name on PCIe
@@ -592,10 +557,10 @@ inline void
  * @return None.
  */
 inline void getBackgroundCopyAndInBandInfo(
+    const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisUUID, bool isPCIe = true)
 {
-
     std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
     if (!isPCIe)
     {
@@ -603,7 +568,7 @@ inline void getBackgroundCopyAndInBandInfo(
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisUUID,
+        [req, asyncResp, chassisUUID,
          isPCIe](const boost::system::error_code ec,
                  const dbus::utility::ManagedObjectType& resp) {
             if (ec)
@@ -656,54 +621,17 @@ inline void getBackgroundCopyAndInBandInfo(
 
             if (foundEID)
             {
-
                 nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
                 oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
-
-                MctpVdmUtilStatusResponse inBandStatusResp =
-                    isInBandEnabled(*eid);
-
-                if (inBandStatusResp.isSuccess)
-                {
-                    oem["InbandUpdatePolicyEnabled"] = inBandStatusResp.enabled;
-                }
-                else
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute command in_band_query_status";
-                }
-
-                MctpVdmUtilStatusResponse statusResp =
-                    isBackgroundCopyEnabled(*eid);
-
-                if (statusResp.isSuccess)
-                {
-                    oem["AutomaticBackgroundCopyEnabled"] = statusResp.enabled;
-                }
-                else
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute command background_copy_query_status";
-                }
-
-                MctpVdmUtilProgressStatusResponse progressStatusResp =
-                    getBackgroundCopyStatus(*eid);
-
-                if (progressStatusResp.isSuccess)
-                {
-                    oem["BackgroundCopyStatus"] = progressStatusResp.status;
-                }
-                else
-                {
-                    BMCWEB_LOG_DEBUG
-                        << "mctp-vdm-util could not execute command background_copy_query_progress";
-                }
+                updateInBandEnabled(req, asyncResp, *eid);
+                updateBackgroundCopyEnabled(req, asyncResp, *eid);
+                updateBackgroundCopyStatus(req, asyncResp, *eid);
             }
             else
             {
                 if (isPCIe)
                 {
-                    getBackgroundCopyAndInBandInfo(asyncResp, chassisUUID,
+                    getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID,
                                                    false);
                 }
                 else
@@ -718,14 +646,24 @@ inline void getBackgroundCopyAndInBandInfo(
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
 
-inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+/**
+ * @brief Get the Chassis UUID
+ *
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
+ * @param connectionName - connection name
+ * @param path - D-Bus path
+ * @param isERoT - true: ERoT resource. false: not a ERoT
+ */
+inline void getChassisUUID(const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
                            const std::string& path, bool isERoT = false)
 {
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Common.UUID", "UUID",
-        [asyncResp, isERoT](const boost::system::error_code ec,
+        [req, asyncResp, isERoT](const boost::system::error_code ec,
                             const std::string& chassisUUID) {
             if (ec)
             {
@@ -737,7 +675,7 @@ inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
             if (isERoT)
             {
-                getBackgroundCopyAndInBandInfo(asyncResp, chassisUUID);
+                getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID);
             }
         });
 }

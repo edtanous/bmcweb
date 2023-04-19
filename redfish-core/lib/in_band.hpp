@@ -15,66 +15,107 @@
 */
 #pragma once
 
+#include "error_messages.hpp"
 #include "mctp_vdm_util_wrapper.hpp"
 
 /**
- *@brief Checks whether the in-band is enabled
+ *@brief Updates InbandUpdatePolicyEnabled property
  *
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
  *
- * @return Object of MctpVdmUtilStatusResponse
- * contains info:
- * whether the MCTP command was performed successfully and
- * whether in-band is enabled or not.
+ * @return
  */
-inline MctpVdmUtilStatusResponse isInBandEnabled(uint32_t endpointId)
+inline void
+    updateInBandEnabled(const crow::Request& req,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        uint32_t endpointId)
 {
-    MctpVdmUtilStatusResponse status;
-    status.isSuccess = false;
-    status.enabled = false;
 
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
-
-    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_STATUS);
-
-    if (mctpVdmUtilWrapper.getReturnStatus() == 0)
-    {
-        status.isSuccess = true;
+    auto responseCallback =
+        []([[maybe_unused]] const crow::Request& req,
+           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+           [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
+           [[maybe_unused]] const std::string& stdErr,
+           const boost::system::error_code& ec, int errorCode) -> void {
+        if (ec || errorCode)
+        {
+            redfish::messages::internalError(asyncResp->res);
+            return;
+        }
+        nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
 
         std::string rxTemplate = "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
-
-        if (std::regex_match(mctpVdmUtilWrapper.getStdOut(),
-                             std::regex(rxTemplate)))
+        if (std::regex_match(stdOut, std::regex(rxTemplate)))
         {
-            status.enabled = true;
+            oem["InbandUpdatePolicyEnabled"] = true;
         }
-    }
+        else
+        {
+            oem["InbandUpdatePolicyEnabled"] = false;
+        }
+        return;
+    };
 
-    return status;
+    mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_STATUS, req, asyncResp,
+                           responseCallback);
+
+    return;
 }
 
 /**
- *@brief Enabled or Disabled in-band
+ *@brief Enable or Disable in-band update policy
  *
+ * @param req - Pointer to object holding request data
+ * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
  * @param enabled Enable or disable the in-band
+ * @param chassisId - chassis Id
  *
- * @return exit code form mctp-vdm-tool.
+ * @return
  */
-inline int enableInBand(uint32_t endpointId, bool enabled)
+inline void enableInBand(const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         uint32_t endpointId, bool enabled,
+                         const std::string& chassisId)
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
+    auto responseCallback =
+        [enabled, chassisId](
+            [[maybe_unused]] const crow::Request& req,
+            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+            [[maybe_unused]] uint32_t endpointId,
+            [[maybe_unused]] const std::string& stdOut,
+            [[maybe_unused]] const std::string& stdErr,
+            const boost::system::error_code& ec, int errorCode) -> void {
+        if (ec || errorCode)
+        {
+            const std::string errorMessage =
+                (enabled == true) ? "MCTP Command Failure: In-Band Enable"
+                                  : "MCTP Command Failure: In-Band Disable";
 
+            redfish::messages::resourceErrorsDetectedFormatError(
+                asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
+                errorMessage);
+            return;
+        }
+        if (asyncResp->res.jsonValue.empty())
+        {
+            redfish::messages::success(asyncResp->res);
+        }
+    };
     if (enabled)
     {
-        mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_ENABLE);
+        mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_ENABLE, req,
+                               asyncResp, responseCallback);
     }
     else
     {
-        mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_DISABLE);
+        mctpVdmUtilWrapper.run(MctpVdmUtilCommand::INBAND_DISABLE, req,
+                               asyncResp, responseCallback);
     }
-
-    return mctpVdmUtilWrapper.getReturnStatus();
 }
