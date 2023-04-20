@@ -38,7 +38,6 @@ inline void handleDeviceServiceConditions(
                 "xyz.openbmc_project.Logging.Entry.Level.";
             const std::string criticalSev = prefix + "Critical";
             const std::string warningSev = prefix + "Warning";
-            bool resolved = false;
             std::time_t timestamp{};
 
             for (auto& objectPath : resp)
@@ -71,17 +70,6 @@ inline void handleDeviceServiceConditions(
                                     std::get_if<std::vector<std::string>>(
                                         &propertyMap.second);
                             }
-                            else if (propertyMap.first == "Resolved")
-                            {
-                                const bool* resolveptr =
-                                    std::get_if<bool>(&propertyMap.second);
-                                if (resolveptr == nullptr)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                resolved = *resolveptr;
-                            }
                             else if (propertyMap.first == "Timestamp")
                             {
                                 const uint64_t* millisTimeStamp =
@@ -110,7 +98,7 @@ inline void handleDeviceServiceConditions(
                 std::string messageId;
                 std::string deviceName;
 
-                if (!resolved && additionalDataRaw != nullptr)
+                if (additionalDataRaw != nullptr)
                 {
                     AdditionalData additional(*additionalDataRaw);
                     if (additional.count("REDFISH_ORIGIN_OF_CONDITION") > 0)
@@ -145,7 +133,7 @@ inline void handleDeviceServiceConditions(
         },
         "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
         "xyz.openbmc_project.Logging.Namespace", "GetAll", chassisId,
-        "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Both");
+        "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Unresolved");
 }
 
 
@@ -278,7 +266,7 @@ inline void handleServiceConditionsURI(
         },
         "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
         "xyz.openbmc_project.Logging.Namespace", "GetAll", "Namespace.All",
-        "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Both");
+        "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Unresolved");
 }
 
 
