@@ -4476,7 +4476,9 @@ inline void
                           const std::string& processorId,
                           const std::string& port)
 {
-    BMCWEB_LOG_DEBUG << "Get associated switch on" << port;
+    BMCWEB_LOG_DEBUG << "Get associated ports on" << port;
+
+    // This is for when the ports are connected to a switch
     crow::connections::systemBus->async_method_call(
         [asyncResp, portPath, processorId,
          port](const boost::system::error_code ec,
@@ -4512,6 +4514,55 @@ inline void
             }
         },
         "xyz.openbmc_project.ObjectMapper", portPath + "/associated_switch",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+
+    // This is for when the ports are connected to another processor
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, portPath, processorId,
+         port](const boost::system::error_code ec,
+               std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "Get associated processor ports failed on: " << port;
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            nlohmann::json& connectedPortslinksArray =
+                asyncResp->res.jsonValue["Links"]["ConnectedPorts"];
+            connectedPortslinksArray = nlohmann::json::array();
+            for (const std::string& processorPortPath : *data)
+            {
+                sdbusplus::message::object_path objectPath(processorPortPath);
+                std::string portName = objectPath.filename();
+                if (portName.empty())
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                nlohmann::json thisProcessorPort = nlohmann::json::object();
+
+                std::string processorPortUri = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+                // This code assumes that the parent of the parent will be the processor that contains
+                // this port. As a result, this only supports processor port to processor port
+                // connections and would need modified to support connections to a different port type
+                std::string connectedGPU = objectPath.parent_path().parent_path().filename();
+                processorPortUri += connectedGPU;
+                processorPortUri += "/Ports/" ;
+                processorPortUri += portName;
+
+                thisProcessorPort["@odata.id"] = processorPortUri;
+                connectedPortslinksArray.push_back(std::move(thisProcessorPort));
+
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", portPath + "/associated_processor_ports",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
