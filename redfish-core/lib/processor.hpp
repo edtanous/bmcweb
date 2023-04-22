@@ -35,6 +35,7 @@
 #include <utils/json_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
+#include <utils/time_utils.hpp>
 
 #include <filesystem>
 
@@ -1901,13 +1902,97 @@ inline void
         "xyz.openbmc_project.State.ProcessorPerformance");
 }
 
-inline void getPowerSystemInputsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& service, const std::string& objPath)
+inline void getGPUNvlinkMetricsData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath, const std::string& nvlinkMetricsIface)
+{
+
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, service, objPath, nvlinkMetricsIface,
+        [aResp](const boost::system::error_code ec,
+                const dbus::utility::DBusPropertiesMap& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "Can't get GPU Nvlink Metrics Iface properties ";
+                return;
+            }
+
+            nlohmann::json& json = aResp->res.jsonValue;
+
+            const double* nvlinkDataRxBandwidthGbps = nullptr;
+            const double* nvlinkDataTxBandwidthGbps = nullptr;
+            const double* nvlinkRawTxBandwidthGbps = nullptr;
+            const double* nvlinkRawRxBandwidthGbps = nullptr;
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), resp,
+                "NVLinkDataRxBandwidthGbps", nvlinkDataRxBandwidthGbps,
+                "NVLinkDataTxBandwidthGbps", nvlinkDataTxBandwidthGbps,
+                "NVLinkRawRxBandwidthGbps", nvlinkRawRxBandwidthGbps,
+                "NVLinkRawTxBandwidthGbps", nvlinkRawTxBandwidthGbps);
+
+            if (!success)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (nvlinkRawTxBandwidthGbps != nullptr)
+            {
+                json["Oem"]["Nvidia"]["NVLinkRawTxBandwidthGbps"] =
+                    *nvlinkRawTxBandwidthGbps;
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Null value returned "
+                                    "for NVLinkRawTxBandwidthGbps";
+            }
+
+            if (nvlinkRawRxBandwidthGbps != nullptr)
+            {
+                json["Oem"]["Nvidia"]["NVLinkRawRxBandwidthGbps"] =
+                    *nvlinkRawRxBandwidthGbps;
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Null value returned "
+                                    "for NVLinkRawRxBandwidthGbps";
+            }
+
+            if (nvlinkDataTxBandwidthGbps != nullptr)
+            {
+                json["Oem"]["Nvidia"]["NVLinkDataTxBandwidthGbps"] =
+                    *nvlinkDataTxBandwidthGbps;
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Null value returned "
+                                    "for NVLinkDataTxBandwidthGbps";
+            }
+
+            if (nvlinkDataRxBandwidthGbps != nullptr)
+            {
+                json["Oem"]["Nvidia"]["NVLinkDataRxBandwidthGbps"] =
+                    *nvlinkDataRxBandwidthGbps;
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Null value returned "
+                                    "for NVLinkDataRxBandwidthGbps";
+            }
+        });
+}
+
+inline void
+    getPowerSystemInputsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& service,
+                             const std::string& objPath)
 {
 
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
-                       const OperatingConfigProperties& properties) {
+                         const OperatingConfigProperties& properties) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error";
@@ -1939,13 +2024,14 @@ inline void getPowerSystemInputsData(const std::shared_ptr<bmcweb::AsyncResp>& a
         "xyz.openbmc_project.State.Decorator.PowerSystemInputs");
 }
 
-inline void getMemorySpareChannelPresenceData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& service, const std::string& objPath)
+inline void getMemorySpareChannelPresenceData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath)
 {
 
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
-                       const std::variant<bool>& property) {
+                         const std::variant<bool>& property) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "DBUS response error";
@@ -1967,19 +2053,19 @@ inline void getMemorySpareChannelPresenceData(const std::shared_ptr<bmcweb::Asyn
                 "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
             json["Oem"]["Nvidia"]["MemorySpareChannelPresence"] =
                 *memorySpareChannelPresence;
-
         },
         service, objPath, "org.freedesktop.DBus.Properties", "Get",
         "com.nvidia.MemorySpareChannel", "MemorySpareChannelPresence");
 }
 
-inline void getMemoryPageRetirementCountData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                           const std::string& service, const std::string& objPath)
+inline void getMemoryPageRetirementCountData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath)
 {
 
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
-                      const std::variant<uint32_t>& property) {
+                         const std::variant<uint32_t>& property) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "DBUS response error";
@@ -2001,7 +2087,6 @@ inline void getMemoryPageRetirementCountData(const std::shared_ptr<bmcweb::Async
                 "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
             json["Oem"]["Nvidia"]["MemoryPageRetirementCount"] =
                 *memoryPageRetirementCount;
-
         },
         service, objPath, "org.freedesktop.DBus.Properties", "Get",
         "com.nvidia.MemoryPageRetirementCount", "MemoryPageRetirementCount");
@@ -2149,6 +2234,440 @@ inline void getRemoteDebugState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 }
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                              const std::string& service,
+                              const std::string& objPath,
+                              const std::string& gpmMetricsIface)
+{
+
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, service, objPath, gpmMetricsIface,
+        [aResp](const boost::system::error_code ec,
+                const dbus::utility::DBusPropertiesMap& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "GetPIDValues: Can't get GPM Metrics Iface properties ";
+                return;
+            }
+
+            nlohmann::json& json = aResp->res.jsonValue;
+
+            const double* fp16ActivityPercent = nullptr;
+            const double* fp32ActivityPercent = nullptr;
+            const double* fp64ActivityPercent = nullptr;
+            const double* graphicsEngActivityPercent = nullptr;
+            const double* nvDecUtilPercent = nullptr;
+            const double* nvJpgUtilPercent = nullptr;
+            const double* nvOfaUtilPercent = nullptr;
+            const double* smActivityPercent = nullptr;
+            const double* smOccupancyPercent = nullptr;
+            const double* tensorCoreActivityPercent = nullptr;
+            const double* dmmaUtil = nullptr;
+            const double* hmmaUtil = nullptr;
+            const double* immaUtil = nullptr;
+            const double* integerActivityUtil = nullptr;
+            const uint64_t* globalSwViolationThrotDuration = nullptr;
+            const uint64_t* hardwareViolationThrottleDuration = nullptr;
+            const double* pcieRxBandwidthGbps = nullptr;
+            const double* pcieTxBandwidthGbps = nullptr;
+            const uint64_t* powerLimitThrottleDuration = nullptr;
+            const uint64_t* thermalLimitThrottleDuration = nullptr;
+            const uint32_t* pcieRXBytes = nullptr;
+            const uint32_t* pcieTXBytes = nullptr;
+            const uint32_t* accumulatedGpuContext = nullptr;
+            const uint32_t* accumulatedSmUtil = nullptr;
+            const std::vector<double>* nvdecInstanceUtil = nullptr;
+            const std::vector<double>* nvjpgInstanceUtil = nullptr;
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), resp, "FP16ActivityPercent",
+                fp16ActivityPercent, "FP32ActivityPercent", fp32ActivityPercent,
+                "FP64ActivityPercent", fp64ActivityPercent,
+                "GraphicsEngineActivityPercent", graphicsEngActivityPercent,
+                "HardwareViolationThrottleDuration",
+                hardwareViolationThrottleDuration, "NVDecUtilizationPercent",
+                nvDecUtilPercent, "NVJpgUtilizationPercent", nvJpgUtilPercent,
+                "NVOfaUtilizationPercent", nvOfaUtilPercent, "PCIeRXBytes",
+                pcieRXBytes, "PCIeRawRxBandwidthGbps", pcieRxBandwidthGbps,
+                "PCIeTXBytes", pcieTXBytes, "PCIeRawTxBandwidthGbps",
+                pcieTxBandwidthGbps, "PowerLimitThrottleDuration",
+                powerLimitThrottleDuration, "SMActivityPercent",
+                smActivityPercent, "SMOccupancyPercent", smOccupancyPercent,
+                "TensorCoreActivityPercent", tensorCoreActivityPercent,
+                "ThermalLimitThrottleDuration", thermalLimitThrottleDuration,
+                "IntergerActivityUtilizationPercent", integerActivityUtil,
+                "DMMAUtilizationPercent", dmmaUtil, "HMMAUtilizationPercent",
+                hmmaUtil, "IMMAUtilizationPercent", immaUtil,
+                "GlobalSoftwareViolationThrottleDuration",
+                globalSwViolationThrotDuration,
+                "AccumulatedSMUtilizationDuration", accumulatedSmUtil,
+                "AccumulatedGPUContextUtilizationDuration",
+                accumulatedGpuContext, "NVDecInstanceUtilizationPercent",
+                nvdecInstanceUtil, "NVJpgInstanceUtilizationPercent",
+                nvjpgInstanceUtil);
+
+            if (!success)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            if (graphicsEngActivityPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["GraphicsEngineActivityPercent"] =
+                    *graphicsEngActivityPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for GraphicsEngineActivityPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (smActivityPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["SMActivityPercent"] = *smActivityPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for SMActivityPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (smOccupancyPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["SMOccupancyPercent"] =
+                    *smOccupancyPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for SMOccupancyPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (tensorCoreActivityPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["TensorCoreActivityPercent"] =
+                    *tensorCoreActivityPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for TensorCoreActivityPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (fp64ActivityPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["FP64ActivityPercent"] =
+                    *fp64ActivityPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for FP64ActivityPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (fp32ActivityPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["FP32ActivityPercent"] =
+                    *fp32ActivityPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for FP32ActivityPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (fp16ActivityPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["FP16ActivityPercent"] =
+                    *fp16ActivityPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for FP16ActivityPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (pcieTxBandwidthGbps != nullptr)
+            {
+                json["Oem"]["Nvidia"]["PCIeRawTxBandwidthGbps"] =
+                    *pcieTxBandwidthGbps;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for PCIeRawTxBandwidthGbps";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (pcieRxBandwidthGbps != nullptr)
+            {
+                json["Oem"]["Nvidia"]["PCIeRawRxBandwidthGbps"] =
+                    *pcieRxBandwidthGbps;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for PCIeRawRxBandwidthGbps";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (nvDecUtilPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["NVDecUtilizationPercent"] =
+                    *nvDecUtilPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for NVDecUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (nvJpgUtilPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["NVJpgUtilizationPercent"] =
+                    *nvJpgUtilPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for NVJpgUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (nvOfaUtilPercent != nullptr)
+            {
+                json["Oem"]["Nvidia"]["NVOfaUtilizationPercent"] =
+                    *nvOfaUtilPercent;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for NVOfaUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (pcieTXBytes != nullptr)
+            {
+                json["Oem"]["Nvidia"]["PCIeTXBytes"] = *pcieTXBytes;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for PCIeTXBytes";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (pcieRXBytes != nullptr)
+            {
+                json["Oem"]["Nvidia"]["PCIeRXBytes"] = *pcieRXBytes;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for PCIeRXBytes";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (hardwareViolationThrottleDuration != nullptr)
+            {
+                json["Oem"]["Nvidia"]["HardwareViolationThrottleDuration"] =
+                    *hardwareViolationThrottleDuration;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for HardwareViolationThrottleDuration";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (globalSwViolationThrotDuration != nullptr)
+            {
+                json["Oem"]["Nvidia"]
+                    ["GlobalSoftwareViolationThrottleDuration"] =
+                        *globalSwViolationThrotDuration;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG
+                    << "Null value returned "
+                       "for GlobalSoftwareViolationThrottleDuration";
+                messages::internalError(aResp->res);
+                return;
+            }
+            if (integerActivityUtil != nullptr)
+            {
+                json["Oem"]["Nvidia"]["IntergerActivityUtilizationPercent"] =
+                    *integerActivityUtil;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for IntergerActivityUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+            if (dmmaUtil != nullptr)
+            {
+                json["Oem"]["Nvidia"]["DMMAUtilizationPercent"] = *dmmaUtil;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for DMMAUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+            if (hmmaUtil != nullptr)
+            {
+                json["Oem"]["Nvidia"]["HMMAUtilizationPercent"] = *hmmaUtil;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for HMMAUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+            if (immaUtil != nullptr)
+            {
+                json["Oem"]["Nvidia"]["IMMAUtilizationPercent"] = *immaUtil;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for IMMAUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (accumulatedGpuContext != nullptr)
+            {
+                json["Oem"]["Nvidia"]
+                    ["AccumulatedGPUContextUtilizationDuration"] =
+                        *accumulatedGpuContext;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG
+                    << "Null value returned "
+                       "for AccumulatedGPUContextUtilizationDuration";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (accumulatedSmUtil != nullptr)
+            {
+                json["Oem"]["Nvidia"]["AccumulatedSMUtilizationDuration"] =
+                    *accumulatedSmUtil;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for AccumulatedSMUtilizationDuration";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (nvdecInstanceUtil != nullptr)
+            {
+                std::vector<double> nvdecInstanceUtilization{};
+                for (auto val : *nvdecInstanceUtil)
+                {
+                    nvdecInstanceUtilization.push_back(val);
+                }
+                json["Oem"]["Nvidia"]["NVDecInstanceUtilizationPercent"] =
+                    nvdecInstanceUtilization;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for NVDecInstanceUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            if (nvjpgInstanceUtil != nullptr)
+            {
+                std::vector<double> nvjpgInstanceUtilization{};
+                for (auto val : *nvjpgInstanceUtil)
+                {
+                    nvjpgInstanceUtilization.push_back(val);
+                }
+                json["Oem"]["Nvidia"]["NVJpgInstanceUtilizationPercent"] =
+                    nvjpgInstanceUtilization;
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG << "Null value returned "
+                                    "for NVJpgUtilizationPercent";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            if (powerLimitThrottleDuration != nullptr)
+            {
+                std::optional<std::string> duration =
+                    time_utils::toDurationStringFromNano(
+                        *powerLimitThrottleDuration);
+
+                if (duration)
+                {
+                    json["PowerLimitThrottleDuration"] = *duration;
+		}
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Null value returned "
+                                    "for PowerLimitThrottleDuration";
+            }
+
+            if (thermalLimitThrottleDuration != nullptr)
+            {
+                std::optional<std::string> duration =
+                    time_utils::toDurationStringFromNano(
+                        *thermalLimitThrottleDuration);
+
+                if(duration)
+                {
+			json["ThermalLimitThrottleDuration"] = *duration;
+		}
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Null value returned "
+                                    "for ThermalLimitThrottleDuration";
+            }
+
+        });
+}
 
 inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& processorId,
@@ -3661,7 +4180,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 processorMetricsURI += processorId;
                 processorMetricsURI += "/ProcessorMetrics";
                 aResp->res.jsonValue["@odata.type"] =
-                    "#ProcessorMetrics.v1_4_0.ProcessorMetrics";
+                    "#ProcessorMetrics.v1_6_1.ProcessorMetrics";
                 aResp->res.jsonValue["@odata.id"] = processorMetricsURI;
                 aResp->res.jsonValue["Id"] = "ProcessorMetrics";
                 aResp->res.jsonValue["Name"] =
@@ -3695,8 +4214,25 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     {
                         getProcessorPerformanceData(aResp, service, path);
                     }
+
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "com.nvidia.NVLink.NVLinkMetrics") !=
+                        interfaces.end())
+                    {
+                        getGPUNvlinkMetricsData(
+                            aResp, service, path,
+                            "com.nvidia.NVLink.NVLinkMetrics");
+                    }
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getSensorMetric(aResp, service, path);
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "com.nvidia.GPMMetrics") != interfaces.end())
+                    {
+                        getGPMMetricsData(aResp, service, path,
+                                          "com.nvidia.GPMMetrics");
+                    }
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getStateSensorMetric(aResp, service, path);
                     getNumericSensorMetric(aResp, service, path);
@@ -3919,7 +4455,7 @@ inline void getProcessorMemoryMetricsData(
                 memoryMetricsURI += processorId;
                 memoryMetricsURI += "/MemorySummary/MemoryMetrics";
                 aResp->res.jsonValue["@odata.type"] =
-                    "#MemoryMetrics.v1_4_1.MemoryMetrics";
+                    "#MemoryMetrics.v1_7_0.MemoryMetrics";
                 aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
                 aResp->res.jsonValue["Id"] = "MemoryMetrics";
                 aResp->res.jsonValue["Name"] =
@@ -3929,6 +4465,9 @@ inline void getProcessorMemoryMetricsData(
                 {
                     const std::string memoryECCInterface =
                         "xyz.openbmc_project.Memory.MemoryECC";
+                    const std::string memoryMetricIface =
+                        "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics";
+
                     if (std::find(interfaces.begin(), interfaces.end(),
                                   memoryECCInterface) != interfaces.end())
                     {
@@ -3980,6 +4519,44 @@ inline void getProcessorMemoryMetricsData(
                             },
                             service, path, "org.freedesktop.DBus.Properties",
                             "GetAll", memoryECCInterface);
+                    }
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  memoryMetricIface) != interfaces.end())
+                    {
+
+                        crow::connections::systemBus->async_method_call(
+                            [aResp{aResp}](
+                                const boost::system::error_code ec,
+                                const OperatingConfigProperties& properties) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_DEBUG
+                                        << "DBUS response error for processor memory metrics";
+                                    messages::internalError(aResp->res);
+                                    return;
+                                }
+
+                                for (const auto& property : properties)
+                                {
+                                    if (property.first ==
+                                        "CapacityUtilizationPercent")
+                                    {
+                                        const uint8_t* value =
+                                            std::get_if<uint8_t>(
+                                                &property.second);
+                                        if (value == nullptr)
+                                        {
+                                            messages::internalError(aResp->res);
+                                            return;
+                                        }
+                                        aResp->res.jsonValue
+                                            ["CapacityUtilizationPercent"] =
+                                            *value;
+                                    }
+                                }
+                            },
+                            service, path, "org.freedesktop.DBus.Properties",
+                            "GetAll", memoryMetricIface);
                     }
                 }
                 return;
@@ -5120,6 +5697,67 @@ inline void getProcessorPortMetricsData(
                                       ["TrainingError"] = false;
                     }
                 }
+                else if (property.first == "NVLinkDataRxBandwidthGbps")
+                {
+                    const double* value = std::get_if<double>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for NVLinkDataRxBandwidthGbps";
+                    }
+                    else
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                                ["NVLinkDataRxBandwidthGbps"] =
+                            *value;
+                    }
+                }
+                else if (property.first == "NVLinkDataTxBandwidthGbps")
+                {
+                    const double* value = std::get_if<double>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for NVLinkDataTxBandwidthGbps";
+                    }
+                    else
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                                ["NVLinkDataTxBandwidthGbps"] =
+                            *value;
+                    }
+                }
+                else if (property.first == "NVLinkRawRxBandwidthGbps")
+                {
+                    const double* value = std::get_if<double>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for NVLinkRawRxBandwidthGbps";
+                    }
+                    else
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                                ["NVLinkRawRxBandwidthGbps"] =
+                            *value;
+                    }
+                }
+                else if (property.first == "NVLinkRawTxBandwidthGbps")
+                {
+                    const double* value = std::get_if<double>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Null value returned "
+                                            "for NVLinkRawTxBandwidthGbps";
+                    }
+                    else
+                    {
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                                ["NVLinkRawTxBandwidthGbps"] =
+                            *value;
+                    }
+                }
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 else if (property.first == "ceCount")
                 {

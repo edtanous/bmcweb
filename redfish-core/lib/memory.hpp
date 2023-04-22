@@ -1020,6 +1020,40 @@ inline void getMemoryDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Inventory.Item.Dimm");
 }
 
+inline void getMemoryMetrics(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                             const std::string& service,
+                             const std::string& objPath,
+                             const std::string& iface)
+{
+    BMCWEB_LOG_DEBUG << "Get memory metrics data.";
+    crow::connections::systemBus->async_method_call(
+        [aResp{std::move(aResp)}](const boost::system::error_code ec,
+                                  const DimmProperties& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for memory metrics";
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const auto& property : properties)
+            {
+                if (property.first == "CapacityUtilizationPercent")
+                {
+                    const uint8_t* value =
+                        std::get_if<uint8_t>(&property.second);
+                    if (value == nullptr)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res.jsonValue["CapacityUtilizationPercent"] = *value;
+                }
+            }
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll", iface);
+}
+
 inline void getMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                              const std::string& service,
                              const std::string& objPath)
@@ -1149,7 +1183,7 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 memoryMetricsURI += dimmId;
                 memoryMetricsURI += "/MemoryMetrics";
                 aResp->res.jsonValue["@odata.type"] =
-                    "#MemoryMetrics.v1_4_1.MemoryMetrics";
+                    "#MemoryMetrics.v1_7_0.MemoryMetrics";
                 aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
                 aResp->res.jsonValue["Id"] = "MemoryMetrics";
                 aResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
@@ -1171,6 +1205,16 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     {
                         getMemoryECCData(aResp, service, path);
                     }
+                    if (std::find(
+                            interfaces.begin(), interfaces.end(),
+                            "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics") !=
+                        interfaces.end())
+                    {
+                        getMemoryMetrics(
+                            aResp, service, path,
+                            "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics");
+                    }
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     if (std::find(interfaces.begin(), interfaces.end(),
                                   "com.nvidia.MemoryRowRemapping") !=
