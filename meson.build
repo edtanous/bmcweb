@@ -109,11 +109,12 @@ feature_map = {
   'dhcp-configuration-update'                   : '-DBMCWEB_DHCP_CONFIGURATION_UPDATE',
   'host-os-features'                            : '-DBMCWEB_ENABLE_HOST_OS_FEATURE',
   'fencing-privilege'                           : '-DBMCWEB_ENABLE_FENCING_PRIVILEGE',
-  'nic-configuration-update'                    : '-DBMCWEB_NIC_CONFIGURATION_UPDATE',  
+  'nic-configuration-update'                    : '-DBMCWEB_NIC_CONFIGURATION_UPDATE',
   'command-shell'                               : '-DBMCWEB_ENABLE_IPMI_SOL',
   'redfish-system-faultlog-dump-log'            : '-DBMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG',
   'reset-bios-by-clear-nonvolatile'             : '-DBMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE',
   'dot-support'                                 : '-DBMCWEB_ENABLE_DOT',
+  'force-insecure-event-notification'           : '-DBMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

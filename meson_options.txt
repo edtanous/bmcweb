@@ -30,10 +30,10 @@ option(
 )
 
 option(
-    'platform-metrics', 
-    type : 'feature', 
-    value : 'enabled', 
-    description : 
+    'platform-metrics',
+    type : 'feature',
+    value : 'enabled',
+    description :
     'Enable/disable the platform metrics to collect all sensors reading'
 )
 
@@ -328,6 +328,13 @@ option(
     type: 'feature',
     value: 'disabled',
     description: 'Enable HTTP push style eventing feature'
+)
+
+option(
+    'force-insecure-event-notification',
+    type: 'feature',
+    value: 'disabled',
+    description: 'Event notification is performed only by http insecure protol regardless the subscription either http or https'
 )
 
 option(

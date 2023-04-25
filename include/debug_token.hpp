@@ -39,6 +39,7 @@ std::vector<std::pair<std::string, uint8_t>> debugTokenServiceValues{
     {"GetDebugTokenRequest", 50},
     {"GetDOTCAKUnlockTokenRequest", 58},
     {"GetDOTEnableTokenRequest", 59},
+    {"GetDOTSignTestToken", 60},
     {"GetDOTOverrideTokenRequest", 61}};
 #else
 std::vector<std::pair<std::string, uint8_t>> debugTokenServiceValues{

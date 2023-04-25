@@ -976,7 +976,7 @@ using BaseBIOSTable = boost::container::flat_map<
  *  1- Updates the BIOS Pending Attributes DBUS property, which are requested
  *     by the oob user.
  *  2- Updates the BIOS Attributes table DBUS property and clean BIOS Pending
-*      Attributes DBUS property , which are requested
+ *      Attributes DBUS property , which are requested
  *     by the UEFI user.
  *
  * @param[in]	    pendingAttrJson BIOS Base Table pending Attribute details
@@ -987,14 +987,14 @@ using BaseBIOSTable = boost::container::flat_map<
  *
  * @return None.
  */
-static void
-    setBiosCurrentOrPendingAttr(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const nlohmann::json& pendingAttrJson, bool biosFlag)
+static void setBiosCurrentOrPendingAttr(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const nlohmann::json& pendingAttrJson, bool biosFlag)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp,
-         pendingAttrJson, biosFlag](const boost::system::error_code ec,
-                          const dbus::utility::MapperGetObject& objType) {
+        [asyncResp, pendingAttrJson,
+         biosFlag](const boost::system::error_code ec,
+                   const dbus::utility::MapperGetObject& objType) {
             if (ec || objType.empty())
             {
                 BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
@@ -1013,7 +1013,8 @@ static void
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    const BaseBIOSTable* p = std::get_if<BaseBIOSTable>(&baseBiosTableResp);
+                    const BaseBIOSTable* p =
+                        std::get_if<BaseBIOSTable>(&baseBiosTableResp);
                     if (p == nullptr)
                     {
                         BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
@@ -1192,9 +1193,13 @@ static void
                                 }
                             }
 
-                           if (biosFlag) {
-                                std::get<BaseBiosTableIndex::baseBiosCurrValue>(attrIt->second) = attrReqVal;
-                            } else {
+                            if (biosFlag)
+                            {
+                                std::get<BaseBiosTableIndex::baseBiosCurrValue>(
+                                    attrIt->second) = attrReqVal;
+                            }
+                            else
+                            {
                                 pendingAttrs.insert(std::make_pair(
                                     pendingAttrIt.key(),
                                     std::make_tuple(attrItType, attrReqVal)));
@@ -1214,13 +1219,17 @@ static void
                             }
                             int64_t attrReqVal = static_cast<int64_t>(
                                 pendingAttrIt.value().get<bool>());
-                           if (biosFlag) {
-                                std::get<BaseBiosTableIndex::baseBiosCurrValue>(attrIt->second) = attrReqVal;
-                           } else {
+                            if (biosFlag)
+                            {
+                                std::get<BaseBiosTableIndex::baseBiosCurrValue>(
+                                    attrIt->second) = attrReqVal;
+                            }
+                            else
+                            {
                                 pendingAttrs.insert(std::make_pair(
                                     pendingAttrIt.key(),
                                     std::make_tuple(attrItType, attrReqVal)));
-                           }
+                            }
                         }
                         else if (attrType == "Integer")
                         {
@@ -1235,12 +1244,16 @@ static void
                                 return;
                             }
                             int64_t attrReqVal = pendingAttrIt.value();
-                            if (biosFlag) {
-                                std::get<BaseBiosTableIndex::baseBiosCurrValue>(attrIt->second) = attrReqVal;
-                            } else {
+                            if (biosFlag)
+                            {
+                                std::get<BaseBiosTableIndex::baseBiosCurrValue>(
+                                    attrIt->second) = attrReqVal;
+                            }
+                            else
+                            {
                                 pendingAttrs.emplace(
-                                pendingAttrIt.key(),
-                                std::make_tuple(attrItType, attrReqVal));
+                                    pendingAttrIt.key(),
+                                    std::make_tuple(attrItType, attrReqVal));
                             }
                         }
                         else
@@ -1251,23 +1264,27 @@ static void
                             return;
                         }
                     }
-                    if (biosFlag) {
+                    if (biosFlag)
+                    {
                         crow::connections::systemBus->async_method_call(
-                            [asyncResp, baseBiosTable](const boost::system::error_code ec) {
-                            if (ec)
-                            {
-                                BMCWEB_LOG_DEBUG << "Error occurred in setting BaseBIOSTable";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
+                            [asyncResp, baseBiosTable](
+                                const boost::system::error_code ec) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_DEBUG
+                                        << "Error occurred in setting BaseBIOSTable";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
 
-                            messages::success(asyncResp->res);
-                        },
-                        "xyz.openbmc_project.BIOSConfigManager",
-                        "/xyz/openbmc_project/bios_config/manager",
-                        "org.freedesktop.DBus.Properties", "Set",
-                        "xyz.openbmc_project.BIOSConfig.Manager", "BaseBIOSTable",
-                        std::variant<BaseBIOSTable>(*baseBiosTable));
+                                messages::success(asyncResp->res);
+                            },
+                            "xyz.openbmc_project.BIOSConfigManager",
+                            "/xyz/openbmc_project/bios_config/manager",
+                            "org.freedesktop.DBus.Properties", "Set",
+                            "xyz.openbmc_project.BIOSConfig.Manager",
+                            "BaseBIOSTable",
+                            std::variant<BaseBIOSTable>(*baseBiosTable));
                     }
                     crow::connections::systemBus->async_method_call(
                         [asyncResp](const boost::system::error_code ec3) {
@@ -1305,9 +1322,11 @@ static void
  * @return None.
  */
 static void
-    setBiosPendingAttr(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const nlohmann::json& pendingAttrJson) {
-            setBiosCurrentOrPendingAttr(asyncResp,pendingAttrJson, false);
-    }
+    setBiosPendingAttr(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const nlohmann::json& pendingAttrJson)
+{
+    setBiosCurrentOrPendingAttr(asyncResp, pendingAttrJson, false);
+}
 
 /**
  *@brief Updates the BIOS Attributes table DBUS property, which are requested
@@ -1318,11 +1337,12 @@ static void
  *
  * @return None.
  */
-static void
-    setBiosServicCurrentAttr(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const nlohmann::json& pendingAttrJson) {
-        setBiosCurrentOrPendingAttr(asyncResp,pendingAttrJson, true);
-    }
-
+static void setBiosServicCurrentAttr(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const nlohmann::json& pendingAttrJson)
+{
+    setBiosCurrentOrPendingAttr(asyncResp, pendingAttrJson, true);
+}
 
 /**
  *@brief Reads the BIOS Base Table DBUS property and update the Bios Attribute
@@ -1791,7 +1811,12 @@ inline void
     asyncResp->res.jsonValue["Id"] = "BIOS";
     asyncResp->res.jsonValue["Actions"]["#Bios.ResetBios"] = {
         {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                   "/Bios/Actions/Bios.ResetBios"}};
+                   "/Bios/Actions/Bios.ResetBios"},
+    };
+    asyncResp->res.jsonValue["Actions"]["#Bios.ChangePassword"] = {
+        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                   "/Bios/Actions/Bios.ChangePassword"},
+    };
     nlohmann::json biosSettings;
     biosSettings["@odata.type"] = "#Settings.v1_3_5.Settings";
     biosSettings["SettingsObject"] = {{"@odata.id",
@@ -1816,7 +1841,7 @@ inline void
  */
 inline void
     handleBiosServicePatch(crow::App& app, const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1866,8 +1891,8 @@ inline void
             }
 
             nlohmann::json pendingAttrJson;
-            if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Attributes",
-                                                    pendingAttrJson))
+            if (!redfish::json_util::readJsonAction(
+                    req, asyncResp->res, "Attributes", pendingAttrJson))
             {
                 BMCWEB_LOG_ERROR << "No 'Attributes' found";
                 messages::unrecognizedRequestBody(asyncResp->res);
@@ -2097,6 +2122,98 @@ inline void requestRoutesBiosReset(App& app)
 }
 
 /**
+ * ChangePassword class supports handle POST method for bios.
+ * The class retrieves and sends data directly to D-Bus.
+ *
+ * Function handles POST method request.
+ * Analyzes POST body message before sends ChangePassword request data to D-Bus.
+ */
+inline void handleBiosChangePasswordPost(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    std::string passwordName;
+    std::string oldPassword;
+    std::string newPassword;
+    if (!redfish::json_util::readJsonAction(
+            req, asyncResp->res, "PasswordName", passwordName, "OldPassword",
+            oldPassword, "NewPassword", newPassword))
+    {
+        return;
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, passwordName, oldPassword,
+         newPassword](boost::system::error_code ec,
+                      const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec || subtree.size() != 1)
+            {
+                BMCWEB_LOG_ERROR << "Failed to find BIOS Password object: "
+                                 << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            const auto& [path, services] = subtree[0];
+
+            if (services.size() != 1)
+            {
+                BMCWEB_LOG_ERROR << "Failed to find BIOS Password object: "
+                                 << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            const auto& [service, interfaces] = services[0];
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](boost::system::error_code ec,
+                            sdbusplus::message_t& msg) {
+                    if (ec)
+                    {
+                        const auto error = msg.get_error();
+                        if (sd_bus_error_has_name(
+                                error,
+                                "xyz.openbmc_project.BIOSConfig.Common.Error.InvalidCurrentPassword"))
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Failed to change password message: "
+                                << error->name;
+                            messages::actionParameterValueError(
+                                asyncResp->res, "OldPassword",
+                                "ChangePassword");
+                            return;
+                        }
+
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    messages::success(asyncResp->res);
+                    return;
+                },
+                service, path, "xyz.openbmc_project.BIOSConfig.Password",
+                "ChangePassword", passwordName, oldPassword, newPassword);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project", 0,
+        std::array<const char*, 1>{"xyz.openbmc_project.BIOSConfig.Password"});
+}
+
+inline void requestRoutesBiosChangePassword(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Bios/Actions/Bios.ChangePassword/")
+        .privileges(redfish::privileges::postBios)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleBiosChangePasswordPost, std::ref(app)));
+}
+
+/**
  * BiosAttributeRegistry class supports handle get method for Bios Attribute
  * Registry.
  */
@@ -2115,7 +2232,8 @@ inline void handleBiosAttrRegistryGet(
         "#AttributeRegistry.v1_3_2.AttributeRegistry";
 #ifdef BMCWEB_ENABLE_DPU_BIOS
     asyncResp->res.jsonValue["Name"] = "DPU Bios Attribute Registry";
-    asyncResp->res.jsonValue["Description"] = "This registry represent DPU's BIOS Attribute instances";
+    asyncResp->res.jsonValue["Description"] =
+        "This registry represent DPU's BIOS Attribute instances";
 #else
     asyncResp->res.jsonValue["Name"] = "Bios Attribute Registry";
 #endif
@@ -2140,10 +2258,10 @@ inline void requestRoutesBiosAttrRegistryService(App& app)
             std::bind_front(handleBiosAttrRegistryGet, std::ref(app)));
 #ifdef BMCWEB_ENABLE_DPU_BIOS
     BMCWEB_ROUTE(app, "/redfish/v1/Registries/"
-                    "BiosAttributeRegistry/BiosAttributeRegistry/")
-    .privileges(redfish::privileges::putBios)
-    .methods(boost::beast::http::verb::put)(
-        std::bind_front(handleBiosServicePut, std::ref(app)));
+                      "BiosAttributeRegistry/BiosAttributeRegistry/")
+        .privileges(redfish::privileges::putBios)
+        .methods(boost::beast::http::verb::put)(
+            std::bind_front(handleBiosServicePut, std::ref(app)));
 #endif
 }
 } // namespace redfish

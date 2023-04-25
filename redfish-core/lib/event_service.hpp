@@ -630,7 +630,9 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 EventServiceManager::getInstance().addSubscription(subValue);
             if (id.empty())
             {
-                messages::internalError(asyncResp->res);
+                messages::resourceAlreadyExists(
+                    asyncResp->res, "Subscription", "Destination",
+                    subValue->destinationUrl);
                 return;
             }
 
