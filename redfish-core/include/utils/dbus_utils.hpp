@@ -128,9 +128,10 @@ inline std::string toReasonType(const std::string& reason)
     {
         return "SyncBoost";
     }
-    if (reason == "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.GPUThermalOvertTreshold")
+    if (reason ==
+        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.GPUThermalOvertTreshold")
     {
-	    return "Current GPU temperature above the GPU Max Operating Temperature or Current memory temperature above the Memory Max Operating Temperature";
+        return "Current GPU temperature above the GPU Max Operating Temperature or Current memory temperature above the Memory Max Operating Temperature";
     }
     if (reason ==
         "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.None")
@@ -219,6 +220,36 @@ inline std::string toLocationType(const std::string& location)
         return "Unknown";
     }
     return "";
+}
+
+/**
+ * @brief Defer the callback function until the shared_ptr destroys the returned
+ * object.
+ * @param callback A callback function, [](boost::system::error_code ec)
+ */
+template <typename Callback>
+inline auto deferTask(Callback&& callback)
+{
+    struct DeferTaskStruct
+    {
+        DeferTaskStruct() = delete;
+        DeferTaskStruct(const DeferTaskStruct&) = delete;
+        DeferTaskStruct& operator=(const DeferTaskStruct&) = delete;
+        DeferTaskStruct(DeferTaskStruct&&) = delete;
+        DeferTaskStruct& operator=(DeferTaskStruct&&) = delete;
+
+        DeferTaskStruct(Callback&& callback) : callback(callback)
+        {}
+
+        ~DeferTaskStruct()
+        {
+            callback(ec);
+        }
+
+        Callback callback;
+        boost::system::error_code ec;
+    };
+    return std::make_shared<DeferTaskStruct>(std::forward<Callback>(callback));
 }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES

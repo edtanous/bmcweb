@@ -33,6 +33,7 @@
 #include <sdbusplus/unpack_properties.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/privilege_utils.hpp>
 #include <utils/sw_utils.hpp>
 
 #include <variant>
@@ -1921,6 +1922,127 @@ inline void
         dbus::utility::DbusVariantType(powerRestorPolicy));
 }
 
+/**
+ * @brief Set Boot Order properties.
+ *
+ * @param[in] aResp  Shared pointer for generating response message.
+ * @param[in] username  Username from request.
+ * @param[in] bootOrder  Boot order properties from request.
+ * @param[in] isSettingsResource  false to set active BootOrder, true to set
+ * pending BootOrder in Settings URI
+ *
+ * @return None.
+ */
+inline void setBootOrder(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const crow::Request& req,
+                         const std::vector<std::string>& bootOrder,
+                         const bool isSettingsResource = false)
+{
+    BMCWEB_LOG_DEBUG << "Set boot order.";
+
+    auto setBootOrderFunc = [aResp, bootOrder, isSettingsResource]() {
+        if (isSettingsResource == false)
+        {
+            sdbusplus::asio::setProperty(
+                *crow::connections::systemBus,
+                "xyz.openbmc_project.BIOSConfigManager",
+                "/xyz/openbmc_project/bios_config/manager",
+                "xyz.openbmc_project.BIOSConfig.BootOrder", "BootOrder",
+                bootOrder, [aResp](const boost::system::error_code ec) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "DBUS response error on BootOrder setProperty: "
+                            << ec;
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                });
+        }
+        else
+        {
+
+            sdbusplus::asio::getProperty<std::vector<std::string>>(
+                *crow::connections::systemBus,
+                "xyz.openbmc_project.BIOSConfigManager",
+                "/xyz/openbmc_project/bios_config/manager",
+                "xyz.openbmc_project.BIOSConfig.BootOrder", "BootOrder",
+                [aResp,
+                 bootOrder](const boost::system::error_code ec,
+                            const std::vector<std::string>& activeBootOrder) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "DBUS response error on BootOrder getProperty: "
+                            << ec;
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    if (bootOrder.size() != activeBootOrder.size())
+                    {
+                        BMCWEB_LOG_DEBUG << "New BootOrder length is incorrect";
+                        messages::propertyValueIncorrect(
+                            aResp->res, "Boot/BootOrder",
+                            nlohmann::json(bootOrder).dump());
+                        return;
+                    }
+                    // Check every bootReference of acitve BootOrder
+                    // existing in new BootOrder.
+                    for (const auto& bootReference : activeBootOrder)
+                    {
+                        auto result = std::find(bootOrder.begin(),
+                                                bootOrder.end(), bootReference);
+                        if (result == bootOrder.end())
+                        {
+                            BMCWEB_LOG_DEBUG << bootReference
+                                             << " missing in new BootOrder";
+                            messages::propertyValueIncorrect(
+                                aResp->res, "Boot/BootOrder",
+                                nlohmann::json(bootOrder).dump());
+                            return;
+                        }
+                    }
+
+                    sdbusplus::asio::setProperty(
+                        *crow::connections::systemBus,
+                        "xyz.openbmc_project.BIOSConfigManager",
+                        "/xyz/openbmc_project/bios_config/manager",
+                        "xyz.openbmc_project.BIOSConfig.BootOrder",
+                        "PendingBootOrder", bootOrder,
+                        [aResp](const boost::system::error_code ec2) {
+                            if (ec2)
+                            {
+                                BMCWEB_LOG_ERROR
+                                    << "DBUS response error on BootOrder setProperty: "
+                                    << ec2;
+                                messages::internalError(aResp->res);
+                                return;
+                            }
+                        });
+                });
+        }
+    };
+
+    if (isSettingsResource == false)
+    {
+        // Only BIOS is allowed to patch active BootOrder
+        privilege_utils::isBiosPrivilege(
+            req, [aResp, setBootOrderFunc](const boost::system::error_code ec,
+                                           const bool isBios) {
+                if (ec || isBios == false)
+                {
+                    messages::propertyNotWritable(aResp->res, "BootOrder");
+                    return;
+                }
+                setBootOrderFunc();
+            });
+    }
+    else
+    {
+        setBootOrderFunc();
+    }
+}
+
 #ifdef BMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE
 /**
  * @brief Retrieves provisioning status
@@ -2737,6 +2859,116 @@ inline void setIdlePowerSaver(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     BMCWEB_LOG_DEBUG << "EXIT: Set idle power saver parameters";
 }
 
+/**
+ * @brief Retrieves host boot order properties over DBUS
+ *
+ * @param[in] aResp     Shared pointer for completing asynchronous calls.
+ *
+ * @return None.
+ */
+inline void getBootOrder(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const bool isSettingsResource = false)
+{
+
+    BMCWEB_LOG_DEBUG << "Get boot order parameters";
+
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, "xyz.openbmc_project.BIOSConfigManager",
+        "/xyz/openbmc_project/bios_config/manager",
+        "xyz.openbmc_project.BIOSConfig.BootOrder",
+        [aResp, isSettingsResource](
+            const boost::system::error_code ec,
+            const dbus::utility::DBusPropertiesMap& properties) {
+            if (ec)
+            {
+                // This is an optional interface so just return
+                // if failed to get all properties
+                BMCWEB_LOG_DEBUG << "No BootOrder found";
+                return;
+            }
+
+            std::vector<std::string> bootOrder;
+            std::vector<std::string> pendingBootOrder;
+            for (auto& [propertyName, propertyVariant] : properties)
+            {
+                if (propertyName == "BootOrder" &&
+                    std::holds_alternative<std::vector<std::string>>(
+                        propertyVariant))
+                {
+                    bootOrder =
+                        std::get<std::vector<std::string>>(propertyVariant);
+                }
+                else if (propertyName == "PendingBootOrder" &&
+                         std::holds_alternative<std::vector<std::string>>(
+                             propertyVariant))
+                {
+                    pendingBootOrder =
+                        std::get<std::vector<std::string>>(propertyVariant);
+                }
+            }
+            if (isSettingsResource == false)
+            {
+                aResp->res.jsonValue["@Redfish.Settings"]["@odata.type"] =
+                    "#Settings.v1_3_5.Settings";
+                aResp->res.jsonValue["@Redfish.Settings"]["SettingsObject"] = {
+                    {"@odata.id",
+                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings"}};
+                aResp->res.jsonValue["Boot"]["BootOptions"]["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/BootOptions";
+                aResp->res.jsonValue["Boot"]["BootOrder"] = bootOrder;
+            }
+            else
+            {
+                aResp->res.jsonValue["Boot"]["BootOrder"] = pendingBootOrder;
+            }
+        });
+
+    BMCWEB_LOG_DEBUG << "EXIT: Get boot order parameters";
+}
+
+/**
+ * @brief Retrieves host secure boot properties over DBUS
+ *
+ * @param[in] aResp     Shared pointer for completing asynchronous calls.
+ *
+ * @return None.
+ */
+inline void getSecureBoot(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+{
+
+    BMCWEB_LOG_DEBUG << "Get SecureBoot parameters";
+
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG
+                    << "DBUS response error on SecureBoot GetSubTree " << ec;
+                messages::internalError(aResp->res);
+                return;
+            }
+            if (subtree.empty())
+            {
+                // This is an optional interface so just return
+                // if there is no instance found
+                BMCWEB_LOG_DEBUG << "No instances found";
+                return;
+            }
+            // SecureBoot object found
+            aResp->res.jsonValue["SecureBoot"]["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/SecureBoot";
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/bios_config", int32_t(0),
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.BIOSConfig.SecureBoot"});
+
+    BMCWEB_LOG_DEBUG << "EXIT: Get SecureBoot parameters";
+}
+
 inline void handleComputerSystemHead(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
@@ -2982,6 +3214,48 @@ inline void handleComputerSystemCollectionHead(
         "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
 }
 
+inline void handleComputerSystemSettingsGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.type"] =
+        "#ComputerSystem.v1_17_0.ComputerSystem";
+    asyncResp->res.jsonValue["Name"] = PLATFORMSYSTEMID " Pending Settings";
+    asyncResp->res.jsonValue["Id"] = "Settings";
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings";
+
+    getBootOrder(asyncResp, true);
+}
+
+inline void handleComputerSystemSettingsPatch(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    std::optional<std::vector<std::string>> bootOrder;
+    if (!json_util::readJsonPatch(req, asyncResp->res, "Boot/BootOrder",
+                                  bootOrder))
+    {
+        return;
+    }
+
+    asyncResp->res.result(boost::beast::http::status::no_content);
+
+    if (bootOrder)
+    {
+        setBootOrder(asyncResp, req, *bootOrder, true);
+    }
+}
+
 /**
  * Systems derived class for delivering Computer Systems Schema.
  */
@@ -3065,7 +3339,7 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.jsonValue["Status"]["Health"] = "OK";
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
-            // Fill in SerialConsole info
+        // Fill in SerialConsole info
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
                 15;
@@ -3135,17 +3409,19 @@ inline void requestRoutesSystems(App& app)
             getBootProperties(asyncResp);
             getBootProgress(asyncResp);
             getBootProgressLastStateTime(asyncResp);
-#endif //BMCWEB_ENABLE_HOST_OS_FEATURE
+            getBootOrder(asyncResp);
+            getSecureBoot(asyncResp);
+#endif // BMCWEB_ENABLE_HOST_OS_FEATURE
             getPCIeDeviceList(asyncResp, "PCIeDevices");
             getHostWatchdogTimer(asyncResp);
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             getPowerRestorePolicy(asyncResp);
             getAutomaticRetry(asyncResp);
-#endif //BMCWEB_ENABLE_HOST_OS_FEATURE
+#endif // BMCWEB_ENABLE_HOST_OS_FEATURE
             getLastResetTime(asyncResp);
 #ifdef BMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE
             getProvisioningStatus(asyncResp);
-#endif //BMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE
+#endif // BMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             getTrustedModuleRequiredToBoot(asyncResp);
 #endif
@@ -3193,6 +3469,7 @@ inline void requestRoutesSystems(App& app)
             std::optional<uint64_t> ipsEnterTime;
             std::optional<uint8_t> ipsExitUtil;
             std::optional<uint64_t> ipsExitTime;
+            std::optional<std::vector<std::string>> bootOrder;
 
             // clang-format off
                 if (!json_util::readJsonPatch(
@@ -3211,6 +3488,7 @@ inline void requestRoutesSystems(App& app)
                         "Boot/BootSourceOverrideEnabled", bootEnable,
                         "Boot/AutomaticRetryConfig", bootAutomaticRetry,
                         "Boot/TrustedModuleRequiredToBoot", bootTrustedModuleRequired,
+                        "Boot/BootOrder", bootOrder,
                         "IdlePowerSaver/Enabled", ipsEnable,
                         "IdlePowerSaver/EnterUtilizationPercent", ipsEnterUtil,
                         "IdlePowerSaver/EnterDwellTimeSeconds", ipsEnterTime,
@@ -3268,6 +3546,11 @@ inline void requestRoutesSystems(App& app)
             {
                 setPowerRestorePolicy(asyncResp, *powerRestorePolicy);
             }
+
+            if (bootOrder)
+            {
+                setBootOrder(asyncResp, req, *bootOrder);
+            }
 #endif
 
             if (powerMode)
@@ -3282,6 +3565,16 @@ inline void requestRoutesSystems(App& app)
                                   ipsEnterTime, ipsExitUtil, ipsExitTime);
             }
         });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/")
+        .privileges(redfish::privileges::getComputerSystem)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleComputerSystemSettingsGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/")
+        .privileges(redfish::privileges::patchComputerSystem)
+        .methods(boost::beast::http::verb::patch)(
+            std::bind_front(handleComputerSystemSettingsPatch, std::ref(app)));
 }
 
 inline void handleSystemCollectionResetActionHead(

@@ -18,6 +18,7 @@
 #include "account_service.hpp"
 #include "assembly.hpp"
 #include "bios.hpp"
+#include "boot_options.hpp"
 #include "cable.hpp"
 #include "certificate_service.hpp"
 #include "chassis.hpp"
@@ -37,6 +38,7 @@
 #include "message_registries.hpp"
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
+#include "network_adapters.hpp"
 #include "network_protocol.hpp"
 #include "pcie.hpp"
 #include "pcieslots.hpp"
@@ -47,6 +49,7 @@
 #include "redfish_sessions.hpp"
 #include "redfish_v1.hpp"
 #include "roles.hpp"
+#include "secure_boot.hpp"
 #include "sensors.hpp"
 #include "service_conditions.hpp"
 #include "service_root.hpp"
@@ -56,7 +59,6 @@
 #include "telemetry_service.hpp"
 #include "thermal.hpp"
 #include "thermal_subsystem.hpp"
-#include "network_adapters.hpp"
 #include "trigger.hpp"
 #include "trusted_components.hpp"
 #include "update_service.hpp"
@@ -253,6 +255,8 @@ class RedfishService
         requestRoutesBiosReset(app);
         requestRoutesBiosChangePassword(app);
         requestRoutesBiosAttrRegistryService(app);
+        requestRoutesBootOptions(app);
+        requestRoutesSecureBoot(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE
