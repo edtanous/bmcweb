@@ -6,6 +6,8 @@
 #pragma once
 
 #include <boost/algorithm/string.hpp>
+#include <utils/registry_utils.hpp>
+#include <dbus_utility.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -78,11 +80,9 @@ const std::string firmwarePrefix =
     "/redfish/v1/UpdateService/FirmwareInventory/";
 
 std::map<std::string, std::string> dBusToRedfishURI = {
-    {chassisPrefixDbus, chassisPrefix},
-    {fabricsPrefixDbus, fabricsPrefix},
-    {processorPrefixDbus, processorPrefix},
-    {memoryPrefixDbus, memoryPrefix},
-    {softwarePrefixDbus, firmwarePrefix}};
+    {chassisPrefixDbus, chassisPrefix},     {fabricsPrefixDbus, fabricsPrefix},
+    {processorPrefixDbus, processorPrefix}, {memoryPrefixDbus, memoryPrefix},
+    {softwarePrefixDbus, firmwarePrefix},   {sensorSubTree, chassisPrefix}};
 
 /**
  * Utility function for populating async response with
@@ -97,57 +97,58 @@ static void oocUtilServiceConditions(
     const std::string& messageId)
 {
     nlohmann::json j;
-    std::string arg0 = messageArgs.substr(0, messageArgs.find(','));
-    std::string arg1 =
-        messageArgs.substr(messageArgs.find(',') + 1, messageArgs.length());
-    boost::trim(arg0);
-    boost::trim(arg1);
-    j["MessageArgs"] = nlohmann::json::array();
-    j["MessageArgs"].push_back(arg0);
-    j["MessageArgs"].push_back(arg1);
-    j["MessageId"] = messageId;
-    if (messageId == "ResourceEvent.1.0.ResourceErrorThresholdExceeded")
+    BMCWEB_LOG_DEBUG << "Generating MessageRegistry for [" << messageId << "]";
+    const redfish::registries::Message* msg =
+        redfish::message_registries::getMessage(messageId);
+
+    if (msg == nullptr)
     {
-        j["Message"] = "The resource property " + arg0 +
-                       " has exceeded error threshold of value " + arg1 + ". ";
+        BMCWEB_LOG_ERROR << "Failed to lookup the message for MessageId["
+                         << messageId << "]";
+        return;
     }
-    else
+
+    std::vector<std::string> fields;
+    fields.reserve(msg->numberOfArgs);
+    boost::split(fields, messageArgs, boost::is_any_of(","));
+
+    for (auto& f : fields)
     {
-        j["Message"] = "The resource property " + arg0 +
-                       " has detected errors of type '" + arg1 + "'.";
+        boost::trim(f);
     }
-    j["Timestamp"] = timestamp;
-    j["Severity"] = severity;
-    j["OriginOfCondition"]["@odata.id"] = ooc;
-    j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
-                                 "LogServices/EventLog/Entries/" +
-                                 id;
+    std::span<std::string> msgArgs;
+    msgArgs = {&fields[0], fields.size()};
+
+    std::string message = msg->message;
+    int i = 0;
+    for (auto& arg : msgArgs)
+    {
+        std::string argStr = "%" + std::to_string(++i);
+        size_t argPos = message.find(argStr);
+        if (argPos != std::string::npos)
+        {
+            message.replace(argPos, argStr.length(), arg);
+        }
+    }
 
     BMCWEB_LOG_DEBUG << "Populating service conditions with ooc " << ooc
                      << "\n";
+    j = {{"Severity", severity},
+         {"Timestamp", timestamp},
+         {"Message", message},
+         {"MessageId", messageId},
+         {"MessageArgs", msgArgs}};
+    j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
+                                 "LogServices/EventLog/Entries/" +
+                                 id;
+    j["OriginOfCondition"]["@odata.id"] = ooc;
 
     if (asyncResp->res.jsonValue.contains("Conditions"))
     {
-        for (auto& elem : asyncResp->res.jsonValue["Conditions"])
-        {
-            if (elem.contains("LogEntry") &&
-                elem["LogEntry"]["@odata.id"] == j["LogEntry"]["@odata.id"])
-            {
-                return;
-            }
-        }
         asyncResp->res.jsonValue["Conditions"].push_back(j);
     }
     else
     {
-        for (auto& elem : asyncResp->res.jsonValue["Status"]["Conditions"])
-        {
-            if (elem.contains("LogEntry") &&
-                elem["LogEntry"]["@odata.id"] == j["LogEntry"]["@odata.id"])
-            {
-                return;
-            }
-        }
         asyncResp->res.jsonValue["Status"]["Conditions"].push_back(j);
     }
 }
@@ -191,13 +192,13 @@ static void oocUtil(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 inline void convertDbusObjectToOriginOfCondition(
     const std::string& path, const std::string& id,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    nlohmann::json& logEntry, const std::string& severity = "",
-    const std::string& messageArgs = "", const std::string& timestamp = "",
-    const std::string& messageId = "")
+    nlohmann::json& logEntry, const std::string& deviceName,
+    const std::string& severity = "", const std::string& messageArgs = "",
+    const std::string& timestamp = "", const std::string& messageId = "")
 {
     sdbusplus::message::object_path objPath(path);
-    std::string deviceName = objPath.filename();
-    if (deviceName.empty())
+    std::string devName = objPath.filename();
+    if (devName.empty())
     {
         BMCWEB_LOG_DEBUG
             << "Empty OriginOfCondition provided to convertDbusObjectToOriginOfCondition"
@@ -209,7 +210,20 @@ inline void convertDbusObjectToOriginOfCondition(
     {
         if (path.find(it.first) != std::string::npos)
         {
-            std::string newPath = path.substr(it.first.length(), path.length());
+            std::string newPath;
+            if (it.first == sensorSubTree)
+            {
+                std::string chassisName = PLATFORMDEVICEPREFIX + deviceName;
+                std::string sensorName;
+                dbus::utility::getNthStringFromPath(path, 4, sensorName);
+                newPath = chassisName + "/Sensors/";
+                newPath += sensorName;
+            }
+            else
+            {
+                newPath = path.substr(it.first.length(), path.length());
+            }
+
             oocUtil(asyncResp, logEntry, id, it.second + newPath, severity,
                     messageArgs, timestamp, messageId);
             return;

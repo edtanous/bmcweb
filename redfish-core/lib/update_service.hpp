@@ -45,7 +45,17 @@ static bool fwUpdateInProgress = false;
 // Timer for software available
 static std::unique_ptr<boost::asio::steady_timer> fwAvailableTimer;
 // match for logging
+constexpr auto fwObjectCreationDefaultTimeout = 20;
 static std::unique_ptr<sdbusplus::bus::match::match> loggingMatch = nullptr;
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#define SUPPORTED_RETIMERS 8
+/* holds compute digest operation state to allow one operation at a time */
+static bool computeDigestInProgress = false;
+const std::string hashComputeInterface = "com.Nvidia.ComputeHash";
+constexpr auto retimerHashMaxTimeSec =
+    180; // 2 mins for 2 attempts and 1 addional min as buffer
+#endif
 
 inline static void cleanUp()
 {
@@ -432,7 +442,9 @@ static void
 // then no asyncResp updates will occur
 static void monitorForSoftwareAvailable(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const crow::Request& req, int timeoutTimeSeconds = 10)
+    const crow::Request& req,
+    int timeoutTimeSeconds = fwObjectCreationDefaultTimeout,
+    const std::string& imagePath = {})
 {
     fwAvailableTimer =
         std::make_unique<boost::asio::steady_timer>(*req.ioService);
@@ -440,7 +452,7 @@ static void monitorForSoftwareAvailable(
     fwAvailableTimer->expires_after(std::chrono::seconds(timeoutTimeSeconds));
 
     fwAvailableTimer->async_wait(
-        [asyncResp](const boost::system::error_code& ec) {
+        [asyncResp, imagePath](const boost::system::error_code& ec) {
             cleanUp();
             if (ec == boost::asio::error::operation_aborted)
             {
@@ -459,6 +471,11 @@ static void monitorForSoftwareAvailable(
             if (asyncResp)
             {
                 redfish::messages::internalError(asyncResp->res);
+            }
+            // remove update package to allow next update
+            if (!imagePath.empty())
+            {
+                std::filesystem::remove(imagePath);
             }
         });
 
@@ -682,11 +699,12 @@ inline void
         }
     }   
 
-    monitorForSoftwareAvailable(asyncResp, req);
-
     std::string filepath(
         updateServiceImageLocation +
         boost::uuids::to_string(boost::uuids::random_generator()()));
+    monitorForSoftwareAvailable(asyncResp, req, fwObjectCreationDefaultTimeout,
+                                filepath);
+
     BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
     std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
                                     std::ofstream::trunc);
@@ -1880,6 +1898,369 @@ inline void
         });
 }
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+/**
+ * @brief compute digest method handler invoke retimer hash computation
+ *
+ * @param[in] req - http request
+ * @param[in] asyncResp - http response
+ * @param[in] hashComputeObjPath - hash object path
+ * @param[in] swId - software id
+ */
+inline void computeDigest(const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& hashComputeObjPath,
+                          const std::string& swId)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, req, hashComputeObjPath, swId](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Failed to GetObject for ComputeDigest: "
+                                 << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            // Ensure we only got one service back
+            if (objInfo.size() != 1)
+            {
+                BMCWEB_LOG_ERROR << "Invalid Object Size " << objInfo.size();
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            const std::string hashComputeService = objInfo[0].first;
+            unsigned retimerId;
+            try
+            {
+                retimerId = std::stoul(swId.substr(swId.rfind("_") + 1));
+            }
+            catch (const std::exception& e)
+            {
+                BMCWEB_LOG_ERROR << "Error while parsing retimer Id: "
+                                 << e.what();
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            // callback to reset hash compute state for timeout scenario
+            auto timeoutCallback = [](const std::string_view state,
+                                      size_t index) {
+                nlohmann::json message{};
+                if (state == "Started")
+                {
+                    message = messages::taskStarted(std::to_string(index));
+                }
+                else if (state == "Aborted")
+                {
+                    computeDigestInProgress = false;
+                    message = messages::taskAborted(std::to_string(index));
+                }
+                return message;
+            };
+            // create a task to wait for the hash digest property changed signal
+            std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+                [hashComputeObjPath, hashComputeService](
+                    boost::system::error_code ec,
+                    sdbusplus::message::message& msg,
+                    const std::shared_ptr<task::TaskData>& taskData) {
+                    if (ec)
+                    {
+                        if (ec != boost::asio::error::operation_aborted)
+                        {
+                            taskData->state = "Aborted";
+                            taskData->messages.emplace_back(
+                                messages::resourceErrorsDetectedFormatError(
+                                    "NvidiaSoftwareInventory.ComputeDigest",
+                                    ec.message()));
+                            taskData->finishTask();
+                        }
+                        computeDigestInProgress = false;
+                        return task::completed;
+                    }
+
+                    std::string interface;
+                    std::map<std::string, dbus::utility::DbusVariantType> props;
+
+                    msg.read(interface, props);
+                    if (interface == hashComputeInterface)
+                    {
+                        auto it = props.find("Digest");
+                        if (it == props.end())
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Signal doesn't have Digest value";
+                            return !task::completed;
+                        }
+                        auto value = std::get_if<std::string>(&(it->second));
+                        if (!value)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Digest value is not a string";
+                            return !task::completed;
+                        }
+
+                        if (!(value->empty()))
+                        {
+                            std::string hashDigestValue = *value;
+                            crow::connections::systemBus->async_method_call(
+                                [taskData, hashDigestValue](
+                                    const boost::system::error_code ec,
+                                    const std::variant<std::string>& property) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "DBUS response error for Algorithm";
+                                        taskData->state = "Exception";
+                                        taskData->messages.emplace_back(
+                                            messages::taskAborted(
+                                                std::to_string(
+                                                    taskData->index)));
+                                        return;
+                                    }
+                                    const std::string* hashAlgoValue =
+                                        std::get_if<std::string>(&property);
+                                    if (hashAlgoValue == nullptr)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "Null value returned for Algorithm";
+                                        taskData->state = "Exception";
+                                        taskData->messages.emplace_back(
+                                            messages::taskAborted(
+                                                std::to_string(
+                                                    taskData->index)));
+                                        return;
+                                    }
+
+                                    nlohmann::json jsonResponse;
+                                    jsonResponse["FirmwareDigest"] =
+                                        hashDigestValue;
+                                    jsonResponse
+                                        ["FirmwareDigestHashingAlgorithm"] =
+                                            *hashAlgoValue;
+                                    taskData->taskResponse.emplace(
+                                        jsonResponse);
+                                    std::string location =
+                                        "Location: /redfish/v1/TaskService/Tasks/" +
+                                        std::to_string(taskData->index) +
+                                        "/Monitor";
+                                    taskData->payload->httpHeaders.emplace_back(
+                                        std::move(location));
+                                    taskData->state = "Completed";
+                                    taskData->percentComplete = 100;
+                                    taskData->messages.emplace_back(
+                                        messages::taskCompletedOK(
+                                            std::to_string(taskData->index)));
+                                    taskData->finishTask();
+                                },
+                                hashComputeService, hashComputeObjPath,
+                                "org.freedesktop.DBus.Properties", "Get",
+                                hashComputeInterface, "Algorithm");
+                            computeDigestInProgress = false;
+                            return task::completed;
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "GetHash failed. Digest is empty.";
+                            taskData->state = "Exception";
+                            taskData->messages.emplace_back(
+                                messages::resourceErrorsDetectedFormatError(
+                                    "NvidiaSoftwareInventory.ComputeDigest",
+                                    "Hash Computation Failed"));
+                            taskData->finishTask();
+                            computeDigestInProgress = false;
+                            return task::completed;
+                        }
+                    }
+                    return !task::completed;
+                },
+                "type='signal',member='PropertiesChanged',"
+                "interface='org.freedesktop.DBus.Properties',"
+                "path='" +
+                    hashComputeObjPath + "',",
+                timeoutCallback);
+            task->startTimer(std::chrono::seconds(retimerHashMaxTimeSec));
+            task->populateResp(asyncResp->res);
+            task->payload.emplace(req);
+            computeDigestInProgress = true;
+            crow::connections::systemBus->async_method_call(
+                [task](const boost::system::error_code ec) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "Failed to ComputeDigest: " << ec;
+                        task->state = "Aborted";
+                        task->messages.emplace_back(
+                            messages::resourceErrorsDetectedFormatError(
+                                "NvidiaSoftwareInventory.ComputeDigest",
+                                ec.message()));
+                        task->finishTask();
+                        computeDigestInProgress = false;
+                        return;
+                    }
+                },
+                hashComputeService, hashComputeObjPath, hashComputeInterface,
+                "GetHash", retimerId);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", hashComputeObjPath,
+        std::array<const char*, 1>{hashComputeInterface.c_str()});
+}
+
+/**
+ * @brief post handler for compute digest method
+ *
+ * @param req
+ * @param asyncResp
+ * @param swId
+ */
+inline void
+    handlePostComputeDigest(const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& swId)
+{
+    crow::connections::systemBus->async_method_call(
+        [req, asyncResp, swId](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<
+                std::string,
+                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+                subtree) {
+            if (ec)
+            {
+                messages::resourceNotFound(
+                    asyncResp->res, "NvidiaSoftwareInventory.ComputeDigest",
+                    swId);
+                BMCWEB_LOG_ERROR << "Invalid object path: " << ec;
+                return;
+            }
+            for (auto& obj : subtree)
+            {
+                sdbusplus::message::object_path hashPath(obj.first);
+                std::string hashId = hashPath.filename();
+                if (hashId == swId)
+                {
+                    computeDigest(req, asyncResp, hashPath, swId);
+                    return;
+                }
+            }
+            messages::resourceNotFound(
+                asyncResp->res, "NvidiaSoftwareInventory.ComputeDigest", swId);
+            return;
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/com/Nvidia/ComputeHash", static_cast<int32_t>(0),
+        std::array<const char*, 1>{hashComputeInterface.c_str()});
+}
+
+/**
+ * @brief app handler for ComputeDigest action
+ *
+ * @param[in] app
+ */
+inline void requestRoutesComputeDigestPost(App& app)
+{
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/UpdateService/FirmwareInventory/<str>/Actions/Oem/"
+             "NvidiaSoftwareInventory.ComputeDigest")
+        .privileges(redfish::privileges::postUpdateService)
+        .methods(
+            boost::beast::http::verb::
+                post)([&app](
+                          const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& param) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+            BMCWEB_LOG_DEBUG
+                << "Enter NvidiaSoftwareInventory.ComputeDigest doPost";
+            std::shared_ptr<std::string> swId =
+                std::make_shared<std::string>(param);
+            // skip input parameter validation
+
+            // 1. Firmware update and retimer hash cannot run in parallel
+            if (fwUpdateInProgress)
+            {
+                redfish::messages::updateInProgressMsg(
+                    asyncResp->res,
+                    "Retry the operation once firmware update operation is complete.");
+                BMCWEB_LOG_ERROR
+                    << "Cannot execute ComputeDigest. Update firmware is in progress.";
+
+                return;
+            }
+            // 2. Only one compute hash allowed at a time due to FPGA limitation
+            if (computeDigestInProgress)
+            {
+                redfish::messages::resourceErrorsDetectedFormatError(
+                    asyncResp->res, "NvidiaSoftwareInventory.ComputeDigest",
+                    "Another ComputeDigest operation is in progress");
+                BMCWEB_LOG_ERROR << "Cannot execute ComputeDigest."
+                                 << " Another ComputeDigest is in progress.";
+                return;
+            }
+            handlePostComputeDigest(req, asyncResp, *swId);
+            BMCWEB_LOG_DEBUG << "Exit NvidiaUpdateService.ComputeDigest doPost";
+        });
+}
+
+/**
+ * @brief update oem action with ComputeDigest for devices which supports hash
+ * compute
+ *
+ * @param[in] asyncResp
+ * @param[in] swId
+ */
+inline void updateOemActionComputeDigest(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& swId)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, swId](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<
+                std::string,
+                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+                subtree) {
+            if (ec)
+            {
+                // hash compute interface is not applicable, ignore for the
+                // device
+                return;
+            }
+            for (auto& obj : subtree)
+            {
+                sdbusplus::message::object_path hashPath(obj.first);
+                std::string hashId = hashPath.filename();
+                if (hashId == swId)
+                {
+                    std::string computeDigestTarget =
+                        "/redfish/v1/UpdateService/FirmwareInventory/" + swId +
+                        "/Actions/Oem/NvidiaSoftwareInventory.ComputeDigest";
+                    asyncResp->res
+                        .jsonValue["Actions"]["Oem"]["Nvidia"]
+                                  ["#NvidiaSoftwareInventory.ComputeDigest"] = {
+                        {"target", computeDigestTarget}};
+                    break;
+                }
+            }
+            return;
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/com/Nvidia/ComputeHash", static_cast<int32_t>(0),
+        std::array<const char*, 1>{hashComputeInterface.c_str()});
+}
+#endif
+
 inline void requestRoutesSoftwareInventory(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/FirmwareInventory/<str>/")
@@ -2073,6 +2454,8 @@ inline void requestRoutesSoftwareInventory(App& app)
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                         asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                             "OK";
+                        asyncResp->res.jsonValue["Status"]["Conditions"] =
+                            nlohmann::json::array();
                     }
                     if (!found)
                     {
@@ -2091,6 +2474,9 @@ inline void requestRoutesSoftwareInventory(App& app)
 
                     asyncResp->res.jsonValue["Updateable"] = false;
                     fw_util::getFwUpdateableStatus(asyncResp, swId);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                    updateOemActionComputeDigest(asyncResp, *swId);
+#endif
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
@@ -2153,6 +2539,8 @@ inline void requestRoutesInventorySoftware(App& app)
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                         asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                             "OK";
+                        asyncResp->res.jsonValue["Status"]["Conditions"] =
+                            nlohmann::json::array();
 
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, swId, path, searchPath](

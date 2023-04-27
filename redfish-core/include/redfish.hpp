@@ -308,13 +308,8 @@ class RedfishService
         requestRoutesTelemetryService(app);
         requestRoutesMetricReportDefinitionCollection(app);
         requestRoutesMetricReportCollection(app);
-#ifdef BMCWEB_ENABLE_PLATFORM_METRICS
-        requestRoutesPlatformMetricReportDefinition(app);
-        requestRoutesPlatformMetricReport(app);
-#else
         requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReport(app);
-#endif
         requestRoutesFabricCollection(app);
         requestRoutesFabric(app);
         requestRoutesSwitchCollection(app);
@@ -339,6 +334,9 @@ class RedfishService
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
         requestRoutesUpdateServiceCommitImage(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesComputeDigestPost(app);
+#endif
         requestRoutesTrustedComponents(app);
         // Note, this must be the last route registered
         requestRoutesRedfish(app);

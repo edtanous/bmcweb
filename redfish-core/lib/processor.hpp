@@ -199,7 +199,7 @@ inline void getSystemPCIeInterfaceProperties(
                         asyncResp->res
                             .jsonValue["SystemInterface"]["PCIe"]["PCIeType"] =
                             redfish::port_utils::getLinkSpeedGeneration(
-                                *currentSpeed, *activeWidth);
+                                *currentSpeed);
                     }
                     if (activeWidth != nullptr)
                     {
@@ -293,7 +293,7 @@ inline void getFPGAPCIeInterfaceProperties(
                     if ((currentSpeed != nullptr) && (activeWidth != nullptr))
                     {
                         speed = redfish::port_utils::getLinkSpeedGeneration(
-                            *currentSpeed, *activeWidth);
+                            *currentSpeed);
                     }
                     if ((activeWidth != nullptr) && (*activeWidth != INT_MAX))
                     {
@@ -2264,6 +2264,28 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 // Service failed to change the config
                 messages::operationFailed(resp->res);
             }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
             else
             {
                 messages::internalError(resp->res);
@@ -2467,11 +2489,31 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 uint32_t speedLimit = std::get<1>(reqSpeedConfig);
                 messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
                                                  std::to_string(speedLimit));
-                return;
             }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
+            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                             "Device.Error.WriteFailure") == 0)
             {
                 // Service failed to change the config
                 messages::operationFailed(resp->res);
@@ -4000,6 +4042,28 @@ inline void patchEccMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 // Service failed to change the config
                 messages::operationFailed(resp->res);
             }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
             else
             {
                 messages::internalError(resp->res);
@@ -4412,7 +4476,9 @@ inline void
                           const std::string& processorId,
                           const std::string& port)
 {
-    BMCWEB_LOG_DEBUG << "Get associated switch on" << port;
+    BMCWEB_LOG_DEBUG << "Get associated ports on" << port;
+
+    // This is for when the ports are connected to a switch
     crow::connections::systemBus->async_method_call(
         [asyncResp, portPath, processorId,
          port](const boost::system::error_code ec,
@@ -4448,6 +4514,55 @@ inline void
             }
         },
         "xyz.openbmc_project.ObjectMapper", portPath + "/associated_switch",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+
+    // This is for when the ports are connected to another processor
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, portPath, processorId,
+         port](const boost::system::error_code ec,
+               std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "Get associated processor ports failed on: " << port;
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            nlohmann::json& connectedPortslinksArray =
+                asyncResp->res.jsonValue["Links"]["ConnectedPorts"];
+            connectedPortslinksArray = nlohmann::json::array();
+            for (const std::string& processorPortPath : *data)
+            {
+                sdbusplus::message::object_path objectPath(processorPortPath);
+                std::string portName = objectPath.filename();
+                if (portName.empty())
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                nlohmann::json thisProcessorPort = nlohmann::json::object();
+
+                std::string processorPortUri = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+                // This code assumes that the parent of the parent will be the processor that contains
+                // this port. As a result, this only supports processor port to processor port
+                // connections and would need modified to support connections to a different port type
+                std::string connectedGPU = objectPath.parent_path().parent_path().filename();
+                processorPortUri += connectedGPU;
+                processorPortUri += "/Ports/" ;
+                processorPortUri += portName;
+
+                thisProcessorPort["@odata.id"] = processorPortUri;
+                connectedPortslinksArray.push_back(std::move(thisProcessorPort));
+
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", portPath + "/associated_processor_ports",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
@@ -4672,6 +4787,10 @@ inline void requestRoutesProcessorPort(App& app)
                                                 .jsonValue["Metrics"]
                                                           ["@odata.id"] =
                                                 metricsURI;
+                                            asyncResp->res
+                                                .jsonValue["Status"]
+                                                          ["Conditions"] =
+                                                nlohmann::json::array();
                                             for (const auto& [service,
                                                               interfaces] :
                                                  object1)

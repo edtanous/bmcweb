@@ -103,21 +103,6 @@ inline const char* toPhysicalContext(const std::string& physicalContext)
 inline std::string toReasonType(const std::string& reason)
 {
     if (reason ==
-        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.Idle")
-    {
-        return "Idle";
-    }
-    if (reason ==
-        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.UserDefined")
-    {
-        return "UserDefined";
-    }
-    if (reason ==
-        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.AppClock")
-    {
-        return "AppClock";
-    }
-    if (reason ==
         "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.SWPowerCap")
     {
         return "SWPowerCap";
@@ -143,20 +128,9 @@ inline std::string toReasonType(const std::string& reason)
     {
         return "SyncBoost";
     }
-    if (reason ==
-        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.SWThermalSlowdownTavg")
+    if (reason == "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.GPUThermalOvertTreshold")
     {
-        return "SWThermalSlowdownTavg";
-    }
-    if (reason ==
-        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.SWThermalSlowdownTlimit")
-    {
-        return "SWThermalSlowdownTlimit";
-    }
-    if (reason ==
-        "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.DisplayClock")
-    {
-        return "DisplayClock";
+	    return "Current GPU temperature above the GPU Max Operating Temperature or Current memory temperature above the Memory Max Operating Temperature";
     }
     if (reason ==
         "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.None")

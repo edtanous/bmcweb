@@ -192,6 +192,26 @@ inline void patchEdppSetPoint(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 messages::propertyValueIncorrect(resp->res, "setPoint",
                                                  std::to_string(setPoint));
             }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
             else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
                                              "Device.Error.WriteFailure") == 0)
             {
@@ -257,10 +277,10 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const std::string& chassisID)
+inline void getPowerWattsBySensorName(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisID, const std::string& sensorName)
 {
-    const std::string& sensorName = platformTotalPowerSensorName;
     const std::string& totalPowerPath =
         "/xyz/openbmc_project/sensors/power/" + sensorName;
     // Add total power sensor to associated chassis only
@@ -346,6 +366,154 @@ inline void getPowerWatts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
         },
         "xyz.openbmc_project.ObjectMapper", totalPowerPath + "/chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline double joulesToKwh(const double& joules)
+{
+    const double jtoKwhFactor = 2.77777778e-7;
+    return jtoKwhFactor * joules;
+}
+
+inline void getEnergyJoulesBySensorName(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisID, const std::string& sensorName)
+{
+    const std::string& sensorPath =
+        "/xyz/openbmc_project/sensors/energy/" + sensorName;
+    // Add total power sensor to associated chassis only
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisID, sensorName,
+         sensorPath](const boost::system::error_code ec,
+                     std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                return; // no endpoints = no failures
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            // Check chassisId for endpoint
+            for (const std::string& endpointPath : *data)
+            {
+                sdbusplus::message::object_path objPath(endpointPath);
+                const std::string& endpointId = objPath.filename();
+                if (endpointId != chassisID)
+                {
+                    continue;
+                }
+                const std::array<const char*, 1> energyJoulesInterfaces = {
+                    "xyz.openbmc_project.Sensor.Value"};
+                // Process sensor reading
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, chassisID, sensorName, sensorPath](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_DEBUG << "DBUS response error";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        for (const auto& tempObject : object)
+                        {
+                            const std::string& connectionName =
+                                tempObject.first;
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp, sensorName,
+                                 chassisID](const boost::system::error_code ec,
+                                            const std::variant<double>& value) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_DEBUG
+                                            << "Can't get Energy Joules!";
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+
+                                    const double* attributeValue =
+                                        std::get_if<double>(&value);
+                                    if (attributeValue == nullptr)
+                                    {
+                                        // illegal property
+                                        messages::internalError(asyncResp->res);
+                                        return;
+                                    }
+                                    std::string tempPath =
+                                        "/redfish/v1/Chassis/" + chassisID +
+                                        "/Sensors/";
+                                    asyncResp->res.jsonValue["EnergykWh"] = {
+                                        {"Reading",
+                                         joulesToKwh(*attributeValue)},
+                                    };
+                                    asyncResp->res.jsonValue["EnergyJoules"] = {
+                                        {"Reading", *attributeValue},
+                                        {"DataSourceUri",
+                                         tempPath + sensorName}};
+                                },
+                                connectionName, sensorPath,
+                                "org.freedesktop.DBus.Properties", "Get",
+                                "xyz.openbmc_project.Sensor.Value", "Value");
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                    energyJoulesInterfaces);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", sensorPath + "/chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void getPowerWattsEnergyJoules(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisID, const std::string& chassisPath)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisID, chassisPath](const boost::system::error_code ec,
+                               std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                return; // no endpoints = no failures
+            }
+
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+
+            // Check chassisId for endpoint
+            for (const std::string& endpoint : *data)
+            {
+                // find power sensor
+                if (endpoint.find("/power/") != std::string::npos &&
+                    ((endpoint.find(processorModuleTotalPowerSensorName) !=
+                      std::string::npos) ||
+                     (endpoint.find(platformTotalPowerSensorName))))
+                {
+                    sdbusplus::message::object_path endpointPath(endpoint);
+                    getPowerWattsBySensorName(asyncResp, chassisID,
+                                              endpointPath.filename());
+                }
+                else if (endpoint.find("/energy/") != std::string::npos)
+                {
+                    sdbusplus::message::object_path endpointPath(endpoint);
+                    getEnergyJoulesBySensorName(asyncResp, chassisID,
+                                                endpointPath.filename());
+                }
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", chassisPath + "/all_sensors",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
@@ -724,7 +892,8 @@ inline void
 
 inline void
     getEnvironmentMetrics(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const std::string& chassisID)
+                          const std::string& chassisID,
+                          const std::string& chassisPath)
 {
     BMCWEB_LOG_DEBUG
         << "Get properties for EnvironmentMetrics associated to chassis = "
@@ -743,7 +912,7 @@ inline void
         "#NvidiaEnvironmentMetrics.v1_0_0.NvidiaEnvironmentMetrics";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     getfanSpeedsPercent(asyncResp, chassisID);
-    getPowerWatts(asyncResp, chassisID);
+    getPowerWattsEnergyJoules(asyncResp, chassisID, chassisPath);
     getPowerAndControlData(asyncResp, chassisID, interfaces);
 }
 
@@ -789,6 +958,28 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 messages::propertyValueIncorrect(resp->res, "powerLimit",
                                                  std::to_string(powerLimit));
             }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
             else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
                                              "Device.Error.WriteFailure") == 0)
             {
@@ -813,10 +1004,10 @@ inline void requestRoutesEnvironmentMetrics(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) {
-                auto getChassisID =
+                auto getChassisPath =
                     [asyncResp, chassisID](
-                        const std::optional<std::string>& validChassisID) {
-                        if (!validChassisID)
+                        const std::optional<std::string>& validChassisPath) {
+                        if (!validChassisPath)
                         {
                             BMCWEB_LOG_ERROR << "Not a valid chassis ID:"
                                              << chassisID;
@@ -825,10 +1016,10 @@ inline void requestRoutesEnvironmentMetrics(App& app)
                             return;
                         }
 
-                        getEnvironmentMetrics(asyncResp, *validChassisID);
+                        getEnvironmentMetrics(asyncResp, chassisID, *validChassisPath);
                     };
-                redfish::chassis_utils::getValidChassisID(
-                    asyncResp, chassisID, std::move(getChassisID));
+                redfish::chassis_utils::getValidChassisPath(
+                    asyncResp, chassisID, std::move(getChassisPath));
             });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/EnvironmentMetrics/")
@@ -967,12 +1158,6 @@ inline void requestRoutesEnvironmentMetrics(App& app)
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         });
-}
-
-inline double joulesToKwh(const double& joules)
-{
-    const double jtoKwhFactor = 2.77777778e-7;
-    return jtoKwhFactor * joules;
 }
 
 inline void getSensorDataByService(

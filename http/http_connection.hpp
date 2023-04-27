@@ -825,7 +825,7 @@ class Connection :
             return {};
         }
 
-        BMCWEB_LOG_DEBUG << "[AuthMiddleware] Authenticating user: " << user;
+        BMCWEB_LOG_DEBUG << "Basic authentication user name: " << user;
         return user;
     }
 

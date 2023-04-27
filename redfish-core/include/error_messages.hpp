@@ -565,6 +565,19 @@ nlohmann::json operationTimeout();
 void operationTimeout(crow::Response& res);
 
 /**
+ * @brief Formats AsyncCommands Error message into JSON
+ * Message body: "Async Comand failed with error rc <errCode> "
+ *
+ * @param[in] arg1 Parameter of message that will replace %1 in its body.
+ *
+ * @returns Message actionParameterValueError formatted to JSON */
+
+nlohmann::json asyncCommandError(const std::string& errCode,
+                                 const std::string& resolution);
+void asyncError(crow::Response& res, const std::string& errCode,
+                const std::string& resolution);
+
+/**
  * @brief Formats PropertyValueTypeError message into JSON
  * Message body: "The value <arg1> for the property <arg2> is of a different
  * type than the property can accept."

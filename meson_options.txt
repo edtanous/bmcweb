@@ -273,6 +273,8 @@ option ('platform-power-control-sensor-name', type : 'string', value : 'total_po
 option ('platform-metrics-id', type : 'string', value : 'PlatformMetrics', description : 'Platform specific telemetry service metric reports id')
 option ('platform-device-prefix', type : 'string', value : '', description : 'Platform specific device name prefix')
 
+option ('processor-module-total-power-sensor-name', type : 'string', value : 'PWR_MODULE_PROC', description : 'Platform specific total power sensor name, which has processor module power watts readings')
+
 option ('tls-auth-opt-in', type : 'feature', value : 'disabled', description : 'Enables feature to opt-in to TLS-Authentication at runtime.')
 option ('host-os-features', type : 'feature', value : 'enabled', description : 'Enables feature specific to host os.')
 option ('redfish-system-faultlog-dump-log', type : 'feature', value : 'disabled', description : 'Enable Redfish System faultlog dump log services.')

@@ -131,7 +131,7 @@ inline bool translateUserGroup(const std::vector<std::string>& userGroups,
     std::vector<std::string> accountTypes;
     for (const auto& userGroup : userGroups)
     {
-        if (userGroup == "redfish")
+        if (userGroup == "redfish" || userGroup == "redfish-hostiface")
         {
             accountTypes.emplace_back("Redfish");
             accountTypes.emplace_back("WebUI");
@@ -366,7 +366,7 @@ inline void handleRoleMapPatch(
                         ldapDbusService, roleMapObjData[index].first,
                         propertyInterface, "Set",
                         "xyz.openbmc_project.User.PrivilegeMapperEntry",
-                        "Privilege", role);
+                        "Privilege", dbus::utility::DbusVariantType(role));
                 }
             }
             // Create a new RoleMapping Object.

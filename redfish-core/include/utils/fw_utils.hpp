@@ -469,6 +469,12 @@ inline void patchFwWriteProtectedStatus(
                 // Service failed to change writeproteect
                 messages::operationFailed(asyncResp->res);
             }
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Error.NotAllowed") == 0)
+            {
+                // pcieswitch wp error
+		messages::propertyNotWritable(asyncResp->res,"WriteProtected");
+            }
             else
             {
                 messages::internalError(asyncResp->res);

@@ -1,10 +1,15 @@
 #pragma once
 
+#include "nlohmann/json.hpp"
+
 #include <app.hpp>
 #include <dbus_utility.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/sw_utils.hpp>
+
+#include <fstream>
+#include <iostream>
 
 namespace redfish
 {
@@ -17,6 +22,16 @@ constexpr char const* biosConfigObj =
     "/xyz/openbmc_project/bios_config/manager";
 constexpr char const* biosConfigIface =
     "xyz.openbmc_project.BIOSConfig.Manager";
+
+#ifdef BMCWEB_ENABLE_DPU_BIOS
+/**
+ * BiosAttributeRegistry DB for DPU bios managment
+ */
+nlohmann::json BiosRegistryJson;
+
+const std::string BiosRegistryJsonFileName =
+    "/var/lib/bmcweb/BiosRegistryJson.json";
+#endif
 
 /**
  * BiosService DBus types
@@ -1352,7 +1367,7 @@ static void setBiosServicCurrentAttr(
  *
  * @return None.
  */
-static void getBiosAttributeRegistry(
+[[maybe_unused]] static void getBiosAttributeRegistry(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     crow::connections::systemBus->async_method_call(
@@ -1720,6 +1735,127 @@ static void getBiosAttributeRegistry(
         "xyz.openbmc_project.ObjectMapper", "GetObject", biosConfigObj,
         std::array<const char*, 1>{biosConfigIface});
 }
+
+/**
+ *@brief Reads the BIOS Base Table DBUS property and update the Bios Attribute
+ *Registry response.
+ *
+ * @param[in,out]   asyncResp   Async HTTP response.
+ *
+ * @return None.
+ */
+#ifdef BMCWEB_ENABLE_DPU_BIOS
+static void
+    updateBiosAttrRegistry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec,
+                    const dbus::utility::MapperGetObject& objType) {
+            if (ec || objType.empty())
+            {
+                BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+                return;
+            }
+
+            const std::string& biosService = objType.begin()->first;
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](
+                    const boost::system::error_code ec2,
+                    const std::variant<BaseBIOSTable>& baseBiosTableResp) {
+                    if (ec2)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "Get BaseBIOSTable DBus response error" << ec2;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    const BaseBIOSTable* baseBiosTable =
+                        std::get_if<BaseBIOSTable>(&baseBiosTableResp);
+
+                    if (baseBiosTable == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    auto& attributes =
+                        redfish::bios::BiosRegistryJson["RegistryEntries"]
+                                                       ["Attributes"];
+
+                    for (const BaseBIOSTableItem& attrIt : *baseBiosTable)
+                    {
+                        std::string attrType = getBiosAttrType(std::string(
+                            std::get<BaseBiosTableIndex::baseBiosAttrType>(
+                                attrIt.second)));
+
+                        auto it = std::find_if(
+                            attributes.begin(), attributes.end(),
+                            [&](const nlohmann::json& attr) {
+                                return attr["AttributeName"] == attrIt.first;
+                            });
+
+                        if ((attrType == "String") ||
+                            (attrType == "Enumeration"))
+                        {
+                            const std::string* attrCurrValue =
+                                std::get_if<std::string>(
+                                    &std::get<
+                                        BaseBiosTableIndex::baseBiosCurrValue>(
+                                        attrIt.second));
+
+                            if (it != attributes.end())
+                            {
+                                (*it)["CurrentValue"] =
+                                    nlohmann::json(*attrCurrValue);
+                            }
+                        }
+                        else if ((attrType == "Integer") ||
+                                 (attrType == "Boolean"))
+                        {
+                            const int64_t* attrCurrValue = std::get_if<int64_t>(
+                                &std::get<
+                                    BaseBiosTableIndex::baseBiosCurrValue>(
+                                    attrIt.second));
+                            if (it != attributes.end())
+                            {
+                                if (attrType == "Boolean")
+                                {
+                                    if (*attrCurrValue)
+                                    {
+                                        (*it)["CurrentValue"] =
+                                            nlohmann::json(true);
+                                    }
+                                    else
+                                    {
+                                        (*it)["CurrentValue"] =
+                                            nlohmann::json(false);
+                                    }
+                                }
+                                else
+                                {
+                                    (*it)["CurrentValue"] =
+                                        nlohmann::json(*attrCurrValue);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_ERROR << "Attribute type not supported";
+                        }
+                    }
+                    asyncResp->res.jsonValue = redfish::bios::BiosRegistryJson;
+                },
+                biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+                "Get", biosConfigIface, "BaseBIOSTable");
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", biosConfigObj,
+        std::array<const char*, 1>{biosConfigIface});
+}
+#endif
 } // namespace bios
 
 /**
@@ -2014,6 +2150,13 @@ inline void
 }
 
 #ifdef BMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE
+enum class SecureSelector
+{
+    nonSecure = 0,
+    secure = 1,
+    both = 2
+};
+
 /**
  * Set ClearNonVolatileVariables.Clear to requested value
  */
@@ -2057,6 +2200,140 @@ inline void setClearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         std::variant<bool>(requestToClear));
 }
 
+inline void handleClearSecureStateSubtree(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const SecureSelector secure, const bool requestToClear,
+    const dbus::utility::MapperGetSubTreeResponse clearSubtree,
+    const dbus::utility::MapperGetSubTreeResponse secureSubtree)
+{
+    for (const auto& [clearPath, clearServices] : clearSubtree)
+    {
+        if (clearServices.size() != 1)
+        {
+            BMCWEB_LOG_ERROR
+                << "Number of ClearNonVolatileVariables provider is not 1. size="
+                << clearServices.size();
+            messages::internalError(aResp->res);
+            return;
+        }
+        const auto& clearService = clearServices[0].first;
+
+        if (secure == SecureSelector::both)
+        {
+            setClearVariables(aResp, clearService, clearPath, requestToClear);
+        }
+        else
+        {
+            std::string closestSecurePath;
+            std::string secureService;
+            for (const auto& [securePath, secureServices] : secureSubtree)
+            {
+                if (!clearPath.starts_with(securePath))
+                {
+                    // not a parent path of the ClearNonVolatileVariables
+                    continue;
+                }
+                if (securePath.length() > closestSecurePath.length())
+                {
+                    closestSecurePath = securePath;
+                    secureService = secureServices[0].first;
+                }
+            }
+
+            crow::connections::systemBus->async_method_call(
+                [aResp, secure, requestToClear, clearService,
+                 clearPath](const boost::system::error_code ec,
+                            const std::variant<bool>& resp) {
+                    if (ec)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    const bool* secureState = std::get_if<bool>(&resp);
+                    if (!secureState)
+                    {
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    if ((*secureState == true &&
+                         secure == SecureSelector::secure) ||
+                        (*secureState == false &&
+                         secure == SecureSelector::nonSecure))
+                    {
+                        setClearVariables(aResp, clearService, clearPath,
+                                          requestToClear);
+                    }
+                },
+                secureService, closestSecurePath,
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.State.Decorator.SecureState", "secure");
+        }
+    }
+}
+
+inline void handleClearNonVolatileVariablesSubtree(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const SecureSelector secure, const bool requestToClear,
+    const dbus::utility::MapperGetSubTreeResponse clearSubtree)
+{
+    if (secure == SecureSelector::both)
+    {
+        handleClearSecureStateSubtree(
+            aResp, secure, requestToClear, clearSubtree,
+            dbus::utility::MapperGetSubTreeResponse());
+        return;
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, secure, requestToClear,
+         clearSubtree](boost::system::error_code ec,
+                       const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
+            {
+                // No state sensors attached.
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            handleClearSecureStateSubtree(aResp, secure, requestToClear,
+                                          clearSubtree, subtree);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/control", 0,
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.State.Decorator.SecureState"});
+}
+
+inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const SecureSelector secure,
+                           const bool requestToClear)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, secure, requestToClear](
+            boost::system::error_code ec,
+            const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
+            {
+                // No state sensors attached.
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            handleClearNonVolatileVariablesSubtree(aResp, secure,
+                                                   requestToClear, subtree);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/control", 0,
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables"});
+}
+
 /**
  * Nvidia BiosReset class supports handle POST method for Reset bios.
  */
@@ -2072,38 +2349,7 @@ inline void
     // set the ResetBiosToDefaultsPending
     bios::setResetBiosSettings(aResp, true);
 
-    crow::connections::systemBus->async_method_call(
-        [aResp](boost::system::error_code ec,
-                const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
-            {
-                // No state sensors attached.
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            // find objects which has ClearNonVolatileVariables and also
-            // belongs objPath
-            for (const auto& [path, mapperService] : subtree)
-            {
-                if (mapperService.size() != 1)
-                {
-                    BMCWEB_LOG_ERROR
-                        << "Number of ClearNonVolatileVariables provider is not 1. size="
-                        << mapperService.size();
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                const auto& service = mapperService[0].first;
-                setClearVariables(aResp, service, path, true);
-            }
-        },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-        "/xyz/openbmc_project/control", 0,
-        std::array<const char*, 1>{
-            "xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables"});
+    clearVariables(aResp, SecureSelector::nonSecure, true);
 }
 #endif
 
@@ -2225,18 +2471,31 @@ inline void handleBiosAttrRegistryGet(
     {
         return;
     }
+#ifdef BMCWEB_ENABLE_DPU_BIOS
+    std::ifstream inputFile(redfish::bios::BiosRegistryJsonFileName);
+    if (!inputFile.is_open())
+    {
+        BMCWEB_LOG_DEBUG << "Can't opening file for reading: "
+                         << redfish::bios::BiosRegistryJsonFileName;
+
+        // Return empty json object if file not found
+        redfish::bios::BiosRegistryJson = nlohmann::json();
+    }
+    else
+    {
+        std::string contents{std::istreambuf_iterator<char>{inputFile},
+                             std::istreambuf_iterator<char>{}};
+        inputFile.close();
+        redfish::bios::BiosRegistryJson = nlohmann::json::parse(contents);
+        bios::updateBiosAttrRegistry(asyncResp);
+    }
+#else
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Registries/BiosAttributeRegistry/"
         "BiosAttributeRegistry";
     asyncResp->res.jsonValue["@odata.type"] =
         "#AttributeRegistry.v1_3_2.AttributeRegistry";
-#ifdef BMCWEB_ENABLE_DPU_BIOS
-    asyncResp->res.jsonValue["Name"] = "DPU Bios Attribute Registry";
-    asyncResp->res.jsonValue["Description"] =
-        "This registry represent DPU's BIOS Attribute instances";
-#else
     asyncResp->res.jsonValue["Name"] = "Bios Attribute Registry";
-#endif
     asyncResp->res.jsonValue["Id"] = "BiosAttributeRegistry";
     asyncResp->res.jsonValue["RegistryVersion"] = "1.0.0";
     asyncResp->res.jsonValue["Language"] = "en";
@@ -2247,7 +2506,117 @@ inline void handleBiosAttrRegistryGet(
 
     // Get the BIOS Attributes Registry
     bios::getBiosAttributeRegistry(asyncResp);
+#endif
 }
+
+#ifdef BMCWEB_ENABLE_DPU_BIOS
+
+/**
+ * BiosAttributeRegistry class supports handle put method for bios.
+ */
+inline void handleBiosAttrRegistryPut(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    crow::connections::systemBus->async_method_call(
+        [req,
+         asyncResp](const boost::system::error_code ec,
+                    const std::map<std::string, dbus::utility::DbusVariantType>&
+                        userInfo) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "GetUserInfo failed";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const std::vector<std::string>* userGroupPtr = nullptr;
+            auto userInfoIter = userInfo.find("UserGroups");
+            if (userInfoIter != userInfo.end())
+            {
+                userGroupPtr = std::get_if<std::vector<std::string>>(
+                    &userInfoIter->second);
+            }
+
+            if (userGroupPtr == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "User Group not found";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            auto found = std::find_if(
+                userGroupPtr->begin(), userGroupPtr->end(),
+                [](const auto& group) {
+                    return (group == "redfish-hostiface") ? true : false;
+                });
+
+            // Only Host Iface (redfish-hostiface) group user should
+            // perform PUT operations
+            if (found == userGroupPtr->end())
+            {
+                BMCWEB_LOG_ERROR << "Not Sufficient Privilage";
+                messages::insufficientPrivilege(asyncResp->res);
+                return;
+            }
+
+            if (!json_util::processJsonFromRequest(
+                    asyncResp->res, req, redfish::bios::BiosRegistryJson))
+            {
+                BMCWEB_LOG_ERROR << "Json value not readable";
+                return;
+            }
+
+            // Save BiosRegistryJson into file
+            std::ofstream outputFile(redfish::bios::BiosRegistryJsonFileName,
+                                     std::ios::trunc);
+            if (!outputFile.is_open())
+            {
+                BMCWEB_LOG_ERROR << "Error opening file for writing: "
+                                 << redfish::bios::BiosRegistryJsonFileName;
+                return;
+            }
+            outputFile << redfish::bios::BiosRegistryJson.dump();
+            outputFile.close();
+
+            auto attributes = redfish::bios::BiosRegistryJson["RegistryEntries"]
+                                                             ["Attributes"];
+
+            // Loop over the "Attributes" array
+            for (auto& attr : attributes)
+            {
+                // replace "HelpText" with "description"
+                if (attr.find("HelpText") != attr.end())
+                {
+                    attr["Description"] = attr["HelpText"];
+                    attr.erase("HelpText");
+                }
+                // Add default value
+                if (attr.find("DefaultValue") == attr.end())
+                {
+                    attr["DefaultValue"] = nullptr;
+                }
+            }
+            std::vector<nlohmann::json> baseBiosTableJson;
+            // Iterate over the 'Attributes' array and add each object to the
+            // vector
+            for (const auto& attribute : attributes)
+            {
+                baseBiosTableJson.push_back(attribute);
+            }
+
+            // Set the BaseBIOSTable
+            bios::fillBiosTable(asyncResp, baseBiosTableJson);
+        },
+        "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
+        "xyz.openbmc_project.User.Manager", "GetUserInfo",
+        req.session->username);
+}
+#endif
 
 inline void requestRoutesBiosAttrRegistryService(App& app)
 {
@@ -2261,7 +2630,7 @@ inline void requestRoutesBiosAttrRegistryService(App& app)
                       "BiosAttributeRegistry/BiosAttributeRegistry/")
         .privileges(redfish::privileges::putBios)
         .methods(boost::beast::http::verb::put)(
-            std::bind_front(handleBiosServicePut, std::ref(app)));
+            std::bind_front(handleBiosAttrRegistryPut, std::ref(app)));
 #endif
 }
 } // namespace redfish
