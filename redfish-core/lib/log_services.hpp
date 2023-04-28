@@ -3563,29 +3563,6 @@ inline void
         dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump";
         overWritePolicy = "WrapsWhenFull";
         collectDiagnosticDataSupported = true;
-        // Call Phosphor-logging GetStats method to get
-        // LatestEntryTimestamp and LatestEntryID
-        crow::connections::systemBus->async_method_call(
-            [asyncResp](const boost::system::error_code ec,
-                        const std::tuple<uint32_t, uint64_t>& reqData) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR
-                        << "Failed to get Data from xyz.openbmc_project.Logging GetStats: "
-                        << ec;
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                auto lastTimeStamp =
-                    redfish::time_utils::getTimestamp(std::get<1>(reqData));
-                asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] =
-                    std::get<0>(reqData);
-                asyncResp->res
-                    .jsonValue["Oem"]["Nvidia"]["LatestEntryTimeStamp"] =
-                    redfish::time_utils::getDateTimeStdtime(lastTimeStamp);
-            },
-            "xyz.openbmc_project.Dump.Manager", "/xyz/openbmc_project/dump/bmc",
-            "xyz.openbmc_project.Dump.Misc", "GetStats");
     }
     else if (dumpType == "FaultLog")
     {
@@ -3599,30 +3576,6 @@ inline void
         dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump";
         overWritePolicy = "WrapsWhenFull";
         collectDiagnosticDataSupported = true;
-        // Call Phosphor-logging GetStats method to get
-        // LatestEntryTimestamp and LatestEntryID
-        crow::connections::systemBus->async_method_call(
-            [asyncResp](const boost::system::error_code ec,
-                        const std::tuple<uint32_t, uint64_t>& reqData) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR
-                        << "Failed to get Data from xyz.openbmc_project.Logging GetStats: "
-                        << ec;
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                auto lastTimeStamp =
-                    redfish::time_utils::getTimestamp(std::get<1>(reqData));
-                asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] =
-                    std::get<0>(reqData);
-                asyncResp->res
-                    .jsonValue["Oem"]["Nvidia"]["LatestEntryTimeStamp"] =
-                    redfish::time_utils::getDateTimeStdtime(lastTimeStamp);
-            },
-            "xyz.openbmc_project.Dump.Manager",
-            "/xyz/openbmc_project/dump/system", "xyz.openbmc_project.Dump.Misc",
-            "GetStats");
     }
     else
     {
