@@ -395,7 +395,14 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
         // Copy the response into a Response object so that it can be
         // processed by the callback function.
         res.stringResponse = parser->release();
-        callback(parser->keep_alive(), connId, res);
+        if (callback != nullptr)
+        {
+            callback(parser->keep_alive(), connId, res);
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR << "recvMessage() callback is nullptr";
+        }
         res.clear();
     }
 
@@ -444,7 +451,14 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
             // We want to return a 502 to indicate there was an error with
             // the external server
             res.result(boost::beast::http::status::bad_gateway);
-            callback(false, connId, res);
+            if (callback != nullptr)
+            {
+                callback(false, connId, res);
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "waitAndRetry() callback is nullptr";
+            }
             res.clear();
 
             // Reset the retrycount to zero so that client can try connecting
@@ -665,8 +679,13 @@ class ConnectionPool : public std::enable_shared_from_this<ConnectionPool>
     // Otherwise closes the connection if it is not a keep-alive
     void sendNext(bool keepAlive, uint32_t connId)
     {
+        if (connId >= connections.size()) {
+            BMCWEB_LOG_ERROR  << "sendNext() bad connection id (out of range) :"
+                            << std::to_string(connId);
+            return;
+        }
+        
         auto conn = connections[connId];
-
         // Allow the connection's handler to be deleted
         // This is needed because of Redfish Aggregation passing an
         // AsyncResponse shared_ptr to this callback
