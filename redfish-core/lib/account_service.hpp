@@ -719,6 +719,9 @@ inline void handleServiceAddressPatch(
                 messages::propertyValueModified(asyncResp->res,
                                                 "ServiceAddresses",
                                                 serviceAddressList.front());
+                // update the message severity
+                redfish::message_registries::updateMessageSeverity(
+                    asyncResp, "ServiceAddresses", "OK");
             }
             BMCWEB_LOG_DEBUG << "Updated the service address";
         },
@@ -826,6 +829,9 @@ inline void
                 messages::propertyValueModified(asyncResp->res,
                                                 "BaseDistinguishedNames",
                                                 baseDNList.front());
+                // update the message severity
+                redfish::message_registries::updateMessageSeverity(
+                    asyncResp, "BaseDistinguishedNames", "OK");
             }
             BMCWEB_LOG_DEBUG << "Updated the base DN";
         },
