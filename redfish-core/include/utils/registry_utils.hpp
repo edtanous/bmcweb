@@ -127,5 +127,17 @@ inline void
     }
 }
 
+inline void
+    updateMessageSeverity(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& property,
+                          const std::string& messageSeverity)
+{
+    std::string extendInfo = property + "@Message.ExtendedInfo";
+    auto& extendedInfoArr = asyncResp->res.jsonValue[extendInfo];
+    if (extendedInfoArr.size() > 0)
+    {
+        extendedInfoArr[0]["MessageSeverity"] = messageSeverity;
+    }
+}
 } // namespace message_registries
 } // namespace redfish

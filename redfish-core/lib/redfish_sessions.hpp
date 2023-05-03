@@ -338,6 +338,9 @@ inline void handleSessionServicePatch(
                 sessionTimeoutInseconds);
             messages::propertyValueModified(asyncResp->res, "SessionTimeOut",
                                             std::to_string(*sessionTimeout));
+            // update the message severity
+            redfish::message_registries::updateMessageSeverity(
+                asyncResp, "SessionTimeOut", "OK");
         }
         else
         {
