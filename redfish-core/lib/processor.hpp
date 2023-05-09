@@ -1939,6 +1939,74 @@ inline void getPowerSystemInputsData(const std::shared_ptr<bmcweb::AsyncResp>& a
         "xyz.openbmc_project.State.Decorator.PowerSystemInputs");
 }
 
+inline void getMemorySpareChannelPresenceData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& service, const std::string& objPath)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec,
+                       const std::variant<bool>& property) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            nlohmann::json& json = aResp->res.jsonValue;
+
+            const bool* memorySpareChannelPresence =
+                std::get_if<bool>(&property);
+            if (memorySpareChannelPresence == nullptr)
+            {
+                BMCWEB_LOG_ERROR
+                    << "Null value returned for memorySpareChannelPresence";
+                messages::internalError(aResp->res);
+                return;
+            }
+            json["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+            json["Oem"]["Nvidia"]["MemorySpareChannelPresence"] =
+                *memorySpareChannelPresence;
+
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "Get",
+        "com.nvidia.MemorySpareChannel", "MemorySpareChannelPresence");
+}
+
+inline void getMemoryPageRetirementCountData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& service, const std::string& objPath)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec,
+                      const std::variant<uint32_t>& property) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "DBUS response error";
+                messages::internalError(aResp->res);
+                return;
+            }
+            nlohmann::json& json = aResp->res.jsonValue;
+
+            const uint32_t* memoryPageRetirementCount =
+                std::get_if<uint32_t>(&property);
+            if (memoryPageRetirementCount == nullptr)
+            {
+                BMCWEB_LOG_ERROR
+                    << "Null value returned for MemoryPageRetirementCount";
+                messages::internalError(aResp->res);
+                return;
+            }
+            json["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+            json["Oem"]["Nvidia"]["MemoryPageRetirementCount"] =
+                *memoryPageRetirementCount;
+
+        },
+        service, objPath, "org.freedesktop.DBus.Properties", "Get",
+        "com.nvidia.MemoryPageRetirementCount", "MemoryPageRetirementCount");
+}
+
 inline void getMigModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                            const std::string& cpuId, const std::string& service,
                            const std::string& objPath)
@@ -3445,9 +3513,10 @@ inline void
             {
                 BMCWEB_LOG_DEBUG << "State Sensor Object Path " << sensorPath;
 
-                const std::array<const char*, 2> sensorInterfaces = {
+                const std::array<const char*, 3> sensorInterfaces = {
                     "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
-                    "xyz.openbmc_project.State.ProcessorPerformance"};
+                    "xyz.openbmc_project.State.ProcessorPerformance",
+                    "com.nvidia.MemorySpareChannel"};
                 // Process sensor reading
                 crow::connections::systemBus->async_method_call(
                     [aResp, sensorPath](
@@ -3478,6 +3547,13 @@ inline void
                                 getPowerSystemInputsData(aResp, service,
                                                          sensorPath);
                             }
+                            if (std::find(interfaces.begin(), interfaces.end(),
+                                          "com.nvidia.MemorySpareChannel") !=
+                                interfaces.end())
+                            {
+                                getMemorySpareChannelPresenceData(aResp, service,
+                                                         sensorPath);
+                            }
                         }
                     },
                     "xyz.openbmc_project.ObjectMapper",
@@ -3489,6 +3565,67 @@ inline void
             getPowerBreakThrottle(aResp, service, objPath);
         },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void
+    getNumericSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& service, const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, service,
+         objPath](const boost::system::error_code& e,
+                  std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                // No state sensors attached.
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const std::string& sensorPath : *data)
+            {
+                BMCWEB_LOG_DEBUG << "Numeric Sensor Object Path " << sensorPath;
+
+                const std::array<const char*, 1> sensorInterfaces = {
+                    "com.nvidia.MemoryPageRetirementCount"};
+                // Process sensor reading
+                crow::connections::systemBus->async_method_call(
+                    [aResp, sensorPath](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                        if (ec)
+                        {
+                            // The path does not implement any numeric sensor interfaces.
+                            return;
+                        }
+
+                        for (const auto& [service, interfaces] : object)
+                        {
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "com.nvidia.MemoryPageRetirementCount") !=
+                                interfaces.end())
+                            {
+                                getMemoryPageRetirementCountData(aResp, service,
+                                                            sensorPath);
+                            }
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                    sensorInterfaces);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/all_sensors",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
@@ -3562,6 +3699,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     getSensorMetric(aResp, service, path);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getStateSensorMetric(aResp, service, path);
+                    getNumericSensorMetric(aResp, service, path);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 }
                 return;
