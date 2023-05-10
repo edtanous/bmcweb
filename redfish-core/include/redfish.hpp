@@ -337,6 +337,9 @@ class RedfishService
         requestRoutesTrigger(app);
 #endif
         requestRoutesEROTChassisCertificate(app);
+#ifdef BMCWEB_ENABLE_DOT
+        requestRoutesEROTChassisDOT(app);
+#endif
         requestRoutesComponentIntegrity(app);
         requestRoutesServiceConditions(app);
         requestRoutesChassisControls(app);

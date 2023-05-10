@@ -173,6 +173,7 @@ add_project_arguments(
   '-Wsign-conversion',
   '-Wunused',
   '-Wno-attributes',
+  '-Wno-error=deprecated-declarations',
   ]),
   language: 'cpp'
 )

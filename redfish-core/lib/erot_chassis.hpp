@@ -14,9 +14,15 @@
 // limitations under the License.
 */
 #pragma once
+#define OPENSSL_SUPPRESS_DEPRECATED 1
 
 #include "background_copy.hpp"
+#include "dot.hpp"
 #include "in_band.hpp"
+#include "lsp.hpp"
+
+#include <openssl/bio.h>
+#include <openssl/ec.h>
 
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
@@ -209,31 +215,32 @@ inline void getChassisOEMComponentProtected(
 
             return;
         }
-        chassis_utils::getRedfishURL(
-            ep, [ep, asyncResp](const bool& status, const std::string& url) {
-                std::string redfishURL = url;
-                if (!status)
+        chassis_utils::getRedfishURL(ep, [ep,
+                                          asyncResp](const bool& status,
+                                                     const std::string& url) {
+            std::string redfishURL = url;
+            if (!status)
+            {
+                BMCWEB_LOG_DEBUG << "Unable to get the Redfish URL for object="
+                                 << ep;
+            }
+            else
+            {
+                if (url.empty())
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Unable to get the Redfish URL for object=" << ep;
+                    redfishURL =
+                        std::string("/redfish/v1/Managers/" PLATFORMBMCID);
                 }
-                else
-                {
-                    if (url.empty())
-                    {
-                        redfishURL =
-                            std::string("/redfish/v1/Managers/" PLATFORMBMCID);
-                    }
-                }
-                asyncResp->res.jsonValue["Links"]["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaChassis.v1_0_0.NvidiaChassis";
-                nlohmann::json& componentsProtectedArray =
-                    asyncResp->res
-                        .jsonValue["Links"]["Oem"]["Nvidia"]["ComponentsProtected"];
-                componentsProtectedArray = nlohmann::json::array();
-                componentsProtectedArray.push_back(
-                    {nlohmann::json::array({"@odata.id", redfishURL})});
-            });
+            }
+            asyncResp->res.jsonValue["Links"]["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaChassis.v1_0_0.NvidiaChassis";
+            nlohmann::json& componentsProtectedArray =
+                asyncResp->res
+                    .jsonValue["Links"]["Oem"]["Nvidia"]["ComponentsProtected"];
+            componentsProtectedArray = nlohmann::json::array();
+            componentsProtectedArray.push_back(
+                {nlohmann::json::array({"@odata.id", redfishURL})});
+        });
     });
 }
 
@@ -543,5 +550,314 @@ inline void
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", 0, interfaces);
 }
+
+#ifdef BMCWEB_ENABLE_DOT
+/**
+ * DOT (device ownership transfer) support
+ */
+#define DOT_MCTP_VDM_UTIL_MCTP_STATUS_RESPONSE_SIZE 9
+#define DOT_MCTP_VDM_UTIL_DOT_RESPONSE_SIZE 10
+// defined in libmctp project in vdm/nvidia/libmctp-vdm-cmds.h
+#define DOT_KEY_SIZE 96
+// related to mctp_vendor_cmd_cak_install structure size in libmctp
+#define DOT_CAK_INSTALL_DATA_SIZE (DOT_KEY_SIZE + 98)
+#define DOT_TOKEN_SIZE 256
+
+bool getBinaryKeyFromPem(const std::string& pem, std::vector<uint8_t>& key)
+{
+    std::unique_ptr<BIO, decltype(&::BIO_free)> bio{BIO_new(BIO_s_mem()),
+                                                    &::BIO_free};
+    if (!bio)
+    {
+        BMCWEB_LOG_ERROR << "openssl BIO allocation failed";
+        return false;
+    }
+
+    size_t written = 0;
+    int ret = BIO_write_ex(bio.get(), pem.data(), pem.size(), &written);
+    if (ret != 1 || written != pem.size())
+    {
+        BMCWEB_LOG_ERROR << "BIO_write_ex failed";
+        return false;
+    }
+
+    std::unique_ptr<EVP_PKEY, decltype(&::EVP_PKEY_free)> pubKey{
+        PEM_read_bio_PUBKEY(bio.get(), nullptr, lsp::emptyPasswordCallback,
+                            nullptr),
+        &::EVP_PKEY_free};
+    if (!pubKey)
+    {
+        BMCWEB_LOG_ERROR << "PEM_read_bio_PUBKEY failed";
+        return false;
+    }
+
+    std::unique_ptr<EC_KEY, decltype(&::EC_KEY_free)> ecKey{
+        EVP_PKEY_get1_EC_KEY(pubKey.get()), &::EC_KEY_free};
+    if (!ecKey)
+    {
+        BMCWEB_LOG_ERROR << "EVP_PKEY_get1_EC_KEY failed";
+        return false;
+    }
+
+    const EC_GROUP* group = EC_KEY_get0_group(ecKey.get());
+    if (!group)
+    {
+        BMCWEB_LOG_ERROR << "EC_KEY_get0_group failed";
+        return false;
+    }
+    const EC_POINT* point = EC_KEY_get0_public_key(ecKey.get());
+    if (!point)
+    {
+        BMCWEB_LOG_ERROR << "EC_KEY_get0_group failed";
+        return false;
+    }
+
+    // the first byte contains information about whether the key
+    // is compressed as per https://www.rfc-editor.org/rfc/rfc5480#section-2.2
+    key.resize(DOT_KEY_SIZE + 1);
+    size_t resultSize = EC_POINT_point2oct(
+        group, point, EC_GROUP_get_point_conversion_form(group), key.data(),
+        key.size(), nullptr);
+    if (resultSize == 0)
+    {
+        BMCWEB_LOG_ERROR << "EC_POINT_point2oct failed";
+        return false;
+    }
+
+    // remove the compression byte
+    key.erase(key.begin());
+    return true;
+}
+
+void createDotErrorResponse(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& type,
+                            const std::string& hexErrorCode)
+{
+    int decErrorCode = 0;
+    try
+    {
+        decErrorCode = std::stoi(hexErrorCode, nullptr, 16);
+    }
+    catch (std::invalid_argument const&)
+    {
+        BMCWEB_LOG_ERROR << "Invalid error code hex octet: " << hexErrorCode;
+        decErrorCode = -1;
+    }
+    asyncResp->res.jsonValue["@odata.type"] = "#Message.v1_1_1.Message";
+    asyncResp->res.jsonValue["MessageId"] = "Nvidia.ActionError";
+    asyncResp->res.jsonValue["Message"] =
+        "Action failed with " + type + ": " + std::to_string(decErrorCode);
+    asyncResp->res.jsonValue["MessageArgs"] = std::to_string(decErrorCode);
+    asyncResp->res.jsonValue["MessageSeverity"] = "Warning";
+    asyncResp->res.jsonValue["Resolution"] = "None";
+}
+
+void executeDotCommand(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& chassisID,
+                       dot::DotMctpVdmUtilCommand command,
+                       const std::vector<uint8_t>& data)
+{
+    static std::unique_ptr<dot::DotCommandHandler> dotOperation;
+    auto resultHandler = [asyncResp](const std::string& output) {
+        std::istringstream iss(output);
+        std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
+                                        std::istream_iterator<std::string>{}};
+        if (tokens.size() != DOT_MCTP_VDM_UTIL_MCTP_STATUS_RESPONSE_SIZE &&
+            tokens.size() != DOT_MCTP_VDM_UTIL_DOT_RESPONSE_SIZE)
+        {
+            BMCWEB_LOG_ERROR << "mctp-vdm-util RX response has invalid length: "
+                             << output;
+            messages::resourceErrorsDetectedFormatError(
+                asyncResp->res, "mctp-vdm-util response", "invalid length");
+        }
+        else if (tokens.size() == DOT_MCTP_VDM_UTIL_MCTP_STATUS_RESPONSE_SIZE)
+        {
+            createDotErrorResponse(asyncResp, "MCTP status",
+                                   tokens[tokens.size() - 1]);
+        }
+        else if (tokens[tokens.size() - 2] == "00" &&
+                 tokens[tokens.size() - 1] == "00")
+        {
+            messages::success(asyncResp->res);
+        }
+        else if (tokens[tokens.size() - 2] == "01")
+        {
+            createDotErrorResponse(asyncResp, "DOT response",
+                                   tokens[tokens.size() - 1]);
+        }
+        else
+        {
+            createDotErrorResponse(asyncResp, "MCTP status",
+                                   tokens[tokens.size() - 2]);
+        }
+        boost::asio::post(crow::connections::systemBus->get_io_context(),
+                          [] { dotOperation = nullptr; });
+    };
+    auto errorHandler = [asyncResp](const std::string& desc,
+                                    const std::string& error) {
+        BMCWEB_LOG_ERROR << desc << ": " << error;
+        messages::resourceErrorsDetectedFormatError(asyncResp->res, desc,
+                                                    error);
+        boost::asio::post(crow::connections::systemBus->get_io_context(),
+                          [] { dotOperation = nullptr; });
+    };
+    dotOperation = std::make_unique<dot::DotCommandHandler>(
+        chassisID, command, data, resultHandler, errorHandler);
+}
+
+inline void requestRoutesEROTChassisDOT(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKInstall")
+        .privileges(redfish::privileges::postChassis)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisID) -> void {
+                std::string cakKey, apFirmwareSignature;
+                std::optional<bool> lockDisable;
+                if (!redfish::json_util::readJsonAction(
+                        req, asyncResp->res, "CAKKey", cakKey,
+                        "APFirmwareSignature", apFirmwareSignature,
+                        "LockDisable", lockDisable))
+                {
+                    return;
+                }
+                std::vector<uint8_t> binaryKey;
+                if (!getBinaryKeyFromPem(cakKey, binaryKey))
+                {
+                    messages::actionParameterValueFormatError(
+                        asyncResp->res, cakKey, "CAKKey", "CAKInstall");
+                    return;
+                }
+                if (binaryKey.size() != DOT_KEY_SIZE)
+                {
+                    messages::propertyValueOutOfRange(
+                        asyncResp->res, std::to_string(binaryKey.size()),
+                        "CAKKey size");
+                    return;
+                }
+                std::string binarySignature;
+                if (!crow::utility::base64Decode(apFirmwareSignature,
+                                                 binarySignature))
+                {
+                    messages::actionParameterValueFormatError(
+                        asyncResp->res, apFirmwareSignature,
+                        "APFirmwareSignature", "CAKInstall");
+                    return;
+                }
+                if (binarySignature.size() !=
+                    (DOT_CAK_INSTALL_DATA_SIZE - DOT_KEY_SIZE - 1))
+                {
+                    messages::propertyValueOutOfRange(
+                        asyncResp->res, std::to_string(binarySignature.size()),
+                        "APFirmwareSignature size");
+                    return;
+                }
+                std::vector<uint8_t> data;
+                data.reserve(binaryKey.size() + binarySignature.size() + 1);
+                data.insert(data.begin(), binaryKey.begin(), binaryKey.end());
+                // lockDisable is optional and false by default
+                data.emplace_back((lockDisable && *lockDisable) ? 1 : 0);
+                data.insert(data.end(), binarySignature.begin(),
+                            binarySignature.end());
+                executeDotCommand(asyncResp, chassisID,
+                                  dot::DotMctpVdmUtilCommand::CAKInstall, data);
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKLock")
+        .privileges(redfish::privileges::postChassis)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisID) -> void {
+                std::string key;
+                if (!redfish::json_util::readJsonAction(req, asyncResp->res,
+                                                        "Key", key))
+                {
+                    return;
+                }
+                std::vector<uint8_t> binaryKey;
+                if (!getBinaryKeyFromPem(key, binaryKey))
+                {
+                    messages::actionParameterValueFormatError(
+                        asyncResp->res, key, "Key", "CAKLock");
+                    return;
+                }
+                if (binaryKey.size() != DOT_KEY_SIZE)
+                {
+                    messages::propertyValueOutOfRange(
+                        asyncResp->res, std::to_string(binaryKey.size()),
+                        "Key size");
+                    return;
+                }
+                executeDotCommand(asyncResp, chassisID,
+                                  dot::DotMctpVdmUtilCommand::CAKLock,
+                                  binaryKey);
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKTest")
+        .privileges(redfish::privileges::postChassis)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisID) -> void {
+                std::vector<uint8_t> data;
+                executeDotCommand(asyncResp, chassisID,
+                                  dot::DotMctpVdmUtilCommand::CAKTest, data);
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/DOTDisable")
+        .privileges(redfish::privileges::postChassis)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisID) -> void {
+                std::string key;
+                if (!redfish::json_util::readJsonAction(req, asyncResp->res,
+                                                        "Key", key))
+                {
+                    return;
+                }
+                std::vector<uint8_t> binaryKey;
+                if (!getBinaryKeyFromPem(key, binaryKey))
+                {
+                    messages::actionParameterValueFormatError(
+                        asyncResp->res, key, "Key", "DOTDisable");
+                    return;
+                }
+                if (binaryKey.size() != DOT_KEY_SIZE)
+                {
+                    messages::propertyValueOutOfRange(
+                        asyncResp->res, std::to_string(binaryKey.size()),
+                        "Key size");
+                    return;
+                }
+                executeDotCommand(asyncResp, chassisID,
+                                  dot::DotMctpVdmUtilCommand::DOTDisable,
+                                  binaryKey);
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/DOTTokenInstall")
+        .privileges(redfish::privileges::postChassis)
+        .methods(boost::beast::http::verb::post)(
+            [](const crow::Request& req,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisID) -> void {
+                if (req.body.size() != DOT_TOKEN_SIZE)
+                {
+                    BMCWEB_LOG_ERROR << "Invalid DOT token size: "
+                                     << req.body.size();
+                    messages::invalidUpload(asyncResp->res, "DOT token install",
+                                            "filesize has to be equal to " +
+                                                std::to_string(DOT_TOKEN_SIZE));
+                    return;
+                }
+                std::vector<uint8_t> data(req.body.begin(), req.body.end());
+                executeDotCommand(asyncResp, chassisID,
+                                  dot::DotMctpVdmUtilCommand::DOTTokenInstall,
+                                  data);
+            });
+}
+#endif // BMCWEB_ENABLE_DOT
 
 } // namespace redfish
