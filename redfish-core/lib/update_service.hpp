@@ -40,10 +40,17 @@ namespace redfish
 
 // Match signals added on software path
 static std::unique_ptr<sdbusplus::bus::match_t> fwUpdateMatcher;
+// Match signals added on software path for stating fw package
+static std::unique_ptr<sdbusplus::bus::match_t> fwStageImageMatcher;
+// Allow staging, deleting or initializing firmware 
+// when staging of another firmware is not in a progress
+static bool fwImageIsStaging = false;
 // Only allow one update at a time
 static bool fwUpdateInProgress = false;
 // Timer for software available
 static std::unique_ptr<boost::asio::steady_timer> fwAvailableTimer;
+// Timer for staging software available
+static std::unique_ptr<boost::asio::steady_timer> fwStageAvailableTimer;
 // match for logging
 constexpr auto fwObjectCreationDefaultTimeout = 20;
 static std::unique_ptr<sdbusplus::bus::match::match> loggingMatch = nullptr;
@@ -761,7 +768,12 @@ inline void requestRoutesUpdateService(App& app)
                  "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage"},
                 {"@Redfish.ActionInfo",
                  "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo"}};
-
+            asyncResp->res.jsonValue["Oem"]["Nvidia"] = {
+                {"@odata.type",
+                 "#NvidiaUpdateService.v1_1_0.NvidiaUpdateService"},
+                {"PersistentStorage",
+                 {"@odata.id",
+                  "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage"}}};
 #ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
             // Update Actions object.
             nlohmann::json& updateSvcSimpleUpdate =
@@ -3030,6 +3042,362 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.Version"});
         });
+}
+
+/**
+ * @brief Add dbus watcher to wait till staged firmware object is created
+ *
+ * @param asyncResp
+ * @param req
+ * @param timeoutTimeSeconds
+ * @param imagePath
+ *
+ * @return None
+ */
+static void addDBusWatchForSoftwareObject(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const crow::Request& req,
+    int timeoutTimeSeconds = fwObjectCreationDefaultTimeout,
+    const std::string& imagePath = {})
+{
+
+    fwStageAvailableTimer =
+        std::make_unique<boost::asio::steady_timer>(*req.ioService);
+
+    fwStageAvailableTimer->expires_after(
+        std::chrono::seconds(timeoutTimeSeconds));
+
+    fwStageAvailableTimer->async_wait(
+        [asyncResp, imagePath](const boost::system::error_code& ec) {
+            fwStageImageMatcher = nullptr;
+
+            if (ec == boost::asio::error::operation_aborted)
+            {
+                // expected, we were canceled before the timer completed.
+                return;
+            }
+            BMCWEB_LOG_ERROR
+                << "Timed out waiting for staged firmware object being created";
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Async_wait failed" << ec;
+                return;
+            }
+
+            if (asyncResp)
+            {
+                redfish::messages::internalError(asyncResp->res);
+            }
+
+            if (!imagePath.empty())
+            {
+                std::filesystem::remove(imagePath);
+            }
+        });
+
+    std::function<void(sdbusplus::message_t&)> callback = [asyncResp](
+                                                              sdbusplus::
+                                                                  message_t&
+                                                                      m) {
+        BMCWEB_LOG_DEBUG << "Match fired";
+
+        sdbusplus::message::object_path path;
+        dbus::utility::DBusInteracesMap interfaces;
+        m.read(path, interfaces);
+
+        if (std::find_if(
+                interfaces.begin(), interfaces.end(), [](const auto& i) {
+                    return i.first ==
+                           "xyz.openbmc_project.Software.PackageInformation";
+                }) != interfaces.end())
+        {
+
+            asyncResp->res.result(boost::beast::http::status::created);
+            asyncResp->res.jsonValue["StagedFirmwarePackageURI"] =
+                "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/0";
+
+            fwStageImageMatcher = nullptr;
+            fwStageAvailableTimer = nullptr;
+        }
+    };
+
+    fwStageImageMatcher = std::make_unique<sdbusplus::bus::match_t>(
+        *crow::connections::systemBus,
+        "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
+        "member='InterfacesAdded',path='/'",
+        callback);
+}
+
+/**
+ * @brief Add dbus watcher to wait till staged firmware object is created
+ * and upload firmware package
+ *
+ * @param asyncResp
+ * @param req
+ *
+ * @return None
+ */
+inline void addDBusWatchAndUploadPackage(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const crow::Request& req)
+{
+    std::string filepath(
+        updateServiceStageLocation +
+        boost::uuids::to_string(boost::uuids::random_generator()()));
+
+    try
+    {
+        addDBusWatchForSoftwareObject(asyncResp, req,
+                                      fwObjectCreationDefaultTimeout, filepath);
+
+        fwImageIsStaging = true;
+        BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
+        std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
+                                        std::ofstream::trunc);
+        out << req.body;
+        out.close();
+    }
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_ERROR << "Error while uploading firmware: " << e.what();
+        messages::internalError(asyncResp->res);
+        fwImageIsStaging = false;
+        fwStageImageMatcher = nullptr;
+        fwStageAvailableTimer = nullptr;
+        return;
+    }
+
+    fwImageIsStaging = false;
+}
+
+/**
+ * @brief Stage firmware package and fill dbus tree
+ *
+ * @param asyncResp
+ * @param req
+ *
+ * @return None
+ */
+inline void
+    stageFirmwarePackage(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const crow::Request& req)
+{
+    crow::connections::systemBus->async_method_call(
+        [req, asyncResp](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<
+                std::string,
+                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+                subtree) {
+            BMCWEB_LOG_DEBUG << "doDelete callback...";
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG
+                    << "expected, staged firmware package does not exist.";
+            }
+
+            bool found = false;
+            std::string foundService;
+            std::string foundPath;
+
+            for (const std::pair<std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                     obj : subtree)
+            {
+                if (obj.second.size() < 1)
+                {
+                    break;
+                }
+
+                foundService = obj.second[0].first;
+                foundPath = obj.first;
+
+                found = true;
+                break;
+            }
+
+            if (found)
+            {
+                auto respHandler = [req, asyncResp](
+                                       const boost::system::error_code ec) {
+                    BMCWEB_LOG_DEBUG << "doDelete callback: Done";
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "doDelete respHandler got error "
+                                         << ec.message();
+                        asyncResp->res.result(
+                            boost::beast::http::status::internal_server_error);
+                        return;
+                    }
+
+                    addDBusWatchAndUploadPackage(asyncResp, req);
+                };
+
+                crow::connections::systemBus->async_method_call(
+                    respHandler, foundService, foundPath,
+                    "xyz.openbmc_project.Object.Delete", "Delete");
+            }
+            else
+            {
+                addDBusWatchAndUploadPackage(asyncResp, req);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/software/staged", static_cast<int32_t>(0),
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Software.PackageInformation"});
+}
+
+/**
+ * @brief POST handler for staging firmware package
+ *
+ * @param app
+ * @param req
+ * @param asyncResp
+ *
+ * @return None
+ */
+inline void handleUpdateServiceStageFirmwarePackagePost(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    BMCWEB_LOG_DEBUG << "doPost...";
+
+    if (req.body.size() > firmwareImageLimitBytes)
+    {
+        if (asyncResp)
+        {
+            BMCWEB_LOG_ERROR << "Large image size: " << req.body.size();
+            std::string resolution =
+                "Firmware package size is greater than allowed "
+                "size. Make sure package size is less than "
+                "UpdateService.MaxImageSizeBytes property and "
+                "retry the firmware update operation.";
+            messages::payloadTooLarge(asyncResp->res, resolution);
+        }
+        return;
+    }
+
+    // staging is not allowed when firmware update is in progress.
+    if (fwUpdateInProgress != false)
+    {
+        if (asyncResp)
+        {
+            // don't copy the image, update already in progress.
+            std::string resolution = "Another update is in progress. Retry"
+                                     " the operation once it is complete.";
+            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+            BMCWEB_LOG_ERROR << "Update already in progress.";
+        }
+        return;
+    }
+
+    // Only allow one FW staging at a time
+    if ((fwStageImageMatcher != nullptr) || (fwImageIsStaging == true))
+    {
+        if (asyncResp)
+        {
+            std::string resolution = "Another staging is in progress. Retry"
+                                     " the operation once it is complete.";
+            redfish::messages::resourceErrorsDetectedFormatError(
+                asyncResp->res,
+                "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/0",
+                resolution);
+            BMCWEB_LOG_ERROR << "Another staging is in progress.";
+        }
+        return;
+    }
+
+    std::error_code spaceInfoError;
+    const std::filesystem::space_info spaceInfo =
+        std::filesystem::space(updateServiceImageLocation, spaceInfoError);
+    if (!spaceInfoError)
+    {
+        if (spaceInfo.free < req.body.size())
+        {
+            BMCWEB_LOG_ERROR
+                << "Insufficient storage space. Required: " << req.body.size()
+                << " Available: " << spaceInfo.free;
+            std::string resolution =
+                "Reset the baseboard and retry the operation.";
+            messages::insufficientStorage(asyncResp->res, resolution);
+            return;
+        }
+    }
+
+    bool stageLocationExists =
+        std::filesystem::exists(updateServiceStageLocation);
+
+    if (!stageLocationExists)
+    {
+        if (asyncResp)
+        {
+            messages::internalError(asyncResp->res);
+            BMCWEB_LOG_ERROR << "Stage location does not exist. "
+                             << stageLocationExists;
+        }
+
+        return;
+    }
+    else
+    {
+        stageFirmwarePackage(asyncResp, req);
+
+        BMCWEB_LOG_DEBUG << "file upload complete!!";
+    }
+}
+
+/**
+ * @brief Register Web Api endpoints for Split Update Firmware Package
+ * functionality
+ *
+ * @param app
+ *
+ * @return None
+ */
+inline void requestRoutesSplitUpdateService(App& app)
+{
+
+    BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage")
+        .privileges(redfish::privileges::getUpdateService)
+        .methods(boost::beast::http::verb::get)([&app](const crow::Request& req,
+                                                       const std::shared_ptr<
+                                                           bmcweb::AsyncResp>&
+                                                           asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#NvidiaPersistentStorage.v1_0_0.NvidiaPersistentStorage";
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage";
+            asyncResp->res.jsonValue["MaxFirmwarePackages"] = 1;
+            asyncResp->res.jsonValue["FirmwarePackages"] = {
+                {"@odata.id",
+                 "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages"}};
+            asyncResp->res.jsonValue
+                ["Actions"]
+                ["#NvidiaPersistentStorage.InitiateFirmwareUpdate"] = {
+                {"target",
+                 "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/Actions/NvidiaPersistentStorage.InitiateFirmwareUpdate"},
+                {"@Redfish.ActionInfo",
+                 "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/InitiateFirmwareUpdateActionInfo"}};
+        });
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/StageFirmwarePackage")
+        .privileges(redfish::privileges::postUpdateService)
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleUpdateServiceStageFirmwarePackagePost, std::ref(app)));
 }
 
 } // namespace redfish

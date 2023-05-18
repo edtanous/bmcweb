@@ -136,6 +136,7 @@ class RedfishService
         requestRoutesProcessorEnvironmentMetrics(app);
         requestRoutesMemoryEnvironmentMetrics(app);
         requestRoutesUpdateService(app);
+        requestRoutesSplitUpdateService(app);
         requestRoutesChassisDrive(app);
         requestRoutesChassisDriveName(app);
 
