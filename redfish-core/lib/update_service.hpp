@@ -3355,6 +3355,385 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
 }
 
 /**
+ * @brief Translate VerificationStatus to Redfish state
+ *
+ * This function will return the corresponding Redfish state
+ *
+ * @param[i]   status  The OpenBMC software state
+ *
+ * @return The corresponding Redfish state
+ */
+inline std::string getPackageVerificationStatus(const std::string& status)
+{
+    if (status ==
+        "xyz.openbmc_project.Software.PackageInformation.PackageVerificationStatus.Invalid")
+    {
+        return "Failed";
+    }
+    if (status ==
+        "xyz.openbmc_project.Software.PackageInformation.PackageVerificationStatus.Valid")
+    {
+        return "Success";
+    }
+
+    BMCWEB_LOG_DEBUG << "Unknown status: " << status;
+    return "Unknown";
+}
+
+/**
+ * @brief Fill properties related to StoragePackageInformation in the response
+ *
+ * @param asyncResp
+ * @param service
+ * @param path
+ *
+ * @return None
+ */
+inline void getPropertiesPersistentStoragePackageInformation(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& service, const std::string& path)
+{
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, service, path,
+        "xyz.openbmc_project.Software.PackageInformation",
+        [asyncResp](const boost::system::error_code errorCode,
+                    const dbus::utility::DBusPropertiesMap& propertiesList) {
+            if (errorCode)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const std::string* packageVersion = nullptr;
+            const std::string* packageVerificationStatus = nullptr;
+
+            bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), propertiesList,
+                "PackageVersion", packageVersion, "VerificationStatus",
+                packageVerificationStatus);
+
+            if (!success)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (packageVersion == nullptr)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (packageVerificationStatus == nullptr)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            asyncResp->res.jsonValue["FirmwarePackageVersion"] =
+                *packageVersion;
+            asyncResp->res.jsonValue["VerificationStatus"] =
+                getPackageVerificationStatus(*packageVerificationStatus);
+        });
+}
+
+/**
+ * @brief Fill properties related to ComputeHash in the response
+ *
+ * @param asyncResp
+ * @param service
+ * @param path
+ *
+ * @return None
+ */
+inline void getPropertiesPersistentStorageComputeHash(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& service, const std::string& path)
+{
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, service, path, "com.nvidia.ComputeHash",
+        [asyncResp](const boost::system::error_code errorCode,
+                    const dbus::utility::DBusPropertiesMap& propertiesList) {
+            if (errorCode)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const std::string* algorithm = nullptr;
+            const std::string* digest = nullptr;
+
+            bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), propertiesList, "Algorithm",
+                algorithm, "Digest", digest);
+
+            if (!success)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (algorithm == nullptr)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (digest == nullptr)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            asyncResp->res.jsonValue["FirmwarePackageDigestHashAlgorithm"] =
+                *algorithm;
+            asyncResp->res.jsonValue["FirmwarePackageDigest"] = *digest;
+        });
+}
+
+/**
+ * @brief Fill property StagedTimestamp in the response
+ *
+ * @param asyncResp
+ * @param service
+ * @param path
+ *
+ * @return None
+ */
+inline void getPropertiesPersistentStorageEpochTime(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& service, const std::string& path)
+{
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, service, path,
+        "xyz.openbmc_project.Time.EpochTime",
+        [asyncResp](const boost::system::error_code errorCode,
+                    const dbus::utility::DBusPropertiesMap& propertiesList) {
+            if (errorCode)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const uint64_t* elapsed = nullptr;
+
+            bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), propertiesList, "Elapsed",
+                elapsed);
+
+            if (!success)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (elapsed == nullptr)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            uint64_t elapsedTimeStamp = *elapsed / 1000;
+
+            asyncResp->res.jsonValue["StagedTimestamp"] =
+                redfish::time_utils::getDateTimeUint(elapsedTimeStamp);
+        });
+}
+
+/**
+ * @brief GET handler to present list of staged firmware packages
+ *
+ * @param app
+ * @param req
+ * @param asyncResp
+ *
+ * @return None
+ */
+inline void handleUpdateServicePersistentStorageFwPackagesListGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.type"] =
+        "#NvidiaFirmwarePackageCollection.NvidiaFirmwarePackageCollection";
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages";
+    asyncResp->res.jsonValue["Name"] = "Firmware Package Collection";
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<
+                std::string,
+                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+                subtree) {
+            BMCWEB_LOG_DEBUG << "doGet callback...";
+            if (ec)
+            {
+                asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
+                asyncResp->res.jsonValue["Members@odata.count"] = 0;
+                return;
+            }
+
+            bool found = false;
+
+            for (const std::pair<std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                     obj : subtree)
+            {
+                if (obj.second.size() < 1)
+                {
+                    break;
+                }
+
+                asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
+
+                nlohmann::json& members = asyncResp->res.jsonValue["Members"];
+
+                members.push_back(
+                    {{"@odata.id",
+                      "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/0"}});
+                asyncResp->res.jsonValue["Members@odata.count"] =
+                    members.size();
+
+                found = true;
+
+                break;
+            }
+
+            if (!found)
+            {
+                asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
+                asyncResp->res.jsonValue["Members@odata.count"] = 0;
+                return;
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/software/staged", static_cast<int32_t>(0),
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Software.PackageInformation"});
+}
+
+/**
+ * @brief GET handler to present details of staged firmware package
+ *
+ * @param app
+ * @param req
+ * @param asyncResp
+ * @param strParam
+ *
+ * @return None
+ */
+inline void handleUpdateServicePersistentStorageFwPackageGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& strParam)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    if (fwUpdateInProgress != false)
+    {
+        if (asyncResp)
+        {
+            std::string resolution = "Update is in progress. Retry"
+                                     " the action once it is complete.";
+            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+            BMCWEB_LOG_ERROR << "Update is in progress.";
+        }
+        return;
+    }
+
+    if ((fwStageImageMatcher != nullptr) || (fwImageIsStaging == true))
+    {
+        if (asyncResp)
+        {
+            std::string resolution = "Staging is in progress. Retry"
+                                     " the action once it is complete.";
+            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+            BMCWEB_LOG_ERROR << "Staging is in progress.";
+        }
+        return;
+    }
+
+    // current implementation assume that the collection of FwPackages has only
+    // one item
+    if (strParam != "0")
+    {
+        messages::resourceNotFound(asyncResp->res, "FirmwarePackages",
+                                   strParam);
+        return;
+    }
+
+    asyncResp->res.jsonValue["@odata.type"] =
+        "#NvidiaFirmwarePackage.v1_0_0.NvidiaFirmwarePackage";
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/0";
+    asyncResp->res.jsonValue["Id"] = 0;
+    asyncResp->res.jsonValue["Name"] = "Firmware Package 0 Resource";
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, &strParam](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<
+                std::string,
+                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+                subtree) {
+            BMCWEB_LOG_DEBUG << "doGet callback...";
+            if (ec)
+            {
+                messages::resourceNotFound(asyncResp->res, "FirmwarePackages",
+                                           "0");
+                return;
+            }
+            // Ensure we find package information, otherwise return an
+            // error
+            bool found = false;
+
+            for (const std::pair<std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                     obj : subtree)
+            {
+                if (obj.second.size() < 1)
+                {
+                    break;
+                }
+
+                found = true;
+
+                getPropertiesPersistentStoragePackageInformation(
+                    asyncResp, obj.second[0].first, obj.first);
+                getPropertiesPersistentStorageComputeHash(
+                    asyncResp, obj.second[0].first, obj.first);
+                getPropertiesPersistentStorageEpochTime(
+                    asyncResp, obj.second[0].first, obj.first);
+            }
+            if (!found)
+            {
+                BMCWEB_LOG_ERROR << "PackageInformation not found!";
+                messages::resourceNotFound(asyncResp->res, "FirmwarePackages",
+                                           "0");
+                return;
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/software/staged", static_cast<int32_t>(0),
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Software.PackageInformation"});
+}
+
+/**
  * @brief Register Web Api endpoints for Split Update Firmware Package
  * functionality
  *
@@ -3398,6 +3777,21 @@ inline void requestRoutesSplitUpdateService(App& app)
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleUpdateServiceStageFirmwarePackagePost, std::ref(app)));
+    
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages")
+        .privileges(redfish::privileges::getUpdateService)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleUpdateServicePersistentStorageFwPackagesListGet,
+            std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/<str>/")
+        .privileges(redfish::privileges::getUpdateService)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleUpdateServicePersistentStorageFwPackageGet, std::ref(app)));
 }
 
 } // namespace redfish
