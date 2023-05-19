@@ -3341,7 +3341,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
         {
             messages::internalError(asyncResp->res);
             BMCWEB_LOG_ERROR << "Stage location does not exist. "
-                             << stageLocationExists;
+                             << updateServiceStageLocation;
         }
 
         return;
@@ -4274,6 +4274,135 @@ inline void updateParametersForInitiateActionInfo(
 }
 
 /**
+ * @brief DELETE handler for deleting firmware package
+ *
+ * @param app
+ * @param req
+ * @param asyncResp
+ * @param strParam
+ *
+ * @return None
+ */
+inline void handleUpdateServiceDeleteFirmwarePackage(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& strParam)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    // current implementation assume that the collection of
+    // FwPackages has only one item
+    if (strParam != "0")
+    {
+        messages::resourceNotFound(asyncResp->res, "FirmwarePackages",
+                                   strParam);
+        return;
+    }
+
+    if (fwUpdateInProgress != false)
+    {
+        if (asyncResp)
+        {
+            std::string resolution = "Update is in progress. Retry"
+                                     " the action once it is complete.";
+            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+            BMCWEB_LOG_ERROR << "Update is in progress.";
+        }
+        return;
+    }
+
+    if ((fwStageImageMatcher != nullptr) || (fwImageIsStaging == true))
+    {
+        if (asyncResp)
+        {
+            std::string resolution = "Staging is in progress. Retry"
+                                     " the action once it is complete.";
+            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+            BMCWEB_LOG_ERROR << "Staging is in progress.";
+        }
+        return;
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<
+                std::string,
+                std::vector<std::pair<std::string, std::vector<std::string>>>>>&
+                subtree) {
+            BMCWEB_LOG_DEBUG << "doDelete callback...";
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error code = " << ec;
+                BMCWEB_LOG_DEBUG << "DBUS response error msg = "
+                                 << ec.message();
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            // Ensure we find package information, otherwise return
+            // an error
+            bool found = false;
+            std::string foundService;
+            std::string foundPath;
+
+            for (const std::pair<std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                     obj : subtree)
+            {
+                if (obj.second.size() < 1)
+                {
+                    break;
+                }
+
+                foundService = obj.second[0].first;
+                foundPath = obj.first;
+
+                found = true;
+                break;
+            }
+
+            if (found)
+            {
+                auto respHandler = [asyncResp](
+                                       const boost::system::error_code ec) {
+                    BMCWEB_LOG_DEBUG << "doDelete callback: Done";
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "doDelete respHandler got error "
+                                         << ec.message();
+                        asyncResp->res.result(
+                            boost::beast::http::status::internal_server_error);
+                        return;
+                    }
+
+                    asyncResp->res.result(boost::beast::http::status::ok);
+                };
+
+                crow::connections::systemBus->async_method_call(
+                    respHandler, foundService, foundPath,
+                    "xyz.openbmc_project.Object.Delete", "Delete");
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "PackageInformation not found!";
+                messages::resourceNotFound(asyncResp->res, "FirmwarePackages",
+                                           "0");
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/software/staged", static_cast<int32_t>(0),
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Software.PackageInformation"});
+}
+
+/**
  * @brief Register Web Api endpoints for Split Update Firmware Package
  * functionality
  *
@@ -4382,6 +4511,13 @@ inline void requestRoutesSplitUpdateService(App& app)
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.Version"});
         });
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/<str>/")
+        .privileges(redfish::privileges::deleteUpdateService)
+        .methods(boost::beast::http::verb::delete_)(std::bind_front(
+            handleUpdateServiceDeleteFirmwarePackage, std::ref(app)));
 }
 
 } // namespace redfish
