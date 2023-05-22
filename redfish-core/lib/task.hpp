@@ -280,9 +280,10 @@ struct TaskData : std::enable_shared_from_this<TaskData>
             res.addHeader(boost::beast::http::field::retry_after,
                           std::to_string(retryAfterSeconds));
         }
-        else if (!taskComplete)
+        else if (!gave204)
         {
-            taskComplete = true;
+            res.result(boost::beast::http::status::no_content);
+            gave204 = true;
         }
     }
 
@@ -443,6 +444,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
     std::optional<Payload> payload;
     std::optional<TaskResponse> taskResponse;
     bool taskComplete = false;
+    bool gave204 = false;
     int percentComplete = 0;
     std::unique_ptr<sdbusplus::bus::match_t> loggingMatch;
 };
@@ -481,7 +483,6 @@ inline void requestRoutesTaskMonitor(App& app)
                     return;
                 }
                 std::shared_ptr<task::TaskData>& ptr = *find;
-                ptr->populateResp(asyncResp->res);
                 // If Task is completed and success, task monitor URI should
                 // return result of the operation
                 if (ptr->getTaskStatus() == "OK" && ptr->state == "Completed" &&
@@ -491,13 +492,14 @@ inline void requestRoutesTaskMonitor(App& app)
                     asyncResp->res.jsonValue = taskResp.jsonResponse;
                     return;
                 }
-                // monitor expires after taskcomplete
-                if (ptr->taskComplete)
+                // monitor expires after 204
+                if (ptr->gave204)
                 {
                     messages::resourceNotFound(asyncResp->res, "Monitor",
                                                strParam);
                     return;
                 }
+                ptr->populateResp(asyncResp->res);
 
                 // if payload http headers contain location entry, use it
                 if (ptr->payload)
@@ -573,7 +575,7 @@ inline void requestRoutesTask(App& app)
                 asyncResp->res.jsonValue["Messages"] = ptr->messages;
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/TaskService/Tasks/" + strParam;
-                if (!ptr->taskComplete)
+                if (!ptr->gave204)
                 {
                     asyncResp->res.jsonValue["TaskMonitor"] =
                         "/redfish/v1/TaskService/Tasks/" + strParam +
