@@ -854,6 +854,18 @@ inline void
                 }
 
                 const std::string& connectionName = connectionNames[0].first;
+                const std::vector<std::string>& interfaces =
+                    connectionNames[0].second;
+
+                if (std::find(
+                        interfaces.begin(), interfaces.end(),
+                        "xyz.openbmc_project.Inventory.Item.Cpu") !=
+                    interfaces.end())
+                {
+                    // Skip PowerAndControlData for /Chassis/CPU_{ID}/EnvironmentMetrics URI
+                    // The CPU power cap is handled by /Systems/{ID}/Processor/CPU_{ID}/Controls URI
+                    continue;
+                }
 
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, connectionName,
