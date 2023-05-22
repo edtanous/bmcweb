@@ -1,6 +1,7 @@
 #pragma once
 #include <utils/dbus_utils.hpp>
 #include <utils/port_utils.hpp>
+#include <utils/chassis_utils.hpp>
 
 inline std::string getPropertySuffix(const std::string& ifaceName,
                                      const std::string& metricName)
@@ -119,6 +120,10 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         {
             suffix = "#/PCIeInterface/MaxLanes";
         }
+        else if (metricName == "LanesInUse")
+        {
+            suffix = "#/PCIeInterface/LanesInUse";
+        }
     }
     else if (ifaceName == "xyz.openbmc_project.Memory.MemoryECC")
     {
@@ -180,6 +185,14 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
             suffix = "/Oem/Nvidia/RowRemappingFailed";
         }
     }
+    else if (ifaceName ==
+             "xyz.openbmc_project.State.Decorator.OperationalStatus")
+    {
+        if (metricName == "State")
+        {
+            suffix = "/Status/State";
+        }
+    }
     else
     {
         suffix.clear();
@@ -225,7 +238,8 @@ std::string
         }
         else if (ifaceName == "xyz.openbmc_project.PCIe.PCIeECC")
         {
-            if (metricName == "PCIeType" || metricName == "MaxLanes")
+            if (metricName == "PCIeType" || metricName == "MaxLanes" ||
+                metricName == "LanesInUse")
             {
                 sdbusplus::message::object_path deviceObjectPath(devicePath);
                 const std::string childDeviceName = deviceObjectPath.filename();
@@ -236,6 +250,13 @@ std::string
                 metricURI += "/PCIeDevices/";
                 metricURI += childDeviceName;
             }
+        }
+        else if (ifaceName ==
+                 "xyz.openbmc_project.State.Decorator.OperationalStatus")
+        {
+            metricURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+            metricURI += "/Processors/";
+            metricURI += deviceName;
         }
         propSuffix = getPropertySuffix(ifaceName, metricName);
     }
@@ -350,6 +371,14 @@ std::string translateReading(const std::string& ifaceName,
         if (metricName == "LinkStatus")
         {
             metricValue = redfish::port_utils::getLinkStatusType(reading);
+        }
+    }
+    else if (ifaceName ==
+             "xyz.openbmc_project.State.Decorator.OperationalStatus")
+    {
+        if (metricName == "State")
+        {
+            metricValue = redfish::chassis_utils::getPowerStateType(reading);
         }
     }
     else
