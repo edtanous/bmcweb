@@ -251,14 +251,15 @@ inline void processChassisSensors(
 
                 auto getAllChassisSensors =
                     [asyncResp, chassisId, managedObjectsResp, sensingInterval,
-                     requestTimestamp,
-                     metricsType](const boost::system::error_code ec,
-                                  const std::variant<std::vector<std::string>>&
-                                      variantEndpoints) {
+                     requestTimestamp, objectPath, metricsType](
+                        const boost::system::error_code ec,
+                        const std::variant<std::vector<std::string>>&
+                            variantEndpoints) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "getAllChassisSensors DBUS error: " << ec;
+                            BMCWEB_LOG_DEBUG
+                                << "getAllChassisSensors DBUS error on chassis path"
+                                << objectPath << ": " << ec;
                             return;
                         }
                         const std::vector<std::string>* sensorPaths =
