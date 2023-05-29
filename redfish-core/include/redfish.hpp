@@ -136,7 +136,9 @@ class RedfishService
         requestRoutesProcessorEnvironmentMetrics(app);
         requestRoutesMemoryEnvironmentMetrics(app);
         requestRoutesUpdateService(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesSplitUpdateService(app);
+#endif
         requestRoutesChassisDrive(app);
         requestRoutesChassisDriveName(app);
 

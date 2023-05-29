@@ -354,7 +354,7 @@ option(
 
 option ('update-service-task-timeout', type : 'integer', min : 5, max : 300, value : 60, description : 'Update service task timeout')
 option ('update-service-image-location', type : 'string', value : '/tmp/images/', description : 'Update service image location')
-option ('update-service-stage-location', type : 'string', value : '/mnt/mmcblk0p2/fwupdate_split_stage/', description : 'Update service stage location')
+option ('update-service-stage-location', type : 'string', value : '', description : 'Update service stage location')
 
 option('redfish-new-powersubsystem', type : 'feature', value : 'enabled', description : 'Enable/disable the new Power sub system.')
 
