@@ -4377,47 +4377,6 @@ inline void requestRoutesProcessorReset(App& app)
             });
 }
 
-inline void
-    getProcessorPortCollection(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                               const std::string& objPath,
-                               const std::string& processorId)
-{
-    // Find objPath parent_chassis for matching port
-    BMCWEB_LOG_DEBUG << "Get Processor Ports Collection";
-
-    // Get parent chassis for sensors URI
-    crow::connections::systemBus->async_method_call(
-        [aResp, objPath,
-         processorId](const boost::system::error_code ec,
-                      std::variant<std::vector<std::string>>& resp) {
-            if (ec)
-            {
-                aResp->res.jsonValue["Members"] = nlohmann::json::array();
-                aResp->res.jsonValue["Members@odata.count"] = 0;
-                return; // no chassis = no failures
-            }
-
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr && data->size() > 1)
-            {
-                // Object must have single parent chassis
-                return;
-            }
-            const std::string& chassisPath = data->front();
-
-            collection_util::getCollectionMembersByAssociation(
-                aResp,
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
-                    processorId + "/Ports",
-                chassisPath + "/all_states",
-                {"xyz.openbmc_project.Inventory.Item.Port"});
-        },
-        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
-}
-
 inline void requestRoutesProcessorPortCollection(App& app)
 {
     /**
@@ -4474,8 +4433,12 @@ inline void requestRoutesProcessorPortCollection(App& app)
                                     "xyz.openbmc_project.Inventory.Item.Cpu") !=
                                 interfacesList.end())
                             {
-                                getProcessorPortCollection(asyncResp, path,
-                                                           processorId);
+                                collection_util::getCollectionMembersByAssociation(
+                                    asyncResp,
+                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
+                                    processorId + "/Ports",
+                                    path + "/all_states",
+                                    {"xyz.openbmc_project.Inventory.Item.Port"});
                             }
                             else if (
                                 std::find(
@@ -4827,39 +4790,6 @@ inline void getProcessorPortData(
         "xyz.openbmc_project.Association", "endpoints");
 }
 
-inline void getProcessorChassis(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                                const std::string& objPath,
-                                const std::string& processorId,
-                                const std::string& portId)
-{
-
-    // Get parent chassis for sensors URI
-    crow::connections::systemBus->async_method_call(
-        [aResp, objPath, processorId,
-         portId](const boost::system::error_code ec,
-                 std::variant<std::vector<std::string>>& resp) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr && data->size() > 1)
-            {
-                // Object must have single parent chassis
-                messages::internalError(aResp->res);
-                return;
-            }
-            const std::string& chassisPath = data->front();
-            getProcessorPortData(aResp, chassisPath, processorId, portId);
-        },
-        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
-}
 
 inline void requestRoutesProcessorPort(App& app)
 {
@@ -4909,8 +4839,7 @@ inline void requestRoutesProcessorPort(App& app)
                                     "xyz.openbmc_project.Inventory.Item.Cpu") !=
                                 interfacesList.end())
                             {
-                                getProcessorChassis(asyncResp, path,
-                                                    processorId, port);
+                               getProcessorPortData(asyncResp, path, processorId, port);
                             }
                             else if (
                                 std::find(
