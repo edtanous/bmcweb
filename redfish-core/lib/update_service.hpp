@@ -3343,7 +3343,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
 
     std::error_code spaceInfoError;
     const std::filesystem::space_info spaceInfo =
-        std::filesystem::space(updateServiceImageLocation, spaceInfoError);
+        std::filesystem::space(updateServiceStageLocation, spaceInfoError);
     if (spaceInfoError)
     {
         messages::internalError(asyncResp->res);
