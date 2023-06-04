@@ -1964,7 +1964,7 @@ inline void
     sw_util::populateSoftwareInformation(asyncResp, sw_util::biosPurpose, "",
                                          true);
 
-    asyncResp->res.jsonValue["Attributes"] = {};
+    asyncResp->res.jsonValue["Attributes"] = nlohmann::json({});
     // Get the BIOS Attributes
     bios::getBiosAttributes(asyncResp);
 
@@ -2102,8 +2102,8 @@ inline void
     asyncResp->res.jsonValue["Description"] = "BIOS Settings";
     asyncResp->res.jsonValue["Id"] = "BIOS_Settings";
 
-    asyncResp->res.jsonValue["Attributes"] = {};
-    // get the BIOS Attributes
+    asyncResp->res.jsonValue["Attributes"] = nlohmann::json({});
+    //get the BIOS Attributes
     bios::getBiosSettingsAttr(asyncResp);
 }
 
