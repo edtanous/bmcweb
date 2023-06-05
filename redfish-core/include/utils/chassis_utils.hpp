@@ -14,6 +14,9 @@ namespace chassis_utils
 constexpr const char* acceleratorInvIntf =
     "xyz.openbmc_project.Inventory.Item.Accelerator";
 
+constexpr const char* cpuInvIntf =
+    "xyz.openbmc_project.Inventory.Item.Cpu";
+
 constexpr const char* switchInvIntf =
     "xyz.openbmc_project.Inventory.Item.Switch";
 
@@ -899,7 +902,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
 
                 for (const auto& interface : interfaces)
                 {
-                    if (interface == acceleratorInvIntf)
+                    if (interface == acceleratorInvIntf || interface == cpuInvIntf)
                     {
                         /*
                         busctl call xyz.openbmc_project.ObjectMapper
