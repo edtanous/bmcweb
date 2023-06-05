@@ -374,14 +374,14 @@ inline void
         "xyz.openbmc_project.ObjectMapper", "GetObject", path, powerinterfaces);
 }
 
-inline void getCpuPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::string& chassisPath)
+inline void getPowerReading(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string &chassisID, const std::string& chassisPath)
 {
     sdbusplus::asio::getProperty<std::vector<std::string>>(
         *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
         chassisPath + "/all_sensors", "xyz.openbmc_project.Association",
         "endpoints",
-        [asyncResp, chassisPath](const boost::system::error_code ec,
+        [asyncResp, chassisID, chassisPath](const boost::system::error_code ec,
                                  const std::vector<std::string>& resp) {
             if (ec)
             {
@@ -389,8 +389,9 @@ inline void getCpuPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
             for (const auto& sensorPath : resp)
             {
-                if (!sensorPath.starts_with(
-                        "/xyz/openbmc_project/sensors/power/"))
+                sdbusplus::message::object_path objPath(sensorPath);
+                std::string prefix = "/xyz/openbmc_project/sensors/power/" + chassisID + "_Power"; 
+                if (sensorPath.find(prefix) == std::string::npos)
                 {
                     continue;
                 }
@@ -794,12 +795,26 @@ inline void requestRoutesChassisControls(App& app)
                                 sdbusplus::message::object_path objPath(object);
                                 if (objPath.filename() == controlID)
                                 {
-                                    asyncResp->res.jsonValue["Name"] =
-                                        "Cpu Power Control";
+                                    if (controlID.find("_CPU_") !=
+                                        std::string::npos)
+                                    {
+                                        asyncResp->res.jsonValue["Name"] =
+                                            "Cpu Power Control";
+                                    }
+                                    else
+                                    {
+                                        asyncResp->res.jsonValue["Name"] =
+                                            "Module Power Control";
+                                        // Automatic mode from H100 8-GPU
+                                        // Redfish SMBPBI Supplement
+                                        asyncResp->res
+                                            .jsonValue["ControlMode"] =
+                                            "Automatic";
+                                    }
                                     asyncResp->res.jsonValue["ControlType"] =
                                         "Power";
                                     getControlSettings(asyncResp, object);
-                                    getCpuPower(asyncResp, *validChassisPath);
+                                    getPowerReading(asyncResp, chassisID, *validChassisPath);
                                     validendpoint = true;
                                     break;
                                 }
@@ -844,6 +859,10 @@ inline void requestRoutesChassisControls(App& app)
                             if (std::find(
                                     interfaces.begin(), interfaces.end(),
                                     "xyz.openbmc_project.Inventory.Item.Cpu") !=
+                                interfaces.end() || 
+                                std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.Inventory.Item.ProcessorModule") !=
                                 interfaces.end())
                             {
                                 getControlCpu(validChassisPath);
@@ -992,24 +1011,38 @@ inline void requestRoutesChassisControls(App& app)
                                     if (mode)
                                     {
 
-                                        if ((*mode == "Automatic") ||
-                                            (*mode == "Override") ||
-                                            (*mode == "Manual"))
+                                        if (controlID.find("_CPU_") !=
+                                                        std::string::npos)
                                         {
-                                            changePowerCapEnable(asyncResp,
-                                                                 object, true);
-                                        }
-                                        else if (*mode == "Disabled")
-                                        {
-                                            changePowerCapEnable(asyncResp,
-                                                                 object, false);
+
+                                            if ((*mode == "Automatic") ||
+                                                (*mode == "Override") ||
+                                                (*mode == "Manual"))
+                                            {
+                                                changePowerCapEnable(
+                                                    asyncResp, object, true);
+                                            }
+                                            else if (*mode == "Disabled")
+                                            {
+                                                changePowerCapEnable(
+                                                    asyncResp, object, false);
+                                            }
+                                            else
+                                            {
+                                                BMCWEB_LOG_ERROR
+                                                    << "invalid input";
+                                                messages::
+                                                    actionParameterUnknown(
+                                                        asyncResp->res,
+                                                        "ControlMode", *mode);
+                                            }
                                         }
                                         else
                                         {
-                                            BMCWEB_LOG_ERROR << "invalid input";
-                                            messages::actionParameterUnknown(
-                                                asyncResp->res, "ControlMode",
-                                                *mode);
+                                            messages::
+                                                actionParameterNotSupported(
+                                                    asyncResp->res,
+                                                    "ControlMode", *mode);
                                         }
                                     }
 
@@ -1062,7 +1095,11 @@ inline void requestRoutesChassisControls(App& app)
                             if (std::find(
                                     interfaces.begin(), interfaces.end(),
                                     "xyz.openbmc_project.Inventory.Item.Cpu") !=
-                                interfaces.end())
+                                    interfaces.end() ||
+                                std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.Inventory.Item.ProcessorModule") !=
+                                    interfaces.end())
                             {
                                 patchControlCpu(validChassisPath);
                                 return;
