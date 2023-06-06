@@ -30,7 +30,6 @@ conf_data.set_quoted('PLATFORM_NETWORK_ADAPTER', get_option('platform-network-ad
 conf_data.set_quoted('PLATFORM_TOTAL_POWER_SENSOR_NAME', get_option('platform-total-power-sensor-name'))
 conf_data.set_quoted('PLATFORM_POWER_CONTOL_SENSOR_NAME', get_option('platform-power-control-sensor-name'))
 conf_data.set_quoted('PLATFORM_METRICS_ID', get_option('platform-metrics-id'))
-conf_data.set_quoted('PROCESSOR_MODULE_TOTAL_POWER_SENSOR_NAME', get_option('processor-module-total-power-sensor-name'))
 conf_data.set_quoted('HOST_IFACE_CHANNEL', get_option('host-iface-channel'))
 conf_data.set_quoted('FW_MCTP_MAPPING_JSON', join_paths(package_datadir, 'fw_mctp_mapping.json'))
 conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
