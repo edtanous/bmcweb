@@ -4199,7 +4199,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
 
     std::optional<std::string> firmwarePackageURI;
     std::optional<std::vector<std::string>> targets;
-    if (!json_util::readJsonPatch(req, asyncResp->res, "FirmwarePackageURI",
+    if (!json_util::readJsonPatch(req, asyncResp->res, "StagedFirmwarePackageURI",
                                   firmwarePackageURI, "Targets", targets))
     {
         BMCWEB_LOG_ERROR << "UpdateService doPatch: Invalid request body";
@@ -4211,18 +4211,18 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
         if (firmwarePackageURI !=
             "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/0")
         {
-            BMCWEB_LOG_ERROR << "Invalid FirmwarePackageURI:  "
+            BMCWEB_LOG_ERROR << "Invalid StagedFirmwarePackageURI:  "
                              << firmwarePackageURI.value();
             messages::propertyValueIncorrect(asyncResp->res,
-                                             "FirmwarePackageURI",
+                                             "StagedFirmwarePackageURI",
                                              firmwarePackageURI.value());
             return;
         }
     }
     else
     {
-        BMCWEB_LOG_ERROR << "FirmwarePackageURI is empty.";
-        messages::propertyValueIncorrect(asyncResp->res, "FirmwarePackageURI",
+        BMCWEB_LOG_ERROR << "StagedFirmwarePackageURI is empty.";
+        messages::propertyValueIncorrect(asyncResp->res, "StagedFirmwarePackageURI",
                                          "empty");
         return;
     }
@@ -4309,7 +4309,7 @@ inline void updateParametersForInitiateActionInfo(
     nlohmann::json& parameters = asyncResp->res.jsonValue["Parameters"];
 
     nlohmann::json parameterPackageURI;
-    parameterPackageURI["Name"] = "FirmwarePackageURI";
+    parameterPackageURI["Name"] = "StagedFirmwarePackageURI";
     parameterPackageURI["Required"] = "true";
     parameterPackageURI["DataType"] = "String";
 
@@ -4492,7 +4492,7 @@ inline void requestRoutesSplitUpdateService(App& app)
             asyncResp->res.jsonValue["Id"] = "PersistentStorage";
             asyncResp->res.jsonValue["Name"] = "Persistent Storage Resource";
             asyncResp->res.jsonValue["StageFirmwarePackageHttpPushUri"] =
-                "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/StageFirmwarePackage";
+                "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/stage-firmware-package";
             asyncResp->res.jsonValue["MaxFirmwarePackages"] = 1;
             asyncResp->res.jsonValue["FirmwarePackages"] = {
                 {"@odata.id",
@@ -4508,7 +4508,7 @@ inline void requestRoutesSplitUpdateService(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/StageFirmwarePackage")
+        "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/stage-firmware-package")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleUpdateServiceStageFirmwarePackagePost, std::ref(app)));
