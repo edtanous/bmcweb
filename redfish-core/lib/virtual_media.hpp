@@ -785,7 +785,7 @@ inline void handleManagersVirtualMediaActionInsertPost(
     {
         return;
     }
-    if (name != "bmc")
+    if (name != PLATFORMBMCID)
     {
         messages::resourceNotFound(asyncResp->res, "VirtualMedia.Insert",
                                    resName);
@@ -910,7 +910,7 @@ inline void handleManagersVirtualMediaActionEject(
     {
         return;
     }
-    if (managerName != "bmc")
+    if (managerName != PLATFORMBMCID)
     {
         messages::resourceNotFound(asyncResp->res, "VirtualMedia.Eject",
                                    resName);
@@ -998,7 +998,7 @@ inline void handleManagersVirtualMediaCollectionGet(
     {
         return;
     }
-    if (name != "bmc")
+    if (name != PLATFORMBMCID)
     {
         messages::resourceNotFound(asyncResp->res, "VirtualMedia", name);
 
@@ -1042,7 +1042,7 @@ inline void
     {
         return;
     }
-    if (name != "bmc")
+    if (name != PLATFORMBMCID)
     {
         messages::resourceNotFound(asyncResp->res, "VirtualMedia", resName);
 

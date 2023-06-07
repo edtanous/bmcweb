@@ -1050,12 +1050,14 @@ inline void objectPropertiesToJson(
                                 "/MinReadingRange"_json_pointer);
         properties.emplace_back("xyz.openbmc_project.Sensor.Value", "MaxValue",
                                 "/MaxReadingRange"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Value",
-                                "MaxAllowableValue",
-                                "/MaxAllowableOperatingValue"_json_pointer);
-        properties.emplace_back("xyz.openbmc_project.Sensor.Value",
-                                "MinAllowableValue",
-                                "/MinAllowableOperatingValue"_json_pointer);
+        if (sensorType != "voltage") {
+            properties.emplace_back("xyz.openbmc_project.Sensor.Value",
+                                    "MaxAllowableValue",
+                                    "/MaxAllowableOperatingValue"_json_pointer);
+            properties.emplace_back("xyz.openbmc_project.Sensor.Value",
+                                    "MinAllowableValue",
+                                    "/MinAllowableOperatingValue"_json_pointer);
+        }
     }
 
     for (const std::tuple<const char*, const char*,

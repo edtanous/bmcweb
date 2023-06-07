@@ -577,9 +577,10 @@ inline void
             {
                 continue;
             }
-            boost::replace_all(dupSensorName, chassisId, "GPU_SXM_{GWild}");
+            std::string gpuPrefix(platformGpuNamePrefix);
+            boost::replace_all(dupSensorName, chassisId, gpuPrefix + "{GWild}");
             tmpPath += PLATFORMDEVICEPREFIX;
-            tmpPath += "GPU_SXM_{GWild}";
+            tmpPath += gpuPrefix + "{GWild}";
             tmpPath += "/Sensors/";
             tmpPath += PLATFORMDEVICEPREFIX;
             tmpPath += dupSensorName;
@@ -796,40 +797,41 @@ inline void getPlatformMetricReportDefinition(
 inline std::string getMemoryMetricURIDef(std::string &propertyName)
 {
     std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string gpuPrefix(platformGpuNamePrefix);
     if (propertyName == "RowRemappingFailed")
     {
         propURI +=
-            "/Memory/GPU_SXM_{GpuId}_DRAM_0#/Oem/Nvidia/RowRemappingFailed";
+            "/Memory/" + gpuPrefix + "{GpuId}_DRAM_0#/Oem/Nvidia/RowRemappingFailed";
     }
     else if (propertyName == "OperatingSpeedMHz")
     {
         propURI +=
-            "/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/OperatingSpeedMHz";
+            "/Memory/" + gpuPrefix + "{GpuId}_DRAM_0/MemoryMetrics#/OperatingSpeedMHz";
     }
     else if (propertyName == "BandwidthPercent")
     {
         propURI +=
-            "/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/BandwidthPercent";
+            "/Memory/" + gpuPrefix + "{GpuId}_DRAM_0/MemoryMetrics#/BandwidthPercent";
     }
     else if (propertyName == "CorrectableECCErrorCount")
     {
         propURI +=
-            "/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/LifeTime/CorrectableECCErrorCount";
+            "/Memory/ + gpuPrefix + {GpuId}_DRAM_0/MemoryMetrics#/LifeTime/CorrectableECCErrorCount";
     }
     else if (propertyName == "UncorrectableECCErrorCount")
     {
         propURI +=
-            "/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/LifeTime/UncorrectableECCErrorCount";
+            "/Memory/" + gpuPrefix + "{GpuId}_DRAM_0/MemoryMetrics#/LifeTime/UncorrectableECCErrorCount";
     }
     else if (propertyName == "CorrectableRowRemappingCount")
     {
         propURI +=
-            "/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/Oem/Nvidia/RowRemapping/CorrectableRowRemappingCount";
+            "/Memory/" + gpuPrefix + "{GpuId}_DRAM_0/MemoryMetrics#/Oem/Nvidia/RowRemapping/CorrectableRowRemappingCount";
     }
     else if (propertyName == "UncorrectableRowRemappingCount")
     {
         propURI +=
-            "/Memory/GPU_SXM_{GpuId}_DRAM_0/MemoryMetrics#/Oem/Nvidia/RowRemapping/UncorrectableRowRemappingCount";
+            "/Memory/" + gpuPrefix + "{GpuId}_DRAM_0/MemoryMetrics#/Oem/Nvidia/RowRemapping/UncorrectableRowRemappingCount";
     }
     return propURI;
       
@@ -838,82 +840,83 @@ inline std::string getMemoryMetricURIDef(std::string &propertyName)
 inline std::string getProcessorMetricURIDef(std::string &propertyName)
 {
     std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string gpuPrefix(platformGpuNamePrefix);
     if (propertyName == "State")
     {
-        propURI += "/Processors/GPU_SXM_{GpuId}#/Status/State";
+        propURI += "/Processors/" + gpuPrefix + "{GpuId}#/Status/State";
     }
     else if (propertyName == "PCIeType")
     {
-        propURI += "/Processors/GPU_SXM_{GpuId}#/SystemInterface/PCIe/PCIeType";
+        propURI += "/Processors/" + gpuPrefix + "{GpuId}#/SystemInterface/PCIe/PCIeType";
     }
     else if (propertyName == "MaxLanes")
     {
-        propURI += "/Processors/GPU_SXM_{GpuId}#/SystemInterface/PCIe/MaxLanes";
+        propURI += "/Processors/" + gpuPrefix + "{GpuId}#/SystemInterface/PCIe/MaxLanes";
     }
     else if (propertyName == "OperatingSpeedMHz")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/OperatingSpeedMHz";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/OperatingSpeedMHz";
     }
     else if (propertyName == "BandwidthPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/BandwidthPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/BandwidthPercent";
     }
     else if (propertyName == "CorrectableECCErrorCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/CacheMetricsTotal/LifeTime/CorrectableECCErrorCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/CacheMetricsTotal/LifeTime/CorrectableECCErrorCount";
     }
     else if (propertyName == "UncorrectableECCErrorCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/CacheMetricsTotal/LifeTime/UncorrectableECCErrorCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/CacheMetricsTotal/LifeTime/UncorrectableECCErrorCount";
     }
     else if (propertyName == "CorrectableErrorCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/CorrectableErrorCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/PCIeErrors/CorrectableErrorCount";
     }
     else if (propertyName == "NonFatalErrorCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/NonFatalErrorCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/PCIeErrors/NonFatalErrorCount";
     }
     else if (propertyName == "FatalErrorCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/FatalErrorCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/PCIeErrors/FatalErrorCount";
     }
     else if (propertyName == "L0ToRecoveryCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/L0ToRecoveryCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/PCIeErrors/L0ToRecoveryCount";
     }
     else if (propertyName == "ReplayCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/ReplayCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/PCIeErrors/ReplayCount";
     }
     else if (propertyName == "ReplayRolloverCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/ReplayRolloverCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/PCIeErrors/ReplayRolloverCount";
     }
     else if (propertyName == "NAKSentCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/NAKSentCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/PCIeErrors/NAKSentCount";
     }
     else if (propertyName == "NAKReceivedCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/PCIeErrors/NAKReceivedCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/PCIeErrors/NAKReceivedCount";
     }
     else if (propertyName == "ThrottleReasons")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/ThrottleReasons";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/ThrottleReasons";
     }
     return propURI;
 }
@@ -979,60 +982,61 @@ inline std::string getNVSwitchMetricURIDef(std::string &propertyName)
 inline std::string getProcessorPortMetricURIDef(std::string &propertyName)
 {
     std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string gpuPrefix(platformGpuNamePrefix);
     if (propertyName == "CurrentSpeedGbps")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}#/CurrentSpeedGbps";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}#/CurrentSpeedGbps";
     }
     else if (propertyName == "TXBytes")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/TXBytes";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/TXBytes";
     }
     else if (propertyName == "RXBytes")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/RXBytes";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/RXBytes";
     }
     else if (propertyName == "TXNoProtocolBytes")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/TXNoProtocolBytes";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/TXNoProtocolBytes";
     }
     else if (propertyName == "RXNoProtocolBytes")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/RXNoProtocolBytes";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/RXNoProtocolBytes";
     }
     else if (propertyName == "RuntimeError")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RuntimeError";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RuntimeError";
     }
     else if (propertyName == "TrainingError")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/TrainingError";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/TrainingError";
     }
     else if (propertyName == "ReplayCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/ReplayCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/ReplayCount";
     }
     else if (propertyName == "RecoveryCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RecoveryCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RecoveryCount";
     }
     else if (propertyName == "FlitCRCCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/FlitCRCCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/FlitCRCCount";
     }
     else if (propertyName == "DataCRCCount")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/DataCRCCount";
+            "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/DataCRCCount";
     }
     return propURI;
 }

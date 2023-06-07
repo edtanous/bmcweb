@@ -302,7 +302,7 @@ inline void requestHostInterfacesRoutes(App& app)
                 asyncResp->res.jsonValue["Name"] = "Host Interface";
                 asyncResp->res.jsonValue["Description"] =
                     "Management Host Interface";
-                asyncResp->res.jsonValue["Id"] = "Host Interface " + ifaceId;
+                asyncResp->res.jsonValue["Id"] = ifaceId;
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Managers/" PLATFORMBMCID "/HostInterfaces/" +
                     ifaceId;
