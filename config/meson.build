@@ -35,6 +35,7 @@ conf_data.set_quoted('PLATFORM_GPU_NAME_PREFIX', get_option('platform-gpu-name-p
 conf_data.set_quoted('PLATFORM_CHASSIS_NAME', get_option('platform-chassis-name'))
 conf_data.set_quoted('FW_MCTP_MAPPING_JSON', join_paths(package_datadir, 'fw_mctp_mapping.json'))
 conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
+conf_data.set('COMPUTER_SYSTEM_INVENTORY_PATH', get_option('computer-system-inventory-path'))
 conf_data.set('OTP_PROVISIONING_STATUS_FILE_PATH', get_option('otp-provisioning-status-file-path'))
 conf_data.set('BMCWEB_LOG_LEVEL', get_option('bmcweb-logging-log-level'))
 conf_data.set('MIN_UCASE_CHRS', get_option('min-ucase-characters'))

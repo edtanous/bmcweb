@@ -367,6 +367,7 @@ option('manufacturing-test-timeout', type : 'integer', min : 60, max : 3600, val
 option('host-iface', type : 'feature', value : 'disabled', description : 'Enable Host Interface schema.')
 option ('host-iface-channel', type : 'string', value : 'usb0', description : 'Host interface channel name')
 
+option ('computer-system-inventory-path', type : 'string', value : '/xyz/openbmc_project/inventory', description : 'Path to search object under inventory')
 option('bios', type: 'feature', value : 'enabled', description : 'Enable the BIOS Redfish API.')
 option('dpu-bios', type: 'feature', value : 'disabled', description : 'Enable the DPU BIOS Redfish API.')
 option('ipmi', type : 'feature', value : 'enabled', description : 'Enable/disable ipmi feature.')

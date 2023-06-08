@@ -88,6 +88,7 @@ void setBootOption(const std::string& id,
                 if (ec)
                 {
                     holdTask->ec = ec;
+                    BMCWEB_LOG_DEBUG << " setBootOption D-BUS error";
                 }
             },
             "xyz.openbmc_project.BIOSConfigManager", path,
@@ -127,8 +128,7 @@ inline void handleBootOptionCollectionPost(
     }
 
     privilege_utils::isBiosPrivilege(req, [req, aResp](
-                                              const boost::system::error_code
-                                                  ec,
+                                              const boost::system::error_code ec,
                                               const bool isBios) {
         if (ec || isBios == false)
         {
@@ -165,11 +165,11 @@ inline void handleBootOptionCollectionPost(
         {
             properties.push_back({"Description", *optBootOptionDescription});
         }
-        if (optBootOptionDescription)
+        if (optBootOptionDisplayName)
         {
             properties.push_back({"DisplayName", *optBootOptionDisplayName});
         }
-        if (optBootOptionDescription)
+        if (optBootOptionUefiDevicePath)
         {
             properties.push_back(
                 {"UefiDevicePath", *optBootOptionUefiDevicePath});

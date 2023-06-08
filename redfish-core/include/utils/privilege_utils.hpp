@@ -20,7 +20,7 @@ template <typename Callback>
 inline void isRedfishHostInterfaceUser(const std::string& username,
                                        Callback&& callback)
 {
-    BMCWEB_LOG_DEBUG << "isRedfishHostInterfaceUser enter";
+    BMCWEB_LOG_DEBUG << "isRedfishHostInterfaceUser enter " << username;
 
     auto respHandler =
         [callback{std::forward<Callback>(callback)}](

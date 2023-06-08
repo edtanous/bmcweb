@@ -40,6 +40,10 @@
 
 namespace redfish
 {
+const std::string& entityMangerService = "xyz.openbmc_project.EntityManager";
+const std::string& card1Path = "/xyz/openbmc_project/inventory/system/board/Card1";
+const std::string& settingsService = "xyz.openbmc_project.Settings";
+const std::string& host0BootPath = "/xyz/openbmc_project/control/host0/boot";
 
 /**
  * @brief Updates the Functional State of DIMMs
@@ -547,7 +551,7 @@ inline void
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-        "/xyz/openbmc_project/inventory", int32_t(0),
+        computerSystemInventoryPath, int32_t(0),
         std::array<const char*, 5>{
             "xyz.openbmc_project.Inventory.Decorator.Asset",
             "xyz.openbmc_project.Inventory.Item.Cpu",
@@ -659,6 +663,36 @@ inline std::string dbusToRfBootSource(const std::string& dbusSource)
         "xyz.openbmc_project.Control.Boot.Source.Sources.RemovableMedia")
     {
         return "Usb";
+    }
+    if (dbusSource ==
+        "xyz.openbmc_project.Control.Boot.Source.Sources.RemovableMedia")
+    {
+        return "Usb";
+    }
+    if (dbusSource ==
+        "xyz.openbmc_project.Control.Boot.Source.Sources.RemovableMedia")
+    {
+        return "Usb";
+    }
+    if (dbusSource ==
+        "xyz.openbmc_project.Control.Boot.Source.Sources.HTTP")
+    {
+        return "UefiHttp";
+    }
+    if (dbusSource ==
+        "xyz.openbmc_project.Control.Boot.Source.Sources.UefiShell")
+    {
+        return "UefiShell";
+    }
+    if (dbusSource ==
+        "xyz.openbmc_project.Control.Boot.Source.Sources.UefiTarget")
+    {
+        return "UefiTarget";
+    }
+    if (dbusSource ==
+        "xyz.openbmc_project.Control.Boot.Source.Sources.UefiBootNext")
+    {
+        return "UefiBootNext";
     }
     return "";
 }
@@ -824,7 +858,7 @@ inline std::string
  *
  * @return Integer error code.
  */
-inline int assignBootParameters(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+inline int  assignBootParameters(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 const std::string& rfSource,
                                 std::string& bootSource, std::string& bootMode)
 {
@@ -860,6 +894,26 @@ inline int assignBootParameters(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     {
         bootSource =
             "xyz.openbmc_project.Control.Boot.Source.Sources.RemovableMedia";
+    }
+    else if (rfSource == "UefiHttp")
+    {
+        bootSource =
+            "xyz.openbmc_project.Control.Boot.Source.Sources.HTTP";
+    }
+    else if (rfSource == "UefiShell")
+    {
+        bootSource =
+            "xyz.openbmc_project.Control.Boot.Source.Sources.UefiShell";
+    }
+    else if (rfSource == "UefiTarget")
+    {
+        bootSource =
+            "xyz.openbmc_project.Control.Boot.Source.Sources.UefiTarget";
+    }
+    else if (rfSource == "UefiBootNext")
+    {
+        bootSource =
+            "xyz.openbmc_project.Control.Boot.Source.Sources.UefiBootNext";
     }
     else
     {
@@ -1023,12 +1077,7 @@ inline void getBootOverrideMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             }
 
             BMCWEB_LOG_DEBUG << "Boot mode: " << bootModeStr;
-
-            aResp->res
-                .jsonValue["Boot"]
-                          ["BootSourceOverrideTarget@Redfish.AllowableValues"] =
-                {"None", "Pxe", "Hdd", "Cd", "Diags", "BiosSetup", "Usb"};
-
+            
             if (bootModeStr !=
                 "xyz.openbmc_project.Control.Boot.Mode.Modes.Regular")
             {
@@ -1726,6 +1775,276 @@ inline void setBootModeOrSource(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Boot.Mode", "BootMode",
         dbus::utility::DbusVariantType(bootModeStr));
+}
+
+/**
+ * @brief Populate objects from D-Bus object of entity-manager
+ *
+ * @param[in] aResp  - Shared pointer for completing asynchronous calls.
+ *
+ * @return None.
+ */
+void populateFromEntityManger(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec,
+        const std::vector<std::pair<std::string, std::variant<std::string>>>&
+        propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Populate from entity manager ";
+                return;
+            }
+            for (auto& property : propertiesList)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "SKU")
+                {
+                    const std::string* sku = std::get_if<std::string>(&property.second);
+                    if (sku != nullptr)
+                    {
+                        aResp->res.jsonValue["SKU"] = *sku;
+                    }
+                }
+                if (propertyName == "SerialNumber")
+                {
+                    const std::string* serialNumber = std::get_if<std::string>(&property.second);
+                    if (serialNumber != nullptr)
+                    {
+                        aResp->res.jsonValue["SerialNumber"] = *serialNumber;
+                    }
+                }
+            }
+        },
+        entityMangerService, card1Path, 
+        "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Decorator.Asset");
+        crow::connections::systemBus->async_method_call(
+            [aResp](
+            const boost::system::error_code ec,
+            const std::variant<std::string>& uuid) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                        "Trying to get UUID";
+                    return;
+                }
+                aResp->res.jsonValue["UUID"] = *std::get_if<std::string>(&uuid);
+        },
+        entityMangerService, card1Path, 
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Common.UUID", "UUID");
+}
+
+/**
+ * @brief Set EntityManager Property - interface or proprty may not exist
+ *
+ * @param[in] aResp     Shared pointer for completing asynchronous calls.
+ * @param[in] interface     interface for set call.
+ * @param[in] property     property for set call.
+ * @param[in] value     value to set.
+ *
+ * @return None.
+ */
+void setEntityMangerProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp, 
+                                    const std::string& interface,
+                                    const std::string& property,
+                                    std::string& value)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, property](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Set entity manager property " + property;
+                return;
+            }
+        },
+        entityMangerService, card1Path, "org.freedesktop.DBus.Properties",
+        "Set",  interface, property,
+        dbus::utility::DbusVariantType(value));
+}
+
+/**
+ * @brief Get UEFI property from settings service
+ *
+ * @param[in] aResp  - Shared pointer for completing asynchronous calls.
+ *
+ * @param[in] addSourcesList  - add to schema target allowable sources list.
+ *
+ * @return None.
+ */
+void getUefiPropertySettingsHost(const std::shared_ptr<bmcweb::AsyncResp>& aResp, 
+                                bool addSourcesList = false)
+{
+    if (addSourcesList)
+    {
+        aResp->res.jsonValue["Boot"]["BootSourceOverrideTarget@Redfish.AllowableValues"] =
+        {"None", "Pxe", "Hdd", "Cd", "Diags", "BiosSetup", "Usb"};
+    }
+
+    crow::connections::systemBus->async_method_call([aResp, addSourcesList](
+            const boost::system::error_code ec,
+            const std::variant<std::vector<std::string>>& sourcesListVariant){
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                            "Get source list ";
+                        return;
+                    }
+                    std::vector<std::string> sourcesList = std::get<std::vector<std::string>>(sourcesListVariant);
+                    if (!sourcesList.empty())
+                    {
+                        bool isIncludeUefiTarget = false;
+                        bool isIncludeUefiBootNext = false;
+                        bool isIncludeUefiHttp = false;
+                        for (const auto& source : sourcesList) 
+                        {
+                            if (source == "UefiTarget")
+                            {
+                                isIncludeUefiTarget = true;
+                            }
+                            else if (source == "UefiBootNext")
+                            {
+                                isIncludeUefiBootNext = true;
+                            }
+                            else if (source == "UefiHttp")
+                            {
+                                isIncludeUefiHttp = true;
+                            }
+                        }
+                        if (addSourcesList)
+                        {
+                            aResp->res.jsonValue["Boot"]
+                                        ["BootSourceOverrideTarget@Redfish.AllowableValues"] =
+                                        sourcesList;
+                        }
+                        crow::connections::systemBus->async_method_call(
+                        [aResp, isIncludeUefiTarget, isIncludeUefiBootNext,isIncludeUefiHttp](
+                            const boost::system::error_code ec,
+                            const std::vector<std::pair<std::string, std::variant<std::string>>>&
+                                propertiesList) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                                    "Populate from Settings service ";
+                                return;
+                            }
+                            for (auto& property : propertiesList)
+                            {
+                                const std::string& propertyName = property.first;
+                                if (propertyName == "HttpPath" && isIncludeUefiHttp)
+                                {
+                                    const std::string* httpPath = std::get_if<std::string>(&property.second);
+                                    if (httpPath != nullptr)
+                                    {
+                                        aResp->res.jsonValue["Boot"]["HttpBootUri"] = *httpPath;
+                                    }
+                                }
+                                else if (propertyName == "BootNext" && isIncludeUefiBootNext)
+                                {
+                                    const std::string* bootNext = std::get_if<std::string>(&property.second);
+                                    if (bootNext != nullptr)
+                                    {
+                                        aResp->res.jsonValue["Boot"]["BootNext"] = *bootNext;
+                                    }   
+                                }
+                                else if (propertyName == "Target" && isIncludeUefiTarget)
+                                {
+                                    const std::string* uefiTrget = std::get_if<std::string>(&property.second);
+                                    if (uefiTrget != nullptr)
+                                    {
+                                        aResp->res.jsonValue["Boot"]["UefiTargetBootSourceOverride"] = *uefiTrget;
+                                    }
+                                }
+                            }
+                        },
+                        settingsService, host0BootPath, 
+                        "org.freedesktop.DBus.Properties", "GetAll",
+                        "xyz.openbmc_project.Control.Boot.UEFI");
+                    }
+                },
+        settingsService, host0BootPath, 
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Control.Boot.SourcesList", "SourcesList");
+}
+
+
+/**
+ * @brief Set D-BUS Property - interface or proprty may not exist
+ *
+ * @param[in] aResp     Shared pointer for completing asynchronous calls.
+ * @param[in] service       D-BUS service.
+ * @param[in] path          D-BUS path.
+ * @param[in] interface     D-BUS interface.
+ * @param[in] property      D-BUS property.
+ * @param[in] value         D-BUS value to be set.
+ *
+ * @return None.
+ */
+template <typename T>
+void setDbusProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                     const std::string& service, 
+                     const std::string& path, 
+                     const std::string& interface,
+                     const std::string& property,
+                     T& value)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, property, value, path, service, interface](
+        const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                    "Set service " + service + " path " + path +
+                                    " interface:" + interface + " property: "  + property +
+                                    " may not exist";
+                return;
+            }
+        },
+        service, path, "org.freedesktop.DBus.Properties",
+        "Set",  interface, property,
+        dbus::utility::DbusVariantType(value));
+}
+
+/**
+ * @brief Set Settings Property - interface or proprty may not exist
+ *
+ * @param[in] aResp  - Shared pointer for completing asynchronous calls.
+ * @param[in] interface     D-BUS interface.
+ * @param[in] property      D-BUS property.
+ * @param[in] value         D-BUS value to be set.
+ *
+ * @return None.
+ */
+template <typename T>
+void setSettingsHostProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp, 
+                                const std::string& interface,
+                                const std::string& property,
+                                T& value)
+{
+    setDbusProperty(aResp, settingsService, host0BootPath, interface, property, value);
+}
+
+
+/**
+ * @brief Set EntityManager Property - interface or proprty may not exist
+ *
+ * @param[in] aResp     Shared pointer for completing asynchronous calls.
+ * @param[in] interface     D-BUS interface.
+ * @param[in] property      D-BUS property.
+ * @param[in] value         D-BUS value to be set.
+ *
+ * @return None.
+ */
+template <typename T>
+void setEntityMangerProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp, 
+                                    const std::string& interface,
+                                    const std::string& property,
+                                    T& value)
+{
+    setDbusProperty(aResp, entityMangerService, card1Path, interface, property, value);
 }
 
 /**
@@ -3230,6 +3549,8 @@ inline void handleComputerSystemSettingsGet(
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings";
 
     getBootOrder(asyncResp, true);
+    getBootProperties(asyncResp);
+    getUefiPropertySettingsHost(asyncResp);
 }
 
 inline void handleComputerSystemSettingsPatch(
@@ -3242,9 +3563,22 @@ inline void handleComputerSystemSettingsPatch(
     }
 
     std::optional<std::vector<std::string>> bootOrder;
+    std::optional<std::string> bootEnable;
+    std::optional<std::string> bootType;
+    std::optional<std::string> bootSource;
+    std::optional<std::string> uefiTargetBootSourceOverride;
+    std::optional<std::string> bootNext;
+    std::optional<std::string> httpBootUri;
     if (!json_util::readJsonPatch(req, asyncResp->res, "Boot/BootOrder",
-                                  bootOrder))
+                                  bootOrder,
+                                  "Boot/UefiTargetBootSourceOverride", uefiTargetBootSourceOverride,
+                                  "Boot/BootSourceOverrideTarget", bootSource,
+                                  "Boot/BootSourceOverrideMode", bootType,
+                                  "Boot/BootSourceOverrideEnabled", bootEnable,
+                                  "Boot/BootNext", bootNext,
+                                  "Boot/HttpBootUri", httpBootUri))
     {
+        BMCWEB_LOG_DEBUG << "handleComputerSystemSettingsPatch readJsonPatch error";
         return;
     }
 
@@ -3253,6 +3587,25 @@ inline void handleComputerSystemSettingsPatch(
     if (bootOrder)
     {
         setBootOrder(asyncResp, req, *bootOrder, true);
+    }
+    if (bootSource || bootType || bootEnable)
+    {
+        setBootProperties(asyncResp, bootSource, bootType, bootEnable);
+    }
+    if (uefiTargetBootSourceOverride)
+    {
+        setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
+                                "Target", *uefiTargetBootSourceOverride);
+    }
+    if (bootNext)
+    {
+        setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
+                                "BootNext", *bootNext);
+    }
+    if (httpBootUri)
+    {
+        setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
+                                "HttpPath", *httpBootUri);
     }
 }
 
@@ -3427,6 +3780,10 @@ inline void requestRoutesSystems(App& app)
 #endif
             getPowerMode(asyncResp);
             getIdlePowerSaver(asyncResp);
+			populateFromEntityManger(asyncResp);
+            getUefiPropertySettingsHost(asyncResp, true);
+            asyncResp->res.jsonValue["Boot"]["BootOrderPropertySelection"] = "BootOrder";
+            asyncResp->res.jsonValue["Boot"]["BootSourceOverrideEnabled@Redfish.AllowableValues"] = {"Once", "Continuous", "Disabled"};
         });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/")
@@ -3470,7 +3827,16 @@ inline void requestRoutesSystems(App& app)
             std::optional<uint8_t> ipsExitUtil;
             std::optional<uint64_t> ipsExitTime;
             std::optional<std::vector<std::string>> bootOrder;
-
+            std::optional<std::string> biosVersion;
+            std::optional<std::string> sku;
+            std::optional<std::string> uuid;
+            std::optional<std::string> serialNumber;
+            std::optional<std::string> uefiTargetBootSourceOverride;
+            std::optional<std::vector<std::string>> bootSourceOverrideEnabledAllowableValues;
+            std::optional<std::vector<std::string>> bootSourceOverrideTargetAllowableValues;
+            std::optional<std::string> bootNext;
+            std::optional<std::string> bootOrderPropertySelection;
+            std::optional<std::string> httpBootUri;
             // clang-format off
                 if (!json_util::readJsonPatch(
                         req, asyncResp->res,
@@ -3493,7 +3859,17 @@ inline void requestRoutesSystems(App& app)
                         "IdlePowerSaver/EnterUtilizationPercent", ipsEnterUtil,
                         "IdlePowerSaver/EnterDwellTimeSeconds", ipsEnterTime,
                         "IdlePowerSaver/ExitUtilizationPercent", ipsExitUtil,
-                        "IdlePowerSaver/ExitDwellTimeSeconds", ipsExitTime))
+                        "IdlePowerSaver/ExitDwellTimeSeconds", ipsExitTime,
+                        "BiosVersion", biosVersion,
+                        "SKU", sku,
+                        "UUID", uuid,
+                        "SerialNumber", serialNumber,
+                        "Boot/UefiTargetBootSourceOverride",uefiTargetBootSourceOverride,
+                        "Boot/BootSourceOverrideEnabled@Redfish.AllowableValues", bootSourceOverrideEnabledAllowableValues,
+                        "Boot/BootSourceOverrideTarget@Redfish.AllowableValues", bootSourceOverrideTargetAllowableValues,
+                        "Boot/BootNext", bootNext,
+                        "Boot/BootOrderPropertySelection", bootOrderPropertySelection,
+                        "Boot/HttpBootUri", httpBootUri))
                 {
                     return;
                 }
@@ -3511,10 +3887,6 @@ inline void requestRoutesSystems(App& app)
                 setWDTProperties(asyncResp, wdtEnable, wdtTimeOutAction);
             }
 
-            if (bootSource || bootType || bootEnable)
-            {
-                setBootProperties(asyncResp, bootSource, bootType, bootEnable);
-            }
             if (bootAutomaticRetry)
             {
                 setAutomaticRetry(asyncResp, *bootAutomaticRetry);
@@ -3564,7 +3936,57 @@ inline void requestRoutesSystems(App& app)
                 setIdlePowerSaver(asyncResp, ipsEnable, ipsEnterUtil,
                                   ipsEnterTime, ipsExitUtil, ipsExitTime);
             }
-        });
+
+            if (bootSource || bootType || bootEnable)
+            {
+                setBootProperties(asyncResp, bootSource, bootType, bootEnable);
+            }
+
+	        if (bootSourceOverrideTargetAllowableValues || sku || uuid || bootSourceOverrideEnabledAllowableValues 
+                || biosVersion || serialNumber)
+	        {
+	            privilege_utils::isBiosPrivilege(
+	                    req, [asyncResp, sku, uuid, bootSourceOverrideTargetAllowableValues]
+                        (const boost::system::error_code ec, const bool isBios) {
+	                        if (ec || isBios == false)
+	                        {
+	                            messages::propertyNotWritable(asyncResp->res, "AllowableValues");
+	                            return;
+	                        }
+                            if (sku)
+                            {
+                                setEntityMangerProperty(asyncResp, "xyz.openbmc_project.Inventory.Decorator.Asset", "SKU", *sku);
+                            }
+                            if (uuid)
+                            {
+                                setEntityMangerProperty(asyncResp, "xyz.openbmc_project.Common.UUID", "UUID", *uuid);
+                            }
+                            if (bootSourceOverrideTargetAllowableValues)
+                            {
+                                setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.SourcesList", 
+                                                        "SourcesList", *bootSourceOverrideTargetAllowableValues);
+                            }
+	
+	                    });
+	        }
+        
+            if (uefiTargetBootSourceOverride)
+            {
+                setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
+                                        "Target", *uefiTargetBootSourceOverride);
+            }
+            if (bootNext)
+            {
+                setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
+                                        "BootNext", *bootNext);
+            }
+            if (httpBootUri)
+            {
+                setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
+                                        "HttpPath", *httpBootUri);
+            }
+       
+    });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/")
         .privileges(redfish::privileges::getComputerSystem)
