@@ -801,6 +801,227 @@ inline void
         });
 }
 
+inline void setStaticPowerHintByObjPath(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& objPath, double cpuClockFrequency, double workloadFactor,
+    double temperature)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, objPath, cpuClockFrequency, workloadFactor, temperature](
+            const boost::system::error_code errorno,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) {
+            if (errorno)
+            {
+                return;
+            }
+
+            for (const auto& [service, interfaces] : objInfo)
+            {
+
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp,
+                     objPath](const boost::system::error_code errorno) {
+                        if (errorno)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "StaticPowerHint::Estimate failed:"
+                                << errorno;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                    },
+                    service, objPath, "com.nvidia.StaticPowerHint",
+                    "EstimatePower", cpuClockFrequency, workloadFactor,
+                    temperature);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
+        std::array<const char*, 1>{"com.nvidia.StaticPowerHint"});
+}
+
+inline void setStaticPowerHintByChassis(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisObjPath, double cpuClockFrequency,
+    double workloadFactor, double temperature)
+{
+    // get endpoints of chassisId/all_controls
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisObjPath, cpuClockFrequency, workloadFactor,
+         temperature](const boost::system::error_code,
+                      std::variant<std::vector<std::string>>& resp) {
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            for (const auto& objPath : *data)
+            {
+                setStaticPowerHintByObjPath(asyncResp, objPath,
+                                            cpuClockFrequency, workloadFactor,
+                                            temperature);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", chassisObjPath + "/all_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void getStaticPowerHintByObjPath(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& objPath)
+{
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, objPath](
+            const boost::system::error_code errorno,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) {
+            if (errorno)
+            {
+                return;
+            }
+
+            for (const auto& [service, interfaces] : objInfo)
+            {
+
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, objPath](
+                        const boost::system::error_code errorno,
+                        const std::vector<
+                            std::pair<std::string,
+                                      std::variant<double, std::string, bool>>>&
+                            propertiesList) {
+                        if (errorno)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Properties::GetAll failed:" << errorno
+                                << "objPath:" << objPath;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        nlohmann::json& staticPowerHint =
+                            asyncResp->res
+                                .jsonValue["Oem"]["Nvidia"]["StaticPowerHint"];
+                        for (const auto& [propertyName, value] : propertiesList)
+                        {
+                            if (propertyName == "MaxCpuClockFrequency" &&
+                                std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["CpuClockFrequencyHz"]
+                                               ["AllowableMax"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "MinCpuClockFrequency" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["CpuClockFrequencyHz"]
+                                               ["AllowableMin"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "CpuClockFrequency" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["CpuClockFrequencyHz"]
+                                               ["SetPoint"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "MaxTemperature" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["TemperatureCelsius"]
+                                               ["AllowableMax"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "MinTemperature" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["TemperatureCelsius"]
+                                               ["AllowableMin"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "Temperature" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["TemperatureCelsius"]
+                                               ["SetPoint"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "MaxWorkloadFactor" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["WorkloadFactor"]
+                                               ["AllowableMax"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "MinWorkloadFactor" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["WorkloadFactor"]
+                                               ["AllowableMin"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "WorkloadFactor" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["WorkloadFactor"]["SetPoint"] =
+                                    std::get<double>(value);
+                            }
+                            else if (propertyName == "PowerEstimate" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                staticPowerHint["PowerEstimationWatt"]
+                                               ["Reading"] =
+                                                   std::get<double>(value);
+                            }
+                            else if (propertyName == "Valid" &&
+                                     std::holds_alternative<bool>(value))
+                            {
+                                staticPowerHint["PowerEstimationWatt"]
+                                               ["Valid"] =
+                                                   std::get<bool>(value);
+                            }
+                        }
+                    },
+                    service, objPath, "org.freedesktop.DBus.Properties",
+                    "GetAll", "com.nvidia.StaticPowerHint");
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
+        std::array<const char*, 1>{"com.nvidia.StaticPowerHint"});
+}
+
+inline void getStaticPowerHintByChassis(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisObjPath)
+{
+    // get endpoints of chassisId/all_controls
+    crow::connections::systemBus->async_method_call(
+        [asyncResp,
+         chassisObjPath](const boost::system::error_code,
+                         std::variant<std::vector<std::string>>& resp) {
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                return;
+            }
+            for (const auto& objPath : *data)
+            {
+                getStaticPowerHintByObjPath(asyncResp, objPath);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", chassisObjPath + "/all_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& objPath,
                            const std::string& service,
@@ -1320,6 +1541,18 @@ inline void
                             }
                         }
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                        const std::string itemSystemInterface =
+                            "xyz.openbmc_project.Inventory.Item.System";
+
+                        if (std::find(interfaces1.begin(), interfaces1.end(),
+                                      itemSystemInterface) != interfaces1.end())
+                        {
+                            // static power hint
+                            getStaticPowerHintByChassis(asyncResp, path);
+                        }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
                         sdbusplus::asio::getProperty<std::vector<std::string>>(
                             *crow::connections::systemBus,
                             "xyz.openbmc_project.ObjectMapper", path + "/drive",
@@ -1367,6 +1600,10 @@ inline void
     std::optional<nlohmann::json> oemJsonObj;
     std::optional<std::string> partNumber;
     std::optional<std::string> serialNumber;
+
+    std::optional<double> cpuClockFrequency;
+    std::optional<double> workloadFactor;
+    std::optional<double> temperature;
 #endif
     if (param.empty())
     {
@@ -1396,9 +1633,41 @@ inline void
             if (json_util::readJson(*oemJsonObj, asyncResp->res, "Nvidia",
                                     nvidiaJsonObj))
             {
+                std::optional<nlohmann::json> staticPowerHintJsonObj;
                 json_util::readJson(*nvidiaJsonObj, asyncResp->res,
                                     "PartNumber", partNumber, "SerialNumber",
-                                    serialNumber);
+                                    serialNumber, "StaticPowerHint",
+                                    staticPowerHintJsonObj);
+
+                if (staticPowerHintJsonObj)
+                {
+                    std::optional<nlohmann::json> cpuClockFrequencyHzJsonObj;
+                    std::optional<nlohmann::json> temperatureCelsiusJsonObj;
+                    std::optional<nlohmann::json> workloadFactorJsonObj;
+                    json_util::readJson(
+                        *staticPowerHintJsonObj, asyncResp->res,
+                        "CpuClockFrequencyHz", cpuClockFrequencyHzJsonObj,
+                        "TemperatureCelsius", temperatureCelsiusJsonObj,
+                        "WorkloadFactor", workloadFactorJsonObj);
+                    if (cpuClockFrequencyHzJsonObj)
+                    {
+                        json_util::readJson(*cpuClockFrequencyHzJsonObj,
+                                            asyncResp->res, "SetPoint",
+                                            cpuClockFrequency);
+                    }
+                    if (temperatureCelsiusJsonObj)
+                    {
+                        json_util::readJson(*temperatureCelsiusJsonObj,
+                                            asyncResp->res, "SetPoint",
+                                            temperature);
+                    }
+                    if (workloadFactorJsonObj)
+                    {
+                        json_util::readJson(*workloadFactorJsonObj,
+                                            asyncResp->res, "SetPoint",
+                                            workloadFactor);
+                    }
+                }
             }
         }
     }
@@ -1424,7 +1693,8 @@ inline void
     crow::connections::systemBus->async_method_call(
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         [asyncResp, chassisId, locationIndicatorActive, indicatorLed,
-         partNumber, serialNumber](
+         partNumber, serialNumber, cpuClockFrequency, workloadFactor,
+         temperature](
 #else
         [asyncResp, chassisId, locationIndicatorActive, indicatorLed](
 #endif
@@ -1510,6 +1780,33 @@ inline void
                 {
                     setOemBaseboardChassisAssert(asyncResp, path,
                                                  "SerialNumber", *serialNumber);
+                }
+                if (cpuClockFrequency || workloadFactor || temperature)
+                {
+                    if (cpuClockFrequency && workloadFactor && temperature)
+                    {
+                        setStaticPowerHintByChassis(
+                            asyncResp, path, *cpuClockFrequency,
+                            *workloadFactor, *temperature);
+                    }
+                    else
+                    {
+                        if (cpuClockFrequency)
+                        {
+                            messages::propertyMissing(asyncResp->res,
+                                                      "CpuClockFrequencyHz");
+                        }
+                        if (workloadFactor)
+                        {
+                            messages::propertyMissing(asyncResp->res,
+                                                      "WorkloadFactor");
+                        }
+                        if (temperature)
+                        {
+                            messages::propertyMissing(asyncResp->res,
+                                                      "TemperatureCelsius");
+                        }
+                    }
                 }
 #endif
                 return;
