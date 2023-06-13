@@ -2620,98 +2620,130 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 BMCWEB_LOG_ERROR << "Got 0 Connection names";
                                 continue;
                             }
-                            const std::vector<std::string>& interfaces =
-                                connectionNames[0].second;
-                            const std::string acceleratorInterface =
-                                "xyz.openbmc_project.Inventory.Item."
-                                "Accelerator";
-                            if (std::find(interfaces.begin(), interfaces.end(),
-                                          acceleratorInterface) !=
-                                interfaces.end())
-                            {
-                                std::string servName = connectionNames[0].first;
-                                sdbusplus::message::object_path objectPath(
-                                    entityPath);
-                                const std::string& entityLink =
-                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                    "/Processors/" +
-                                    objectPath.filename();
-                                // Get processor PCIe device data
-                                getEndpointData(aResp, entityPath, entityLink,
-                                                servName);
-                                // Get port endpoint data
-                                getEndpointPortData(aResp, objPath, entityPath,
-                                                    fabricId);
-                                // Get zone links
-                                getEndpointZoneData(aResp, objPath, fabricId);
-                            }
-                            const std::string switchInterface =
-                                "xyz.openbmc_project.Inventory.Item.Switch";
 
-                            if (std::find(interfaces.begin(), interfaces.end(),
-                                          switchInterface) != interfaces.end())
-                            {
-                                BMCWEB_LOG_DEBUG << "Item type switch ";
-                                std::string servName = connectionNames[0].first;
+                            for (const auto & connectionName : connectionNames) {
+                                const std::vector<std::string>& interfaces =
+                                connectionName.second;
+                                const std::string acceleratorInterface =
+                                    "xyz.openbmc_project.Inventory.Item."
+                                    "Accelerator";
+                                if (std::find(interfaces.begin(), interfaces.end(),
+                                              acceleratorInterface) !=
+                                    interfaces.end())
+                                {
+                                    std::string servName = connectionName.first;
+                                    sdbusplus::message::object_path objectPath(
+                                        entityPath);
+                                    const std::string& entityLink =
+                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                        "/Processors/" +
+                                        objectPath.filename();
+                                    // Get processor PCIe device data
+                                    getEndpointData(aResp, entityPath, entityLink,
+                                                    servName);
+                                    // Get port endpoint data
+                                    getEndpointPortData(aResp, objPath, entityPath,
+                                                        fabricId);
+                                    // Get zone links
+                                    getEndpointZoneData(aResp, objPath, fabricId);
+                                }
+                                const std::string switchInterface =
+                                    "xyz.openbmc_project.Inventory.Item.Switch";
 
-                                sdbusplus::message::object_path objectPath(
-                                    entityPath);
-                                std::string entityName = objectPath.filename();
-                                // get switch type endpint
-                                crow::connections::systemBus->async_method_call(
-                                    [aResp, objPath, entityPath, entityName,
-                                     servName, fabricId](
-                                        const boost::system::error_code ec,
-                                        std::variant<std::vector<std::string>>&
-                                            resp) {
-                                        if (ec)
-                                        {
-                                            BMCWEB_LOG_ERROR
-                                                << "fabric not found for switch entity";
-                                            return; // no processors identified
-                                                    // for pcieslotpath
-                                        }
+                                if (std::find(interfaces.begin(), interfaces.end(),
+                                              switchInterface) != interfaces.end())
+                                {
+                                    BMCWEB_LOG_DEBUG << "Item type switch ";
+                                    std::string servName = connectionName.first;
 
-                                        std::vector<std::string>* data =
-                                            std::get_if<
-                                                std::vector<std::string>>(
-                                                &resp);
-                                        if (data == nullptr)
-                                        {
-                                            BMCWEB_LOG_ERROR
-                                                << "processor data null for pcieslot ";
-                                            return;
-                                        }
+                                    sdbusplus::message::object_path objectPath(
+                                        entityPath);
+                                    std::string entityName = objectPath.filename();
+                                    // get switch type endpint
+                                    crow::connections::systemBus->async_method_call(
+                                        [aResp, objPath, entityPath, entityName,
+                                         servName, fabricId](
+                                            const boost::system::error_code ec,
+                                            std::variant<std::vector<std::string>>&
+                                                resp) {
+                                            if (ec)
+                                            {
+                                                BMCWEB_LOG_ERROR
+                                                    << "fabric not found for switch entity";
+                                                return; // no processors identified
+                                                        // for pcieslotpath
+                                            }
 
-                                        std::string fabricName;
-                                        for (const std::string& fabricPath :
-                                             *data)
-                                        {
-                                            sdbusplus::message::object_path
-                                                dbusObjPath(fabricPath);
-                                            fabricName = dbusObjPath.filename();
-                                        }
-                                        std::string entityLink =
-                                            "/redfish/v1/Fabrics/";
-                                        entityLink += fabricName;
-                                        entityLink += "/Switches/";
-                                        entityLink += entityName;
-                                        // Get processor/switch PCIe device data
-                                        getEndpointData(aResp, entityPath,
-                                                        entityLink, servName);
-                                        // Get port endpoint data
-                                        getEndpointPortData(aResp, objPath,
-                                                            entityPath,
-                                                            fabricId);
-                                        // Get zone links
-                                        getEndpointZoneData(aResp, objPath,
-                                                            fabricId);
-                                    },
-                                    "xyz.openbmc_project.ObjectMapper",
-                                    entityPath + "/fabrics",
-                                    "org.freedesktop.DBus.Properties", "Get",
-                                    "xyz.openbmc_project.Association",
-                                    "endpoints");
+                                            std::vector<std::string>* data =
+                                                std::get_if<
+                                                    std::vector<std::string>>(
+                                                    &resp);
+                                            if (data == nullptr)
+                                            {
+                                                BMCWEB_LOG_ERROR
+                                                    << "processor data null for pcieslot ";
+                                                return;
+                                            }
+
+                                            std::string fabricName;
+                                            for (const std::string& fabricPath :
+                                                 *data)
+                                            {
+                                                sdbusplus::message::object_path
+                                                    dbusObjPath(fabricPath);
+                                                fabricName = dbusObjPath.filename();
+                                            }
+                                            std::string entityLink =
+                                                "/redfish/v1/Fabrics/";
+                                            entityLink += fabricName;
+                                            entityLink += "/Switches/";
+                                            entityLink += entityName;
+                                            // Get processor/switch PCIe device data
+                                            getEndpointData(aResp, entityPath,
+                                                            entityLink, servName);
+                                            // Get port endpoint data
+                                            getEndpointPortData(aResp, objPath,
+                                                                entityPath,
+                                                                fabricId);
+                                            // Get zone links
+                                            getEndpointZoneData(aResp, objPath,
+                                                                fabricId);
+                                        },
+                                        "xyz.openbmc_project.ObjectMapper",
+                                        entityPath + "/fabrics",
+                                        "org.freedesktop.DBus.Properties", "Get",
+                                        "xyz.openbmc_project.Association",
+                                        "endpoints");
+                                }
+                                const std::string cpuInterface =
+                                "xyz.openbmc_project.Inventory.Item.Cpu";
+                                if (std::find(interfaces.begin(), interfaces.end(),
+                                                cpuInterface) != interfaces.end())
+                                {
+                                    std::string servName = connectionName.first;
+                                    sdbusplus::message::object_path objectPath(
+                                        entityPath);
+                                    const std::string& entityLink =
+                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                        "/Processors/" +
+                                        objectPath.filename();
+                                    //Add EntityLink
+                                    nlohmann::json& connectedEntitiesArray =
+                                    aResp->res.jsonValue["ConnectedEntities"];
+                                    connectedEntitiesArray.push_back(
+                                        {{"EntityType", "Processor"},
+                                        {"EntityLink", {{"@odata.id", entityLink}}}});
+
+                                    // Get port endpoint data
+                                    getEndpointPortData(aResp, objPath, entityPath,
+                                                        fabricId);
+                                    // Get zone links
+                                    getEndpointZoneData(aResp, objPath, fabricId);
+
+                                    // Update processor health
+                                    getProcessorEndpointHealth(aResp, servName,
+                                                                entityPath);
+                                }
                             }
                         }
                     },
