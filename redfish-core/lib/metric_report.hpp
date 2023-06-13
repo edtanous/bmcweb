@@ -507,8 +507,8 @@ inline void getManagedObjectForMetrics(
     metricDefinitionUri += "/";
     metricDefinitionUri += metricId;
 
-    // asyncResp->res.jsonValue["MetricReportDefinition"]["@odata.id"] =
-    //     metricDefinitionUri;
+    asyncResp->res.jsonValue["MetricReportDefinition"]["@odata.id"] =
+         metricDefinitionUri;
     crow::connections::systemBus->async_method_call(
         [asyncResp,
          deviceType](const boost::system::error_code ec,
