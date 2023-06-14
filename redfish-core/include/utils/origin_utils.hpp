@@ -6,8 +6,8 @@
 #pragma once
 
 #include <boost/algorithm/string.hpp>
-#include <utils/registry_utils.hpp>
 #include <dbus_utility.hpp>
+#include <utils/registry_utils.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -130,9 +130,6 @@ static void oocUtilServiceConditions(
             message.replace(argPos, argStr.length(), arg);
         }
     }
-
-    BMCWEB_LOG_DEBUG << "Populating service conditions with ooc " << ooc
-                     << "\n";
     j = {{"Severity", severity},
          {"Timestamp", timestamp},
          {"Message", message},
@@ -141,8 +138,12 @@ static void oocUtilServiceConditions(
     j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
                                  "LogServices/EventLog/Entries/" +
                                  id;
-    j["OriginOfCondition"]["@odata.id"] = ooc;
-
+    if (ooc.size() > 0)
+    {
+        BMCWEB_LOG_DEBUG << "Populating service conditions with ooc " << ooc
+                         << "\n";
+        j["OriginOfCondition"]["@odata.id"] = ooc;
+    }
     if (asyncResp->res.jsonValue.contains("Conditions"))
     {
         asyncResp->res.jsonValue["Conditions"].push_back(j);
@@ -171,16 +172,16 @@ static void oocUtil(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                  severity, id, messageId);
         return;
     }
-
-    if (!asyncResp->res.jsonValue.contains("Members"))
+    if (ooc.size() > 0)
     {
-        asyncResp->res.jsonValue["Links"]["OriginOfCondition"]["@odata.id"] =
-            ooc;
-        return;
+        if (!asyncResp->res.jsonValue.contains("Members"))
+        {
+            asyncResp->res
+                .jsonValue["Links"]["OriginOfCondition"]["@odata.id"] = ooc;
+            return;
+        }
+        logEntry["Links"]["OriginOfCondition"]["@odata.id"] = ooc;
     }
-
-    logEntry["Links"]["OriginOfCondition"]["@odata.id"] = ooc;
-
     return;
 }
 
@@ -196,16 +197,6 @@ inline void convertDbusObjectToOriginOfCondition(
     const std::string& severity = "", const std::string& messageArgs = "",
     const std::string& timestamp = "", const std::string& messageId = "")
 {
-    sdbusplus::message::object_path objPath(path);
-    std::string devName = objPath.filename();
-    if (devName.empty())
-    {
-        BMCWEB_LOG_DEBUG
-            << "Empty OriginOfCondition provided to convertDbusObjectToOriginOfCondition"
-            << "For path: " << path << "\n";
-        return;
-    }
-
     for (auto& it : dBusToRedfishURI)
     {
         if (path.find(it.first) != std::string::npos)
@@ -229,7 +220,8 @@ inline void convertDbusObjectToOriginOfCondition(
             return;
         }
     }
-
+    oocUtil(asyncResp, logEntry, id, std::string(""), severity, messageArgs,
+            timestamp, messageId);
     BMCWEB_LOG_ERROR
         << "No Matching prefix found for OriginOfCondition DBus object Path: "
         << path << "\n";
