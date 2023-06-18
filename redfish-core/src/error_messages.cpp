@@ -1326,11 +1326,16 @@ nlohmann::json success(void)
     return getLog(redfish::registries::base::Index::success, {});
 }
 
-void success(crow::Response& res)
+void success(crow::Response& res, const std::string& resolution)
 {
     // don't set res.result here because success is the default and any
     // error should overwrite the default
-    addMessageToJsonRoot(res.jsonValue, success());
+    nlohmann::json responseMessage = success();
+    if (!resolution.empty())
+    {
+        responseMessage["Resolution"] = resolution;
+    }
+    addMessageToJsonRoot(res.jsonValue, responseMessage);
 }
 
 /**
@@ -1923,11 +1928,16 @@ nlohmann::json resourceErrorsDetectedFormatError(const std::string& arg1,
 
 void resourceErrorsDetectedFormatError(crow::Response& res,
                                        const std::string& arg1,
-                                       const std::string& arg2)
+                                       const std::string& arg2,
+                                       const std::string& resolution)
 {
     res.result(boost::beast::http::status::internal_server_error);
-    addMessageToErrorJson(res.jsonValue,
-                          resourceErrorsDetectedFormatError(arg1, arg2));
+    nlohmann::json responseMessage = resourceErrorsDetectedFormatError(arg1, arg2);
+    if (!resolution.empty())
+    {
+        responseMessage["Resolution"] = resolution;
+    }
+    addMessageToErrorJson(res.jsonValue, responseMessage);
 }
 
 /**

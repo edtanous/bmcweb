@@ -776,7 +776,7 @@ void generalError(crow::Response& res);
  * @returns Message Success formatted to JSON */
 nlohmann::json success();
 
-void success(crow::Response& res);
+void success(crow::Response& res, const std::string& resolution = {});
 
 /**
  * @brief Formats Created message into JSON
@@ -1151,7 +1151,8 @@ nlohmann::json resourceErrorsDetectedFormatError(const std::string& arg1,
 
 void resourceErrorsDetectedFormatError(crow::Response& res,
                                        const std::string& arg1,
-                                       const std::string& arg2);
+                                       const std::string& arg2,
+                                       const std::string& resolution = {});
 
 /**
  * @brief message registry entry for update in progress
