@@ -378,7 +378,7 @@ class Connection :
                     req->getHeaderValue("Accept"), res);
 
                 std::string user = getUser(*req);
-                auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
+                auto asyncResp = std::make_shared<bmcweb::AsyncResp>(std::move(res));
                 BMCWEB_LOG_DEBUG << "Setting completion handler";
                 asyncResp->res.setCompleteRequestHandler(
                     [self(shared_from_this())](crow::Response& thisRes) {
