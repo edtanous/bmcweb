@@ -378,7 +378,8 @@ class Connection :
                     req->getHeaderValue("Accept"), res);
 
                 std::string user = getUser(*req);
-                auto asyncResp = std::make_shared<bmcweb::AsyncResp>(std::move(res));
+                auto asyncResp =
+                    std::make_shared<bmcweb::AsyncResp>(std::move(res));
                 BMCWEB_LOG_DEBUG << "Setting completion handler";
                 asyncResp->res.setCompleteRequestHandler(
                     [self(shared_from_this())](crow::Response& thisRes) {
@@ -787,13 +788,12 @@ class Connection :
         BMCWEB_LOG_DEBUG << this << " timer started";
     }
 
-    /* @brief : This function is used to get the user from the Authorization header
-     * and return the user name
-     * If the header is not present or the header is not in the correct format
-     * then an empty string is returned
-     * The header is expected to be in the format:
-     * Authorization: Basic <base64 encoded user:password>
-     * The user name is extracted from the header and returned
+    /* @brief : This function is used to get the user from the Authorization
+     * header and return the user name If the header is not present or the
+     * header is not in the correct format then an empty string is returned The
+     * header is expected to be in the format: Authorization: Basic <base64
+     * encoded user:password> The user name is extracted from the header and
+     * returned
      * @param[in] req - The request object
      * @return std::string - The user name
      */
