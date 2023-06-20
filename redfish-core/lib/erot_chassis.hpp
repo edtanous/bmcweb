@@ -289,6 +289,22 @@ inline void getEROTChassis(const crow::Request& req,
                     BMCWEB_LOG_ERROR << "Got 0 Connection names";
                     continue;
                 }
+#ifdef BMCWEB_ENABLE_DOT
+                auto& oemActionsJson =
+                    asyncResp->res.jsonValue["Actions"]["Oem"];
+                std::string oemActionsRoute =
+                    "/redfish/v1/Chassis/" + chassisId + "/Actions/Oem/";
+                oemActionsJson["#CAKInstall"]["target"] =
+                    oemActionsRoute + "CAKInstall";
+                oemActionsJson["#CAKLock"]["target"] =
+                    oemActionsRoute + "CAKLock";
+                oemActionsJson["#CAKTest"]["target"] =
+                    oemActionsRoute + "CAKTest";
+                oemActionsJson["#DOTDisable"]["target"] =
+                    oemActionsRoute + "DOTDisable";
+                oemActionsJson["#DOTTokenInstall"]["target"] =
+                    oemActionsRoute + "DOTTokenInstall";
+#endif
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                 auto health = std::make_shared<HealthRollup>(
@@ -489,7 +505,8 @@ inline void
         "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
 
     crow::connections::systemBus->async_method_call(
-        [req, asyncResp, chassisId(std::string(chassisId)), backgroundCopyEnabled,
+        [req, asyncResp, chassisId(std::string(chassisId)),
+         backgroundCopyEnabled,
          inBandEnabled](const boost::system::error_code ec,
                         const crow::openbmc_mapper::GetSubTreeType& subtree) {
             if (ec)
@@ -720,8 +737,9 @@ inline void requestRoutesEROTChassisDOT(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) -> void {
-                std::string cakKey, apFirmwareSignature;
+                std::string cakKey;
                 std::optional<bool> lockDisable;
+                std::optional<std::string> apFirmwareSignature;
                 if (!redfish::json_util::readJsonAction(
                         req, asyncResp->res, "CAKKey", cakKey,
                         "APFirmwareSignature", apFirmwareSignature,
@@ -744,29 +762,36 @@ inline void requestRoutesEROTChassisDOT(App& app)
                     return;
                 }
                 std::string binarySignature;
-                if (!crow::utility::base64Decode(apFirmwareSignature,
-                                                 binarySignature))
+                if (apFirmwareSignature)
                 {
-                    messages::actionParameterValueFormatError(
-                        asyncResp->res, apFirmwareSignature,
-                        "APFirmwareSignature", "CAKInstall");
-                    return;
-                }
-                if (binarySignature.size() !=
-                    (DOT_CAK_INSTALL_DATA_SIZE - DOT_KEY_SIZE - 1))
-                {
-                    messages::propertyValueOutOfRange(
-                        asyncResp->res, std::to_string(binarySignature.size()),
-                        "APFirmwareSignature size");
-                    return;
+                    if (!crow::utility::base64Decode(*apFirmwareSignature,
+                                                     binarySignature))
+                    {
+                        messages::actionParameterValueFormatError(
+                            asyncResp->res, *apFirmwareSignature,
+                            "APFirmwareSignature", "CAKInstall");
+                        return;
+                    }
+                    if (binarySignature.size() !=
+                        (DOT_CAK_INSTALL_DATA_SIZE - DOT_KEY_SIZE - 1))
+                    {
+                        messages::propertyValueOutOfRange(
+                            asyncResp->res,
+                            std::to_string(binarySignature.size()),
+                            "APFirmwareSignature size");
+                        return;
+                    }
                 }
                 std::vector<uint8_t> data;
                 data.reserve(binaryKey.size() + binarySignature.size() + 1);
                 data.insert(data.begin(), binaryKey.begin(), binaryKey.end());
                 // lockDisable is optional and false by default
                 data.emplace_back((lockDisable && *lockDisable) ? 1 : 0);
-                data.insert(data.end(), binarySignature.begin(),
-                            binarySignature.end());
+                if (!binarySignature.empty())
+                {
+                    data.insert(data.end(), binarySignature.begin(),
+                                binarySignature.end());
+                }
                 executeDotCommand(asyncResp, chassisID,
                                   dot::DotMctpVdmUtilCommand::CAKInstall, data);
             });
