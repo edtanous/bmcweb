@@ -518,9 +518,10 @@ inline void
 
         std::string tmpPath = std::string("/redfish/v1/Chassis/");
         std::string dupSensorName = sensorName;
-        std::string chassisName = "HGX_Chassis_0";
+        std::string chassisName = PLATFORMCHASSISNAME;
         std::string fpgaChassiName = PLATFORMDEVICEPREFIX;
         fpgaChassiName += "FPGA_0";
+
         if (chassisId == chassisName)
         {
             // PlatformEnvMetric doesn't contain AltitudePressure sensor
@@ -790,7 +791,7 @@ inline void getPlatformMetricReportDefinition(
     std::vector<std::string> redfishReportActions;
     redfishReportActions.emplace_back("LogToMetricReportsCollection");
     asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
-    getPlatformMetricsProperties(asyncResp, "HGX_Chassis_0");
+    getPlatformMetricsProperties(asyncResp, PLATFORMCHASSISNAME);
 }
 
 // This code is added to form platform independent URIs for the aggregated metric properties
