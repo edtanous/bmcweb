@@ -489,6 +489,7 @@ inline void requestRoutesManagerResetActionInfo(App& app)
                 nlohmann::json::array_t allowableValues;
                 allowableValues.push_back("GracefulRestart");
                 allowableValues.push_back("ForceRestart");
+                allowableValues.push_back("GracefulShutdown");
                 parameter["AllowableValues"] = std::move(allowableValues);
 
                 nlohmann::json::array_t parameters;
