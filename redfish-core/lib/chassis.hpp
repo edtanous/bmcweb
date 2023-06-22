@@ -1596,8 +1596,9 @@ inline void
     nlohmann::json reqJson;
     std::optional<bool> locationIndicatorActive;
     std::optional<std::string> indicatorLed;
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     std::optional<nlohmann::json> oemJsonObj;
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     std::optional<std::string> partNumber;
     std::optional<std::string> serialNumber;
 
@@ -1609,64 +1610,53 @@ inline void
     {
         return;
     }
-    if (!json_util::processJsonFromRequest(asyncResp->res, req, reqJson))
+
+    if (!json_util::readJsonPatch(req, asyncResp->res,
+                                  "LocationIndicatorActive",
+                                  locationIndicatorActive, "IndicatorLED",
+                                  indicatorLed, "Oem", oemJsonObj))
     {
         return;
     }
-    if (reqJson.find("LocationIndicatorActive") != reqJson.end())
-    {
-        json_util::readJsonAction(req, asyncResp->res,
-                                  "LocationIndicatorActive",
-                                  locationIndicatorActive);
-    }
-    if (reqJson.find("IndicatorLED") != reqJson.end())
-    {
-        json_util::readJsonAction(req, asyncResp->res, "IndicatorLED",
-                                  indicatorLed);
-    }
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    if (reqJson.find("Oem") != reqJson.end())
-    {
-        if (json_util::readJsonAction(req, asyncResp->res, "Oem", oemJsonObj))
-        {
-            std::optional<nlohmann::json> nvidiaJsonObj;
-            if (json_util::readJson(*oemJsonObj, asyncResp->res, "Nvidia",
-                                    nvidiaJsonObj))
-            {
-                std::optional<nlohmann::json> staticPowerHintJsonObj;
-                json_util::readJson(*nvidiaJsonObj, asyncResp->res,
-                                    "PartNumber", partNumber, "SerialNumber",
-                                    serialNumber, "StaticPowerHint",
-                                    staticPowerHintJsonObj);
 
-                if (staticPowerHintJsonObj)
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    if (oemJsonObj)
+    {
+        std::optional<nlohmann::json> nvidiaJsonObj;
+        if (json_util::readJson(*oemJsonObj, asyncResp->res, "Nvidia",
+                                nvidiaJsonObj))
+        {
+            std::optional<nlohmann::json> staticPowerHintJsonObj;
+            json_util::readJson(*nvidiaJsonObj, asyncResp->res, "PartNumber",
+                                partNumber, "SerialNumber", serialNumber,
+                                "StaticPowerHint", staticPowerHintJsonObj);
+
+            if (staticPowerHintJsonObj)
+            {
+                std::optional<nlohmann::json> cpuClockFrequencyHzJsonObj;
+                std::optional<nlohmann::json> temperatureCelsiusJsonObj;
+                std::optional<nlohmann::json> workloadFactorJsonObj;
+                json_util::readJson(
+                    *staticPowerHintJsonObj, asyncResp->res,
+                    "CpuClockFrequencyHz", cpuClockFrequencyHzJsonObj,
+                    "TemperatureCelsius", temperatureCelsiusJsonObj,
+                    "WorkloadFactor", workloadFactorJsonObj);
+                if (cpuClockFrequencyHzJsonObj)
                 {
-                    std::optional<nlohmann::json> cpuClockFrequencyHzJsonObj;
-                    std::optional<nlohmann::json> temperatureCelsiusJsonObj;
-                    std::optional<nlohmann::json> workloadFactorJsonObj;
-                    json_util::readJson(
-                        *staticPowerHintJsonObj, asyncResp->res,
-                        "CpuClockFrequencyHz", cpuClockFrequencyHzJsonObj,
-                        "TemperatureCelsius", temperatureCelsiusJsonObj,
-                        "WorkloadFactor", workloadFactorJsonObj);
-                    if (cpuClockFrequencyHzJsonObj)
-                    {
-                        json_util::readJson(*cpuClockFrequencyHzJsonObj,
-                                            asyncResp->res, "SetPoint",
-                                            cpuClockFrequency);
-                    }
-                    if (temperatureCelsiusJsonObj)
-                    {
-                        json_util::readJson(*temperatureCelsiusJsonObj,
-                                            asyncResp->res, "SetPoint",
-                                            temperature);
-                    }
-                    if (workloadFactorJsonObj)
-                    {
-                        json_util::readJson(*workloadFactorJsonObj,
-                                            asyncResp->res, "SetPoint",
-                                            workloadFactor);
-                    }
+                    json_util::readJson(*cpuClockFrequencyHzJsonObj,
+                                        asyncResp->res, "SetPoint",
+                                        cpuClockFrequency);
+                }
+                if (temperatureCelsiusJsonObj)
+                {
+                    json_util::readJson(*temperatureCelsiusJsonObj,
+                                        asyncResp->res, "SetPoint",
+                                        temperature);
+                }
+                if (workloadFactorJsonObj)
+                {
+                    json_util::readJson(*workloadFactorJsonObj, asyncResp->res,
+                                        "SetPoint", workloadFactor);
                 }
             }
         }
