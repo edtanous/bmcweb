@@ -599,10 +599,17 @@ void deleteDbusSELEntry(std::string& entryID,
 }
 
 inline void parseDumpEntryFromDbusObject(
-    const dbus::utility::ManagedObjectType::value_type& object,
-    std::string& dumpStatus, uint64_t& size, uint64_t& timestampUs,
-    std::string& faultLogDiagnosticDataType,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const dbus::utility::ManagedObjectType::value_type &object,
+    std::string &dumpStatus, uint64_t &size, uint64_t &timestampUs,
+    std::string &faultLogDiagnosticDataType,
+    std::string &sectionType, std::string &fruid, std::string &severity,
+    std::string &nvipSignature, std::string &nvSeverity,
+    std::string &nvSocketNumber, std::string &pcieVendorID,
+    std::string &pcieDeviceID, std::string &pcieClassCode,
+    std::string &pcieFunctionNumber, std::string &pcieDeviceNumber,
+    std::string &pcieSegmentNumber, std::string &pcieDeviceBusNumber,
+    std::string &pcieSecondaryBusNumber, std::string &pcieSlotNumber,
+    const std::shared_ptr<bmcweb::AsyncResp> &asyncResp)
 {
     for (const auto& interfaceMap : object.second)
     {
@@ -684,6 +691,163 @@ inline void parseDumpEntryFromDbusObject(
                 {
                     faultLogDiagnosticDataType = *additionalTypeName;
                 }
+            }
+        }
+        else if (interfaceMap.first == "xyz.openbmc_project.Dump.Entry.CPERDecode")
+        {
+            const std::string *sectionTypePtr = nullptr;
+            const std::string *fruidPtr = nullptr;
+            const std::string *severityPtr = nullptr;
+            const std::string *nvipSignaturePtr = nullptr;
+            const std::string *nvSeverityPtr = nullptr;
+            const std::string *nvSocketNumberPtr = nullptr;
+            const std::string *pcieVendorIDPtr = nullptr;
+            const std::string *pcieDeviceIDPtr = nullptr;
+            const std::string *pcieClassCodePtr = nullptr;
+            const std::string *pcieFunctionNumberPtr = nullptr;
+            const std::string *pcieDeviceNumberPtr = nullptr;
+            const std::string *pcieSegmentNumberPtr = nullptr;
+            const std::string *pcieDeviceBusNumberPtr = nullptr;
+            const std::string *pcieSecondaryBusNumberPtr = nullptr;
+            const std::string *pcieSlotNumberPtr = nullptr;
+
+            for (auto &propertyMap : interfaceMap.second)
+            {
+                if (propertyMap.first == "FRU_ID")
+                {
+                    fruidPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "NV_IPSignature")
+                {
+                    nvipSignaturePtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "NV_Severity")
+                {
+                    nvSeverityPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "NV_Socket_Number")
+                {
+                    nvSocketNumberPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Class_Code")
+                {
+                    pcieClassCodePtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Device_Bus_Number")
+                {
+                    pcieDeviceBusNumberPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Device_ID")
+                {
+                    pcieDeviceIDPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Device_Number")
+                {
+                    pcieDeviceNumberPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Function_Number")
+                {
+                    pcieFunctionNumberPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Secondary_Bus_Number")
+                {
+                    pcieSecondaryBusNumberPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Segment_Number")
+                {
+                    pcieSegmentNumberPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Slot_Number")
+                {
+                    pcieSlotNumberPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "PCIE_Vendor_ID")
+                {
+                    pcieVendorIDPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "Section_Type")
+                {
+                    sectionTypePtr = std::get_if<std::string>(&propertyMap.second);
+                }
+                else if (propertyMap.first == "Severity")
+                {
+                    severityPtr = std::get_if<std::string>(&propertyMap.second);
+                }
+            }
+
+            if (fruidPtr != nullptr)
+            {
+                fruid = *fruidPtr;
+            }
+
+            if (sectionTypePtr != nullptr)
+            {
+                sectionType = *sectionTypePtr;
+            }
+
+            if (severityPtr != nullptr)
+            {
+                severity = *severityPtr;
+            }
+
+            if (nvipSignaturePtr != nullptr)
+            {
+                nvipSignature = *nvipSignaturePtr;
+            }
+
+            if (nvSeverityPtr != nullptr)
+            {
+                nvSeverity = *nvSeverityPtr;
+            }
+
+            if (nvSocketNumberPtr != nullptr)
+            {
+                nvSocketNumber = *nvSocketNumberPtr;
+            }
+
+            if (pcieVendorIDPtr != nullptr)
+            {
+                pcieVendorID = *pcieVendorIDPtr;
+            }
+
+            if (pcieDeviceIDPtr != nullptr)
+            {
+                pcieDeviceID = *pcieDeviceIDPtr;
+            }
+
+            if (pcieClassCodePtr != nullptr)
+            {
+                pcieClassCode = *pcieClassCodePtr;
+            }
+
+            if (pcieFunctionNumberPtr != nullptr)
+            {
+                pcieFunctionNumber = *pcieFunctionNumberPtr;
+            }
+
+            if (pcieDeviceNumberPtr != nullptr)
+            {
+                pcieDeviceNumber = *pcieDeviceNumberPtr;
+            }
+
+            if (pcieSegmentNumberPtr != nullptr)
+            {
+                pcieSegmentNumber = *pcieSegmentNumberPtr;
+            }
+
+            if (pcieDeviceBusNumberPtr != nullptr)
+            {
+                pcieDeviceBusNumber = *pcieDeviceBusNumberPtr;
+            }
+
+            if (pcieSecondaryBusNumberPtr != nullptr)
+            {
+                pcieSecondaryBusNumber = *pcieSecondaryBusNumberPtr;
+            }
+
+            if (pcieSlotNumberPtr != nullptr)
+            {
+                pcieSlotNumber = *pcieSlotNumberPtr;
             }
         }
     }
@@ -778,6 +942,21 @@ inline void
                 std::string dumpStatus;
                 nlohmann::json::object_t thisEntry;
                 std::string faultLogDiagnosticDataType;
+                std::string sectionType;
+                std::string fruid;
+                std::string severity;
+                std::string nvipSignature;
+                std::string nvSeverity;
+                std::string nvSocketNumber;
+                std::string pcieVendorID;
+                std::string pcieDeviceID;
+                std::string pcieClassCode;
+                std::string pcieFunctionNumber;
+                std::string pcieDeviceNumber;
+                std::string pcieSegmentNumber;
+                std::string pcieDeviceBusNumber;
+                std::string pcieSecondaryBusNumber;
+                std::string pcieSlotNumber;
 
                 std::string entryID = object.first.filename();
                 if (entryID.empty())
@@ -787,7 +966,12 @@ inline void
 
                 parseDumpEntryFromDbusObject(
                     object, dumpStatus, size, timestampS,
-                    faultLogDiagnosticDataType, asyncResp);
+                    faultLogDiagnosticDataType,
+                    sectionType, fruid, severity, nvipSignature, nvSeverity,
+                    nvSocketNumber, pcieVendorID, pcieDeviceID, pcieClassCode,
+                    pcieFunctionNumber, pcieDeviceNumber, pcieSegmentNumber,
+                    pcieDeviceBusNumber, pcieSecondaryBusNumber, pcieSlotNumber,
+                    asyncResp);
 
                 if (dumpStatus !=
                         "xyz.openbmc_project.Common.Progress.OperationStatus.Completed" &&
@@ -797,7 +981,7 @@ inline void
                     continue;
                 }
 
-                thisEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+                thisEntry["@odata.type"] = "#LogEntry.v1_15_0.LogEntry";
                 thisEntry["@odata.id"] = entriesPath + entryID;
                 thisEntry["Id"] = entryID;
                 thisEntry["EntryType"] = "Event";
@@ -831,6 +1015,54 @@ inline void
                     thisEntry["AdditionalDataURI"] =
                         entriesPath + entryID + "/attachment";
                     thisEntry["AdditionalDataSizeBytes"] = size;
+                    thisEntry["Severity"] = severity;
+                    // CPER Properties
+                    if (sectionType != "NA") {
+                    thisEntry["CPER"]["Oem"]["SectionType"] = sectionType;
+                    }
+                    if (fruid != "NA") {
+                    thisEntry["CPER"]["Oem"]["FruID"] = fruid;
+                    }
+                    if (severity != "NA") {
+                    thisEntry["CPER"]["Oem"]["Severity"] = severity;
+                    }
+                    if (nvipSignature != "NA") {
+                    thisEntry["CPER"]["Oem"]["NvIpSignature"] = nvipSignature;
+                    }
+                    if (nvSeverity != "NA") {
+                    thisEntry["CPER"]["Oem"]["NvSeverity"] = nvSeverity;
+                    }
+                    if (nvSocketNumber != "NA") {
+                    thisEntry["CPER"]["Oem"]["NvSocketNumber"] = nvSocketNumber;
+                    }
+                    if (pcieVendorID != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieVendorId"] = pcieVendorID;
+                    }
+                    if (pcieDeviceID != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieDeviceId"] = pcieDeviceID;
+                    }
+                    if (pcieClassCode != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieClassCode"] = pcieClassCode;
+                    }
+                    if (pcieFunctionNumber != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieFunctionNumber"] = pcieFunctionNumber;
+                    }
+                    if (pcieDeviceNumber != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieDeviceNumber"] = pcieDeviceNumber;
+                    }
+                    if (pcieSegmentNumber != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieSegmentNumber"] = pcieSegmentNumber;
+                    }
+                    if (pcieDeviceBusNumber != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieDeviceBusNumber"] = pcieDeviceBusNumber;
+                    }
+                    if (pcieSecondaryBusNumber != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieSecondaryBusNumber"] = pcieSecondaryBusNumber;
+                    }
+                    if (pcieSlotNumber != "NA") {
+                    thisEntry["CPER"]["Oem"]["PcieSlotNumber"] = pcieSlotNumber;
+                    }
+
                 }
                 entriesArray.push_back(std::move(thisEntry));
             }
@@ -881,10 +1113,30 @@ inline void
                 uint64_t size = 0;
                 std::string dumpStatus;
                 std::string faultLogDiagnosticDataType;
+                std::string sectionType;
+                std::string fruid;
+                std::string severity;
+                std::string nvipSignature;
+                std::string nvSeverity;
+                std::string nvSocketNumber;
+                std::string pcieVendorID;
+                std::string pcieDeviceID;
+                std::string pcieClassCode;
+                std::string pcieFunctionNumber;
+                std::string pcieDeviceNumber;
+                std::string pcieSegmentNumber;
+                std::string pcieDeviceBusNumber;
+                std::string pcieSecondaryBusNumber;
+                std::string pcieSlotNumber;
 
                 parseDumpEntryFromDbusObject(
                     objectPath, dumpStatus, size, timestampUs,
-                    faultLogDiagnosticDataType, asyncResp);
+                    faultLogDiagnosticDataType,
+                    sectionType, fruid, severity, nvipSignature, nvSeverity,
+                    nvSocketNumber, pcieVendorID, pcieDeviceID, pcieClassCode,
+                    pcieFunctionNumber, pcieDeviceNumber, pcieSegmentNumber,
+                    pcieDeviceBusNumber, pcieSecondaryBusNumber, pcieSlotNumber,
+                    asyncResp);
 
                 if (dumpStatus !=
                         "xyz.openbmc_project.Common.Progress.OperationStatus.Completed" &&
@@ -898,7 +1150,7 @@ inline void
                 }
 
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogEntry.v1_9_0.LogEntry";
+                    "#LogEntry.v1_15_0.LogEntry";
                 asyncResp->res.jsonValue["@odata.id"] = entriesPath + entryID;
                 asyncResp->res.jsonValue["Id"] = entryID;
                 asyncResp->res.jsonValue["EntryType"] = "Event";
@@ -932,6 +1184,52 @@ inline void
                         "/redfish/v1/Systems/" PLATFORMSYSTEMID
                         "/LogServices/FaultLog/Entries/" +
                         entryID + "/attachment";
+                    if (sectionType != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["SectionType"] = sectionType;
+                    }
+                    if (fruid != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["FruID"] = fruid;
+                    }
+                    if (severity != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["Severity"] = severity;
+                    }
+                    if (nvipSignature != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["NvIpSignature"] = nvipSignature;
+                    }
+                    if (nvSeverity != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["NvSeverity"] = nvSeverity;
+                    }
+                    if (nvSocketNumber != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["NvSocketNumber"] = nvSocketNumber;
+                    }
+                    if (pcieVendorID != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieVendorId"] = pcieVendorID;
+                    }
+                    if (pcieDeviceID != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieDeviceId"] = pcieDeviceID;
+                    }
+                    if (pcieClassCode != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieClassCode"] = pcieClassCode;
+                    }
+                    if (pcieFunctionNumber != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieFunctionNumber"] = pcieFunctionNumber;
+                    }
+                    if (pcieDeviceNumber != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieDeviceNumber"] = pcieDeviceNumber;
+                    }
+                    if (pcieSegmentNumber != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieSegmentNumber"] = pcieSegmentNumber;
+                    }
+                    if (pcieDeviceBusNumber != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieDeviceBusNumber"] = pcieDeviceBusNumber;
+                    }
+                    if (pcieSecondaryBusNumber != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieSecondaryBusNumber"] = pcieSecondaryBusNumber;
+                    }
+                    if (pcieSlotNumber != "NA") {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieSlotNumber"] = pcieSlotNumber;
+                    }
+
                 }
             }
 
