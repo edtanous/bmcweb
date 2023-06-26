@@ -1811,7 +1811,7 @@ inline void getPowerBreakThrottleData(
             for (const auto& property : properties)
             {
                 json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                    "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
                 if (property.first == "Value")
                 {
                     const std::string* state =
@@ -1832,6 +1832,7 @@ inline void getPowerBreakThrottleData(
         "xyz.openbmc_project.State.ProcessorPerformance");
 }
 
+
 inline void
     getProcessorPerformanceData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 const std::string& service,
@@ -1851,7 +1852,7 @@ inline void
             for (const auto& property : properties)
             {
                 json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                    "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
                 if (property.first == "Value")
                 {
                     const std::string* state =
@@ -1892,9 +1893,89 @@ inline void
                     }
 
                     json["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                        "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
                     json["Oem"]["Nvidia"]["ThrottleReasons"] =
                         formattedThrottleReasons;
+                }
+                if ((property.first == "PowerLimitThrottleDuration") ||
+                    (property.first == "ThermalLimitThrottleDuration"))
+                {
+                    auto propName = property.first;
+                    const uint64_t* val =
+                        std::get_if<uint64_t>(&property.second);
+                    if (val == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG
+                            << "Get  power/thermal duration property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    std::optional<std::string> duration =
+                        time_utils::toDurationStringFromNano(*val);
+
+                    if (duration)
+                    {
+                        json[propName] = *duration;
+                    }
+                }
+                if ((property.first == "HardwareViolationThrottleDuration") ||
+                    (property.first ==
+                     "GlobalSoftwareViolationThrottleDuration"))
+                {
+                    auto propName = property.first;
+                    const uint64_t* val =
+                        std::get_if<uint64_t>(&property.second);
+                    if (val == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Get  duraiton property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    std::optional<std::string> duration =
+                        time_utils::toDurationStringFromNano(*val);
+
+                    if (duration)
+                    {
+                        json["Oem"]["Nvidia"][propName] = *duration;
+                    }
+                }
+                if ((property.first == "AccumulatedSMUtilizationDuration") ||
+                    (property.first ==
+                     "AccumulatedGPUContextUtilizationDuration"))
+                {
+                    auto propName = property.first;
+                    const uint32_t* val =
+                        std::get_if<uint32_t>(&property.second);
+                    if (val == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Get  acc duraiton property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    std::optional<std::string> duration =
+                        time_utils::toDurationStringFromNano(*val);
+
+                    if (duration)
+                    {
+                        json["Oem"]["Nvidia"][propName] = *duration;
+                    }
+                }
+                if ((property.first == "PCIeTXBytes") ||
+                    (property.first == "PCIeRXBytes"))
+                {
+                    auto propName = property.first;
+                    const uint32_t* val =
+                        std::get_if<uint32_t>(&property.second);
+                    if (val == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG << "Get  pcie bytes property failed";
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    json["Oem"]["Nvidia"][propName] = *val;
                 }
             }
         },
@@ -2003,7 +2084,7 @@ inline void
             for (const auto& property : properties)
             {
                 json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                    "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
                 if (property.first == "Status")
                 {
                     const std::string* state =
@@ -2050,7 +2131,7 @@ inline void getMemorySpareChannelPresenceData(
                 return;
             }
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
             json["Oem"]["Nvidia"]["MemorySpareChannelPresence"] =
                 *memorySpareChannelPresence;
         },
@@ -2084,7 +2165,7 @@ inline void getMemoryPageRetirementCountData(
                 return;
             }
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_0_0.NvidiaProcessorMetrics";
+                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
             json["Oem"]["Nvidia"]["MemoryPageRetirementCount"] =
                 *memoryPageRetirementCount;
         },
@@ -2233,8 +2314,6 @@ inline void getRemoteDebugState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         "xyz.openbmc_project.Association", "endpoints");
 }
 
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
 inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                               const std::string& service,
                               const std::string& objPath,
@@ -2268,16 +2347,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             const double* hmmaUtil = nullptr;
             const double* immaUtil = nullptr;
             const double* integerActivityUtil = nullptr;
-            const uint64_t* globalSwViolationThrotDuration = nullptr;
-            const uint64_t* hardwareViolationThrottleDuration = nullptr;
             const double* pcieRxBandwidthGbps = nullptr;
             const double* pcieTxBandwidthGbps = nullptr;
-            const uint64_t* powerLimitThrottleDuration = nullptr;
-            const uint64_t* thermalLimitThrottleDuration = nullptr;
-            const uint32_t* pcieRXBytes = nullptr;
-            const uint32_t* pcieTXBytes = nullptr;
-            const uint32_t* accumulatedGpuContext = nullptr;
-            const uint32_t* accumulatedSmUtil = nullptr;
             const std::vector<double>* nvdecInstanceUtil = nullptr;
             const std::vector<double>* nvjpgInstanceUtil = nullptr;
 
@@ -2286,27 +2357,18 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 fp16ActivityPercent, "FP32ActivityPercent", fp32ActivityPercent,
                 "FP64ActivityPercent", fp64ActivityPercent,
                 "GraphicsEngineActivityPercent", graphicsEngActivityPercent,
-                "HardwareViolationThrottleDuration",
-                hardwareViolationThrottleDuration, "NVDecUtilizationPercent",
-                nvDecUtilPercent, "NVJpgUtilizationPercent", nvJpgUtilPercent,
-                "NVOfaUtilizationPercent", nvOfaUtilPercent, "PCIeRXBytes",
-                pcieRXBytes, "PCIeRawRxBandwidthGbps", pcieRxBandwidthGbps,
-                "PCIeTXBytes", pcieTXBytes, "PCIeRawTxBandwidthGbps",
-                pcieTxBandwidthGbps, "PowerLimitThrottleDuration",
-                powerLimitThrottleDuration, "SMActivityPercent",
-                smActivityPercent, "SMOccupancyPercent", smOccupancyPercent,
-                "TensorCoreActivityPercent", tensorCoreActivityPercent,
-                "ThermalLimitThrottleDuration", thermalLimitThrottleDuration,
-                "IntergerActivityUtilizationPercent", integerActivityUtil,
-                "DMMAUtilizationPercent", dmmaUtil, "HMMAUtilizationPercent",
-                hmmaUtil, "IMMAUtilizationPercent", immaUtil,
-                "GlobalSoftwareViolationThrottleDuration",
-                globalSwViolationThrotDuration,
-                "AccumulatedSMUtilizationDuration", accumulatedSmUtil,
-                "AccumulatedGPUContextUtilizationDuration",
-                accumulatedGpuContext, "NVDecInstanceUtilizationPercent",
-                nvdecInstanceUtil, "NVJpgInstanceUtilizationPercent",
-                nvjpgInstanceUtil);
+                "NVDecUtilizationPercent", nvDecUtilPercent,
+                "NVJpgUtilizationPercent", nvJpgUtilPercent,
+                "NVOfaUtilizationPercent", nvOfaUtilPercent,
+                "PCIeRawRxBandwidthGbps", pcieRxBandwidthGbps,
+                "PCIeRawTxBandwidthGbps", pcieTxBandwidthGbps,
+                "SMActivityPercent", smActivityPercent, "SMOccupancyPercent",
+                smOccupancyPercent, "TensorCoreActivityPercent",
+                tensorCoreActivityPercent, "IntergerActivityUtilizationPercent",
+                integerActivityUtil, "DMMAUtilizationPercent", dmmaUtil,
+                "HMMAUtilizationPercent", hmmaUtil, "IMMAUtilizationPercent",
+                immaUtil, "NVDecInstanceUtilizationPercent", nvdecInstanceUtil,
+                "NVJpgInstanceUtilizationPercent", nvjpgInstanceUtil);
 
             if (!success)
             {
@@ -2314,7 +2376,6 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 return;
             }
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             if (graphicsEngActivityPercent != nullptr)
             {
                 json["Oem"]["Nvidia"]["GraphicsEngineActivityPercent"] =
@@ -2469,58 +2530,6 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 messages::internalError(aResp->res);
                 return;
             }
-
-            if (pcieTXBytes != nullptr)
-            {
-                json["Oem"]["Nvidia"]["PCIeTXBytes"] = *pcieTXBytes;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for PCIeTXBytes";
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            if (pcieRXBytes != nullptr)
-            {
-                json["Oem"]["Nvidia"]["PCIeRXBytes"] = *pcieRXBytes;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for PCIeRXBytes";
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            if (hardwareViolationThrottleDuration != nullptr)
-            {
-                json["Oem"]["Nvidia"]["HardwareViolationThrottleDuration"] =
-                    *hardwareViolationThrottleDuration;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for HardwareViolationThrottleDuration";
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            if (globalSwViolationThrotDuration != nullptr)
-            {
-                json["Oem"]["Nvidia"]
-                    ["GlobalSoftwareViolationThrottleDuration"] =
-                        *globalSwViolationThrotDuration;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG
-                    << "Null value returned "
-                       "for GlobalSoftwareViolationThrottleDuration";
-                messages::internalError(aResp->res);
-                return;
-            }
             if (integerActivityUtil != nullptr)
             {
                 json["Oem"]["Nvidia"]["IntergerActivityUtilizationPercent"] =
@@ -2566,35 +2575,6 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 messages::internalError(aResp->res);
                 return;
             }
-
-            if (accumulatedGpuContext != nullptr)
-            {
-                json["Oem"]["Nvidia"]
-                    ["AccumulatedGPUContextUtilizationDuration"] =
-                        *accumulatedGpuContext;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG
-                    << "Null value returned "
-                       "for AccumulatedGPUContextUtilizationDuration";
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            if (accumulatedSmUtil != nullptr)
-            {
-                json["Oem"]["Nvidia"]["AccumulatedSMUtilizationDuration"] =
-                    *accumulatedSmUtil;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for AccumulatedSMUtilizationDuration";
-                messages::internalError(aResp->res);
-                return;
-            }
-
             if (nvdecInstanceUtil != nullptr)
             {
                 std::vector<double> nvdecInstanceUtilization{};
@@ -2631,43 +2611,10 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 return;
             }
 
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            if (powerLimitThrottleDuration != nullptr)
-            {
-                std::optional<std::string> duration =
-                    time_utils::toDurationStringFromNano(
-                        *powerLimitThrottleDuration);
-
-                if (duration)
-                {
-                    json["PowerLimitThrottleDuration"] = *duration;
-		}
-            }
-            else
-            {
-                BMCWEB_LOG_ERROR << "Null value returned "
-                                    "for PowerLimitThrottleDuration";
-            }
-
-            if (thermalLimitThrottleDuration != nullptr)
-            {
-                std::optional<std::string> duration =
-                    time_utils::toDurationStringFromNano(
-                        *thermalLimitThrottleDuration);
-
-                if(duration)
-                {
-			json["ThermalLimitThrottleDuration"] = *duration;
-		}
-            }
-            else
-            {
-                BMCWEB_LOG_ERROR << "Null value returned "
-                                    "for ThermalLimitThrottleDuration";
-            }
-
         });
 }
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& processorId,
@@ -4224,14 +4171,15 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                             "com.nvidia.NVLink.NVLinkMetrics");
                     }
 
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    getSensorMetric(aResp, service, path);
                     if (std::find(interfaces.begin(), interfaces.end(),
                                   "com.nvidia.GPMMetrics") != interfaces.end())
                     {
                         getGPMMetricsData(aResp, service, path,
                                           "com.nvidia.GPMMetrics");
                     }
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                    getSensorMetric(aResp, service, path);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getStateSensorMetric(aResp, service, path);
@@ -5573,7 +5521,7 @@ inline void getProcessorPortMetricsData(
                         return;
                     }
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaPortMetrics.v1_0_0.NvidiaPortMetrics";
+                        "#NvidiaPortMetrics.v1_1_0.NvidiaPortMetrics";
                     asyncResp->res
                         .jsonValue["Oem"]["Nvidia"]["RXNoProtocolBytes"] =
                         *value;
