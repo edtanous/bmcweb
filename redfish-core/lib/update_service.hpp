@@ -19,7 +19,10 @@
 
 #include "background_copy.hpp"
 #include "commit_image.hpp"
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 #include "persistentstorage_util.hpp"
+#endif
 
 #include <app.hpp>
 #include <boost/algorithm/string.hpp>
@@ -62,17 +65,6 @@ static std::chrono::time_point<std::chrono::steady_clock> stagedUpdateTimeStamp;
 static std::unique_ptr<boost::asio::steady_timer> fwStageAvailableTimer;
 /* Match signals added on emmc partition service */
 static std::unique_ptr<sdbusplus::bus::match_t> emmcServiceSignalMatch;
-
-/* Exist codes returned by nvidia-emmc partition service after completion.*/
-enum EMMCServiceExitCodes
-{
-    emmcPartitionMounted = 0,
-    emmcNotFound = 1,
-    emmcDisabled = 2,
-    eudaNotProgrammed = 3,
-    eudaProgrammed = 4,
-    eudaProgrammedNotActivated = 5
-};
 #endif
 // Timer for software available
 static std::unique_ptr<boost::asio::steady_timer> fwAvailableTimer;
@@ -3251,6 +3243,81 @@ inline void
 }
 
 /**
+ * @brief handle stage location errors and map to redfish errors
+ *
+ * @param[in] req
+ * @param[in] asyncResp
+ */
+inline void handleStageLocationErrors(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    std::string getCommand = "/sbin/fw_printenv";
+    auto emmcStatusCallback =
+        []([[maybe_unused]] const crow::Request& req,
+           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+           const std::string& stdOut,
+           [[maybe_unused]] const std::string& stdErr,
+           [[maybe_unused]] const boost::system::error_code& ec,
+           [[maybe_unused]] int errorCode) -> void {
+        if (stdOut.find("emmc=enable") != std::string::npos)
+        {
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec,
+                            const std::variant<int32_t>& property) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "DBUS response error getting service status: "
+                            << ec.message();
+                        redfish::messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    const int32_t* serviceStatus =
+                        std::get_if<int32_t>(&property);
+                    if (serviceStatus == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "Invalid service exit status code";
+                        redfish::messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    std::optional<ErrorMapping> errorMapping =
+                        getEMMCErrorMessageFromExitCode(*serviceStatus);
+                    if (errorMapping)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "stage-firmware-package Error Message: "
+                            << (*errorMapping).first;
+                        redfish::messages::resourceErrorsDetectedFormatError(
+                            asyncResp->res,
+                            "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage/stage-firmware-package",
+                            (*errorMapping).first, (*errorMapping).second);
+                    }
+                    else
+                    {
+                        redfish::messages::internalError(asyncResp->res);
+                    }
+                },
+                "org.freedesktop.systemd1",
+                "/org/freedesktop/systemd1/unit/nvidia_2demmc_2dpartition_2eservice",
+                "org.freedesktop.DBus.Properties", "Get",
+                "org.freedesktop.systemd1.Service", "ExecMainStatus");
+        }
+        else
+        {
+            BMCWEB_LOG_INFO << "PersistentStorage is not enabled.";
+            messages::serviceDisabled(
+                asyncResp->res,
+                "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage");
+        }
+        return;
+    };
+    PersistentStorageUtil persistentStorageUtil;
+    persistentStorageUtil.executeEnvCommand(req, asyncResp, getCommand,
+                                            std::move(emmcStatusCallback));
+}
+
+/**
  * @brief POST handler for staging firmware package
  *
  * @param app
@@ -3354,6 +3421,20 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
         stagedUpdateCount += 1;
     }
 
+    bool stageLocationExists =
+        std::filesystem::exists(updateServiceStageLocation);
+
+    if (!stageLocationExists)
+    {
+        if (asyncResp)
+        {
+            BMCWEB_LOG_ERROR << "Stage location does not exist. "
+                             << updateServiceStageLocation;
+            handleStageLocationErrors(req, asyncResp);
+        }
+        return;
+    }
+
     std::error_code spaceInfoError;
     const std::filesystem::space_info spaceInfo =
         std::filesystem::space(updateServiceStageLocation, spaceInfoError);
@@ -3374,21 +3455,6 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
             messages::insufficientStorage(asyncResp->res, resolution);
             return;
         }
-    }
-
-    bool stageLocationExists =
-        std::filesystem::exists(updateServiceStageLocation);
-
-    if (!stageLocationExists)
-    {
-        if (asyncResp)
-        {
-            messages::internalError(asyncResp->res);
-            BMCWEB_LOG_ERROR << "Stage location does not exist. "
-                             << updateServiceStageLocation;
-        }
-
-        return;
     }
 
     stageFirmwarePackage(asyncResp, req);
@@ -4478,15 +4544,43 @@ inline void handleUpdateServiceDeleteFirmwarePackage(
 }
 
 /**
+ * @brief reset emmc variable when enabling emmc service fails
+ *
+ * @param[in] req
+ * @param[in] asyncResp
+ */
+inline void resetEMMCEnvironmentVariable(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    std::string setCommand = "/sbin/fw_setenv emmc";
+    PersistentStorageUtil persistentStorageUtil;
+    auto resetEMMCCallback =
+        []([[maybe_unused]] const crow::Request& req,
+           [[maybe_unused]] const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+           [[maybe_unused]] const std::string& stdOut,
+           [[maybe_unused]] const std::string& stdErr,
+           [[maybe_unused]] const boost::system::error_code& ec,
+           [[maybe_unused]] int errorCode) -> void {
+        BMCWEB_LOG_INFO << "Resetting PersistentStorage env";
+        return;
+    };
+    persistentStorageUtil.executeEnvCommand(req, asyncResp, setCommand,
+                                            std::move(resetEMMCCallback));
+}
+
+/**
  * @brief start emmc partition service and waits for completion
  *
+ * @param[in] req
  * @param[in] asyncResp
  */
 inline void startEMMCPartitionService(
+    const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     std::string serviceUnit = "nvidia-emmc-partition.service";
-    auto emmcServiceSignalCallback = [asyncResp, serviceUnit](
+    auto emmcServiceSignalCallback = [req, asyncResp, serviceUnit](
                                          sdbusplus::message_t& msg) mutable {
         BMCWEB_LOG_DEBUG
             << "Received signal for emmc partition service state change";
@@ -4503,8 +4597,8 @@ inline void startEMMCPartitionService(
                 newStateResult == "dependency")
             {
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec,
-                                const std::variant<int32_t>& property) {
+                    [req, asyncResp](const boost::system::error_code ec,
+                                     const std::variant<int32_t>& property) {
                         if (ec)
                         {
                             BMCWEB_LOG_ERROR
@@ -4516,8 +4610,14 @@ inline void startEMMCPartitionService(
                         }
                         const int32_t* serviceStatus =
                             std::get_if<int32_t>(&property);
+                        if (serviceStatus == nullptr)
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Invalid service exit status code";
+                            redfish::messages::internalError(asyncResp->res);
+                            return;
+                        }
                         if (*serviceStatus == emmcPartitionMounted ||
-                            *serviceStatus == eudaProgrammed ||
                             *serviceStatus == eudaProgrammedNotActivated)
                         {
                             std::string resolution =
@@ -4534,7 +4634,26 @@ inline void startEMMCPartitionService(
                             BMCWEB_LOG_ERROR
                                 << "EMMC Service failed with error: "
                                 << *serviceStatus;
-                            redfish::messages::internalError(asyncResp->res);
+                            std::optional<ErrorMapping> errorMapping =
+                                getEMMCErrorMessageFromExitCode(*serviceStatus);
+                            if (errorMapping)
+                            {
+                                BMCWEB_LOG_ERROR
+                                    << "PersistentStorage.Enable Error Message: "
+                                    << (*errorMapping).first;
+                                redfish::messages::
+                                    resourceErrorsDetectedFormatError(
+                                        asyncResp->res,
+                                        "PersistentStorage.Enable",
+                                        (*errorMapping).first,
+                                        (*errorMapping).second);
+                            }
+                            else
+                            {
+                                redfish::messages::internalError(
+                                    asyncResp->res);
+                            }
+                            resetEMMCEnvironmentVariable(req, asyncResp);
                             emmcServiceSignalMatch = nullptr;
                         }
                     },
@@ -4588,7 +4707,7 @@ inline void enableEMMC(const crow::Request& req,
            [[maybe_unused]] const boost::system::error_code& ec,
            [[maybe_unused]] int errorCode) -> void {
         BMCWEB_LOG_INFO << "PersistentStorage setting env is success";
-        startEMMCPartitionService(asyncResp);
+        startEMMCPartitionService(req, asyncResp);
         return;
     };
     persistentStorageUtil.executeEnvCommand(req, asyncResp, setCommand,
@@ -4625,6 +4744,8 @@ inline void handleUpdateServicePersistentStoragePatch(
                 asyncResp->res, "PersistentStorage.Enable",
                 "Disabling PersistentStorage is not allowed");
             BMCWEB_LOG_ERROR << "Disabling PersistentStorage is not allowed.";
+            messages::propertyValueIncorrect(
+                asyncResp->res, "PersistentStorage.Enable", "false");
         }
         else
         {            
@@ -4640,13 +4761,7 @@ inline void handleUpdateServicePersistentStoragePatch(
                 if (stdOut.find("emmc=enable") != std::string::npos)
                 {
                     BMCWEB_LOG_ERROR << "PersistentStorage already enabled";
-                    std::string resolution =
-                        "PersistentStorage is already enabled. If "
-                        "PesistentStorage is not activated, reset the baseboard"
-                        " to activate the PersistentStorage";
-                    redfish::messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, "PersistentStorage.Enable",
-                        "PersistentStorage already enabled", resolution);
+                    redfish::messages::noOperation(asyncResp->res);
                 }
                 else
                 {
@@ -4662,6 +4777,52 @@ inline void handleUpdateServicePersistentStoragePatch(
     }
     return;
 }
+
+/**
+ * @brief populate Status.State property based on EMMC service exit code
+ * 
+ * @param asyncResp 
+ */
+inline void
+    populateStatusProperty(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec,
+                    const std::variant<int32_t>& property) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "DBUS response error getting service status: "
+                    << ec.message();
+                redfish::messages::internalError(asyncResp->res);
+                return;
+            }
+            const int32_t* serviceStatus = std::get_if<int32_t>(&property);
+            if (serviceStatus == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "Invalid service exit status code";
+                redfish::messages::internalError(asyncResp->res);
+                return;
+            }
+            if (*serviceStatus == emmcPartitionMounted)
+            {
+                asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+            }
+            else if (*serviceStatus == eudaProgrammedNotActivated)
+            {
+                asyncResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
+            }
+            else
+            {
+                asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
+            }
+        },
+        "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1/unit/nvidia_2demmc_2dpartition_2eservice",
+        "org.freedesktop.DBus.Properties", "Get",
+        "org.freedesktop.systemd1.Service", "ExecMainStatus");
+}
+
 /**
  * @brief Register Web Api endpoints for Split Update Firmware Package
  * functionality
@@ -4684,7 +4845,7 @@ inline void requestRoutesSplitUpdateService(App& app)
                 return;
             }
             asyncResp->res.jsonValue["@odata.type"] =
-                "#OcpPersistentStorage.v1_0_0.OcpPersistentStorage";
+                "#OCPPersistentStorage.v1_0_0.OCPPersistentStorage";
             asyncResp->res.jsonValue["@odata.id"] =
                 "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage";
             asyncResp->res.jsonValue["Id"] = "PersistentStorage";
@@ -4697,9 +4858,9 @@ inline void requestRoutesSplitUpdateService(App& app)
                  "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage/FirmwarePackages"}};
             asyncResp->res.jsonValue
                 ["Actions"]
-                ["#OcpPersistentStorage.InitiateFirmwareUpdate"] = {
+                ["#OCPPersistentStorage.InitiateFirmwareUpdate"] = {
                 {"target",
-                 "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage/Actions/OcpPersistentStorage.InitiateFirmwareUpdate"},
+                 "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage/Actions/OCPPersistentStorage.InitiateFirmwareUpdate"},
                 {"@Redfish.ActionInfo",
                  "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage/InitiateFirmwareUpdateActionInfo"}};
             std::string getCommand = "/sbin/fw_printenv";
@@ -4714,16 +4875,15 @@ inline void requestRoutesSplitUpdateService(App& app)
                 if (stdOut.find("emmc=enable") != std::string::npos)
                 {
                     asyncResp->res.jsonValue["Enabled"] = true;
-                    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
                 }
                 else
                 {
                     asyncResp->res.jsonValue["Enabled"] = false;
-                    asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
                 }
             };
             persistentStorageUtil.executeEnvCommand(req, asyncResp, getCommand,
                                                     respCallback);
+            populateStatusProperty(asyncResp);
         });
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage")
         .privileges(redfish::privileges::patchUpdateService)
@@ -4753,7 +4913,7 @@ inline void requestRoutesSplitUpdateService(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage/Actions/OcpPersistentStorage.InitiateFirmwareUpdate")
+        "/redfish/v1/UpdateService/Oem/OCP/PersistentStorage/Actions/OCPPersistentStorage.InitiateFirmwareUpdate")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleUpdateServiceInitiateFirmwarePackagePost, std::ref(app)));

@@ -25,6 +25,64 @@
 
 namespace bp = boost::process;
 
+using ExitCode = int32_t;
+using ErrorMessage = std::string;
+using Resolution = std::string;
+using ErrorMapping = std::pair<ErrorMessage, Resolution>;
+
+/* Exist codes returned by nvidia-emmc partition service after completion.*/
+enum EMMCServiceExitCodes
+{
+    emmcPartitionMounted = 0,
+    emmcInitFail = 1,
+    emmcDisabled = 2,
+    eudaProgramFail = 3,
+    eudaProgrammedNotActivated = 4,
+    emmcPartitionFail = 5,
+    emmcFileSystemFormatFail = 6,
+    emmcMountFail = 7
+};
+
+/* EMMC Service error mapping */
+std::unordered_map<ExitCode, ErrorMapping> emmcServiceErrorMapping = {
+    {emmcInitFail,
+     {"PersistentStorage Initialization Failure",
+      "Reset the baseboard and retry the operation."}},
+    {eudaProgramFail,
+     {"PersistentStorage Configuration Failure", "Retry the operation."}},
+    {eudaProgrammedNotActivated,
+     {"PersistentStorage Enabled but not activated",
+      "Reset the baseboard to activate the PersistentStorage."}},
+    {emmcPartitionFail,
+     {"PersistentStorage Internal Error: Partition Fail",
+      "Reset the baseboard and retry the operation."}},
+    {emmcFileSystemFormatFail,
+     {"PersistentStorage Internal Error: File System Format Failure",
+      "Reset the baseboard and retry the operation."}},
+    {emmcMountFail,
+     {"PersistentStorage Internal Error: Mount Failure",
+      "Reset the baseboard and retry the operation."}},
+};
+
+/**
+ * @brief get EMMC error message from service exit code
+ *
+ * @param[in] exitCode
+ * @return std::optional<ErrorMapping>
+ */
+std::optional<ErrorMapping> getEMMCErrorMessageFromExitCode(ExitCode exitCode)
+{
+    if (emmcServiceErrorMapping.find(exitCode) != emmcServiceErrorMapping.end())
+    {
+        return emmcServiceErrorMapping[exitCode];
+    }
+    else
+    {
+        BMCWEB_LOG_ERROR << "No mapping found for ExitCode: " << exitCode;
+        return std::nullopt;
+    }
+}
+
 using AsyncResponseCallback = std::function<void(
     const crow::Request&, const std::shared_ptr<bmcweb::AsyncResp>&,
     const std::string& /* stdOut*/, const std::string& /* stdErr*/,
