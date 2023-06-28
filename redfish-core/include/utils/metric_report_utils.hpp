@@ -77,6 +77,133 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         {
             suffix = "/Oem/Nvidia/ThrottleReasons";
         }
+        if (metricName == "PowerLimitThrottleDuration")
+        {
+            suffix = "/PowerLimitThrottleDuration";
+        }
+        if (metricName == "ThermalLimitThrottleDuration")
+        {
+            suffix = "/ThermalLimitThrottleDuration";
+        }
+        if (metricName == "AccumulatedSMUtilizationDuration")
+        {
+            suffix = "/Oem/Nvidia/AccumulatedSMUtilizationDuration";
+        }
+        if (metricName == "AccumulatedGPUContextUtilizationDuration")
+        {
+            suffix = "/Oem/Nvidia/AccumulatedGPUContextUtilizationDuration";
+        }
+        if (metricName == "GlobalSoftwareViolationThrottleDuration")
+        {
+            suffix = "/Oem/Nvidia/GlobalSoftwareViolationThrottleDuration";
+        }
+        if (metricName == "HardwareViolationThrottleDuration")
+        {
+            suffix = "/Oem/Nvidia/HardwareViolationThrottleDuration";
+        }
+        if (metricName == "PCIeTXBytes")
+        {
+            suffix = "/Oem/Nvidia/PCIeTXBytes";
+        }
+        if (metricName == "PCIeRXBytes")
+        {
+            suffix = "/Oem/Nvidia/PCIeRXBytes";
+        }
+    }
+    else if (ifaceName == "com.nvidia.NVLink.NVLinkMetrics")
+    {
+        if (metricName == "NVLinkRawTxBandwidthGbps")
+        {
+            suffix = "/Oem/Nvidia/NVLinkRawTxBandwidthGbps";
+        }
+        if (metricName == "NVLinkRawRxBandwidthGbps")
+        {
+            suffix = "/Oem/Nvidia/NVLinkRawRxBandwidthGbps";
+        }
+        if (metricName == "NVLinkDataTxBandwidthGbps")
+        {
+            suffix = "/Oem/Nvidia/NVLinkDataTxBandwidthGbps";
+        }
+        if (metricName == "NVLinkDataRxBandwidthGbps")
+        {
+            suffix = "/Oem/Nvidia/NVLinkDataRxBandwidthGbps";
+        }
+    }
+    else if (ifaceName == "com.nvidia.GPMMetrics")
+    {
+
+        if (metricName == "NVDecInstanceUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/NVDecInstanceUtilizationPercent";
+        }
+        if (metricName == "NVJpgInstanceUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/NVJpgInstanceUtilizationPercent";
+        }
+        if (metricName == "GraphicsEngineActivityPercent")
+        {
+            suffix = "/Oem/Nvidia/GraphicsEngineActivityPercent";
+        }
+        if (metricName == "SMActivityPercent")
+        {
+            suffix = "/Oem/Nvidia/SMActivityPercent";
+        }
+        if (metricName == "SMOccupancyPercent")
+        {
+            suffix = "/Oem/Nvidia/SMOccupancyPercent";
+        }
+        if (metricName == "TensorCoreActivityPercent")
+        {
+            suffix = "/Oem/Nvidia/TensorCoreActivityPercent";
+        }
+        if (metricName == "FP64ActivityPercent")
+        {
+            suffix = "/Oem/Nvidia/FP64ActivityPercent";
+        }
+        if (metricName == "FP32ActivityPercent")
+        {
+            suffix = "/Oem/Nvidia/FP32ActivityPercent";
+        }
+        if (metricName == "FP16ActivityPercent")
+        {
+            suffix = "/Oem/Nvidia/FP16ActivityPercent";
+        }
+        if (metricName == "NVDecUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/NVDecUtilizationPercent";
+        }
+        if (metricName == "NVJpgUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/NVJpgUtilizationPercent";
+        }
+        if (metricName == "NVOfaUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/NVOfaUtilizationPercent";
+        }
+        if (metricName == "PCIeRawTxBandwidthGbps")
+        {
+            suffix = "/Oem/Nvidia/PCIeRawTxBandwidthGbps";
+        }
+        if (metricName == "PCIeRawRxBandwidthGbps")
+        {
+            suffix = "/Oem/Nvidia/PCIeRawRxBandwidthGbps";
+        }
+        if (metricName == "IntergerActivityUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/IntergerActivityUtilizationPercent";
+        }
+        if (metricName == "DMMAUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/DMMAUtilizationPercent";
+        }
+        if (metricName == "HMMAUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/HMMAUtilizationPercent";
+        }
+        if (metricName == "IMMAUtilizationPercent")
+        {
+            suffix = "/Oem/Nvidia/IMMAUtilizationPercent";
+        }
     }
     else if (ifaceName == "xyz.openbmc_project.PCIe.PCIeECC")
     {
@@ -217,6 +344,16 @@ std::string
         metricURI += subDeviceName;
         propSuffix = getPropertySuffix(ifaceName, metricName);
     }
+    else if (deviceType == "ProcessorPortGpmMetrics")
+    {
+        metricURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+        metricURI += "/Processors/";
+        metricURI += deviceName;
+        metricURI += "/Ports/";
+        metricURI += subDeviceName;
+        metricURI += "/Metrics#";
+        propSuffix = getPropertySuffix(ifaceName, metricName);
+    }
     else if (deviceType == "NVSwitchPortMetrics")
     {
        metricURI = "/redfish/v1/Fabrics/" PLATFORMDEVICEPREFIX;
@@ -258,6 +395,14 @@ std::string
             metricURI += "/Processors/";
             metricURI += deviceName;
         }
+        propSuffix = getPropertySuffix(ifaceName, metricName);
+    }
+    else if (deviceType == "ProcessorGpmMetrics")
+    {
+        metricURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+        metricURI += "/Processors/";
+        metricURI += deviceName;
+        metricURI += "/ProcessorMetrics#";
         propSuffix = getPropertySuffix(ifaceName, metricName);
     }
     else if (deviceType == "NVSwitchMetrics")
@@ -387,6 +532,52 @@ std::string translateReading(const std::string& ifaceName,
     }
     return metricValue;
 }
+
+std::string translateThrottleDuration(const std::string& metricName,
+                                      const uint64_t& reading)
+{
+    std::string metricValue;
+    if ((metricName == "PowerLimitThrottleDuration") ||
+        (metricName == "ThermalLimitThrottleDuration") ||
+        (metricName == "HardwareViolationThrottleDuration") ||
+        (metricName == "GlobalSoftwareViolationThrottleDuration"))
+    {
+        std::optional<std::string> duration =
+            redfish::time_utils::toDurationStringFromNano(reading);
+
+        if (duration)
+        {
+            metricValue = *duration;
+        }
+    }
+    else
+    {
+        metricValue = std::to_string(reading);
+    }
+    return metricValue;
+}
+
+std::string translateAccumlatedDuration(const std::string& metricName,
+                                        const uint32_t& reading)
+{
+    std::string metricValue;
+    if ((metricName == "AccumulatedSMUtilizationDuration") ||
+        (metricName == "AccumulatedGPUContextUtilizationDuration"))
+    {
+        auto nanoseconds = static_cast<uint64_t>(reading);
+        std::optional<std::string> duration =
+            redfish::time_utils::toDurationStringFromNano(nanoseconds);
+        if (duration)
+        {
+            metricValue = *duration;
+        }
+    }
+    else
+    {
+        metricValue = std::to_string(reading);
+    }
+    return metricValue;
+}
 void getMetricValue(const std::string& deviceType,
                     const std::string& deviceName,
                     const std::string& subDeviceName,
@@ -423,6 +614,29 @@ void getMetricValue(const std::string& deviceType,
         {
             std::string val = translateReading(ifaceName, metricName, reading);
             thisMetric["MetricValue"] = val;
+            std::string metricProp =
+                generateURI(deviceType, deviceName, subDeviceName, devicePath,
+                            metricName, ifaceName);
+            metricProp += "/";
+            metricProp += std::to_string(i);
+            thisMetric["MetricProperty"] = metricProp;
+            thisMetric["Timestamp"] = redfish::time_utils::getDateTimeUintMs(
+                sensorUpdatetimeSystemClock);
+            resArray.push_back(thisMetric);
+            i++;
+        }
+    }
+    else if (const std::vector<double>* readingArray =
+                 std::get_if<std::vector<double>>(&value))
+    {
+        // This is for the property whose value is of type list and each element
+        // in the list on the redfish is represented with
+        // "PropertyName/<index_of_list_element>". and it always starts with 0
+        int i = 0;
+        for (const double& reading : *readingArray)
+        {
+            // double val = translateReading(ifaceName, metricName, reading);
+            thisMetric["MetricValue"] = std::to_string(reading);
             std::string metricProp =
                 generateURI(deviceType, deviceName, subDeviceName, devicePath,
                             metricName, ifaceName);
@@ -474,13 +688,29 @@ void getMetricValue(const std::string& deviceType,
         }
         else if (const uint32_t* reading = std::get_if<uint32_t>(&value))
         {
-
-            thisMetric["MetricValue"] = std::to_string(*reading);
+            if (ifaceName == "xyz.openbmc_project.State.ProcessorPerformance")
+            {
+                std::string val =
+                    translateAccumlatedDuration(metricName, *reading);
+                thisMetric["MetricValue"] = val;
+            }
+            else
+            {
+                thisMetric["MetricValue"] = std::to_string(*reading);
+            }
         }
         else if (const uint64_t* reading = std::get_if<uint64_t>(&value))
         {
-
-            thisMetric["MetricValue"] = std::to_string(*reading);
+            if (ifaceName == "xyz.openbmc_project.State.ProcessorPerformance")
+            {
+                std::string val =
+                    translateThrottleDuration(metricName, *reading);
+                thisMetric["MetricValue"] = val;
+            }
+            else
+            {
+                thisMetric["MetricValue"] = std::to_string(*reading);
+            }
         }
         else if (const double* reading = std::get_if<double>(&value))
         {

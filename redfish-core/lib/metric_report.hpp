@@ -50,7 +50,7 @@ inline nlohmann::json toMetricValues(const Readings& readings)
 inline bool fillReport(nlohmann::json& json, const std::string& id,
                        const TimestampReadings& timestampReadings)
 {
-    json["@odata.type"] = "#MetricReport.v1_3_0.MetricReport";
+    json["@odata.type"] = "#MetricReport.v1_4_2.MetricReport";
     json["@odata.id"] =
         crow::utility::urlFromPieces("redfish", "v1", "TelemetryService",
                                      "MetricReports", id)
@@ -112,10 +112,23 @@ inline void
                         metricReportUriPath + processorMetricId;
                     addMembers.push_back({{"@odata.id", uripath}});
 
+                    std::string processorGpmMetricId =
+                        PLATFORMDEVICEPREFIX "ProcessorGPMMetrics";
+                    processorGpmMetricId += "_0";
+                    std::string uripathGpm =
+                        metricReportUriPath + processorGpmMetricId;
+                    addMembers.push_back({{"@odata.id", uripathGpm}});
+
                     std::string processorPortMetricId =
                         PLATFORMDEVICEPREFIX "ProcessorPortMetrics";
                     processorPortMetricId += "_0";
                     uripath = metricReportUriPath + processorPortMetricId;
+                    addMembers.push_back({{"@odata.id", uripath}});
+
+                    std::string processorPortGpmMetricId =
+                        PLATFORMDEVICEPREFIX "ProcessorPortGPMMetrics";
+                    processorPortGpmMetricId += "_0";
+                    uripath = metricReportUriPath + processorPortGpmMetricId;
                     addMembers.push_back({{"@odata.id", uripath}});
                 }
                 else if (boost::ends_with(object, "Switches"))
@@ -253,7 +266,7 @@ inline void getPlatforMetricsFromSensorMap(
     const std::string& metricId, const uint64_t& requestTimestamp = 0)
 {
     asyncResp->res.jsonValue["@odata.type"] =
-        "#MetricReport.v1_3_0.MetricReport";
+        "#MetricReport.v1_4_2.MetricReport";
     std::string metricUri = "/redfish/v1/TelemetryService/MetricReports/";
     metricUri += metricId;
     asyncResp->res.jsonValue["@odata.id"] = metricUri;
@@ -320,7 +333,7 @@ inline void
                 continue;
             }
             asyncResp->res.jsonValue["@odata.type"] =
-                "#MetricReport.v1_3_0.MetricReport";
+                "#MetricReport.v1_4_2.MetricReport";
             asyncResp->res.jsonValue["@odata.id"] =
                 "/redfish/v1/TelemetryService/MetricReports/" PLATFORMMETRICSID;
             asyncResp->res.jsonValue["Id"] = PLATFORMMETRICSID;
@@ -353,10 +366,11 @@ inline void getAggregatedDeviceMetrics(
     const dbus::utility::DBusInteracesMap& portInterfacesProperties)
 {
     if (deviceType != "MemoryMetrics" && deviceType != "ProcessorMetrics" &&
-        deviceType != "NVSwitchMetrics")
+        deviceType != "NVSwitchMetrics" && deviceType != "ProcessorGpmMetrics")
     {
         return;
     }
+
     nlohmann::json& resArray = asyncResp->res.jsonValue["MetricValues"];
     auto timestampIterator = std::find_if(
         portInterfacesProperties.begin(), portInterfacesProperties.end(),
@@ -367,6 +381,14 @@ inline void getAggregatedDeviceMetrics(
         {
             std::string ifaceName = std::string(interface.first);
             std::string keyName = getKeyNameonTimeStampIface(ifaceName);
+            // GPM Processor Metrics Hosted on GPM Metrics Inerface
+            if (((deviceType == "ProcessorGpmMetrics") &&
+                 ((keyName != "GPMMetrics") && (keyName != "NVLinkMetrics"))) ||
+                ((deviceType != "ProcessorGpmMetrics") &&
+                 ((keyName == "GPMMetrics") || (keyName == "NVLinkMetrics"))))
+            {
+                continue;
+            }
             std::string subDeviceName = "";
             auto timeStampMap = timestampIterator->second;
             auto timestampPropertiesIterator = std::find_if(
@@ -404,7 +426,8 @@ inline void getAggregatedSubDeviceMetrics(
     const dbus::utility::DBusInteracesMap& portInterfacesProperties)
 {
     if (deviceType != "ProcessorPortMetrics" &&
-        deviceType != "NVSwitchPortMetrics")
+        deviceType != "NVSwitchPortMetrics" &&
+        deviceType != "ProcessorPortGpmMetrics")
     {
         return;
     }
@@ -418,6 +441,16 @@ inline void getAggregatedSubDeviceMetrics(
         {
             std::string ifaceName = std::string(interface.first);
             std::string keyName = getKeyNameonTimeStampIface(ifaceName);
+
+            // GPM Processor Metrics Hosted on GPM Metrics Inerface
+            if (((deviceType == "ProcessorPortGpmMetrics") &&
+                 (keyName != "NVLinkMetrics")) ||
+                ((deviceType != "ProcessorPortGpmMetrics") &&
+                 (keyName == "NVLinkMetrics")))
+            {
+                continue;
+            }
+
             auto timeStampMap = timestampIterator->second;
             auto timestampPropertiesIterator = std::find_if(
                 timeStampMap.begin(), timeStampMap.end(),
@@ -461,9 +494,17 @@ inline void getManagedObjectForMetrics(
     std::string processorMetrics = PLATFORMDEVICEPREFIX "ProcessorMetrics";
     processorMetrics += "_0";
 
+    std::string processorGpmMetrics =
+        PLATFORMDEVICEPREFIX "ProcessorGPMMetrics";
+    processorGpmMetrics += "_0";
+
     std::string processorPortMetrics =
         PLATFORMDEVICEPREFIX "ProcessorPortMetrics";
     processorPortMetrics += "_0";
+
+    std::string processorPortGpmMetrics =
+        PLATFORMDEVICEPREFIX "ProcessorPortGPMMetrics";
+    processorPortGpmMetrics += "_0";
 
     std::string nvswitchMetrics = PLATFORMDEVICEPREFIX "NVSwitchMetrics";
     nvswitchMetrics += "_0";
@@ -492,12 +533,20 @@ inline void getManagedObjectForMetrics(
     {
         deviceType = "NVSwitchMetrics";
     }
+    else if (metricId == processorGpmMetrics && metricfname == "processors")
+    {
+        deviceType = "ProcessorGpmMetrics";
+    }
+    else if (metricId == processorPortGpmMetrics && metricfname == "processors")
+    {
+        deviceType = "ProcessorPortGpmMetrics";
+    }
     else{
         return;
     }
     supportedMetricIds.emplace_back(metricId);
     asyncResp->res.jsonValue["@odata.type"] =
-        "#MetricReport.v1_3_0.MetricReport";
+        "#MetricReport.v1_4_2.MetricReport";
     std::string metricUri = "/redfish/v1/TelemetryService/MetricReports/";
     metricUri += metricId;
     asyncResp->res.jsonValue["@odata.id"] = metricUri;
@@ -521,7 +570,8 @@ inline void getManagedObjectForMetrics(
             }
             if (deviceType == "MemoryMetrics" ||
                 deviceType == "NVSwitchMetrics" ||
-                deviceType == "ProcessorMetrics")
+                deviceType == "ProcessorMetrics" ||
+                deviceType == "ProcessorGpmMetrics")
             {
                 for (const auto& object : objects)
                 {
@@ -540,7 +590,8 @@ inline void getManagedObjectForMetrics(
                 }
             }
             else if (deviceType == "NVSwitchPortMetrics" ||
-                     deviceType == "ProcessorPortMetrics")
+                     deviceType == "ProcessorPortMetrics" ||
+                     deviceType == "ProcessorPortGpmMetrics")
             {
                 for (const auto& object : objects)
                 {

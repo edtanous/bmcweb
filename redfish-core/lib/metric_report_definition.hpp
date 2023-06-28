@@ -36,7 +36,7 @@ inline void
                          const dbus::utility::DBusPropertiesMap& ret)
 {
     asyncResp->res.jsonValue["@odata.type"] =
-        "#MetricReportDefinition.v1_3_0.MetricReportDefinition";
+        "#MetricReportDefinition.v1_4_1.MetricReportDefinition";
     asyncResp->res.jsonValue["@odata.id"] =
         crow::utility::urlFromPieces("redfish", "v1", "TelemetryService",
                                      "MetricReportDefinitions", id)
@@ -416,6 +416,20 @@ inline void requestRoutesMetricReportDefinitionCollection(App& app)
                             uripath =
                                 metricReportDefUriPath + processorPortMetricId;
                             addMembers.push_back({{"@odata.id", uripath}});
+
+                            std::string processorGpmMetricId =
+                                PLATFORMDEVICEPREFIX "ProcessorGPMMetrics";
+                            processorGpmMetricId += "_0";
+                            uripath =
+                                metricReportDefUriPath + processorGpmMetricId;
+                            addMembers.push_back({{"@odata.id", uripath}});
+
+                            std::string processorportGpmMetricId =
+                                PLATFORMDEVICEPREFIX "ProcessorPortGPMMetrics";
+                            processorportGpmMetricId += "_0";
+                            uripath = metricReportDefUriPath +
+                                      processorportGpmMetricId;
+                            addMembers.push_back({{"@odata.id", uripath}});
                         }
                         else if (boost::ends_with(object, "Switches"))
                         {
@@ -772,7 +786,7 @@ inline void getPlatformMetricReportDefinition(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
 {
     asyncResp->res.jsonValue["@odata.type"] =
-        "#MetricReportDefinition.v1_3_0.MetricReportDefinition";
+        "#MetricReportDefinition.v1_4_1.MetricReportDefinition";
     asyncResp->res.jsonValue["@odata.id"] =
         telemetry::metricReportDefinitionUri + std::string("/") + id;
     asyncResp->res.jsonValue["Id"] = id;
@@ -867,6 +881,252 @@ inline std::string getMemoryMetricURIDef(std::string &propertyName)
       
 }
 
+// This code is added to form platform independent URIs for the aggregated
+// metric properties
+inline std::string getProcessorGpmMetricURIDef(std::string& propertyName)
+{
+    std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+
+    if (propertyName == "DMMAUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/DMMAUtilizationPercent";
+    }
+    else if (propertyName == "FP16ActivityPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP16ActivityPercent";
+    }
+    else if (propertyName == "FP32ActivityPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP32ActivityPercent";
+    }
+    else if (propertyName == "FP64ActivityPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP64ActivityPercent";
+    }
+    else if (propertyName == "GraphicsEngineActivityPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/GraphicsEngineActivityPercent";
+    }
+    else if (propertyName == "HMMAUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/HMMAUtilizationPercent";
+    }
+    else if (propertyName == "IMMAUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/IMMAUtilizationPercent";
+    }
+    else if (propertyName == "IntergerActivityUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/IntergerActivityUtilizationPercent";
+    }
+    else if (propertyName == "NVDecUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVDecUtilizationPercent";
+    }
+    else if (propertyName == "NVJpgInstanceUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVJpgInstanceUtilizationPercent";
+    }
+    else if (propertyName == "NVDecInstanceUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVDecInstanceUtilizationPercent";
+    }
+    else if (propertyName == "NVJpgUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVJpgUtilizationPercent";
+    }
+    else if (propertyName == "NVLinkDataTxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkDataTxBandwidthGbps";
+    }
+    else if (propertyName == "NVLinkDataRxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkDataRxBandwidthGbps";
+    }
+    else if (propertyName == "NVLinkRawTxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkRawTxBandwidthGbps";
+    }
+    else if (propertyName == "NVLinkRawRxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkRawRxBandwidthGbps";
+    }
+    else if (propertyName == "NVOfaUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVOfaUtilizationPercent";
+    }
+    else if (propertyName == "PCIeRawTxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/PCIeRawTxBandwidthGbps";
+    }
+    else if (propertyName == "PCIeRawRxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/PCIeRawRxBandwidthGbps";
+    }
+    else if (propertyName == "SMActivityPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/SMActivityPercent";
+    }
+    else if (propertyName == "SMOccupancyPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/SMOccupancyPercent";
+    }
+    else if (propertyName == "TensorCoreActivityPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/TensorCoreActivityPercent";
+    }
+    else if (propertyName == "CapacityUtilizationPercent")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/MemorySummary/MemoryMetrics#/CapacityUtilizationPercent";
+    }
+    return propURI;
+}
+
+// This code is added to form platform independent URIs for the aggregated
+// metric properties
+inline std::string getProcessorPortGpmMetricURIDef(std::string& propertyName)
+{
+    std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    if (propertyName == "NVLinkDataTxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkDataTxBandwidthGbps";
+    }
+    else if (propertyName == "NVLinkDataRxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkDataRxBandwidthGbps";
+    }
+    else if (propertyName == "NVLinkRawTxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkRawTxBandwidthGbps";
+    }
+    else if (propertyName == "NVLinkRawRxBandwidthGbps")
+    {
+        propURI +=
+            "/Processors/GPU_SXM_{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkRawRxBandwidthGbps";
+    }
+    return propURI;
+}
+
+inline void populateGpmMetricProperties(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& deviceType)
+{
+    nlohmann::json metricPropertiesAray = nlohmann::json::array();
+    if (deviceType == "ProcessorGpmMetrics")
+    {
+        std::string propName = "TensorCoreActivityPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "SMOccupancyPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "SMActivityPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "PCIeRawTxBandwidthGbps";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "PCIeRawRxBandwidthGbps";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVOfaUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVLinkRawTxBandwidthGbps";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVLinkRawRxBandwidthGbps";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVLinkDataTxBandwidthGbps";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVLinkDataRxBandwidthGbps";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVJpgUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVJpgInstanceUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVDecInstanceUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "NVDecUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "IntergerActivityUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "IMMAUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "HMMAUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "GraphicsEngineActivityPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "FP64ActivityPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "FP32ActivityPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "FP16ActivityPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+
+        propName = "DMMAUtilizationPercent";
+        metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
+    }
+    else if (deviceType == "ProcessorPortGpmMetrics")
+    {
+        std::string propName = "NVLinkDataTxBandwidthGbps";
+        metricPropertiesAray.push_back(
+            getProcessorPortGpmMetricURIDef(propName));
+
+        propName = "NVLinkDataRxBandwidthGbps";
+        metricPropertiesAray.push_back(
+            getProcessorPortGpmMetricURIDef(propName));
+
+        propName = "NVLinkRawTxBandwidthGbps";
+        metricPropertiesAray.push_back(
+            getProcessorPortGpmMetricURIDef(propName));
+
+        propName = "NVLinkRawRxBandwidthGbps";
+        metricPropertiesAray.push_back(
+            getProcessorPortGpmMetricURIDef(propName));
+    }
+    asyncResp->res.jsonValue["MetricProperties"] = metricPropertiesAray;
+}
+
 inline std::string getProcessorMetricURIDef(std::string &propertyName)
 {
     std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
@@ -947,6 +1207,50 @@ inline std::string getProcessorMetricURIDef(std::string &propertyName)
     {
         propURI +=
             "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/ThrottleReasons";
+    }
+    else if (propertyName == "AccumulatedGPUContextUtilizationDuration")
+    {
+        propURI +=
+            "/Processors/" + gpuPrefix +
+            "{GpuId}/ProcessorMetrics#/Oem/Nvidia/AccumulatedGPUContextUtilizationDuration";
+    }
+    else if (propertyName == "AccumulatedSMUtilizationDuration")
+    {
+        propURI +=
+            "/Processors/" + gpuPrefix +
+            "{GpuId}/ProcessorMetrics#/Oem/Nvidia/AccumulatedSMUtilizationDuration";
+    }
+    else if (propertyName == "PCIeTXBytes")
+    {
+        propURI += "/Processors/" + gpuPrefix +
+                   "{GpuId}/ProcessorMetrics#/Oem/Nvidia/PCIeTXBytes";
+    }
+    else if (propertyName == "PCIeRXBytes")
+    {
+        propURI += "/Processors/" + gpuPrefix +
+                   "{GpuId}/ProcessorMetrics#/Oem/Nvidia/PCIeRXBytes";
+    }
+    else if (propertyName == "PowerLimitThrottleDuration")
+    {
+        propURI += "/Processors/" + gpuPrefix +
+                   "{GpuId}/ProcessorMetrics#/PowerLimitThrottleDuration";
+    }
+    else if (propertyName == "ThermalLimitThrottleDuration")
+    {
+        propURI += "/Processors/" + gpuPrefix +
+                   "{GpuId}/ProcessorMetrics#/ThermalLimitThrottleDuration";
+    }
+    else if (propertyName == "HardwareViolationThrottleDuration")
+    {
+        propURI +=
+            "/Processors/" + gpuPrefix +
+            "{GpuId}/ProcessorMetrics#/Oem/Nvidia/HardwareViolationThrottleDuration";
+    }
+    else if (propertyName == "GlobalSoftwareViolationThrottleDuration")
+    {
+        propURI +=
+            "/Processors/" + gpuPrefix +
+            "{GpuId}/ProcessorMetrics#/Oem/Nvidia/GlobalSoftwareViolationThrottleDuration";
     }
     return propURI;
 }
@@ -1231,6 +1535,33 @@ inline void populateMetricProperties(
 
         propName = "ThrottleReasons";
         metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "ThermalLimitThrottleDuration";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "PowerLimitThrottleDuration";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "PCIeTXBytes";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "PCIeRXBytes";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "AccumulatedGPUContextUtilizationDuration";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "AccumulatedSMUtilizationDuration";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        // propName = "CapacityUtilizationPercent";
+        // metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "GlobalSoftwareViolationThrottleDuration";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "HardwareViolationThrottleDuration";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
     }
     else if (deviceType == "NVSwitchMetrics")
     {
@@ -1353,7 +1684,9 @@ inline std::string getWildCardDevId(const std::string& deviceType)
 {
     std::string wildCardId;
     if (deviceType == "MemoryMetrics" || deviceType == "ProcessorMetrics" ||
-        deviceType == "ProcessorPortMetrics")
+        deviceType == "ProcessorPortMetrics" ||
+        deviceType == "ProcessorGpmMetrics" ||
+        deviceType == "ProcessorPortGpmMetrics")
     {
         wildCardId = "GpuId";
     }
@@ -1368,7 +1701,8 @@ inline std::string getWildCardSubDevId(const std::string& deviceType)
 {
     std::string wildCardId;
     if (deviceType == "ProcessorPortMetrics" ||
-        deviceType == "NVSwitchPortMetrics")
+        deviceType == "NVSwitchPortMetrics" ||
+        deviceType == "ProcessorPortGpmMetrics")
     {
         wildCardId = "NvlinkId";
     }
@@ -1389,7 +1723,16 @@ inline void populateMetricPropertiesAndWildcards(
                 messages::internalError(asyncResp->res);
                 return;
             }
-            populateMetricProperties(asyncResp, deviceType);
+            if (deviceType == "ProcessorGpmMetrics" ||
+                deviceType == "ProcessorPortGpmMetrics")
+            {
+                populateGpmMetricProperties(asyncResp, deviceType);
+            }
+            else
+            {
+                populateMetricProperties(asyncResp, deviceType);
+            }
+
             nlohmann::json wildCards = nlohmann::json::array();
             int wildCardMinForDevice = -1;
             int wildCardMaxForDevice = -1;
@@ -1427,7 +1770,9 @@ inline void populateMetricPropertiesAndWildcards(
                 else if (parentName == "processors")
                 {
                     if (deviceType == "ProcessorMetrics" ||
-                        deviceType == "ProcessorPortMetrics")
+                        deviceType == "ProcessorPortMetrics" ||
+                        deviceType == "ProcessorGpmMetrics" ||
+                        deviceType == "ProcessorPortGpmMetrics")
                     {
                         if (wildCardMinForDevice == -1)
                         {
@@ -1460,8 +1805,9 @@ inline void populateMetricPropertiesAndWildcards(
                 }
                 else if (parentName == "Ports")
                 {
-                    if (devTypeOnDbus == "processors" &&
-                        deviceType == "ProcessorPortMetrics")
+                    if ((devTypeOnDbus == "processors") &&
+                        (deviceType == "ProcessorPortMetrics" ||
+                         deviceType == "ProcessorPortGpmMetrics"))
                     {
                         if (wildCardMinForSubDevice == -1)
                         {
@@ -1503,7 +1849,8 @@ inline void populateMetricPropertiesAndWildcards(
                 {"Values", devCount},
             });
             if (deviceType == "ProcessorPortMetrics" ||
-                deviceType == "NVSwitchPortMetrics")
+                deviceType == "NVSwitchPortMetrics" ||
+                deviceType == "ProcessorPortGpmMetrics")
             {
                 nlohmann::json subDevCount = nlohmann::json::array();
                 for (int i = wildCardMinForSubDevice;
@@ -1532,14 +1879,16 @@ inline void getMetricReportDefForAggregatedMetrics(
     if (deviceType != "MemoryMetrics" && deviceType != "ProcessorMetrics" &&
         deviceType != "NVSwitchMetrics" &&
         deviceType != "ProcessorPortMetrics" &&
-        deviceType != "NVSwitchPortMetrics")
+        deviceType != "NVSwitchPortMetrics" &&
+        deviceType != "ProcessorGpmMetrics" &&
+        deviceType != "ProcessorPortGpmMetrics")
     {
         return;
     }
     asyncResp->res.jsonValue["@odata.id"] =
         telemetry::metricReportDefinitionUri + std::string("/") + id;
     asyncResp->res.jsonValue["@odata.type"] =
-        "#MetricReportDefinition.v1_3_0.MetricReportDefinition";
+        "#MetricReportDefinition.v1_4_1.MetricReportDefinition";
     asyncResp->res.jsonValue["Id"] = id;
     asyncResp->res.jsonValue["Name"] = id;
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -1575,6 +1924,8 @@ inline void validateAndGetMetricReportDefinition(
             bool validMetricId = false;
             std::string deviceType;
             std::string serviceName;
+            std::string devicePath;
+
             for (const auto& [path, serviceMap] : subtree)
             {
                 const std::string objectPath = path;
@@ -1604,6 +1955,11 @@ inline void validateAndGetMetricReportDefinition(
                             PLATFORMDEVICEPREFIX "ProcessorMetrics_0";
                         std::string processorPortMetricId =
                             PLATFORMDEVICEPREFIX "ProcessorPortMetrics_0";
+                        std::string processorPortGpmMetricId =
+                            PLATFORMDEVICEPREFIX "ProcessorPortGPMMetrics_0";
+                        std::string processorGpmMetricId =
+                            PLATFORMDEVICEPREFIX "ProcessorGPMMetrics_0";
+
                         if (id == processorMetricId)
                         {
                             serviceName = conName;
@@ -1615,6 +1971,20 @@ inline void validateAndGetMetricReportDefinition(
                             serviceName = conName;
                             validMetricId = true;
                             deviceType = "ProcessorPortMetrics";
+                        }
+                        else if (id == processorGpmMetricId)
+                        {
+                            serviceName = conName;
+                            validMetricId = true;
+                            deviceType = "ProcessorGpmMetrics";
+                            devicePath = objectPath;
+                        }
+                        if (id == processorPortGpmMetricId)
+                        {
+                            serviceName = conName;
+                            validMetricId = true;
+                            deviceType = "ProcessorPortGpmMetrics";
+                            devicePath = objectPath;
                         }
                     }
                     else if (boost::ends_with(objectPath, "Switches"))
