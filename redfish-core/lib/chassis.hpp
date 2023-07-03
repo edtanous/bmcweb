@@ -978,12 +978,15 @@ inline void getStaticPowerHintByObjPath(
                                                ["Reading"] =
                                                    std::get<double>(value);
                             }
-                            else if (propertyName == "Valid" &&
-                                     std::holds_alternative<bool>(value))
+                            else if (propertyName ==
+                                         "StateOfLastEstimatePower" &&
+                                     std::holds_alternative<std::string>(value))
                             {
-                                staticPowerHint["PowerEstimationWatt"]
-                                               ["Valid"] =
-                                                   std::get<bool>(value);
+                                staticPowerHint
+                                    ["PowerEstimationWatt"]["State"] =
+                                        redfish::chassis_utils::
+                                            getStateOfEstimatePowerMethod(
+                                                std::get<std::string>(value));
                             }
                         }
                     },

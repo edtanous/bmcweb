@@ -74,6 +74,37 @@ inline std::string getPowerStateType(const std::string& stateType)
 }
 
 /**
+ * @brief Convert state of EstimatePowerMethod PDI
+ * @param state   stateOfEstimatePowerMEthod property of static power hint PDI
+ */
+inline std::string getStateOfEstimatePowerMethod(const std::string& state)
+{
+    if (state == "com.nvidia.StaticPowerHint.StateOfEstimatePower.Completed")
+    {
+        return "Completed";
+    }
+    if (state == "com.nvidia.StaticPowerHint.StateOfEstimatePower.InProgress")
+    {
+        return "InProgress";
+    }
+    if (state == "com.nvidia.StaticPowerHint.StateOfEstimatePower.Failed")
+    {
+        return "Failed";
+    }
+    if (state ==
+        "com.nvidia.StaticPowerHint.StateOfEstimatePower.InvalidArgument")
+    {
+        return "InvalidArgument";
+    }
+    if (state == "com.nvidia.StaticPowerHint.StateOfEstimatePower.Invalid")
+    {
+        return "Invalid";
+    }
+    // Unknown or others
+    return "";
+}
+
+/**
  * @brief Retrieves valid chassis ID
  * @param asyncResp   Pointer to object holding response data
  * @param callback  Callback for next step to get valid chassis ID
