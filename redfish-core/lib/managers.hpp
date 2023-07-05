@@ -2849,7 +2849,8 @@ inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     BMCWEB_LOG_DEBUG << "Failed to set elapsed time. "
                                         "DBUS response error "
                                      << ec;
-                    messages::internalError(aResp->res);
+                    messages::propertyValueExternalConflict(
+                        aResp->res, "DateTime", datetime);
                     return;
                 }
                 aResp->res.jsonValue["DateTime"] = datetime;
