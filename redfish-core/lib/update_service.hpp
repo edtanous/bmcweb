@@ -2929,8 +2929,8 @@ inline void handleCommitImagePost(
             {
                 BMCWEB_LOG_DEBUG
                     << "Cannot find firmware inventory in allowable values";
-                messages::resourceMissingAtURI(
-                    asyncResp->res, crow::utility::urlFromPieces(target));
+                boost::urls::url_view targetURL(target);
+                messages::resourceMissingAtURI(asyncResp->res, targetURL);
             }
         }
     }
