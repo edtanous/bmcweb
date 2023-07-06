@@ -83,7 +83,6 @@ inline void getBmcAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
             if (!success)
             {
                 BMCWEB_LOG_ERROR << "Unpack Error while fetching BMC Asset data";
-                messages::internalError(asyncResp->res);
                 return;
             }
 
@@ -162,7 +161,6 @@ inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
                 return;
             }
-            messages::resourceNotFound(asyncResp->res, "BMC", PLATFORMBMCID);
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
