@@ -595,10 +595,31 @@ inline void
             tmpPath += PLATFORMDEVICEPREFIX;
             tmpPath += dupSensorName;
         }
+        else if (chassisId.find("PCIeRetimer") != std::string::npos)
+        {
+            boost::replace_all(dupSensorName, chassisId, "PCIeRetimer_{PRWild}");
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += "PCIeRetimer_{PRWild}";
+            tmpPath += "/Sensors/";
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += dupSensorName;
+        }
+        else if (chassisId.find("PCIeSwitch") != std::string::npos)
+        {
+            boost::replace_all(dupSensorName, chassisId, "PCIeSwitch_{PSWild}");
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += "PCIeSwitch_{PSWild}";
+            tmpPath += "/Sensors/";
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += dupSensorName;
+        }
         if (std::find(metricProperties.begin(), metricProperties.end(),
                       tmpPath) == metricProperties.end())
         {
-            asyncResp->res.jsonValue["MetricProperties"].push_back(tmpPath);
+            if(strcmp(tmpPath.c_str(), "/redfish/v1/Chassis/") != 0)
+            {
+                asyncResp->res.jsonValue["MetricProperties"].push_back(tmpPath);
+            }
         }
     }
 }
@@ -668,17 +689,18 @@ inline void processChassisSensorsMetric(
                         for (auto& item : wildCards.items())
                         {
                             nlohmann::json& itemObj = item.value();
-                            if (itemObj["Name"] == "GWild" &&
-                                chassisId.find("GPU") != std::string::npos)
-                            {
-                                // gpu indices starts from 1
-                                size_t v = itemObj["Values"].size() + 1;
-                                itemObj["Values"].push_back(std::to_string(v));
-                            }
-                            if (itemObj["Name"] == "NWild" &&
-                                chassisId.find("NVSwitch") != std::string::npos)
+                            std::string name = itemObj["Name"];
+
+                            if((name == "NWild" && chassisId.find("NVSwitch") != std::string::npos) ||
+                            (name == "PRWild" && chassisId.find("PCIeRetimer") != std::string::npos) ||
+                            (name == "PSWild" && chassisId.find("PCIeSwitch") != std::string::npos))
                             {
                                 size_t v = itemObj["Values"].size();
+                                itemObj["Values"].push_back(std::to_string(v));
+                            }
+                            else if((name == "GWild" && chassisId.find("GPU") != std::string::npos))
+                            {
+                                size_t v = itemObj["Values"].size() + 1;
                                 itemObj["Values"].push_back(std::to_string(v));
                             }
                         }
@@ -761,6 +783,8 @@ inline void getPlatformMetricReportDefinition(
     nlohmann::json metricPropertiesAray = nlohmann::json::array();
     nlohmann::json metricGpuCount = nlohmann::json::array();
     nlohmann::json metricNVSwitchCount = nlohmann::json::array();
+    nlohmann::json metricPCIeSwitchCount = nlohmann::json::array();
+    nlohmann::json metricPCIeRetimerCount = nlohmann::json::array();
     nlohmann::json metricBaseboarSensorArray = nlohmann::json::array();
 
     nlohmann::json wildCards = nlohmann::json::array();
@@ -775,8 +799,13 @@ inline void getPlatformMetricReportDefinition(
     });
 
     wildCards.push_back({
-        {"Name", "BSWild"},
-        {"Values", metricBaseboarSensorArray},
+        {"Name", "PRWild"},
+        {"Values", metricPCIeRetimerCount},
+    });
+
+    wildCards.push_back({
+        {"Name", "PSWild"},
+        {"Values", metricPCIeSwitchCount},
     });
     wildCards.push_back({
         {"Name", "FWild"},
