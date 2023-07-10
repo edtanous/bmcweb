@@ -30,6 +30,9 @@ inline void handleSecureBootGet(crow::App& app, const crow::Request& req,
     aResp->res.jsonValue["Description"] =
         "The UEFI Secure Boot associated with this system.";
     aResp->res.jsonValue["Id"] = "SecureBoot";
+    aResp->res.jsonValue["SecureBootDatabases"]["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+        "/SecureBoot/SecureBootDatabases";
 
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, "xyz.openbmc_project.BIOSConfigManager",

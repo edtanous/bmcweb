@@ -598,6 +598,85 @@ inline void requestRoutesTask(App& app)
                 asyncResp->res.jsonValue["PercentComplete"] =
                     ptr->percentComplete;
             });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/TaskService/Tasks/<str>/Update/")
+        .privileges(redfish::privileges::patchTask)
+        .methods(
+            boost::beast::http::verb::
+                patch)([&app](
+                           const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& strParam) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+
+            privilege_utils::isBiosPrivilege(req, [req, asyncResp, strParam](
+                                                      const boost::system::
+                                                          error_code ec,
+                                                      const bool isBios) {
+                if (ec || isBios == false)
+                {
+                    asyncResp->res.addHeader(boost::beast::http::field::allow,
+                                             "");
+                    messages::resourceNotFound(asyncResp->res, "", "Update");
+                    return;
+                }
+
+                auto find = std::find_if(
+                    task::tasks.begin(), task::tasks.end(),
+                    [&strParam](const std::shared_ptr<task::TaskData>& task) {
+                        if (!task)
+                        {
+                            return false;
+                        }
+
+                        // we compare against the string version as on failure
+                        // strtoul returns 0
+                        return std::to_string(task->index) == strParam;
+                    });
+
+                if (find == task::tasks.end())
+                {
+                    messages::resourceNotFound(asyncResp->res, "Tasks",
+                                               strParam);
+                    return;
+                }
+
+                const std::shared_ptr<task::TaskData>& ptr = *find;
+
+                std::optional<std::string> taskState;
+                std::optional<nlohmann::json> messages;
+                if (!json_util::readJsonPatch(req, asyncResp->res, "TaskState",
+                                              taskState, "Messages", messages))
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "/redfish/v1/TaskService/Tasks/<str>/Update/ readJsonPatch error";
+                    return;
+                }
+
+                if (messages)
+                {
+                    ptr->messages = *messages;
+                }
+
+                if (taskState && ptr->state != *taskState)
+                {
+                    ptr->state = *taskState;
+                    if (ptr->state == "Completed" ||
+                        ptr->state == "Cancelled" ||
+                        ptr->state == "Exception" || ptr->state == "Killed")
+                    {
+                        ptr->timer.cancel();
+                        ptr->finishTask();
+                    }
+                    ptr->sendTaskEvent(ptr->state, ptr->index);
+                }
+
+                asyncResp->res.result(boost::beast::http::status::no_content);
+            });
+        });
 }
 
 inline void requestRoutesTaskCollection(App& app)

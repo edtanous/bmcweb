@@ -50,6 +50,7 @@
 #include "redfish_v1.hpp"
 #include "roles.hpp"
 #include "secure_boot.hpp"
+#include "secure_boot_database.hpp"
 #include "sensors.hpp"
 #include "service_conditions.hpp"
 #include "service_root.hpp"
@@ -260,6 +261,7 @@ class RedfishService
         requestRoutesBiosAttrRegistryService(app);
         requestRoutesBootOptions(app);
         requestRoutesSecureBoot(app);
+        requestRoutesSecureBootDatabase(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE
