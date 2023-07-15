@@ -80,6 +80,7 @@ const std::string hashComputeInterface = "com.Nvidia.ComputeHash";
 constexpr auto retimerHashMaxTimeSec =
     180; // 2 mins for 2 attempts and 1 addional min as buffer
 #endif
+const std::string firmwarePrefix = "redfish/v1/UpdateService/FirmwareInventory/";
 
 inline static void cleanUp()
 {
@@ -551,8 +552,10 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                     return;
                 }
 
-                std::optional<std::string> transferProtocol;
                 std::string imageURI;
+                std::optional<std::string> transferProtocol;
+                std::optional<std::vector<std::string>> targets;
+                std::optional<std::string> username;
 
                 BMCWEB_LOG_DEBUG << "Enter UpdateService.SimpleUpdate doPost";
 
@@ -564,12 +567,16 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
 
                 if (!json_util::readJsonAction(
                         req, asyncResp->res, "TransferProtocol",
-                        transferProtocol, "ImageURI", imageURI))
+                        transferProtocol, "ImageURI", imageURI,
+                        "Targets", targets, "Username", username)
+                        && imageURI.empty())
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Missing TransferProtocol or ImageURI parameter";
+                    messages::createFailedMissingReqProperties(
+                        asyncResp->res, "ImageURI");
+                    BMCWEB_LOG_DEBUG << "Missing ImageURI";
                     return;
                 }
+
                 if (!transferProtocol)
                 {
                     // Must be option 2
@@ -586,6 +593,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                             << imageURI;
                         return;
                     }
+
                     transferProtocol = imageURI.substr(0, separator);
                     // Ensure protocol is upper case for a common comparison
                     // path below
@@ -599,14 +607,39 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                     imageURI = imageURI.substr(separator + 3);
                     BMCWEB_LOG_DEBUG << "Adjusted imageUri " << imageURI;
                 }
-                // OpenBMC currently only supports TFTP
-                if (*transferProtocol != "TFTP")
+
+                std::vector<std::string> supportedProtocols;
+#ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
+                supportedProtocols.push_back("TFTP");
+#endif
+#ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
+                supportedProtocols.push_back("SCP");
+#endif
+                // OpenBMC currently only supports TFTP and SCP
+                if (std::find(supportedProtocols.begin(), supportedProtocols.end(), *transferProtocol)
+                    == supportedProtocols.end())
                 {
                     messages::actionParameterNotSupported(
                         asyncResp->res, "TransferProtocol",
                         "UpdateService.SimpleUpdate");
                     BMCWEB_LOG_ERROR << "Request incorrect protocol parameter: "
                                      << *transferProtocol;
+                    return;
+                }
+
+                if ((*transferProtocol == "SCP") && (!targets))
+                {
+                    messages::createFailedMissingReqProperties(
+                        asyncResp->res, "Targets");
+                    BMCWEB_LOG_DEBUG << "Missing Target URI";
+                    return;
+                }
+
+                if ((*transferProtocol == "SCP") && (!username))
+                {
+                    messages::createFailedMissingReqProperties(
+                        asyncResp->res, "Username");
+                    BMCWEB_LOG_DEBUG << "Missing Username";
                     return;
                 }
 
@@ -622,12 +655,12 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                     return;
                 }
 
-                std::string tftpServer = imageURI.substr(0, separator);
+                std::string server = imageURI.substr(0, separator);
                 std::string fwFile = imageURI.substr(separator + 1);
                 BMCWEB_LOG_DEBUG
-                    << "Server: " << tftpServer + " File: " << fwFile;
+                    << "Server: " << server + " File: " << fwFile;
 
-
+                // Allow only one operation at a time
                 if (fwUpdateInProgress != false)
                 {
                     if (asyncResp)
@@ -635,41 +668,158 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                         std::string resolution =
                             "Another update is in progress. Retry"
                             " the update operation once it is complete.";
-                        redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+                        messages::updateInProgressMsg(asyncResp->res, resolution);
                     }
                     return;
                 }
 
-                // Setup callback for when new software detected
-                // Give TFTP 10 minutes to complete
-                monitorForSoftwareAvailable(asyncResp, req, 600);
+                if (*transferProtocol == "TFTP")
+                {
+                    // Setup callback for when new software detected
+                    // Give TFTP 10 minutes to detect new software
+                    monitorForSoftwareAvailable(asyncResp, req, 600);
 
-                // TFTP can take up to 10 minutes depending on image size and
-                // connection speed. Return to caller as soon as the TFTP
-                // operation has been started. The callback above will ensure
-                // the activate is started once the download has completed
-                redfish::messages::success(asyncResp->res);
+                    // TFTP can take up to 10 minutes depending on image size and
+                    // connection speed. Return to caller as soon as the TFTP
+                    // operation has been started. The callback above will ensure
+                    // the activate is started once the download has completed
+                    messages::success(asyncResp->res);
 
-                // Call TFTP service
-                crow::connections::systemBus->async_method_call(
-                    [](const boost::system::error_code ec) {
-                        if (ec)
-                        {
-                            // messages::internalError(asyncResp->res);
-                            cleanUp();
-                            BMCWEB_LOG_DEBUG << "error_code = " << ec;
-                            BMCWEB_LOG_DEBUG << "error msg = " << ec.message();
-                        }
-                        else
-                        {
-                            BMCWEB_LOG_DEBUG
-                                << "Call to DownloaViaTFTP Success";
-                        }
-                    },
-                    "xyz.openbmc_project.Software.Download",
-                    "/xyz/openbmc_project/software",
-                    "xyz.openbmc_project.Common.TFTP", "DownloadViaTFTP",
-                    fwFile, tftpServer);
+                    // Call TFTP service
+                    crow::connections::systemBus->async_method_call(
+                        [](const boost::system::error_code ec) {
+                            if (ec)
+                            {
+                                // messages::internalError(asyncResp->res);
+                                cleanUp();
+                                BMCWEB_LOG_DEBUG << "error_code = " << ec;
+                                BMCWEB_LOG_DEBUG << "error msg = " << ec.message();
+                            }
+                            else
+                            {
+                                BMCWEB_LOG_DEBUG
+                                    << "Call to DownloaViaTFTP Success";
+                            }
+                        },
+                        "xyz.openbmc_project.Software.Download",
+                        "/xyz/openbmc_project/software",
+                        "xyz.openbmc_project.Common.TFTP", "DownloadViaTFTP",
+                        fwFile, server);
+                }
+                else if (*transferProtocol == "SCP")
+                {
+                    // Take the first target as only one target is supported
+                    std::string targetURI = targets.value()[0];
+                    if (targetURI.find(firmwarePrefix) == std::string::npos)
+                    {
+                        // Find the last occurrence of the directory separator character
+                        messages::actionParameterNotSupported(
+                                    asyncResp->res, "Targets",
+                                    "UpdateService.SimpleUpdate");
+                        BMCWEB_LOG_ERROR << "Invalid TargetURI: " << targetURI;
+                        return;
+                    }
+                    std::string objName = "/xyz/openbmc_project/software/" + 
+                                          targetURI.substr(firmwarePrefix.length());
+
+                    // Search for the version object related to the given target URI
+                    crow::connections::systemBus->async_method_call(
+                        [req, asyncResp, objName, fwFile, server, username](
+                            const boost::system::error_code ec,
+                            const std::vector<std::pair<
+                                std::string, std::vector<std::string>>>&
+                                objInfo) {
+                            if (ec)
+                            {
+                                messages::actionParameterNotSupported(
+                                    asyncResp->res, "Targets",
+                                    "UpdateService.SimpleUpdate");
+                                    BMCWEB_LOG_ERROR << "Request incorrect target URI parameter: "
+                                     << objName;
+                                BMCWEB_LOG_ERROR << "error_code = " << ec << " " <<
+                                                    "error msg = " << ec.message();
+                                return;
+                            }
+                            // Ensure we only got one service back
+                            if (objInfo.size() != 1)
+                            {
+                                messages::internalError(asyncResp->res);
+                                BMCWEB_LOG_ERROR << "Invalid Object Size "
+                                                 << objInfo.size();
+                                return;
+                            }
+
+                            // Read the version object's FilePath property which holds
+                            // the local path used for the update procedure
+                            crow::connections::systemBus->async_method_call(
+                                [req, asyncResp, fwFile, server, username](
+                                    const boost::system::error_code ecPath,
+                                    const std::variant<std::string>& property) {
+                                    if (ecPath)
+                                    {
+                                        messages::actionParameterNotSupported(
+                                            asyncResp->res, "Targets",
+                                            "UpdateService.SimpleUpdate");
+                                        BMCWEB_LOG_ERROR << "Failed to read the path property of Target";
+                                        BMCWEB_LOG_ERROR << "error_code = " << ecPath << " " <<
+                                                            "error msg = " << ecPath.message();
+                                        return;
+                                    }
+
+                                    const std::string* targetPath = std::get_if<std::string>(&property);
+                                    if (targetPath == nullptr)
+                                    {
+                                        messages::actionParameterNotSupported(
+                                            asyncResp->res, "Targets",
+                                            "UpdateService.SimpleUpdate");
+                                        BMCWEB_LOG_ERROR << "Null value returned for path";
+                                        return;
+                                    }
+
+                                    // Check if local path exists
+                                    if (!fs::exists(*targetPath))
+                                    {
+                                        messages::resourceNotFound(asyncResp->res, "Targets", *targetPath);
+                                        BMCWEB_LOG_ERROR << "Path does not exist";
+                                        return;
+                                    }
+
+                                    // Setup callback for when new software detected
+                                    // Give SCP 10 minutes to detect new software
+                                    monitorForSoftwareAvailable(asyncResp, req, 600);
+
+                                    // Call SCP service. As key-based authentication is used,
+                                    // user password is not necessary
+                                    crow::connections::systemBus->async_method_call(
+                                        [asyncResp](const boost::system::error_code ecSCP) {
+                                            if (ecSCP)
+                                            {
+                                                messages::internalError(asyncResp->res);
+                                                BMCWEB_LOG_ERROR << "error_code = " << ecSCP << " " <<
+                                                                    "error msg = " << ecSCP.message();
+                                            }
+                                            else
+                                            {
+                                                BMCWEB_LOG_DEBUG << "Call to DownloadViaSCP Success";
+                                            }
+                                        },
+                                        "xyz.openbmc_project.Software.Download",
+                                        "/xyz/openbmc_project/software",
+                                        "xyz.openbmc_project.Common.SCP", "DownloadViaSCP",
+                                        server, *username, fwFile, *targetPath);
+                                },
+                                objInfo[0].first, objName,
+                                "org.freedesktop.DBus.Properties", "Get",
+                                "xyz.openbmc_project.Common.FilePath",
+                                "Path");
+                        },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetObject", objName,
+                        std::array<const char*, 2>{
+                            "xyz.openbmc_project.Software.Version",
+                            "xyz.openbmc_project.Common.FilePath"});
+                }
 
                 BMCWEB_LOG_DEBUG << "Exit UpdateService.SimpleUpdate doPost";
             });
@@ -1393,6 +1543,15 @@ inline void requestRoutesUpdateService(App& app)
                  "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage"},
                 {"@Redfish.ActionInfo",
                  "/redfish/v1/UpdateService/Oem/Nvidia/CommitImageActionInfo"}};
+            asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]
+                                    ["#NvidiaUpdateService.PublicKeyExchange"] = {
+                {"target",
+                 "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.PublicKeyExchange"}};
+            asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]
+                                    ["#NvidiaUpdateService.RevokeAllRemoteServerPublicKeys"] = {
+                {"target",
+                 "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys"}};
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             asyncResp->res.jsonValue["Oem"]["Nvidia"] = {
                 {"@odata.type", "#NvidiaUpdateService.v1_0_0.NvidiaUpdateService"},
@@ -1400,15 +1559,20 @@ inline void requestRoutesUpdateService(App& app)
                  {"@odata.id",
                   "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage"}}}};
 #endif
-#ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
+#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) || defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
             // Update Actions object.
             nlohmann::json& updateSvcSimpleUpdate =
                 asyncResp->res
                     .jsonValue["Actions"]["#UpdateService.SimpleUpdate"];
             updateSvcSimpleUpdate["target"] =
                 "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate";
-            updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] =
-                {"TFTP"};
+            updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] = {};
+#ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
+            updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] += {"TFTP"};
+#endif
+#ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
+            updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] += {"SCP"};
+#endif
 #endif
             // Get the current ApplyTime value
             sdbusplus::asio::getProperty<std::string>(
@@ -1935,8 +2099,7 @@ inline void requestRoutesSoftwareInventoryCollection(App& app)
             }
             asyncResp->res.jsonValue["@odata.type"] =
                 "#SoftwareInventoryCollection.SoftwareInventoryCollection";
-            asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/UpdateService/FirmwareInventory";
+            asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/UpdateService/FirmwareInventory";
             asyncResp->res.jsonValue["Name"] = "Software Inventory Collection";
 
             crow::connections::systemBus->async_method_call(
@@ -1971,7 +2134,7 @@ inline void requestRoutesSoftwareInventoryCollection(App& app)
                             asyncResp->res.jsonValue["Members"];
                         members.push_back(
                             {{"@odata.id",
-                              "/redfish/v1/UpdateService/FirmwareInventory/" +
+                                "/redfish/v1/UpdateService/FirmwareInventory/" +
                                   swId}});
                         asyncResp->res.jsonValue["Members@odata.count"] =
                             members.size();
@@ -3701,6 +3864,175 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
                     "xyz.openbmc_project.Software.Version"});
         });
 }
+
+/**
+ * @brief POST handler for SSH public key exchange - user and remote server
+ * authentication.
+ *
+ * @param app
+ *
+ * @return None
+ */
+inline nlohmann::json extendedInfoSuccessMsg(const std::string& msg,
+                                             const std::string& arg)
+{
+    return nlohmann::json{
+        {"@odata.type", "#Message.v1_1_1.Message"},
+        {"Message", msg},
+        {"MessageArgs", {arg}}};
+}
+
+inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
+{
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.PublicKeyExchange")
+        .privileges(redfish::privileges::postUpdateService)
+        .methods(
+            boost::beast::http::verb::
+                post)([&app](const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+
+            std::string remoteServerIP;
+            std::string remoteServerKeyString; // "<type> <key>"
+
+            BMCWEB_LOG_DEBUG << "Enter UpdateService.PublicKeyExchange doPost";
+
+            if (!json_util::readJsonAction(
+                    req, asyncResp->res, "RemoteServerIP", remoteServerIP,
+                    "RemoteServerKeyString", remoteServerKeyString)
+                    && (remoteServerIP.empty()||remoteServerKeyString.empty()))
+            {
+                std::string emptyprops;
+                if (remoteServerIP.empty())
+                {
+                    emptyprops += "RemoteServerIP ";
+                }
+                if (remoteServerKeyString.empty())
+                {
+                    emptyprops += "RemoteServerKeyString ";
+                }
+                messages::createFailedMissingReqProperties(
+                        asyncResp->res, emptyprops);
+                BMCWEB_LOG_DEBUG << "Missing " << emptyprops;
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG
+                << "RemoteServerIP: " << remoteServerIP +
+                " RemoteServerKeyString: " << remoteServerKeyString;
+
+            // Call SCP service
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        BMCWEB_LOG_ERROR << "error_code = " << ec << " " <<
+                                            "error msg = " << ec.message();
+                        return;
+                    }
+
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp](const boost::system::error_code ec,
+                                    const std::string& selfPublicKeyStr) {
+                            if (ec || selfPublicKeyStr.empty())
+                            {
+                                messages::internalError(asyncResp->res);
+                                BMCWEB_LOG_ERROR << "error_code = " << ec << " " <<
+                                                    "error msg = " << ec.message();
+                                return;
+                            }
+
+                            // Create a JSON object with the additional information
+                            std::string keyMsg =
+                            "Please add the following public key info to "
+                            "~/.ssh/authorized_keys on the remote server";
+                            std::string keyInfo = selfPublicKeyStr + " root@dpu-bmc";
+
+                            asyncResp->res.jsonValue[messages::messageAnnotation] = nlohmann::json::array();
+                            asyncResp->res.jsonValue[messages::messageAnnotation].push_back(
+                                extendedInfoSuccessMsg(keyMsg,keyInfo));
+                            messages::success(asyncResp->res);
+                            BMCWEB_LOG_DEBUG
+                            << "Call to PublicKeyExchange succeeded " + selfPublicKeyStr;
+                    },
+                    "xyz.openbmc_project.Software.Download",
+                    "/xyz/openbmc_project/software",
+                    "xyz.openbmc_project.Common.SCP", "GenerateSelfKeyPair");
+                },
+                "xyz.openbmc_project.Software.Download",
+                "/xyz/openbmc_project/software",
+                "xyz.openbmc_project.Common.SCP", "AddRemoteServerPublicKey",
+                remoteServerIP, remoteServerKeyString);
+        });
+}
+
+/**
+ * @brief POST handler for adding remote server SSH public key
+ *
+ * @param app
+ *
+ * @return None
+ */
+inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
+{
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys")
+        .privileges(redfish::privileges::postUpdateService)
+        .methods(
+            boost::beast::http::verb::
+                post)([&app](const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+
+            std::string remoteServerIP;
+
+            BMCWEB_LOG_DEBUG << "Enter UpdateService.RevokeAllRemoteServerPublicKeys doPost";
+
+            if (!json_util::readJsonAction(
+                    req, asyncResp->res, "RemoteServerIP", remoteServerIP)
+                    && remoteServerIP.empty())
+            {
+                messages::createFailedMissingReqProperties(
+                        asyncResp->res, "RemoteServerIP");
+                BMCWEB_LOG_DEBUG << "Missing RemoteServerIP";
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "RemoteServerIP: " << remoteServerIP;
+
+            // Call SCP service
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        BMCWEB_LOG_ERROR << "error_code = " << ec << " " <<
+                                            "error msg = " << ec.message();
+                    }
+                    else
+                    {
+                        messages::success(asyncResp->res);
+                        BMCWEB_LOG_DEBUG
+                            << "Call to RevokeAllRemoteServerPublicKeys succeeded";
+                    }
+                },
+                "xyz.openbmc_project.Software.Download",
+                "/xyz/openbmc_project/software",
+                "xyz.openbmc_project.Common.SCP", "RevokeAllRemoteServerPublicKeys",
+                remoteServerIP);
+        });   
+}
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 /**
  * @brief Add dbus watcher to wait till staged firmware object is created

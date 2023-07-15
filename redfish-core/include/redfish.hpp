@@ -162,7 +162,7 @@ class RedfishService
         requestRoutesCable(app);
         requestRoutesCableCollection(app);
 #endif
-#ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
+#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) || defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
         requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
         requestRoutesSoftwareInventoryCollection(app);
@@ -375,6 +375,10 @@ class RedfishService
         requestRoutesComputeDigestPost(app);
 #endif
         requestRoutesTrustedComponents(app);
+#ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
+        requestRoutesUpdateServicePublicKeyExchange(app);
+	requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
+#endif
         // Note, this must be the last route registered
         requestRoutesRedfish(app);
     }

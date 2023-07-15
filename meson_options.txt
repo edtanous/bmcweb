@@ -338,6 +338,14 @@ option(
 )
 
 option(
+    'scp-update',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enable SCP based firmware update transactions through
+                    Redfish UpdateService.SimpleUpdate.'''
+)
+
+option(
     'insecure-push-style-notification',
     type: 'feature',
     value: 'disabled',
