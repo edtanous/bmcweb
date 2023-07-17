@@ -685,12 +685,12 @@ inline std::string dbusToRfBootSource(const std::string& dbusSource)
         return "UefiShell";
     }
     if (dbusSource ==
-        "xyz.openbmc_project.Control.Boot.Source.Sources.UefiTarget")
+        "xyz.openbmc_project.Control.Boot.Source.Sources.UefiDevicePath")
     {
         return "UefiTarget";
     }
     if (dbusSource ==
-        "xyz.openbmc_project.Control.Boot.Source.Sources.UefiBootNext")
+        "xyz.openbmc_project.Control.Boot.Source.Sources.UefiBootOption")
     {
         return "UefiBootNext";
     }
@@ -908,12 +908,12 @@ inline int  assignBootParameters(const std::shared_ptr<bmcweb::AsyncResp>& aResp
     else if (rfSource == "UefiTarget")
     {
         bootSource =
-            "xyz.openbmc_project.Control.Boot.Source.Sources.UefiTarget";
+            "xyz.openbmc_project.Control.Boot.Source.Sources.UefiDevicePath";
     }
     else if (rfSource == "UefiBootNext")
     {
         bootSource =
-            "xyz.openbmc_project.Control.Boot.Source.Sources.UefiBootNext";
+            "xyz.openbmc_project.Control.Boot.Source.Sources.UefiBootOption";
     }
     else
     {
@@ -1021,13 +1021,14 @@ inline void getBootProgressLastStateTime(
  * @return None.
  */
 
-inline void getBootOverrideType(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+inline void getBootOverrideType(const std::shared_ptr<bmcweb::AsyncResp>& aResp, 
+                                bool isSettingsUrl = false)
 {
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/control/host0/boot",
         "xyz.openbmc_project.Control.Boot.Type", "BootType",
-        [aResp](const boost::system::error_code ec,
+        [aResp, isSettingsUrl](const boost::system::error_code ec,
                 const std::string& bootType) {
             if (ec)
             {
@@ -1036,11 +1037,14 @@ inline void getBootOverrideType(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             }
 
             BMCWEB_LOG_DEBUG << "Boot type: " << bootType;
+            if (!isSettingsUrl)
+            {
+                aResp->res
+                    .jsonValue["Boot"]
+                            ["BootSourceOverrideMode@Redfish.AllowableValues"] = {
+                    "Legacy", "UEFI"};
+            }
 
-            aResp->res
-                .jsonValue["Boot"]
-                          ["BootSourceOverrideMode@Redfish.AllowableValues"] = {
-                "Legacy", "UEFI"};
 
             auto rfType = dbusToRfBootType(bootType);
             if (rfType.empty())
@@ -1220,12 +1224,13 @@ inline void
  *
  * @return None.
  */
-inline void getBootProperties(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+inline void getBootProperties(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                               bool isSettingsUrl = false)
 {
     BMCWEB_LOG_DEBUG << "Get boot information.";
 
     getBootOverrideSource(aResp);
-    getBootOverrideType(aResp);
+    getBootOverrideType(aResp, isSettingsUrl);
     getBootOverrideEnable(aResp);
 }
 
@@ -1273,7 +1278,8 @@ inline void getLastResetTime(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
  *
  * @return None.
  */
-inline void getAutomaticRetry(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+inline void getAutomaticRetry(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                              bool isSettingsUrl = false)
 {
     BMCWEB_LOG_DEBUG << "Get Automatic Retry policy";
 
@@ -1281,7 +1287,7 @@ inline void getAutomaticRetry(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/control/host0/auto_reboot",
         "xyz.openbmc_project.Control.Boot.RebootPolicy", "AutoReboot",
-        [aResp](const boost::system::error_code ec, bool autoRebootEnabled) {
+        [aResp, isSettingsUrl](const boost::system::error_code ec, bool autoRebootEnabled) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "D-BUS response error " << ec;
@@ -1293,30 +1299,33 @@ inline void getAutomaticRetry(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             {
                 aResp->res.jsonValue["Boot"]["AutomaticRetryConfig"] =
                     "RetryAttempts";
-                // If AutomaticRetry (AutoReboot) is enabled see how many
-                // attempts are left
-                sdbusplus::asio::getProperty<uint32_t>(
-                    *crow::connections::systemBus,
-                    "xyz.openbmc_project.State.Host",
-                    "/xyz/openbmc_project/state/host0",
-                    "xyz.openbmc_project.Control.Boot.RebootAttempts",
-                    "AttemptsLeft",
-                    [aResp](const boost::system::error_code ec2,
-                            const uint32_t autoRebootAttemptsLeft) {
-                        if (ec2)
-                        {
-                            BMCWEB_LOG_DEBUG << "D-BUS response error " << ec2;
-                            return;
-                        }
+                if (!isSettingsUrl)
+                {
+                    // If AutomaticRetry (AutoReboot) is enabled see how many
+                    // attempts are left
+                    sdbusplus::asio::getProperty<uint32_t>(
+                        *crow::connections::systemBus,
+                        "xyz.openbmc_project.State.Host",
+                        "/xyz/openbmc_project/state/host0",
+                        "xyz.openbmc_project.Control.Boot.RebootAttempts",
+                        "AttemptsLeft",
+                        [aResp](const boost::system::error_code ec2,
+                                const uint32_t autoRebootAttemptsLeft) {
+                            if (ec2)
+                            {
+                                BMCWEB_LOG_DEBUG << "D-BUS response error " << ec2;
+                                return;
+                            }
 
-                        BMCWEB_LOG_DEBUG << "Auto Reboot Attempts Left: "
+                            BMCWEB_LOG_DEBUG << "Auto Reboot Attempts Left: "
                                          << autoRebootAttemptsLeft;
 
-                        aResp->res
-                            .jsonValue["Boot"]
-                                      ["RemainingAutomaticRetryAttempts"] =
-                            autoRebootAttemptsLeft;
-                    });
+                            aResp->res
+                                .jsonValue["Boot"]
+                                        ["RemainingAutomaticRetryAttempts"] =
+                                autoRebootAttemptsLeft;
+                        });
+                }
             }
             else
             {
@@ -1324,17 +1333,20 @@ inline void getAutomaticRetry(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
                     "Disabled";
             }
 
-            // Not on D-Bus. Hardcoded here:
-            // https://github.com/openbmc/phosphor-state-manager/blob/1dbbef42675e94fb1f78edb87d6b11380260535a/meson_options.txt#L71
-            aResp->res.jsonValue["Boot"]["AutomaticRetryAttempts"] = 3;
+            if (!isSettingsUrl)
+            {
+                // Not on D-Bus. Hardcoded here:
+                // https://github.com/openbmc/phosphor-state-manager/blob/1dbbef42675e94fb1f78edb87d6b11380260535a/meson_options.txt#L71
+                aResp->res.jsonValue["Boot"]["AutomaticRetryAttempts"] = 3;
 
-            // "AutomaticRetryConfig" can be 3 values, Disabled, RetryAlways,
-            // and RetryAttempts. OpenBMC only supports Disabled and
-            // RetryAttempts.
-            aResp->res
-                .jsonValue["Boot"]
-                          ["AutomaticRetryConfig@Redfish.AllowableValues"] = {
-                "Disabled", "RetryAttempts"};
+                // "AutomaticRetryConfig" can be 3 values, Disabled, RetryAlways,
+                // and RetryAttempts. OpenBMC only supports Disabled and
+                // RetryAttempts.
+                aResp->res
+                    .jsonValue["Boot"]
+                            ["AutomaticRetryConfig@Redfish.AllowableValues"] = {
+                    "Disabled", "RetryAttempts"};
+            }
         });
 }
 
@@ -1893,14 +1905,17 @@ void getUefiPropertySettingsHost(const std::shared_ptr<bmcweb::AsyncResp>& aResp
                                             "Get source list ";
                         return;
                     }
-                    std::vector<std::string> sourcesList = std::get<std::vector<std::string>>(sourcesListVariant);
-                    if (!sourcesList.empty())
+                    std::vector<std::string> dbusSourcesList = std::get<std::vector<std::string>>(sourcesListVariant);
+                    if (!dbusSourcesList.empty())
                     {
                         bool isIncludeUefiTarget = false;
                         bool isIncludeUefiBootNext = false;
                         bool isIncludeUefiHttp = false;
-                        for (const auto& source : sourcesList) 
+                        std::vector<std::string> sourcesList;
+                        for (const auto& dbusSource : dbusSourcesList) 
                         {
+                            std::string source = dbusToRfBootSource(dbusSource);
+                            sourcesList.push_back(source);
                             if (source == "UefiTarget")
                             {
                                 isIncludeUefiTarget = true;
@@ -1934,7 +1949,7 @@ void getUefiPropertySettingsHost(const std::shared_ptr<bmcweb::AsyncResp>& aResp
                             for (auto& property : propertiesList)
                             {
                                 const std::string& propertyName = property.first;
-                                if (propertyName == "HttpPath" && isIncludeUefiHttp)
+                                if (propertyName == "TargetURI" && isIncludeUefiHttp)
                                 {
                                     const std::string* httpPath = std::get_if<std::string>(&property.second);
                                     if (httpPath != nullptr)
@@ -1942,7 +1957,7 @@ void getUefiPropertySettingsHost(const std::shared_ptr<bmcweb::AsyncResp>& aResp
                                         aResp->res.jsonValue["Boot"]["HttpBootUri"] = *httpPath;
                                     }
                                 }
-                                else if (propertyName == "BootNext" && isIncludeUefiBootNext)
+                                else if (propertyName == "TargetBootOption" && isIncludeUefiBootNext)
                                 {
                                     const std::string* bootNext = std::get_if<std::string>(&property.second);
                                     if (bootNext != nullptr)
@@ -1950,7 +1965,7 @@ void getUefiPropertySettingsHost(const std::shared_ptr<bmcweb::AsyncResp>& aResp
                                         aResp->res.jsonValue["Boot"]["BootNext"] = *bootNext;
                                     }   
                                 }
-                                else if (propertyName == "Target" && isIncludeUefiTarget)
+                                else if (propertyName == "TargetDevicePath" && isIncludeUefiTarget)
                                 {
                                     const std::string* uefiTrget = std::get_if<std::string>(&property.second);
                                     if (uefiTrget != nullptr)
@@ -1967,7 +1982,7 @@ void getUefiPropertySettingsHost(const std::shared_ptr<bmcweb::AsyncResp>& aResp
                 },
         settingsService, host0BootPath, 
         "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Control.Boot.SourcesList", "SourcesList");
+        "xyz.openbmc_project.Control.Boot.Source", "AllowedSources");
 }
 
 
@@ -1999,7 +2014,7 @@ void setDbusProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 BMCWEB_LOG_DEBUG << "DBUS response error for "
                                     "Set service " + service + " path " + path +
                                     " interface:" + interface + " property: "  + property +
-                                    " may not exist";
+                                    " , error: " << ec.message();
                 return;
             }
         },
@@ -3549,8 +3564,9 @@ inline void handleComputerSystemSettingsGet(
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings";
 
     getBootOrder(asyncResp, true);
-    getBootProperties(asyncResp);
+    getBootProperties(asyncResp, true);
     getUefiPropertySettingsHost(asyncResp);
+    getAutomaticRetry(asyncResp, true);
 }
 
 inline void handleComputerSystemSettingsPatch(
@@ -3569,6 +3585,7 @@ inline void handleComputerSystemSettingsPatch(
     std::optional<std::string> uefiTargetBootSourceOverride;
     std::optional<std::string> bootNext;
     std::optional<std::string> httpBootUri;
+    std::optional<std::string> bootAutomaticRetry;
     if (!json_util::readJsonPatch(req, asyncResp->res, "Boot/BootOrder",
                                   bootOrder,
                                   "Boot/UefiTargetBootSourceOverride", uefiTargetBootSourceOverride,
@@ -3576,7 +3593,8 @@ inline void handleComputerSystemSettingsPatch(
                                   "Boot/BootSourceOverrideMode", bootType,
                                   "Boot/BootSourceOverrideEnabled", bootEnable,
                                   "Boot/BootNext", bootNext,
-                                  "Boot/HttpBootUri", httpBootUri))
+                                  "Boot/HttpBootUri", httpBootUri,
+                                  "Boot/AutomaticRetryConfig", bootAutomaticRetry))
     {
         BMCWEB_LOG_DEBUG << "handleComputerSystemSettingsPatch readJsonPatch error";
         return;
@@ -3595,17 +3613,21 @@ inline void handleComputerSystemSettingsPatch(
     if (uefiTargetBootSourceOverride)
     {
         setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
-                                "Target", *uefiTargetBootSourceOverride);
+                                "TargetDevicePath", *uefiTargetBootSourceOverride);
     }
     if (bootNext)
     {
         setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
-                                "BootNext", *bootNext);
+                                "TargetBootOption", *bootNext);
     }
     if (httpBootUri)
     {
         setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
-                                "HttpPath", *httpBootUri);
+                                "TargetURI", *httpBootUri);
+    }
+    if (bootAutomaticRetry)
+    {
+        setAutomaticRetry(asyncResp, *bootAutomaticRetry);
     }
 }
 
@@ -3963,8 +3985,17 @@ inline void requestRoutesSystems(App& app)
                             }
                             if (bootSourceOverrideTargetAllowableValues)
                             {
-                                setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.SourcesList", 
-                                                        "SourcesList", *bootSourceOverrideTargetAllowableValues);
+                                std::vector<std::string> allowedSourcesList;
+                                for (const auto& source : *bootSourceOverrideTargetAllowableValues) 
+                                {
+                                    std::string bootSourceStr;
+                                    std::string bootModeStr;
+                                    assignBootParameters(asyncResp, source, bootSourceStr, bootModeStr);
+                                    allowedSourcesList.push_back(bootSourceStr);
+                                }
+                                
+                                setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.Source", 
+                                                        "AllowedSources", allowedSourcesList);
                             }
 	
 	                    });
@@ -3973,17 +4004,17 @@ inline void requestRoutesSystems(App& app)
             if (uefiTargetBootSourceOverride)
             {
                 setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
-                                        "Target", *uefiTargetBootSourceOverride);
+                                        "TargetDevicePath", *uefiTargetBootSourceOverride);
             }
             if (bootNext)
             {
                 setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
-                                        "BootNext", *bootNext);
+                                        "TargetBootOption", *bootNext);
             }
             if (httpBootUri)
             {
                 setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
-                                        "HttpPath", *httpBootUri);
+                                        "TargetURI", *httpBootUri);
             }
        
     });
