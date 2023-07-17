@@ -117,6 +117,7 @@ feature_map = {
   'dot-support'                                 : '-DBMCWEB_ENABLE_DOT',
   'debug-interface-support'                     : '-DBMCWEB_ENABLE_DEBUG_INTERFACE',
   'force-insecure-event-notification'           : '-DBMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION',
+  'use-efficient-expand-on-sensors'             : '-DBMCWEB_ENABLE_EFFICIENT_EXPAND',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

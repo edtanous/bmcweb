@@ -406,3 +406,10 @@ option('min-password-length',
     value: 7,
     description: 'Min password Length',
 )
+
+option(
+    'use-efficient-expand-on-sensors',
+    type: 'feature',
+    value: 'disabled',
+    description: 'Enable/Disable use of efficient expand on sensors collection'
+)

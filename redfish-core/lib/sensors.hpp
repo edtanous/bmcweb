@@ -3052,6 +3052,8 @@ inline void
                               const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                               const std::string& chassisId)
 {
+#ifdef BMCWEB_ENABLE_EFFICIENT_EXPAND
+    // Efficient expand on sensors
     query_param::QueryCapabilities capabilities = {
         .canDelegateExpandLevel = 1,
     };
@@ -3075,6 +3077,13 @@ inline void
             << "SensorCollection doGet exit via efficient expand handler";
         return;
     }
+#else
+    // Fallback to default expand mechanism
+    if (!redfish::setUpRedfishRoute(app, req, aResp))
+    {
+        return;
+    }
+#endif
 
     // We get all sensors as hyperlinkes in the chassis (this
     // implies we reply on the default query parameters handler)
