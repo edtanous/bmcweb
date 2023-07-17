@@ -747,6 +747,50 @@ inline void
 
 }
 
+class BMCStatusAsyncResp
+{
+  public:
+    BMCStatusAsyncResp(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) :
+        asyncResp(asyncResp) {}
+
+    ~BMCStatusAsyncResp()
+    {
+        nlohmann::json conditionMsg;
+        if (bmcStateString == "xyz.openbmc_project.State.BMC.BMCState.Ready"
+            && hostStateString != "xyz.openbmc_project.State.Host.HostState.TransitioningToRunning"
+            && hostStateString != "xyz.openbmc_project.State.Host.HostState.TransitioningToOff"
+            && pldm_serviceStatus && mctp_serviceStatus)
+        {
+            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+            asyncResp->res.jsonValue["Status"]["Conditions"] = nlohmann::json::array();
+        }
+        else if (hostStateString == "xyz.openbmc_project.State.Host.HostState.TransitioningToRunning"
+            || hostStateString == "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
+        {
+            conditionMsg = {{"Message", "Host Power Cycling"}};
+            asyncResp->res.jsonValue["Status"]["State"] = "UnavailableOffline";
+            asyncResp->res.jsonValue["Status"]["Conditions"].push_back(conditionMsg);
+        }
+        else
+        {
+            conditionMsg = {{"Message", "BMC Initializing"}};
+            asyncResp->res.jsonValue["Status"]["State"] = "UnavailableOffline";
+            asyncResp->res.jsonValue["Status"]["Conditions"].push_back(conditionMsg);
+        }
+    }
+
+    BMCStatusAsyncResp(const BMCStatusAsyncResp&) = delete;
+    BMCStatusAsyncResp(BMCStatusAsyncResp&&) = delete;
+    BMCStatusAsyncResp& operator=(const BMCStatusAsyncResp&) = delete;    
+    BMCStatusAsyncResp& operator=(BMCStatusAsyncResp&&) = delete;
+
+    const std::shared_ptr<bmcweb::AsyncResp> asyncResp;
+    bool pldm_serviceStatus = false;
+    bool mctp_serviceStatus = false;
+    std::string bmcStateString;
+    std::string hostStateString;
+};
+
 inline void requestRoutesUpdateService(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/")
@@ -844,8 +888,9 @@ inline void requestRoutesUpdateService(App& app)
                     }
                 });
 
+            auto getUpdateStatus = std::make_shared<BMCStatusAsyncResp>(asyncResp);
             crow::connections::systemBus->async_method_call(
-                [asyncResp](
+                [asyncResp, getUpdateStatus](
                     const boost::system::error_code errorCode,
                     const std::vector<
                         std::pair<std::string, std::vector<std::string>>>&
@@ -859,8 +904,11 @@ inline void requestRoutesUpdateService(App& app)
                         {
                             messages::internalError(asyncResp->res);
                         }
+                        getUpdateStatus->pldm_serviceStatus  = false;
                         return;
                     }
+                    getUpdateStatus->pldm_serviceStatus  = true;
+
                     // Ensure we only got one service back
                     if (objInfo.size() != 1)
                     {
@@ -943,6 +991,54 @@ inline void requestRoutesUpdateService(App& app)
                 "/xyz/openbmc_project/software",
                 std::array<const char*, 1>{
                     "xyz.openbmc_project.Software.UpdatePolicy"});
+
+            crow::connections::systemBus->async_method_call(
+                [getUpdateStatus](boost::system::error_code ec,
+                            const MapperGetSubTreeResponse& subtree) mutable {
+                    if (ec || !subtree.size())
+                    {
+                        getUpdateStatus->mctp_serviceStatus  = false;
+                    } else {
+                        getUpdateStatus->mctp_serviceStatus = true;
+                    }
+                    return;
+                },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/mctp/0", 0,
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.MCTP.Endpoint"});
+
+            sdbusplus::asio::getProperty<std::string>(
+                *crow::connections::systemBus, "xyz.openbmc_project.State.BMC",
+                "/xyz/openbmc_project/state/bmc0", "xyz.openbmc_project.State.BMC",
+                "CurrentBMCState",
+                [getUpdateStatus](const boost::system::error_code ec,
+                const std::string& bmcState) mutable {
+                if (ec)
+                {
+                    return;
+                }
+
+                getUpdateStatus->bmcStateString = bmcState;
+                return;
+            });
+
+            sdbusplus::asio::getProperty<std::string>(
+                *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
+                "/xyz/openbmc_project/state/host0", "xyz.openbmc_project.State.Host",
+                "CurrentHostState",
+                [getUpdateStatus](const boost::system::error_code ec,
+                const std::string& hostState) mutable {
+                if (ec)
+                {
+                    return;
+                }
+
+                getUpdateStatus->hostStateString = hostState;
+                return;
+            });
         });
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/")
         .privileges(redfish::privileges::patchUpdateService)
