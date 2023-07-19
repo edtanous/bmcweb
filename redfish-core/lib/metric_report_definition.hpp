@@ -846,7 +846,7 @@ inline std::string getMemoryMetricURIDef(std::string &propertyName)
     else if (propertyName == "CorrectableECCErrorCount")
     {
         propURI +=
-            "/Memory/ + gpuPrefix + {GpuId}_DRAM_0/MemoryMetrics#/LifeTime/CorrectableECCErrorCount";
+            "/Memory/" + gpuPrefix + "{GpuId}_DRAM_0/MemoryMetrics#/LifeTime/CorrectableECCErrorCount";
     }
     else if (propertyName == "UncorrectableECCErrorCount")
     {
