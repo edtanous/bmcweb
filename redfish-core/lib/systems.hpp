@@ -24,6 +24,7 @@
 #include "query.hpp"
 #include "redfish_util.hpp"
 #include "utils/time_utils.hpp"
+#include "debug_policy.hpp"
 
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
@@ -3806,6 +3807,9 @@ inline void requestRoutesSystems(App& app)
             getUefiPropertySettingsHost(asyncResp, true);
             asyncResp->res.jsonValue["Boot"]["BootOrderPropertySelection"] = "BootOrder";
             asyncResp->res.jsonValue["Boot"]["BootSourceOverrideEnabled@Redfish.AllowableValues"] = {"Once", "Continuous", "Disabled"};
+#ifdef BMCWEB_ENABLE_DEBUG_INTERFACE
+            handleDebugPolicyGet(asyncResp);
+#endif
         });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/")
@@ -3859,6 +3863,7 @@ inline void requestRoutesSystems(App& app)
             std::optional<std::string> bootNext;
             std::optional<std::string> bootOrderPropertySelection;
             std::optional<std::string> httpBootUri;
+            std::optional<nlohmann::json> processorDebugCapabilities;
             // clang-format off
                 if (!json_util::readJsonPatch(
                         req, asyncResp->res,
@@ -3891,7 +3896,9 @@ inline void requestRoutesSystems(App& app)
                         "Boot/BootSourceOverrideTarget@Redfish.AllowableValues", bootSourceOverrideTargetAllowableValues,
                         "Boot/BootNext", bootNext,
                         "Boot/BootOrderPropertySelection", bootOrderPropertySelection,
-                        "Boot/HttpBootUri", httpBootUri))
+                        "Boot/HttpBootUri", httpBootUri,
+                        "Oem/Nvidia/ProcessorDebugCapabilities", processorDebugCapabilities
+                        ))
                 {
                     return;
                 }
@@ -4016,7 +4023,13 @@ inline void requestRoutesSystems(App& app)
                 setSettingsHostProperty(asyncResp, "xyz.openbmc_project.Control.Boot.UEFI",
                                         "TargetURI", *httpBootUri);
             }
-       
+
+#ifdef BMCWEB_ENABLE_DEBUG_INTERFACE
+            if (processorDebugCapabilities)
+            {
+                handleDebugPolicyPatchReq(asyncResp, *processorDebugCapabilities);
+            }
+#endif
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/")
