@@ -3371,7 +3371,7 @@ inline void requestRoutesManager(App& app)
             nlohmann::json& resetToDefaults =
                 asyncResp->res.jsonValue["Actions"]["#Manager.ResetToDefaults"];
             resetToDefaults["target"] =
-                "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults";
+                "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/Manager.ResetToDefaults";
             resetToDefaults["ResetType@Redfish.AllowableValues"] = {"ResetAll"};
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
