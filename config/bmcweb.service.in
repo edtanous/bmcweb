@@ -10,6 +10,7 @@ ExecStart=@MESON_INSTALL_PREFIX@/bin/bmcweb
 Type=simple
 WorkingDirectory=/home/root
 StateDirectory=bmcweb
+WatchdogSec=60s
 
 [Install]
 WantedBy=network.target

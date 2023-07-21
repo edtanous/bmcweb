@@ -25,6 +25,7 @@
 #include <ssl_key_handler.hpp>
 #include <vm_websocket.hpp>
 #include <webassets.hpp>
+#include <watchdog.hpp>
 
 #include <exception>
 #include <memory>
@@ -70,6 +71,8 @@ static int run()
 
     sdbusplus::asio::connection systemBus(*io);
     crow::connections::systemBus = &systemBus;
+    // Enable SystemD service watchdog kicking. Service file has timeout of 60s. 
+    crow::watchdog::ServiceWD watchdog(30, io);
 
     // Static assets need to be initialized before Authorization, because auth
     // needs to build the whitelist from the static routes
