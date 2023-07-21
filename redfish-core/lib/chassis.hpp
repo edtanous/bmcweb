@@ -974,7 +974,7 @@ inline void getStaticPowerHintByObjPath(
                             else if (propertyName == "PowerEstimate" &&
                                      std::holds_alternative<double>(value))
                             {
-                                staticPowerHint["PowerEstimationWatt"]
+                                staticPowerHint["PowerEstimationWatts"]
                                                ["Reading"] =
                                                    std::get<double>(value);
                             }
@@ -983,7 +983,7 @@ inline void getStaticPowerHintByObjPath(
                                      std::holds_alternative<std::string>(value))
                             {
                                 staticPowerHint
-                                    ["PowerEstimationWatt"]["State"] =
+                                    ["PowerEstimationWatts"]["State"] =
                                         redfish::chassis_utils::
                                             getStateOfEstimatePowerMethod(
                                                 std::get<std::string>(value));
