@@ -4480,43 +4480,59 @@ inline void updateParametersForInitiateActionInfo(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const crow::openbmc_mapper::GetSubTreeType& subtree)
 {
-    asyncResp->res.jsonValue["Parameters"] = nlohmann::json::array();
-    nlohmann::json& parameters = asyncResp->res.jsonValue["Parameters"];
+    sdbusplus::asio::getProperty<std::vector<std::string>>(
+        *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/software/updateable",
+        "xyz.openbmc_project.Association", "endpoints",
+        [asyncResp, subtree](const boost::system::error_code ec,
+                             const std::vector<std::string>& objPaths) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << " error_code = " << ec
+                                 << " error msg =  " << ec.message();
+                // System can exist with no updateable firmware,
+                // so don't throw error here.
+                return;
+            }
+            asyncResp->res.jsonValue["Parameters"] = nlohmann::json::array();
+            nlohmann::json& parameters = asyncResp->res.jsonValue["Parameters"];
 
-    nlohmann::json parameterPackageURI;
-    parameterPackageURI["Name"] = "StagedFirmwarePackageURI";
-    parameterPackageURI["Required"] = "true";
-    parameterPackageURI["DataType"] = "String";
+            nlohmann::json parameterPackageURI;
+            parameterPackageURI["Name"] = "StagedFirmwarePackageURI";
+            parameterPackageURI["Required"] = "true";
+            parameterPackageURI["DataType"] = "String";
 
-    parameters.push_back(parameterPackageURI);
+            parameters.push_back(parameterPackageURI);
 
-    nlohmann::json parameterTargets;
-    parameterTargets["Name"] = "Targets";
-    parameterTargets["Required"] = "false";
-    parameterTargets["DataType"] = "StringArray";
-    parameterTargets["AllowableValues"] = nlohmann::json::array();
-
-    nlohmann::json& allowableValues = parameterTargets["AllowableValues"];
-
-    for (auto& obj : subtree)
-    {
-        sdbusplus::message::object_path path(obj.first);
-        std::string fwId = path.filename();
-        if (fwId.empty())
-        {
-            messages::internalError(asyncResp->res);
-            BMCWEB_LOG_DEBUG << "Cannot parse firmware ID";
-            return;
-        }
-
-        if (isInventoryAllowableValue(obj.first))
-        {
-            allowableValues.push_back(
-                "/redfish/v1/UpdateService/FirmwareInventory/" + fwId);
-        }
-    }
-
-    parameters.push_back(parameterTargets);
+            nlohmann::json parameterTargets;
+            parameterTargets["Name"] = "Targets";
+            parameterTargets["Required"] = "false";
+            parameterTargets["DataType"] = "StringArray";
+            parameterTargets["AllowableValues"] = nlohmann::json::array();
+            nlohmann::json& allowableValues =
+                parameterTargets["AllowableValues"];
+            std::string inventoryPath = "/xyz/openbmc_project/software/";
+            for (auto& obj : subtree)
+            {
+                sdbusplus::message::object_path path(obj.first);
+                std::string fwId = path.filename();
+                std::string reqFwObjPath = inventoryPath + fwId;
+                if (fwId.empty())
+                {
+                    messages::internalError(asyncResp->res);
+                    BMCWEB_LOG_DEBUG << "Cannot parse firmware ID";
+                    return;
+                }
+                if (std::find(objPaths.begin(), objPaths.end(), reqFwObjPath) !=
+                    objPaths.end())
+                {
+                    BMCWEB_LOG_ERROR << "Alowable Value" << fwId;
+                    allowableValues.push_back(
+                        "/redfish/v1/UpdateService/FirmwareInventory/" + fwId);
+                }
+            }
+            parameters.push_back(parameterTargets);
+        });
 }
 
 /**
