@@ -1233,7 +1233,6 @@ inline void updateUserProperties(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                     // If password is invalid
                     messages::propertyValueFormatError(asyncResp->res,
                                                        *password, "Password");
-
                     std::string resolution =
                         " Password should be " +
                         std::to_string(minPasswordLength) +
@@ -1699,31 +1698,69 @@ inline void handleAccountCollectionPost(
         roleId = priv;
     }
 
-    // Reading AllGroups property
-    sdbusplus::asio::getProperty<std::vector<std::string>>(
+    sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, "xyz.openbmc_project.User.Manager",
-        "/xyz/openbmc_project/user", "xyz.openbmc_project.User.Manager",
-        "AllGroups",
+        "/xyz/openbmc_project/user", "",
         [asyncResp, username, password{std::move(password)}, roleId,
          enabled](const boost::system::error_code ec,
-                  const std::vector<std::string>& allGroupsList) {
+                  const dbus::utility::DBusPropertiesMap& propertiesList) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "ERROR with async_method_call";
                 messages::internalError(asyncResp->res);
                 return;
             }
 
-            if (allGroupsList.empty())
+            BMCWEB_LOG_DEBUG << "Got " << propertiesList.size()
+                             << "properties for AccountService";
+
+            const uint8_t* minPassLength = nullptr;
+            const std::vector<std::string>* allGroupsList = nullptr;
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), propertiesList,
+                "MinPasswordLength", minPassLength, "AllGroups", allGroupsList);
+
+            if (!success)
+            {
+                BMCWEB_LOG_ERROR << "getAllProperties dbus call failed.";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (minPassLength != nullptr)
+            {
+                BMCWEB_LOG_DEBUG << "MinPasswordLength: "
+                                 << std::to_string(*minPassLength);
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "MinPasswordLength: nullptr";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (allGroupsList == nullptr)
             {
                 messages::internalError(asyncResp->res);
                 return;
+            }
+
+            if (allGroupsList->empty())
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "User will be added to group list";
+            for (auto& group : *allGroupsList)
+            {
+                BMCWEB_LOG_DEBUG << "Group: " << group;
             }
 
             crow::connections::systemBus->async_method_call(
-                [asyncResp, username,
-                 password](const boost::system::error_code ec2,
-                           sdbusplus::message_t& m) {
+                [asyncResp, username, password,
+                 minPassLength](const boost::system::error_code ec2,
+                                sdbusplus::message_t& m) {
                     if (ec2)
                     {
                         userErrorMessageHandler(m.get_error(), asyncResp,
@@ -1742,10 +1779,9 @@ inline void handleAccountCollectionPost(
 
                         if (retval == PAM_AUTHTOK_ERR)
                         {
-
                             std::string resolution =
                                 "Password should be " +
-                                std::to_string(minPasswordLength) +
+                                std::to_string(*minPassLength) +
                                 " character long including " +
                                 std::to_string(minUcaseCharacters) +
                                 " uppercase character, " +
@@ -1759,7 +1795,6 @@ inline void handleAccountCollectionPost(
                             // password policy too
                             redfish::message_registries::updateResolution(
                                 asyncResp, "Password", resolution);
-
                             BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
                         }
 
@@ -1795,7 +1830,7 @@ inline void handleAccountCollectionPost(
                 },
                 "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
                 "xyz.openbmc_project.User.Manager", "CreateUser", username,
-                allGroupsList, *roleId, *enabled);
+                *allGroupsList, *roleId, *enabled);
         });
 }
 
