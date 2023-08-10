@@ -403,37 +403,33 @@ inline void handleRoleMapPatch(
                 BMCWEB_LOG_DEBUG << "Remote Group=" << *remoteGroup
                                  << ",LocalRole=" << *localRole;
 
-                        std::string role =
-                            getPrivilegeFromRoleId(std::move(*localRole));
-                        if (role.empty())
+                std::string role =
+                    getPrivilegeFromRoleId(std::move(*localRole));
+                if (role.empty())
+                {
+                    BMCWEB_LOG_ERROR << "Invalid privilege";
+                    messages::insufficientPrivilege(asyncResp->res);
+                    return;
+                }
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, serverType, localRole,
+                     remoteGroup](const boost::system::error_code ec) {
+                        if (ec)
                         {
-                            BMCWEB_LOG_ERROR << "Invalid privilege";
-                            messages::insufficientPrivilege(asyncResp->res);
+                            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                            messages::internalError(asyncResp->res);
                             return;
                         }
-                        crow::connections::systemBus->async_method_call(
-                            [asyncResp, serverType, localRole,
-                             remoteGroup](const boost::system::error_code ec) {
-                                if (ec)
-                                {
-                                    BMCWEB_LOG_ERROR << "DBUS response error: "
-                                                     << ec;
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                nlohmann::json& remoteRoleJson =
-                                    asyncResp->res
-                                        .jsonValue[serverType]
-                                                  ["RemoteRoleMapping"];
-                                nlohmann::json::object_t roleMapEntry;
-                                roleMapEntry["LocalRole"] = *localRole;
-                                roleMapEntry["RemoteGroup"] = *remoteGroup;
-                                remoteRoleJson.push_back(
-                                    std::move(roleMapEntry));
-                            },
-                            ldapDbusService, dbusObjectPath,
-                            ldapPrivMapperInterface, "Create", *remoteGroup,
-                            role);
+                        nlohmann::json& remoteRoleJson =
+                            asyncResp->res
+                                .jsonValue[serverType]["RemoteRoleMapping"];
+                        nlohmann::json::object_t roleMapEntry;
+                        roleMapEntry["LocalRole"] = *localRole;
+                        roleMapEntry["RemoteGroup"] = *remoteGroup;
+                        remoteRoleJson.push_back(std::move(roleMapEntry));
+                    },
+                    ldapDbusService, dbusObjectPath, ldapPrivMapperInterface,
+                    "Create", *remoteGroup, role);
             }
         }
     }
