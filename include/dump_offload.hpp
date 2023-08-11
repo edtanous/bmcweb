@@ -206,8 +206,7 @@ class Handler : public std::enable_shared_from_this<Handler>
                 }
 
                 outputBuffer.commit(bytesRead);
-                auto streamHandler = [this, bytesRead,
-                                      self(shared_from_this())]() {
+                auto streamHandler = [this, bytesRead]() {
                     this->outputBuffer.consume(bytesRead);
                     this->doReadStream();
                 };
@@ -223,7 +222,7 @@ class Handler : public std::enable_shared_from_this<Handler>
     boost::asio::local::stream_protocol::socket unixSocket;
     uint64_t dumpSize;
     boost::asio::steady_timer waitTimer;
-    crow::streaming_response::Connection* connection = nullptr;
+    std::shared_ptr<crow::streaming_response::Connection> connection = nullptr;
     uint16_t connectRetryCount;
 };
 
@@ -250,7 +249,7 @@ inline void requestRoutes(App& app)
 
             handlers[&conn] = std::make_shared<Handler>(
                 *ioCon, dumpId, dumpType, unixSocketPath);
-            handlers[&conn]->connection = &conn;
+            handlers[&conn]->connection = conn.getSharedReference();
             handlers[&conn]->getDumpSize(dumpId, dumpType);
         })
         .onclose([](crow::streaming_response::Connection& conn) {
@@ -281,7 +280,7 @@ inline void requestRoutes(App& app)
 
             handlers[&conn] = std::make_shared<Handler>(
                 *ioCon, dumpId, dumpType, unixSocketPath);
-            handlers[&conn]->connection = &conn;
+            handlers[&conn]->connection = conn.getSharedReference();
             handlers[&conn]->getDumpSize(dumpId, dumpType);
         })
         .onclose([](crow::streaming_response::Connection& conn) {
@@ -312,7 +311,7 @@ inline void requestRoutes(App& app)
 
             handlers[&conn] = std::make_shared<Handler>(
                 *ioCon, dumpId, dumpType, unixSocketPath);
-            handlers[&conn]->connection = &conn;
+            handlers[&conn]->connection = conn.getSharedReference();
             handlers[&conn]->getDumpSize(dumpId, dumpType);
         })
         .onclose([](crow::streaming_response::Connection& conn) {

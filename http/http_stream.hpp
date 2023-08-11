@@ -32,7 +32,10 @@ struct Connection : std::enable_shared_from_this<Connection>
     Connection& operator=(const Connection&) = delete;
     Connection& operator=(const Connection&&) = delete;
     virtual ~Connection() = default;
-
+    std::shared_ptr<crow::streaming_response::Connection> getSharedReference()
+    {
+        return shared_from_this();
+    }
     boost::beast::http::request<boost::beast::http::string_body> req;
     crow::DynamicResponse streamres;
 };
@@ -63,7 +66,7 @@ class ConnectionImpl : public Connection
 
     void start()
     {
-        streamres.completeRequestHandler = [this, self(shared_from_this())] {
+        streamres.completeRequestHandler = [this] {
             BMCWEB_LOG_DEBUG << "running completeRequestHandler";
             this->close();
         };
