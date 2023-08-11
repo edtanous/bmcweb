@@ -17,6 +17,8 @@ namespace redfish
 namespace origin_utils
 {
 
+const std::string redfishPrefix = "/redfish/v1";
+
 const std::string inventorySubTree = "/xyz/openbmc_project/inventory";
 const std::string sensorSubTree = "/xyz/openbmc_project/sensors";
 
@@ -197,6 +199,13 @@ inline void convertDbusObjectToOriginOfCondition(
     const std::string& severity = "", const std::string& messageArgs = "",
     const std::string& timestamp = "", const std::string& messageId = "")
 {
+    // if redfish URI is already provided in path, no need to compute, just use it
+    if (boost::starts_with(path, redfishPrefix))
+    {
+        oocUtil(asyncResp, logEntry, id, path, severity, messageArgs, timestamp,
+                messageId);
+        return;
+    }
     for (auto& it : dBusToRedfishURI)
     {
         if (path.find(it.first) != std::string::npos)
