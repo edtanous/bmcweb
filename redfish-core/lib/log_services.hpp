@@ -1873,6 +1873,29 @@ inline void requestRoutesEventLogService(App& app)
                 "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
                 "xyz.openbmc_project.Logging.Namespace", "GetStats", "all");
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec,
+                            std::variant<bool>& resp) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "Failed to get Data from xyz.openbmc_project.Logging: "
+                            << ec;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    const bool* state = std::get_if<bool>(&resp);
+                    asyncResp->res
+                        .jsonValue["Oem"]["Nvidia"]
+                                  ["AutoClearResolvedLogEnabled"] = *state;
+                },
+                "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Logging.Namespace",
+                "AutoClearResolvedLogEnabled");
+#endif /* BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES */
+
             asyncResp->res.jsonValue["Entries"] = {
                 {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
                               "/LogServices/EventLog/Entries"}};
@@ -1882,6 +1905,66 @@ inline void requestRoutesEventLogService(App& app)
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID
                  "/LogServices/EventLog/Actions/LogService.ClearLog"}};
         });
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/EventLog/")
+        .privileges(redfish::privileges::patchLogService)
+        .methods(boost::beast::http::verb::patch)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                std::optional<nlohmann::json> oemObject;
+
+                if (!json_util::readJsonPatch(req, asyncResp->res, "Oem",
+                                              oemObject))
+                {
+                    return;
+                }
+
+                std::optional<nlohmann::json> oemNvidiaObject;
+
+                if (!json_util::readJson(*oemObject, asyncResp->res, "Nvidia",
+                                         oemNvidiaObject))
+                {
+                    return;
+                }
+
+                std::optional<bool> autoClearResolvedLogEnabled;
+
+                if (!json_util::readJson(*oemNvidiaObject, asyncResp->res,
+                                         "AutoClearResolvedLogEnabled",
+                                         autoClearResolvedLogEnabled))
+                {
+                    return;
+                }
+                BMCWEB_LOG_DEBUG << "Set Log Purge Policy";
+
+                if (autoClearResolvedLogEnabled)
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp](const boost::system::error_code ec) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_DEBUG << "DBUS response error "
+                                    << ec;
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                        },
+                        "xyz.openbmc_project.Logging",
+                        "/xyz/openbmc_project/logging",
+                        "org.freedesktop.DBus.Properties", "Set",
+                        "xyz.openbmc_project.Logging.Namespace",
+                        "AutoClearResolvedLogEnabled",
+                        dbus::utility::DbusVariantType(
+                            *autoClearResolvedLogEnabled));
+                }
+            });
+#endif /* BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES */
 }
 
 inline void requestRoutesSELLogService(App& app)
