@@ -806,7 +806,6 @@ inline void setStaticPowerHintByObjPath(
     const std::string& objPath, double cpuClockFrequency, double workloadFactor,
     double temperature)
 {
-
     crow::connections::systemBus->async_method_call(
         [asyncResp, objPath, cpuClockFrequency, workloadFactor, temperature](
             const boost::system::error_code errorno,
@@ -819,22 +818,109 @@ inline void setStaticPowerHintByObjPath(
 
             for (const auto& [service, interfaces] : objInfo)
             {
-
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp,
-                     objPath](const boost::system::error_code errorno) {
+                    [asyncResp, objPath, service{service}, cpuClockFrequency,
+                     workloadFactor, temperature](
+                        const boost::system::error_code errorno,
+                        const std::vector<
+                            std::pair<std::string,
+                                      std::variant<double, std::string, bool>>>&
+                            propertiesList) {
                         if (errorno)
                         {
                             BMCWEB_LOG_ERROR
-                                << "StaticPowerHint::Estimate failed:"
-                                << errorno;
+                                << "Properties::GetAll failed:" << errorno
+                                << "objPath:" << objPath;
                             messages::internalError(asyncResp->res);
                             return;
                         }
+
+                        double cpuClockFrequencyMax = 0;
+                        double cpuClockFrequencyMin = 0;
+                        double workloadFactorMax = 0;
+                        double workloadFactorMin = 0;
+                        double temperatureMax = 0;
+                        double temperatureMin = 0;
+
+                        for (const auto& [propertyName, value] : propertiesList)
+                        {
+                            if (propertyName == "MaxCpuClockFrequency" &&
+                                std::holds_alternative<double>(value))
+                            {
+                                cpuClockFrequencyMax = std::get<double>(value);
+                            }
+                            else if (propertyName == "MinCpuClockFrequency" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                cpuClockFrequencyMin = std::get<double>(value);
+                            }
+                            else if (propertyName == "MaxTemperature" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                temperatureMax = std::get<double>(value);
+                            }
+                            else if (propertyName == "MinTemperature" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                temperatureMin = std::get<double>(value);
+                            }
+                            else if (propertyName == "MaxWorkloadFactor" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                workloadFactorMax = std::get<double>(value);
+                            }
+                            else if (propertyName == "MinWorkloadFactor" &&
+                                     std::holds_alternative<double>(value))
+                            {
+                                workloadFactorMin = std::get<double>(value);
+                            }
+                        }
+
+                        if ((cpuClockFrequencyMax < cpuClockFrequency) ||
+                            (cpuClockFrequencyMin > cpuClockFrequency))
+                        {
+                            messages::propertyValueOutOfRange(
+                                asyncResp->res,
+                                std::to_string(cpuClockFrequency),
+                                "CpuClockFrequency");
+                            return;
+                        }
+
+                        if ((temperatureMax < temperature) ||
+                            (temperatureMin > temperature))
+                        {
+                            messages::propertyValueOutOfRange(
+                                asyncResp->res, std::to_string(temperature),
+                                "Temperature");
+                            return;
+                        }
+
+                        if ((workloadFactorMax < workloadFactor) ||
+                            (workloadFactorMin > workloadFactor))
+                        {
+                            messages::propertyValueOutOfRange(
+                                asyncResp->res, std::to_string(workloadFactor),
+                                "WorkloadFactor");
+                            return;
+                        }
+
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, objPath](const boost::system::error_code errorno) {
+                                if (errorno)
+                                {
+                                    BMCWEB_LOG_ERROR
+                                        << "StaticPowerHint::Estimate failed:"
+                                        << errorno;
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                            },
+                            service, objPath, "com.nvidia.StaticPowerHint",
+                            "EstimatePower", cpuClockFrequency, workloadFactor,
+                            temperature);
                     },
-                    service, objPath, "com.nvidia.StaticPowerHint",
-                    "EstimatePower", cpuClockFrequency, workloadFactor,
-                    temperature);
+                    service, objPath, "org.freedesktop.DBus.Properties",
+                    "GetAll", "com.nvidia.StaticPowerHint");
             }
         },
         "xyz.openbmc_project.ObjectMapper",
@@ -1784,17 +1870,17 @@ inline void
                     }
                     else
                     {
-                        if (cpuClockFrequency)
+                        if (!cpuClockFrequency)
                         {
                             messages::propertyMissing(asyncResp->res,
                                                       "CpuClockFrequencyHz");
                         }
-                        if (workloadFactor)
+                        if (!workloadFactor)
                         {
                             messages::propertyMissing(asyncResp->res,
                                                       "WorkloadFactor");
                         }
-                        if (temperature)
+                        if (!temperature)
                         {
                             messages::propertyMissing(asyncResp->res,
                                                       "TemperatureCelsius");
