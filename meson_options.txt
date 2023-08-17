@@ -278,6 +278,7 @@ option ('platform-system-id', type : 'string', value : 'system', description : '
 option ('platform-bmc-id', type : 'string', value : 'bmc', description : 'Platform specific managers bmc id')
 option ('platform-network-adapter', type : 'string', value : 'networkadapter', description : 'Platform network adapter')
 option ('network-adapters', type : 'feature', value : 'disabled', description : 'Enable NetworkAdapters')
+option ('network-adapters-generic', type : 'feature', value : 'disabled', description : 'Enable Generic NetworkAdapters')
 option ('platform-total-power-sensor-name', type : 'string', value : 'TotalHSC_Power', description : 'Platform specific total power sensor name, which has system power watts readings')
 option ('platform-power-control-sensor-name', type : 'string', value : 'total_power', description : 'Platform specific total power control sensor name, which has system current power watts readings')
 option ('platform-metrics-id', type : 'string', value : 'PlatformMetrics', description : 'Platform specific telemetry service metric reports id')

@@ -81,6 +81,7 @@ feature_map = {
   'nvidia-oem-properties'                       : '-DBMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES',
   'nvidia-oem-logservices'                      : '-DBMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES',
   'network-adapters'                            : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS',
+  'network-adapters-generic'                    : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC',
   'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
   'redfish-dump-log'                            : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
   'redfish-fdr-log'                             : '-DBMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG',

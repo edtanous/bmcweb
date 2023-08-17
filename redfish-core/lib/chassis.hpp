@@ -1546,6 +1546,52 @@ inline void getChassisUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 }
 
 inline void
+    getNetworkAdapters(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& objPath,
+                       const std::vector<std::string>& interfaces,
+                       const std::string& chassisId)
+{
+    // NetworkAdapters collection
+    const std::string networkInterface =
+        "xyz.openbmc_project.Inventory.Item.NetworkInterface";
+    if (std::find(interfaces.begin(), interfaces.end(), networkInterface) !=
+        interfaces.end())
+    {
+        // networkInterface at the same chassis objPath
+        asyncResp->res.jsonValue["NetworkAdapters"] = {
+            {"@odata.id",
+             "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
+        return;
+    }
+
+    const std::array<const char*, 1> networkInterfaces = {
+        "xyz.openbmc_project.Inventory.Item.NetworkInterface"};
+    BMCWEB_LOG_ERROR << "test networkInterface:" + objPath;
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisId(std::string(chassisId))](
+            const boost::system::error_code ec,
+            const crow::openbmc_mapper::GetSubTreeType& subtree) {
+            if (ec)
+            {
+                return;
+            }
+
+            if (subtree.size() == 0)
+            {
+                return;
+            }
+            asyncResp->res.jsonValue["NetworkAdapters"] = {
+                {"@odata.id",
+                 "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree", objPath, 0,
+        networkInterfaces);
+}
+
+inline void
     handleChassisGet(App& app, const crow::Request& req,
                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& chassisId)
@@ -1629,6 +1675,9 @@ inline void
                                 break;
                             }
                         }
+
+                        getNetworkAdapters(asyncResp, path, interfaces1,
+                                           chassisId);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                         const std::string itemSystemInterface =

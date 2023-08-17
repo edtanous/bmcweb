@@ -38,7 +38,15 @@
 #include "message_registries.hpp"
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
+
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
 #include "network_adapters.hpp"
+#endif
+
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
+#include "network_adapters_generic.hpp"
+#endif
+
 #include "network_protocol.hpp"
 #include "pcie.hpp"
 #include "pcieslots.hpp"
@@ -113,6 +121,10 @@ class RedfishService
         requestRoutesNetworkAdapters(app);
         requestRoutesNetworkDeviceFunctions(app);
         requestRoutesACDPort(app);
+#endif
+
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
+        requestRoutesNetworkAdapters(app);
 #endif
 
 #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
