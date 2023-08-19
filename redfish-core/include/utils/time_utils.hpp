@@ -286,6 +286,10 @@ inline std::string nanoSecToDurationString(std::chrono::nanoseconds ns)
         fmt += details::padZeros(ns.count(), 9);
         fmt += "S";
     }
+    else if (fmt == "PT")
+    {
+        fmt += "0S"; // Append "0S" when time is zero seconds
+    }
 
     return fmt;
 }
