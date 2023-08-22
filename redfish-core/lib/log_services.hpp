@@ -1528,7 +1528,8 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (*diagnosticDataType != "OEM")
         {
             BMCWEB_LOG_ERROR << "Wrong parameter values passed";
-            messages::internalError(asyncResp->res);
+            messages::actionParameterValueError(asyncResp->res, "DiagnosticDataType",
+                                                "LogService.CollectDiagnosticData");
             return;
         }
         dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/";
@@ -1547,7 +1548,8 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             BMCWEB_LOG_ERROR
                 << "Wrong parameter value passed for 'DiagnosticDataType'";
-            messages::internalError(asyncResp->res);
+            messages::actionParameterValueError(asyncResp->res, "DiagnosticDataType",
+                                                "LogService.CollectDiagnosticData");
             return;
         }
         dumpPath = "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/";
