@@ -619,11 +619,11 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             for (const auto& element : objInfo)
             {
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp, objPath](
-                        const boost::system::error_code ec,
-                        const std::vector<
-                            std::pair<std::string, std::variant<uint32_t>>>&
-                            propertiesList) {
+                    [asyncResp,
+                     objPath](const boost::system::error_code ec,
+                              const std::vector<std::pair<
+                                  std::string, std::variant<uint32_t, bool>>>&
+                                  propertiesList) {
                         if (ec)
                         {
                             BMCWEB_LOG_DEBUG << "DBUS response error for "
@@ -632,8 +632,8 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             return;
                         }
                         for (const std::pair<std::string,
-                                             std::variant<uint32_t>>& property :
-                             propertiesList)
+                                             std::variant<uint32_t, bool>>&
+                                 property : propertiesList)
                         {
                             const std::string& propertyName = property.first;
                             if (propertyName == "PowerCap")
@@ -680,6 +680,29 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                 asyncResp->res.jsonValue["PowerLimitWatts"]
                                                         ["AllowableMax"] =
                                     *value;
+                            }
+                            else if (propertyName == "PowerCapEnable")
+                            {
+                                const bool* value =
+                                    std::get_if<bool>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                                        "for type";
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+
+                                if (*value)
+                                {
+                                    asyncResp->res.jsonValue["PowerLimitWatts"]["ControlMode"] =
+                                        "Automatic";
+                                }
+                                else
+                                {
+                                    asyncResp->res.jsonValue["PowerLimitWatts"]["ControlMode"] =
+                                        "Disabled";
+                                }
                             }
                         }
                     },
