@@ -755,28 +755,18 @@ class BMCStatusAsyncResp
 
     ~BMCStatusAsyncResp()
     {
-        nlohmann::json conditionMsg;
         if (bmcStateString == "xyz.openbmc_project.State.BMC.BMCState.Ready"
             && hostStateString != "xyz.openbmc_project.State.Host.HostState.TransitioningToRunning"
             && hostStateString != "xyz.openbmc_project.State.Host.HostState.TransitioningToOff"
             && pldm_serviceStatus && mctp_serviceStatus)
         {
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-            asyncResp->res.jsonValue["Status"]["Conditions"] = nlohmann::json::array();
-        }
-        else if (hostStateString == "xyz.openbmc_project.State.Host.HostState.TransitioningToRunning"
-            || hostStateString == "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
-        {
-            conditionMsg = {{"Message", "Host Power Cycling"}};
-            asyncResp->res.jsonValue["Status"]["State"] = "UnavailableOffline";
-            asyncResp->res.jsonValue["Status"]["Conditions"].push_back(conditionMsg);
         }
         else
         {
-            conditionMsg = {{"Message", "BMC Initializing"}};
             asyncResp->res.jsonValue["Status"]["State"] = "UnavailableOffline";
-            asyncResp->res.jsonValue["Status"]["Conditions"].push_back(conditionMsg);
         }
+        asyncResp->res.jsonValue["Status"]["Conditions"] = nlohmann::json::array();
     }
 
     BMCStatusAsyncResp(const BMCStatusAsyncResp&) = delete;
