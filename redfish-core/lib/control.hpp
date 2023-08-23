@@ -362,11 +362,78 @@ inline void
                                     asyncResp->res.jsonValue["ControlMode"] =
                                         "Disabled";
                                 }
+                                asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                             }
                         }
                     },
                     element.first, path, "org.freedesktop.DBus.Properties",
                     "GetAll", "xyz.openbmc_project.Control.Power.Cap");
+
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp,
+                     path](const boost::system::error_code errorno,
+                           const std::vector<std::pair<
+                               std::string, dbus::utility::DbusVariantType>>&
+                               propertiesList) {
+                        if (errorno)
+                        {
+                            return;
+                        }
+
+                        for (const auto& [propertyName, value] : propertiesList)
+                        {
+                            if (propertyName == "PhysicalContext")
+                            {
+                                const auto* physicalcontext =
+                                    std::get_if<std::string>(&value);
+                                asyncResp->res.jsonValue[propertyName] =
+                                    redfish::dbus_utils::toPhysicalContext(
+                                        *physicalcontext);
+                                return;
+                            }
+                        }
+                    },
+                    element.first, path, "org.freedesktop.DBus.Properties",
+                    "GetAll", "xyz.openbmc_project.Inventory.Decorator.Area");
+
+                // Read related items
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code errCode,
+                                std::variant<std::vector<std::string>>& resp) {
+                        if (errCode)
+                        {
+                            BMCWEB_LOG_DEBUG << "Get Related Items failed: "
+                                             << errCode;
+                            return;
+                        }
+                        std::vector<std::string>* data =
+                            std::get_if<std::vector<std::string>>(&resp);
+                        if (data == nullptr)
+                        {
+                            BMCWEB_LOG_DEBUG
+                                << "Null value returned for Related Items ";
+                            return;
+                        }
+                        nlohmann::json& relatedItemsArray =
+                            asyncResp->res.jsonValue["RelatedItem"];
+                        relatedItemsArray = nlohmann::json::array();
+                        for (const std::string& chassisPath : *data)
+                        {
+                            sdbusplus::message::object_path objectPath(
+                                chassisPath);
+                            std::string chassisName = objectPath.filename();
+                            if (chassisName.empty())
+                            {
+                                return;
+                            }
+                            relatedItemsArray.push_back(
+                                {{"@odata.id",
+                                  "/redfish/v1/Chassis/" + chassisName}});
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper", path + "/chassis",
+                    "org.freedesktop.DBus.Properties", "Get",
+                    "xyz.openbmc_project.Association", "endpoints");
             }
         },
         "xyz.openbmc_project.ObjectMapper",
