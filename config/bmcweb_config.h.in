@@ -59,5 +59,6 @@ constexpr const uint8_t minDigits = @MIN_DIGITS@;
 constexpr const uint8_t minPasswordLength = @MIN_PASSWORD_LENGTH@;
 
 constexpr const char* platformGpuNamePrefix = @PLATFORM_GPU_NAME_PREFIX@;
+constexpr const int gpuIndexStart = @GPU_INDEX_START@;
 
 // clang-format on

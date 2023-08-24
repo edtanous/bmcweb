@@ -413,3 +413,5 @@ option(
     value: 'disabled',
     description: 'Enable/Disable use of efficient expand on sensors collection'
 )
+
+option('gpu-index-start', type : 'integer', value : 1, description : 'The index to start GPUs from')

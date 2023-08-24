@@ -1758,8 +1758,8 @@ inline void populateMetricPropertiesAndWildcards(
                         if (wildCardMinForDevice == -1)
                         {
                             // Index start with 1 for memory devices
-                            wildCardMinForDevice = 1;
-                            wildCardMaxForDevice = 1;
+                            wildCardMinForDevice = gpuIndexStart;
+                            wildCardMaxForDevice = gpuIndexStart;
                         }
                         else
                         {
@@ -1777,8 +1777,8 @@ inline void populateMetricPropertiesAndWildcards(
                         if (wildCardMinForDevice == -1)
                         {
                             // Index start with 1 for gpu processor devices
-                            wildCardMinForDevice = 1;
-                            wildCardMaxForDevice = 1;
+                            wildCardMinForDevice = gpuIndexStart;
+                            wildCardMaxForDevice = gpuIndexStart;
                         }
                         else
                         {
@@ -1809,6 +1809,10 @@ inline void populateMetricPropertiesAndWildcards(
                         (deviceType == "ProcessorPortMetrics" ||
                          deviceType == "ProcessorPortGpmMetrics"))
                     {
+                        if( deviceName.find("C2C_") != std::string::npos)
+                        {
+                            continue;
+                        }
                         if (wildCardMinForSubDevice == -1)
                         {
                             // Index start with 0 for GPU NVLink devices
