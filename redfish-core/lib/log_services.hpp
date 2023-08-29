@@ -5137,10 +5137,12 @@ inline void requestRoutesEventLogDiagnosticDataEntry(App& app)
                 auto files = scriptExecOutputFiles.size();
                 if (files == 0 || id > files - 1)
                 {
-                    messages::resourceMissingAtURI(asyncResp->res,
-                                                   crow::utility::urlFromPieces(
-                                                        "redfish", "v1", "Systems", PLATFORMSYSTEMID,
-                                                        "LogServices", "EventLog", "DiagnosticData", id, "attachment");
+                    messages::resourceMissingAtURI(
+                        asyncResp->res,
+                        crow::utility::urlFromPieces(
+                            "redfish", "v1", "Systems", PLATFORMSYSTEMID,
+                            "LogServices", "EventLog", "DiagnosticData",
+                            std::to_string(id), "attachment"));
                     return;
                 }
                 std::ifstream file(scriptExecOutputFiles[id]);
@@ -5150,8 +5152,8 @@ inline void requestRoutesEventLogDiagnosticDataEntry(App& app)
                         asyncResp->res,
                         crow::utility::urlFromPieces(
                             "redfish", "v1", "Systems", PLATFORMSYSTEMID,
-                            "LogServices", "EventLog", "DiagnosticData", id,
-                            "attachment"));
+                            "LogServices", "EventLog", "DiagnosticData",
+                            std::to_string(id), "attachment"));
                     return;
                 }
                 std::stringstream ss;
