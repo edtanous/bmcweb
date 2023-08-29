@@ -511,12 +511,21 @@ inline void
                                     {
                                         aResp->res.jsonValue["Model"] = *model;
                                     }
+                                    else
+                                    {
+                                        //Schema defaults for interop validator 
+                                        aResp->res.jsonValue["Model"] = "";
+                                    }
 
                                     if (subModel != nullptr)
                                     {
                                         aResp->res.jsonValue["SubModel"] =
                                             *subModel;
                                     }
+
+                                    //Schema defaults for interop validator 
+                                    aResp->res.jsonValue["BiosVersion"] = "";
+                                    aResp->res.jsonValue["AssetTag"] = "";
 
 #ifdef BMCWEB_ENABLE_BIOS
                                     // Grab the bios version

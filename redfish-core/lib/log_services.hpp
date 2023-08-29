@@ -1157,6 +1157,12 @@ inline void
                 asyncResp->res.jsonValue["Name"] = dumpType + " Dump Entry";
 
                 asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
+                asyncResp->res.jsonValue["Created"] =
+                    redfish::time_utils::getDateTimeUint(timestampUs);
+                //Set schema defaults 
+                asyncResp->res.jsonValue["Message"] = "";
+                asyncResp->res.jsonValue["Severity"] = "OK";
+
 
                 if (dumpType == "BMC")
                 {
