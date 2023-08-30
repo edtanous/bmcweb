@@ -2332,6 +2332,38 @@ inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         "/xyz/openbmc_project/control", 0,
         std::array<const char*, 1>{
             "xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables"});
+
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                messages::internalError(aResp->res);
+                return;
+            }
+            BMCWEB_LOG_DEBUG << "Boot override CMOSClear update done.";
+        },
+        "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/control/host0/boot",
+        "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Control.Boot.Flags", "CMOSClear",
+        dbus::utility::DbusVariantType(true));
+
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                messages::internalError(aResp->res);
+                return;
+            }
+            BMCWEB_LOG_DEBUG << "Boot override enable update done.";
+        },
+        "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/control/host0/boot",
+        "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Object.Enable", "Enabled",
+        dbus::utility::DbusVariantType(true));
 }
 
 /**
