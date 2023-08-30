@@ -538,6 +538,73 @@ inline void
         });
 }
 
+inline void
+    getDrivePortProperties(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Item.Port",
+        [asyncResp](const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string, dbus::utility::DbusVariantType>>&
+                        propertiesList) {
+            if (ec)
+            {
+                // this interface isn't required
+                return;
+            }
+            for (const std::pair<std::string, dbus::utility::DbusVariantType>&
+                     property : propertiesList)
+            {
+                const std::string& propertyName = property.first;
+                if (propertyName == "MaxSpeed")
+                {
+                    const size_t* maxSpeed =
+                        std::get_if<size_t>(&property.second);
+                    if (maxSpeed == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "Illegal property: MaxSpeed";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    asyncResp->res.jsonValue["CapableSpeedGbs"] = *maxSpeed;
+                }
+                else if (propertyName == "CurrentSpeed")
+                {
+                    const size_t* speed = std::get_if<size_t>(&property.second);
+                    if (speed == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "Illegal property: NegotiatedSpeedGbs";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["NegotiatedSpeedGbs"] = *speed;
+                }
+            }
+        });
+}
+
+inline void getDriveVersion(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& connectionName,
+                            const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Software.Version", "Version",
+        [asyncResp, path](const boost::system::error_code ec,
+                          const std::string version) {
+            if (ec)
+            {
+                return;
+            }
+            asyncResp->res.jsonValue["FirmwareVersion"] = version;
+        });
+}
+
 static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& connectionName,
                             const std::string& path,
@@ -560,6 +627,14 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         else if (interface == "xyz.openbmc_project.Inventory.Item.Drive")
         {
             getDriveItemProperties(asyncResp, connectionName, path);
+        }
+        else if (interface == "xyz.openbmc_project.Inventory.Item.Port")
+        {
+            getDrivePortProperties(asyncResp, connectionName, path);
+        }
+        else if (interface == "xyz.openbmc_project.Software.Version")
+        {
+            getDriveVersion(asyncResp, connectionName, path);
         }
     }
 }
