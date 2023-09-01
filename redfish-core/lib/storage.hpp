@@ -725,6 +725,7 @@ inline void requestRoutesDrive(App& app)
                         auto health =
                             std::make_shared<HealthPopulate>(asyncResp);
                         health->inventory.emplace_back(path);
+                        health->selfPath = path;
                         health->populate();
 
                         addAllDriveInfo(asyncResp, connectionNames[0].first,
@@ -890,6 +891,11 @@ inline void buildDrive(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         asyncResp->res.jsonValue["Id"] = driveName;
         // default it to Enabled
         asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+
+        auto health = std::make_shared<HealthPopulate>(asyncResp);
+        health->inventory.emplace_back(path);
+        health->selfPath = path;
+        health->populate();
 
         nlohmann::json::object_t linkChassisNav;
         linkChassisNav["@odata.id"] =
