@@ -3,6 +3,18 @@
 #include <utils/port_utils.hpp>
 #include <utils/chassis_utils.hpp>
 
+// Inline function to check if a key-value pair json object already exists in the JSON array
+inline bool containsJsonObject(const nlohmann::json& j, const std::string& key, const std::string& value) {
+
+    nlohmann::json temp  = {{key, value}};
+    for (const auto& item : j) {
+        if (temp == item) {
+            return true;
+        }
+    }
+    return false;
+}
+
 inline std::string getPropertySuffix(const std::string& ifaceName,
                                      const std::string& metricName)
 {

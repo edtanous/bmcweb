@@ -91,9 +91,13 @@ inline void
                     "/redfish/v1/TelemetryService/MetricReports/";
                 if (boost::ends_with(object, "platformmetrics"))
                 {
-                    addMembers.push_back(
-                        {{"@odata.id",
-                          "/redfish/v1/TelemetryService/MetricReports/" PLATFORMMETRICSID}});
+		    std::string uripath = metricReportUriPath;
+		    uripath += PLATFORMMETRICSID;
+                    if(!containsJsonObject(addMembers, "@odata.id", uripath))
+                    {
+                        addMembers.push_back(
+                            {{"@odata.id", uripath}});
+                    }
                 }
                 else if (boost::ends_with(object, "memory"))
                 {

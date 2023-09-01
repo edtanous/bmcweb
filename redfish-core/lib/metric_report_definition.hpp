@@ -2,6 +2,7 @@
 
 #include "sensors.hpp"
 #include "utils/telemetry_utils.hpp"
+#include "utils/metric_report_utils.hpp"
 #include "utils/time_utils.hpp"
 
 #include <app.hpp>
@@ -391,7 +392,10 @@ inline void requestRoutesMetricReportDefinitionCollection(App& app)
                         {
                             std::string uripath = metricReportDefUriPath;
                             uripath += PLATFORMMETRICSID;
-                            addMembers.push_back({{"@odata.id", uripath}});
+                             if(!containsJsonObject(addMembers, "@odata.id", uripath))
+                             {
+                                addMembers.push_back({{"@odata.id", uripath}});
+                             }
                         }
                         else if (boost::ends_with(object, "memory"))
                         {
