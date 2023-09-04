@@ -605,6 +605,59 @@ inline void getDriveVersion(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         });
 }
 
+inline void getDriveStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path, const std::string& sw)
+{
+    sdbusplus::asio::getProperty<bool>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.State.Decorator.OperationalStatus", "Functional",
+        [asyncResp, path, sw](const boost::system::error_code ec,
+                          const bool functional) {
+            if (ec)
+            {
+                std::cout <<"fail to get drive status"<<std::endl;
+                return;
+            }
+            std::cout <<"functional:" <<functional<<"sw:"<<sw<<std::endl;
+            if (!functional) {
+                asyncResp->res.jsonValue["StatusIndicator"] = "Fail";
+            }
+            else if(sw != "0" && sw != "2")
+            {
+                // the temperature(2) is excluded and it is not PFA.
+                asyncResp->res.jsonValue["StatusIndicator"] =
+                    "PredictiveFailureAnalysis";
+                asyncResp->res.jsonValue["FailurePredicted"] = true;
+            }
+            else
+            {
+                asyncResp->res.jsonValue["StatusIndicator"] = "OK";
+                asyncResp->res.jsonValue["FailurePredicted"] = false;
+            }
+        });
+}
+
+inline void
+    getDriveSmartWarning(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& connectionName,
+                         const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Nvme.Status", "SmartWarnings",
+        [asyncResp, connectionName, path](const boost::system::error_code ec,
+                          const std::string sw) {
+            if (ec)
+            {
+                std::cout <<"fail to get drive smart"<<std::endl;
+                return;
+            }
+            getDriveStatus(asyncResp, connectionName, path, sw);
+        });
+
+}
+
 static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& connectionName,
                             const std::string& path,
@@ -635,6 +688,10 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         else if (interface == "xyz.openbmc_project.Software.Version")
         {
             getDriveVersion(asyncResp, connectionName, path);
+        }
+        else if (interface == "xyz.openbmc_project.Nvme.Status")
+        {
+            getDriveSmartWarning(asyncResp, connectionName, path);
         }
     }
 }
