@@ -429,6 +429,78 @@ inline std::optional<std::string> convertDriveProtocol(const std::string& proto)
     return std::nullopt;
 }
 
+inline std::optional<std::string>
+    convertDriveFormFactor(const std::string& formFactor)
+{
+
+    if (formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.Drive3_5")
+    {
+        return "Drive3_5";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.Drive2_5" )
+    {
+        return "Drive2_5";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Long" )
+    {
+        return "EDSFF_1U_Long";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Short" )
+    {
+        return "EDSFF_1U_Short";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Short" )
+    {
+        return "EDSFF_E3_Short";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Long" )
+    {
+        return "EDSFF_E3_Long";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2230" )
+    {
+        return "M2_2230";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2242" )
+    {
+        return "M2_2242";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2260" )
+    {
+        return "M2_2260";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2280" )
+    {
+        return "M2_2280";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_22110" )
+    {
+        return "M2_22110";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.U2" )
+    {
+        return "U2";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotFullLength" )
+    {
+        return "PCIeSlotFullLength";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotLowProfile" )
+    {
+        return "PCIeSlotLowProfile";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeHalfLength" )
+    {
+        return "PCIeHalfLength";
+    }
+    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.OEM" )
+    {
+        return "OEM";
+    }
+
+    return std::nullopt;
+}
+
 inline void
     getDriveItemProperties(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
@@ -514,6 +586,28 @@ inline void
                         return;
                     }
                     asyncResp->res.jsonValue["Protocol"] = *proto;
+                }
+                else if (propertyName == "FormFactor")
+                {
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR << "Illegal property: FormFactor";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    std::optional<std::string> formFactor =
+                        convertDriveFormFactor(*value);
+                    if (!formFactor)
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "Unsupported Drive FormFactor Interface: "
+                            << *value;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue["FormFactor"] = *formFactor;
                 }
                 else if (propertyName == "PredictedMediaLifeLeftPercent")
                 {
@@ -605,6 +699,23 @@ inline void getDriveVersion(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         });
 }
 
+inline void
+    getDriveLocation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                     const std::string& connectionName, const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.LocationCode", "LocationCode",
+        [asyncResp, path](const boost::system::error_code ec,
+                          const std::string location) {
+            if (ec)
+            {
+                return;
+            }
+            asyncResp->res.jsonValue["PhysicalLocation"] = location;
+        });
+}
+
 inline void getDriveStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& connectionName,
                            const std::string& path, const std::string& sw)
@@ -692,6 +803,11 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         else if (interface == "xyz.openbmc_project.Nvme.Status")
         {
             getDriveSmartWarning(asyncResp, connectionName, path);
+        }
+        else if (interface ==
+                 "xyz.openbmc_project.Inventory.Decorator.LocationCode")
+        {
+            getDriveLocation(asyncResp, connectionName, path);
         }
     }
 }
