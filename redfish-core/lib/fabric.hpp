@@ -321,7 +321,7 @@ inline void
 {
     BMCWEB_LOG_DEBUG << "Get Switch Data";
     using PropertyType =
-        std::variant<std::string, bool, size_t, std::vector<std::string>>;
+        std::variant<std::string, bool, double, size_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     // Get interface properties
     crow::connections::systemBus->async_method_call(
@@ -460,7 +460,7 @@ inline void
                 }
                 else if (propertyName == "CurrentBandwidth")
                 {
-                    const size_t* value = std::get_if<size_t>(&property.second);
+                    const double* value = std::get_if<double>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
@@ -472,7 +472,7 @@ inline void
                 }
                 else if (propertyName == "MaxBandwidth")
                 {
-                    const size_t* value = std::get_if<size_t>(&property.second);
+                    const double* value = std::get_if<double>(&property.second);
                     if (value == nullptr)
                     {
                         BMCWEB_LOG_DEBUG << "Null value returned "
