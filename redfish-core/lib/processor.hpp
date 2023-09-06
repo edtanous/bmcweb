@@ -1692,50 +1692,6 @@ inline void getEccPendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         "xyz.openbmc_project.Memory.MemoryECC");
 }
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-inline void getMigPendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                              const std::string& cpuId,
-                              const std::string& service,
-                              const std::string& objPath)
-
-{
-    crow::connections::systemBus->async_method_call(
-        [aResp, cpuId](const boost::system::error_code ec,
-                       const OperatingConfigProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
-            {
-                if (property.first == "PendingMIGState")
-                {
-                    const bool* pendingMigState =
-                        std::get_if<bool>(&property.second);
-                    if (pendingMigState == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    if (*pendingMigState)
-                    {
-                        json["Oem"]["Nvidia"]["@odata.type"] =
-                            "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
-                        json["Oem"]["Nvidia"]["MIGModeEnabled"] =
-                            *pendingMigState;
-                    }
-                }
-            }
-        },
-        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
-        "com.nvidia.MigMode");
-}
-
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
 inline void getProcessorEccModeData(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
     const std::string& service, const std::string& objPath)
@@ -4593,14 +4549,6 @@ inline void
                     {
                         getEccPendingData(aResp, processorId, service, path);
                     }
-
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "com.nvidia.MigMode") != interfaces.end())
-                    {
-                        getMigPendingData(aResp, processorId, service, path);
-                    }
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
                     if (std::find(interfaces.begin(), interfaces.end(),
                                   "xyz.openbmc_project.Software.ApplyTime") !=
