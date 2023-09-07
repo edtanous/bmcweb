@@ -3260,7 +3260,12 @@ inline void requestRoutesManager(App& app)
             oemOpenbmc["Certificates"] = {{"@odata.id",
                                            "/redfish/v1/Managers/" PLATFORMBMCID
                                            "/Truststore/Certificates"}};
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
+         	oem["Nvidia"]["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia";
 #endif
+
+#endif // BMCWEB_ENABLE_HOST_OS_FEATURE
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 

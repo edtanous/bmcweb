@@ -72,6 +72,7 @@
 #include "trusted_components.hpp"
 #include "update_service.hpp"
 #include "virtual_media.hpp"
+#include "nvidia_oem_dpu.hpp"
 
 namespace redfish
 {
@@ -373,6 +374,9 @@ class RedfishService
         requestRoutesUpdateServiceCommitImage(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesComputeDigestPost(app);
+#endif
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
+        requestRoutesNvidiaOemBf(app);
 #endif
         requestRoutesTrustedComponents(app);
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE

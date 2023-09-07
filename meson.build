@@ -81,6 +81,8 @@ feature_map = {
   'redfish-cpu-log'                             : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
   'nvidia-oem-properties'                       : '-DBMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES',
   'nvidia-oem-logservices'                      : '-DBMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES',
+  'nvidia-oem-common-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES',
+  'nvidia-oem-bf-properties'                    : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES',
   'network-adapters'                            : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS',
   'network-adapters-generic'                    : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC',
   'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
