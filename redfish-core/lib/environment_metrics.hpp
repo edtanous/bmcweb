@@ -1601,7 +1601,7 @@ inline void
                   std::variant<std::vector<std::string>>& resp) {
             if (e)
             {
-                messages::internalError(aResp->res);
+                // The path does not implement any power cap interfaces.
                 return;
             }
             std::vector<std::string>* data =
