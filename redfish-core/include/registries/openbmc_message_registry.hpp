@@ -2617,7 +2617,19 @@ constexpr std::array registry = {
                      },
                      "%2",
                  }},
-
+    MessageEntry{"BMCResourceInfo",
+        {
+            "Indicates BMC resource consumtion by process interms of storage, CPU and memory or any other resource",
+            "Processes consuming HIGH Resource %1 are %2",
+            "OK",
+            "OK",
+            2,
+            {
+                "string",
+                "string",
+            },
+            "None.",
+        }},
     
     
 
