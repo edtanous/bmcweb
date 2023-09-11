@@ -767,14 +767,62 @@ inline void requestRoutesDrive(App& app)
                             return;
                         }
 
-                        getMainChassisId(
-                            asyncResp,
-                            [](const std::string& chassisId,
-                               const std::shared_ptr<bmcweb::AsyncResp>& aRsp) {
-                                aRsp->res.jsonValue["Links"]["Chassis"]
-                                                   ["@odata.id"] =
-                                    "/redfish/v1/Chassis/" + chassisId;
-                            });
+                        const std::array<const char*, 2> interfaces = {
+                            "xyz.openbmc_project.Inventory.Item.Board",
+                            "xyz.openbmc_project.Inventory.Item.Chassis"};
+
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp](
+                                const boost::system::error_code ec,
+                                const dbus::utility::MapperGetSubTreeResponse&
+                                    subtree) {
+                                if (ec)
+                                {
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+
+                                // Iterate over all retrieved ObjectPaths.
+                                for (const auto& [p, connectionNames] : subtree)
+                                {
+                                    if (connectionNames.empty())
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "Got 0 Connection names";
+                                        continue;
+                                    }
+
+                                    sdbusplus::asio::getProperty<
+                                        std::vector<std::string>>(
+                                        *crow::connections::systemBus,
+                                        "xyz.openbmc_project.ObjectMapper",
+                                        p + "/drive",
+                                        "xyz.openbmc_project.Association",
+                                        "endpoints",
+                                        [asyncResp,
+                                         p](const boost::system::error_code ec3,
+                                            const std::vector<std::string>&
+                                                resp) {
+                                            if (ec3 || resp.empty())
+                                            {
+                                                return; // no drives = no
+                                                        // failures
+                                            }
+                                            sdbusplus::message::object_path
+                                                path(p);
+                                            asyncResp->res
+                                                .jsonValue["Links"]["Chassis"]
+                                                          ["@odata.id"] =
+                                                "/redfish/v1/Chassis/" +
+                                                path.filename();
+                                            return;
+                                        });
+                                }
+                            },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                            "/xyz/openbmc_project/inventory", 0, interfaces);
 
                         // default it to Enabled
                         asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
