@@ -36,6 +36,7 @@
 #include <utils/json_utils.hpp>
 #include <utils/privilege_utils.hpp>
 #include <utils/sw_utils.hpp>
+#include <utils/istmode_utils.hpp>
 
 #include <variant>
 
@@ -3707,6 +3708,12 @@ inline void requestRoutesSystems(App& app)
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors";
             asyncResp->res.jsonValue["Memory"]["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            ist_mode_utils::getIstMode(asyncResp);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["Storage"]["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
@@ -3861,6 +3868,7 @@ inline void requestRoutesSystems(App& app)
                 boost::beast::http::field::link,
                 "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
 
+            std::optional<nlohmann::json> oemObject;
             std::optional<bool> locationIndicatorActive;
             std::optional<std::string> indicatorLed;
             std::optional<std::string> assetTag;
@@ -3923,7 +3931,8 @@ inline void requestRoutesSystems(App& app)
                         "Boot/BootNext", bootNext,
                         "Boot/BootOrderPropertySelection", bootOrderPropertySelection,
                         "Boot/HttpBootUri", httpBootUri,
-                        "Oem/Nvidia/ProcessorDebugCapabilities", processorDebugCapabilities
+                        "Oem/Nvidia/ProcessorDebugCapabilities", processorDebugCapabilities,
+                        "Oem",oemObject
                         ))
                 {
                     return;
@@ -3931,6 +3940,26 @@ inline void requestRoutesSystems(App& app)
             // clang-format on
 
             asyncResp->res.result(boost::beast::http::status::no_content);
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            // Update migMode
+            if (std::optional<nlohmann::json> oemNvidiaObject;
+                oemObject &&
+                redfish::json_util::readJson(*oemObject, asyncResp->res,
+                                             "Nvidia", oemNvidiaObject))
+            {
+                std::optional<bool> istMode;
+                if (oemNvidiaObject && redfish::json_util::readJson(
+                                           *oemNvidiaObject, asyncResp->res,
+                                           "ISTModeEnabled", istMode))
+                {
+                    if (istMode)
+                    {
+                        ist_mode_utils::setIstMode(asyncResp, req, *istMode);
+                    }
+                }
+            }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
             if (assetTag)
             {

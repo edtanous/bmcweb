@@ -2,12 +2,16 @@
 
 #include "logging.hpp"
 
+#include <sdbusplus/server.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 
 namespace redfish
 {
 namespace dbus_utils
 {
+
+using PropertyVal = std::variant<uint8_t, uint16_t, std::string,
+                                 std::vector<std::string>, bool>;
 
 struct UnpackErrorPrinter
 {
@@ -29,6 +33,61 @@ constexpr const char* mapperBusName = "xyz.openbmc_project.ObjectMapper";
 constexpr const char* mapperObjectPath = "/xyz/openbmc_project/object_mapper";
 constexpr const char* mapperIntf = "xyz.openbmc_project.ObjectMapper";
 constexpr char const* objDeleteIntf = "xyz.openbmc_project.Object.Delete";
+
+inline std::string getRedfishIstMode(const std::string& mode)
+{
+    if (mode == "xyz.openbmc_project.Control.Mode.StateOfISTMode.Disabled")
+    {
+        return "Disabled";
+    }
+    if (mode == "xyz.openbmc_project.Control.Mode.StateOfISTMode.Enabled")
+    {
+        return "Enabled";
+    }
+    if (mode == "xyz.openbmc_project.Control.Mode.StateOfISTMode.InProgress")
+    {
+        return "InProgress";
+    }
+    return "";
+}
+
+inline std::string toIstmgrStatus(const std::string& mode)
+{
+    if (mode == "com.Nvidia.IstModeManager.Server.StateOfISTMode.Disabled")
+    {
+        return "Disabled";
+    }
+    if (mode == "com.Nvidia.IstModeManager.Server.StateOfISTMode.Enabled")
+    {
+        return "Enabled";
+    }
+    if (mode == "com.Nvidia.IstModeManager.Server.StateOfISTMode.InProgress")
+    {
+        return "InProgress";
+    }
+    return "";
+}
+
+inline std::string getIstmgrParam(const bool& Enabled)
+{
+    std::string val =
+        "com.Nvidia.IstModeManager.Server.StateOfISTMode.Disabled";
+    if (Enabled)
+    {
+        val = "com.Nvidia.IstModeManager.Server.StateOfISTMode.Enabled";
+    }
+    return val;
+}
+
+inline std::string getReqMode(const bool& Enabled)
+{
+    std::string val = "Disabled";
+    if (Enabled)
+    {
+        val = "Enabled";
+    }
+    return val;
+}
 
 inline const char* toPhysicalContext(const std::string& physicalContext)
 {
