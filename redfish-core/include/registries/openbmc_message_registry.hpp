@@ -2631,10 +2631,19 @@ constexpr std::array registry = {
             },
             "None.",
         }},
-
-    
-    
-
-
+    MessageEntry{
+        "BMCServiceResourceInfo",
+        {
+            "Indicates BMC resource consumtion by process interms of storage, CPU and memory or any other resource",
+            "The process consuming HIGH %1 Resource is %2",
+            "Warning",
+            "Warning",
+            2,
+            {
+                "string",
+                "string",
+            },
+            "None.",
+        }},
 };
 } // namespace redfish::registries::openbmc
