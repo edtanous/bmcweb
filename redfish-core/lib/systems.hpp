@@ -4048,6 +4048,10 @@ inline void
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
+	asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";
+#endif
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     // Fill in SerialConsole info
     asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] = 15;
