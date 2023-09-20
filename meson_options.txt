@@ -273,6 +273,7 @@ option('health-rollup-alternative', type : 'feature', value : 'disabled', descri
 option('nvidia-oem-properties', type : 'feature', value : 'disabled', description : 'Enable OEM properties.')
 option('nvidia-oem-logservices', type : 'feature', value : 'disabled', description : 'Enable OEM log services.')
 option('nvidia-oem-bf-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Bluefield properties')
+option('nvidia-oem-bf3-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Bluefield 3 properties')
 option('nvidia-oem-common-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Nvidia common properties.')
 option ('stalesensor-upper-limit-milisecond', type : 'integer', min : 1, max : 65535, value : 750, description : 'Upper limit in miliseconds to determine the staleness of sensor reading')
 option ('platform-metrics-sensing-interval', type : 'integer', min : 1, max : 65535, value : 250, description : 'Platform metrics telemetry sensor refresh interval in milliseconds')
