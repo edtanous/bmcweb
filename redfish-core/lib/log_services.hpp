@@ -4448,6 +4448,9 @@ inline void
     asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
     asyncResp->res.jsonValue["DateTimeLocalOffset"] =
         redfishDateTimeOffset.second;
+    asyncResp->res.jsonValue["Actions"]["#LogService.ClearLog"] = {
+        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                   "/LogServices/FDR/Actions/LogService.ClearLog"}};
 
     getFDRServiceState(asyncResp);
 }
@@ -4568,6 +4571,49 @@ inline void requestRoutesSystemFDRService(App& app)
         .privileges(redfish::privileges::patchLogService)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleFDRServicePatch, std::ref(app)));
+}
+
+void inline requestRoutesSystemFDRServiceClear(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/FDR/Actions/LogService.ClearLog/")
+        .privileges(redfish::privileges::postLogService)
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                std::vector<std::pair<std::string, std::string>>
+                    createDumpParamVec;
+
+                createDumpParamVec.emplace_back(
+                    std::make_pair("DiagnosticType", "FDR"));
+                createDumpParamVec.emplace_back(
+                    std::make_pair("Action", "Clean"));
+
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code ec,
+                                const sdbusplus::message::message& msg,
+                                const sdbusplus::message::object_path&
+                                    objPath) mutable {
+                        (void)msg;
+                        (void)objPath;
+
+                        if (ec)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        messages::success(asyncResp->res);
+                    },
+                    "xyz.openbmc_project.Dump.Manager",
+                    "/xyz/openbmc_project/dump/system",
+                    "xyz.openbmc_project.Dump.Create", "CreateDump",
+                    createDumpParamVec);
+            });
 }
 
 inline void requestRoutesCrashdumpService(App& app)
