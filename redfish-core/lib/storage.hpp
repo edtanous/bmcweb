@@ -1303,8 +1303,69 @@ inline void handleDriveSanitizetActionInfoGet(
         std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item.Drive"});
 }
 
+/**
+ * System drives, this URL will show all the DriveCollection
+ * information
+ */
+inline void driveCollectionGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemName)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    if (systemName != PLATFORMSYSTEMID)
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.type"] =
+        "#DriveCollection.DriveCollection";
+    asyncResp->res.jsonValue["Name"] = "Drive Collection";
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/";
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec,
+                      const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Drive mapper call error";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            nlohmann::json& members = asyncResp->res.jsonValue["Members"];
+            // important if array is empty
+            members = nlohmann::json::array();
+            nlohmann::json::object_t member;
+            for (const auto& [path, connectionNames] : subtree)
+            {
+                sdbusplus::message::object_path objPath(path);
+                auto id =objPath.filename();
+                member["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                      "/Storage/1/Drives/" +
+                                      id;
+                members.emplace_back(std::move(member));
+            }
+            asyncResp->res.jsonValue["Members@odata.count"] = members.size();
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", int32_t(0),
+        std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item.Drive"});
+}
+
 inline void requestRoutesDrive(App& app)
 {
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/1/Drives/")
+        .privileges(redfish::privileges::getDriveCollection)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(driveCollectionGet, std::ref(app)));
+
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/")
         .privileges(redfish::privileges::getDrive)
         .methods(boost::beast::http::verb::get)(
