@@ -29,9 +29,8 @@
 
 namespace redfish
 {
-const uint8_t maxDriveNum = 32;
 // only allow doing drive sanitize once
-static bool sanitizeInProgress[maxDriveNum] = { false };
+static std::unordered_map<std::string, bool> sanitizeInProgress;
 // task uri for long-run drive operation
 std::vector<std::string> taskUris;
 
@@ -987,8 +986,7 @@ inline void handleDriveSanitizePost(
         return;
     }
 
-    auto driveIdx = stoi(driveId);
-    if (sanitizeInProgress[driveIdx] == true)
+    if (sanitizeInProgress[driveId] == true)
     {
         if (asyncResp)
         {
@@ -1063,15 +1061,14 @@ inline void handleDriveSanitizePost(
 
             auto service = connNames[0].first;
             auto interfaces = connNames[0].second;
-            auto driveIdx = stoi(driveId);
             for (const std::string& interface : interfaces)
             {
-                if (interface != "xyz.openbmc_project.Inventory.Item.Drive")
+                if (interface != "xyz.openbmc_project.Nvme.SecureErase")
                 {
                     continue;
                 }
                 std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-                    [service, path, driveIdx](
+                    [service, path, driveId](
                         boost::system::error_code ec, sdbusplus::message_t& msg,
                         const std::shared_ptr<task::TaskData>& taskData) {
                         if (ec)
@@ -1114,7 +1111,7 @@ inline void handleDriveSanitizePost(
                                 taskData->state = "Exception";
                                 taskData->messages.emplace_back(
                                     messages::taskAborted(index));
-                                sanitizeInProgress[driveIdx] = false;
+                                sanitizeInProgress.emplace(driveId, false);
                                 return task::completed;
                             }
 
@@ -1125,7 +1122,7 @@ inline void handleDriveSanitizePost(
                                 taskData->messages.emplace_back(
                                     messages::taskCompletedOK(index));
                                 taskData->finishTask();
-                                sanitizeInProgress[driveIdx] = false;
+                                sanitizeInProgress.emplace(driveId, false);
                                 return task::completed;
                             }
                         }
@@ -1162,12 +1159,12 @@ inline void handleDriveSanitizePost(
                 taskUris.push_back("/redfish/v1/TaskService/Tasks/" +
                                    std::to_string(task->index));
                 auto methodName =
-                    "xyz.openbmc_project.Inventory.Item.Drive.EraseMethod." +
+                    "xyz.openbmc_project.Nvme.SecureErase.EraseMethod." +
                     sanitizeType;
-                sanitizeInProgress[driveIdx] = true;
+                sanitizeInProgress.emplace(driveId, true);
                 // execute drive sanitize operation
                 crow::connections::systemBus->async_method_call(
-                    [req, asyncResp, driveIdx, 
+                    [req, asyncResp, driveId, 
                      task](const boost::system::error_code ec) {
                         if (ec)
                         {
@@ -1176,7 +1173,7 @@ inline void handleDriveSanitizePost(
                                 messages::resourceErrorsDetectedFormatError(
                                     "Drive secureErase", ec.message()));
                             task->finishTask();
-                            sanitizeInProgress[driveIdx] = false;
+                            sanitizeInProgress.emplace(driveId, false);
                             return;
                         }
                     },
@@ -1244,7 +1241,7 @@ inline void handleDriveSanitizetActionInfoGet(
             auto interfaces = connNames[0].second;
             for (const std::string& interface : interfaces)
             {
-                if (interface != "xyz.openbmc_project.Inventory.Item.Drive")
+                if (interface != "xyz.openbmc_project.Nvme.SecureErase")
                 {
                     continue;
                 }
@@ -1264,7 +1261,7 @@ inline void handleDriveSanitizetActionInfoGet(
 
                         if (std::find(
                                 cap.begin(), cap.end(),
-                                "xyz.openbmc_project.Inventory.Item.Drive.EraseMethod.Overwrite") !=
+                                "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.Overwrite") !=
                             cap.end())
                         {
                             parameter["Name"] = "OverwritePasses";
@@ -1275,14 +1272,14 @@ inline void handleDriveSanitizetActionInfoGet(
                         }
                         if (std::find(
                                 cap.begin(), cap.end(),
-                                "xyz.openbmc_project.Inventory.Item.Drive.EraseMethod.BlockErase") !=
+                                "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.BlockErase") !=
                             cap.end())
                         {
                             allowed.push_back("BlockErase");
                         }
                         if (std::find(
                                 cap.begin(), cap.end(),
-                                "xyz.openbmc_project.Inventory.Item.Drive.EraseMethod.CryptoErase") !=
+                                "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.CryptoErase") !=
                             cap.end())
                         {
                             allowed.push_back("CryptographicErase");
