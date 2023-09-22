@@ -110,6 +110,14 @@ option(
 )
 
 option(
+    'redfish-fdr-log',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enable FDR log service transactions through Redfish. Paths
+                   are under /redfish/v1/Systems/bmc/LogServices/FDR'''
+)
+
+option(
     'redfish-dbus-log',
     type: 'feature',
     value: 'disabled',

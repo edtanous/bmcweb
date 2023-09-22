@@ -1758,6 +1758,13 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                 logServiceArray.push_back(std::move(dumpLog));
 #endif
 
+#ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
+                nlohmann::json::object_t fdrLog;
+                fdrLog["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR";
+                logServiceArray.push_back(std::move(fdrLog));
+#endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
+
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
                 nlohmann::json::object_t faultLog;
                 faultLog["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -4383,6 +4390,184 @@ inline void requestRoutesSystemFaultLogClear(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
             { clearDump(asyncResp, "FaultLog"); });
+}
+
+inline void getFDRServiceState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+{
+    constexpr char const* serviceName = "org.freedesktop.systemd1";
+    // change fdrServiceObjectPath accoridng to FDR service name
+    constexpr char const* fdrServiceObjectPath =
+        "/org/freedesktop/systemd1/unit/nvidia_2dfdr_2eservice";
+    constexpr char const* interfaceName = "org.freedesktop.systemd1.Unit";
+    constexpr char const* property = "SubState";
+
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, serviceName, fdrServiceObjectPath,
+        interfaceName, property,
+        [aResp](const boost::system::error_code ec,
+                const std::string& serviceState) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "DBUS response error " << ec;
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            BMCWEB_LOG_DEBUG << "serviceState : " << serviceState;
+
+            if (serviceState == "running")
+            {
+                aResp->res.jsonValue["ServiceEnabled"] = "True";
+            }
+            else
+            {
+                aResp->res.jsonValue["ServiceEnabled"] = "False";
+            }
+        });
+}
+
+inline void
+    handleFDRServiceGet(crow::App& app, const crow::Request& req,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR";
+    asyncResp->res.jsonValue["@odata.type"] = "#LogService.v1_2_0.LogService";
+    asyncResp->res.jsonValue["Name"] = "FDR LogService";
+    asyncResp->res.jsonValue["Description"] = "System FDR LogService";
+    asyncResp->res.jsonValue["Id"] = "FDR";
+    asyncResp->res.jsonValue["OverWritePolicy"] = "Unknown";
+
+    std::pair<std::string, std::string> redfishDateTimeOffset =
+        redfish::time_utils::getDateTimeOffsetNow();
+    asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
+    asyncResp->res.jsonValue["DateTimeLocalOffset"] =
+        redfishDateTimeOffset.second;
+
+    getFDRServiceState(asyncResp);
+}
+
+inline void
+    handleFDRServicePatch(crow::App& app, const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    std::optional<bool> enabled;
+
+    if (!json_util::readJsonPatch(req, asyncResp->res, "ServiceEnabled",
+                                  enabled))
+    {
+        BMCWEB_LOG_ERROR << "Failed to get ServiceEnabled property";
+        return;
+    }
+
+    if (!enabled.has_value())
+    {
+        BMCWEB_LOG_ERROR << "No value for ServiceEnabled property";
+        return;
+    }
+
+    BMCWEB_LOG_DEBUG << "enabled = " << *enabled;
+
+    constexpr char const* serviceName = "org.freedesktop.systemd1";
+    constexpr char const* objectPath = "/org/freedesktop/systemd1";
+    constexpr char const* interfaceName = "org.freedesktop.systemd1.Manager";
+    constexpr char const* startService = "StartUnit";
+    constexpr char const* stopService = "StopUnit";
+    constexpr char const* enableService = "EnableUnitFiles";
+    constexpr char const* disableService = "DisableUnitFiles";
+    // change fdrServiceName accoridng to FDR service name
+    constexpr char const* fdrServiceName = "nvidia-fdr.service";
+
+    if (*enabled)
+    {
+        // Try to enable service persistently
+        constexpr bool runtime = false;
+        constexpr bool force = false;
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            },
+            serviceName, objectPath, interfaceName, enableService,
+            std::array<std::string, 1>{fdrServiceName}, runtime, force);
+
+        // Try to start service
+        constexpr char const* mode = "replace";
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            },
+            serviceName, objectPath, interfaceName, startService,
+            fdrServiceName, mode);
+    }
+    else
+    {
+        // Try to stop service
+        constexpr char const* mode = "replace";
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            },
+            serviceName, objectPath, interfaceName, stopService, fdrServiceName,
+            mode);
+
+        // Try to disable service persistently
+        constexpr bool runtime = false;
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            },
+            serviceName, objectPath, interfaceName, disableService,
+            std::array<std::string, 1>{fdrServiceName}, runtime);
+    }
+}
+
+inline void requestRoutesSystemFDRService(App& app)
+{
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR/")
+        .privileges(redfish::privileges::getLogService)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleFDRServiceGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR/")
+        .privileges(redfish::privileges::patchLogService)
+        .methods(boost::beast::http::verb::patch)(
+            std::bind_front(handleFDRServicePatch, std::ref(app)));
 }
 
 inline void requestRoutesCrashdumpService(App& app)
