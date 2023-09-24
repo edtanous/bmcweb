@@ -279,12 +279,203 @@ const PropertyInfo modeInfo = {
         {"NicMode",
          "xyz.openbmc_project.Control.NicAttribute.Modes.Disabled"}}};
 
+const PropertyInfo nicAttributeInfo = {
+    .intf = "xyz.openbmc_project.Control.NicAttribute",
+    .prop = "NicAttribute",
+    .dbusToRedfish = {{"xyz.openbmc_project.Control.NicAttribute.Modes.Enabled", "Enabled"},
+                {"xyz.openbmc_project.Control.NicAttribute.Modes.Disabled", "Disabled"},
+                {"xyz.openbmc_project.Control.NicAttribute.Modes.Invaild", "Invaild"}},
+    .redfishToDbus = {{"Enabled", "xyz.openbmc_project.Control.NicAttribute.Modes.Enabled"},
+                {"Disabled", "xyz.openbmc_project.Control.NicAttribute.Modes.Disabled"}}};
+
+const PropertyInfo nicTristateAttributeInfo = {
+    .intf = "xyz.openbmc_project.Control.NicTristateAttribute",
+    .prop = "NicTristateAttribute",
+    .dbusToRedfish = {{"xyz.openbmc_project.Control.NicTristateAttribute.Modes.Default", "Default"},
+                 {"xyz.openbmc_project.Control.NicTristateAttribute.Modes.Enabled", "Enabled"},
+                 {"xyz.openbmc_project.Control.NicTristateAttribute.Modes.Disabled", "Disabled"},
+                 {"xyz.openbmc_project.Control.NicTristateAttribute.Modes.Invaild", "Invaild"}},
+    .redfishToDbus = {{"Default", "xyz.openbmc_project.Control.NicTristateAttribute.Modes.Default"},
+                 {"Enabled", "xyz.openbmc_project.Control.NicTristateAttribute.Modes.Enabled"},
+                 {"Disabled", "xyz.openbmc_project.Control.NicTristateAttribute.Modes.Disabled"}}};
+
 constexpr char oemNvidiaGet[] =
     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";
 
+constexpr char hostRhimTarget[] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/Oem/Nvidia/Actions/HostRshim.Set";
+
 constexpr char modeTarget[] =
     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Actions/Mode.Set";
+	constexpr char dpuStrpOptionGet[] =
+    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Connectx/StrapOptions";
+constexpr char dpuHostPrivGet[] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/Oem/Nvidia/Connectx/ExternalHostPrivileges";
+constexpr char externalHostPrivilegeTarget[] =
+    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    "/Oem/Nvidia/Connectx/ExternalHostPrivileges/Actions/ExternalHostPrivileges.Set";
 
+bluefield::DpuActionSetAndGetProp externalHostPrivilege(
+    {{"HostPrivFlashAccess",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/external_host_privileges/external_host_privileges/HOST_PRIV_FLASH_ACCESS",
+       .propertyInfo = bluefield::nicTristateAttributeInfo}},
+     {"HostPrivFwUpdate",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/external_host_privileges/external_host_privileges/HOST_PRIV_FW_UPDATE",
+       .propertyInfo = bluefield::nicTristateAttributeInfo}},
+     {"HostPrivNicReset",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/external_host_privileges/external_host_privileges/HOST_PRIV_NIC_RESET",
+       .propertyInfo = bluefield::nicTristateAttributeInfo}},
+     {"HostPrivNvGlobal",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/external_host_privileges/external_host_privileges/HOST_PRIV_NV_GLOBAL",
+       .propertyInfo = bluefield::nicTristateAttributeInfo}},
+     {"HostPrivNvHost",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/external_host_privileges/external_host_privileges/HOST_PRIV_NV_HOST",
+       .propertyInfo = bluefield::nicTristateAttributeInfo}},
+     {"HostPrivNvInternalCpu",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/external_host_privileges/external_host_privileges/HOST_PRIV_NV_INTERNAL_CPU",
+       .propertyInfo = bluefield::nicTristateAttributeInfo}},
+     {"HostPrivNvPort",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/external_host_privileges/external_host_privileges/HOST_PRIV_NV_PORT",
+       .propertyInfo = bluefield::nicTristateAttributeInfo}},
+     {"HostPrivPccUpdate",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/external_host_privileges/external_host_privileges/HOST_PRIV_PCC_UPDATE",
+       .propertyInfo = bluefield::nicTristateAttributeInfo}}},
+    bluefield::externalHostPrivilegeTarget);
+bluefield::DpuGetProperties starpOptions(
+    {{"2PcoreActive",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/2PCORE_ACTIVE",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"CoreBypassN",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/CORE_BYPASS_N",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"DisableInbandRecover",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/DISABLE_INBAND_RECOVER",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"Fnp",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/FNP",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"OscFreq0",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/OSC_FREQ_0",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"OscFreq1",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/OSC_FREQ_1",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"PciPartition0",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/PCI_PARTITION_0",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"PciPartition1",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/PCI_PARTITION_1",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"PciReversal",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/PCI_REVERSAL",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"PrimaryIsPcore1",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/PRIMARY_IS_PCORE_1",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"SocketDirect",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/strap_options/SOCKET_DIRECT",
+       .propertyInfo = bluefield::nicAttributeInfo}}});
+bluefield::DpuGetProperties starpOptionsMask(
+    {{"2PcoreActive",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/2PCORE_ACTIVE",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"CoreBypassN",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/CORE_BYPASS_N",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"DisableInbandRecover",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/DISABLE_INBAND_RECOVER",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"Fnp",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj = "/xyz/openbmc_project/network/connectx/strap_options/mask/FNP",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"OscFreq0",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/OSC_FREQ_0",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"OscFreq1",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/OSC_FREQ_1",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"PciPartition0",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/PCI_PARTITION_0",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"PciPartition1",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/PCI_PARTITION_1",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"PciReversal",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/PCI_REVERSAL",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"PrimaryIsPcore1",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/PRIMARY_IS_PCORE_1",
+       .propertyInfo = bluefield::nicAttributeInfo}},
+     {"SocketDirect",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/strap_options/mask/SOCKET_DIRECT",
+       .propertyInfo = bluefield::nicAttributeInfo}}});
+bluefield::DpuActionSetAndGetProp hostRshim(
+    {{"HostRshim",
+      {.service = "xyz.openbmc_project.Settings.connectx",
+       .obj =
+           "/xyz/openbmc_project/network/connectx/host_access/HOST_PRIV_RSHIM",
+       .propertyInfo = bluefield::nicAttributeInfo,
+       .required = true}}},
+    bluefield::hostRhimTarget);
 DpuActionSetAndGetProp mode(
     {{"Mode",
       {.service = "xyz.openbmc_project.Settings.connectx",
@@ -413,6 +604,26 @@ inline void requestRoutesNvidiaOemBf(App& app)
                 }
             });
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
+
+	    BMCWEB_ROUTE(app, bluefield::hostRhimTarget)
+        .privileges(redfish::privileges::postComputerSystem)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
+                            &bluefield::hostRshim, std::ref(app)));
+
+    BMCWEB_ROUTE(app, bluefield::modeTarget)
+        .privileges(redfish::privileges::postComputerSystem)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
+                            &bluefield::mode, std::ref(app)));
+
+
+    BMCWEB_ROUTE(app, bluefield::externalHostPrivilegeTarget)
+        .privileges(redfish::privileges::postComputerSystem)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
+                            &bluefield::externalHostPrivilege, std::ref(app)));
+
     BMCWEB_ROUTE(app, bluefield::oemNvidiaGet)
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
@@ -423,18 +634,55 @@ inline void requestRoutesNvidiaOemBf(App& app)
                     return;
                 }
                 auto& nvidia = asyncResp->res.jsonValue;
+                auto& connectx = nvidia["Connectx"];
                 auto& actions = nvidia["Actions"];
+                auto& hostRshimAction = actions["#HostRshim.Set"];
                 auto& modeAction = actions["#Mode.Set"];
 
                 bluefield::mode.getProperty(&nvidia, asyncResp);
+                bluefield::hostRshim.getProperty(&nvidia, asyncResp);
+                connectx["StrapOptions"]["@odata.id"] = bluefield::dpuStrpOptionGet;
+                connectx["ExternalHostPrivilege"]["@odata.id"] = bluefield::dpuHostPrivGet;
                 bluefield::mode.getActionInfo(&modeAction);
+				bluefield::hostRshim.getActionInfo(&hostRshimAction);
             });
-    BMCWEB_ROUTE(app, bluefield::modeTarget)
-        .privileges(redfish::privileges::postComputerSystem)
-        .methods(boost::beast::http::verb::post)(
-            std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
-                            &bluefield::mode, std::ref(app)));
-#endif //BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
+
+    BMCWEB_ROUTE(app, bluefield::dpuStrpOptionGet)
+        .privileges(redfish::privileges::getComputerSystem)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                auto& strapOptionsJson =
+                    asyncResp->res.jsonValue["StrapOptions"];
+                auto& mask = asyncResp->res.jsonValue["Mask"];
+
+                bluefield::starpOptions.getProperty(&strapOptionsJson, asyncResp);
+                bluefield::starpOptionsMask.getProperty(&mask, asyncResp);
+            });
+
+    BMCWEB_ROUTE(app, bluefield::dpuHostPrivGet)
+        .privileges(redfish::privileges::getComputerSystem)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                auto& hostPriv =
+                    asyncResp->res.jsonValue["ExternalHostPrivilege"];
+                auto& actions =
+                    asyncResp->res
+                        .jsonValue["Actions"]["#ExternalHostPrivilege.Set"];
+
+                bluefield::externalHostPrivilege.getProperty(&hostPriv, asyncResp);
+                bluefield::externalHostPrivilege.getActionInfo(&actions);
+            });
+			#endif //BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 }
 
 } // namespace redfish
