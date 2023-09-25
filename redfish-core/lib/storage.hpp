@@ -510,65 +510,65 @@ inline std::optional<std::string>
 inline std::optional<std::string>
     convertDriveOperation(const std::string& op)
 {
-    if (op == "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Sanitize")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Sanitize")
     {
         return "Sanitize";
     }
     if (op ==
-        "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Deduplicate")
+        "xyz.openbmc_project.Nvme.Operation.OperationType.Deduplicate")
     {
         return "Deduplicate";
     }
     if (op ==
-        "xyz.openbmc_project.Inventory.Item.Drive.OperationType.CheckConsistency")
+        "xyz.openbmc_project.Nvme.Operation.OperationType.CheckConsistency")
     {
         return "CheckConsistency";
     }
     if (op ==
-        "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Initialize")
+        "xyz.openbmc_project.Nvme.Operation.OperationType.Initialize")
     {
         return "Initialize";
     }
     if (op ==
-        "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Replicate")
+        "xyz.openbmc_project.Nvme.Operation.OperationType.Replicate")
     {
         return "Replicate";
     }
-    if (op == "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Delete")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Delete")
     {
         return "Delete";
     }
     if (op ==
-        "xyz.openbmc_project.Inventory.Item.Drive.OperationType.ChangeRAIDType")
+        "xyz.openbmc_project.Nvme.Operation.OperationType.ChangeRAIDType")
     {
         return "ChangeRAIDType";
     }
-    if (op == "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Rebuild")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Rebuild")
     {
         return "Rebuild";
     }
-    if (op == "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Encrypt")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Encrypt")
     {
         return "Encrypt";
     }
-    if (op == "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Encrypt")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Encrypt")
     {
         return "Decrypt";
     }
-    if (op == "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Resize")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Resize")
     {
         return "Resize";
     }
-    if (op == "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Compress")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Compress")
     {
         return "Compress";
     }
-    if (op == "xyz.openbmc_project.Inventory.Item.Drive.OperationType.Format")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Format")
     {
         return "Format";
     }
     if (op ==
-        "xyz.openbmc_project.Inventory.Item.Drive.OperationType.ChangeStripSize")
+        "xyz.openbmc_project.Nvme.Operation.OperationType.ChangeStripSize")
     {
         return "ChangeStripSize";
     }
@@ -701,22 +701,6 @@ inline void
                             .jsonValue["PredictedMediaLifeLeftPercent"] =
                             *lifeLeft;
                     }
-                }
-                else if (propertyName == "Operation")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR << "Illegal property: Operation";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    std::optional<std::string> prog =
-                        convertDriveOperation(*value);
-                    asyncResp->res.jsonValue["Operations"]["Operation"] = *prog;
-                    asyncResp->res.jsonValue["Operations"]["AssociatedTask"] = taskUris;
                 }
             }
         });
@@ -878,6 +862,28 @@ inline void
         });
 }
 
+inline void
+    getDriveOperation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Nvme.Operation", "Operation",
+        [asyncResp, connectionName, path](const boost::system::error_code ec,
+                                          const std::string op) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "fail to get drive progress";
+                return;
+            }
+
+            std::optional<std::string> operation = convertDriveOperation(op);
+            asyncResp->res.jsonValue["Operations"]["Operation"] = *operation;
+            asyncResp->res.jsonValue["Operations"]["AssociatedTask"] = taskUris;
+        });
+}
+
 static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& connectionName,
                             const std::string& path,
@@ -922,7 +928,16 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             getDriveProgress(asyncResp, connectionName, path);
         }
+        else if (interface == "xyz.openbmc_project.Common.Progress")
+        {
+            getDriveProgress(asyncResp, connectionName, path);
+        }
+        else if (interface == "xyz.openbmc_project.Nvme.Operation")
+        {
+            getDriveOperation(asyncResp, connectionName, path);
+        }
     }
+
 }
 
 inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
