@@ -29,8 +29,6 @@
 
 namespace redfish
 {
-// only allow doing drive sanitize once
-static std::unordered_map<std::string, bool> sanitizeInProgress;
 // task uri for long-run drive operation
 std::vector<std::string> taskUris;
 
@@ -990,6 +988,98 @@ inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", 0, interfaces);
 }
+inline void createSanitizeProgressTask(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, std::string service,
+    std::string path, std::string driveId)
+{
+    std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+        [service, path,
+         driveId](boost::system::error_code ec, sdbusplus::message_t& msg,
+                  const std::shared_ptr<task::TaskData>& taskData) {
+            if (ec)
+            {
+                taskData->finishTask();
+                taskData->state = "Aborted";
+                taskData->messages.emplace_back(
+                    messages::resourceErrorsDetectedFormatError(
+                        "Drive SecureErase", ec.message()));
+                return task::completed;
+            }
+
+            std::string iface;
+            boost::container::flat_map<std::string,
+                                       dbus::utility::DbusVariantType>
+                values;
+
+            std::string index = std::to_string(taskData->index);
+            msg.read(iface, values);
+
+            if (iface != "xyz.openbmc_project.Common.Progress")
+            {
+                return !task::completed;
+            }
+            auto findStatus = values.find("Status");
+            if (findStatus != values.end())
+            {
+                std::string* state =
+                    std::get_if<std::string>(&(findStatus->second));
+                if (state == nullptr)
+                {
+                    taskData->messages.emplace_back(messages::internalError());
+                    return !task::completed;
+                }
+
+                if (boost::ends_with(*state, "Aborted") ||
+                    boost::ends_with(*state, "Failed"))
+                {
+                    taskData->state = "Exception";
+                    taskData->messages.emplace_back(
+                        messages::taskAborted(index));
+                    return task::completed;
+                }
+
+                if (boost::ends_with(*state, "Completed"))
+                {
+                    taskData->state = "Completed";
+                    taskData->percentComplete = 100;
+                    taskData->messages.emplace_back(
+                        messages::taskCompletedOK(index));
+                    taskData->finishTask();
+                    return task::completed;
+                }
+            }
+
+            auto findProgress = values.find("Progress");
+            if (findProgress == values.end())
+            {
+                return !task::completed;
+            }
+            uint8_t* progress = std::get_if<uint8_t>(&(findProgress->second));
+            if (progress == nullptr)
+            {
+                taskData->messages.emplace_back(messages::internalError());
+                return task::completed;
+            }
+            taskData->percentComplete = static_cast<int>(*progress);
+
+            BMCWEB_LOG_ERROR << taskData->percentComplete;
+            taskData->messages.emplace_back(messages::taskProgressChanged(
+                index, static_cast<size_t>(*progress)));
+
+            return !task::completed;
+        },
+        "type='signal',interface='org.freedesktop.DBus.Properties',"
+        "member='PropertiesChanged',path='" +
+            path + "'");
+    task->startTimer(std::chrono::seconds(60));
+    task->payload.emplace(req);
+    task->populateResp(asyncResp->res);
+
+    taskUris.clear();
+    taskUris.push_back("/redfish/v1/TaskService/Tasks/" +
+                       std::to_string(task->index));
+}
 
 inline void handleDriveSanitizePost(
     App& app, const crow::Request& req,
@@ -998,21 +1088,6 @@ inline void handleDriveSanitizePost(
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
-        return;
-    }
-
-    if (sanitizeInProgress[driveId] == true)
-    {
-        if (asyncResp)
-        {
-            std::string resolution =
-                "Drive sanitize in progress. Retry "
-                "the sanitize operation once it is complete.";
-                redfish::messages::updateInProgressMsg(asyncResp->res,
-                                                       resolution);
-            BMCWEB_LOG_ERROR << "Sanitize on drive" << driveId
-                             << " already in progress.";
-        }
         return;
     }
 
@@ -1082,115 +1157,37 @@ inline void handleDriveSanitizePost(
                 {
                     continue;
                 }
-                std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-                    [service, path, driveId](
-                        boost::system::error_code ec, sdbusplus::message_t& msg,
-                        const std::shared_ptr<task::TaskData>& taskData) {
-                        if (ec)
-                        {
-                            taskData->finishTask();
-                            taskData->state = "Aborted";
-                            taskData->messages.emplace_back(
-                                messages::resourceErrorsDetectedFormatError(
-                                    "Drive SecureErase", ec.message()));
-                            return task::completed;
-                        }
 
-                        std::string iface;
-                        boost::container::flat_map<
-                            std::string, dbus::utility::DbusVariantType>
-                            values;
-
-                        std::string index = std::to_string(taskData->index);
-                        msg.read(iface, values);
-
-                        if (iface != "xyz.openbmc_project.Common.Progress")
-                        {
-                            return !task::completed;
-                        }
-                        auto findStatus = values.find("Status");
-                        if (findStatus != values.end())
-                        {
-                            std::string* state =
-                                std::get_if<std::string>(&(findStatus->second));
-                            if (state == nullptr)
-                            {
-                                taskData->messages.emplace_back(
-                                    messages::internalError());
-                                return !task::completed;
-                            }
-
-                            if (boost::ends_with(*state, "Aborted") ||
-                                boost::ends_with(*state, "Failed"))
-                            {
-                                taskData->state = "Exception";
-                                taskData->messages.emplace_back(
-                                    messages::taskAborted(index));
-                                sanitizeInProgress.emplace(driveId, false);
-                                return task::completed;
-                            }
-
-                            if (boost::ends_with(*state, "Completed"))
-                            {
-                                taskData->state = "Completed";
-                                taskData->percentComplete = 100;
-                                taskData->messages.emplace_back(
-                                    messages::taskCompletedOK(index));
-                                taskData->finishTask();
-                                sanitizeInProgress.emplace(driveId, false);
-                                return task::completed;
-                            }
-                        }
-
-                        auto findProgress = values.find("Progress");
-                        if (findProgress == values.end())
-                        {
-                            return !task::completed;
-                        }
-                        uint8_t* progress =
-                            std::get_if<uint8_t>(&(findProgress->second));
-                        if (progress == nullptr)
-                        {
-                            taskData->messages.emplace_back(
-                                messages::internalError());
-                            return task::completed;
-                        }
-                        taskData->percentComplete = static_cast<int>(*progress);
-
-                        BMCWEB_LOG_ERROR << taskData->percentComplete;
-                        taskData->messages.emplace_back(
-                            messages::taskProgressChanged(
-                                index, static_cast<size_t>(*progress)));
-
-                        return !task::completed;
-                    },
-                    "type='signal',interface='org.freedesktop.DBus.Properties',"
-                    "member='PropertiesChanged',path='" + path + "'");
-                task->startTimer(std::chrono::seconds(60));
-                task->payload.emplace(req);
-                task->populateResp(asyncResp->res);
-
-                taskUris.clear();
-                taskUris.push_back("/redfish/v1/TaskService/Tasks/" +
-                                   std::to_string(task->index));
                 auto methodName =
                     "xyz.openbmc_project.Nvme.SecureErase.EraseMethod." +
                     sanitizeType;
-                sanitizeInProgress.emplace(driveId, true);
                 // execute drive sanitize operation
                 crow::connections::systemBus->async_method_call(
-                    [req, asyncResp, driveId, 
-                     task](const boost::system::error_code ec) {
+                    [req, asyncResp, service, path,
+                     driveId](const boost::system::error_code ec,
+                              sdbusplus::message::message& msg) {
+                        const sd_bus_error* dbusError = msg.get_error();
+                        if (dbusError != nullptr &&
+                            strcmp(
+                                dbusError->name,
+                                "xyz.openbmc_project.Common.Error.NotAllowed") ==
+                                0)
+                        {
+                            std::string resolution =
+                                "Drive sanitize in progress. Retry "
+                                "the sanitize operation once it is complete.";
+                            redfish::messages::updateInProgressMsg(
+                                asyncResp->res, resolution);
+                            BMCWEB_LOG_ERROR << "Sanitize on drive" << driveId
+                                             << " already in progress.";
+                        }
                         if (ec)
                         {
-                            task->state = "Aborted";
-                            task->messages.emplace_back(
-                                messages::resourceErrorsDetectedFormatError(
-                                    "Drive secureErase", ec.message()));
-                            task->finishTask();
-                            sanitizeInProgress.emplace(driveId, false);
+                            //other errors return here.
                             return;
                         }
+                        createSanitizeProgressTask(req, asyncResp, service,
+                                                   path, driveId);
                     },
                     service, path, interface, "Erase", owPass, methodName);
                 return;
@@ -1203,18 +1200,12 @@ inline void handleDriveSanitizePost(
         std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item.Drive"});
 }
 
+
 inline void handleDriveSanitizetActionInfoGet(
-    App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisId, const std::string& driveId)
+    const std::string& , const std::string& driveId)
 {
-    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-    {
-        return;
-    }
     asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
-    asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Chassis/" + chassisId + "/Drives/"+ driveId +"/SanitizeActionInfo";
     asyncResp->res.jsonValue["Name"] = "Sanitize Action Info";
     asyncResp->res.jsonValue["Id"] = "SanitizeActionInfo";
 
@@ -1316,6 +1307,36 @@ inline void handleDriveSanitizetActionInfoGet(
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", int32_t(0),
         std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item.Drive"});
+}
+
+inline void handleSystemDriveSanitizetActionInfoGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemId, const std::string& driveId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + systemId + "/Drives/"+ driveId +"/SanitizeActionInfo";
+
+    handleDriveSanitizetActionInfoGet(asyncResp,systemId, driveId);
+}
+
+inline void handleChassisDriveSanitizetActionInfoGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId, const std::string& driveId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Chassis/" + chassisId + "/Drives/"+ driveId +"/SanitizeActionInfo";
+
+    handleDriveSanitizetActionInfoGet(asyncResp,chassisId, driveId);
 }
 
 /**
@@ -1489,11 +1510,12 @@ inline void requestRoutesDrive(App& app)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleDriveSanitizePost, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/SanitizeActionInfo")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/SanitizeActionInfo")
         .privileges(redfish::privileges::getDrive)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(handleDriveSanitizetActionInfoGet, std::ref(app)));
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleSystemDriveSanitizetActionInfoGet, std::ref(app)));
 }
 
 /**
@@ -1784,7 +1806,7 @@ inline void requestRoutesChassisDriveName(App& app)
                  "/redfish/v1/Chassis/<str>/Drives/<str>/SanitizeActionInfo")
         .privileges(redfish::privileges::getDrive)
         .methods(boost::beast::http::verb::get)(
-            std::bind_front(handleDriveSanitizetActionInfoGet, std::ref(app)));
+            std::bind_front(handleChassisDriveSanitizetActionInfoGet, std::ref(app)));
 }
 
 } // namespace redfish
