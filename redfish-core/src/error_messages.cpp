@@ -1995,7 +1995,7 @@ nlohmann::json unsupportedMediaType()
 
     return nlohmann::json{
         {"@odata.type", "#Message.v1_1_1.Message"},
-        {"MessageId", "Base.1.8.1.UnsupportedMediaType"},
+        {"MessageId", "Base.1.15.0.UnsupportedMediaType"},
         {"Message",
          "The request specifies a Content-Type for the body that is not supported"},
         {"MessageArgs", {}},
