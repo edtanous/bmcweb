@@ -1822,7 +1822,7 @@ nlohmann::json payloadTooLarge()
 
 void payloadTooLarge(crow::Response& res, const std::string& resolution)
 {
-    res.result(boost::beast::http::status::bad_request);
+    res.result(boost::beast::http::status::payload_too_large);
     nlohmann::json responseMessage = payloadTooLarge();
     if (!resolution.empty())
     {
@@ -1932,7 +1932,8 @@ void resourceErrorsDetectedFormatError(crow::Response& res,
                                        const std::string& resolution)
 {
     res.result(boost::beast::http::status::internal_server_error);
-    nlohmann::json responseMessage = resourceErrorsDetectedFormatError(arg1, arg2);
+    nlohmann::json responseMessage =
+        resourceErrorsDetectedFormatError(arg1, arg2);
     if (!resolution.empty())
     {
         responseMessage["Resolution"] = resolution;
@@ -1969,8 +1970,6 @@ void mutualExclusiveProperties(crow::Response& res, const std::string& arg1,
     addMessageToErrorJson(res.jsonValue, mutualExclusiveProperties(arg1, arg2));
 }
 
-
-
 void updateInProgressMsg(crow::Response& res, const std::string& resolution)
 {
     res.result(boost::beast::http::status::bad_request);
@@ -1982,6 +1981,33 @@ void updateInProgressMsg(crow::Response& res, const std::string& resolution)
         message["Resolution"] = resolution;
     }
     addMessageToErrorJson(res.jsonValue, message);
+}
+
+/**
+ * @internal
+ * @brief Formats UnsupportedMediaType message into JSON
+ *
+ * See header file for more information
+ * @endinternal
+ */
+nlohmann::json unsupportedMediaType()
+{
+
+    return nlohmann::json{
+        {"@odata.type", "#Message.v1_1_1.Message"},
+        {"MessageId", "Base.1.8.1.UnsupportedMediaType"},
+        {"Message",
+         "The request specifies a Content-Type for the body that is not supported"},
+        {"MessageArgs", {}},
+        {"MessageSeverity", "Critical"},
+        {"Resolution",
+         "Please ensure that the Content-Type header in your request specifies a valid media type for the body content."}};
+}
+
+void unsupportedMediaType(crow::Response& res)
+{
+    res.result(boost::beast::http::status::unsupported_media_type);
+    addMessageToErrorJson(res.jsonValue, unsupportedMediaType());
 }
 
 } // namespace messages

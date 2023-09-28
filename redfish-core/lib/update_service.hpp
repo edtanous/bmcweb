@@ -675,16 +675,507 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
             });
 }
 
-inline void
-    handleUpdateServicePost(App& app, const crow::Request& req,
+/**
+ * @brief Upload firmware image
+ *
+ * @param[in] req  HTTP request.
+ * @param[in] asyncResp Pointer to object holding response data
+ *
+ * @return None
+ */
+inline void uploadImageFile(const crow::Request& req,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    std::string filepath(
+        updateServiceImageLocation +
+        boost::uuids::to_string(boost::uuids::random_generator()()));
+
+    monitorForSoftwareAvailable(asyncResp, req, fwObjectCreationDefaultTimeout,
+                                filepath);
+
+    BMCWEB_LOG_DEBUG << "Uploaded image is written to " << filepath;
+    std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
+                                    std::ofstream::trunc);
+    // set the permission of the file to 640
+    std::filesystem::perms permission =
+        std::filesystem::perms::owner_read | std::filesystem::perms::group_read;
+    std::filesystem::permissions(filepath, permission);
+
+    MultipartParser parser;
+    ParserError ec = parser.parse(req);
+    if (ec != ParserError::PARSER_SUCCESS)
+    {
+        // handle error
+        BMCWEB_LOG_ERROR << "MIME parse failed, ec : " << static_cast<int>(ec);
+        messages::internalError(asyncResp->res);
+        return;
+    }
+
+    bool hasUpdateFile = false;
+
+    for (const FormPart& formpart : parser.mime_fields)
+    {
+        boost::beast::http::fields::const_iterator it =
+            formpart.fields.find("Content-Disposition");
+
+        size_t index = it->value().find(';');
+        if (index == std::string::npos)
+        {
+            continue;
+        }
+
+        for (auto const& param :
+             boost::beast::http::param_list{it->value().substr(index)})
+        {
+            if (param.first != "name" || param.second.empty())
+            {
+                continue;
+            }
+
+            if (param.second == "UpdateFile")
+            {
+                hasUpdateFile = true;
+                out << formpart.content;
+
+                if (out.bad())
+                {
+                    BMCWEB_LOG_ERROR << "Error writing to file: " << filepath
+                                     << ", Error code: " << out.rdstate();
+                    messages::internalError(asyncResp->res);
+                    cleanUp();
+                }
+            }
+        }
+    }
+
+    if (!hasUpdateFile)
+    {
+        BMCWEB_LOG_ERROR << "File with firmware image is missing.";
+        messages::propertyMissing(asyncResp->res, "UpdateFile");
+    }
+}
+
+/**
+ * @brief Check if the list of targets contains invalid and unupdateable
+ * targets. The function returns a list of valid targets in the parameter
+ * 'validTargets'
+ *
+ * @param[in] uriTargets  List of components delivered in HTTPRequest
+ * @param[in] updateables List of all unupdateable components in the system
+ * @param[in] swInvPaths  List of software inventory paths
+ * @param[out] validTargets  List of valid components delivered in HTTPRequest
+ *
+ * @return It returns true when a list of delivered components contains invalid
+ * or unupdateable components
+ */
+inline bool areTargetsInvalidOrUnupdatable(
+    const std::vector<std::string>& uriTargets,
+    const std::vector<std::string>& updateables,
+    const std::vector<std::string>& swInvPaths,
+    std::vector<sdbusplus::message::object_path>& validTargets)
+{
+    bool hasAnyInvalidOrUnupdateableTarget = false;
+    for (const std::string& target : uriTargets)
+    {
+        std::string componentName = std::filesystem::path(target).filename();
+        bool validTarget = false;
+        std::string softwarePath = "software/" + componentName;
+
+        if (std::any_of(swInvPaths.begin(), swInvPaths.end(),
+                        [&](const std::string& path) {
+                            return path.find(softwarePath) != std::string::npos;
+                        }))
+        {
+            validTarget = true;
+
+            if (std::find(updateables.begin(), updateables.end(),
+                          componentName) != updateables.end())
+            {
+                validTargets.emplace_back(
+                    sdbusplus::message::object_path(softwarePath));
+            }
+            else
+            {
+                hasAnyInvalidOrUnupdateableTarget = true;
+                BMCWEB_LOG_ERROR << "Unupdatable Target: " << target << "\n";
+            }
+        }
+
+        if (!validTarget)
+        {
+            hasAnyInvalidOrUnupdateableTarget = true;
+            BMCWEB_LOG_ERROR << "Invalid Target: " << target << "\n";
+        }
+    }
+
+    return hasAnyInvalidOrUnupdateableTarget;
+}
+
+/**
+ * @brief Handle update policy
+ *
+ * @param[in] errorCode Error code
+ * @param[in] objInfo Service object
+ * @param[in] req  HTTP request
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] targets  List of valid components delivered in HTTPRequest
+ *
+ * @return None
+ */
+inline void validateUpdatePolicyCallback(
+    const boost::system::error_code errorCode,
+    const MapperServiceMap& objInfo,
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::vector<sdbusplus::message::object_path>& targets)
+{
+    if (errorCode)
+    {
+        BMCWEB_LOG_ERROR << "validateUpdatePolicyCallback:error_code = "
+                         << errorCode;
+        BMCWEB_LOG_ERROR << "validateUpdatePolicyCallback:error msg = "
+                         << errorCode.message();
+        if (asyncResp)
+        {
+            messages::internalError(asyncResp->res);
+        }
+        return;
+    }
+    // Ensure we only got one service back
+    if (objInfo.size() != 1)
+    {
+        BMCWEB_LOG_ERROR
+            << "More than one service support xyz.openbmc_project.Software.UpdatePolicy. Object Size "
+            << objInfo.size();
+        if (asyncResp)
+        {
+            messages::internalError(asyncResp->res);
+        }
+        return;
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [req, asyncResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "error_code = " << ec;
+                messages::internalError(asyncResp->res);
+            }
+
+            uploadImageFile(req, asyncResp);
+        },
+        objInfo[0].first, "/xyz/openbmc_project/software",
+        "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Software.UpdatePolicy", "Targets",
+        dbus::utility::DbusVariantType(targets));
+}
+
+/**
+ * @brief Handle check updateable devices
+ *
+ * @param[in] ec Error code
+ * @param[in] objPaths Object paths
+ * @param[in] req  HTTP request
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] uriTargets List of valid components delivered in HTTPRequest
+ * @param[in] swInvPaths List of software inventory paths
+ *
+ * @return None
+ */
+inline void areTargetsUpdateableCallback(
+    const boost::system::error_code& ec,
+    const std::vector<std::string>& objPaths, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::vector<std::string>& uriTargets,
+    const std::vector<std::string>& swInvPaths)
+{
+    if (ec)
+    {
+        BMCWEB_LOG_DEBUG << "areTargetsUpdateableCallback:error_code = " << ec;
+        BMCWEB_LOG_DEBUG << "areTargetsUpdateableCallback:error msg =  "
+                         << ec.message();
+
+        BMCWEB_LOG_ERROR << "Targeted devices not updateable";
+
+        boost::urls::url_view targetURL("Target");
+        messages::invalidObject(asyncResp->res, targetURL);
+        return;
+    }
+
+    std::vector<std::string> updateableFw;
+    for (const auto& reqFwObjPath : swInvPaths)
+    {
+        if (std::find(objPaths.begin(), objPaths.end(), reqFwObjPath) !=
+            objPaths.end())
+        {
+            std::string compName =
+                std::filesystem::path(reqFwObjPath).filename();
+            updateableFw.push_back(compName);
+        }
+    }
+
+    std::vector<sdbusplus::message::object_path> targets = {};
+    // validate TargetUris if entries are present
+    if (uriTargets.size() != 0)
+    {
+
+        if (areTargetsInvalidOrUnupdatable(uriTargets, updateableFw, swInvPaths,
+                                           targets))
+        {
+            boost::urls::url_view targetURL("Target");
+            messages::invalidObject(asyncResp->res, targetURL);
+            return;
+        }
+
+        // else all targets are valid
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [req, asyncResp, targets](const boost::system::error_code errorCode,
+                                  const MapperServiceMap& objInfo) mutable {
+            validateUpdatePolicyCallback(errorCode, objInfo, req, asyncResp,
+                                         targets);
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject",
+        "/xyz/openbmc_project/software",
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Software.UpdatePolicy"});
+}
+
+/**
+ * @brief Perfom a check to determine if the targets are updateable
+ *
+ * @param[in] req  HTTP request
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] uriTargets  List of valid components delivered in HTTPRequest
+ *
+ * @return None
+ */
+inline void
+    areTargetsUpdateable(const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::vector<std::string>& uriTargets)
+{
+    crow::connections::systemBus->async_method_call(
+        [req, asyncResp,
+         uriTargets](const boost::system::error_code ec,
+                     const std::vector<std::string>& swInvPaths) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            sdbusplus::asio::getProperty<std::vector<std::string>>(
+                *crow::connections::systemBus,
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/software/updateable",
+                "xyz.openbmc_project.Association", "endpoints",
+                [req, asyncResp, uriTargets,
+                 swInvPaths](const boost::system::error_code ec,
+                             const std::vector<std::string>& objPaths) {
+                    areTargetsUpdateableCallback(ec, objPaths, req, asyncResp,
+                                                 uriTargets,
+                                                 swInvPaths);
+                });
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+        "/xyz/openbmc_project/software/", static_cast<int32_t>(0),
+        std::array<std::string, 1>{"xyz.openbmc_project.Software.Version"});
+}
+
+/**
+ * @brief Parse multipart update form
+ *
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] parser  Multipart Parser
+ * @param[out] hasUpdateParameters return true when 'UpdateParameters' is added
+ * to HTTPRequest
+ * @param[out] targets List of delivered targets in HTTPRequest
+ * @param[out] applyTime Operation Apply Time
+ * @param[out] hasFile return true when 'UpdateFile' is added to HTTPRequest
+ *
+ * @return It returns true when parsing of the multipart update form is
+ * successfully completed.
+ */
+inline bool
+    parseMultipartForm(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const MultipartParser& parser, bool& hasUpdateParameters,
+                       std::optional<std::vector<std::string>>& targets,
+                       std::optional<std::string>& applyTime, 
+                       bool& hasFile)
+{
+    hasUpdateParameters = false;
+    hasFile = false;
+    for (const FormPart& formpart : parser.mime_fields)
+    {
+        boost::beast::http::fields::const_iterator it =
+            formpart.fields.find("Content-Disposition");
+        if (it == formpart.fields.end())
+        {
+            BMCWEB_LOG_ERROR << "Couldn't find Content-Disposition";
+            messages::propertyMissing(asyncResp->res, "Content-Disposition");
+            return false;
+        }
+        BMCWEB_LOG_INFO << "Parsing value " << it->value();
+
+        // The construction parameters of param_list must start with `;`
+        size_t index = it->value().find(';');
+        if (index == std::string::npos)
+        {
+            continue;
+        }
+
+        for (auto const& param :
+             boost::beast::http::param_list{it->value().substr(index)})
+        {
+            if (param.first != "name" || param.second.empty())
+            {
+                continue;
+            }
+
+            if (param.second == "UpdateParameters")
+            {
+                hasUpdateParameters = true;
+                nlohmann::json content =
+                    nlohmann::json::parse(formpart.content);
+
+                json_util::readJson(content, asyncResp->res, "Targets", targets,
+                                    "@Redfish.OperationApplyTime", applyTime);
+            }
+            else if (param.second == "UpdateFile")
+            {
+                hasFile = true;
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @brief Check multipart update form UpdateParameters
+ *
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] hasUpdateParameters true when 'UpdateParameters' is added
+ * to HTTPRequest
+ * @param[in] applyTime Operation Apply Time
+ *
+ * @return It returns true when the form section 'UpdateParameters' contains the
+ * required parameters.
+ */
+inline bool validateUpdateParametersFormData(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    bool hasUpdateParameters, std::optional<std::string>& applyTime)
+{
+    if (!hasUpdateParameters)
+    {
+        BMCWEB_LOG_INFO << "UpdateParameters parameter is missing";
+
+        messages::actionParameterMissing(asyncResp->res, "update-multipart",
+                                         "UpdateParameters");
+
+        return false;
+    }
+
+    if (applyTime)
+    {
+        std::string allowedApplyTime = "Immediate";
+        if (allowedApplyTime != *applyTime)
+        {
+            BMCWEB_LOG_INFO
+                << "ApplyTime value is not in the list of acceptable values";
+
+            messages::propertyValueNotInList(asyncResp->res, *applyTime,
+                                             "@Redfish.OperationApplyTime");
+
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @brief Check multipart update form UpdateFile
+ *
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] hasFile true when 'UpdateFile' is added to HTTPRequest
+ *
+ * @return It returns true when the form section 'UpdateFile' contains the
+ * required parameters.
+ */
+inline bool validateUpdateFileFormData(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const bool hasFile)
+{
+    if (!hasFile)
+    {
+        BMCWEB_LOG_ERROR << "Upload data is NULL";
+        messages::propertyMissing(asyncResp->res, "UpdateFile");
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * @brief Process multipart form data
+ *
+ * @param[in] req  HTTP request
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] parser  MultipartParser
+ *
+ * @return None
+ */
+inline void processMultipartFormData(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const MultipartParser& parser)
+{
+    std::optional<std::string> applyTime;
+    std::optional<std::vector<std::string>> targets;
+    bool hasUpdateParameters = false;
+    bool hasFile = false;
+
+    if (!parseMultipartForm(asyncResp, parser, hasUpdateParameters, targets,
+                            applyTime, hasFile))
     {
         return;
     }
-    BMCWEB_LOG_DEBUG << "doPost...";
 
+    if (!validateUpdateParametersFormData(asyncResp, hasUpdateParameters,
+                                          applyTime))
+    {
+        return;
+    }
+
+    if (!validateUpdateFileFormData(asyncResp, hasFile))
+    {
+        return;
+    }
+
+    std::vector<std::string> uriTargets{*targets};
+    areTargetsUpdateable(req, asyncResp, uriTargets);
+}
+
+/**
+ * @brief Check whether an update can be processed.
+ *
+ * @param[in] req  HTTP request
+ * @param[in] asyncResp Pointer to object holding response data
+ *
+ * @return Returns true when the firmware can be applied.
+ */
+inline bool preCheckMultipartUpdateServiceReq(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
     if (req.body.size() > firmwareImageLimitBytes)
     {
         if (asyncResp)
@@ -697,7 +1188,7 @@ inline void
                 "retry the firmware update operation.";
             messages::payloadTooLarge(asyncResp->res, resolution);
         }
-        return;
+        return false;
     }
 
     // Only allow one FW update at a time
@@ -712,7 +1203,7 @@ inline void
             redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
             BMCWEB_LOG_ERROR << "Update already in progress.";
         }
-        return;
+        return false;
     }
 
     std::error_code spaceInfoError;
@@ -728,9 +1219,72 @@ inline void
             std::string resolution =
                 "Reset the baseboard and retry the operation.";
             messages::insufficientStorage(asyncResp->res, resolution);
-            return;
+            return false;
         }
-    }   
+    }
+
+    return true;
+}
+
+/**
+ * @brief POST handler for Multipart Update Service
+ *
+ * @param[in] app App
+ * @param[in] req  HTTP request
+ * @param[in] asyncResp  Pointer to object holding response data
+ *
+ * @return None
+ */
+inline void handleMultipartUpdateServicePost(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    BMCWEB_LOG_DEBUG
+        << "Execute HTTP POST method '/redfish/v1/UpdateService/update-multipart/'";
+
+    if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
+    {
+        return;
+    }
+
+    MultipartParser parser;
+    ParserError ec = parser.parse(req);
+    if (ec == ParserError::ERROR_BOUNDARY_FORMAT)
+    {
+        BMCWEB_LOG_ERROR << "The request has unsupported media type";
+        messages::unsupportedMediaType(asyncResp->res);
+
+        return;
+    }
+    if (ec != ParserError::PARSER_SUCCESS)
+    {
+        // handle error
+        BMCWEB_LOG_ERROR << "MIME parse failed, ec : " << static_cast<int>(ec);
+        messages::internalError(asyncResp->res);
+        return;
+    }
+    processMultipartFormData(req, asyncResp, parser);
+}
+
+inline void
+    handleUpdateServicePost(App& app, const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    BMCWEB_LOG_DEBUG
+        << "Execute HTTP POST method '/redfish/v1/UpdateService/update/'";
+
+    if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
+    {
+        return;
+    }
 
     std::string filepath(
         updateServiceImageLocation +
@@ -794,7 +1348,7 @@ inline void requestRoutesUpdateService(App& app)
                 return;
             }
             asyncResp->res.jsonValue["@odata.type"] =
-                "#UpdateService.v1_5_0.UpdateService";
+                "#UpdateService.v1_8_0.UpdateService";
             asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/UpdateService";
             asyncResp->res.jsonValue["Id"] = "UpdateService";
             asyncResp->res.jsonValue["Description"] =
@@ -815,6 +1369,17 @@ inline void requestRoutesUpdateService(App& app)
 
             // UpdateService cannot be disabled
             asyncResp->res.jsonValue["ServiceEnabled"] = true;
+
+            asyncResp->res.jsonValue["MultipartHttpPushUri"] =
+                "/redfish/v1/UpdateService/update-multipart";
+
+            const nlohmann::json operationApplyTimeSupportedValues = {"Immediate"};
+
+            asyncResp->res.jsonValue
+                ["MultipartHttpPushUri@Redfish.OperationApplyTimeSupport"] = {
+                {"@odata.type", "#Settings.v1_3_3.OperationApplyTimeSupport"},
+                {"SupportedValues", operationApplyTimeSupportedValues}};
+
             asyncResp->res.jsonValue["FirmwareInventory"]["@odata.id"] =
                 "/redfish/v1/UpdateService/FirmwareInventory";
             asyncResp->res.jsonValue["SoftwareInventory"] = {
@@ -1349,6 +1914,11 @@ inline void requestRoutesUpdateService(App& app)
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleUpdateServicePost, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/update-multipart/")
+        .privileges(redfish::privileges::postUpdateService)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleMultipartUpdateServicePost, std::ref(app)));
 }
 
 inline void requestRoutesSoftwareInventoryCollection(App& app)
