@@ -441,63 +441,63 @@ inline std::optional<std::string>
     {
         return "Drive3_5";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.Drive2_5" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.Drive2_5" )
     {
         return "Drive2_5";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Long" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Long" )
     {
         return "EDSFF_1U_Long";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Short" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Short" )
     {
         return "EDSFF_1U_Short";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Short" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Short" )
     {
         return "EDSFF_E3_Short";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Long" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Long" )
     {
         return "EDSFF_E3_Long";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2230" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2230" )
     {
         return "M2_2230";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2242" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2242" )
     {
         return "M2_2242";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2260" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2260" )
     {
         return "M2_2260";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2280" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2280" )
     {
         return "M2_2280";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_22110" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_22110" )
     {
         return "M2_22110";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.U2" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.U2" )
     {
         return "U2";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotFullLength" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotFullLength" )
     {
         return "PCIeSlotFullLength";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotLowProfile" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotLowProfile" )
     {
         return "PCIeSlotLowProfile";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeHalfLength" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeHalfLength" )
     {
         return "PCIeHalfLength";
     }
-    else if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.OEM" )
+    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.OEM" )
     {
         return "OEM";
     }
@@ -762,7 +762,7 @@ inline void getDriveVersion(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Software.Version", "Version",
         [asyncResp, path](const boost::system::error_code ec,
-                          const std::string version) {
+                          const std::string& version) {
             if (ec)
             {
                 return;
@@ -779,7 +779,7 @@ inline void
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Inventory.Decorator.LocationCode", "LocationCode",
         [asyncResp, path](const boost::system::error_code ec,
-                          const std::string location) {
+                          const std::string& location) {
             if (ec)
             {
                 return;
@@ -829,7 +829,7 @@ inline void
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Nvme.Status", "SmartWarnings",
         [asyncResp, connectionName, path](const boost::system::error_code ec,
-                          const std::string sw) {
+                          const std::string& sw) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "fail to get drive smart";
@@ -869,7 +869,7 @@ inline void
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Nvme.Operation", "Operation",
         [asyncResp, connectionName, path](const boost::system::error_code ec,
-                                          const std::string op) {
+                                          const std::string& op) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "fail to get drive progress";
@@ -926,10 +926,6 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             getDriveProgress(asyncResp, connectionName, path);
         }
-        else if (interface == "xyz.openbmc_project.Common.Progress")
-        {
-            getDriveProgress(asyncResp, connectionName, path);
-        }
         else if (interface == "xyz.openbmc_project.Nvme.Operation")
         {
             getDriveOperation(asyncResp, connectionName, path);
@@ -955,7 +951,7 @@ inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
 
             // Iterate over all retrieved ObjectPaths.
-            for (const auto& [p, connectionNames] : subtree)
+            for (const auto& [path, connectionNames] : subtree)
             {
                 if (connectionNames.empty())
                 {
@@ -963,21 +959,21 @@ inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     continue;
                 }
 
+                sdbusplus::message::object_path objPath(path);
                 sdbusplus::asio::getProperty<std::vector<std::string>>(
                     *crow::connections::systemBus,
-                    "xyz.openbmc_project.ObjectMapper", p + "/drive",
+                    "xyz.openbmc_project.ObjectMapper", path + "/drive",
                     "xyz.openbmc_project.Association", "endpoints",
-                    [asyncResp, p](const boost::system::error_code ec3,
+                    [asyncResp, objPath](const boost::system::error_code ec3,
                                    const std::vector<std::string>& resp) {
                         if (ec3 || resp.empty())
                         {
                             return; // no drives = no
                                     // failures
                         }
-                        sdbusplus::message::object_path path(p);
                         asyncResp->res
                             .jsonValue["Links"]["Chassis"]["@odata.id"] =
-                            "/redfish/v1/Chassis/" + path.filename();
+                            "/redfish/v1/Chassis/" + objPath.filename();
 
                         return;
                     });
@@ -988,10 +984,12 @@ inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", 0, interfaces);
 }
+
 inline void createSanitizeProgressTask(
     const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, std::string service,
-    std::string path, std::string driveId)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& service, const std::string& path,
+    const std::string& driveId)
 {
     std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
         [service, path,
@@ -1272,7 +1270,7 @@ inline void handleDriveSanitizetActionInfoGet(
                         {
                             parameter["Name"] = "OverwritePasses";
                             parameter["DataType"] = "integer";
-                            parameters.push_back(std::move(parameter));
+                            parameters.push_back(parameter);
 
                             allowed.push_back("Overwrite");
                         }
@@ -1293,11 +1291,10 @@ inline void handleDriveSanitizetActionInfoGet(
                         parameter["Name"] = "SanitizationType";
                         parameter["DataType"] = "string";
 
-                        parameter["AllowableValues"] = std::move(allowed);
-                        parameters.push_back(std::move(parameter));
+                        parameter["AllowableValues"] = allowed;
+                        parameters.push_back(parameter);
 
-                        asyncResp->res.jsonValue["Parameters"] =
-                            std::move(parameters);
+                        asyncResp->res.jsonValue["Parameters"] = parameters;
                     });
                 break;
             }
@@ -1384,7 +1381,7 @@ inline void driveCollectionGet(
                 member["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                       "/Storage/1/Drives/" +
                                       id;
-                members.emplace_back(std::move(member));
+                members.emplace_back(member);
             }
             asyncResp->res.jsonValue["Members@odata.count"] = members.size();
         },
@@ -1680,12 +1677,13 @@ inline void buildDrive(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId);
         asyncResp->res.jsonValue["Links"]["Chassis"] = linkChassisNav;
         asyncResp->res.jsonValue["Actions"]["#Drive.SecureErase"]["target"] =
-            "/redfish/v1/Chassis/" + chassisId + "/Drives/" + driveName +
-            "/Actions/Drive.SecureErase";
+            crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
+                                         "Drives", driveName, "Actions",
+                                         "Drive.SecureErase");
         asyncResp->res
             .jsonValue["Actions"]["#Drive.SecureErase"]["@Redfish.ActionInfo"] =
-            "/redfish/v1/Chassis/" + chassisId + "/Drives/" + driveName +
-            "/SanitizeActionInfo";
+            crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
+                                         "Drives", driveName, "SanitizeActionInfo");
 
         addAllDriveInfo(asyncResp, connectionNames[0].first, path,
                         connectionNames[0].second);
