@@ -258,7 +258,6 @@ inline void getSensorMap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     {
                         thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = false;
                     }
-                    thisMetric["Oem"]["Nvidia"]["FreshnessInms"] = freshness;                    
                 }
                 resArray.push_back(thisMetric);
             }
