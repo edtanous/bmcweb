@@ -97,6 +97,33 @@ void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         connection, path, "xyz.openbmc_project.Control.Power.Cap",
         "ClearPowerCap");
 }
+
+inline std::string getTelemetryStateType(const std::string& stateType)
+{
+    if (stateType == "xyz.openbmc_project.State.FeatureReady.States.Enabled")
+    {
+        return "Enabled";
+    }
+    if (stateType == "xyz.openbmc_project.State.FeatureReady.States.StandbyOffline")
+    {
+        return "StandbyOffline";
+    }
+    if (stateType == "xyz.openbmc_project.State.FeatureReady.States.Starting")
+    {
+        return "Starting";
+    }
+    if (stateType == "xyz.openbmc_project.State.FeatureReady.States.Disabled")
+    {
+        return "Disabled";
+    }
+    if (stateType == "xyz.openbmc_project.State.FeatureReady.States.Unknown")
+    {
+        return "Unknown";
+    }
+    // Unknown or others
+    return "";
+}
+
 /**
  * @brief Convert state of EstimatePowerMethod PDI
  * @param state   stateOfEstimatePowerMEthod property of static power hint PDI
