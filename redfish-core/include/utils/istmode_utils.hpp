@@ -143,222 +143,161 @@ inline void setIstMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         return;
                     }
                     // validate request
-                    else if ((mode == "Disabled") && !reqIstModeEnabled)
+                    if ((mode == "Disabled") && !reqIstModeEnabled)
                     {
                         BMCWEB_LOG_ERROR << "ISTMode Already Disabled";
                         aResp->res.result(
                             boost::beast::http::status::no_content);
                         return;
                     }
-                    else
-                    {
-                        // Async method call to get current Status
-                        crow::connections::systemBus->async_method_call(
-                            [aResp, reqIstModeEnabled,
-                             req](const boost::system::error_code ec1,
-                                  const std::variant<std::string>& istStatus) {
-                                if (ec1)
-                                {
-                                    BMCWEB_LOG_DEBUG
-                                        << "DBUS response error for "
-                                           "Trying to get ISTManager Sttaus";
-                                    messages::internalError(aResp->res);
-                                    return;
-                                }
-                                // If ISTMode Setting is already in progress,
-                                // return error
-                                auto status = dbus_utils::toIstmgrStatus(
-                                    *std::get_if<std::string>(&istStatus));
-                                if (status == "InProgress")
-                                {
-                                    BMCWEB_LOG_ERROR
-                                        << "ISTMode Settings In Progress";
-                                    std::string resolution =
-                                        "ISTMode operation is in progress. Retry"
-                                        " the  operation once it is complete.";
-                                    redfish::messages::updateInProgressMsg(
-                                        aResp->res, resolution);
-                                    return;
-                                }
-                                else
-                                {
-                                    std::string setParam =
-                                        dbus_utils::getIstmgrParam(
+
+                    // Async method call to get current Status
+                    crow::connections::systemBus->async_method_call(
+                        [aResp, reqIstModeEnabled,
+                         req](const boost::system::error_code ec1,
+                              const std::variant<std::string>& istStatus) {
+                            if (ec1)
+                            {
+                                BMCWEB_LOG_DEBUG
+                                    << "DBUS response error for "
+                                       "Trying to get ISTManager Sttaus";
+                                messages::internalError(aResp->res);
+                                return;
+                            }
+                            // If ISTMode Setting is already in progress,
+                            // return error
+                            auto status = dbus_utils::toIstmgrStatus(
+                                *std::get_if<std::string>(&istStatus));
+                            if (status == "InProgress")
+                            {
+                                BMCWEB_LOG_ERROR
+                                    << "ISTMode Settings In Progress";
+                                std::string resolution =
+                                    "ISTMode operation is in progress. Retry"
+                                    " the  operation once it is complete.";
+                                redfish::messages::updateInProgressMsg(
+                                    aResp->res, resolution);
+                                return;
+                            }
+
+                            std::string setParam =
+                                dbus_utils::getIstmgrParam(reqIstModeEnabled);
+
+                            // Async method call setISTMode
+                            crow::connections::systemBus->async_method_call(
+                                [aResp, req, reqIstModeEnabled](
+                                    boost::system::error_code ec) {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "setISTMode failed with error";
+                                        messages::internalError(aResp->res);
+                                        return;
+                                    }
+                                    std::string reqIstModVal =
+                                        dbus_utils::getReqMode(
                                             reqIstModeEnabled);
+                                    // create task to monitor
+                                    // ISTMode status
+                                    std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+                                        [reqIstModVal](
+                                            boost::system::error_code err,
+                                            sdbusplus::message::message&
+                                                taskMsg,
+                                            const std::shared_ptr<
+                                                task::TaskData>& taskData) {
+                                            if (err)
+                                            {
+                                                BMCWEB_LOG_ERROR
+                                                    << "task cancelled";
+                                                taskData->state = "Cancelled";
+                                                taskData->messages.emplace_back(
+                                                    messages::
+                                                        resourceErrorsDetectedFormatError(
+                                                            "SetIstMode task",
+                                                            err.message()));
+                                                taskData->finishTask();
+                                                return task::completed;
+                                            }
 
-                                    // Async method call setISTMode
-                                    crow::connections::
-                                        systemBus
-                                            ->async_method_call(
-                                                [aResp, req, reqIstModeEnabled](
-                                                    boost::system::error_code
-                                                        ec) {
-                                                    if (ec)
-                                                    {
-                                                        BMCWEB_LOG_ERROR
-                                                            << "setISTMode failed with error";
-                                                        messages::internalError(
-                                                            aResp->res);
-                                                        return;
-                                                    }
-                                                    std::string reqIstModVal =
-                                                        dbus_utils::getReqMode(
-                                                            reqIstModeEnabled);
-                                                    // create task to monitor
-                                                    // ISTMode status
-                                                    std::
-                                                        shared_ptr<
-                                                            task::TaskData>
-                                                            task =
-                                                                task::
-                                                                    TaskData::
-                                                                        createTask(
-                                                                            [reqIstModVal](
-                                                                                boost::system::
-                                                                                    error_code
-                                                                                        err,
-                                                                                sdbusplus::message::
-                                                                                    message&
-                                                                                        taskMsg,
-                                                                                const std::shared_ptr<
-                                                                                    task::
-                                                                                        TaskData>&
-                                                                                    taskData) {
-                                                                                if (err)
-                                                                                {
-                                                                                    BMCWEB_LOG_ERROR
-                                                                                        << "task cancelled";
-                                                                                    taskData
-                                                                                        ->state =
-                                                                                        "Cancelled";
-                                                                                    taskData
-                                                                                        ->messages
-                                                                                        .emplace_back(messages::resourceErrorsDetectedFormatError(
-                                                                                            "SetIstMode task",
-                                                                                            err.message()));
-                                                                                    taskData
-                                                                                        ->finishTask();
-                                                                                    return task::
-                                                                                        completed;
-                                                                                }
+                                            std::string interface;
+                                            std::map<
+                                                std::string,
+                                                dbus::utility::DbusVariantType>
+                                                props;
 
-                                                                                std::string
-                                                                                    interface;
-                                                                                std::map<
-                                                                                    std::
-                                                                                        string,
-                                                                                    dbus::utility::
-                                                                                        DbusVariantType>
-                                                                                    props;
+                                            taskMsg.read(interface, props);
+                                            auto it = props.find("Status");
+                                            if (it == props.end())
+                                            {
+                                                BMCWEB_LOG_ERROR
+                                                    << "Did not receive an ISTMode Status value";
+                                                return !task::completed;
+                                            }
+                                            auto value =
+                                                std::get_if<std::string>(
+                                                    &(it->second));
+                                            if (!value)
+                                            {
+                                                BMCWEB_LOG_ERROR
+                                                    << "Received ISTMode Status is not a string";
+                                                return !task::completed;
+                                            }
+                                            std::string propName = "ISTMode";
+                                            auto mode =
+                                                dbus_utils::toIstmgrStatus(
+                                                    *value);
+                                            if (mode == "InProgress")
+                                            {
+                                                // ignore inprogress change
+                                                return !task::completed;
+                                            }
+                                            if (mode == reqIstModVal)
+                                            {
+                                                // ist mode manager status
+                                                // property changed to user
+                                                // requested value
+                                                taskData->state = "Completed";
+                                                taskData->percentComplete = 100;
+                                                taskData->messages.emplace_back(
+                                                    messages::taskCompletedOK(
+                                                        std::to_string(
+                                                            taskData->index)));
+                                                taskData->finishTask();
+                                                return task::completed;
+                                            }
 
-                                                                                taskMsg
-                                                                                    .read(
-                                                                                        interface,
-                                                                                        props);
-                                                                                auto it =
-                                                                                    props
-                                                                                        .find(
-                                                                                            "Status");
-                                                                                if (it ==
-                                                                                    props
-                                                                                        .end())
-                                                                                {
-                                                                                    BMCWEB_LOG_ERROR
-                                                                                        << "Did not receive an ISTMode Status value";
-                                                                                    return !task::
-                                                                                        completed;
-                                                                                }
-                                                                                auto value = std::get_if<
-                                                                                    std::
-                                                                                        string>(
-                                                                                    &(it->second));
-                                                                                if (!value)
-                                                                                {
-                                                                                    BMCWEB_LOG_ERROR
-                                                                                        << "Received ISTMode Status is not a string";
-                                                                                    return !task::
-                                                                                        completed;
-                                                                                }
-                                                                                std::string
-                                                                                    propName =
-                                                                                        "ISTMode";
-                                                                                auto mode = dbus_utils::
-                                                                                    toIstmgrStatus(
-                                                                                        *value);
-                                                                                if (mode ==
-                                                                                    "InProgress")
-                                                                                {
-                                                                                    // ignore inprogress change
-                                                                                    return !task::
-                                                                                        completed;
-                                                                                }
-                                                                                else if (
-                                                                                    mode ==
-                                                                                    reqIstModVal)
-                                                                                {
-                                                                                    // ist mode manager status property
-                                                                                    // changed to user requested value
-                                                                                    taskData
-                                                                                        ->state =
-                                                                                        "Completed";
-                                                                                    taskData
-                                                                                        ->percentComplete =
-                                                                                        100;
-                                                                                    taskData
-                                                                                        ->messages
-                                                                                        .emplace_back(messages::taskCompletedOK(
-                                                                                            std::to_string(
-                                                                                                taskData
-                                                                                                    ->index)));
-                                                                                    taskData
-                                                                                        ->finishTask();
-                                                                                    return task::
-                                                                                        completed;
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    // ist mode manager status property
-                                                                                    // changed to value other than
-                                                                                    // inprogress and user requested
-                                                                                    // value
-                                                                                    // throw error message in task
-                                                                                    // status and return
-                                                                                    taskData
-                                                                                        ->state =
-                                                                                        "Exception";
-                                                                                    taskData
-                                                                                        ->messages
-                                                                                        .emplace_back(
-                                                                                            messages::resourceErrorsDetectedFormatError(
-                                                                                                "NvidiaComputerSystem.ISTMode",
-                                                                                                reqIstModVal +
-                                                                                                    " Failed"));
-                                                                                    taskData
-                                                                                        ->finishTask();
-                                                                                    return task::
-                                                                                        completed;
-                                                                                }
-                                                                            },
-                                                                            "type='signal',interface='org.freedesktop.DBus.Properties',"
-                                                                            "member='PropertiesChanged',path='" +
-                                                                                istMgrPath +
-                                                                                "'");
-                                                    task->startTimer(
-                                                        std::chrono::seconds(
-                                                            150));
-                                                    task->populateResp(
-                                                        aResp->res);
-                                                    task->payload.emplace(req);
-                                                },
-                                                istMgrServ, istMgrPath,
-                                                istMgrIface, "setISTMode",
-                                                setParam);
-                                }
-                            },
-                            istMgrServ, istMgrPath,
-                            "org.freedesktop.DBus.Properties", "Get",
-                            istMgrIface, "Status");
-                    }
+                                            // ist mode manager status
+                                            // property changed to value
+                                            // other than inprogress and
+                                            // user requested value
+                                            // throw error message in
+                                            // task status and return
+                                            taskData->state = "Exception";
+                                            taskData->messages.emplace_back(
+                                                messages::
+                                                    resourceErrorsDetectedFormatError(
+                                                        "NvidiaComputerSystem.ISTMode",
+                                                        reqIstModVal +
+                                                            " Failed"));
+                                            taskData->finishTask();
+                                            return task::completed;
+                                            
+                                        },
+                                        "type='signal',interface='org.freedesktop.DBus.Properties',"
+                                        "member='PropertiesChanged',path='" +
+                                            istMgrPath + "'");
+                                    task->startTimer(std::chrono::seconds(150));
+                                    task->populateResp(aResp->res);
+                                    task->payload.emplace(req);
+                                },
+                                istMgrServ, istMgrPath, istMgrIface,
+                                "setISTMode", setParam);
+                        },
+                        istMgrServ, istMgrPath,
+                        "org.freedesktop.DBus.Properties", "Get", istMgrIface,
+                        "Status");
+                    
                 },
                 service, path, "org.freedesktop.DBus.Properties", "Get",
                 istIface, "ISTMode");

@@ -255,8 +255,8 @@ inline void
                        const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
+                BMCWEB_LOG_ERROR << "getComputerSystem DBUS response error";
+                // messages::internalError(aResp->res);
                 return;
             }
             // Iterate over all retrieved ObjectPaths.
@@ -3942,7 +3942,7 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.result(boost::beast::http::status::no_content);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            // Update migMode
+            // Update istMode
             if (std::optional<nlohmann::json> oemNvidiaObject;
                 oemObject &&
                 redfish::json_util::readJson(*oemObject, asyncResp->res,

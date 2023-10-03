@@ -117,7 +117,7 @@ inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
-                messages::internalError(asyncResp->res);
+                //messages::internalError(asyncResp->res);
                 return;
             }
             for (const auto& [objectPath, serviceMap] : subtree)

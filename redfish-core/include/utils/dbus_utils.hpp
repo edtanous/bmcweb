@@ -68,21 +68,21 @@ inline std::string toIstmgrStatus(const std::string& mode)
     return "";
 }
 
-inline std::string getIstmgrParam(const bool& Enabled)
+inline std::string getIstmgrParam(const bool& enabled)
 {
     std::string val =
         "com.Nvidia.IstModeManager.Server.StateOfISTMode.Disabled";
-    if (Enabled)
+    if (enabled)
     {
         val = "com.Nvidia.IstModeManager.Server.StateOfISTMode.Enabled";
     }
     return val;
 }
 
-inline std::string getReqMode(const bool& Enabled)
+inline std::string getReqMode(const bool& enabled)
 {
     std::string val = "Disabled";
-    if (Enabled)
+    if (enabled)
     {
         val = "Enabled";
     }
