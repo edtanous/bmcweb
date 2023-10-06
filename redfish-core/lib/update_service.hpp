@@ -929,7 +929,7 @@ inline bool areTargetsInvalidOrUnupdatable(
     {
         std::string componentName = std::filesystem::path(target).filename();
         bool validTarget = false;
-        std::string softwarePath = "software/" + componentName;
+        std::string softwarePath = "/xyz/openbmc_project/software/" + componentName;
 
         if (std::any_of(swInvPaths.begin(), swInvPaths.end(),
                         [&](const std::string& path) {
