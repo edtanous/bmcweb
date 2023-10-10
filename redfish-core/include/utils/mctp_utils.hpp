@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <openbmc_dbus_rest.hpp>
 #include <utils/dbus_utils.hpp>
@@ -16,7 +17,7 @@ namespace mctp_utils
 
 constexpr const char* spdmResponderIntf = "xyz.openbmc_project.SPDM.Responder";
 constexpr const std::string_view mctpObjectPrefix =
-    "/xyz/openbmc_project/mctp/0/";
+    "/xyz/openbmc_project/mctp/";
 
 using AssociationCallback = std::function<void(
     bool /* success */,
@@ -28,13 +29,18 @@ class MctpEndpoint
                  AssociationCallback&& callback) :
         spdmObj(spdmObject)
     {
+        BMCWEB_LOG_DEBUG << "Finding associations for " << spdmObject;
         dbus::utility::findAssociations(
             spdmObject + "/transport_object",
-            [this, callback{std::forward<AssociationCallback>(callback)}](
+            [this, spdmObject,
+             callback{std::forward<AssociationCallback>(callback)}](
                 const boost::system::error_code ec,
                 std::variant<std::vector<std::string>>& association) {
+                BMCWEB_LOG_DEBUG << "findAssociations callback for "
+                                 << spdmObject;
                 if (ec)
                 {
+                    BMCWEB_LOG_ERROR << spdmObject << ": " << ec.message();
                     callback(false, ec.message());
                     return;
                 }
@@ -49,21 +55,25 @@ class MctpEndpoint
                 mctpObj = data->front();
                 if (mctpObj.rfind(mctpObjectPrefix, 0) == 0)
                 {
+                    std::vector<std::string> v;
+                    boost::split(v, mctpObj, boost::is_any_of("/"));
+                    if (v.size() == 0)
+                    {
+                        callback(false, "invalid MCTP object path: " + mctpObj);
+                        return;
+                    }
                     try
                     {
-                        mctpEid = std::stoi(
-                            mctpObj.substr(mctpObjectPrefix.length()));
+                        mctpEid = std::stoi(v.back());
                         callback(true, mctpObj);
                     }
                     catch (std::invalid_argument const&)
                     {
                         callback(false, "invalid MCTP object path: " + mctpObj);
                     }
+                    return;
                 }
-                else
-                {
-                    callback(false, "invalid MCTP object path: " + mctpObj);
-                }
+                callback(false, "invalid MCTP object path: " + mctpObj);
             });
     }
 
@@ -96,12 +106,11 @@ using ErrorCallback = std::function<void(
     const std::string& /* error message*/)>;
 void enumerateMctpEndpoints(EndpointCallback&& endpointCallback,
                             ErrorCallback&& errorCallback,
-                            const std::string& spdmObjectFilter = "")
+                            const std::string& spdmObjectFilter = "",
+                            uint64_t timeoutUs = 0)
 {
-    std::shared_ptr<size_t> enumeratedEndpoints = std::make_shared<size_t>(0);
-    crow::connections::systemBus->async_method_call(
-        [enumeratedEndpoints,
-         endpointCallback{std::forward<EndpointCallback>(endpointCallback)},
+    crow::connections::systemBus->async_method_call_timed(
+        [endpointCallback{std::forward<EndpointCallback>(endpointCallback)},
          errorCallback{std::forward<ErrorCallback>(errorCallback)},
          spdmObjectFilter](
             const boost::system::error_code ec,
@@ -110,6 +119,7 @@ void enumerateMctpEndpoints(EndpointCallback&& endpointCallback,
             BMCWEB_LOG_DEBUG << desc;
             if (ec)
             {
+                BMCWEB_LOG_ERROR << desc << ": " << ec.message();
                 errorCallback(true, desc, ec.message());
                 return;
             }
@@ -134,7 +144,7 @@ void enumerateMctpEndpoints(EndpointCallback&& endpointCallback,
                     endpoints->reserve(1);
                     endpoints->emplace_back(
                         obj->first,
-                        [desc, endpoints, enumeratedEndpoints, endpointCallback,
+                        [desc, endpoints, endpointCallback,
                          errorCallback](bool success, const std::string& msg) {
                             if (!success)
                             {
@@ -145,46 +155,45 @@ void enumerateMctpEndpoints(EndpointCallback&& endpointCallback,
                                 endpointCallback(endpoints);
                             }
                         });
+                    return;
                 }
-                else
-                {
-                    errorCallback(true, desc,
-                                  "no SPDM objects matching " +
-                                      spdmObjectFilter + " found");
-                }
+                errorCallback(true, desc,
+                              "no SPDM objects matching " + spdmObjectFilter +
+                                  " found");
+                return;
             }
-            else
+
+            auto endpoints = std::make_shared<Endpoints>();
+            endpoints->reserve(subtree.size());
+            std::shared_ptr<size_t> enumeratedEndpoints =
+                std::make_shared<size_t>(0);
+            for (const auto& object : subtree)
             {
-                auto endpoints = std::make_shared<Endpoints>();
-                endpoints->reserve(subtree.size());
-                for (const auto& object : subtree)
-                {
-                    endpoints->emplace_back(
-                        object.first,
-                        [desc, endpoints, enumeratedEndpoints, endpointCallback,
-                         errorCallback](bool success, const std::string& msg) {
-                            if (!success)
-                            {
-                                errorCallback(false, desc, msg);
-                            }
-                            *enumeratedEndpoints += 1;
-                            if (*enumeratedEndpoints == endpoints->capacity())
-                            {
-                                std::sort(endpoints->begin(), endpoints->end(),
-                                          [](const MctpEndpoint& a,
-                                             const MctpEndpoint& b) {
-                                              return a.getMctpEid() <
-                                                     b.getMctpEid();
-                                          });
-                                endpointCallback(endpoints);
-                            }
-                        });
-                }
+                endpoints->emplace_back(
+                    object.first,
+                    [desc, endpoints, enumeratedEndpoints, endpointCallback,
+                     errorCallback](bool success, const std::string& msg) {
+                        if (!success)
+                        {
+                            errorCallback(false, desc, msg);
+                        }
+                        *enumeratedEndpoints += 1;
+                        if (*enumeratedEndpoints == endpoints->capacity())
+                        {
+                            std::sort(endpoints->begin(), endpoints->end(),
+                                      [](const MctpEndpoint& a,
+                                         const MctpEndpoint& b) {
+                                          return a.getMctpEid() <
+                                                 b.getMctpEid();
+                                      });
+                            endpointCallback(endpoints);
+                        }
+                    });
             }
         },
         dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,
-        dbus_utils::mapperIntf, "GetSubTree", "/xyz/openbmc_project/SPDM", 0,
-        std::array{spdmResponderIntf});
+        dbus_utils::mapperIntf, "GetSubTree", timeoutUs,
+        "/xyz/openbmc_project/SPDM", 0, std::array{spdmResponderIntf});
 }
 
 } // namespace mctp_utils

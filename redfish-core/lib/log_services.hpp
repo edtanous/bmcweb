@@ -1159,7 +1159,7 @@ inline void
                 asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
                 asyncResp->res.jsonValue["Created"] =
                     redfish::time_utils::getDateTimeUint(timestampUs);
-                //Set schema defaults 
+                //Set schema defaults
                 asyncResp->res.jsonValue["Message"] = "";
                 asyncResp->res.jsonValue["Severity"] = "OK";
 
@@ -6695,32 +6695,147 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/DebugTokenService/CollectDiagnosticData")
         .privileges(redfish::privileges::getLogEntry)
-        .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                std::string diagnosticDataType;
-                std::string oemDiagnosticDataType;
-                if (!redfish::json_util::readJsonAction(
-                        req, asyncResp->res, "DiagnosticDataType",
-                        diagnosticDataType, "OEMDiagnosticDataType",
-                        oemDiagnosticDataType))
-                {
-                    return;
-                }
+        .methods(
+            boost::beast::http::verb::
+                post)([](const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            std::string diagnosticDataType;
+            std::string oemDiagnosticDataType;
+            if (!redfish::json_util::readJsonAction(
+                    req, asyncResp->res, "DiagnosticDataType",
+                    diagnosticDataType, "OEMDiagnosticDataType",
+                    oemDiagnosticDataType))
+            {
+                return;
+            }
+            if (diagnosticDataType != "OEM")
+            {
+                BMCWEB_LOG_ERROR << "Only OEM DiagnosticDataType supported "
+                                    "for DebugTokenService";
+                messages::actionParameterValueFormatError(
+                    asyncResp->res, diagnosticDataType, "DiagnosticDataType",
+                    "CollectDiagnosticData");
+                return;
+            }
 
-                if (diagnosticDataType != "OEM")
+            int index = 0;
+            std::string matchString;
+            if (oemDiagnosticDataType == "DebugTokenStatus")
+            {
+                matchString = "0";
+            }
+            else
+            {
+                index = redfish::debug_token::getMeasurementIndex(
+                    oemDiagnosticDataType);
+                if (index < 0)
                 {
-                    BMCWEB_LOG_ERROR << "Only OEM DiagnosticDataType supported "
-                                        "for DebugTokenService";
+                    BMCWEB_LOG_ERROR << "Unsupported OEMDiagnosticDataType: "
+                                     << oemDiagnosticDataType;
                     messages::actionParameterValueFormatError(
-                        asyncResp->res, diagnosticDataType,
-                        "DiagnosticDataType", "CollectDiagnosticData");
+                        asyncResp->res, oemDiagnosticDataType,
+                        "OEMDiagnosticDataType", "CollectDiagnosticData");
                     return;
                 }
+                matchString =
+                    "type='signal',interface='org.freedesktop.DBus.Properties',"
+                    "member='PropertiesChanged',"
+                    "path_namespace='/xyz/openbmc_project/SPDM'";
+            }
 
-                auto callback = [](const std::shared_ptr<task::TaskData>& task,
-                                   const std::string& output) {
-                    debugTokenData.push_back(output);
+            static std::unique_ptr<debug_token::OperationHandler> op;
+            if (op)
+            {
+                messages::serviceTemporarilyUnavailable(asyncResp->res, "20");
+                return;
+            }
+
+            std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+                [](boost::system::error_code ec, sdbusplus::message_t& msg,
+                   const std::shared_ptr<task::TaskData>& taskData) {
+                    bool completed = true;
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "Debug token operation task error: "
+                                         << ec.message();
+                        if (ec != boost::asio::error::operation_aborted)
+                        {
+                            taskData->messages.emplace_back(
+                                messages::resourceErrorsDetectedFormatError(
+                                    "Debug token task", ec.message()));
+                        }
+                        op.reset();
+                    }
+                    else if (op)
+                    {
+                        completed = op->update(msg);
+                        taskData->extendTimer(std::chrono::seconds(20));
+                    }
+                    return completed ? task::completed : !task::completed;
+                },
+                matchString);
+
+            auto resultHandler = [oemDiagnosticDataType,
+                                  task](const std::shared_ptr<std::vector<
+                                            debug_token::DebugTokenEndpoint>>&
+                                            endpoints) {
+                std::string result;
+                int totalEpCount = 0;
+                int validEpCount = 0;
+                if (op && endpoints)
+                {
+                    op->getResult(result);
+                    totalEpCount = static_cast<int>(endpoints->size());
+                    for (const auto& ep : *endpoints)
+                    {
+                        const auto& state = std::get<3>(ep);
+                        if (oemDiagnosticDataType == "DebugTokenStatus")
+                        {
+                            if (state ==
+                                debug_token::EndpointState::StatusAcquired)
+                            {
+                                ++validEpCount;
+                            }
+                        }
+                        else
+                        {
+                            if (state == debug_token::EndpointState::
+                                             RequestAcquired ||
+                                state ==
+                                    debug_token::EndpointState::TokenInstalled)
+                            {
+                                ++validEpCount;
+                            }
+                        }
+                        const auto& mctpEp = std::get<0>(ep);
+                        const auto spdmObject = mctpEp.getSpdmObject();
+                        std::string stateDesc;
+                        switch (state)
+                        {
+                            case debug_token::EndpointState::StatusAcquired:
+                                stateDesc = "Debug token status acquired";
+                                break;
+                            case debug_token::EndpointState::TokenInstalled:
+                                stateDesc = "Debug token already installed";
+                                break;
+                            case debug_token::EndpointState::RequestAcquired:
+                                stateDesc = "Debug token request acquired";
+                                break;
+                            case debug_token::EndpointState::Error:
+                                stateDesc = "Error";
+                                break;
+                            default:
+                                stateDesc = "Invalid state";
+                                break;
+                        }
+                        task->messages.emplace_back(
+                            messages::resourceErrorsDetectedFormatError(
+                                spdmObject, stateDesc));
+                    }
+                }
+                if (result.size() != 0)
+                {
+                    debugTokenData.push_back(result);
                     std::string path =
                         "/redfish/v1/Systems/" PLATFORMSYSTEMID
                         "/LogServices/DebugTokenService/"
@@ -6730,54 +6845,73 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     std::string location = "Location: " + path;
                     task->payload->httpHeaders.emplace_back(
                         std::move(location));
-                };
-
-                if (oemDiagnosticDataType == "DebugTokenStatus")
+                }
+                if (validEpCount == 0 || totalEpCount == 0)
                 {
-                    static std::shared_ptr<debug_token::StatusQuery> query;
-                    if (!query || !query->isRunning())
-                    {
-                        query = std::make_shared<debug_token::StatusQuery>(
-                            std::move(callback));
-                        query->run(req, asyncResp);
-                    }
-                    else
-                    {
-                        messages::serviceTemporarilyUnavailable(asyncResp->res,
-                                                                "60");
-                    }
+                    task->state = "Stopping";
+                    task->messages.emplace_back(
+                        messages::taskAborted(std::to_string(task->index)));
                 }
                 else
                 {
-                    auto index = redfish::debug_token::getMeasurementIndex(
-                        oemDiagnosticDataType);
-                    if (index >= 0)
+                    if (validEpCount == totalEpCount)
                     {
-                        static std::shared_ptr<debug_token::Request> request;
-                        if (!request || !request->isRunning())
-                        {
-                            request = std::make_shared<debug_token::Request>(
-                                index, std::move(callback));
-                            request->run(req, asyncResp);
-                        }
-                        else
-                        {
-                            messages::serviceTemporarilyUnavailable(
-                                asyncResp->res, "60");
-                        }
+                        task->state = "Completed";
+                        task->messages.emplace_back(messages::taskCompletedOK(
+                            std::to_string(task->index)));
                     }
                     else
                     {
-
-                        BMCWEB_LOG_ERROR
-                            << "Unsupported OEMDiagnosticDataType: "
-                            << oemDiagnosticDataType;
-                        messages::actionParameterValueFormatError(
-                            asyncResp->res, oemDiagnosticDataType,
-                            "OEMDiagnosticDataType", "CollectDiagnosticData");
+                        task->state = "Exception";
+                        task->messages.emplace_back(
+                            messages::taskCompletedWarning(
+                                std::to_string(task->index)));
                     }
+                    task->percentComplete = 100 * validEpCount / totalEpCount;
                 }
-            });
+                task->timer.cancel();
+                task->finishTask();
+                task->sendTaskEvent(task->state, task->index);
+                boost::asio::post(
+                    crow::connections::systemBus->get_io_context(), [task] {
+                        task->match.reset();
+                        op.reset();
+                    });
+            };
+            auto errorHandler = [task](bool critical, const std::string& desc,
+                                       const std::string& error) {
+                task->messages.emplace_back(
+                    messages::resourceErrorsDetectedFormatError(desc, error));
+                if (critical)
+                {
+                    task->state = "Stopping";
+                    task->messages.emplace_back(
+                        messages::taskAborted(std::to_string(task->index)));
+                    task->timer.cancel();
+                    task->finishTask();
+                    task->sendTaskEvent(task->state, task->index);
+                    boost::asio::post(
+                        crow::connections::systemBus->get_io_context(), [task] {
+                            task->match.reset();
+                            op.reset();
+                        });
+                }
+            };
+
+            if (oemDiagnosticDataType == "DebugTokenStatus")
+            {
+                op = std::make_unique<debug_token::StatusQueryHandler>(
+                    resultHandler, errorHandler);
+            }
+            else
+            {
+                op = std::make_unique<debug_token::RequestHandler>(
+                    resultHandler, errorHandler, index);
+            }
+            task->payload.emplace(req);
+            task->populateResp(asyncResp->res);
+            task->startTimer(std::chrono::seconds(20));
+        });
 }
 
 inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
