@@ -1567,7 +1567,6 @@ inline void
 
     const std::array<const char*, 1> networkInterfaces = {
         "xyz.openbmc_project.Inventory.Item.NetworkInterface"};
-    BMCWEB_LOG_ERROR << "test networkInterface:" + objPath;
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, chassisId(std::string(chassisId))](

@@ -1084,13 +1084,16 @@ inline void objectPropertiesToJson(
                 {
                     forceToInt = true;
                 }
-                if (forceToInt)
+                if (!std::isinf(*doubleValue))
                 {
-                    sensorJson[key] = static_cast<int64_t>(*doubleValue);
-                }
-                else
-                {
-                    sensorJson[key] = *doubleValue;
+                    if (forceToInt)
+                    {
+                        sensorJson[key] = static_cast<int64_t>(*doubleValue);
+                    }
+                    else
+                    {
+                        sensorJson[key] = *doubleValue;
+                    }
                 }
             }
             else if (stringValue != nullptr)
