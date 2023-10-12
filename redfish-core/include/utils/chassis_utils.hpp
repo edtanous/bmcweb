@@ -73,6 +73,30 @@ inline std::string getPowerStateType(const std::string& stateType)
     return "";
 }
 
+void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                     const std::string& path, const std::string& connection)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](boost::system::error_code ec1, const int retValue) {
+            if (!ec1)
+            {
+
+                if (retValue != 0)
+                {
+                    BMCWEB_LOG_ERROR << retValue;
+                    messages::internalError(asyncResp->res);
+                }
+                BMCWEB_LOG_DEBUG << " PowerLimit Reset Succeded";
+                messages::success(asyncResp->res);
+                return;
+            }
+            BMCWEB_LOG_DEBUG << ec1;
+            messages::internalError(asyncResp->res);
+            return;
+        },
+        connection, path, "xyz.openbmc_project.Control.Power.Cap",
+        "ClearPowerCap");
+}
 /**
  * @brief Convert state of EstimatePowerMethod PDI
  * @param state   stateOfEstimatePowerMEthod property of static power hint PDI
@@ -337,7 +361,7 @@ inline std::string getPowerModeType(const std::string& dbusAction)
     if (dbusAction ==
         "xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance")
     {
-        return "MaxP";
+        return "Custom";
     }
     if (dbusAction ==
         "xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving")

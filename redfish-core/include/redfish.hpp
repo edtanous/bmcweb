@@ -142,6 +142,12 @@ class RedfishService
         // requestRoutesManagerDiagnosticData(app);
         requestRoutesChassisCollection(app);
         requestRoutesChassis(app);
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesChassisEnvironmentMetricsClearOOBSetPoint(app);
+        requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(app);
+#endif
+
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesChassisResetAction(app);
         requestRoutesChassisResetActionInfo(app);
