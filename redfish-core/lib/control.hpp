@@ -880,6 +880,8 @@ inline void requestRoutesChassisControls(App& app)
                                     }
                                     asyncResp->res.jsonValue["ControlType"] =
                                         "Power";
+                                    asyncResp->res
+                                        .jsonValue["Status"]["Health"] = "OK";
                                     getControlSettings(asyncResp, object);
                                     getPowerReading(asyncResp, chassisID, *validChassisPath);
                                     validendpoint = true;
