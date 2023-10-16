@@ -2645,5 +2645,15 @@ constexpr std::array registry = {
             },
             "None.",
         }},
+    MessageEntry{"BMCServicePeakResourceInfo",
+                 {
+                    "Indicates that sensor value has crossed peak threshold limit.",
+                    "%1 sensor value (Reading = %2) has crossed peak Threshold = %3",
+                    "OK",
+                    "OK",
+                    3,
+                    {"string", "number", "number",},
+                    "None.",
+                 }},
 };
 } // namespace redfish::registries::openbmc
