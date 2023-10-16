@@ -31,6 +31,9 @@ namespace redfish
 {
 // task uri for long-run drive operation
 std::vector<std::string> taskUris;
+const std::array<const char*, 2> driveInterface = {
+    "xyz.openbmc_project.Inventory.Item.Drive",
+    "xyz.openbmc_project.Nvme.Operation"};
 
 inline void requestRoutesStorageCollection(App& app)
 {
@@ -72,7 +75,7 @@ inline void getDrives(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     crow::connections::systemBus->async_method_call(
         [asyncResp, health](
             const boost::system::error_code ec,
-            const dbus::utility::MapperGetSubTreePathsResponse& driveList) {
+            const dbus::utility::MapperGetSubTreeResponse & ret) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "Drive mapper call error";
@@ -85,30 +88,39 @@ inline void getDrives(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             auto& count = asyncResp->res.jsonValue["Drives@odata.count"];
             count = 0;
 
-            health->inventory.insert(health->inventory.end(), driveList.begin(),
-                                     driveList.end());
-
-            for (const std::string& drive : driveList)
+            for (const auto& [path, objDict] : ret)
             {
-                sdbusplus::message::object_path object(drive);
-                if (object.filename().empty())
+                uint32_t num = 0;
+                for (const std::string& interface : objDict.begin()->second)
                 {
-                    BMCWEB_LOG_ERROR << "Failed to find filename in " << drive;
-                    return;
+                    if (std::find_if(
+                            driveInterface.begin(), driveInterface.end(),
+                            [interface](const std::string& possible) {
+                                 return boost::starts_with(interface, possible);
+                            }) != driveInterface.end())
+                    {
+                        num ++;
+                    }
                 }
+                if (num != driveInterface.size())
+                {
+                    continue;
+                }
+                health->inventory.insert(health->inventory.end(), path);
 
                 nlohmann::json::object_t driveJson;
-                driveJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                         "/Storage/1/Drives/" +
-                                         object.filename();
-                driveArray.push_back(std::move(driveJson));
-            }
+                std::string file = std::filesystem::path(path).filename();
 
+                driveJson["@odata.id"] = crow::utility::urlFromPieces(
+                    "redfish", "v1", "Systems", PLATFORMSYSTEMID, "Storage",
+                    "1", "Drives", file);
+                driveArray.push_back(driveJson);
+            }
             count = driveArray.size();
         },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/inventory", int32_t(0),
         std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item.Drive"});
 }
@@ -1374,10 +1386,26 @@ inline void driveCollectionGet(
             // important if array is empty
             members = nlohmann::json::array();
             nlohmann::json::object_t member;
-            for (const auto& [path, connectionNames] : subtree)
+            for (const auto& [path, connNames] : subtree)
             {
                 sdbusplus::message::object_path objPath(path);
                 auto id =objPath.filename();
+                uint32_t num = 0;
+                for (const std::string& interface : connNames.begin()->second)
+                {
+                    if (std::find_if(
+                            driveInterface.begin(), driveInterface.end(),
+                            [interface](const std::string& possible) {
+                                 return boost::starts_with(interface, possible);
+                            }) != driveInterface.end())
+                    {
+                        num ++;
+                    }
+                }
+                if (num != driveInterface.size())
+                {
+                    continue;
+                }
                 member["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                       "/Storage/1/Drives/" +
                                       id;
