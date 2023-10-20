@@ -7,7 +7,7 @@ project('bmcweb', 'cpp',
             'b_lto=true',
             'b_ndebug=if-release',
             'buildtype=debugoptimized',
-            'cpp_rtti=false',
+            'cpp_rtti=true',
             'cpp_std=c++20',
             'warning_level=3',
             'werror=true',
@@ -128,6 +128,7 @@ feature_map = {
   'manual-boot-mode-support'                    : '-DBMCWEB_ENABLE_MANUAL_BOOT_MODE',
   'force-insecure-event-notification'           : '-DBMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION',
   'use-efficient-expand-on-sensors'             : '-DBMCWEB_ENABLE_EFFICIENT_EXPAND',
+  'dbus-platform-metrics'                      : '-DBMCWEB_ENABLE_DBUS_PLATFORM_METRICS',  
 }
 
 if(get_option('tls-auth-opt-in').enabled())
@@ -306,7 +307,8 @@ bmcweb_dependencies = []
 pam = cxx.find_library('pam', required: true)
 atomic =  cxx.find_library('atomic', required: true)
 openssl = dependency('openssl', required : true)
-bmcweb_dependencies += [pam, atomic, openssl]
+nvshmem = dependency('nvidia-shmem', required : true)
+bmcweb_dependencies += [pam, atomic, openssl, nvshmem]
 
 sdbusplus = dependency('sdbusplus', required : false, include_type: 'system')
 if not sdbusplus.found()

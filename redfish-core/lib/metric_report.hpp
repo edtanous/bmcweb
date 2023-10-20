@@ -16,6 +16,8 @@
 
 #include <chrono>
 
+#include "shmem_utils.hpp"
+
 namespace redfish
 {
 
@@ -725,7 +727,11 @@ inline void requestRoutesMetricReport(App& app)
                         std::chrono::steady_clock::now().time_since_epoch())
                         .count());
                 BMCWEB_LOG_DEBUG << "Request submitted at" << requestTimestamp;
+#ifdef BMCWEB_ENABLE_DBUS_PLATFORM_METRICS
                 getPlatforMetrics(asyncResp, id, requestTimestamp);
+#else
+                redfish::shmem::getShmemPlatformMetrics(asyncResp, id, requestTimestamp);
+#endif
                 return;
 #else
                 const std::string reportPath = telemetry::getDbusReportPath(id);
