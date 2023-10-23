@@ -1875,8 +1875,13 @@ inline void requestRoutesEventLogService(App& app)
                     }
                     auto lastTimeStamp =
                         redfish::time_utils::getTimestamp(std::get<1>(reqData));
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                        "#NvidiaLogService.v1_1_0.NvidiaLogService";
+#else
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
                         "#NvidiaLogService.v1_0_0.NvidiaLogService";
+#endif /* BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES */
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] =
                         std::to_string(std::get<0>(reqData));
                     asyncResp->res
