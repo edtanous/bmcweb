@@ -434,3 +434,4 @@ option(
 )
 
 option('gpu-index-start', type : 'integer', value : 1, description : 'The index to start GPUs from')
+option('tls-cacert-path', type : 'string', value : '/etc/ssl/certs/authority/', description : 'CA certificate path truststore')

@@ -44,6 +44,7 @@ conf_data.set('MIN_DIGITS', get_option('min-digits'))
 conf_data.set('MIN_SPEC_CHRS', get_option('min-special-characters'))
 conf_data.set('MIN_PASSWORD_LENGTH', get_option('min-password-length'))
 conf_data.set('GPU_INDEX_START', get_option('gpu-index-start'))
+conf_data.set('TLS_CACERT_PATH', get_option('tls-cacert-path') )
 conf_h_dep = declare_dependency(
     include_directories: include_directories('.'),
     sources: configure_file(
