@@ -128,7 +128,7 @@ static inline void addPrefixToStringItem(std::string& strValue,
     if (addedPrefix)
     {
         url.segments().insert(url.segments().begin(), {"redfish", "v1"});
-        strValue = url.buffer();
+        strValue = std::string(url.data(), url.size());
     }
 }
 
