@@ -93,7 +93,7 @@ static void addPrefixToItem(nlohmann::json& item, std::string_view prefix)
     bool addedPrefix = false;
     boost::urls::url url("/");
     boost::urls::segments_view::iterator it = urlSegments.begin();
-    const boost::urls::segments_view::const_iterator end = urlSegments.end();
+    boost::urls::segments_view::iterator end = urlSegments.end();
 
     // Skip past the leading "/redfish/v1"
     it++;
@@ -108,11 +108,13 @@ static void addPrefixToItem(nlohmann::json& item, std::string_view prefix)
             return;
         }
 
+        std::string_view link(url.data(), url.size());
         if (std::binary_search(topCollections.begin(), topCollections.end(),
-                               url.buffer()))
+                               link))
         {
             std::string collectionItem(prefix);
-            collectionItem += "_" + (*it);
+            std::string seg((*it).data(), (*it).size());
+            collectionItem += "_" + seg;
             url.segments().push_back(collectionItem);
             it++;
             addedPrefix = true;
