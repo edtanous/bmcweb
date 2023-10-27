@@ -500,20 +500,21 @@ class RedfishAggregator
             thisReq.urlView.segments();
         boost::urls::url currentUrl("/");
         boost::urls::segments_view::iterator it = urlSegments.begin();
-        const boost::urls::segments_view::const_iterator end =
-            urlSegments.end();
+        boost::urls::segments_view::iterator end = urlSegments.end();
 
         // Skip past the leading "/redfish/v1"
         it++;
         it++;
         for (; it != end; it++)
         {
+            std::string_view link(currentUrl.data(), currentUrl.size());
             if (std::binary_search(topCollections.begin(), topCollections.end(),
-                                   currentUrl.buffer()))
+                                   link))
             {
                 // We've matched a resource collection so this current segment
                 // must contain an aggregation prefix
-                findSatellite(thisReq, asyncResp, satelliteInfo, *it);
+                std::string_view  name((*it).data(), (*it).size());
+                findSatellite(thisReq, asyncResp, satelliteInfo, name);
                 return;
             }
 
@@ -804,17 +805,17 @@ class RedfishAggregator
         std::string collectionItem;
         boost::urls::url currentUrl("/");
         boost::urls::segments_view::iterator it = urlSegments.begin();
-        const boost::urls::segments_view::const_iterator end =
-            urlSegments.end();
+        boost::urls::segments_view::iterator end = urlSegments.end();
 
         // Skip past the leading "/redfish/v1"
         it++;
         it++;
         for (; it != end; it++)
         {
-            collectionItem = *it;
+            collectionItem = std::string_view((*it).data(), (*it).size());
+            std::string_view link(currentUrl.data(), currentUrl.size());
             if (std::binary_search(topCollections.begin(), topCollections.end(),
-                                   currentUrl.buffer()))
+                                   link))
             {
                 // We've matched a resource collection so this current segment
                 // might contain an aggregation prefix
@@ -850,8 +851,9 @@ class RedfishAggregator
 
         // If we made it here then currentUrl could contain a top level
         // collection URI without a trailing "/", e.g. /redfish/v1/Chassis
+        std::string_view currLink(currentUrl.data(), currentUrl.size());
         if (std::binary_search(topCollections.begin(), topCollections.end(),
-                               currentUrl.buffer()))
+                               currLink))
         {
             startAggregation(AggregationType::Collection, thisReq, asyncResp);
             return Result::LocalHandle;
