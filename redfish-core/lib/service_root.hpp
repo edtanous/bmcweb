@@ -190,6 +190,10 @@ inline void handleServiceRootGetImpl(
         asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
             "/redfish/v1/AccountService";
     }
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
+        "/redfish/v1/AggregationService";
+#endif
     asyncResp->res.jsonValue["Chassis"]["@odata.id"] = "/redfish/v1/Chassis";
     asyncResp->res.jsonValue["ComponentIntegrity"]["@odata.id"] =
         "/redfish/v1/ComponentIntegrity";

@@ -17,6 +17,9 @@ namespace redfish
     constexpr std::array schemas {
         "AccountService",
         "ActionInfo",
+        "AggregationService",
+        "AggregationSource",
+        "AggregationSourceCollection",
         "Assembly",
         "AttributeRegistry",
         "Bios",

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "account_service.hpp"
+#include "aggregation_service.hpp"
 #include "assembly.hpp"
 #include "bios.hpp"
 #include "boot_options.hpp"
@@ -102,6 +103,11 @@ class RedfishService
             requestRoutesRoles(app);
             requestRoutesRoleCollection(app);
         }
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+        requestRoutesAggregationService(app);
+        requestRoutesAggregationSourceCollection(app);
+        requestRoutesAggregationSource(app);
+#endif
         requestRoutesServiceRoot(app);
         requestRoutesNetworkProtocol(app);
         if (persistent_data::getConfig().isTLSAuthEnabled())
