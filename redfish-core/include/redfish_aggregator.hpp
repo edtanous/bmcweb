@@ -43,7 +43,7 @@ constexpr std::array nonUriProperties{
 // Determines if the passed property contains a URI.  Those property names
 // either end with a case-insensitive version of "uri" or are specifically
 // defined in the above array.
-inline bool isPropertyUri(const std::string_view propertyName)
+inline bool isPropertyUri(std::string_view propertyName)
 {
     return boost::iends_with(propertyName, "uri") ||
            std::binary_search(nonUriProperties.begin(), nonUriProperties.end(),
@@ -255,7 +255,7 @@ class RedfishAggregator
     {
         BMCWEB_LOG_DEBUG << "Gathering satellite configs";
         crow::connections::systemBus->async_method_call(
-            [handler](const boost::system::error_code ec,
+            [handler](const boost::system::error_code& ec,
                       const dbus::utility::ManagedObjectType& objects) {
                 if (ec)
                 {
