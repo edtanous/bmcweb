@@ -6663,6 +6663,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
 // vector containing debug token-related functionalities'
 // (GetDebugTokenRequest, GetDebugTokenStatus) output data
 static std::vector<std::string> debugTokenData;
+static constexpr const uint32_t debugTokenTaskTimeoutSec{60};
 
 inline void requestRoutesDebugToken(App& app)
 {
@@ -6915,7 +6916,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             }
             task->payload.emplace(req);
             task->populateResp(asyncResp->res);
-            task->startTimer(std::chrono::seconds(20));
+            task->startTimer(std::chrono::seconds(debugTokenTaskTimeoutSec));
         });
 }
 
