@@ -77,9 +77,10 @@ inline bool searchCollectionsArray(std::string_view uri,
         parseCount--;
     }
 
+    auto rootUri = uri.substr(serviceRootUri.size(), parseCount);
     boost::urls::result<boost::urls::url_view> parsedUrl =
         boost::urls::parse_relative_ref(
-            uri.substr(serviceRootUri.size(), parseCount));
+            std::string(rootUri.begin(), rootUri.end()));
     if (!parsedUrl)
     {
         BMCWEB_LOG_ERROR << "Failed to get target URI from "
@@ -101,7 +102,8 @@ inline bool searchCollectionsArray(std::string_view uri,
     }
 
     const auto* it = std::lower_bound(
-        topCollections.begin(), topCollections.end(), parsedUrl->buffer());
+        topCollections.begin(), topCollections.end(),
+        std::string_view{parsedUrl->data(), parsedUrl->size()});
     if (it == topCollections.end())
     {
         // parsedUrl is alphabetically after the last entry in the array so it
@@ -109,11 +111,11 @@ inline bool searchCollectionsArray(std::string_view uri,
         return false;
     }
 
-    boost::urls::url collectionUrl(*it);
+    boost::urls::url_view collectionUrl(std::string{*it});
     boost::urls::segments_view collectionSegments = collectionUrl.segments();
     boost::urls::segments_view::iterator itCollection =
         collectionSegments.begin();
-    const boost::urls::segments_view::const_iterator endCollection =
+    boost::urls::segments_view::iterator endCollection =
         collectionSegments.end();
 
     // Each segment in the passed URI should match the found collection
