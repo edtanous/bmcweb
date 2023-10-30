@@ -179,7 +179,7 @@ void MctpVdmUtil::run(MctpVdmUtilCommand mctpVdmUtilcommand,
         respCallback(req, asyncResp, endpointId, stdOut, stdErr, ec, errorCode);
         return;
     };
-    bp::async_system(*req.ioService, std::move(exitCallback), command,
-                     bp::std_in.close(), bp::std_out > *dataOut,
-                     bp::std_err > *dataErr);
+    bp::async_system(crow::connections::systemBus->get_io_context(),
+                     std::move(exitCallback), command, bp::std_in.close(),
+                     bp::std_out > *dataOut, bp::std_err > *dataErr);
 }
