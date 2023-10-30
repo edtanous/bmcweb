@@ -8,6 +8,8 @@
 #include <http_connection.hpp>
 
 #include <array>
+#include <ranges>
+#include <string_view>
 
 namespace redfish
 {
@@ -101,9 +103,8 @@ inline bool searchCollectionsArray(std::string_view uri,
                (searchType == SearchType::CollOrCon);
     }
 
-    const auto* it = std::lower_bound(
-        topCollections.begin(), topCollections.end(),
-        std::string_view{parsedUrl->data(), parsedUrl->size()});
+    std::string_view url{parsedUrl->data(), parsedUrl->size()};
+    const auto* it = std::ranges::lower_bound(topCollections, url);
     if (it == topCollections.end())
     {
         // parsedUrl is alphabetically after the last entry in the array so it
