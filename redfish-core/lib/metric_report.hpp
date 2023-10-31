@@ -163,10 +163,13 @@ inline void requestRoutesMetricReportCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/TelemetryService/MetricReports/")
         .privileges(redfish::privileges::getMetricReportCollection)
-        .methods(
-            boost::beast::http::verb::
-                get)([](const crow::Request&,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+              const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
             asyncResp->res.jsonValue["@odata.type"] =
                 "#MetricReportCollection.MetricReportCollection";
             asyncResp->res.jsonValue["@odata.id"] =

@@ -408,9 +408,13 @@ inline void requestRoutesThermalMetrics(App& app)
                  "/redfish/v1/Chassis/<str>/ThermalSubsystem/ThermalMetrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 const std::string& chassisId = param;
                 // Identify chassis
                 const std::array<const char*, 1> interface = {

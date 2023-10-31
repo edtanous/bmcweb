@@ -198,7 +198,7 @@ inline void asyncGetSPDMMeasurementData(const std::string& objectPath,
 }
 
 inline void handleSPDMGETSignedMeasurement(
-    const crow::Request& req,
+    crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
 {
     std::optional<std::string> nonce;
@@ -206,6 +206,10 @@ inline void handleSPDMGETSignedMeasurement(
     std::optional<uint8_t> slotID;
     std::optional<std::vector<uint8_t>> indices;
 
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
     // the request body should either be empty (or pure whitespace),
     // contain an empty json, or be fully valid
     std::string body = req.body;
@@ -387,8 +391,12 @@ inline void requestRoutesComponentIntegrity(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/")
         .privileges(redfish::privileges::getManagerAccountCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) -> void {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue = {
                     {"@odata.id", "/redfish/v1/ComponentIntegrity"},
                     {"@odata.type", "#ComponentIntegrityCollection."
@@ -436,10 +444,14 @@ inline void requestRoutesComponentIntegrity(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& id) -> void {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string objectPath = std::string(rootSPDMDbusPath) + "/" + id;
             asyncGetSPDMMeasurementData(objectPath, [asyncResp, id, objectPath](
                                                         const SPDMMeasurementData&
@@ -566,15 +578,19 @@ inline void requestRoutesComponentIntegrity(App& app)
                       "Actions/SPDMGetSignedMeasurements")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::post)(
-            handleSPDMGETSignedMeasurement);
+            std::bind_front(handleSPDMGETSignedMeasurement, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
                       "Actions/SPDMGetSignedMeasurements/data")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& id) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 const std::string objPath =
                     std::string(rootSPDMDbusPath) + "/" + id;
                 asyncGetSPDMMeasurementData(
@@ -610,9 +626,13 @@ inline void requestRoutesComponentIntegrity(App& app)
                       "SPDMGetSignedMeasurementsActionInfo")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& compIntegrityID) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue = {
                     {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
                     {"@odata.id", "/redfish/v1/ComponentIntegrity/" +
