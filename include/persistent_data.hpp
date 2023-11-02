@@ -1,6 +1,5 @@
 #pragma once
 
-#include <app.hpp>
 #include <boost/beast/http/fields.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
