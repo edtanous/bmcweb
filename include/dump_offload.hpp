@@ -206,9 +206,16 @@ class Handler : public std::enable_shared_from_this<Handler>
                 }
 
                 outputBuffer.commit(bytesRead);
-                auto streamHandler = [this, bytesRead]() {
+                auto streamHandler = [this, bytesRead](bool error) {
                     this->outputBuffer.consume(bytesRead);
-                    this->doReadStream();
+                    if (!error)
+                    {
+                        this->doReadStream();
+                    }
+                    else
+                    {
+                        this->unixSocket.close();
+                    }
                 };
                 this->connection->sendMessage(outputBuffer.data(),
                                               streamHandler);
