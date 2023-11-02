@@ -112,10 +112,17 @@ class StatusQueryHandler : public OperationHandler
                     endpoints->reserve(mctpEndpoints->size());
                     for (auto& ep : *mctpEndpoints)
                     {
-                        endpoints->emplace_back(std::make_tuple(
-                            std::move(ep), std::string(),
-                            std::vector<uint8_t>(), EndpointState::None));
+                        const auto& msgTypes = ep.getMctpMessageTypes();
+                        if (std::find(msgTypes.begin(), msgTypes.end(),
+                                      mctp_utils::mctpMessageTypeVdm) !=
+                            msgTypes.end())
+                        {
+                            endpoints->emplace_back(std::make_tuple(
+                                std::move(ep), std::string(),
+                                std::vector<uint8_t>(), EndpointState::None));
+                        }
                     }
+                    endpoints->shrink_to_fit();
                     getStatus();
                     return;
                 }
