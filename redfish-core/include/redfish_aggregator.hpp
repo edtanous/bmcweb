@@ -80,9 +80,9 @@ inline bool searchCollectionsArray(std::string_view uri,
     }
 
     auto rootUri = uri.substr(serviceRootUri.size(), parseCount);
+    std::string str(rootUri.begin(), rootUri.end());
     boost::urls::result<boost::urls::url_view> parsedUrl =
-        boost::urls::parse_relative_ref(
-            std::string(rootUri.begin(), rootUri.end()));
+        boost::urls::parse_relative_ref(str);
     if (!parsedUrl)
     {
         BMCWEB_LOG_ERROR << "Failed to get target URI from "
@@ -112,7 +112,8 @@ inline bool searchCollectionsArray(std::string_view uri,
         return false;
     }
 
-    boost::urls::url_view collectionUrl(std::string{*it});
+    std::string collectionStr{*it};
+    boost::urls::url_view collectionUrl(collectionStr);
     boost::urls::segments_view collectionSegments = collectionUrl.segments();
     boost::urls::segments_view::iterator itCollection =
         collectionSegments.begin();
