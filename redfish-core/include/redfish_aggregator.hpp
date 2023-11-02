@@ -6,6 +6,7 @@
 #include <error_messages.hpp>
 #include <http_client.hpp>
 #include <http_connection.hpp>
+#include <utility.hpp>
 
 #include <array>
 #include <ranges>
@@ -130,7 +131,8 @@ inline bool searchCollectionsArray(std::string_view uri,
             return searchType == SearchType::Resource;
         }
 
-        if (segment != (*itCollection))
+        if (std::string_view(segment.data(), segment.size()) !=
+            std::string_view((*itCollection).data(), (*itCollection).size()))
         {
             return false;
         }
