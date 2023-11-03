@@ -1679,6 +1679,8 @@ inline void clearDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "/xyz/openbmc_project/dump/" + dumpTypeLowerCopy, 0,
         std::array<std::string, 1>{"xyz.openbmc_project.Dump.Entry." +
                                    dumpType});
+
+        asyncResp->res.result(boost::beast::http::status::no_content);
 }
 
 inline static void
