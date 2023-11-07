@@ -219,6 +219,10 @@ inline std::string toDurationString(std::chrono::milliseconds ms)
         fmt += details::padZeros(ms.count(), 3);
         fmt += "S";
     }
+    else if (fmt == "PT")
+    {
+        fmt += "0S"; // Append "0S" when time is zero seconds
+    }
 
     return fmt;
 }
