@@ -76,8 +76,8 @@ inline ContentType getPreferedContentType(std::string_view header,
         const auto* knownContentType =
             std::find_if(contentTypes.begin(), contentTypes.end(),
                          [encoding](const ContentTypePair& pair) {
-                             return pair.contentTypeString == encoding;
-                         });
+            return pair.contentTypeString == encoding;
+        });
 
         if (knownContentType == contentTypes.end())
         {

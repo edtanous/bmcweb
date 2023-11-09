@@ -33,7 +33,6 @@ inline void
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         uint32_t endpointId)
 {
-
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
     auto responseCallback =
         []([[maybe_unused]] const crow::Request& req,

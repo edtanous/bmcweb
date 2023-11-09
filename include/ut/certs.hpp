@@ -1,8 +1,8 @@
 #pragma once
 
+#include <array>
 #include <cstdlib>
 #include <cstring>
-#include <array>
 #include <string>
 #include <vector>
 

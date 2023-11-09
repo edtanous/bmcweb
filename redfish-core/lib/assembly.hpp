@@ -69,98 +69,96 @@ inline void
             const boost::system::error_code ec,
             const std::vector<std::pair<
                 std::string, std::variant<std::string>>>& propertiesList) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error for assembly properties";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        // Assemblies data
+        nlohmann::json assemblyRes;
+        assemblyRes["@odata.id"] = "/redfish/v1/Chassis/" + chassisId +
+                                   "/Assembly#/Assemblies/" + assemblyId;
+        assemblyRes["MemberId"] = assemblyId;
+        for (const std::pair<std::string, std::variant<std::string>>& property :
+             propertiesList)
+        {
+            // Store DBus properties that are also Redfish
+            // properties with same name and a string value
+            const std::string& propertyName = property.first;
+            if ((propertyName == "Model") || (propertyName == "Name") ||
+                (propertyName == "PartNumber") ||
+                (propertyName == "SerialNumber") || (propertyName == "Version"))
             {
-                BMCWEB_LOG_DEBUG
-                    << "DBUS response error for assembly properties";
-                messages::internalError(asyncResp->res);
-                return;
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for asset properties";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                assemblyRes[propertyName] = *value;
             }
-            // Assemblies data
-            nlohmann::json assemblyRes;
-            assemblyRes["@odata.id"] = "/redfish/v1/Chassis/" + chassisId +
-                                       "/Assembly#/Assemblies/" + assemblyId;
-            assemblyRes["MemberId"] = assemblyId;
-            for (const std::pair<std::string, std::variant<std::string>>&
-                     property : propertiesList)
+            else if (propertyName == "Manufacturer")
             {
-                // Store DBus properties that are also Redfish
-                // properties with same name and a string value
-                const std::string& propertyName = property.first;
-                if ((propertyName == "Model") || (propertyName == "Name") ||
-                    (propertyName == "PartNumber") ||
-                    (propertyName == "SerialNumber") ||
-                    (propertyName == "Version"))
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
                 {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for asset properties";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    assemblyRes[propertyName] = *value;
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for manufacturer";
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
-                else if (propertyName == "Manufacturer")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for manufacturer";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    assemblyRes["Vendor"] = *value;
-                }
-                else if (propertyName == "BuildDate")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for build date";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    assemblyRes["ProductionDate"] = *value;
-                }
-                else if (propertyName == "LocationType")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for LocationType";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    assemblyRes["Location"]["PartLocation"]["LocationType"] =
-                        redfish::dbus_utils::toLocationType(*value);
-                }
-                else if (propertyName == "PhysicalContext")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for PhysicalContext";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    assemblyRes["PhysicalContext"] =
-                        redfish::dbus_utils::toPhysicalContext(*value);
-                }
+                assemblyRes["Vendor"] = *value;
             }
-            nlohmann::json& jResp = asyncResp->res.jsonValue["Assemblies"];
-            jResp.push_back(assemblyRes);
-        },
+            else if (propertyName == "BuildDate")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for build date";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                assemblyRes["ProductionDate"] = *value;
+            }
+            else if (propertyName == "LocationType")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for LocationType";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                assemblyRes["Location"]["PartLocation"]["LocationType"] =
+                    redfish::dbus_utils::toLocationType(*value);
+            }
+            else if (propertyName == "PhysicalContext")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for PhysicalContext";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                assemblyRes["PhysicalContext"] =
+                    redfish::dbus_utils::toPhysicalContext(*value);
+            }
+        }
+        nlohmann::json& jResp = asyncResp->res.jsonValue["Assemblies"];
+        jResp.push_back(assemblyRes);
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
@@ -172,94 +170,91 @@ inline void requestAssemblyRoutes(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Assembly/")
         .privileges({{"Login"}})
-        .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
-                                              const std::shared_ptr<
-                                                  bmcweb::AsyncResp>& asyncResp,
-                                              const std::string& chassisId) {
-            BMCWEB_LOG_DEBUG << "Assembly doGet enter";
-            const std::array<const char*, 1> interface = {
-                "xyz.openbmc_project.Inventory.Item.Chassis"};
-            // Get chassis collection
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, chassisId(std::string(chassisId))](
-                    const boost::system::error_code ec,
-                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                    const std::array<const char*, 1> assemblyIntf = {
-                        "xyz.openbmc_project.Inventory.Item.Assembly"};
+        .methods(boost::beast::http::verb::get)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& chassisId) {
+        BMCWEB_LOG_DEBUG << "Assembly doGet enter";
+        const std::array<const char*, 1> interface = {
+            "xyz.openbmc_project.Inventory.Item.Chassis"};
+        // Get chassis collection
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, chassisId(std::string(chassisId))](
+                const boost::system::error_code ec,
+                const crow::openbmc_mapper::GetSubTreeType& subtree) {
+            const std::array<const char*, 1> assemblyIntf = {
+                "xyz.openbmc_project.Inventory.Item.Assembly"};
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            // Iterate over all retrieved ObjectPaths.
+            for (const std::pair<std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                     object : subtree)
+            {
+                const std::string& path = object.first;
+                const std::vector<
+                    std::pair<std::string, std::vector<std::string>>>&
+                    connectionNames = object.second;
+                sdbusplus::message::object_path objPath(path);
+                if (objPath.filename() != chassisId)
+                {
+                    continue;
+                }
+                if (connectionNames.size() < 1)
+                {
+                    std::cerr << "Got 0 Connection names";
+                    continue;
+                }
+                const std::string& connectionName = connectionNames[0].first;
+                // Chassis assembly properties
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#Assembly.v1_3_0.Assembly";
+                asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" +
+                                                        chassisId + "/Assembly";
+                asyncResp->res.jsonValue["Id"] = "Assembly";
+                asyncResp->res.jsonValue["Name"] = "Assembly data for " +
+                                                   chassisId;
+                // Get chassis assembly
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, chassisId(std::string(chassisId)),
+                     connectionName](
+                        const boost::system::error_code ec,
+                        const std::vector<std::string>& assemblyList) {
                     if (ec)
                     {
                         BMCWEB_LOG_DEBUG << "DBUS response error";
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    // Iterate over all retrieved ObjectPaths.
-                    for (const std::pair<
-                             std::string,
-                             std::vector<std::pair<std::string,
-                                                   std::vector<std::string>>>>&
-                             object : subtree)
+                    // Update the Assemblies
+                    asyncResp->res.jsonValue["Assemblies"] =
+                        nlohmann::json::array();
+                    for (const std::string& assembly : assemblyList)
                     {
-                        const std::string& path = object.first;
-                        const std::vector<
-                            std::pair<std::string, std::vector<std::string>>>&
-                            connectionNames = object.second;
-                        sdbusplus::message::object_path objPath(path);
-                        if (objPath.filename() != chassisId)
-                        {
-                            continue;
-                        }
-                        if (connectionNames.size() < 1)
-                        {
-                            std::cerr << "Got 0 Connection names";
-                            continue;
-                        }
-                        const std::string& connectionName =
-                            connectionNames[0].first;
-                        // Chassis assembly properties
-                        asyncResp->res.jsonValue["@odata.type"] =
-                            "#Assembly.v1_3_0.Assembly";
-                        asyncResp->res.jsonValue["@odata.id"] =
-                            "/redfish/v1/Chassis/" + chassisId + "/Assembly";
-                        asyncResp->res.jsonValue["Id"] = "Assembly";
-                        asyncResp->res.jsonValue["Name"] =
-                            "Assembly data for " + chassisId;
-                        // Get chassis assembly
-                        crow::connections::systemBus->async_method_call(
-                            [asyncResp, chassisId(std::string(chassisId)),
-                             connectionName](
-                                const boost::system::error_code ec,
-                                const std::vector<std::string>& assemblyList) {
-                                if (ec)
-                                {
-                                    BMCWEB_LOG_DEBUG << "DBUS response error";
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                // Update the Assemblies
-                                asyncResp->res.jsonValue["Assemblies"] =
-                                    nlohmann::json::array();
-                                for (const std::string& assembly : assemblyList)
-                                {
-                                    updateAssemblies(asyncResp, connectionName,
-                                                     assembly, chassisId);
-                                }
-                            },
-                            "xyz.openbmc_project.ObjectMapper",
-                            "/xyz/openbmc_project/object_mapper",
-                            "xyz.openbmc_project.ObjectMapper",
-                            "GetSubTreePaths", path + "/", 0, assemblyIntf);
-                        return;
+                        updateAssemblies(asyncResp, connectionName, assembly,
+                                         chassisId);
                     }
-                    // Couldn't find an object with that name. return an error
-                    messages::resourceNotFound(
-                        asyncResp->res, "#Chassis.v1_15_0.Chassis", chassisId);
                 },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                "/xyz/openbmc_project/inventory", 0, interface);
-        });
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+                    path + "/", 0, assemblyIntf);
+                return;
+            }
+            // Couldn't find an object with that name. return an error
+            messages::resourceNotFound(asyncResp->res,
+                                       "#Chassis.v1_15_0.Chassis", chassisId);
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+            "/xyz/openbmc_project/inventory", 0, interface);
+    });
 }
 
 } // namespace redfish

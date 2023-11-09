@@ -18,34 +18,33 @@ inline void
                     const std::vector<
                         std::pair<std::string, std::variant<std::string>>>&
                         propertiesList) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Can't get PowerSupply asset!";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            for (const std::pair<std::string, std::variant<std::string>>&
-                     property : propertiesList)
-            {
-                const std::string& propertyName = property.first;
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Can't get PowerSupply asset!";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        for (const std::pair<std::string, std::variant<std::string>>& property :
+             propertiesList)
+        {
+            const std::string& propertyName = property.first;
 
-                if ((propertyName == "PartNumber") ||
-                    (propertyName == "SerialNumber") ||
-                    (propertyName == "Model") ||
-                    (propertyName == "SparePartNumber") ||
-                    (propertyName == "Manufacturer"))
+            if ((propertyName == "PartNumber") ||
+                (propertyName == "SerialNumber") || (propertyName == "Model") ||
+                (propertyName == "SparePartNumber") ||
+                (propertyName == "Manufacturer"))
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
                 {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue[propertyName] = *value;
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
+                asyncResp->res.jsonValue[propertyName] = *value;
             }
-        },
+        }
+    },
         connectionName, path, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Decorator.Asset");
 }
@@ -60,32 +59,31 @@ inline void
                     const std::vector<
                         std::pair<std::string, std::variant<std::string>>>&
                         propertiesList) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Can't get PowerSupply location!";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            for (const std::pair<std::string, std::variant<std::string>>&
-                     property : propertiesList)
-            {
-                const std::string& propertyName = property.first;
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Can't get PowerSupply location!";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        for (const std::pair<std::string, std::variant<std::string>>& property :
+             propertiesList)
+        {
+            const std::string& propertyName = property.first;
 
-                if (propertyName == "LocationCode")
+            if (propertyName == "LocationCode")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
                 {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res
-                        .jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
-                        *value;
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
+                asyncResp->res.jsonValue["Location"]["PartLocation"]
+                                        ["ServiceLabel"] = *value;
             }
-        },
+        }
+    },
         connectionName, path, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Decorator.LocationCode");
 }
@@ -95,31 +93,30 @@ inline void
                         const std::string& connectionName,
                         const std::string& path)
 {
-
     // Set the default state to Absent
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
                     const std::variant<bool> state) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Can't get PowerSupply state!";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Can't get PowerSupply state!";
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            const bool* value = std::get_if<bool>(&state);
-            if (value == nullptr)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            if (*value == false)
-            {
-                asyncResp->res.jsonValue["Status"]["State"] = "Absent";
-            }
-        },
+        const bool* value = std::get_if<bool>(&state);
+        if (value == nullptr)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        if (*value == false)
+        {
+            asyncResp->res.jsonValue["Status"]["State"] = "Absent";
+        }
+    },
         connectionName, path, "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Inventory.Item", "Present");
 }
@@ -135,24 +132,24 @@ inline void
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
                     const std::variant<bool> health) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Can't get PowerSupply health!";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Can't get PowerSupply health!";
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            const bool* value = std::get_if<bool>(&health);
-            if (value == nullptr)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            if (*value == false)
-            {
-                asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
-            }
-        },
+        const bool* value = std::get_if<bool>(&health);
+        if (value == nullptr)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        if (*value == false)
+        {
+            asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
+        }
+    },
         connectionName, path, "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.State.Decorator.OperationalStatus", "Functional");
 }
@@ -170,61 +167,57 @@ inline void
                 std::string,
                 std::vector<std::pair<std::string, std::vector<std::string>>>>>&
                 subtree) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "Get PowerSupply attributes respHandler DBus error " << ec;
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        if (subtree.size() == 0)
+        {
+            BMCWEB_LOG_DEBUG << "Can't find Power Supply efficiency ratings!";
+            return;
+        }
+        if (subtree[0].second.empty())
+        {
+            BMCWEB_LOG_ERROR << "Get Power Supply efficiency ratings error!";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        const std::string& psAttributesPath = subtree[0].first;
+        const std::string& connection = subtree[0].second[0].first;
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec,
+                        const std::variant<uint32_t>& deratingFactor) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR
-                    << "Get PowerSupply attributes respHandler DBus error "
-                    << ec;
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            if (subtree.size() == 0)
-            {
-                BMCWEB_LOG_DEBUG
-                    << "Can't find Power Supply efficiency ratings!";
-                return;
-            }
-            if (subtree[0].second.empty())
-            {
-                BMCWEB_LOG_ERROR
-                    << "Get Power Supply efficiency ratings error!";
+                BMCWEB_LOG_ERROR << "Get PowerSupply DeratingFactor "
+                                    "respHandler DBus error "
+                                 << ec;
                 messages::internalError(asyncResp->res);
                 return;
             }
 
-            const std::string& psAttributesPath = subtree[0].first;
-            const std::string& connection = subtree[0].second[0].first;
+            const uint32_t* value = std::get_if<uint32_t>(&deratingFactor);
+            if (value == nullptr)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            nlohmann::json& tempArray =
+                asyncResp->res.jsonValue["EfficiencyRatings"];
+            tempArray.push_back({});
+            nlohmann::json& propertyData = tempArray.back();
 
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code ec,
-                            const std::variant<uint32_t>& deratingFactor) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR << "Get PowerSupply DeratingFactor "
-                                            "respHandler DBus error "
-                                         << ec;
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    const uint32_t* value =
-                        std::get_if<uint32_t>(&deratingFactor);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    nlohmann::json& tempArray =
-                        asyncResp->res.jsonValue["EfficiencyRatings"];
-                    tempArray.push_back({});
-                    nlohmann::json& propertyData = tempArray.back();
-
-                    propertyData["EfficiencyPercent"] = *value;
-                },
-                connection, psAttributesPath, "org.freedesktop.DBus.Properties",
-                "Get", "xyz.openbmc_project.Control.PowerSupplyAttributes",
-                "DeratingFactor");
+            propertyData["EfficiencyPercent"] = *value;
         },
+            connection, psAttributesPath, "org.freedesktop.DBus.Properties",
+            "Get", "xyz.openbmc_project.Control.PowerSupplyAttributes",
+            "DeratingFactor");
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -255,83 +248,76 @@ inline void
                 std::string,
                 std::vector<std::pair<std::string, std::vector<std::string>>>>>&
                 subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "D-Bus response error on GetSubTree " << ec;
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "D-Bus response error on GetSubTree " << ec;
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            nlohmann::json& powerSupplyList =
-                asyncResp->res.jsonValue["Members"];
-            powerSupplyList = nlohmann::json::array();
+        nlohmann::json& powerSupplyList = asyncResp->res.jsonValue["Members"];
+        powerSupplyList = nlohmann::json::array();
 
-            std::string powerSuppliesPath = "/redfish/v1/Chassis/" + chassisID +
-                                            "/PowerSubsystem/PowerSupplies/";
-            for (const auto& object : subtree)
-            {
-                // The association of this PowerSupply is used to determine
-                // whether it belongs to this ChassisID
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, chassisID, &powerSupplyList, powerSuppliesPath,
-                     object](const boost::system::error_code ec,
-                             const std::variant<std::vector<std::string>>&
-                                 endpoints) {
-                        if (ec)
-                        {
-                            if (ec.value() == EBADR)
-                            {
-                                // This PowerSupply have no chassis association.
-                                return;
-                            }
+        std::string powerSuppliesPath = "/redfish/v1/Chassis/" + chassisID +
+                                        "/PowerSubsystem/PowerSupplies/";
+        for (const auto& object : subtree)
+        {
+            // The association of this PowerSupply is used to determine
+            // whether it belongs to this ChassisID
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, chassisID, &powerSupplyList, powerSuppliesPath,
+                 object](
+                    const boost::system::error_code ec,
+                    const std::variant<std::vector<std::string>>& endpoints) {
+                if (ec)
+                {
+                    if (ec.value() == EBADR)
+                    {
+                        // This PowerSupply have no chassis association.
+                        return;
+                    }
 
-                            BMCWEB_LOG_ERROR << "DBUS response error";
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
+                    BMCWEB_LOG_ERROR << "DBUS response error";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
 
-                        const std::vector<std::string>* powerSupplyChassis =
-                            std::get_if<std::vector<std::string>>(&(endpoints));
+                const std::vector<std::string>* powerSupplyChassis =
+                    std::get_if<std::vector<std::string>>(&(endpoints));
 
-                        if (powerSupplyChassis != nullptr)
-                        {
-                            if ((*powerSupplyChassis).size() != 1)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "PowerSupply association error! ";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            std::vector<std::string> chassisPath =
-                                *powerSupplyChassis;
-                            sdbusplus::message::object_path path(
-                                chassisPath[0]);
-                            std::string chassisName = path.filename();
-                            if (chassisName != chassisID)
-                            {
-                                // The PowerSupply does't belong to the
-                                // chassisID
-                                return;
-                            }
+                if (powerSupplyChassis != nullptr)
+                {
+                    if ((*powerSupplyChassis).size() != 1)
+                    {
+                        BMCWEB_LOG_ERROR << "PowerSupply association error! ";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    std::vector<std::string> chassisPath = *powerSupplyChassis;
+                    sdbusplus::message::object_path path(chassisPath[0]);
+                    std::string chassisName = path.filename();
+                    if (chassisName != chassisID)
+                    {
+                        // The PowerSupply does't belong to the
+                        // chassisID
+                        return;
+                    }
 
-                            sdbusplus::message::object_path pathPS(
-                                object.first);
-                            const std::string objectPowerSupplyID =
-                                pathPS.filename();
+                    sdbusplus::message::object_path pathPS(object.first);
+                    const std::string objectPowerSupplyID = pathPS.filename();
 
-                            powerSupplyList.push_back(
-                                {{"@odata.id",
-                                  powerSuppliesPath + objectPowerSupplyID}});
-                            asyncResp->res.jsonValue["Members@odata.count"] =
-                                powerSupplyList.size();
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    object.first + "/chassis",
-                    "org.freedesktop.DBus.Properties", "Get",
-                    "xyz.openbmc_project.Association", "endpoints");
-            }
-        },
+                    powerSupplyList.push_back(
+                        {{"@odata.id",
+                          powerSuppliesPath + objectPowerSupplyID}});
+                    asyncResp->res.jsonValue["Members@odata.count"] =
+                        powerSupplyList.size();
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper", object.first + "/chassis",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+        }
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -356,110 +342,101 @@ inline void
                 std::string,
                 std::vector<std::pair<std::string, std::vector<std::string>>>>>&
                 subtree) {
-            BMCWEB_LOG_DEBUG << "getValidPowerSupplyID respHandler enter";
+        BMCWEB_LOG_DEBUG << "getValidPowerSupplyID respHandler enter";
 
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "getValidPowerSupplyID respHandler DBUS error: " << ec;
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "getValidPowerSupplyID respHandler DBUS error: "
+                             << ec;
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            // Set the default value to resourceNotFound, and if we confirm that
-            // powerSupplyID is correct, the error response will be cleared.
-            messages::resourceNotFound(asyncResp->res, "PowerSupply",
-                                       powerSupplyID);
+        // Set the default value to resourceNotFound, and if we confirm that
+        // powerSupplyID is correct, the error response will be cleared.
+        messages::resourceNotFound(asyncResp->res, "PowerSupply",
+                                   powerSupplyID);
 
-            for (const auto& object : subtree)
-            {
-                // The association of this PowerSupply is used to determine
-                // whether it belongs to this ChassisID
-                crow::connections::systemBus->async_method_call(
-                    [callback{std::move(callback)}, asyncResp, chassisID,
-                     powerSupplyID,
-                     object](const boost::system::error_code ec,
-                             const std::variant<std::vector<std::string>>&
-                                 endpoints) {
-                        if (ec)
+        for (const auto& object : subtree)
+        {
+            // The association of this PowerSupply is used to determine
+            // whether it belongs to this ChassisID
+            crow::connections::systemBus->async_method_call(
+                [callback{std::move(callback)}, asyncResp, chassisID,
+                 powerSupplyID, object](
+                    const boost::system::error_code ec,
+                    const std::variant<std::vector<std::string>>& endpoints) {
+                if (ec)
+                {
+                    if (ec.value() == EBADR)
+                    {
+                        // This PowerSupply have no chassis association.
+                        return;
+                    }
+
+                    BMCWEB_LOG_ERROR << "DBUS response error";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                const std::vector<std::string>* powerSupplyChassis =
+                    std::get_if<std::vector<std::string>>(&(endpoints));
+
+                if (powerSupplyChassis != nullptr)
+                {
+                    if ((*powerSupplyChassis).size() != 1)
+                    {
+                        BMCWEB_LOG_ERROR << "PowerSupply association error! ";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    std::vector<std::string> chassisPath = *powerSupplyChassis;
+                    sdbusplus::message::object_path path(chassisPath[0]);
+                    std::string chassisName = path.filename();
+                    if (chassisName != chassisID)
+                    {
+                        // The PowerSupply does't belong to the
+                        // chassisID
+                        return;
+                    }
+
+                    sdbusplus::message::object_path pathPS(object.first);
+                    const std::string powerSupplyName = pathPS.filename();
+                    if (powerSupplyName.empty())
+                    {
+                        BMCWEB_LOG_ERROR << "Failed to find powerSupplyName in "
+                                         << object.first;
+                        return;
+                    }
+
+                    std::string validPowerSupplyPath;
+
+                    if (powerSupplyName == powerSupplyID)
+                    {
+                        // Clear resourceNotFound response
+                        asyncResp->res.clear();
+
+                        if (object.second.size() != 1)
                         {
-                            if (ec.value() == EBADR)
-                            {
-                                // This PowerSupply have no chassis association.
-                                return;
-                            }
-
-                            BMCWEB_LOG_ERROR << "DBUS response error";
+                            BMCWEB_LOG_ERROR << "Error getting PowerSupply "
+                                                "D-Bus object!";
                             messages::internalError(asyncResp->res);
                             return;
                         }
 
-                        const std::vector<std::string>* powerSupplyChassis =
-                            std::get_if<std::vector<std::string>>(&(endpoints));
+                        const std::string& path = object.first;
+                        const std::string& connectionName =
+                            object.second[0].first;
 
-                        if (powerSupplyChassis != nullptr)
-                        {
-                            if ((*powerSupplyChassis).size() != 1)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "PowerSupply association error! ";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            std::vector<std::string> chassisPath =
-                                *powerSupplyChassis;
-                            sdbusplus::message::object_path path(
-                                chassisPath[0]);
-                            std::string chassisName = path.filename();
-                            if (chassisName != chassisID)
-                            {
-                                // The PowerSupply does't belong to the
-                                // chassisID
-                                return;
-                            }
-
-                            sdbusplus::message::object_path pathPS(
-                                object.first);
-                            const std::string powerSupplyName =
-                                pathPS.filename();
-                            if (powerSupplyName.empty())
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "Failed to find powerSupplyName in "
-                                    << object.first;
-                                return;
-                            }
-
-                            std::string validPowerSupplyPath;
-
-                            if (powerSupplyName == powerSupplyID)
-                            {
-                                // Clear resourceNotFound response
-                                asyncResp->res.clear();
-
-                                if (object.second.size() != 1)
-                                {
-                                    BMCWEB_LOG_ERROR
-                                        << "Error getting PowerSupply "
-                                           "D-Bus object!";
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-
-                                const std::string& path = object.first;
-                                const std::string& connectionName =
-                                    object.second[0].first;
-
-                                callback(path, connectionName);
-                            }
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    object.first + "/chassis",
-                    "org.freedesktop.DBus.Properties", "Get",
-                    "xyz.openbmc_project.Association", "endpoints");
-            }
-        };
+                        callback(path, connectionName);
+                    }
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper", object.first + "/chassis",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+        }
+    };
 
     // Get the PowerSupply Collection
     crow::connections::systemBus->async_method_call(
@@ -480,23 +457,22 @@ inline void requestRoutesPowerSupplyCollection(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) {
-                auto getChassisID =
-                    [asyncResp, chassisID](
-                        const std::optional<std::string>& validChassisID) {
-                        if (!validChassisID)
-                        {
-                            BMCWEB_LOG_ERROR << "Not a valid chassis ID:"
-                                             << chassisID;
-                            messages::resourceNotFound(asyncResp->res,
-                                                       "Chassis", chassisID);
-                            return;
-                        }
+        auto getChassisID =
+            [asyncResp,
+             chassisID](const std::optional<std::string>& validChassisID) {
+            if (!validChassisID)
+            {
+                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                messages::resourceNotFound(asyncResp->res, "Chassis",
+                                           chassisID);
+                return;
+            }
 
-                        getPowerSupplies(asyncResp, chassisID);
-                    };
-                redfish::chassis_utils::getValidChassisID(
-                    asyncResp, chassisID, std::move(getChassisID));
-            });
+            getPowerSupplies(asyncResp, chassisID);
+        };
+        redfish::chassis_utils::getValidChassisID(asyncResp, chassisID,
+                                                  std::move(getChassisID));
+    });
 }
 
 inline void requestRoutesPowerSupply(App& app)
@@ -508,66 +484,58 @@ inline void requestRoutesPowerSupply(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID, const std::string& powerSupplyID) {
-                auto getChassisID =
-                    [asyncResp, chassisID, powerSupplyID](
-                        const std::optional<std::string>& validChassisID) {
-                        if (!validChassisID)
-                        {
-                            BMCWEB_LOG_ERROR << "Not a valid chassis ID:"
-                                             << chassisID;
-                            messages::resourceNotFound(asyncResp->res,
-                                                       "Chassis", chassisID);
-                            return;
-                        }
+        auto getChassisID =
+            [asyncResp, chassisID,
+             powerSupplyID](const std::optional<std::string>& validChassisID) {
+            if (!validChassisID)
+            {
+                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                messages::resourceNotFound(asyncResp->res, "Chassis",
+                                           chassisID);
+                return;
+            }
 
-                        // Get the PowerSupply information using the path and
-                        // service obtained by getValidPowerSupplyID function
-                        auto getPowerSupplyID =
-                            [asyncResp, chassisID, powerSupplyID](
-                                const std::string& validPowerSupplyPath,
+            // Get the PowerSupply information using the path and
+            // service obtained by getValidPowerSupplyID function
+            auto getPowerSupplyID =
+                [asyncResp, chassisID,
+                 powerSupplyID](const std::string& validPowerSupplyPath,
                                 const std::string& validPowerSupplyService) {
-                                asyncResp->res.jsonValue["@odata.type"] =
-                                    "#PowerSupply.v1_0_0.PowerSupply";
-                                asyncResp->res.jsonValue["Name"] =
-                                    powerSupplyID;
-                                asyncResp->res.jsonValue["Id"] = powerSupplyID;
-                                asyncResp->res.jsonValue["@odata.id"] =
-                                    "/redfish/v1/Chassis/" + chassisID +
-                                    "/PowerSubsystem/PowerSupplies/" +
-                                    powerSupplyID;
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#PowerSupply.v1_0_0.PowerSupply";
+                asyncResp->res.jsonValue["Name"] = powerSupplyID;
+                asyncResp->res.jsonValue["Id"] = powerSupplyID;
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Chassis/" + chassisID +
+                    "/PowerSubsystem/PowerSupplies/" + powerSupplyID;
 
-                                // Get power supply asset
-                                getPowerSupplyAsset(asyncResp,
-                                                    validPowerSupplyService,
-                                                    validPowerSupplyPath);
+                // Get power supply asset
+                getPowerSupplyAsset(asyncResp, validPowerSupplyService,
+                                    validPowerSupplyPath);
 
-                                // Get power supply Location
-                                getPowerSupplyLocation(asyncResp,
-                                                       validPowerSupplyService,
-                                                       validPowerSupplyPath);
+                // Get power supply Location
+                getPowerSupplyLocation(asyncResp, validPowerSupplyService,
+                                       validPowerSupplyPath);
 
-                                // Get power supply state
-                                getPowerSupplyState(asyncResp,
-                                                    validPowerSupplyService,
-                                                    validPowerSupplyPath);
+                // Get power supply state
+                getPowerSupplyState(asyncResp, validPowerSupplyService,
+                                    validPowerSupplyPath);
 
-                                // Get power supply health
-                                getPowerSupplyHealth(asyncResp,
-                                                     validPowerSupplyService,
-                                                     validPowerSupplyPath);
+                // Get power supply health
+                getPowerSupplyHealth(asyncResp, validPowerSupplyService,
+                                     validPowerSupplyPath);
 
-                                // Get power supply efficiency ratings
-                                getEfficiencyRatings(asyncResp);
-                            };
-                        // Get the correct Path and Service that match the input
-                        // parameters
-                        getValidPowerSupplyID(asyncResp, chassisID,
-                                              powerSupplyID,
-                                              std::move(getPowerSupplyID));
-                    };
-                redfish::chassis_utils::getValidChassisID(
-                    asyncResp, chassisID, std::move(getChassisID));
-            });
+                // Get power supply efficiency ratings
+                getEfficiencyRatings(asyncResp);
+            };
+            // Get the correct Path and Service that match the input
+            // parameters
+            getValidPowerSupplyID(asyncResp, chassisID, powerSupplyID,
+                                  std::move(getPowerSupplyID));
+        };
+        redfish::chassis_utils::getValidChassisID(asyncResp, chassisID,
+                                                  std::move(getChassisID));
+    });
 }
 
 } // namespace redfish

@@ -116,7 +116,7 @@ inline bool getNthStringFromPath(const std::string& path, int index,
 
     std::filesystem::path p1(path);
     int count = -1;
-    for (auto const& element : p1)
+    for (const auto& element : p1)
     {
         if (element.has_filename())
         {
@@ -138,8 +138,8 @@ inline void checkDbusPathExists(const std::string& path, Callback&& callback)
         [callback{std::forward<Callback>(callback)}](
             const boost::system::error_code ec,
             const dbus::utility::MapperGetObject& objectNames) {
-            callback(!ec && !objectNames.empty());
-        },
+        callback(!ec && !objectNames.empty());
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", path,
@@ -153,8 +153,8 @@ inline void findAssociations(const std::string& path, Callback&& callback)
         [callback{std::forward<Callback>(callback)}](
             const boost::system::error_code ec,
             std::variant<std::vector<std::string>>& resp) {
-            callback(ec, resp);
-        },
+        callback(ec, resp);
+    },
         "xyz.openbmc_project.ObjectMapper", path,
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");

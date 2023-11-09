@@ -36,7 +36,7 @@ void removeDuplicate(T& t)
     t.erase(firstDuplicate(t.begin(), t.end()), t.end());
 }
 
-std::vector<uint8_t> getBytes(std::string const& s)
+std::vector<uint8_t> getBytes(const std::string& s)
 {
     std::vector<uint8_t> bytes;
     bytes.reserve(s.size());

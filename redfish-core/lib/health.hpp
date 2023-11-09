@@ -85,7 +85,6 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
             // managers inventory is all the inventory, don't skip any
             if (!isManagersHealth && !isSelf)
             {
-
                 // We only want to look at this association if either the path
                 // of this association is an inventory item, or one of the
                 // endpoints in this association is a child
@@ -200,13 +199,13 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
         crow::connections::systemBus->async_method_call(
             [self](const boost::system::error_code ec,
                    const dbus::utility::MapperGetSubTreePathsResponse& resp) {
-                if (ec || resp.size() != 1)
-                {
-                    // no global item, or too many
-                    return;
-                }
-                self->globalInventoryPath = resp[0];
-            },
+            if (ec || resp.size() != 1)
+            {
+                // no global item, or too many
+                return;
+            }
+            self->globalInventoryPath = resp[0];
+        },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/", 0,
@@ -220,23 +219,22 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
         crow::connections::systemBus->async_method_call(
             [self](const boost::system::error_code ec,
                    const dbus::utility::ManagedObjectType& resp) {
-                if (ec)
+            if (ec)
+            {
+                return;
+            }
+            self->statuses = resp;
+            for (auto it = self->statuses.begin(); it != self->statuses.end();)
+            {
+                if (it->first.str.ends_with("critical") ||
+                    it->first.str.ends_with("warning"))
                 {
-                    return;
+                    it++;
+                    continue;
                 }
-                self->statuses = resp;
-                for (auto it = self->statuses.begin();
-                     it != self->statuses.end();)
-                {
-                    if (it->first.str.ends_with("critical") ||
-                        it->first.str.ends_with("warning"))
-                    {
-                        it++;
-                        continue;
-                    }
-                    it = self->statuses.erase(it);
-                }
-            },
+                it = self->statuses.erase(it);
+            }
+        },
             "xyz.openbmc_project.ObjectMapper", "/",
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     }
@@ -794,39 +792,38 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
             [self, serviceManager,
              objPath](const boost::system::error_code ec,
                       const std::variant<Association>& result) mutable {
-                if (ec)
+            if (ec)
+            {
+                self->getPropertyFailFeedback(serviceManager, objPath,
+                                              dbusIntfDefinitions,
+                                              dbusPropAssociations, ec);
+                // TODO: move to ASSOC_Q_HEALTH_SERVICE state (assume
+                // that error in getting associations is no associations)
+                self->stopRollup(STOP_ERROR);
+            }
+            else // ! ec
+            {
+                const Association* associations = get_if<Association>(&result);
+                if (associations == nullptr)
                 {
-                    self->getPropertyFailFeedback(serviceManager, objPath,
-                                                  dbusIntfDefinitions,
-                                                  dbusPropAssociations, ec);
-                    // TODO: move to ASSOC_Q_HEALTH_SERVICE state (assume
-                    // that error in getting associations is no associations)
+                    self->invalidPropertyTypeFeedback(
+                        serviceManager, objPath, dbusIntfDefinitions,
+                        dbusPropAssociations, "a(sss)");
                     self->stopRollup(STOP_ERROR);
                 }
-                else // ! ec
+                else // ! associations == nullptr
                 {
-                    const Association* associations =
-                        get_if<Association>(&result);
-                    if (associations == nullptr)
+                    for (const auto& tup : *associations)
                     {
-                        self->invalidPropertyTypeFeedback(
-                            serviceManager, objPath, dbusIntfDefinitions,
-                            dbusPropAssociations, "a(sss)");
-                        self->stopRollup(STOP_ERROR);
-                    }
-                    else // ! associations == nullptr
-                    {
-                        for (const auto& tup : *associations)
+                        if (get<0>(tup) == dbusAssocHealthCategory)
                         {
-                            if (get<0>(tup) == dbusAssocHealthCategory)
-                            {
-                                self->devicesToVisit.push_back(get<2>(tup));
-                            }
+                            self->devicesToVisit.push_back(get<2>(tup));
                         }
-                        self->assocQueryForService();
                     }
+                    self->assocQueryForService();
                 }
-            },
+            }
+        },
             serviceManager.c_str(), objPath.c_str(), dbusIntfProperties.c_str(),
             "Get", dbusIntfDefinitions.c_str(), dbusPropAssociations.c_str());
     }
@@ -1078,59 +1075,58 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
             [self, objPath, interface](
                 const boost::system::error_code ec,
                 const std::map<std::string, std::vector<std::string>>& result) {
-                ServiceQueryingResult nextMove =
-                    self->determineQueryingServiceNextMove(ec, result, objPath,
-                                                           interface);
-                if (nextMove == SERVICE_OK_CONTINUE)
+            ServiceQueryingResult nextMove =
+                self->determineQueryingServiceNextMove(ec, result, objPath,
+                                                       interface);
+            if (nextMove == SERVICE_OK_CONTINUE)
+            {
+                auto manager = result.cbegin()->first;
+                BMCWEB_LOG_INFO << "Found manager service for object path '"
+                                << objPath << "' implementing the interface '"
+                                << interface << "': '" << manager << "'";
+                if (self->state == ROOT_Q_HEALTH_SERVICE)
                 {
-                    auto manager = result.cbegin()->first;
-                    BMCWEB_LOG_INFO << "Found manager service for object path '"
-                                    << objPath
-                                    << "' implementing the interface '"
-                                    << interface << "': '" << manager << "'";
-                    if (self->state == ROOT_Q_HEALTH_SERVICE)
-                    {
-                        self->state = ROOT_Q_HEALTH;
-                        self->queryForHealth(manager, objPath);
-                    }
-                    else if (self->state == ROOT_Q_ASSOCS_SERVICE)
-                    {
-                        self->state = ROOT_Q_ASSOCS;
-                        self->rootQueryForAssocs(manager, objPath);
-                    }
-                    else // self->state == ASSOC_Q_HEALTH_SERVICE
-                    {
-                        // 'state == ASSOC_Q_HEALTH_SERVICE' by virtue of
-                        // assertion (2)
-                        self->state = ASSOC_Q_HEALTH;
-                        self->queryForHealth(manager, objPath);
-                    }
+                    self->state = ROOT_Q_HEALTH;
+                    self->queryForHealth(manager, objPath);
                 }
-                else if (nextMove == SERVICE_ERROR_SKIP)
+                else if (self->state == ROOT_Q_ASSOCS_SERVICE)
                 {
-                    if (self->state == ROOT_Q_HEALTH_SERVICE)
-                    {
-                        self->state = ROOT_Q_HEALTH;
-                        self->proceedWithCurrentNodeHealth(
-                            self->assumedHealthWhenMissing, objPath);
-                    }
-                    else if (self->state == ROOT_Q_ASSOCS_SERVICE)
-                    {
-                        self->state = ROOT_Q_ASSOCS;
-                        self->assocQueryForService();
-                    }
-                    else // self->state == ASSOC_Q_HEALTH_SERVICE
-                    {
-                        self->state = ASSOC_Q_HEALTH;
-                        self->proceedWithCurrentNodeHealth(
-                            self->assumedHealthWhenMissing);
-                    }
+                    self->state = ROOT_Q_ASSOCS;
+                    self->rootQueryForAssocs(manager, objPath);
                 }
-                else // nextMove == SERVICE_ERROR_STOP
+                else // self->state == ASSOC_Q_HEALTH_SERVICE
                 {
-                    self->stopRollup(STOP_ERROR);
+                    // 'state == ASSOC_Q_HEALTH_SERVICE' by virtue of
+                    // assertion (2)
+                    self->state = ASSOC_Q_HEALTH;
+                    self->queryForHealth(manager, objPath);
                 }
-            },
+            }
+            else if (nextMove == SERVICE_ERROR_SKIP)
+            {
+                if (self->state == ROOT_Q_HEALTH_SERVICE)
+                {
+                    self->state = ROOT_Q_HEALTH;
+                    self->proceedWithCurrentNodeHealth(
+                        self->assumedHealthWhenMissing, objPath);
+                }
+                else if (self->state == ROOT_Q_ASSOCS_SERVICE)
+                {
+                    self->state = ROOT_Q_ASSOCS;
+                    self->assocQueryForService();
+                }
+                else // self->state == ASSOC_Q_HEALTH_SERVICE
+                {
+                    self->state = ASSOC_Q_HEALTH;
+                    self->proceedWithCurrentNodeHealth(
+                        self->assumedHealthWhenMissing);
+                }
+            }
+            else // nextMove == SERVICE_ERROR_STOP
+            {
+                self->stopRollup(STOP_ERROR);
+            }
+        },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
@@ -1335,11 +1331,10 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
             [self, serviceManager,
              objPath](const boost::system::error_code ec,
                       const std::variant<std::string>& result) {
-                const health_state::Type* nodeHealth =
-                    self->determineNodeHealth(ec, result, serviceManager,
-                                              objPath);
-                self->proceedWithCurrentNodeHealth(nodeHealth, objPath);
-            },
+            const health_state::Type* nodeHealth =
+                self->determineNodeHealth(ec, result, serviceManager, objPath);
+            self->proceedWithCurrentNodeHealth(nodeHealth, objPath);
+        },
             serviceManager.c_str(), objPath.c_str(), dbusIntfProperties, "Get",
             dbusIntfHealth, dbusPropHealth);
     }

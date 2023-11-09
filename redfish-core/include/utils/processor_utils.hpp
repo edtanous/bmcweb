@@ -43,52 +43,52 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         [resp, processorId, handler = std::forward<Handler>(handler)](
             boost::system::error_code ec,
             const MapperGetSubTreeResponse& subtree) mutable {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+            messages::internalError(resp->res);
+            return;
+        }
+        for (const auto& [objectPath, serviceMap] : subtree)
+        {
+            // Ignore any objects which don't end with our desired cpu name
+            if (!boost::ends_with(objectPath, processorId))
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
-                messages::internalError(resp->res);
-                return;
+                continue;
             }
-            for (const auto& [objectPath, serviceMap] : subtree)
+
+            bool found = false;
+            // Filter out objects that don't have the CPU-specific
+            // interfaces to make sure we can return 404 on non-CPUs
+            // (e.g. /redfish/../Processors/dimm0)
+            for (const auto& [serviceName, interfaceList] : serviceMap)
             {
-                // Ignore any objects which don't end with our desired cpu name
-                if (!boost::ends_with(objectPath, processorId))
+                if (std::find_first_of(
+                        interfaceList.begin(), interfaceList.end(),
+                        processorInterfaces.begin(),
+                        processorInterfaces.end()) != interfaceList.end())
                 {
-                    continue;
+                    found = true;
+                    break;
                 }
-
-                bool found = false;
-                // Filter out objects that don't have the CPU-specific
-                // interfaces to make sure we can return 404 on non-CPUs
-                // (e.g. /redfish/../Processors/dimm0)
-                for (const auto& [serviceName, interfaceList] : serviceMap)
-                {
-                    if (std::find_first_of(
-                            interfaceList.begin(), interfaceList.end(),
-                            processorInterfaces.begin(),
-                            processorInterfaces.end()) != interfaceList.end())
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    continue;
-                }
-
-                // Process the first object which does match our cpu name and
-                // required interfaces, and potentially ignore any other
-                // matching objects. Assume all interfaces we want to process
-                // must be on the same object path.
-
-                handler(resp, processorId, objectPath, serviceMap);
-
-                return;
             }
-            messages::resourceNotFound(resp->res, "Processor", processorId);
-        },
+
+            if (!found)
+            {
+                continue;
+            }
+
+            // Process the first object which does match our cpu name and
+            // required interfaces, and potentially ignore any other
+            // matching objects. Assume all interfaces we want to process
+            // must be on the same object path.
+
+            handler(resp, processorId, objectPath, serviceMap);
+
+            return;
+        }
+        messages::resourceNotFound(resp->res, "Processor", processorId);
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -112,112 +112,101 @@ inline void getPCIeErrorData(std::shared_ptr<bmcweb::AsyncResp> aResp,
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const OperatingConfigProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const auto& property : properties)
+        for (const auto& property : properties)
+        {
+            if (property.first == "ceCount")
             {
-                if (property.first == "ceCount")
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res
-                        .jsonValue["PCIeErrors"]["CorrectableErrorCount"] =
-                        *value;
+                    messages::internalError(aResp->res);
+                    return;
                 }
-                else if (property.first == "nonfeCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["PCIeErrors"]["NonFatalErrorCount"] =
-                        *value;
-                }
-                else if (property.first == "feCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["PCIeErrors"]["FatalErrorCount"] =
-                        *value;
-                }
-                else if (property.first == "L0ToRecoveryCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["PCIeErrors"]["L0ToRecoveryCount"] =
-                        *value;
-                }
-                else if (property.first == "ReplayCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["PCIeErrors"]["ReplayCount"] = *value;
-                }
-                else if (property.first == "ReplayRolloverCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["PCIeErrors"]["ReplayRolloverCount"] =
-                        *value;
-                }
-                else if (property.first == "NAKSentCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["PCIeErrors"]["NAKSentCount"] = *value;
-                }
-                else if (property.first == "NAKReceivedCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] =
-                        *value;
-                }
+                aResp->res.jsonValue["PCIeErrors"]["CorrectableErrorCount"] =
+                    *value;
             }
-        },
+            else if (property.first == "nonfeCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["NonFatalErrorCount"] =
+                    *value;
+            }
+            else if (property.first == "feCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["FatalErrorCount"] = *value;
+            }
+            else if (property.first == "L0ToRecoveryCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["L0ToRecoveryCount"] =
+                    *value;
+            }
+            else if (property.first == "ReplayCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["ReplayCount"] = *value;
+            }
+            else if (property.first == "ReplayRolloverCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["ReplayRolloverCount"] =
+                    *value;
+            }
+            else if (property.first == "NAKSentCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["NAKSentCount"] = *value;
+            }
+            else if (property.first == "NAKReceivedCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] = *value;
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.PCIe.PCIeECC");
 }

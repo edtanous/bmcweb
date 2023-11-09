@@ -21,8 +21,8 @@
 
 namespace ensuressl
 {
-constexpr char const* trustStorePath = "/etc/ssl/certs/authority";
-constexpr char const* x509Comment = "Generated from OpenBMC service";
+constexpr const char* trustStorePath = "/etc/ssl/certs/authority";
+constexpr const char* x509Comment = "Generated from OpenBMC service";
 static void initOpenssl();
 static EVP_PKEY* createEcKey();
 
@@ -145,8 +145,8 @@ inline bool verifyOpensslKeyCert(const std::string& filepath,
                 }
             }
 #else
-            EVP_PKEY_CTX* pkeyCtx =
-                EVP_PKEY_CTX_new_from_pkey(nullptr, pkey, nullptr);
+            EVP_PKEY_CTX* pkeyCtx = EVP_PKEY_CTX_new_from_pkey(nullptr, pkey,
+                                                               nullptr);
 
             if (pkeyCtx == nullptr)
             {
@@ -159,7 +159,6 @@ inline bool verifyOpensslKeyCert(const std::string& filepath,
             }
             else
             {
-
                 std::cerr << "Key not valid error number " << ERR_get_error()
                           << "\n";
             }
@@ -429,8 +428,8 @@ inline void encryptCredentials(const std::string& filename,
                          << "\n";
         return;
     }
-    auto pkey =
-        PEM_read_PrivateKey(fp, nullptr, lsp::emptyPasswordCallback, nullptr);
+    auto pkey = PEM_read_PrivateKey(fp, nullptr, lsp::emptyPasswordCallback,
+                                    nullptr);
     if (pkey == nullptr)
     {
         BMCWEB_LOG_ERROR << "Could not read private key from file: " << filename

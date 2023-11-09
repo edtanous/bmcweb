@@ -40,30 +40,30 @@ inline void requestRoutesStorageCollection(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& systemName) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                if (systemName != PLATFORMSYSTEMID)
-                {
-                    messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                               systemName);
-                    return;
-                }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        if (systemName != PLATFORMSYSTEMID)
+        {
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
 
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#StorageCollection.StorageCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
-                asyncResp->res.jsonValue["Name"] = "Storage Collection";
-                nlohmann::json::array_t members;
-                nlohmann::json::object_t member;
-                member["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1";
-                members.emplace_back(member);
-                asyncResp->res.jsonValue["Members"] = std::move(members);
-                asyncResp->res.jsonValue["Members@odata.count"] = 1;
-            });
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#StorageCollection.StorageCollection";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
+        asyncResp->res.jsonValue["Name"] = "Storage Collection";
+        nlohmann::json::array_t members;
+        nlohmann::json::object_t member;
+        member["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                              "/Storage/1";
+        members.emplace_back(member);
+        asyncResp->res.jsonValue["Members"] = std::move(members);
+        asyncResp->res.jsonValue["Members@odata.count"] = 1;
+    });
 }
 
 inline void getDrives(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -73,39 +73,39 @@ inline void getDrives(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         [asyncResp, health](
             const boost::system::error_code ec,
             const dbus::utility::MapperGetSubTreePathsResponse& driveList) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Drive mapper call error";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        nlohmann::json& driveArray = asyncResp->res.jsonValue["Drives"];
+        driveArray = nlohmann::json::array();
+        auto& count = asyncResp->res.jsonValue["Drives@odata.count"];
+        count = 0;
+
+        health->inventory.insert(health->inventory.end(), driveList.begin(),
+                                 driveList.end());
+
+        for (const std::string& drive : driveList)
+        {
+            sdbusplus::message::object_path object(drive);
+            if (object.filename().empty())
             {
-                BMCWEB_LOG_ERROR << "Drive mapper call error";
-                messages::internalError(asyncResp->res);
+                BMCWEB_LOG_ERROR << "Failed to find filename in " << drive;
                 return;
             }
 
-            nlohmann::json& driveArray = asyncResp->res.jsonValue["Drives"];
-            driveArray = nlohmann::json::array();
-            auto& count = asyncResp->res.jsonValue["Drives@odata.count"];
-            count = 0;
+            nlohmann::json::object_t driveJson;
+            driveJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                     "/Storage/1/Drives/" +
+                                     object.filename();
+            driveArray.push_back(std::move(driveJson));
+        }
 
-            health->inventory.insert(health->inventory.end(), driveList.begin(),
-                                     driveList.end());
-
-            for (const std::string& drive : driveList)
-            {
-                sdbusplus::message::object_path object(drive);
-                if (object.filename().empty())
-                {
-                    BMCWEB_LOG_ERROR << "Failed to find filename in " << drive;
-                    return;
-                }
-
-                nlohmann::json::object_t driveJson;
-                driveJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                         "/Storage/1/Drives/" +
-                                         object.filename();
-                driveArray.push_back(std::move(driveJson));
-            }
-
-            count = driveArray.size();
-        },
+        count = driveArray.size();
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
@@ -121,143 +121,138 @@ inline void
         [asyncResp,
          health](const boost::system::error_code ec,
                  const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec || subtree.empty())
+        if (ec || subtree.empty())
+        {
+            // doesn't have to be there
+            return;
+        }
+
+        nlohmann::json& root = asyncResp->res.jsonValue["StorageControllers"];
+        root = nlohmann::json::array();
+        for (const auto& [path, interfaceDict] : subtree)
+        {
+            sdbusplus::message::object_path object(path);
+            std::string id = object.filename();
+            if (id.empty())
             {
-                // doesn't have to be there
+                BMCWEB_LOG_ERROR << "Failed to find filename in " << path;
                 return;
             }
 
-            nlohmann::json& root =
-                asyncResp->res.jsonValue["StorageControllers"];
-            root = nlohmann::json::array();
-            for (const auto& [path, interfaceDict] : subtree)
+            if (interfaceDict.size() != 1)
             {
-                sdbusplus::message::object_path object(path);
-                std::string id = object.filename();
-                if (id.empty())
+                BMCWEB_LOG_ERROR << "Connection size " << interfaceDict.size()
+                                 << ", greater than 1";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const std::string& connectionName = interfaceDict.front().first;
+
+            size_t index = root.size();
+            nlohmann::json& storageController =
+                root.emplace_back(nlohmann::json::object());
+
+            storageController["@odata.type"] =
+                "#Storage.v1_7_0.StorageController";
+            storageController["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/Storage/1#/StorageControllers/" +
+                std::to_string(index);
+            storageController["Name"] = id;
+            storageController["MemberId"] = id;
+            storageController["Status"]["State"] = "Enabled";
+
+            sdbusplus::asio::getProperty<bool>(
+                *crow::connections::systemBus, connectionName, path,
+                "xyz.openbmc_project.Inventory.Item", "Present",
+                [asyncResp, index](const boost::system::error_code ec2,
+                                   bool enabled) {
+                // this interface isn't necessary, only check it
+                // if we get a good return
+                if (ec2)
                 {
-                    BMCWEB_LOG_ERROR << "Failed to find filename in " << path;
+                    return;
+                }
+                if (!enabled)
+                {
+                    asyncResp->res.jsonValue["StorageControllers"][index]
+                                            ["Status"]["State"] = "Disabled";
+                }
+            });
+
+            sdbusplus::asio::getAllProperties(
+                *crow::connections::systemBus, connectionName, path,
+                "xyz.openbmc_project.Inventory.Decorator.Asset",
+                [asyncResp, index](
+                    const boost::system::error_code ec2,
+                    const std::vector<
+                        std::pair<std::string, dbus::utility::DbusVariantType>>&
+                        propertiesList) {
+                if (ec2)
+                {
+                    // this interface isn't necessary
                     return;
                 }
 
-                if (interfaceDict.size() != 1)
+                const std::string* partNumber = nullptr;
+                const std::string* serialNumber = nullptr;
+                const std::string* manufacturer = nullptr;
+                const std::string* model = nullptr;
+
+                const bool success = sdbusplus::unpackPropertiesNoThrow(
+                    dbus_utils::UnpackErrorPrinter(), propertiesList,
+                    "PartNumber", partNumber, "SerialNumber", serialNumber,
+                    "Manufacturer", manufacturer, "Model", model);
+
+                if (!success)
                 {
-                    BMCWEB_LOG_ERROR << "Connection size "
-                                     << interfaceDict.size()
-                                     << ", greater than 1";
                     messages::internalError(asyncResp->res);
                     return;
                 }
 
-                const std::string& connectionName = interfaceDict.front().first;
+                nlohmann::json& controller =
+                    asyncResp->res.jsonValue["StorageControllers"][index];
 
-                size_t index = root.size();
-                nlohmann::json& storageController =
-                    root.emplace_back(nlohmann::json::object());
+                if (partNumber != nullptr)
+                {
+                    controller["PartNumber"] = *partNumber;
+                }
 
-                storageController["@odata.type"] =
-                    "#Storage.v1_7_0.StorageController";
-                storageController["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                    "/Storage/1#/StorageControllers/" +
-                    std::to_string(index);
-                storageController["Name"] = id;
-                storageController["MemberId"] = id;
-                storageController["Status"]["State"] = "Enabled";
+                if (serialNumber != nullptr)
+                {
+                    controller["SerialNumber"] = *serialNumber;
+                }
 
-                sdbusplus::asio::getProperty<bool>(
-                    *crow::connections::systemBus, connectionName, path,
-                    "xyz.openbmc_project.Inventory.Item", "Present",
-                    [asyncResp, index](const boost::system::error_code ec2,
-                                       bool enabled) {
-                        // this interface isn't necessary, only check it
-                        // if we get a good return
-                        if (ec2)
-                        {
-                            return;
-                        }
-                        if (!enabled)
-                        {
-                            asyncResp->res.jsonValue["StorageControllers"]
-                                                    [index]["Status"]["State"] =
-                                "Disabled";
-                        }
-                    });
+                if (manufacturer != nullptr)
+                {
+                    controller["Manufacturer"] = *manufacturer;
+                }
 
-                sdbusplus::asio::getAllProperties(
-                    *crow::connections::systemBus, connectionName, path,
-                    "xyz.openbmc_project.Inventory.Decorator.Asset",
-                    [asyncResp,
-                     index](const boost::system::error_code ec2,
-                            const std::vector<std::pair<
-                                std::string, dbus::utility::DbusVariantType>>&
-                                propertiesList) {
-                        if (ec2)
-                        {
-                            // this interface isn't necessary
-                            return;
-                        }
+                if (model != nullptr)
+                {
+                    controller["Model"] = *model;
+                }
+            });
+        }
 
-                        const std::string* partNumber = nullptr;
-                        const std::string* serialNumber = nullptr;
-                        const std::string* manufacturer = nullptr;
-                        const std::string* model = nullptr;
-
-                        const bool success = sdbusplus::unpackPropertiesNoThrow(
-                            dbus_utils::UnpackErrorPrinter(), propertiesList,
-                            "PartNumber", partNumber, "SerialNumber",
-                            serialNumber, "Manufacturer", manufacturer, "Model",
-                            model);
-
-                        if (!success)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        nlohmann::json& controller =
-                            asyncResp->res
-                                .jsonValue["StorageControllers"][index];
-
-                        if (partNumber != nullptr)
-                        {
-                            controller["PartNumber"] = *partNumber;
-                        }
-
-                        if (serialNumber != nullptr)
-                        {
-                            controller["SerialNumber"] = *serialNumber;
-                        }
-
-                        if (manufacturer != nullptr)
-                        {
-                            controller["Manufacturer"] = *manufacturer;
-                        }
-
-                        if (model != nullptr)
-                        {
-                            controller["Model"] = *model;
-                        }
-                    });
-            }
-
-            // this is done after we know the json array will no longer
-            // be resized, as json::array uses vector underneath and we
-            // need references to its members that won't change
-            size_t count = 0;
-            // Pointer based on |asyncResp->res.jsonValue|
-            nlohmann::json::json_pointer rootPtr =
-                "/StorageControllers"_json_pointer;
-            for (const auto& [path, interfaceDict] : subtree)
-            {
-                auto subHealth = std::make_shared<HealthPopulate>(
-                    asyncResp, rootPtr / count / "Status");
-                subHealth->inventory.emplace_back(path);
-                health->inventory.emplace_back(path);
-                health->children.emplace_back(subHealth);
-                count++;
-            }
-        },
+        // this is done after we know the json array will no longer
+        // be resized, as json::array uses vector underneath and we
+        // need references to its members that won't change
+        size_t count = 0;
+        // Pointer based on |asyncResp->res.jsonValue|
+        nlohmann::json::json_pointer rootPtr =
+            "/StorageControllers"_json_pointer;
+        for (const auto& [path, interfaceDict] : subtree)
+        {
+            auto subHealth = std::make_shared<HealthPopulate>(
+                asyncResp, rootPtr / count / "Status");
+            subHealth->inventory.emplace_back(path);
+            health->inventory.emplace_back(path);
+            health->children.emplace_back(subHealth);
+            count++;
+        }
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -273,24 +268,23 @@ inline void requestRoutesStorage(App& app)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#Storage.v1_7_1.Storage";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1";
-                asyncResp->res.jsonValue["Name"] = "Storage";
-                asyncResp->res.jsonValue["Id"] = "1";
-                asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["@odata.type"] = "#Storage.v1_7_1.Storage";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1";
+        asyncResp->res.jsonValue["Name"] = "Storage";
+        asyncResp->res.jsonValue["Id"] = "1";
+        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
-                auto health = std::make_shared<HealthPopulate>(asyncResp);
-                health->populate();
+        auto health = std::make_shared<HealthPopulate>(asyncResp);
+        health->populate();
 
-                getDrives(asyncResp, health);
-                getStorageControllers(asyncResp, health);
-            });
+        getDrives(asyncResp, health);
+        getStorageControllers(asyncResp, health);
+    });
 }
 
 inline void getDriveAsset(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -304,48 +298,48 @@ inline void getDriveAsset(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     const std::vector<
                         std::pair<std::string, dbus::utility::DbusVariantType>>&
                         propertiesList) {
-            if (ec)
-            {
-                // this interface isn't necessary
-                return;
-            }
+        if (ec)
+        {
+            // this interface isn't necessary
+            return;
+        }
 
-            const std::string* partNumber = nullptr;
-            const std::string* serialNumber = nullptr;
-            const std::string* manufacturer = nullptr;
-            const std::string* model = nullptr;
+        const std::string* partNumber = nullptr;
+        const std::string* serialNumber = nullptr;
+        const std::string* manufacturer = nullptr;
+        const std::string* model = nullptr;
 
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), propertiesList, "PartNumber",
-                partNumber, "SerialNumber", serialNumber, "Manufacturer",
-                manufacturer, "Model", model);
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), propertiesList, "PartNumber",
+            partNumber, "SerialNumber", serialNumber, "Manufacturer",
+            manufacturer, "Model", model);
 
-            if (!success)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (!success)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            if (partNumber != nullptr)
-            {
-                asyncResp->res.jsonValue["PartNumber"] = *partNumber;
-            }
+        if (partNumber != nullptr)
+        {
+            asyncResp->res.jsonValue["PartNumber"] = *partNumber;
+        }
 
-            if (serialNumber != nullptr)
-            {
-                asyncResp->res.jsonValue["SerialNumber"] = *serialNumber;
-            }
+        if (serialNumber != nullptr)
+        {
+            asyncResp->res.jsonValue["SerialNumber"] = *serialNumber;
+        }
 
-            if (manufacturer != nullptr)
-            {
-                asyncResp->res.jsonValue["Manufacturer"] = *manufacturer;
-            }
+        if (manufacturer != nullptr)
+        {
+            asyncResp->res.jsonValue["Manufacturer"] = *manufacturer;
+        }
 
-            if (model != nullptr)
-            {
-                asyncResp->res.jsonValue["Model"] = *model;
-            }
-        });
+        if (model != nullptr)
+        {
+            asyncResp->res.jsonValue["Model"] = *model;
+        }
+    });
 }
 
 inline void getDrivePresent(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -357,18 +351,18 @@ inline void getDrivePresent(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.Inventory.Item", "Present",
         [asyncResp, path](const boost::system::error_code ec,
                           const bool enabled) {
-            // this interface isn't necessary, only check it if
-            // we get a good return
-            if (ec)
-            {
-                return;
-            }
+        // this interface isn't necessary, only check it if
+        // we get a good return
+        if (ec)
+        {
+            return;
+        }
 
-            if (!enabled)
-            {
-                asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
-            }
-        });
+        if (!enabled)
+        {
+            asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
+        }
+    });
 }
 
 inline void getDriveState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -379,22 +373,22 @@ inline void getDriveState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.State.Drive", "Rebuilding",
         [asyncResp](const boost::system::error_code ec, const bool updating) {
-            // this interface isn't necessary, only check it
-            // if we get a good return
-            if (ec)
-            {
-                return;
-            }
+        // this interface isn't necessary, only check it
+        // if we get a good return
+        if (ec)
+        {
+            return;
+        }
 
-            // updating and disabled in the backend shouldn't be
-            // able to be set at the same time, so we don't need
-            // to check for the race condition of these two
-            // calls
-            if (updating)
-            {
-                asyncResp->res.jsonValue["Status"]["State"] = "Updating";
-            }
-        });
+        // updating and disabled in the backend shouldn't be
+        // able to be set at the same time, so we don't need
+        // to check for the race condition of these two
+        // calls
+        if (updating)
+        {
+            asyncResp->res.jsonValue["Status"]["State"] = "Updating";
+        }
+    });
 }
 
 inline std::optional<std::string> convertDriveType(const std::string& type)
@@ -436,68 +430,83 @@ inline std::optional<std::string> convertDriveProtocol(const std::string& proto)
 inline std::optional<std::string>
     convertDriveFormFactor(const std::string& formFactor)
 {
-
-    if (formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.Drive3_5")
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.Drive3_5")
     {
         return "Drive3_5";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.Drive2_5" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.Drive2_5")
     {
         return "Drive2_5";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Long" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Long")
     {
         return "EDSFF_1U_Long";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Short" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_1U_Short")
     {
         return "EDSFF_1U_Short";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Short" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Short")
     {
         return "EDSFF_E3_Short";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Long" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.EDSFF_E3_Long")
     {
         return "EDSFF_E3_Long";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2230" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2230")
     {
         return "M2_2230";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2242" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2242")
     {
         return "M2_2242";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2260" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2260")
     {
         return "M2_2260";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2280" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_2280")
     {
         return "M2_2280";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_22110" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.M2_22110")
     {
         return "M2_22110";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.U2" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.U2")
     {
         return "U2";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotFullLength" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotFullLength")
     {
         return "PCIeSlotFullLength";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotLowProfile" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeSlotLowProfile")
     {
         return "PCIeSlotLowProfile";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeHalfLength" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.PCIeHalfLength")
     {
         return "PCIeHalfLength";
     }
-    if ( formFactor == "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.OEM" )
+    if (formFactor ==
+        "xyz.openbmc_project.Inventory.Item.Drive.DriveFormFactor.OEM")
     {
         return "OEM";
     }
@@ -505,15 +514,13 @@ inline std::optional<std::string>
     return std::nullopt;
 }
 
-inline std::optional<std::string>
-    convertDriveOperation(const std::string& op)
+inline std::optional<std::string> convertDriveOperation(const std::string& op)
 {
     if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Sanitize")
     {
         return "Sanitize";
     }
-    if (op ==
-        "xyz.openbmc_project.Nvme.Operation.OperationType.Deduplicate")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Deduplicate")
     {
         return "Deduplicate";
     }
@@ -522,13 +529,11 @@ inline std::optional<std::string>
     {
         return "CheckConsistency";
     }
-    if (op ==
-        "xyz.openbmc_project.Nvme.Operation.OperationType.Initialize")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Initialize")
     {
         return "Initialize";
     }
-    if (op ==
-        "xyz.openbmc_project.Nvme.Operation.OperationType.Replicate")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.Replicate")
     {
         return "Replicate";
     }
@@ -536,8 +541,7 @@ inline std::optional<std::string>
     {
         return "Delete";
     }
-    if (op ==
-        "xyz.openbmc_project.Nvme.Operation.OperationType.ChangeRAIDType")
+    if (op == "xyz.openbmc_project.Nvme.Operation.OperationType.ChangeRAIDType")
     {
         return "ChangeRAIDType";
     }
@@ -585,123 +589,118 @@ inline void
                     const std::vector<
                         std::pair<std::string, dbus::utility::DbusVariantType>>&
                         propertiesList) {
-            if (ec)
+        if (ec)
+        {
+            // this interface isn't required
+            return;
+        }
+        for (const std::pair<std::string, dbus::utility::DbusVariantType>&
+                 property : propertiesList)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "Type")
             {
-                // this interface isn't required
-                return;
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
+                {
+                    // illegal property
+                    BMCWEB_LOG_ERROR << "Illegal property: Type";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                std::optional<std::string> mediaType = convertDriveType(*value);
+                if (!mediaType)
+                {
+                    BMCWEB_LOG_ERROR << "Unsupported DriveType Interface: "
+                                     << *value;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                asyncResp->res.jsonValue["MediaType"] = *mediaType;
             }
-            for (const std::pair<std::string, dbus::utility::DbusVariantType>&
-                     property : propertiesList)
+            else if (propertyName == "Capacity")
             {
-                const std::string& propertyName = property.first;
-                if (propertyName == "Type")
+                const uint64_t* capacity =
+                    std::get_if<uint64_t>(&property.second);
+                if (capacity == nullptr)
                 {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        // illegal property
-                        BMCWEB_LOG_ERROR << "Illegal property: Type";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    std::optional<std::string> mediaType =
-                        convertDriveType(*value);
-                    if (!mediaType)
-                    {
-                        BMCWEB_LOG_ERROR << "Unsupported DriveType Interface: "
-                                         << *value;
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    asyncResp->res.jsonValue["MediaType"] = *mediaType;
+                    BMCWEB_LOG_ERROR << "Illegal property: Capacity";
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
-                else if (propertyName == "Capacity")
+                if (*capacity == 0)
                 {
-                    const uint64_t* capacity =
-                        std::get_if<uint64_t>(&property.second);
-                    if (capacity == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR << "Illegal property: Capacity";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    if (*capacity == 0)
-                    {
-                        // drive capacity not known
-                        continue;
-                    }
+                    // drive capacity not known
+                    continue;
+                }
 
-                    asyncResp->res.jsonValue["CapacityBytes"] = *capacity;
-                }
-                else if (propertyName == "Protocol")
+                asyncResp->res.jsonValue["CapacityBytes"] = *capacity;
+            }
+            else if (propertyName == "Protocol")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
                 {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR << "Illegal property: Protocol";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+                    BMCWEB_LOG_ERROR << "Illegal property: Protocol";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
 
-                    std::optional<std::string> proto =
-                        convertDriveProtocol(*value);
-                    if (!proto)
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Unsupported DrivePrototype Interface: "
-                            << *value;
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["Protocol"] = *proto;
-                }
-                else if (propertyName == "FormFactor")
+                std::optional<std::string> proto = convertDriveProtocol(*value);
+                if (!proto)
                 {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR << "Illegal property: FormFactor";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    std::optional<std::string> formFactor =
-                        convertDriveFormFactor(*value);
-                    if (!formFactor)
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Unsupported Drive FormFactor Interface: "
-                            << *value;
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["FormFactor"] = *formFactor;
+                    BMCWEB_LOG_ERROR << "Unsupported DrivePrototype Interface: "
+                                     << *value;
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
-                else if (propertyName == "PredictedMediaLifeLeftPercent")
+                asyncResp->res.jsonValue["Protocol"] = *proto;
+            }
+            else if (propertyName == "FormFactor")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint8_t* lifeLeft =
-                        std::get_if<uint8_t>(&property.second);
-                    if (lifeLeft == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Illegal property: PredictedMediaLifeLeftPercent";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    // 255 means reading the value is not supported
-                    if (*lifeLeft != 255)
-                    {
-                        asyncResp->res
-                            .jsonValue["PredictedMediaLifeLeftPercent"] =
-                            *lifeLeft;
-                    }
+                    BMCWEB_LOG_ERROR << "Illegal property: FormFactor";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                std::optional<std::string> formFactor =
+                    convertDriveFormFactor(*value);
+                if (!formFactor)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "Unsupported Drive FormFactor Interface: " << *value;
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["FormFactor"] = *formFactor;
+            }
+            else if (propertyName == "PredictedMediaLifeLeftPercent")
+            {
+                const uint8_t* lifeLeft =
+                    std::get_if<uint8_t>(&property.second);
+                if (lifeLeft == nullptr)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "Illegal property: PredictedMediaLifeLeftPercent";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                // 255 means reading the value is not supported
+                if (*lifeLeft != 255)
+                {
+                    asyncResp->res.jsonValue["PredictedMediaLifeLeftPercent"] =
+                        *lifeLeft;
                 }
             }
-        });
+        }
+    });
 }
 
 inline void
@@ -716,42 +715,40 @@ inline void
                     const std::vector<
                         std::pair<std::string, dbus::utility::DbusVariantType>>&
                         propertiesList) {
-            if (ec)
+        if (ec)
+        {
+            // this interface isn't required
+            return;
+        }
+        for (const std::pair<std::string, dbus::utility::DbusVariantType>&
+                 property : propertiesList)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "MaxSpeed")
             {
-                // this interface isn't required
-                return;
-            }
-            for (const std::pair<std::string, dbus::utility::DbusVariantType>&
-                     property : propertiesList)
-            {
-                const std::string& propertyName = property.first;
-                if (propertyName == "MaxSpeed")
+                const size_t* maxSpeed = std::get_if<size_t>(&property.second);
+                if (maxSpeed == nullptr)
                 {
-                    const size_t* maxSpeed =
-                        std::get_if<size_t>(&property.second);
-                    if (maxSpeed == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR << "Illegal property: MaxSpeed";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+                    BMCWEB_LOG_ERROR << "Illegal property: MaxSpeed";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
 
-                    asyncResp->res.jsonValue["CapableSpeedGbs"] = *maxSpeed;
-                }
-                else if (propertyName == "CurrentSpeed")
-                {
-                    const size_t* speed = std::get_if<size_t>(&property.second);
-                    if (speed == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Illegal property: NegotiatedSpeedGbs";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["NegotiatedSpeedGbs"] = *speed;
-                }
+                asyncResp->res.jsonValue["CapableSpeedGbs"] = *maxSpeed;
             }
-        });
+            else if (propertyName == "CurrentSpeed")
+            {
+                const size_t* speed = std::get_if<size_t>(&property.second);
+                if (speed == nullptr)
+                {
+                    BMCWEB_LOG_ERROR << "Illegal property: NegotiatedSpeedGbs";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["NegotiatedSpeedGbs"] = *speed;
+            }
+        }
+    });
 }
 
 inline void getDriveVersion(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -763,12 +760,12 @@ inline void getDriveVersion(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.Software.Version", "Version",
         [asyncResp, path](const boost::system::error_code ec,
                           const std::string& version) {
-            if (ec)
-            {
-                return;
-            }
-            asyncResp->res.jsonValue["FirmwareVersion"] = version;
-        });
+        if (ec)
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["FirmwareVersion"] = version;
+    });
 }
 
 inline void
@@ -780,12 +777,12 @@ inline void
         "xyz.openbmc_project.Inventory.Decorator.LocationCode", "LocationCode",
         [asyncResp, path](const boost::system::error_code ec,
                           const std::string& location) {
-            if (ec)
-            {
-                return;
-            }
-            asyncResp->res.jsonValue["PhysicalLocation"] = location;
-        });
+        if (ec)
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["PhysicalLocation"] = location;
+    });
 }
 
 inline void getDriveStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -796,28 +793,29 @@ inline void getDriveStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.State.Decorator.OperationalStatus", "Functional",
         [asyncResp, path, sw](const boost::system::error_code ec,
-                          const bool functional) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "fail to get drive status";
-                return;
-            }
-            if (!functional) {
-                asyncResp->res.jsonValue["StatusIndicator"] = "Fail";
-            }
-            else if(sw != "0" && sw != "2")
-            {
-                // the temperature(2) is excluded and it is not PFA.
-                asyncResp->res.jsonValue["StatusIndicator"] =
-                    "PredictiveFailureAnalysis";
-                asyncResp->res.jsonValue["FailurePredicted"] = true;
-            }
-            else
-            {
-                asyncResp->res.jsonValue["StatusIndicator"] = "OK";
-                asyncResp->res.jsonValue["FailurePredicted"] = false;
-            }
-        });
+                              const bool functional) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "fail to get drive status";
+            return;
+        }
+        if (!functional)
+        {
+            asyncResp->res.jsonValue["StatusIndicator"] = "Fail";
+        }
+        else if (sw != "0" && sw != "2")
+        {
+            // the temperature(2) is excluded and it is not PFA.
+            asyncResp->res.jsonValue["StatusIndicator"] =
+                "PredictiveFailureAnalysis";
+            asyncResp->res.jsonValue["FailurePredicted"] = true;
+        }
+        else
+        {
+            asyncResp->res.jsonValue["StatusIndicator"] = "OK";
+            asyncResp->res.jsonValue["FailurePredicted"] = false;
+        }
+    });
 }
 
 inline void
@@ -829,57 +827,54 @@ inline void
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Nvme.Status", "SmartWarnings",
         [asyncResp, connectionName, path](const boost::system::error_code ec,
-                          const std::string& sw) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "fail to get drive smart";
-                return;
-            }
-            getDriveStatus(asyncResp, connectionName, path, sw);
-        });
-
+                                          const std::string& sw) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "fail to get drive smart";
+            return;
+        }
+        getDriveStatus(asyncResp, connectionName, path, sw);
+    });
 }
 
 inline void
     getDriveProgress(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& connectionName,
-                           const std::string& path)
+                     const std::string& connectionName, const std::string& path)
 {
     sdbusplus::asio::getProperty<uint8_t>(
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Common.Progress", "Progress",
         [asyncResp, connectionName, path](const boost::system::error_code ec,
                                           const uint8_t prog) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "fail to get drive progress";
-                return;
-            }
-            asyncResp->res.jsonValue["Operations"]["PercentageComplete"] =
-                prog;
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "fail to get drive progress";
+            return;
+        }
+        asyncResp->res.jsonValue["Operations"]["PercentageComplete"] = prog;
+    });
 }
 
 inline void
     getDriveOperation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& connectionName,
-                           const std::string& path)
+                      const std::string& connectionName,
+                      const std::string& path)
 {
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Nvme.Operation", "Operation",
         [asyncResp, connectionName, path](const boost::system::error_code ec,
                                           const std::string& op) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "fail to get drive progress";
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "fail to get drive progress";
+            return;
+        }
 
-            std::optional<std::string> operation = convertDriveOperation(op);
-            asyncResp->res.jsonValue["Operations"]["Operation"] = *operation;
-            asyncResp->res.jsonValue["Operations"]["AssociatedTask"] = taskUris;
-        });
+        std::optional<std::string> operation = convertDriveOperation(op);
+        asyncResp->res.jsonValue["Operations"]["Operation"] = *operation;
+        asyncResp->res.jsonValue["Operations"]["AssociatedTask"] = taskUris;
+    });
 }
 
 static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -931,7 +926,6 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             getDriveOperation(asyncResp, connectionName, path);
         }
     }
-
 }
 
 inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -942,43 +936,43 @@ inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "xyz.openbmc_project.Inventory.Item.Chassis"};
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, driveId](const boost::system::error_code ec,
-                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
+        [asyncResp,
+         driveId](const boost::system::error_code ec,
+                  const dbus::utility::MapperGetSubTreeResponse& subtree) {
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        // Iterate over all retrieved ObjectPaths.
+        for (const auto& [path, connectionNames] : subtree)
+        {
+            if (connectionNames.empty())
             {
-                messages::internalError(asyncResp->res);
-                return;
+                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                continue;
             }
 
-            // Iterate over all retrieved ObjectPaths.
-            for (const auto& [path, connectionNames] : subtree)
-            {
-                if (connectionNames.empty())
+            sdbusplus::message::object_path objPath(path);
+            sdbusplus::asio::getProperty<std::vector<std::string>>(
+                *crow::connections::systemBus,
+                "xyz.openbmc_project.ObjectMapper", path + "/drive",
+                "xyz.openbmc_project.Association", "endpoints",
+                [asyncResp, objPath](const boost::system::error_code ec3,
+                                     const std::vector<std::string>& resp) {
+                if (ec3 || resp.empty())
                 {
-                    BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                    continue;
+                    return; // no drives = no
+                            // failures
                 }
+                asyncResp->res.jsonValue["Links"]["Chassis"]["@odata.id"] =
+                    "/redfish/v1/Chassis/" + objPath.filename();
 
-                sdbusplus::message::object_path objPath(path);
-                sdbusplus::asio::getProperty<std::vector<std::string>>(
-                    *crow::connections::systemBus,
-                    "xyz.openbmc_project.ObjectMapper", path + "/drive",
-                    "xyz.openbmc_project.Association", "endpoints",
-                    [asyncResp, objPath](const boost::system::error_code ec3,
-                                   const std::vector<std::string>& resp) {
-                        if (ec3 || resp.empty())
-                        {
-                            return; // no drives = no
-                                    // failures
-                        }
-                        asyncResp->res
-                            .jsonValue["Links"]["Chassis"]["@odata.id"] =
-                            "/redfish/v1/Chassis/" + objPath.filename();
-
-                        return;
-                    });
-            }
-        },
+                return;
+            });
+        }
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -995,78 +989,76 @@ inline void createSanitizeProgressTask(
         [service, path,
          driveId](boost::system::error_code ec, sdbusplus::message_t& msg,
                   const std::shared_ptr<task::TaskData>& taskData) {
-            if (ec)
-            {
-                taskData->finishTask();
-                taskData->state = "Aborted";
-                taskData->messages.emplace_back(
-                    messages::resourceErrorsDetectedFormatError(
-                        "Drive SecureErase", ec.message()));
-                return task::completed;
-            }
+        if (ec)
+        {
+            taskData->finishTask();
+            taskData->state = "Aborted";
+            taskData->messages.emplace_back(
+                messages::resourceErrorsDetectedFormatError("Drive SecureErase",
+                                                            ec.message()));
+            return task::completed;
+        }
 
-            std::string iface;
-            boost::container::flat_map<std::string,
-                                       dbus::utility::DbusVariantType>
-                values;
+        std::string iface;
+        boost::container::flat_map<std::string, dbus::utility::DbusVariantType>
+            values;
 
-            std::string index = std::to_string(taskData->index);
-            msg.read(iface, values);
+        std::string index = std::to_string(taskData->index);
+        msg.read(iface, values);
 
-            if (iface != "xyz.openbmc_project.Common.Progress")
-            {
-                return !task::completed;
-            }
-            auto findStatus = values.find("Status");
-            if (findStatus != values.end())
-            {
-                std::string* state =
-                    std::get_if<std::string>(&(findStatus->second));
-                if (state == nullptr)
-                {
-                    taskData->messages.emplace_back(messages::internalError());
-                    return !task::completed;
-                }
-
-                if (boost::ends_with(*state, "Aborted") ||
-                    boost::ends_with(*state, "Failed"))
-                {
-                    taskData->state = "Exception";
-                    taskData->messages.emplace_back(
-                        messages::taskAborted(index));
-                    return task::completed;
-                }
-
-                if (boost::ends_with(*state, "Completed"))
-                {
-                    taskData->state = "Completed";
-                    taskData->percentComplete = 100;
-                    taskData->messages.emplace_back(
-                        messages::taskCompletedOK(index));
-                    taskData->finishTask();
-                    return task::completed;
-                }
-            }
-
-            auto findProgress = values.find("Progress");
-            if (findProgress == values.end())
-            {
-                return !task::completed;
-            }
-            uint8_t* progress = std::get_if<uint8_t>(&(findProgress->second));
-            if (progress == nullptr)
+        if (iface != "xyz.openbmc_project.Common.Progress")
+        {
+            return !task::completed;
+        }
+        auto findStatus = values.find("Status");
+        if (findStatus != values.end())
+        {
+            std::string* state =
+                std::get_if<std::string>(&(findStatus->second));
+            if (state == nullptr)
             {
                 taskData->messages.emplace_back(messages::internalError());
+                return !task::completed;
+            }
+
+            if (boost::ends_with(*state, "Aborted") ||
+                boost::ends_with(*state, "Failed"))
+            {
+                taskData->state = "Exception";
+                taskData->messages.emplace_back(messages::taskAborted(index));
                 return task::completed;
             }
-            taskData->percentComplete = static_cast<int>(*progress);
 
-            BMCWEB_LOG_ERROR << taskData->percentComplete;
-            taskData->messages.emplace_back(messages::taskProgressChanged(
-                index, static_cast<size_t>(*progress)));
+            if (boost::ends_with(*state, "Completed"))
+            {
+                taskData->state = "Completed";
+                taskData->percentComplete = 100;
+                taskData->messages.emplace_back(
+                    messages::taskCompletedOK(index));
+                taskData->finishTask();
+                return task::completed;
+            }
+        }
 
+        auto findProgress = values.find("Progress");
+        if (findProgress == values.end())
+        {
             return !task::completed;
-        },
+        }
+        uint8_t* progress = std::get_if<uint8_t>(&(findProgress->second));
+        if (progress == nullptr)
+        {
+            taskData->messages.emplace_back(messages::internalError());
+            return task::completed;
+        }
+        taskData->percentComplete = static_cast<int>(*progress);
+
+        BMCWEB_LOG_ERROR << taskData->percentComplete;
+        taskData->messages.emplace_back(messages::taskProgressChanged(
+            index, static_cast<size_t>(*progress)));
+
+        return !task::completed;
+    },
         "type='signal',interface='org.freedesktop.DBus.Properties',"
         "member='PropertiesChanged',path='" +
             path + "'");
@@ -1079,10 +1071,11 @@ inline void createSanitizeProgressTask(
                        std::to_string(task->index));
 }
 
-inline void handleDriveSanitizePost(
-    App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& /*chassisId*/, const std::string& driveId)
+inline void
+    handleDriveSanitizePost(App& app, const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& /*chassisId*/,
+                            const std::string& driveId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1094,8 +1087,8 @@ inline void handleDriveSanitizePost(
     if (!json_util::readJsonAction(req, asyncResp->res, "SanitizationType",
                                    sanitizeType))
     {
-            messages::actionParameterValueError(
-                asyncResp->res, "Drive.SecureErase", "SanitizationType");
+        messages::actionParameterValueError(asyncResp->res, "Drive.SecureErase",
+                                            "SanitizationType");
         return;
     }
     if (sanitizeType == "Overwrite")
@@ -1117,80 +1110,78 @@ inline void handleDriveSanitizePost(
         [req, asyncResp, driveId, sanitizeType,
          owPass](const boost::system::error_code ec,
                  const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Drive mapper call error";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        auto drive = std::find_if(
+            subtree.begin(), subtree.end(),
+            [&driveId](
+                const std::pair<std::string, dbus::utility::MapperServiceMap>&
+                    object) {
+            return sdbusplus::message::object_path(object.first).filename() ==
+                   driveId;
+        });
+        if (drive == subtree.end())
+        {
+            messages::resourceNotFound(asyncResp->res, "Drive", driveId);
+            return;
+        }
+        const std::string& path = drive->first;
+        const dbus::utility::MapperServiceMap& connNames = drive->second;
+        if (connNames.size() != 1)
+        {
+            BMCWEB_LOG_ERROR << "Connection size " << connNames.size()
+                             << ", not equal to 1";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        auto service = connNames[0].first;
+        auto interfaces = connNames[0].second;
+        for (const std::string& interface : interfaces)
+        {
+            if (interface != "xyz.openbmc_project.Nvme.SecureErase")
             {
-                BMCWEB_LOG_ERROR << "Drive mapper call error";
-                messages::internalError(asyncResp->res);
-                return;
+                continue;
             }
 
-            auto drive = std::find_if(
-                subtree.begin(), subtree.end(),
-                [&driveId](
-                    const std::pair<std::string,
-                                    dbus::utility::MapperServiceMap>& object) {
-                    return sdbusplus::message::object_path(object.first)
-                               .filename() == driveId;
-                });
-            if (drive == subtree.end())
-            {
-                messages::resourceNotFound(asyncResp->res, "Drive", driveId);
-                return;
-            }
-            const std::string& path = drive->first;
-            const dbus::utility::MapperServiceMap& connNames = drive->second;
-            if (connNames.size() != 1)
-            {
-                BMCWEB_LOG_ERROR << "Connection size " << connNames.size()
-                                 << ", not equal to 1";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-
-            auto service = connNames[0].first;
-            auto interfaces = connNames[0].second;
-            for (const std::string& interface : interfaces)
-            {
-                if (interface != "xyz.openbmc_project.Nvme.SecureErase")
+            auto methodName =
+                "xyz.openbmc_project.Nvme.SecureErase.EraseMethod." +
+                sanitizeType;
+            // execute drive sanitize operation
+            crow::connections::systemBus->async_method_call(
+                [req, asyncResp, service, path,
+                 driveId](const boost::system::error_code ec,
+                          sdbusplus::message::message& msg) {
+                const sd_bus_error* dbusError = msg.get_error();
+                if (dbusError != nullptr &&
+                    strcmp(dbusError->name,
+                           "xyz.openbmc_project.Common.Error.NotAllowed") == 0)
                 {
-                    continue;
+                    std::string resolution =
+                        "Drive sanitize in progress. Retry "
+                        "the sanitize operation once it is complete.";
+                    redfish::messages::updateInProgressMsg(asyncResp->res,
+                                                           resolution);
+                    BMCWEB_LOG_ERROR << "Sanitize on drive" << driveId
+                                     << " already in progress.";
                 }
-
-                auto methodName =
-                    "xyz.openbmc_project.Nvme.SecureErase.EraseMethod." +
-                    sanitizeType;
-                // execute drive sanitize operation
-                crow::connections::systemBus->async_method_call(
-                    [req, asyncResp, service, path,
-                     driveId](const boost::system::error_code ec,
-                              sdbusplus::message::message& msg) {
-                        const sd_bus_error* dbusError = msg.get_error();
-                        if (dbusError != nullptr &&
-                            strcmp(
-                                dbusError->name,
-                                "xyz.openbmc_project.Common.Error.NotAllowed") ==
-                                0)
-                        {
-                            std::string resolution =
-                                "Drive sanitize in progress. Retry "
-                                "the sanitize operation once it is complete.";
-                            redfish::messages::updateInProgressMsg(
-                                asyncResp->res, resolution);
-                            BMCWEB_LOG_ERROR << "Sanitize on drive" << driveId
-                                             << " already in progress.";
-                        }
-                        if (ec)
-                        {
-                            //other errors return here.
-                            return;
-                        }
-                        createSanitizeProgressTask(req, asyncResp, service,
-                                                   path, driveId);
-                    },
-                    service, path, interface, "Erase", owPass, methodName);
-                return;
-            }
-        },
+                if (ec)
+                {
+                    // other errors return here.
+                    return;
+                }
+                createSanitizeProgressTask(req, asyncResp, service, path,
+                                           driveId);
+            },
+                service, path, interface, "Erase", owPass, methodName);
+            return;
+        }
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -1198,10 +1189,9 @@ inline void handleDriveSanitizePost(
         std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item.Drive"});
 }
 
-
 inline void handleDriveSanitizetActionInfoGet(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& , const std::string& driveId)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string&,
+    const std::string& driveId)
 {
     asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
     asyncResp->res.jsonValue["Name"] = "Sanitize Action Info";
@@ -1211,94 +1201,94 @@ inline void handleDriveSanitizetActionInfoGet(
         [asyncResp,
          driveId](const boost::system::error_code ec,
                   const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Drive mapper call error";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Drive mapper call error";
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            auto drive = std::find_if(
-                subtree.begin(), subtree.end(),
-                [&driveId](
-                    const std::pair<std::string,
-                                    dbus::utility::MapperServiceMap>& object) {
-                    return sdbusplus::message::object_path(object.first)
-                               .filename() == driveId;
-                });
-            if (drive == subtree.end())
-            {
-                messages::resourceNotFound(asyncResp->res, "Drive", driveId);
-                return;
-            }
-            const std::string& path = drive->first;
-            const dbus::utility::MapperServiceMap& connNames = drive->second;
-            if (connNames.size() != 1)
-            {
-                BMCWEB_LOG_ERROR << "Connection size " << connNames.size()
-                                 << ", not equal to 1";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        auto drive = std::find_if(
+            subtree.begin(), subtree.end(),
+            [&driveId](
+                const std::pair<std::string, dbus::utility::MapperServiceMap>&
+                    object) {
+            return sdbusplus::message::object_path(object.first).filename() ==
+                   driveId;
+        });
+        if (drive == subtree.end())
+        {
+            messages::resourceNotFound(asyncResp->res, "Drive", driveId);
+            return;
+        }
+        const std::string& path = drive->first;
+        const dbus::utility::MapperServiceMap& connNames = drive->second;
+        if (connNames.size() != 1)
+        {
+            BMCWEB_LOG_ERROR << "Connection size " << connNames.size()
+                             << ", not equal to 1";
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            auto service = connNames[0].first;
-            auto interfaces = connNames[0].second;
-            for (const std::string& interface : interfaces)
+        auto service = connNames[0].first;
+        auto interfaces = connNames[0].second;
+        for (const std::string& interface : interfaces)
+        {
+            if (interface != "xyz.openbmc_project.Nvme.SecureErase")
             {
-                if (interface != "xyz.openbmc_project.Nvme.SecureErase")
+                continue;
+            }
+            sdbusplus::asio::getProperty<std::vector<std::string>>(
+                *crow::connections::systemBus, service, path, interface,
+                "SanitizeCapability",
+                [asyncResp](const boost::system::error_code ec,
+                            const std::vector<std::string>& cap) {
+                if (ec)
                 {
-                    continue;
+                    BMCWEB_LOG_ERROR << "fail to get drive Progress";
+                    return;
                 }
-                sdbusplus::asio::getProperty<std::vector<std::string>>(
-                    *crow::connections::systemBus, service, path, interface,
-                    "SanitizeCapability",
-                    [asyncResp](const boost::system::error_code ec,
-                                const std::vector<std::string>& cap) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "fail to get drive Progress";
-                            return;
-                        }
-                        nlohmann::json::array_t parameters;
-                        nlohmann::json::object_t parameter;
-                        nlohmann::json::array_t allowed;
+                nlohmann::json::array_t parameters;
+                nlohmann::json::object_t parameter;
+                nlohmann::json::array_t allowed;
 
-                        if (std::find(
-                                cap.begin(), cap.end(),
-                                "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.Overwrite") !=
-                            cap.end())
-                        {
-                            parameter["Name"] = "OverwritePasses";
-                            parameter["DataType"] = "integer";
-                            parameters.push_back(parameter);
+                if (std::find(
+                        cap.begin(), cap.end(),
+                        "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.Overwrite") !=
+                    cap.end())
+                {
+                    parameter["Name"] = "OverwritePasses";
+                    parameter["DataType"] = "integer";
+                    parameters.push_back(parameter);
 
-                            allowed.push_back("Overwrite");
-                        }
-                        if (std::find(
-                                cap.begin(), cap.end(),
-                                "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.BlockErase") !=
-                            cap.end())
-                        {
-                            allowed.push_back("BlockErase");
-                        }
-                        if (std::find(
-                                cap.begin(), cap.end(),
-                                "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.CryptoErase") !=
-                            cap.end())
-                        {
-                            allowed.push_back("CryptographicErase");
-                        }
-                        parameter["Name"] = "SanitizationType";
-                        parameter["DataType"] = "string";
+                    allowed.push_back("Overwrite");
+                }
+                if (std::find(
+                        cap.begin(), cap.end(),
+                        "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.BlockErase") !=
+                    cap.end())
+                {
+                    allowed.push_back("BlockErase");
+                }
+                if (std::find(
+                        cap.begin(), cap.end(),
+                        "xyz.openbmc_project.Nvme.SecureErase.EraseMethod.CryptoErase") !=
+                    cap.end())
+                {
+                    allowed.push_back("CryptographicErase");
+                }
+                parameter["Name"] = "SanitizationType";
+                parameter["DataType"] = "string";
 
-                        parameter["AllowableValues"] = allowed;
-                        parameters.push_back(parameter);
+                parameter["AllowableValues"] = allowed;
+                parameters.push_back(parameter);
 
-                        asyncResp->res.jsonValue["Parameters"] = parameters;
-                    });
-                break;
-            }
-        },
+                asyncResp->res.jsonValue["Parameters"] = parameters;
+            });
+            break;
+        }
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -1315,10 +1305,11 @@ inline void handleSystemDriveSanitizetActionInfoGet(
     {
         return;
     }
-    asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" + systemId + "/Drives/"+ driveId +"/SanitizeActionInfo";
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" + systemId +
+                                            "/Drives/" + driveId +
+                                            "/SanitizeActionInfo";
 
-    handleDriveSanitizetActionInfoGet(asyncResp,systemId, driveId);
+    handleDriveSanitizetActionInfoGet(asyncResp, systemId, driveId);
 }
 
 inline void handleChassisDriveSanitizetActionInfoGet(
@@ -1330,20 +1321,21 @@ inline void handleChassisDriveSanitizetActionInfoGet(
     {
         return;
     }
-    asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Chassis/" + chassisId + "/Drives/"+ driveId +"/SanitizeActionInfo";
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" + chassisId +
+                                            "/Drives/" + driveId +
+                                            "/SanitizeActionInfo";
 
-    handleDriveSanitizetActionInfoGet(asyncResp,chassisId, driveId);
+    handleDriveSanitizetActionInfoGet(asyncResp, chassisId, driveId);
 }
 
 /**
  * System drives, this URL will show all the DriveCollection
  * information
  */
-inline void driveCollectionGet(
-    crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& systemName)
+inline void
+    driveCollectionGet(crow::App& app, const crow::Request& req,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1363,28 +1355,28 @@ inline void driveCollectionGet(
 
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
-                      const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Drive mapper call error";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            nlohmann::json& members = asyncResp->res.jsonValue["Members"];
-            // important if array is empty
-            members = nlohmann::json::array();
-            nlohmann::json::object_t member;
-            for (const auto& [path, connectionNames] : subtree)
-            {
-                sdbusplus::message::object_path objPath(path);
-                auto id =objPath.filename();
-                member["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                      "/Storage/1/Drives/" +
-                                      id;
-                members.emplace_back(member);
-            }
-            asyncResp->res.jsonValue["Members@odata.count"] = members.size();
-        },
+                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Drive mapper call error";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        nlohmann::json& members = asyncResp->res.jsonValue["Members"];
+        // important if array is empty
+        members = nlohmann::json::array();
+        nlohmann::json::object_t member;
+        for (const auto& [path, connectionNames] : subtree)
+        {
+            sdbusplus::message::object_path objPath(path);
+            auto id = objPath.filename();
+            member["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/Storage/1/Drives/" +
+                                  id;
+            members.emplace_back(member);
+        }
+        asyncResp->res.jsonValue["Members@odata.count"] = members.size();
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -1405,104 +1397,94 @@ inline void requestRoutesDrive(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& systemName, const std::string& driveId) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                if (systemName != PLATFORMSYSTEMID)
-                {
-                    messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                               systemName);
-                    return;
-                }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        if (systemName != PLATFORMSYSTEMID)
+        {
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp,
-                     driveId](const boost::system::error_code ec,
-                              const dbus::utility::MapperGetSubTreeResponse&
-                                  subtree) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "Drive mapper call error";
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
+        crow::connections::systemBus->async_method_call(
+            [asyncResp,
+             driveId](const boost::system::error_code ec,
+                      const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Drive mapper call error";
+                messages::internalError(asyncResp->res);
+                return;
+            }
 
-                        auto drive = std::find_if(
-                            subtree.begin(), subtree.end(),
-                            [&driveId](
-                                const std::pair<
-                                    std::string,
+            auto drive = std::find_if(
+                subtree.begin(), subtree.end(),
+                [&driveId](
+                    const std::pair<std::string,
                                     dbus::utility::MapperServiceMap>& object) {
-                                return sdbusplus::message::object_path(
-                                           object.first)
-                                           .filename() == driveId;
-                            });
-
-                        if (drive == subtree.end())
-                        {
-                            messages::resourceNotFound(asyncResp->res, "Drive",
-                                                       driveId);
-                            return;
-                        }
-
-                        const std::string& path = drive->first;
-                        const dbus::utility::MapperServiceMap& connectionNames =
-                            drive->second;
-
-                        asyncResp->res.jsonValue["@odata.type"] =
-                            "#Drive.v1_7_0.Drive";
-                        asyncResp->res.jsonValue["@odata.id"] =
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/Storage/1/Drives/" +
-                            driveId;
-                        asyncResp->res.jsonValue["Name"] = driveId;
-                        asyncResp->res.jsonValue["Id"] = driveId;
-
-                        asyncResp->res
-                            .jsonValue["Actions"]["#Drive.SecureErase"]
-                                      ["target"] =
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/Storage/1/Drives/" +
-                            driveId + "/Actions/Drive.SecureErase";
-                        asyncResp->res
-                            .jsonValue["Actions"]["#Drive.SecureErase"]
-                                      ["@Redfish.ActionInfo"] =
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/Storage/1/Drives/" +
-                            driveId +"/SanitizeActionInfo";
-                        if (connectionNames.size() != 1)
-                        {
-                            BMCWEB_LOG_ERROR << "Connection size "
-                                             << connectionNames.size()
-                                             << ", not equal to 1";
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-
-                        getChassisID(asyncResp, driveId);
-
-                        // default it to Enabled
-                        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-
-                        auto health =
-                            std::make_shared<HealthPopulate>(asyncResp);
-                        health->inventory.emplace_back(path);
-                        health->selfPath = path;
-                        health->populate();
-
-                        addAllDriveInfo(asyncResp, connectionNames[0].first,
-                                        path, connectionNames[0].second);
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                    "/xyz/openbmc_project/inventory", int32_t(0),
-                    std::array<const char*, 1>{
-                        "xyz.openbmc_project.Inventory.Item.Drive"});
+                return sdbusplus::message::object_path(object.first)
+                           .filename() == driveId;
             });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/Actions/Drive.SecureErase")
+            if (drive == subtree.end())
+            {
+                messages::resourceNotFound(asyncResp->res, "Drive", driveId);
+                return;
+            }
+
+            const std::string& path = drive->first;
+            const dbus::utility::MapperServiceMap& connectionNames =
+                drive->second;
+
+            asyncResp->res.jsonValue["@odata.type"] = "#Drive.v1_7_0.Drive";
+            asyncResp->res.jsonValue["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/" +
+                driveId;
+            asyncResp->res.jsonValue["Name"] = driveId;
+            asyncResp->res.jsonValue["Id"] = driveId;
+
+            asyncResp->res
+                .jsonValue["Actions"]["#Drive.SecureErase"]["target"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/" +
+                driveId + "/Actions/Drive.SecureErase";
+            asyncResp->res.jsonValue["Actions"]["#Drive.SecureErase"]
+                                    ["@Redfish.ActionInfo"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/" +
+                driveId + "/SanitizeActionInfo";
+            if (connectionNames.size() != 1)
+            {
+                BMCWEB_LOG_ERROR << "Connection size " << connectionNames.size()
+                                 << ", not equal to 1";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            getChassisID(asyncResp, driveId);
+
+            // default it to Enabled
+            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+
+            auto health = std::make_shared<HealthPopulate>(asyncResp);
+            health->inventory.emplace_back(path);
+            health->selfPath = path;
+            health->populate();
+
+            addAllDriveInfo(asyncResp, connectionNames[0].first, path,
+                            connectionNames[0].second);
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+            "/xyz/openbmc_project/inventory", int32_t(0),
+            std::array<const char*, 1>{
+                "xyz.openbmc_project.Inventory.Item.Drive"});
+    });
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/Actions/Drive.SecureErase")
         .privileges(redfish::privileges::postDrive)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleDriveSanitizePost, std::ref(app)));
@@ -1534,84 +1516,80 @@ inline void chassisDriveCollectionGet(
         [asyncResp,
          chassisId](const boost::system::error_code ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
+        if (ec)
+        {
+            if (ec == boost::system::errc::host_unreachable)
             {
-                if (ec == boost::system::errc::host_unreachable)
-                {
-                    messages::resourceNotFound(asyncResp->res, "Chassis",
-                                               chassisId);
-                    return;
-                }
-                messages::internalError(asyncResp->res);
+                messages::resourceNotFound(asyncResp->res, "Chassis",
+                                           chassisId);
                 return;
             }
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            // Iterate over all retrieved ObjectPaths.
-            for (const auto& [path, connectionNames] : subtree)
+        // Iterate over all retrieved ObjectPaths.
+        for (const auto& [path, connectionNames] : subtree)
+        {
+            sdbusplus::message::object_path objPath(path);
+            if (objPath.filename() != chassisId)
             {
-                sdbusplus::message::object_path objPath(path);
-                if (objPath.filename() != chassisId)
+                continue;
+            }
+
+            if (connectionNames.empty())
+            {
+                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                continue;
+            }
+
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#DriveCollection.DriveCollection";
+            asyncResp->res.jsonValue["@odata.id"] =
+                crow::utility::urlFromPieces("redfish", "v1", "Chassis",
+                                             chassisId, "Drives");
+            asyncResp->res.jsonValue["Name"] = "Drive Collection";
+
+            // Association lambda
+            sdbusplus::asio::getProperty<std::vector<std::string>>(
+                *crow::connections::systemBus,
+                "xyz.openbmc_project.ObjectMapper", path + "/drive",
+                "xyz.openbmc_project.Association", "endpoints",
+                [asyncResp, chassisId](const boost::system::error_code ec3,
+                                       const std::vector<std::string>& resp) {
+                if (ec3)
                 {
-                    continue;
+                    BMCWEB_LOG_ERROR << "Error in chassis Drive association ";
+                }
+                nlohmann::json& members = asyncResp->res.jsonValue["Members"];
+                // important if array is empty
+                members = nlohmann::json::array();
+
+                std::vector<std::string> leafNames;
+                for (const auto& drive : resp)
+                {
+                    sdbusplus::message::object_path drivePath(drive);
+                    leafNames.push_back(drivePath.filename());
                 }
 
-                if (connectionNames.empty())
+                std::sort(leafNames.begin(), leafNames.end(),
+                          AlphanumLess<std::string>());
+
+                for (const auto& leafName : leafNames)
                 {
-                    BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                    continue;
+                    nlohmann::json::object_t member;
+                    member["@odata.id"] = crow::utility::urlFromPieces(
+                        "redfish", "v1", "Chassis", chassisId, "Drives",
+                        leafName);
+                    members.push_back(std::move(member));
+                    // navigation links will be registered in next patch
+                    // set
                 }
+                asyncResp->res.jsonValue["Members@odata.count"] = resp.size();
+            }); // end association lambda
 
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#DriveCollection.DriveCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    crow::utility::urlFromPieces("redfish", "v1", "Chassis",
-                                                 chassisId, "Drives");
-                asyncResp->res.jsonValue["Name"] = "Drive Collection";
-
-                // Association lambda
-                sdbusplus::asio::getProperty<std::vector<std::string>>(
-                    *crow::connections::systemBus,
-                    "xyz.openbmc_project.ObjectMapper", path + "/drive",
-                    "xyz.openbmc_project.Association", "endpoints",
-                    [asyncResp,
-                     chassisId](const boost::system::error_code ec3,
-                                const std::vector<std::string>& resp) {
-                        if (ec3)
-                        {
-                            BMCWEB_LOG_ERROR
-                                << "Error in chassis Drive association ";
-                        }
-                        nlohmann::json& members =
-                            asyncResp->res.jsonValue["Members"];
-                        // important if array is empty
-                        members = nlohmann::json::array();
-
-                        std::vector<std::string> leafNames;
-                        for (const auto& drive : resp)
-                        {
-                            sdbusplus::message::object_path drivePath(drive);
-                            leafNames.push_back(drivePath.filename());
-                        }
-
-                        std::sort(leafNames.begin(), leafNames.end(),
-                                  AlphanumLess<std::string>());
-
-                        for (const auto& leafName : leafNames)
-                        {
-                            nlohmann::json::object_t member;
-                            member["@odata.id"] = crow::utility::urlFromPieces(
-                                "redfish", "v1", "Chassis", chassisId, "Drives",
-                                leafName);
-                            members.push_back(std::move(member));
-                            // navigation links will be registered in next patch
-                            // set
-                        }
-                        asyncResp->res.jsonValue["Members@odata.count"] =
-                            resp.size();
-                    }); // end association lambda
-
-            } // end Iterate over all retrieved ObjectPaths
-        },
+        }       // end Iterate over all retrieved ObjectPaths
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -1635,7 +1613,6 @@ inline void buildDrive(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const boost::system::error_code ec,
                        const dbus::utility::MapperGetSubTreeResponse& subtree)
 {
-
     if (ec)
     {
         BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
@@ -1683,7 +1660,8 @@ inline void buildDrive(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         asyncResp->res
             .jsonValue["Actions"]["#Drive.SecureErase"]["@Redfish.ActionInfo"] =
             crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
-                                         "Drives", driveName, "SanitizeActionInfo");
+                                         "Drives", driveName,
+                                         "SanitizeActionInfo");
 
         addAllDriveInfo(asyncResp, connectionNames[0].first, path,
                         connectionNames[0].second);
@@ -1696,7 +1674,6 @@ inline void
                       const std::string& driveName,
                       const std::vector<std::string>& resp)
 {
-
     for (const std::string& drivePath : resp)
     {
         sdbusplus::message::object_path path(drivePath);
@@ -1713,8 +1690,8 @@ inline void
             [asyncResp, chassisId, driveName](
                 const boost::system::error_code ec,
                 const dbus::utility::MapperGetSubTreeResponse& subtree) {
-                buildDrive(asyncResp, chassisId, driveName, ec, subtree);
-            },
+            buildDrive(asyncResp, chassisId, driveName, ec, subtree);
+        },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -1741,44 +1718,43 @@ inline void
         [asyncResp, chassisId,
          driveName](const boost::system::error_code ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        // Iterate over all retrieved ObjectPaths.
+        for (const auto& [path, connectionNames] : subtree)
+        {
+            sdbusplus::message::object_path objPath(path);
+            if (objPath.filename() != chassisId)
             {
-                messages::internalError(asyncResp->res);
-                return;
+                continue;
             }
 
-            // Iterate over all retrieved ObjectPaths.
-            for (const auto& [path, connectionNames] : subtree)
+            if (connectionNames.empty())
             {
-                sdbusplus::message::object_path objPath(path);
-                if (objPath.filename() != chassisId)
-                {
-                    continue;
-                }
-
-                if (connectionNames.empty())
-                {
-                    BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                    continue;
-                }
-
-                sdbusplus::asio::getProperty<std::vector<std::string>>(
-                    *crow::connections::systemBus,
-                    "xyz.openbmc_project.ObjectMapper", path + "/drive",
-                    "xyz.openbmc_project.Association", "endpoints",
-                    [asyncResp, chassisId,
-                     driveName](const boost::system::error_code ec3,
-                                const std::vector<std::string>& resp) {
-                        if (ec3)
-                        {
-                            return; // no drives = no failures
-                        }
-                        matchAndFillDrive(asyncResp, chassisId, driveName,
-                                          resp);
-                    });
-                break;
+                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                continue;
             }
-        },
+
+            sdbusplus::asio::getProperty<std::vector<std::string>>(
+                *crow::connections::systemBus,
+                "xyz.openbmc_project.ObjectMapper", path + "/drive",
+                "xyz.openbmc_project.Association", "endpoints",
+                [asyncResp, chassisId,
+                 driveName](const boost::system::error_code ec3,
+                            const std::vector<std::string>& resp) {
+                if (ec3)
+                {
+                    return; // no drives = no failures
+                }
+                matchAndFillDrive(asyncResp, chassisId, driveName, resp);
+            });
+            break;
+        }
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -1795,7 +1771,8 @@ inline void requestRoutesChassisDriveName(App& app)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleChassisDriveGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Drives/<str>/Actions/Drive.SecureErase")
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Chassis/<str>/Drives/<str>/Actions/Drive.SecureErase")
         .privileges(redfish::privileges::postDrive)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleDriveSanitizePost, std::ref(app)));
@@ -1803,8 +1780,8 @@ inline void requestRoutesChassisDriveName(App& app)
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Chassis/<str>/Drives/<str>/SanitizeActionInfo")
         .privileges(redfish::privileges::getDrive)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(handleChassisDriveSanitizetActionInfoGet, std::ref(app)));
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleChassisDriveSanitizetActionInfoGet, std::ref(app)));
 }
 
 } // namespace redfish

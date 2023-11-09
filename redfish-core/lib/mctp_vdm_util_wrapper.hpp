@@ -64,8 +64,7 @@ using ResponseCallback = std::function<void(
 struct MctpVdmUtil
 {
   public:
-    MctpVdmUtil(uint32_t endpointId) : endpointId(endpointId)
-    {}
+    MctpVdmUtil(uint32_t endpointId) : endpointId(endpointId) {}
 
     /**
      *@brief Execute mctp-vdm-util tool command for
@@ -143,12 +142,11 @@ void MctpVdmUtil::run(MctpVdmUtilCommand mctpVdmUtilcommand,
     translateOperationToCommand(mctpVdmUtilcommand);
     auto dataOut = std::make_shared<boost::process::ipstream>();
     auto dataErr = std::make_shared<boost::process::ipstream>();
-    auto exitCallback = [req, asyncResp, dataOut, dataErr,
-                         respCallback = std::move(responseCallback),
-                         endpointId = this->endpointId,
-                         command =
-                             this->command](const boost::system::error_code& ec,
-                                            int errorCode) mutable {
+    auto exitCallback =
+        [req, asyncResp, dataOut, dataErr,
+         respCallback = std::move(responseCallback),
+         endpointId = this->endpointId, command = this->command](
+            const boost::system::error_code& ec, int errorCode) mutable {
         std::string stdOut;
         while (*dataOut)
         {

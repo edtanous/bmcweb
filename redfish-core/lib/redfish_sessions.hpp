@@ -32,8 +32,8 @@ inline void fillSessionObject(crow::Response& res,
 {
     res.jsonValue["Id"] = session.uniqueId;
     res.jsonValue["UserName"] = session.username;
-    res.jsonValue["@odata.id"] =
-        "/redfish/v1/SessionService/Sessions/" + session.uniqueId;
+    res.jsonValue["@odata.id"] = "/redfish/v1/SessionService/Sessions/" +
+                                 session.uniqueId;
     res.jsonValue["@odata.type"] = "#Session.v1_5_0.Session";
     res.jsonValue["Name"] = "User Session";
     res.jsonValue["Description"] = "Manager User Session";
@@ -55,7 +55,6 @@ inline void
                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       const std::string& /*sessionId*/)
 {
-
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
@@ -144,7 +143,6 @@ inline void handleSessionCollectionHead(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
@@ -280,7 +278,6 @@ inline void handleSessionServiceHead(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;

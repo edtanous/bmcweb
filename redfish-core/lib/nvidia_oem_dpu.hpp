@@ -33,16 +33,16 @@ inline void getIsOemNvidiaRshimEnable(
         systemdUnitIntfBf, "ActiveState",
         [asyncResp](const boost::system::error_code ec,
                     const std::string& rshimActiveState) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "DBUS response error for getIsOemNvidiaRshimEnable";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            asyncResp->res.jsonValue["BmcRShim"]["BmcRShimEnabled"] =
-                (rshimActiveState == "active");
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "DBUS response error for getIsOemNvidiaRshimEnable";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        asyncResp->res.jsonValue["BmcRShim"]["BmcRShimEnabled"] =
+            (rshimActiveState == "active");
+    });
 }
 
 inline void
@@ -60,14 +60,13 @@ inline void
 
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "DBUS response error for rshim enable/disable";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "DBUS response error for rshim enable/disable";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+    },
         systemdServiceBf, rshimSystemdObjBf, systemdUnitIntfBf, method.c_str(),
         "replace");
 
@@ -77,55 +76,54 @@ inline void
 
 inline void requestRoutesNvidiaOemBf(App& app)
 {
-
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia")
         .privileges(redfish::privileges::getManager)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                bluefield::getIsOemNvidiaRshimEnable(asyncResp);
-            });
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        bluefield::getIsOemNvidiaRshimEnable(asyncResp);
+    });
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/Nvidia/")
         .privileges(redfish::privileges::patchManager)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                std::optional<nlohmann::json> bmcRshim;
-                if (!redfish::json_util::readJsonPatch(req, asyncResp->res,
-                                                  "BmcRShim", bmcRshim))
-                {
-                    BMCWEB_LOG_ERROR
-                        << "Illegal Property "
-                        << asyncResp->res.jsonValue.dump(2, ' ', true,
-                                     nlohmann::json::error_handler_t::replace);
-                    return;
-                }
-                if (bmcRshim)
-                {
-                    std::optional<bool> bmcRshimEnabled;
-                    if (!redfish::json_util::readJson(*bmcRshim, asyncResp->res,
-                                                      "BmcRShimEnabled",
-                                                      bmcRshimEnabled))
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Illegal Property "
-                            << asyncResp->res.jsonValue.dump(
-                                   2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace);
-                        return;
-                    }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        std::optional<nlohmann::json> bmcRshim;
+        if (!redfish::json_util::readJsonPatch(req, asyncResp->res, "BmcRShim",
+                                               bmcRshim))
+        {
+            BMCWEB_LOG_ERROR
+                << "Illegal Property "
+                << asyncResp->res.jsonValue.dump(
+                       2, ' ', true, nlohmann::json::error_handler_t::replace);
+            return;
+        }
+        if (bmcRshim)
+        {
+            std::optional<bool> bmcRshimEnabled;
+            if (!redfish::json_util::readJson(*bmcRshim, asyncResp->res,
+                                              "BmcRShimEnabled",
+                                              bmcRshimEnabled))
+            {
+                BMCWEB_LOG_ERROR
+                    << "Illegal Property "
+                    << asyncResp->res.jsonValue.dump(
+                           2, ' ', true,
+                           nlohmann::json::error_handler_t::replace);
+                return;
+            }
 
-                    bluefield::requestOemNvidiaRshim(asyncResp, *bmcRshimEnabled);
-                }
-            });
+            bluefield::requestOemNvidiaRshim(asyncResp, *bmcRshimEnabled);
+        }
+    });
 }
 
 } // namespace redfish

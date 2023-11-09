@@ -17,8 +17,7 @@ namespace streaming_response
 struct Connection : std::enable_shared_from_this<Connection>
 {
   public:
-    explicit Connection(const crow::Request& reqIn) : req(reqIn.req)
-    {}
+    explicit Connection(const crow::Request& reqIn) : req(reqIn.req) {}
     virtual void sendMessage(const boost::asio::mutable_buffer& buffer,
                              std::function<void()> handler) = 0;
     virtual void close() = 0;
@@ -80,32 +79,31 @@ class ConnectionImpl : public Connection
             adaptor, *streamres.bufferResponse,
             [this, self(shared_from_this())](
                 const boost::system::error_code& ec2, std::size_t) {
-                if (ec2)
-                {
-                    BMCWEB_LOG_DEBUG << "Error while writing on socket" << ec2;
-                    close();
-                    return;
-                }
-            });
+            if (ec2)
+            {
+                BMCWEB_LOG_DEBUG << "Error while writing on socket" << ec2;
+                close();
+                return;
+            }
+        });
     }
 
     void sendStreamHeaders(const std::string& streamDataSize,
                            const std::string& contentType) override
     {
-
         streamres.addHeader("Content-Length", streamDataSize);
         streamres.addHeader("Content-Type", contentType);
         boost::beast::http::async_write(
             adaptor, *streamres.bufferResponse,
             [this, self(shared_from_this())](
                 const boost::system::error_code& ec2, std::size_t) {
-                if (ec2)
-                {
-                    BMCWEB_LOG_DEBUG << "Error while writing on socket" << ec2;
-                    close();
-                    return;
-                }
-            });
+            if (ec2)
+            {
+                BMCWEB_LOG_DEBUG << "Error while writing on socket" << ec2;
+                close();
+                return;
+            }
+        });
     }
     void sendMessage(const boost::asio::mutable_buffer& buffer,
                      std::function<void()> handler) override
@@ -134,16 +132,16 @@ class ConnectionImpl : public Connection
             adaptor, streamres.bufferResponse->body().data(),
             [this, self(shared_from_this())](boost::beast::error_code ec,
                                              std::size_t bytesWritten) {
-                streamres.bufferResponse->body().consume(bytesWritten);
+            streamres.bufferResponse->body().consume(bytesWritten);
 
-                if (ec)
-                {
-                    BMCWEB_LOG_DEBUG << "Error in async_write " << ec;
-                    close();
-                    return;
-                }
-                (handlerFunc)();
-            });
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "Error in async_write " << ec;
+                close();
+                return;
+            }
+            (handlerFunc)();
+        });
     }
 
   private:

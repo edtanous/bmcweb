@@ -48,6 +48,7 @@
 #endif
 
 #include "network_protocol.hpp"
+#include "nvidia_oem_dpu.hpp"
 #include "pcie.hpp"
 #include "pcieslots.hpp"
 #include "power.hpp"
@@ -72,7 +73,6 @@
 #include "trusted_components.hpp"
 #include "update_service.hpp"
 #include "virtual_media.hpp"
-#include "nvidia_oem_dpu.hpp"
 
 namespace redfish
 {
@@ -163,7 +163,8 @@ class RedfishService
         requestRoutesCable(app);
         requestRoutesCableCollection(app);
 #endif
-#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) || defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
         requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
         requestRoutesSoftwareInventoryCollection(app);
@@ -381,7 +382,7 @@ class RedfishService
         requestRoutesTrustedComponents(app);
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
         requestRoutesUpdateServicePublicKeyExchange(app);
-	requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
+        requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
 #endif
         // Note, this must be the last route registered
         requestRoutesRedfish(app);

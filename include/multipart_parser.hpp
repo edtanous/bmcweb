@@ -8,7 +8,6 @@
 #include <string>
 #include <string_view>
 
-
 enum class ParserError
 {
     PARSER_SUCCESS,
@@ -143,7 +142,8 @@ class MultipartParser
                             return ParserError::ERROR_EMPTY_HEADER;
                         }
                         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                        currentHeaderName.append(buffer.data() + headerFieldMark,
+                        currentHeaderName.append(buffer.data() +
+                                                     headerFieldMark,
                                                  i - headerFieldMark);
                         state = State::HEADER_VALUE_START;
                         break;
@@ -218,7 +218,7 @@ class MultipartParser
         {
             return ParserError::ERROR_UNEXPECTED_END_OF_INPUT;
         }
-        
+
         return ParserError::PARSER_SUCCESS;
     }
     std::vector<FormPart> mime_fields;
@@ -271,8 +271,8 @@ class MultipartParser
                     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                     const char* start = buffer.data() + partDataMark;
                     size_t size = i - partDataMark;
-                    mime_fields.rbegin()->content +=
-                        std::string_view(start, size);
+                    mime_fields.rbegin()->content += std::string_view(start,
+                                                                      size);
                 }
                 index++;
             }

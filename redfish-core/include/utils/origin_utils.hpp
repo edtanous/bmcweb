@@ -55,8 +55,8 @@ const std::string fabricsPrefix = "/redfish/v1/Fabrics/";
 // "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_1_DRAM_0"
 const std::string memoryPrefixDbus =
     "/xyz/openbmc_project/inventory/system/memory/";
-const std::string memoryPrefix =
-    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
+const std::string memoryPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                 "/Memory/";
 
 // All the Processor Devices follows pattern:
 
@@ -67,8 +67,8 @@ const std::string memoryPrefix =
 // "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_1/Ports/NVLink_0"
 const std::string processorPrefixDbus =
     "/xyz/openbmc_project/inventory/system/processors/";
-const std::string processorPrefix =
-    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+const std::string processorPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                    "/Processors/";
 
 // All the Processor Devices follows pattern:
 
@@ -199,7 +199,8 @@ inline void convertDbusObjectToOriginOfCondition(
     const std::string& severity = "", const std::string& messageArgs = "",
     const std::string& timestamp = "", const std::string& messageId = "")
 {
-    // if redfish URI is already provided in path, no need to compute, just use it
+    // if redfish URI is already provided in path, no need to compute, just use
+    // it
     if (boost::starts_with(path, redfishPrefix))
     {
         oocUtil(asyncResp, logEntry, id, path, severity, messageArgs, timestamp,

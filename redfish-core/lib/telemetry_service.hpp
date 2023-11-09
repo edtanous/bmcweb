@@ -42,45 +42,45 @@ inline void handleTelemetryServiceGet(
         "xyz.openbmc_project.Telemetry.ReportManager",
         [asyncResp](const boost::system::error_code ec,
                     const dbus::utility::DBusPropertiesMap& ret) {
-            if (ec == boost::system::errc::host_unreachable)
-            {
-                asyncResp->res.jsonValue["Status"]["State"] = "Absent";
-                return;
-            }
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec == boost::system::errc::host_unreachable)
+        {
+            asyncResp->res.jsonValue["Status"]["State"] = "Absent";
+            return;
+        }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
-            const size_t* maxReports = nullptr;
-            const uint64_t* minInterval = nullptr;
+        const size_t* maxReports = nullptr;
+        const uint64_t* minInterval = nullptr;
 
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), ret, "MaxReports", maxReports,
-                "MinInterval", minInterval);
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), ret, "MaxReports", maxReports,
+            "MinInterval", minInterval);
 
-            if (!success)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (!success)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            if (maxReports != nullptr)
-            {
-                asyncResp->res.jsonValue["MaxReports"] = *maxReports;
-            }
+        if (maxReports != nullptr)
+        {
+            asyncResp->res.jsonValue["MaxReports"] = *maxReports;
+        }
 
-            if (minInterval != nullptr)
-            {
-                asyncResp->res.jsonValue["MinCollectionInterval"] =
-                    time_utils::toDurationString(std::chrono::milliseconds(
-                        static_cast<time_t>(*minInterval)));
-            }
-        });
+        if (minInterval != nullptr)
+        {
+            asyncResp->res.jsonValue["MinCollectionInterval"] =
+                time_utils::toDurationString(std::chrono::milliseconds(
+                    static_cast<time_t>(*minInterval)));
+        }
+    });
 }
 
 inline void requestRoutesTelemetryService(App& app)

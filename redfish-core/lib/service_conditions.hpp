@@ -14,20 +14,19 @@ inline void requestRoutesServiceConditions(App& app)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                BMCWEB_LOG_DEBUG << "session " << req.session;
-                asyncResp->res.jsonValue = {
-                    {"@odata.type",
-                     "#ServiceConditions.v1_0_0.ServiceConditions"},
-                    {"@odata.id", "/redfish/v1/ServiceConditions"},
-                    {"Id", "ServiceConditions"},
-                    {"Name", "Redfish Service Conditions"},
-                    {"HealthRollup", "OK"}};
+        BMCWEB_LOG_DEBUG << "session " << req.session;
+        asyncResp->res.jsonValue = {
+            {"@odata.type", "#ServiceConditions.v1_0_0.ServiceConditions"},
+            {"@odata.id", "/redfish/v1/ServiceConditions"},
+            {"Id", "ServiceConditions"},
+            {"Name", "Redfish Service Conditions"},
+            {"HealthRollup", "OK"}};
 
-                asyncResp->res.jsonValue["Oem"] =  nlohmann::json::object();
+        asyncResp->res.jsonValue["Oem"] = nlohmann::json::object();
 
-                redfish::conditions_utils::populateServiceConditions(
-                    asyncResp, std::string(""));
-            });
+        redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                             std::string(""));
+    });
 }
 
 } // namespace redfish

@@ -45,8 +45,7 @@ static constexpr const size_t methodNotAllowedIndex = notFoundIndex + 1;
 class BaseRule
 {
   public:
-    explicit BaseRule(const std::string& thisRule) : rule(thisRule)
-    {}
+    explicit BaseRule(const std::string& thisRule) : rule(thisRule) {}
 
     virtual ~BaseRule() = default;
 
@@ -242,8 +241,7 @@ struct Wrapped
     template <typename Req, typename... Args>
     struct ReqHandlerWrapper
     {
-        explicit ReqHandlerWrapper(Func fIn) : f(std::move(fIn))
-        {}
+        explicit ReqHandlerWrapper(Func fIn) : f(std::move(fIn)) {}
 
         void operator()(const Request& req,
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -346,11 +344,9 @@ class WebSocketRule : public BaseRule
     using self_t = WebSocketRule;
 
   public:
-    explicit WebSocketRule(const std::string& ruleIn) : BaseRule(ruleIn)
-    {}
+    explicit WebSocketRule(const std::string& ruleIn) : BaseRule(ruleIn) {}
 
-    void validate() override
-    {}
+    void validate() override {}
 
     void handle(const Request& /*req*/,
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -429,11 +425,9 @@ class StreamingResponseRule : public BaseRule
     using self_t = StreamingResponseRule;
 
   public:
-    StreamingResponseRule(const std::string& ruleIn) : BaseRule(ruleIn)
-    {}
+    StreamingResponseRule(const std::string& ruleIn) : BaseRule(ruleIn) {}
 
-    void validate() override
-    {}
+    void validate() override {}
 
     void handle(const Request&,
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -597,8 +591,7 @@ struct RuleParameterTraits
 class DynamicRule : public BaseRule, public RuleParameterTraits<DynamicRule>
 {
   public:
-    explicit DynamicRule(const std::string& ruleIn) : BaseRule(ruleIn)
-    {}
+    explicit DynamicRule(const std::string& ruleIn) : BaseRule(ruleIn) {}
 
     void validate() override
     {
@@ -675,8 +668,7 @@ class TaggedRule :
   public:
     using self_t = TaggedRule<Args...>;
 
-    explicit TaggedRule(const std::string& ruleIn) : BaseRule(ruleIn)
-    {}
+    explicit TaggedRule(const std::string& ruleIn) : BaseRule(ruleIn) {}
 
     void validate() override
     {
@@ -812,8 +804,7 @@ class Trie
         }
     };
 
-    Trie() : nodes(1)
-    {}
+    Trie() : nodes(1) {}
 
   private:
     void optimizeNode(Node* node)
@@ -934,12 +925,12 @@ class Trie
 
         auto updateFound =
             [&found, &matchParams](std::pair<unsigned, RoutingParams>& ret) {
-                if (ret.first != 0U && (found == 0U || found > ret.first))
-                {
-                    found = ret.first;
-                    matchParams = std::move(ret.second);
-                }
-            };
+            if (ret.first != 0U && (found == 0U || found > ret.first))
+            {
+                found = ret.first;
+                matchParams = std::move(ret.second);
+            }
+        };
 
         if (node->paramChildrens[static_cast<size_t>(ParamType::INT)] != 0U)
         {
@@ -948,8 +939,8 @@ class Trie
             {
                 char* eptr = nullptr;
                 errno = 0;
-                long long int value =
-                    std::strtoll(reqUrl.data() + pos, &eptr, 10);
+                long long int value = std::strtoll(reqUrl.data() + pos, &eptr,
+                                                   10);
                 if (errno != ERANGE && eptr != reqUrl.data() + pos)
                 {
                     params->intParams.push_back(value);
@@ -1427,15 +1418,14 @@ class Router
             else
             {
                 // See if we have a method not allowed (405) handler
-                foundRoute.route =
-                    findRouteByIndex(req.url, methodNotAllowedIndex);
+                foundRoute.route = findRouteByIndex(req.url,
+                                                    methodNotAllowedIndex);
             }
         }
 
         // Fill in the allow header if it's valid
         if (!foundRoute.allowHeader.empty())
         {
-
             asyncResp->res.addHeader(boost::beast::http::field::allow,
                                      foundRoute.allowHeader);
         }
@@ -1473,107 +1463,103 @@ class Router
             [&req, asyncResp, &rule,
              params](const boost::system::error_code ec,
                      const dbus::utility::DBusPropertiesMap& userInfoMap) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "GetUserInfo failed...";
-                    asyncResp->res.result(
-                        boost::beast::http::status::internal_server_error);
-                    return;
-                }
-                std::string userRole{};
-                const bool* remoteUser = nullptr;
-                std::optional<bool> passwordExpired;
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "GetUserInfo failed...";
+                asyncResp->res.result(
+                    boost::beast::http::status::internal_server_error);
+                return;
+            }
+            std::string userRole{};
+            const bool* remoteUser = nullptr;
+            std::optional<bool> passwordExpired;
 
-                for (const auto& userInfo : userInfoMap)
+            for (const auto& userInfo : userInfoMap)
+            {
+                if (userInfo.first == "UserPrivilege")
                 {
-                    if (userInfo.first == "UserPrivilege")
+                    const std::string* userRolePtr =
+                        std::get_if<std::string>(&userInfo.second);
+                    if (userRolePtr == nullptr)
                     {
-                        const std::string* userRolePtr =
-                            std::get_if<std::string>(&userInfo.second);
-                        if (userRolePtr == nullptr)
-                        {
-                            continue;
-                        }
-                        userRole = *userRolePtr;
-                        BMCWEB_LOG_DEBUG
-                            << "userName = " << req.session->username
-                            << " userRole = " << *userRolePtr;
+                        continue;
                     }
-                    else if (userInfo.first == "RemoteUser")
-                    {
-                        remoteUser = std::get_if<bool>(&userInfo.second);
-                    }
-                    else if (userInfo.first == "UserPasswordExpired")
-                    {
-                        const bool* passwordExpiredPtr =
-                            std::get_if<bool>(&userInfo.second);
-                        if (passwordExpiredPtr == nullptr)
-                        {
-                            continue;
-                        }
-                        passwordExpired = *passwordExpiredPtr;
-                    }
+                    userRole = *userRolePtr;
+                    BMCWEB_LOG_DEBUG << "userName = " << req.session->username
+                                     << " userRole = " << *userRolePtr;
                 }
+                else if (userInfo.first == "RemoteUser")
+                {
+                    remoteUser = std::get_if<bool>(&userInfo.second);
+                }
+                else if (userInfo.first == "UserPasswordExpired")
+                {
+                    const bool* passwordExpiredPtr =
+                        std::get_if<bool>(&userInfo.second);
+                    if (passwordExpiredPtr == nullptr)
+                    {
+                        continue;
+                    }
+                    passwordExpired = *passwordExpiredPtr;
+                }
+            }
 
-                if (remoteUser == nullptr)
+            if (remoteUser == nullptr)
+            {
+                BMCWEB_LOG_ERROR << "RemoteUser property missing or wrong type";
+                asyncResp->res.result(
+                    boost::beast::http::status::internal_server_error);
+                return;
+            }
+
+            if (passwordExpired == std::nullopt)
+            {
+                if (!*remoteUser)
                 {
                     BMCWEB_LOG_ERROR
-                        << "RemoteUser property missing or wrong type";
+                        << "UserPasswordExpired property is expected for"
+                           " local user but is missing or wrong type";
                     asyncResp->res.result(
                         boost::beast::http::status::internal_server_error);
                     return;
                 }
+                passwordExpired = false;
+            }
 
-                if (passwordExpired == std::nullopt)
-                {
-                    if (!*remoteUser)
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "UserPasswordExpired property is expected for"
-                               " local user but is missing or wrong type";
-                        asyncResp->res.result(
-                            boost::beast::http::status::internal_server_error);
-                        return;
-                    }
-                    passwordExpired = false;
-                }
+            // Get the user's privileges from the role
+            redfish::Privileges userPrivileges =
+                redfish::getUserPrivileges(userRole);
 
-                // Get the user's privileges from the role
-                redfish::Privileges userPrivileges =
-                    redfish::getUserPrivileges(userRole);
+            // Set isConfigureSelfOnly based on D-Bus results.  This
+            // ignores the results from both pamAuthenticateUser and the
+            // value from any previous use of this session.
+            req.session->isConfigureSelfOnly = *passwordExpired;
 
-                // Set isConfigureSelfOnly based on D-Bus results.  This
-                // ignores the results from both pamAuthenticateUser and the
-                // value from any previous use of this session.
-                req.session->isConfigureSelfOnly = *passwordExpired;
+            // Modify privileges if isConfigureSelfOnly.
+            if (req.session->isConfigureSelfOnly)
+            {
+                // Remove all privileges except ConfigureSelf
+                userPrivileges = userPrivileges.intersection(
+                    redfish::Privileges{"ConfigureSelf"});
+                BMCWEB_LOG_DEBUG << "Operation limited to ConfigureSelf";
+            }
 
-                // Modify privileges if isConfigureSelfOnly.
+            if (!rule.checkPrivileges(userPrivileges))
+            {
+                asyncResp->res.result(boost::beast::http::status::forbidden);
                 if (req.session->isConfigureSelfOnly)
                 {
-                    // Remove all privileges except ConfigureSelf
-                    userPrivileges = userPrivileges.intersection(
-                        redfish::Privileges{"ConfigureSelf"});
-                    BMCWEB_LOG_DEBUG << "Operation limited to ConfigureSelf";
+                    redfish::messages::passwordChangeRequired(
+                        asyncResp->res, crow::utility::urlFromPieces(
+                                            "redfish", "v1", "AccountService",
+                                            "Accounts", req.session->username));
                 }
+                return;
+            }
 
-                if (!rule.checkPrivileges(userPrivileges))
-                {
-                    asyncResp->res.result(
-                        boost::beast::http::status::forbidden);
-                    if (req.session->isConfigureSelfOnly)
-                    {
-                        redfish::messages::passwordChangeRequired(
-                            asyncResp->res,
-                            crow::utility::urlFromPieces(
-                                "redfish", "v1", "AccountService", "Accounts",
-                                req.session->username));
-                    }
-                    return;
-                }
-
-                req.userRole = userRole;
-                rule.handle(req, asyncResp, params);
-            },
+            req.userRole = userRole;
+            rule.handle(req, asyncResp, params);
+        },
             "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
             "xyz.openbmc_project.User.Manager", "GetUserInfo",
             req.session->username);
@@ -1612,8 +1598,7 @@ class Router
         Trie trie;
         // rule index 0 has special meaning; preallocate it to avoid
         // duplication.
-        PerMethod() : rules(1)
-        {}
+        PerMethod() : rules(1) {}
     };
 
     std::array<PerMethod, methodNotAllowedIndex + 1> perMethods;

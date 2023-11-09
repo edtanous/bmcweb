@@ -36,45 +36,43 @@ class MctpEndpoint
              callback{std::forward<AssociationCallback>(callback)}](
                 const boost::system::error_code ec,
                 std::variant<std::vector<std::string>>& association) {
-                BMCWEB_LOG_DEBUG << "findAssociations callback for "
-                                 << spdmObject;
-                if (ec)
+            BMCWEB_LOG_DEBUG << "findAssociations callback for " << spdmObject;
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << spdmObject << ": " << ec.message();
+                callback(false, ec.message());
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&association);
+            if (data == nullptr || data->empty())
+            {
+                callback(false, spdmObj + ": no SPDM / MCTP association found");
+                return;
+            }
+            mctpObj = data->front();
+            if (mctpObj.rfind(mctpObjectPrefix, 0) == 0)
+            {
+                std::vector<std::string> v;
+                boost::split(v, mctpObj, boost::is_any_of("/"));
+                if (v.size() == 0)
                 {
-                    BMCWEB_LOG_ERROR << spdmObject << ": " << ec.message();
-                    callback(false, ec.message());
+                    callback(false, "invalid MCTP object path: " + mctpObj);
                     return;
                 }
-                std::vector<std::string>* data =
-                    std::get_if<std::vector<std::string>>(&association);
-                if (data == nullptr || data->empty())
+                try
                 {
-                    callback(false,
-                             spdmObj + ": no SPDM / MCTP association found");
-                    return;
+                    mctpEid = std::stoi(v.back());
+                    callback(true, mctpObj);
                 }
-                mctpObj = data->front();
-                if (mctpObj.rfind(mctpObjectPrefix, 0) == 0)
+                catch (std::invalid_argument const&)
                 {
-                    std::vector<std::string> v;
-                    boost::split(v, mctpObj, boost::is_any_of("/"));
-                    if (v.size() == 0)
-                    {
-                        callback(false, "invalid MCTP object path: " + mctpObj);
-                        return;
-                    }
-                    try
-                    {
-                        mctpEid = std::stoi(v.back());
-                        callback(true, mctpObj);
-                    }
-                    catch (std::invalid_argument const&)
-                    {
-                        callback(false, "invalid MCTP object path: " + mctpObj);
-                    }
-                    return;
+                    callback(false, "invalid MCTP object path: " + mctpObj);
                 }
-                callback(false, "invalid MCTP object path: " + mctpObj);
-            });
+                return;
+            }
+            callback(false, "invalid MCTP object path: " + mctpObj);
+        });
     }
 
     int getMctpEid() const
@@ -115,82 +113,78 @@ void enumerateMctpEndpoints(EndpointCallback&& endpointCallback,
          spdmObjectFilter](
             const boost::system::error_code ec,
             const crow::openbmc_mapper::GetSubTreeType& subtree) {
-            const std::string desc = "SPDM / MCTP endpoint enumeration";
-            BMCWEB_LOG_DEBUG << desc;
-            if (ec)
+        const std::string desc = "SPDM / MCTP endpoint enumeration";
+        BMCWEB_LOG_DEBUG << desc;
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << desc << ": " << ec.message();
+            errorCallback(true, desc, ec.message());
+            return;
+        }
+        if (subtree.size() == 0)
+        {
+            errorCallback(true, desc, "no SPDM objects found");
+            return;
+        }
+        if (!spdmObjectFilter.empty())
+        {
+            auto obj = std::find_if(subtree.begin(), subtree.end(),
+                                    [spdmObjectFilter](const auto& object) {
+                const auto& name =
+                    sdbusplus::message::object_path(object.first).filename();
+                return spdmObjectFilter.compare(name) == 0;
+            });
+            if (obj != subtree.end())
             {
-                BMCWEB_LOG_ERROR << desc << ": " << ec.message();
-                errorCallback(true, desc, ec.message());
-                return;
-            }
-            if (subtree.size() == 0)
-            {
-                errorCallback(true, desc, "no SPDM objects found");
-                return;
-            }
-            if (!spdmObjectFilter.empty())
-            {
-                auto obj = std::find_if(
-                    subtree.begin(), subtree.end(),
-                    [spdmObjectFilter](const auto& object) {
-                        const auto& name =
-                            sdbusplus::message::object_path(object.first)
-                                .filename();
-                        return spdmObjectFilter.compare(name) == 0;
-                    });
-                if (obj != subtree.end())
-                {
-                    auto endpoints = std::make_shared<Endpoints>();
-                    endpoints->reserve(1);
-                    endpoints->emplace_back(
-                        obj->first,
-                        [desc, endpoints, endpointCallback,
-                         errorCallback](bool success, const std::string& msg) {
-                            if (!success)
-                            {
-                                errorCallback(true, desc, msg);
-                            }
-                            else
-                            {
-                                endpointCallback(endpoints);
-                            }
-                        });
-                    return;
-                }
-                errorCallback(true, desc,
-                              "no SPDM objects matching " + spdmObjectFilter +
-                                  " found");
-                return;
-            }
-
-            auto endpoints = std::make_shared<Endpoints>();
-            endpoints->reserve(subtree.size());
-            std::shared_ptr<size_t> enumeratedEndpoints =
-                std::make_shared<size_t>(0);
-            for (const auto& object : subtree)
-            {
+                auto endpoints = std::make_shared<Endpoints>();
+                endpoints->reserve(1);
                 endpoints->emplace_back(
-                    object.first,
-                    [desc, endpoints, enumeratedEndpoints, endpointCallback,
+                    obj->first,
+                    [desc, endpoints, endpointCallback,
                      errorCallback](bool success, const std::string& msg) {
-                        if (!success)
-                        {
-                            errorCallback(false, desc, msg);
-                        }
-                        *enumeratedEndpoints += 1;
-                        if (*enumeratedEndpoints == endpoints->capacity())
-                        {
-                            std::sort(endpoints->begin(), endpoints->end(),
-                                      [](const MctpEndpoint& a,
-                                         const MctpEndpoint& b) {
-                                          return a.getMctpEid() <
-                                                 b.getMctpEid();
-                                      });
-                            endpointCallback(endpoints);
-                        }
-                    });
+                    if (!success)
+                    {
+                        errorCallback(true, desc, msg);
+                    }
+                    else
+                    {
+                        endpointCallback(endpoints);
+                    }
+                });
+                return;
             }
-        },
+            errorCallback(true, desc,
+                          "no SPDM objects matching " + spdmObjectFilter +
+                              " found");
+            return;
+        }
+
+        auto endpoints = std::make_shared<Endpoints>();
+        endpoints->reserve(subtree.size());
+        std::shared_ptr<size_t> enumeratedEndpoints =
+            std::make_shared<size_t>(0);
+        for (const auto& object : subtree)
+        {
+            endpoints->emplace_back(
+                object.first,
+                [desc, endpoints, enumeratedEndpoints, endpointCallback,
+                 errorCallback](bool success, const std::string& msg) {
+                if (!success)
+                {
+                    errorCallback(false, desc, msg);
+                }
+                *enumeratedEndpoints += 1;
+                if (*enumeratedEndpoints == endpoints->capacity())
+                {
+                    std::sort(endpoints->begin(), endpoints->end(),
+                              [](const MctpEndpoint& a, const MctpEndpoint& b) {
+                        return a.getMctpEid() < b.getMctpEid();
+                    });
+                    endpointCallback(endpoints);
+                }
+            });
+        }
+    },
         dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,
         dbus_utils::mapperIntf, "GetSubTree", timeoutUs,
         "/xyz/openbmc_project/SPDM", 0, std::array{spdmResponderIntf});

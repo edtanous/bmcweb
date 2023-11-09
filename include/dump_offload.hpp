@@ -53,34 +53,34 @@ class Handler : public std::enable_shared_from_this<Handler>
         this->unixSocket.async_connect(
             unixSocketPath.c_str(),
             [this, self(shared_from_this())](boost::system::error_code ec) {
-                if (ec)
+            if (ec)
+            {
+                // TODO:
+                // right now we don't have dbus method which can make sure
+                // unix socket is ready to accept connection so its possible
+                // that bmcweb can try to connect to socket before even
+                // socket setup, so using retry mechanism with timeout.
+                if (ec == boost::system::errc::no_such_file_or_directory ||
+                    ec == boost::system::errc::connection_refused)
                 {
-                    // TODO:
-                    // right now we don't have dbus method which can make sure
-                    // unix socket is ready to accept connection so its possible
-                    // that bmcweb can try to connect to socket before even
-                    // socket setup, so using retry mechanism with timeout.
-                    if (ec == boost::system::errc::no_such_file_or_directory ||
-                        ec == boost::system::errc::connection_refused)
-                    {
-                        BMCWEB_LOG_DEBUG << "UNIX Socket: async_connect "
-                                         << ec.message() << ec;
-                        retrySocketConnect();
-                        return;
-                    }
-                    BMCWEB_LOG_ERROR << "UNIX Socket: async_connect error "
+                    BMCWEB_LOG_DEBUG << "UNIX Socket: async_connect "
                                      << ec.message() << ec;
-                    waitTimer.cancel();
-                    this->connection->sendStreamErrorStatus(
-                        boost::beast::http::status::internal_server_error);
-                    this->connection->close();
+                    retrySocketConnect();
                     return;
                 }
+                BMCWEB_LOG_ERROR << "UNIX Socket: async_connect error "
+                                 << ec.message() << ec;
                 waitTimer.cancel();
-                this->connection->sendStreamHeaders(
-                    std::to_string(this->dumpSize), "application/octet-stream");
-                this->doReadStream();
-            });
+                this->connection->sendStreamErrorStatus(
+                    boost::beast::http::status::internal_server_error);
+                this->connection->close();
+                return;
+            }
+            waitTimer.cancel();
+            this->connection->sendStreamHeaders(std::to_string(this->dumpSize),
+                                                "application/octet-stream");
+            this->doReadStream();
+        });
     }
 
     /**
@@ -94,15 +94,15 @@ class Handler : public std::enable_shared_from_this<Handler>
         crow::connections::systemBus->async_method_call(
             [this,
              self(shared_from_this())](const boost::system::error_code ec) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
-                    this->connection->sendStreamErrorStatus(
-                        boost::beast::http::status::internal_server_error);
-                    this->connection->close();
-                    return;
-                }
-            },
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                this->connection->sendStreamErrorStatus(
+                    boost::beast::http::status::internal_server_error);
+                this->connection->close();
+                return;
+            }
+        },
             "xyz.openbmc_project.Dump.Manager",
             "/xyz/openbmc_project/dump/" + dumpType + "/entry/" + entryID,
             "xyz.openbmc_project.Dump.Entry", "InitiateOffload",
@@ -154,21 +154,21 @@ class Handler : public std::enable_shared_from_this<Handler>
             [this,
              self(shared_from_this())](const boost::system::error_code ec,
                                        const std::variant<uint64_t>& size) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR
-                        << "DBUS response error: Unable to get the dump size "
-                        << ec;
-                    this->connection->sendStreamErrorStatus(
-                        boost::beast::http::status::internal_server_error);
-                    this->connection->close();
-                    return;
-                }
-                const uint64_t* dumpsize = std::get_if<uint64_t>(&size);
-                this->dumpSize = *dumpsize;
-                this->initiateOffload();
-                this->doConnect();
-            },
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "DBUS response error: Unable to get the dump size "
+                    << ec;
+                this->connection->sendStreamErrorStatus(
+                    boost::beast::http::status::internal_server_error);
+                this->connection->close();
+                return;
+            }
+            const uint64_t* dumpsize = std::get_if<uint64_t>(&size);
+            this->dumpSize = *dumpsize;
+            this->initiateOffload();
+            this->doConnect();
+        },
             "xyz.openbmc_project.Dump.Manager",
             "/xyz/openbmc_project/dump/" + dumpType + "/entry/" + entryID,
             "org.freedesktop.DBus.Properties", "Get",
@@ -190,29 +190,27 @@ class Handler : public std::enable_shared_from_this<Handler>
             outputBuffer.prepare(bytes),
             [this, self(shared_from_this())](
                 const boost::system::error_code& ec, std::size_t bytesRead) {
-                if (ec)
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Couldn't read from local peer: " << ec;
+
+                if (ec != boost::asio::error::eof)
                 {
                     BMCWEB_LOG_ERROR << "Couldn't read from local peer: " << ec;
-
-                    if (ec != boost::asio::error::eof)
-                    {
-                        BMCWEB_LOG_ERROR << "Couldn't read from local peer: "
-                                         << ec;
-                        this->connection->sendStreamErrorStatus(
-                            boost::beast::http::status::internal_server_error);
-                    }
-                    this->connection->close();
-                    return;
+                    this->connection->sendStreamErrorStatus(
+                        boost::beast::http::status::internal_server_error);
                 }
+                this->connection->close();
+                return;
+            }
 
-                outputBuffer.commit(bytesRead);
-                auto streamHandler = [this, bytesRead]() {
-                    this->outputBuffer.consume(bytesRead);
-                    this->doReadStream();
-                };
-                this->connection->sendMessage(outputBuffer.data(),
-                                              streamHandler);
-            });
+            outputBuffer.commit(bytesRead);
+            auto streamHandler = [this, bytesRead]() {
+                this->outputBuffer.consume(bytesRead);
+                this->doReadStream();
+            };
+            this->connection->sendMessage(outputBuffer.data(), streamHandler);
+        });
     }
 
     std::string entryID;
@@ -237,94 +235,91 @@ inline void requestRoutes(App& app)
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
-            std::string url(conn.req.target());
-            std::filesystem::path dumpIdPath(
-                url.substr(0, url.find("/attachment")));
-            std::string dumpId = dumpIdPath.filename();
-            std::string dumpType = "bmc";
-            boost::asio::io_context* ioCon = conn.getIoContext();
+        std::string url(conn.req.target());
+        std::filesystem::path dumpIdPath(
+            url.substr(0, url.find("/attachment")));
+        std::string dumpId = dumpIdPath.filename();
+        std::string dumpType = "bmc";
+        boost::asio::io_context* ioCon = conn.getIoContext();
 
-            std::string unixSocketPath =
-                unixSocketPathDir + dumpType + "_dump_" + dumpId;
+        std::string unixSocketPath = unixSocketPathDir + dumpType + "_dump_" +
+                                     dumpId;
 
-            handlers[&conn] = std::make_shared<Handler>(
-                *ioCon, dumpId, dumpType, unixSocketPath);
-            handlers[&conn]->connection = conn.getSharedReference();
-            handlers[&conn]->getDumpSize(dumpId, dumpType);
-        })
-        .onclose([](crow::streaming_response::Connection& conn) {
-            auto handler = handlers.find(&conn);
-            if (handler == handlers.end())
-            {
-                BMCWEB_LOG_DEBUG << "No handler to cleanup";
-                return;
-            }
-            handler->second->outputBuffer.clear();
-            handlers.erase(handler);
-        });
+        handlers[&conn] = std::make_shared<Handler>(*ioCon, dumpId, dumpType,
+                                                    unixSocketPath);
+        handlers[&conn]->connection = conn.getSharedReference();
+        handlers[&conn]->getDumpSize(dumpId, dumpType);
+    }).onclose([](crow::streaming_response::Connection& conn) {
+        auto handler = handlers.find(&conn);
+        if (handler == handlers.end())
+        {
+            BMCWEB_LOG_DEBUG << "No handler to cleanup";
+            return;
+        }
+        handler->second->outputBuffer.clear();
+        handlers.erase(handler);
+    });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/Dump/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
-            std::string url(conn.req.target());
-            std::filesystem::path dumpIdPath(
-                url.substr(0, url.find("/attachment")));
-            std::string dumpId = dumpIdPath.filename();
-            std::string dumpType = "system";
-            boost::asio::io_context* ioCon = conn.getIoContext();
+        std::string url(conn.req.target());
+        std::filesystem::path dumpIdPath(
+            url.substr(0, url.find("/attachment")));
+        std::string dumpId = dumpIdPath.filename();
+        std::string dumpType = "system";
+        boost::asio::io_context* ioCon = conn.getIoContext();
 
-            std::string unixSocketPath =
-                unixSocketPathDir + dumpType + "_dump_" + dumpId;
+        std::string unixSocketPath = unixSocketPathDir + dumpType + "_dump_" +
+                                     dumpId;
 
-            handlers[&conn] = std::make_shared<Handler>(
-                *ioCon, dumpId, dumpType, unixSocketPath);
-            handlers[&conn]->connection = conn.getSharedReference();
-            handlers[&conn]->getDumpSize(dumpId, dumpType);
-        })
-        .onclose([](crow::streaming_response::Connection& conn) {
-            auto handler = handlers.find(&conn);
-            if (handler == handlers.end())
-            {
-                BMCWEB_LOG_DEBUG << "No handler to cleanup";
-                return;
-            }
-            handlers.erase(handler);
-            handler->second->outputBuffer.clear();
-        });
+        handlers[&conn] = std::make_shared<Handler>(*ioCon, dumpId, dumpType,
+                                                    unixSocketPath);
+        handlers[&conn]->connection = conn.getSharedReference();
+        handlers[&conn]->getDumpSize(dumpId, dumpType);
+    }).onclose([](crow::streaming_response::Connection& conn) {
+        auto handler = handlers.find(&conn);
+        if (handler == handlers.end())
+        {
+            BMCWEB_LOG_DEBUG << "No handler to cleanup";
+            return;
+        }
+        handlers.erase(handler);
+        handler->second->outputBuffer.clear();
+    });
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/FaultLog/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
-            std::string url(conn.req.target());
-            std::filesystem::path dumpIdPath(
-                url.substr(0, url.find("/attachment")));
-            std::string dumpId = dumpIdPath.filename();
-            std::string dumpType = "faultlog";
-            boost::asio::io_context* ioCon = conn.getIoContext();
+        std::string url(conn.req.target());
+        std::filesystem::path dumpIdPath(
+            url.substr(0, url.find("/attachment")));
+        std::string dumpId = dumpIdPath.filename();
+        std::string dumpType = "faultlog";
+        boost::asio::io_context* ioCon = conn.getIoContext();
 
-            std::string unixSocketPath =
-                unixSocketPathDir + dumpType + "_dump_" + dumpId;
+        std::string unixSocketPath = unixSocketPathDir + dumpType + "_dump_" +
+                                     dumpId;
 
-            handlers[&conn] = std::make_shared<Handler>(
-                *ioCon, dumpId, dumpType, unixSocketPath);
-            handlers[&conn]->connection = conn.getSharedReference();
-            handlers[&conn]->getDumpSize(dumpId, dumpType);
-        })
-        .onclose([](crow::streaming_response::Connection& conn) {
-            auto handler = handlers.find(&conn);
-            if (handler == handlers.end())
-            {
-                BMCWEB_LOG_DEBUG << "No handler to cleanup";
-                return;
-            }
-            handlers.erase(handler);
-            handler->second->outputBuffer.clear();
-        });
-#endif //BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
+        handlers[&conn] = std::make_shared<Handler>(*ioCon, dumpId, dumpType,
+                                                    unixSocketPath);
+        handlers[&conn]->connection = conn.getSharedReference();
+        handlers[&conn]->getDumpSize(dumpId, dumpType);
+    }).onclose([](crow::streaming_response::Connection& conn) {
+        auto handler = handlers.find(&conn);
+        if (handler == handlers.end())
+        {
+            BMCWEB_LOG_DEBUG << "No handler to cleanup";
+            return;
+        }
+        handlers.erase(handler);
+        handler->second->outputBuffer.clear();
+    });
+#endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
 }
 
 } // namespace obmc_dump

@@ -222,69 +222,67 @@ inline void processChassisSensors(
          requestTimestamp,
          metricsType](const boost::system::error_code ec,
                       std::variant<std::vector<std::string>>& chassisLinks) {
-            std::vector<std::string> chassisPaths;
-            if (ec)
+        std::vector<std::string> chassisPaths;
+        if (ec)
+        {
+            // no chassis links = no failures
+        }
+        // Add parent chassis to the list
+        chassisPaths.emplace_back(chassisPath);
+        // Add underneath chassis paths
+        std::vector<std::string>* chassisData =
+            std::get_if<std::vector<std::string>>(&chassisLinks);
+        if (chassisData != nullptr)
+        {
+            for (const std::string& path : *chassisData)
             {
-                // no chassis links = no failures
+                chassisPaths.emplace_back(path);
             }
-            // Add parent chassis to the list
-            chassisPaths.emplace_back(chassisPath);
-            // Add underneath chassis paths
-            std::vector<std::string>* chassisData =
-                std::get_if<std::vector<std::string>>(&chassisLinks);
-            if (chassisData != nullptr)
-            {
-                for (const std::string& path : *chassisData)
+        }
+        // Sort the chassis for sensors paths
+        std::sort(chassisPaths.begin(), chassisPaths.end());
+
+        // Process all sensors to all chassis
+        for (const std::string& objectPath : chassisPaths)
+        {
+            // Get the chassis path for respective sensors
+            sdbusplus::message::object_path path(objectPath);
+            const std::string& chassisId = path.filename();
+
+            auto getAllChassisSensors =
+                [asyncResp, chassisId, managedObjectsResp, sensingInterval,
+                 requestTimestamp, objectPath,
+                 metricsType](const boost::system::error_code ec,
+                              const std::variant<std::vector<std::string>>&
+                                  variantEndpoints) {
+                if (ec)
                 {
-                    chassisPaths.emplace_back(path);
+                    BMCWEB_LOG_DEBUG
+                        << "getAllChassisSensors DBUS error on chassis path"
+                        << objectPath << ": " << ec;
+                    return;
                 }
-            }
-            // Sort the chassis for sensors paths
-            std::sort(chassisPaths.begin(), chassisPaths.end());
-
-            // Process all sensors to all chassis
-            for (const std::string& objectPath : chassisPaths)
-            {
-                // Get the chassis path for respective sensors
-                sdbusplus::message::object_path path(objectPath);
-                const std::string& chassisId = path.filename();
-
-                auto getAllChassisSensors =
-                    [asyncResp, chassisId, managedObjectsResp, sensingInterval,
-                     requestTimestamp, objectPath, metricsType](
-                        const boost::system::error_code ec,
-                        const std::variant<std::vector<std::string>>&
-                            variantEndpoints) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_DEBUG
-                                << "getAllChassisSensors DBUS error on chassis path"
-                                << objectPath << ": " << ec;
-                            return;
-                        }
-                        const std::vector<std::string>* sensorPaths =
-                            std::get_if<std::vector<std::string>>(
-                                &(variantEndpoints));
-                        if (sensorPaths == nullptr)
-                        {
-                            BMCWEB_LOG_ERROR
-                                << "getAllChassisSensors empty sensors list"
-                                << "\n";
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        // Process sensor readings
-                        processSensorsValue(asyncResp, *sensorPaths, chassisId,
-                                            managedObjectsResp, metricsType,
-                                            sensingInterval, requestTimestamp);
-                    };
-                crow::connections::systemBus->async_method_call(
-                    getAllChassisSensors, "xyz.openbmc_project.ObjectMapper",
-                    objectPath + "/all_sensors",
-                    "org.freedesktop.DBus.Properties", "Get",
-                    "xyz.openbmc_project.Association", "endpoints");
-            }
-        };
+                const std::vector<std::string>* sensorPaths =
+                    std::get_if<std::vector<std::string>>(&(variantEndpoints));
+                if (sensorPaths == nullptr)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "getAllChassisSensors empty sensors list"
+                        << "\n";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                // Process sensor readings
+                processSensorsValue(asyncResp, *sensorPaths, chassisId,
+                                    managedObjectsResp, metricsType,
+                                    sensingInterval, requestTimestamp);
+            };
+            crow::connections::systemBus->async_method_call(
+                getAllChassisSensors, "xyz.openbmc_project.ObjectMapper",
+                objectPath + "/all_sensors", "org.freedesktop.DBus.Properties",
+                "Get", "xyz.openbmc_project.Association", "endpoints");
+        }
+    };
     // Get all chassis
     crow::connections::systemBus->async_method_call(
         getAllChassisHandler, "xyz.openbmc_project.ObjectMapper",
@@ -302,17 +300,17 @@ inline void getServiceRootManagedObjects(
         [asyncResp, connection, chassisPath, sensingInterval, requestTimestamp,
          metricsType](const boost::system::error_code ec,
                       ManagedObjectsVectorType& resp) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "getServiceRootManagedObjects for connection:"
-                    << connection << " error: " << ec;
-                return;
-            }
-            std::sort(resp.begin(), resp.end());
-            processChassisSensors(asyncResp, resp, chassisPath, metricsType,
-                                  sensingInterval, requestTimestamp);
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "getServiceRootManagedObjects for connection:" << connection
+                << " error: " << ec;
+            return;
+        }
+        std::sort(resp.begin(), resp.end());
+        processChassisSensors(asyncResp, resp, chassisPath, metricsType,
+                              sensingInterval, requestTimestamp);
+    },
         connection, "/", "org.freedesktop.DBus.ObjectManager",
         "GetManagedObjects");
 }
@@ -327,21 +325,21 @@ inline void getServiceManagedObjects(
         [asyncResp, connection, chassisPath, sensingInterval, requestTimestamp,
          metricsType](const boost::system::error_code ec,
                       ManagedObjectsVectorType& resp) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG
-                    << "GetManagedObjects is not at sensor path for connection:"
-                    << connection << "\n";
-                // Check managed objects on service root
-                getServiceRootManagedObjects(asyncResp, connection, chassisPath,
-                                             metricsType, sensingInterval,
-                                             requestTimestamp);
-                return;
-            }
-            std::sort(resp.begin(), resp.end());
-            processChassisSensors(asyncResp, resp, chassisPath, metricsType,
-                                  sensingInterval, requestTimestamp);
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG
+                << "GetManagedObjects is not at sensor path for connection:"
+                << connection << "\n";
+            // Check managed objects on service root
+            getServiceRootManagedObjects(asyncResp, connection, chassisPath,
+                                         metricsType, sensingInterval,
+                                         requestTimestamp);
+            return;
+        }
+        std::sort(resp.begin(), resp.end());
+        processChassisSensors(asyncResp, resp, chassisPath, metricsType,
+                              sensingInterval, requestTimestamp);
+    },
         connection, "/xyz/openbmc_project/sensors",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
@@ -411,63 +409,59 @@ inline void requestRoutesThermalMetrics(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& param) {
-                const std::string& chassisId = param;
-                // Identify chassis
-                const std::array<const char*, 1> interface = {
-                    "xyz.openbmc_project.Inventory.Item.Chassis"};
+        const std::string& chassisId = param;
+        // Identify chassis
+        const std::array<const char*, 1> interface = {
+            "xyz.openbmc_project.Inventory.Item.Chassis"};
 
-                auto respHandler = [asyncResp, chassisId](
-                                       const boost::system::error_code ec,
-                                       const std::vector<std::string>&
-                                           chassisPaths) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "thermal metrics respHandler DBUS error: " << ec;
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    // Identify the chassis
-                    for (const std::string& chassisPath : chassisPaths)
-                    {
-                        sdbusplus::message::object_path path(chassisPath);
-                        const std::string& chassisName = path.filename();
-                        if (chassisName.empty())
-                        {
-                            BMCWEB_LOG_ERROR << "Failed to find '/' in "
-                                             << chassisPath << "\n";
-                            continue;
-                        }
-                        if (chassisName != chassisId)
-                        {
-                            continue;
-                        }
-                        // Process response
-                        asyncResp->res.jsonValue["@odata.type"] =
-                            "#ThermalMetrics.v1_0_0.ThermalMetrics";
-                        asyncResp->res.jsonValue["@odata.id"] =
-                            "/redfish/v1/Chassis/" + chassisId +
-                            "/ThermalSubsystem/ThermalMetrics";
-                        asyncResp->res.jsonValue["Id"] = "ThermalMetrics";
-                        asyncResp->res.jsonValue["Name"] =
-                            "Chassis Thermal Metrics";
-                        asyncResp->res.jsonValue["TemperatureReadingsCelsius"] =
-                            nlohmann::json::array();
+        auto respHandler = [asyncResp, chassisId](
+                               const boost::system::error_code ec,
+                               const std::vector<std::string>& chassisPaths) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "thermal metrics respHandler DBUS error: "
+                                 << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            // Identify the chassis
+            for (const std::string& chassisPath : chassisPaths)
+            {
+                sdbusplus::message::object_path path(chassisPath);
+                const std::string& chassisName = path.filename();
+                if (chassisName.empty())
+                {
+                    BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassisPath
+                                     << "\n";
+                    continue;
+                }
+                if (chassisName != chassisId)
+                {
+                    continue;
+                }
+                // Process response
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#ThermalMetrics.v1_0_0.ThermalMetrics";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Chassis/" + chassisId +
+                    "/ThermalSubsystem/ThermalMetrics";
+                asyncResp->res.jsonValue["Id"] = "ThermalMetrics";
+                asyncResp->res.jsonValue["Name"] = "Chassis Thermal Metrics";
+                asyncResp->res.jsonValue["TemperatureReadingsCelsius"] =
+                    nlohmann::json::array();
 
-                        // Identify sensor services for sensor readings
-                        processSensorServices(asyncResp, chassisPath,
-                                              "thermal");
-                        return;
-                    }
-                    messages::resourceNotFound(asyncResp->res, "Chassis",
-                                               chassisId);
-                };
-                // Get the Chassis Collection
-                crow::connections::systemBus->async_method_call(
-                    respHandler, "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-                    "/xyz/openbmc_project/inventory", 0, interface);
-            });
+                // Identify sensor services for sensor readings
+                processSensorServices(asyncResp, chassisPath, "thermal");
+                return;
+            }
+            messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+        };
+        // Get the Chassis Collection
+        crow::connections::systemBus->async_method_call(
+            respHandler, "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+            "/xyz/openbmc_project/inventory", 0, interface);
+    });
 }
 } // namespace redfish

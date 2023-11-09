@@ -460,16 +460,15 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
                 break;
             }
 
-            result =
-                std::visit(
-                    [&item, &unpackSpec, &res](auto&& val) {
-                        using ContainedT =
-                            std::remove_pointer_t<std::decay_t<decltype(val)>>;
-                        return details::unpackValue<ContainedT>(
-                            item.value(), unpackSpec.key, res, *val);
-                    },
-                    unpackSpec.value) &&
-                result;
+            result = std::visit(
+                         [&item, &unpackSpec, &res](auto&& val) {
+                using ContainedT =
+                    std::remove_pointer_t<std::decay_t<decltype(val)>>;
+                return details::unpackValue<ContainedT>(
+                    item.value(), unpackSpec.key, res, *val);
+            },
+                         unpackSpec.value) &&
+                     result;
 
             unpackSpec.complete = true;
             break;
@@ -488,10 +487,10 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
         {
             bool isOptional = std::visit(
                 [](auto&& val) {
-                    using ContainedType =
-                        std::remove_pointer_t<std::decay_t<decltype(val)>>;
-                    return details::IsOptional<ContainedType>::value;
-                },
+                using ContainedType =
+                    std::remove_pointer_t<std::decay_t<decltype(val)>>;
+                return details::IsOptional<ContainedType>::value;
+            },
                 perUnpack.value);
             if (isOptional)
             {
@@ -504,8 +503,7 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
     return result;
 }
 
-inline void packVariant(std::span<PerUnpack> /*toPack*/)
-{}
+inline void packVariant(std::span<PerUnpack> /*toPack*/) {}
 
 template <typename FirstType, typename... UnpackTypes>
 void packVariant(std::span<PerUnpack> toPack, std::string_view key,
@@ -563,8 +561,8 @@ inline std::optional<nlohmann::json>
     }
     std::erase_if(*object,
                   [](const std::pair<std::string, nlohmann::json>& item) {
-                      return item.first.starts_with("@odata.");
-                  });
+        return item.first.starts_with("@odata.");
+    });
     if (object->empty())
     {
         //  If the update request only contains OData annotations, the service

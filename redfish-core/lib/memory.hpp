@@ -243,15 +243,14 @@ inline void getPersistentMemoryProperties(
 
     if (volatileSizeInKiB != nullptr)
     {
-
         aResp->res.jsonValue[jsonPtr]["VolatileSizeMiB"] =
             (*volatileSizeInKiB) >> 10;
     }
 
     if (pmSizeInKiB != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["NonVolatileSizeMiB"] =
-            (*pmSizeInKiB) >> 10;
+        aResp->res.jsonValue[jsonPtr]["NonVolatileSizeMiB"] = (*pmSizeInKiB) >>
+                                                              10;
     }
 
     if (cacheSizeInKB != nullptr)
@@ -364,30 +363,26 @@ inline void getPersistentMemoryProperties(
 
     if (dataLockCapable != nullptr)
     {
-        aResp->res
-            .jsonValue[jsonPtr]["SecurityCapabilities"]["DataLockCapable"] =
-            *dataLockCapable;
+        aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                            ["DataLockCapable"] = *dataLockCapable;
     }
 
     if (passphraseCapable != nullptr)
     {
-        aResp->res
-            .jsonValue[jsonPtr]["SecurityCapabilities"]["PassphraseCapable"] =
-            *passphraseCapable;
+        aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                            ["PassphraseCapable"] = *passphraseCapable;
     }
 
     if (maxPassphraseCount != nullptr)
     {
-        aResp->res
-            .jsonValue[jsonPtr]["SecurityCapabilities"]["MaxPassphraseCount"] =
-            *maxPassphraseCount;
+        aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                            ["MaxPassphraseCount"] = *maxPassphraseCount;
     }
 
     if (passphraseLockLimit != nullptr)
     {
-        aResp->res
-            .jsonValue[jsonPtr]["SecurityCapabilities"]["PassphraseLockLimit"] =
-            *passphraseLockLimit;
+        aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                            ["PassphraseLockLimit"] = *passphraseLockLimit;
     }
 }
 
@@ -603,9 +598,8 @@ inline void
 
     if (locationCode != nullptr)
     {
-        aResp->res
-            .jsonValue[jsonPtr]["Location"]["PartLocation"]["ServiceLabel"] =
-            *locationCode;
+        aResp->res.jsonValue[jsonPtr]["Location"]["PartLocation"]
+                            ["ServiceLabel"] = *locationCode;
     }
     if (locationType != nullptr)
     {
@@ -640,9 +634,9 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
     std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
         objPath, [aResp](const std::string& rootHealth,
                          const std::string& healthRollup) {
-            aResp->res.jsonValue["Status"]["Health"] = rootHealth;
-            aResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
-        });
+        aResp->res.jsonValue["Status"]["Health"] = rootHealth;
+        aResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+    });
     health->start();
 #else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
@@ -657,14 +651,14 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
         [dimmId, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
             const dbus::utility::DBusPropertiesMap& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            assembleDimmProperties(dimmId, aResp, properties, ""_json_pointer);
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        assembleDimmProperties(dimmId, aResp, properties, ""_json_pointer);
+    });
 }
 
 inline void assembleDimmPartitionData(
@@ -730,16 +724,16 @@ inline void getDimmPartitionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
             const dbus::utility::DBusPropertiesMap& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
 
-                return;
-            }
-            nlohmann::json::json_pointer regionPtr = "/Regions"_json_pointer;
-            assembleDimmPartitionData(aResp, properties, regionPtr);
+            return;
         }
+        nlohmann::json::json_pointer regionPtr = "/Regions"_json_pointer;
+        assembleDimmPartitionData(aResp, properties, regionPtr);
+    }
 
     );
 }
@@ -759,34 +753,34 @@ inline void
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
-            if (ec2)
+        if (ec2)
+        {
+            return; // no processors = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        nlohmann::json& linksArray =
+            aResp->res.jsonValue["Links"]["Processors"];
+        linksArray = nlohmann::json::array();
+        for (const std::string& processorPath : *data)
+        {
+            sdbusplus::message::object_path objectPath(processorPath);
+            std::string processorName = objectPath.filename();
+            if (processorName.empty())
             {
-                return; // no processors = no failures
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
+                messages::internalError(aResp->res);
                 return;
             }
-            nlohmann::json& linksArray =
-                aResp->res.jsonValue["Links"]["Processors"];
-            linksArray = nlohmann::json::array();
-            for (const std::string& processorPath : *data)
-            {
-                sdbusplus::message::object_path objectPath(processorPath);
-                std::string processorName = objectPath.filename();
-                if (processorName.empty())
-                {
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                linksArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/Processors/" +
-                                       processorName}});
-            }
-        },
+            linksArray.push_back(
+                {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                               "/Processors/" +
+                                   processorName}});
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_processor",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -807,28 +801,28 @@ inline void
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
-            if (ec2)
-            {
-                return; // no chassis = no failures
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr && data->size() > 1)
-            {
-                // Memory must have single parent chassis
-                return;
-            }
-            const std::string& chassisPath = data->front();
-            sdbusplus::message::object_path objectPath(chassisPath);
-            std::string chassisName = objectPath.filename();
-            if (chassisName.empty())
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-            aResp->res.jsonValue["Links"]["Chassis"] = {
-                {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
-        },
+        if (ec2)
+        {
+            return; // no chassis = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr && data->size() > 1)
+        {
+            // Memory must have single parent chassis
+            return;
+        }
+        const std::string& chassisPath = data->front();
+        sdbusplus::message::object_path objectPath(chassisPath);
+        std::string chassisName = objectPath.filename();
+        if (chassisName.empty())
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        aResp->res.jsonValue["Links"]["Chassis"] = {
+            {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -842,70 +836,69 @@ inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         [dimmId, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
             const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
 
-                return;
-            }
-            bool found = false;
-            for (const auto& [rawPath, object] : subtree)
+            return;
+        }
+        bool found = false;
+        for (const auto& [rawPath, object] : subtree)
+        {
+            sdbusplus::message::object_path path(rawPath);
+            for (const auto& [service, interfaces] : object)
             {
-                sdbusplus::message::object_path path(rawPath);
-                for (const auto& [service, interfaces] : object)
+                for (const auto& interface : interfaces)
                 {
-                    for (const auto& interface : interfaces)
+                    if (interface ==
+                            "xyz.openbmc_project.Inventory.Item.Dimm" &&
+                        path.filename() == dimmId)
                     {
-                        if (interface ==
-                                "xyz.openbmc_project.Inventory.Item.Dimm" &&
-                            path.filename() == dimmId)
-                        {
-                            getDimmDataByService(aResp, dimmId, service,
-                                                 rawPath);
-                            found = true;
-                            // Link association to parent processor
-                            getMemoryProcessorLink(aResp, path);
-                            // Link association to parent chassis
-                            getMemoryChassisLink(aResp, path);
-                        }
+                        getDimmDataByService(aResp, dimmId, service, rawPath);
+                        found = true;
+                        // Link association to parent processor
+                        getMemoryProcessorLink(aResp, path);
+                        // Link association to parent chassis
+                        getMemoryChassisLink(aResp, path);
+                    }
 
-                        // partitions are separate as there can be multiple
-                        // per
-                        // device, i.e.
-                        // /xyz/openbmc_project/Inventory/Item/Dimm1/Partition1
-                        // /xyz/openbmc_project/Inventory/Item/Dimm1/Partition2
-                        if (interface ==
-                                "xyz.openbmc_project.Inventory.Item.PersistentMemory.Partition" &&
-                            path.parent_path().filename() == dimmId)
-                        {
-                            getDimmPartitionData(aResp, service, rawPath);
-                        }
+                    // partitions are separate as there can be multiple
+                    // per
+                    // device, i.e.
+                    // /xyz/openbmc_project/Inventory/Item/Dimm1/Partition1
+                    // /xyz/openbmc_project/Inventory/Item/Dimm1/Partition2
+                    if (interface ==
+                            "xyz.openbmc_project.Inventory.Item.PersistentMemory.Partition" &&
+                        path.parent_path().filename() == dimmId)
+                    {
+                        getDimmPartitionData(aResp, service, rawPath);
                     }
                 }
             }
-            // Object not found
-            if (!found)
-            {
-                messages::resourceNotFound(aResp->res, "Memory", dimmId);
-                return;
-            }
-            // Set @odata only if object is found
-            aResp->res.jsonValue["@odata.type"] = "#Memory.v1_11_0.Memory";
-            aResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/" + dimmId;
-            std::string memoryMetricsURI =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
-            memoryMetricsURI += dimmId;
-            std::string environmentMetricsURI = memoryMetricsURI;
-            memoryMetricsURI += "/MemoryMetrics";
-            aResp->res.jsonValue["Metrics"]["@odata.id"] = memoryMetricsURI;
-            environmentMetricsURI += "/EnvironmentMetrics";
-            aResp->res.jsonValue["EnvironmentMetrics"]["@odata.id"] =
-                environmentMetricsURI;
-
+        }
+        // Object not found
+        if (!found)
+        {
+            messages::resourceNotFound(aResp->res, "Memory", dimmId);
             return;
-        },
+        }
+        // Set @odata only if object is found
+        aResp->res.jsonValue["@odata.type"] = "#Memory.v1_11_0.Memory";
+        aResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/" + dimmId;
+        std::string memoryMetricsURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                       "/Memory/";
+        memoryMetricsURI += dimmId;
+        std::string environmentMetricsURI = memoryMetricsURI;
+        memoryMetricsURI += "/MemoryMetrics";
+        aResp->res.jsonValue["Metrics"]["@odata.id"] = memoryMetricsURI;
+        environmentMetricsURI += "/EnvironmentMetrics";
+        aResp->res.jsonValue["EnvironmentMetrics"]["@odata.id"] =
+            environmentMetricsURI;
+
+        return;
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -926,28 +919,27 @@ inline void requestRoutesMemoryCollection(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& systemName) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                if (systemName != PLATFORMSYSTEMID)
-                {
-                    messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                               systemName);
-                    return;
-                }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        if (systemName != PLATFORMSYSTEMID)
+        {
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
 
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#MemoryCollection.MemoryCollection";
-                asyncResp->res.jsonValue["Name"] = "Memory Module Collection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#MemoryCollection.MemoryCollection";
+        asyncResp->res.jsonValue["Name"] = "Memory Module Collection";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
 
-                collection_util::getCollectionMembers(
-                    asyncResp,
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory",
-                    {"xyz.openbmc_project.Inventory.Item.Dimm"});
-            });
+        collection_util::getCollectionMembers(
+            asyncResp, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory",
+            {"xyz.openbmc_project.Inventory.Item.Dimm"});
+    });
 }
 
 inline void requestRoutesMemory(App& app)
@@ -961,19 +953,19 @@ inline void requestRoutesMemory(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& systemName, const std::string& dimmId) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                if (systemName != PLATFORMSYSTEMID)
-                {
-                    messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                               systemName);
-                    return;
-                }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        if (systemName != PLATFORMSYSTEMID)
+        {
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
 
-                getDimmData(asyncResp, dimmId);
-            });
+        getDimmData(asyncResp, dimmId);
+    });
 }
 
 inline void getMemoryDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
@@ -984,38 +976,37 @@ inline void getMemoryDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const DimmProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const auto& property : properties)
+        for (const auto& property : properties)
+        {
+            if (property.first == "MemoryConfiguredSpeedInMhz")
             {
-                if (property.first == "MemoryConfiguredSpeedInMhz")
+                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint16_t* value =
-                        std::get_if<uint16_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["OperatingSpeedMHz"] = *value;
+                    messages::internalError(aResp->res);
+                    return;
                 }
-                else if (property.first == "Utilization")
-                {
-                    const double* value = std::get_if<double>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["BandwidthPercent"] = *value;
-                }
+                aResp->res.jsonValue["OperatingSpeedMHz"] = *value;
             }
-        },
+            else if (property.first == "Utilization")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["BandwidthPercent"] = *value;
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Item.Dimm");
 }
@@ -1029,28 +1020,27 @@ inline void getMemoryMetrics(std::shared_ptr<bmcweb::AsyncResp> aResp,
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const DimmProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error for memory metrics";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error for memory metrics";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const auto& property : properties)
+        for (const auto& property : properties)
+        {
+            if (property.first == "CapacityUtilizationPercent")
             {
-                if (property.first == "CapacityUtilizationPercent")
+                const uint8_t* value = std::get_if<uint8_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint8_t* value =
-                        std::get_if<uint8_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["CapacityUtilizationPercent"] = *value;
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                aResp->res.jsonValue["CapacityUtilizationPercent"] = *value;
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", iface);
 }
 
@@ -1062,43 +1052,39 @@ inline void getMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const DimmProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const auto& property : properties)
+        for (const auto& property : properties)
+        {
+            if (property.first == "ceCount")
             {
-                if (property.first == "ceCount")
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res
-                        .jsonValue["LifeTime"]["CorrectableECCErrorCount"] =
-                        *value;
+                    messages::internalError(aResp->res);
+                    return;
                 }
-                else if (property.first == "ueCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res
-                        .jsonValue["LifeTime"]["UncorrectableECCErrorCount"] =
-                        *value;
-                }
+                aResp->res.jsonValue["LifeTime"]["CorrectableECCErrorCount"] =
+                    *value;
             }
-        },
+            else if (property.first == "ueCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["LifeTime"]["UncorrectableECCErrorCount"] =
+                    *value;
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Memory.MemoryECC");
 }
@@ -1112,43 +1098,39 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const DimmProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const auto& property : properties)
+        for (const auto& property : properties)
+        {
+            if (property.first == "ceRowRemappingCount")
             {
-                if (property.first == "ceRowRemappingCount")
+                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint32_t* value =
-                        std::get_if<uint32_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
-                                        ["CorrectableRowRemappingCount"] =
-                        *value;
+                    messages::internalError(aResp->res);
+                    return;
                 }
-                else if (property.first == "ueRowRemappingCount")
-                {
-                    const uint32_t* value =
-                        std::get_if<uint32_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
-                                        ["UncorrectableRowRemappingCount"] =
-                        *value;
-                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                    ["CorrectableRowRemappingCount"] = *value;
             }
-        },
+            else if (property.first == "ueRowRemappingCount")
+            {
+                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                    ["UncorrectableRowRemappingCount"] = *value;
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "com.nvidia.MemoryRowRemapping");
 }
@@ -1165,71 +1147,71 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 std::string, boost::container::flat_map<
                                  std::string, std::vector<std::string>>>&
                 subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << " DBUS response error";
-                messages::internalError(aResp->res);
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << " DBUS response error";
+            messages::internalError(aResp->res);
 
-                return;
-            }
-            for (const auto& [path, object] : subtree)
+            return;
+        }
+        for (const auto& [path, object] : subtree)
+        {
+            if (!boost::ends_with(path, dimmId))
             {
-                if (!boost::ends_with(path, dimmId))
-                {
-                    continue;
-                }
-                std::string memoryMetricsURI =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
-                memoryMetricsURI += dimmId;
-                memoryMetricsURI += "/MemoryMetrics";
-                aResp->res.jsonValue["@odata.type"] =
-                    "#MemoryMetrics.v1_7_0.MemoryMetrics";
-                aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
-                aResp->res.jsonValue["Id"] = "MemoryMetrics";
-                aResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
+                continue;
+            }
+            std::string memoryMetricsURI =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
+            memoryMetricsURI += dimmId;
+            memoryMetricsURI += "/MemoryMetrics";
+            aResp->res.jsonValue["@odata.type"] =
+                "#MemoryMetrics.v1_7_0.MemoryMetrics";
+            aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
+            aResp->res.jsonValue["Id"] = "MemoryMetrics";
+            aResp->res.jsonValue["Name"] = dimmId + " Memory Metrics";
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaMemoryMetrics.v1_0_0.NvidiaMemoryMetrics";
+            aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaMemoryMetrics.v1_0_0.NvidiaMemoryMetrics";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                for (const auto& [service, interfaces] : object)
+            for (const auto& [service, interfaces] : object)
+            {
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Inventory.Item.Dimm") !=
+                    interfaces.end())
                 {
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "xyz.openbmc_project.Inventory.Item.Dimm") !=
-                        interfaces.end())
-                    {
-                        getMemoryDataByService(aResp, service, path);
-                    }
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "xyz.openbmc_project.Memory.MemoryECC") !=
-                        interfaces.end())
-                    {
-                        getMemoryECCData(aResp, service, path);
-                    }
-                    if (std::find(
-                            interfaces.begin(), interfaces.end(),
-                            "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics") !=
-                        interfaces.end())
-                    {
-                        getMemoryMetrics(
-                            aResp, service, path,
-                            "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics");
-                    }
+                    getMemoryDataByService(aResp, service, path);
+                }
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Memory.MemoryECC") !=
+                    interfaces.end())
+                {
+                    getMemoryECCData(aResp, service, path);
+                }
+                if (std::find(
+                        interfaces.begin(), interfaces.end(),
+                        "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics") !=
+                    interfaces.end())
+                {
+                    getMemoryMetrics(
+                        aResp, service, path,
+                        "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics");
+                }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "com.nvidia.MemoryRowRemapping") !=
-                        interfaces.end())
-                    {
-                        getMemoryRowRemappings(aResp, service, path);
-                    }
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "com.nvidia.MemoryRowRemapping") !=
+                    interfaces.end())
+                {
+                    getMemoryRowRemappings(aResp, service, path);
                 }
-                return;
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             }
-            // Object not found
-            messages::resourceNotFound(aResp->res, "#Memory.v1_11_0.Memory",
-                                       dimmId);
-        },
+            return;
+        }
+        // Object not found
+        messages::resourceNotFound(aResp->res, "#Memory.v1_11_0.Memory",
+                                   dimmId);
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -1249,8 +1231,8 @@ inline void requestRoutesMemoryMetrics(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& dimmId) {
-                getMemoryMetricsData(asyncResp, dimmId);
-            });
+        getMemoryMetricsData(asyncResp, dimmId);
+    });
 }
 
 } // namespace redfish

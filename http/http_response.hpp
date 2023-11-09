@@ -40,8 +40,7 @@ struct Response
         stringResponse->set(key, value);
     }
 
-    Response() : stringResponse(response_type{})
-    {}
+    Response() : stringResponse(response_type{}) {}
 
     Response(Response&& res) noexcept :
         stringResponse(std::move(res.stringResponse)), completed(res.completed)
@@ -255,8 +254,7 @@ struct DynamicResponse
         bufferResponse->set(key, value);
     }
 
-    DynamicResponse() : bufferResponse(response_type{})
-    {}
+    DynamicResponse() : bufferResponse(response_type{}) {}
 
     DynamicResponse(const DynamicResponse&) = delete;
 

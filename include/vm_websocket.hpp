@@ -88,27 +88,27 @@ class Handler : public std::enable_shared_from_this<Handler>
             inputBuffer->data(),
             [this, self(shared_from_this())](boost::beast::error_code ec,
                                              std::size_t bytesWritten) {
-                BMCWEB_LOG_DEBUG << "Wrote " << bytesWritten << "bytes";
-                doingWrite = false;
-                inputBuffer->consume(bytesWritten);
+            BMCWEB_LOG_DEBUG << "Wrote " << bytesWritten << "bytes";
+            doingWrite = false;
+            inputBuffer->consume(bytesWritten);
 
-                if (session == nullptr)
-                {
-                    return;
-                }
-                if (ec == boost::asio::error::eof)
-                {
-                    session->close("VM socket port closed");
-                    return;
-                }
-                if (ec)
-                {
-                    session->close("Error in writing to proxy port");
-                    BMCWEB_LOG_ERROR << "Error in VM socket write " << ec;
-                    return;
-                }
-                doWrite();
-            });
+            if (session == nullptr)
+            {
+                return;
+            }
+            if (ec == boost::asio::error::eof)
+            {
+                session->close("VM socket port closed");
+                return;
+            }
+            if (ec)
+            {
+                session->close("Error in writing to proxy port");
+                BMCWEB_LOG_ERROR << "Error in VM socket write " << ec;
+                return;
+            }
+            doWrite();
+        });
     }
 
     void doRead()
@@ -119,31 +119,30 @@ class Handler : public std::enable_shared_from_this<Handler>
             outputBuffer->prepare(bytes),
             [this, self(shared_from_this())](
                 const boost::system::error_code& ec, std::size_t bytesRead) {
-                BMCWEB_LOG_DEBUG << "Read done.  Read " << bytesRead
-                                 << " bytes";
-                if (ec)
+            BMCWEB_LOG_DEBUG << "Read done.  Read " << bytesRead << " bytes";
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "Couldn't read from VM port: " << ec;
+                if (session != nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Couldn't read from VM port: " << ec;
-                    if (session != nullptr)
-                    {
-                        session->close("Error in connecting to VM port");
-                    }
-                    return;
+                    session->close("Error in connecting to VM port");
                 }
-                if (session == nullptr)
-                {
-                    return;
-                }
+                return;
+            }
+            if (session == nullptr)
+            {
+                return;
+            }
 
-                outputBuffer->commit(bytesRead);
-                std::string_view payload(
-                    static_cast<const char*>(outputBuffer->data().data()),
-                    bytesRead);
-                session->sendBinary(payload);
-                outputBuffer->consume(bytesRead);
+            outputBuffer->commit(bytesRead);
+            std::string_view payload(
+                static_cast<const char*>(outputBuffer->data().data()),
+                bytesRead);
+            session->sendBinary(payload);
+            outputBuffer->consume(bytesRead);
 
-                doRead();
-            });
+            doRead();
+        });
     }
 
     boost::process::async_pipe pipeOut;
@@ -166,57 +165,57 @@ inline void requestRoutes(App& app)
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .websocket()
         .onopen([](crow::websocket::Connection& conn) {
-            BMCWEB_LOG_DEBUG << "Connection " << &conn << " opened";
+        BMCWEB_LOG_DEBUG << "Connection " << &conn << " opened";
 
-            if (session != nullptr)
-            {
-                conn.close("Session already connected");
-                return;
-            }
+        if (session != nullptr)
+        {
+            conn.close("Session already connected");
+            return;
+        }
 
-            if (handler != nullptr)
-            {
-                conn.close("Handler already running");
-                return;
-            }
+        if (handler != nullptr)
+        {
+            conn.close("Handler already running");
+            return;
+        }
 
-            session = &conn;
+        session = &conn;
 
-            // media is the last digit of the endpoint /vm/0/0. A future
-            // enhancement can include supporting different endpoint values.
-            const char* media = "0";
-            handler = std::make_shared<Handler>(media, conn.getIoContext());
-            handler->connect();
-        })
+        // media is the last digit of the endpoint /vm/0/0. A future
+        // enhancement can include supporting different endpoint values.
+        const char* media = "0";
+        handler = std::make_shared<Handler>(media, conn.getIoContext());
+        handler->connect();
+    })
         .onclose([](crow::websocket::Connection& conn,
                     const std::string& /*reason*/) {
-            if (&conn != session)
-            {
-                return;
-            }
+        if (&conn != session)
+        {
+            return;
+        }
 
-            session = nullptr;
-            handler->doClose();
-            handler->inputBuffer->clear();
-            handler->outputBuffer->clear();
-            handler.reset();
-        })
+        session = nullptr;
+        handler->doClose();
+        handler->inputBuffer->clear();
+        handler->outputBuffer->clear();
+        handler.reset();
+    })
         .onmessage([](crow::websocket::Connection& conn,
                       const std::string& data, bool) {
-            if (data.length() >
-                handler->inputBuffer->capacity() - handler->inputBuffer->size())
-            {
-                BMCWEB_LOG_ERROR << "Buffer overrun when writing "
-                                 << data.length() << " bytes";
-                conn.close("Buffer overrun");
-                return;
-            }
+        if (data.length() >
+            handler->inputBuffer->capacity() - handler->inputBuffer->size())
+        {
+            BMCWEB_LOG_ERROR << "Buffer overrun when writing " << data.length()
+                             << " bytes";
+            conn.close("Buffer overrun");
+            return;
+        }
 
-            boost::asio::buffer_copy(handler->inputBuffer->prepare(data.size()),
-                                     boost::asio::buffer(data));
-            handler->inputBuffer->commit(data.size());
-            handler->doWrite();
-        });
+        boost::asio::buffer_copy(handler->inputBuffer->prepare(data.size()),
+                                 boost::asio::buffer(data));
+        handler->inputBuffer->commit(data.size());
+        handler->doWrite();
+    });
 }
 
 } // namespace obmc_vm

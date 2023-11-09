@@ -1,14 +1,18 @@
 #pragma once
+#include <utils/chassis_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/port_utils.hpp>
-#include <utils/chassis_utils.hpp>
 
-// Inline function to check if a key-value pair json object already exists in the JSON array
-inline bool containsJsonObject(const nlohmann::json& j, const std::string& key, const std::string& value) {
-
-    nlohmann::json temp  = {{key, value}};
-    for (const auto& item : j) {
-        if (temp == item) {
+// Inline function to check if a key-value pair json object already exists in
+// the JSON array
+inline bool containsJsonObject(const nlohmann::json& j, const std::string& key,
+                               const std::string& value)
+{
+    nlohmann::json temp = {{key, value}};
+    for (const auto& item : j)
+    {
+        if (temp == item)
+        {
             return true;
         }
     }
@@ -143,7 +147,6 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
     }
     else if (ifaceName == "com.nvidia.GPMMetrics")
     {
-
         if (metricName == "NVDecInstanceUtilizationPercent")
         {
             suffix = "/Oem/Nvidia/NVDecInstanceUtilizationPercent";
@@ -368,12 +371,12 @@ std::string
     }
     else if (deviceType == "NVSwitchPortMetrics")
     {
-       metricURI = "/redfish/v1/Fabrics/" PLATFORMDEVICEPREFIX;
-       metricURI += "NVLinkFabric_0/Switches/";
-       metricURI += deviceName;
-       metricURI += "/Ports/";
-       metricURI += subDeviceName;
-       propSuffix = getPropertySuffix(ifaceName, metricName);
+        metricURI = "/redfish/v1/Fabrics/" PLATFORMDEVICEPREFIX;
+        metricURI += "NVLinkFabric_0/Switches/";
+        metricURI += deviceName;
+        metricURI += "/Ports/";
+        metricURI += subDeviceName;
+        propSuffix = getPropertySuffix(ifaceName, metricName);
     }
     else if (deviceType == "ProcessorMetrics")
     {
@@ -620,15 +623,16 @@ void getMetricValue(const std::string& deviceType,
         // This is for the property whose value is of type list and each element
         // in the list on the redfish is represented with
         // "PropertyName/<index_of_list_element>". and it always starts with 0
-        // Eg:- ThrottleReasosns: [Idle, AppClock]-> "Idle" maps to ThrottleReasons/0
+        // Eg:- ThrottleReasosns: [Idle, AppClock]-> "Idle" maps to
+        // ThrottleReasons/0
         int i = 0;
         for (const std::string& reading : *readingArray)
         {
             std::string val = translateReading(ifaceName, metricName, reading);
             thisMetric["MetricValue"] = val;
-            std::string metricProp =
-                generateURI(deviceType, deviceName, subDeviceName, devicePath,
-                            metricName, ifaceName);
+            std::string metricProp = generateURI(deviceType, deviceName,
+                                                 subDeviceName, devicePath,
+                                                 metricName, ifaceName);
             metricProp += "/";
             metricProp += std::to_string(i);
             thisMetric["MetricProperty"] = metricProp;
@@ -649,9 +653,9 @@ void getMetricValue(const std::string& deviceType,
         {
             // double val = translateReading(ifaceName, metricName, reading);
             thisMetric["MetricValue"] = std::to_string(reading);
-            std::string metricProp =
-                generateURI(deviceType, deviceName, subDeviceName, devicePath,
-                            metricName, ifaceName);
+            std::string metricProp = generateURI(deviceType, deviceName,
+                                                 subDeviceName, devicePath,
+                                                 metricName, ifaceName);
             metricProp += "/";
             metricProp += std::to_string(i);
             thisMetric["MetricProperty"] = metricProp;
@@ -663,9 +667,9 @@ void getMetricValue(const std::string& deviceType,
     }
     else
     {
-        const std::string metricURI =
-            generateURI(deviceType, deviceName, subDeviceName, devicePath,
-                        metricName, ifaceName);
+        const std::string metricURI = generateURI(deviceType, deviceName,
+                                                  subDeviceName, devicePath,
+                                                  metricName, ifaceName);
         if (metricURI.empty())
         {
             return;
@@ -680,30 +684,26 @@ void getMetricValue(const std::string& deviceType,
         }
         else if (const int* reading = std::get_if<int>(&value))
         {
-
             thisMetric["MetricValue"] = std::to_string(*reading);
         }
         else if (const int16_t* reading = std::get_if<int16_t>(&value))
         {
-
             thisMetric["MetricValue"] = std::to_string(*reading);
         }
         else if (const int64_t* reading = std::get_if<int64_t>(&value))
         {
-
             thisMetric["MetricValue"] = std::to_string(*reading);
         }
         else if (const uint16_t* reading = std::get_if<uint16_t>(&value))
         {
-
             thisMetric["MetricValue"] = std::to_string(*reading);
         }
         else if (const uint32_t* reading = std::get_if<uint32_t>(&value))
         {
             if (ifaceName == "xyz.openbmc_project.State.ProcessorPerformance")
             {
-                std::string val =
-                    translateAccumlatedDuration(metricName, *reading);
+                std::string val = translateAccumlatedDuration(metricName,
+                                                              *reading);
                 thisMetric["MetricValue"] = val;
             }
             else
@@ -715,8 +715,8 @@ void getMetricValue(const std::string& deviceType,
         {
             if (ifaceName == "xyz.openbmc_project.State.ProcessorPerformance")
             {
-                std::string val =
-                    translateThrottleDuration(metricName, *reading);
+                std::string val = translateThrottleDuration(metricName,
+                                                            *reading);
                 thisMetric["MetricValue"] = val;
             }
             else
@@ -726,7 +726,6 @@ void getMetricValue(const std::string& deviceType,
         }
         else if (const double* reading = std::get_if<double>(&value))
         {
-
             thisMetric["MetricValue"] = std::to_string(*reading);
         }
         else if (const bool* reading = std::get_if<bool>(&value))

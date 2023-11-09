@@ -69,8 +69,8 @@ inline const redfish::registries::Message* getMessageFromRegistry(
             registry.begin(), registry.end(),
             [&messageKey](
                 const redfish::registries::MessageEntry& messageEntry) {
-                return !std::strcmp(messageEntry.first, messageKey.c_str());
-            });
+        return !std::strcmp(messageEntry.first, messageKey.c_str());
+    });
     if (messageIt != registry.end())
     {
         return &messageIt->second;

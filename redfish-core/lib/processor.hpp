@@ -145,80 +145,76 @@ inline void getSystemPCIeInterfaceProperties(
             const boost::system::error_code errorCode,
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
                 objInfo) mutable {
-            if (errorCode)
+        if (errorCode)
+        {
+            BMCWEB_LOG_ERROR << "error_code = " << errorCode;
+            BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+            if (asyncResp)
             {
-                BMCWEB_LOG_ERROR << "error_code = " << errorCode;
-                BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
-                if (asyncResp)
-                {
-                    messages::internalError(asyncResp->res);
-                }
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+        if (objInfo.empty())
+        {
+            BMCWEB_LOG_ERROR << "Empty Object Size";
+            if (asyncResp)
+            {
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+        // Get all properties
+        sdbusplus::asio::getAllProperties(
+            *crow::connections::systemBus, objInfo[0].first, objPath, "",
+            [objPath,
+             asyncResp](const boost::system::error_code ec,
+                        const dbus::utility::DBusPropertiesMap& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "error_code = " << ec;
+                BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+                messages::internalError(asyncResp->res);
                 return;
             }
-            if (objInfo.empty())
+
+            const double* currentSpeed = nullptr;
+            const size_t* activeWidth = nullptr;
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), properties, "CurrentSpeed",
+                currentSpeed, "ActiveWidth", activeWidth);
+
+            asyncResp->res.jsonValue["SystemInterface"]["InterfaceType"] =
+                "PCIe";
+
+            if (!success)
             {
-                BMCWEB_LOG_ERROR << "Empty Object Size";
-                if (asyncResp)
-                {
-                    messages::internalError(asyncResp->res);
-                }
+                messages::internalError(asyncResp->res);
                 return;
             }
-            // Get all properties
-            sdbusplus::asio::getAllProperties(
-                *crow::connections::systemBus, objInfo[0].first, objPath, "",
-                [objPath, asyncResp](
-                    const boost::system::error_code ec,
-                    const dbus::utility::DBusPropertiesMap& properties) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR << "error_code = " << ec;
-                        BMCWEB_LOG_ERROR << "error msg = " << ec.message();
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
 
-                    const double* currentSpeed = nullptr;
-                    const size_t* activeWidth = nullptr;
-
-                    const bool success = sdbusplus::unpackPropertiesNoThrow(
-                        dbus_utils::UnpackErrorPrinter(), properties,
-                        "CurrentSpeed", currentSpeed, "ActiveWidth",
-                        activeWidth);
-
+            if ((currentSpeed != nullptr) && (activeWidth != nullptr))
+            {
+                asyncResp->res
+                    .jsonValue["SystemInterface"]["PCIe"]["PCIeType"] =
+                    redfish::port_utils::getLinkSpeedGeneration(*currentSpeed);
+            }
+            if (activeWidth != nullptr)
+            {
+                if (*activeWidth == INT_MAX)
+                {
                     asyncResp->res
-                        .jsonValue["SystemInterface"]["InterfaceType"] = "PCIe";
-
-                    if (!success)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    if ((currentSpeed != nullptr) && (activeWidth != nullptr))
-                    {
-                        asyncResp->res
-                            .jsonValue["SystemInterface"]["PCIe"]["PCIeType"] =
-                            redfish::port_utils::getLinkSpeedGeneration(
-                                *currentSpeed);
-                    }
-                    if (activeWidth != nullptr)
-                    {
-                        if (*activeWidth == INT_MAX)
-                        {
-                            asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
-                                                    ["LanesInUse"] = 0;
-                        }
-                        else
-                        {
-                            asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
-                                                    ["LanesInUse"] =
-                                *activeWidth;
-                        }
-                    }
-                });
-
-        },
+                        .jsonValue["SystemInterface"]["PCIe"]["LanesInUse"] = 0;
+                }
+                else
+                {
+                    asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
+                                            ["LanesInUse"] = *activeWidth;
+                }
+            }
+        });
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
@@ -242,74 +238,72 @@ inline void getFPGAPCIeInterfaceProperties(
             const boost::system::error_code errorCode,
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
                 objInfo) mutable {
-            if (errorCode)
+        if (errorCode)
+        {
+            BMCWEB_LOG_ERROR << "error_code = " << errorCode;
+            BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+            if (asyncResp)
             {
-                BMCWEB_LOG_ERROR << "error_code = " << errorCode;
-                BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
-                if (asyncResp)
-                {
-                    messages::internalError(asyncResp->res);
-                }
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+        if (objInfo.empty())
+        {
+            BMCWEB_LOG_ERROR << "Empty Object Size";
+            if (asyncResp)
+            {
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+        // Get all properties
+        sdbusplus::asio::getAllProperties(
+            *crow::connections::systemBus, objInfo[0].first, objPath, "",
+            [objPath,
+             asyncResp](const boost::system::error_code ec,
+                        const dbus::utility::DBusPropertiesMap& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "error_code = " << ec;
+                BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+                messages::internalError(asyncResp->res);
                 return;
             }
-            if (objInfo.empty())
+            std::string speed;
+            size_t width = 0;
+
+            const double* currentSpeed = nullptr;
+            const size_t* activeWidth = nullptr;
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), properties, "CurrentSpeed",
+                currentSpeed, "ActiveWidth", activeWidth);
+
+            if (!success)
             {
-                BMCWEB_LOG_ERROR << "Empty Object Size";
-                if (asyncResp)
-                {
-                    messages::internalError(asyncResp->res);
-                }
+                messages::internalError(asyncResp->res);
                 return;
             }
-            // Get all properties
-            sdbusplus::asio::getAllProperties(
-                *crow::connections::systemBus, objInfo[0].first, objPath, "",
-                [objPath, asyncResp](
-                    const boost::system::error_code ec,
-                    const dbus::utility::DBusPropertiesMap& properties) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR << "error_code = " << ec;
-                        BMCWEB_LOG_ERROR << "error msg = " << ec.message();
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    std::string speed;
-                    size_t width = 0;
 
-                    const double* currentSpeed = nullptr;
-                    const size_t* activeWidth = nullptr;
-
-                    const bool success = sdbusplus::unpackPropertiesNoThrow(
-                        dbus_utils::UnpackErrorPrinter(), properties,
-                        "CurrentSpeed", currentSpeed, "ActiveWidth",
-                        activeWidth);
-
-                    if (!success)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    if ((currentSpeed != nullptr) && (activeWidth != nullptr))
-                    {
-                        speed = redfish::port_utils::getLinkSpeedGeneration(
-                            *currentSpeed);
-                    }
-                    if ((activeWidth != nullptr) && (*activeWidth != INT_MAX))
-                    {
-                        width = *activeWidth;
-                    }
-                    nlohmann::json& fpgaIfaceArray =
-                        asyncResp->res.jsonValue["FPGA"]["ExternalInterfaces"];
-                    fpgaIfaceArray = nlohmann::json::array();
-                    fpgaIfaceArray.push_back(
-                        {{"InterfaceType", "PCIe"},
-                         {"PCIe",
-                          {{"PCIeType", speed}, {"LanesInUse", width}}}});
-                    return;
-                });
-        },
+            if ((currentSpeed != nullptr) && (activeWidth != nullptr))
+            {
+                speed =
+                    redfish::port_utils::getLinkSpeedGeneration(*currentSpeed);
+            }
+            if ((activeWidth != nullptr) && (*activeWidth != INT_MAX))
+            {
+                width = *activeWidth;
+            }
+            nlohmann::json& fpgaIfaceArray =
+                asyncResp->res.jsonValue["FPGA"]["ExternalInterfaces"];
+            fpgaIfaceArray = nlohmann::json::array();
+            fpgaIfaceArray.push_back(
+                {{"InterfaceType", "PCIe"},
+                 {"PCIe", {{"PCIeType", speed}, {"LanesInUse", width}}}});
+            return;
+        });
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
@@ -330,21 +324,21 @@ inline void getProcessorSystemPCIeInterface(
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
-            if (ec2)
-            {
-                return; // no system interface = no failures
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                return;
-            }
-            for (const std::string& linkPath : *data)
-            {
-                getSystemPCIeInterfaceProperties(aResp, linkPath);
-            }
-        },
+        if (ec2)
+        {
+            return; // no system interface = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        for (const std::string& linkPath : *data)
+        {
+            getSystemPCIeInterfaceProperties(aResp, linkPath);
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/system_interface",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -364,21 +358,21 @@ inline void getProcessorFPGAPCIeInterface(
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
-            if (ec2)
-            {
-                return; // no fpga interface = no failures
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                return;
-            }
-            for (const std::string& linkPath : *data)
-            {
-                getFPGAPCIeInterfaceProperties(aResp, linkPath);
-            }
-        },
+        if (ec2)
+        {
+            return; // no fpga interface = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        for (const std::string& linkPath : *data)
+        {
+            getFPGAPCIeInterfaceProperties(aResp, linkPath);
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/fpga_interface",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -399,34 +393,33 @@ inline void
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
-            if (ec2)
+        if (ec2)
+        {
+            return; // no memory = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        nlohmann::json& linksArray = aResp->res.jsonValue["Links"]["Memory"];
+        linksArray = nlohmann::json::array();
+        for (const std::string& memoryPath : *data)
+        {
+            sdbusplus::message::object_path objectPath(memoryPath);
+            std::string memoryName = objectPath.filename();
+            if (memoryName.empty())
             {
-                return; // no memory = no failures
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
+                messages::internalError(aResp->res);
                 return;
             }
-            nlohmann::json& linksArray =
-                aResp->res.jsonValue["Links"]["Memory"];
-            linksArray = nlohmann::json::array();
-            for (const std::string& memoryPath : *data)
-            {
-                sdbusplus::message::object_path objectPath(memoryPath);
-                std::string memoryName = objectPath.filename();
-                if (memoryName.empty())
-                {
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                linksArray.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/Memory/" +
-                                       memoryName}});
-            }
-        },
+            linksArray.push_back(
+                {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                               "/Memory/" +
+                                   memoryName}});
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_memory",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -452,63 +445,60 @@ inline void getProcessorPCIeFunctionsLinks(
             boost::container::flat_map<std::string,
                                        std::variant<std::string, size_t>>&
                 pcieDevProperties) {
-            if (ec)
+        if (ec)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        aResp->res.jsonValue["SystemInterface"]["InterfaceType"] = "PCIe";
+        // PCIe interface properties
+        for (const std::pair<std::string, std::variant<std::string, size_t>>&
+                 property : pcieDevProperties)
+        {
+            const std::string& propertyName = property.first;
+            if ((propertyName == "LanesInUse") || (propertyName == "MaxLanes"))
             {
-                messages::internalError(aResp->res);
-                return;
-            }
-            aResp->res.jsonValue["SystemInterface"]["InterfaceType"] = "PCIe";
-            // PCIe interface properties
-            for (const std::pair<std::string,
-                                 std::variant<std::string, size_t>>& property :
-                 pcieDevProperties)
-            {
-                const std::string& propertyName = property.first;
-                if ((propertyName == "LanesInUse") ||
-                    (propertyName == "MaxLanes"))
+                const size_t* value = std::get_if<size_t>(&property.second);
+                if (value != nullptr)
                 {
-                    const size_t* value = std::get_if<size_t>(&property.second);
-                    if (value != nullptr)
-                    {
-                        aResp->res.jsonValue["SystemInterface"]["PCIe"]
-                                            [propertyName] = *value;
-                    }
-                }
-                else if ((propertyName == "PCIeType") ||
-                         (propertyName == "MaxPCIeType"))
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        aResp->res.jsonValue["SystemInterface"]["PCIe"]
-                                            [propertyName] =
-                            getPCIeType(*value);
-                    }
+                    aResp->res.jsonValue["SystemInterface"]["PCIe"]
+                                        [propertyName] = *value;
                 }
             }
-            // PCIe functions properties
-            nlohmann::json& pcieFunctionList =
-                aResp->res.jsonValue["Links"]["PCIeFunctions"];
-            pcieFunctionList = nlohmann::json::array();
-            static constexpr const int maxPciFunctionNum = 8;
-            for (int functionNum = 0; functionNum < maxPciFunctionNum;
-                 functionNum++)
+            else if ((propertyName == "PCIeType") ||
+                     (propertyName == "MaxPCIeType"))
             {
-                // Check if this function exists by looking for a device
-                // ID
-                std::string devIDProperty =
-                    "Function" + std::to_string(functionNum) + "DeviceId";
-                std::string* property =
-                    std::get_if<std::string>(&pcieDevProperties[devIDProperty]);
-                if (property && !property->empty())
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
                 {
-                    pcieFunctionList.push_back(
-                        {{"@odata.id", pcieDeviceLink + "/PCIeFunctions/" +
-                                           std::to_string(functionNum)}});
+                    aResp->res.jsonValue["SystemInterface"]["PCIe"]
+                                        [propertyName] = getPCIeType(*value);
                 }
             }
-        },
+        }
+        // PCIe functions properties
+        nlohmann::json& pcieFunctionList =
+            aResp->res.jsonValue["Links"]["PCIeFunctions"];
+        pcieFunctionList = nlohmann::json::array();
+        static constexpr const int maxPciFunctionNum = 8;
+        for (int functionNum = 0; functionNum < maxPciFunctionNum;
+             functionNum++)
+        {
+            // Check if this function exists by looking for a device
+            // ID
+            std::string devIDProperty =
+                "Function" + std::to_string(functionNum) + "DeviceId";
+            std::string* property =
+                std::get_if<std::string>(&pcieDevProperties[devIDProperty]);
+            if (property && !property->empty())
+            {
+                pcieFunctionList.push_back(
+                    {{"@odata.id", pcieDeviceLink + "/PCIeFunctions/" +
+                                       std::to_string(functionNum)}});
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Item.PCIeDevice");
 }
@@ -528,67 +518,67 @@ inline void getParentChassisPCIeDeviceLink(
     crow::connections::systemBus->async_method_call(
         [aResp, chassisName](const boost::system::error_code ec,
                              std::variant<std::vector<std::string>>& resp) {
-            if (ec)
-            {
-                return; // no chassis = no failures
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr && data->size() > 1)
-            {
-                // Chassis must have single parent chassis
-                return;
-            }
-            const std::string& parentChassisPath = data->front();
-            sdbusplus::message::object_path objectPath(parentChassisPath);
-            std::string parentChassisName = objectPath.filename();
-            if (parentChassisName.empty())
+        if (ec)
+        {
+            return; // no chassis = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr && data->size() > 1)
+        {
+            // Chassis must have single parent chassis
+            return;
+        }
+        const std::string& parentChassisPath = data->front();
+        sdbusplus::message::object_path objectPath(parentChassisPath);
+        std::string parentChassisName = objectPath.filename();
+        if (parentChassisName.empty())
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        crow::connections::systemBus->async_method_call(
+            [aResp, chassisName,
+             parentChassisName](const boost::system::error_code ec1,
+                                const MapperGetSubTreeResponse& subtree) {
+            if (ec1)
             {
                 messages::internalError(aResp->res);
                 return;
             }
-            crow::connections::systemBus->async_method_call(
-                [aResp, chassisName,
-                 parentChassisName](const boost::system::error_code ec1,
-                                    const MapperGetSubTreeResponse& subtree) {
-                    if (ec1)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    for (const auto& [objectPath1, serviceMap] : subtree)
-                    {
-                        // Process same device
-                        if (!boost::ends_with(objectPath1, chassisName))
-                        {
-                            continue;
-                        }
-                        std::string pcieDeviceLink = "/redfish/v1/Chassis/";
-                        pcieDeviceLink += parentChassisName;
-                        pcieDeviceLink += "/PCIeDevices/";
-                        pcieDeviceLink += chassisName;
-                        aResp->res.jsonValue["Links"]["PCIeDevice"] = {
-                            {"@odata.id", pcieDeviceLink}};
-                        if (serviceMap.size() < 1)
-                        {
-                            BMCWEB_LOG_ERROR << "Got 0 service "
-                                                "names";
-                            messages::internalError(aResp->res);
-                            return;
-                        }
-                        const std::string& serviceName = serviceMap[0].first;
-                        // Get PCIeFunctions Link
-                        getProcessorPCIeFunctionsLinks(
-                            aResp, serviceName, objectPath1, pcieDeviceLink);
-                    }
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                parentChassisPath, 0,
-                std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item."
-                                           "PCIeDevice"});
+            for (const auto& [objectPath1, serviceMap] : subtree)
+            {
+                // Process same device
+                if (!boost::ends_with(objectPath1, chassisName))
+                {
+                    continue;
+                }
+                std::string pcieDeviceLink = "/redfish/v1/Chassis/";
+                pcieDeviceLink += parentChassisName;
+                pcieDeviceLink += "/PCIeDevices/";
+                pcieDeviceLink += chassisName;
+                aResp->res.jsonValue["Links"]["PCIeDevice"] = {
+                    {"@odata.id", pcieDeviceLink}};
+                if (serviceMap.size() < 1)
+                {
+                    BMCWEB_LOG_ERROR << "Got 0 service "
+                                        "names";
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                const std::string& serviceName = serviceMap[0].first;
+                // Get PCIeFunctions Link
+                getProcessorPCIeFunctionsLinks(aResp, serviceName, objectPath1,
+                                               pcieDeviceLink);
+            }
         },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree", parentChassisPath,
+            0,
+            std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item."
+                                       "PCIeDevice"});
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -611,72 +601,70 @@ inline void
         [aResp, objPath,
          service](const boost::system::error_code ec,
                   std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            return; // no chassis = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr && data->size() > 1)
+        {
+            // Processor must have single parent chassis
+            return;
+        }
+        const std::string& chassisPath = data->front();
+        sdbusplus::message::object_path objectPath(chassisPath);
+        std::string chassisName = objectPath.filename();
+        if (chassisName.empty())
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        aResp->res.jsonValue["Links"]["Chassis"] = {
+            {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
+
+        // Get PCIeDevice on this chassis
+        crow::connections::systemBus->async_method_call(
+            [aResp, chassisName, chassisPath,
+             service](const boost::system::error_code ec,
+                      std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
-                return; // no chassis = no failures
+                BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
+                return; // no pciedevices = no failures
             }
             std::vector<std::string>* data =
                 std::get_if<std::vector<std::string>>(&resp);
             if (data == nullptr && data->size() > 1)
             {
-                // Processor must have single parent chassis
+                // Chassis must have single pciedevice
+                BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
                 return;
             }
-            const std::string& chassisPath = data->front();
-            sdbusplus::message::object_path objectPath(chassisPath);
-            std::string chassisName = objectPath.filename();
-            if (chassisName.empty())
+            const std::string& pcieDevicePath = data->front();
+            sdbusplus::message::object_path objectPath(pcieDevicePath);
+            std::string pcieDeviceName = objectPath.filename();
+            if (pcieDeviceName.empty())
             {
+                BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
                 messages::internalError(aResp->res);
                 return;
             }
-            aResp->res.jsonValue["Links"]["Chassis"] = {
-                {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
+            std::string pcieDeviceLink = "/redfish/v1/Chassis/";
+            pcieDeviceLink += chassisName;
+            pcieDeviceLink += "/PCIeDevices/";
+            pcieDeviceLink += pcieDeviceName;
+            aResp->res.jsonValue["Links"]["PCIeDevice"] = {
+                {"@odata.id", pcieDeviceLink}};
 
-            // Get PCIeDevice on this chassis
-            crow::connections::systemBus->async_method_call(
-                [aResp, chassisName, chassisPath,
-                 service](const boost::system::error_code ec,
-                          std::variant<std::vector<std::string>>& resp) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Chassis has no connected PCIe devices";
-                        return; // no pciedevices = no failures
-                    }
-                    std::vector<std::string>* data =
-                        std::get_if<std::vector<std::string>>(&resp);
-                    if (data == nullptr && data->size() > 1)
-                    {
-                        // Chassis must have single pciedevice
-                        BMCWEB_LOG_ERROR
-                            << "chassis must have single pciedevice";
-                        return;
-                    }
-                    const std::string& pcieDevicePath = data->front();
-                    sdbusplus::message::object_path objectPath(pcieDevicePath);
-                    std::string pcieDeviceName = objectPath.filename();
-                    if (pcieDeviceName.empty())
-                    {
-                        BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    std::string pcieDeviceLink = "/redfish/v1/Chassis/";
-                    pcieDeviceLink += chassisName;
-                    pcieDeviceLink += "/PCIeDevices/";
-                    pcieDeviceLink += pcieDeviceName;
-                    aResp->res.jsonValue["Links"]["PCIeDevice"] = {
-                        {"@odata.id", pcieDeviceLink}};
-
-                    // Get PCIeFunctions Link
-                    getProcessorPCIeFunctionsLinks(
-                        aResp, service, pcieDevicePath, pcieDeviceLink);
-                },
-                "xyz.openbmc_project.ObjectMapper", chassisPath + "/pciedevice",
-                "org.freedesktop.DBus.Properties", "Get",
-                "xyz.openbmc_project.Association", "endpoints");
+            // Get PCIeFunctions Link
+            getProcessorPCIeFunctionsLinks(aResp, service, pcieDevicePath,
+                                           pcieDeviceLink);
         },
+            "xyz.openbmc_project.ObjectMapper", chassisPath + "/pciedevice",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -700,14 +688,14 @@ inline void getProcessorUUID(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Common.UUID", "UUID",
         [objPath, aResp{std::move(aResp)}](const boost::system::error_code ec,
                                            const std::string& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            aResp->res.jsonValue["UUID"] = property;
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        aResp->res.jsonValue["UUID"] = property;
+    });
 }
 
 /**
@@ -728,15 +716,15 @@ inline void getFpgaTypeData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Inventory.Decorator.FpgaType", "FpgaType",
         [objPath, aResp{std::move(aResp)}](const boost::system::error_code ec,
                                            const std::string& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            std::string fpgaType = getProcessorFpgaType(property);
-            aResp->res.jsonValue["FPGA"]["FpgaType"] = fpgaType;
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        std::string fpgaType = getProcessorFpgaType(property);
+        aResp->res.jsonValue["FPGA"]["FpgaType"] = fpgaType;
+    });
 }
 
 /**
@@ -756,22 +744,22 @@ inline void
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const std::variant<std::string>& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                    "Processor firmware version";
-                messages::internalError(aResp->res);
-                return;
-            }
-            const std::string* value = std::get_if<std::string>(&property);
-            if (value == nullptr)
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned for Version";
-                messages::internalError(aResp->res);
-                return;
-            }
-            aResp->res.jsonValue["FirmwareVersion"] = *value;
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error for "
+                                "Processor firmware version";
+            messages::internalError(aResp->res);
+            return;
+        }
+        const std::string* value = std::get_if<std::string>(&property);
+        if (value == nullptr)
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned for Version";
+            messages::internalError(aResp->res);
+            return;
+        }
+        aResp->res.jsonValue["FirmwareVersion"] = *value;
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Software.Version", "Version");
 }
@@ -930,45 +918,43 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
         [cpuId, service, objPath, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
             const dbus::utility::ManagedObjectType& dbusData) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            aResp->res.jsonValue["Id"] = cpuId;
-            aResp->res.jsonValue["Name"] = "Processor";
-            aResp->res.jsonValue["ProcessorType"] = "CPU";
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        aResp->res.jsonValue["Id"] = cpuId;
+        aResp->res.jsonValue["Name"] = "Processor";
+        aResp->res.jsonValue["ProcessorType"] = "CPU";
 
-            bool slotPresent = false;
-            std::string corePath = objPath + "/core";
-            size_t totalCores = 0;
-            for (const auto& object : dbusData)
+        bool slotPresent = false;
+        std::string corePath = objPath + "/core";
+        size_t totalCores = 0;
+        for (const auto& object : dbusData)
+        {
+            if (object.first.str == objPath)
             {
-                if (object.first.str == objPath)
+                getCpuDataByInterface(aResp, object.second);
+            }
+            else if (object.first.str.starts_with(corePath))
+            {
+                for (const auto& interface : object.second)
                 {
-                    getCpuDataByInterface(aResp, object.second);
-                }
-                else if (object.first.str.starts_with(corePath))
-                {
-                    for (const auto& interface : object.second)
+                    if (interface.first == "xyz.openbmc_project.Inventory.Item")
                     {
-                        if (interface.first ==
-                            "xyz.openbmc_project.Inventory.Item")
+                        for (const auto& property : interface.second)
                         {
-                            for (const auto& property : interface.second)
+                            if (property.first == "Present")
                             {
-                                if (property.first == "Present")
+                                const bool* present =
+                                    std::get_if<bool>(&property.second);
+                                if (present != nullptr)
                                 {
-                                    const bool* present =
-                                        std::get_if<bool>(&property.second);
-                                    if (present != nullptr)
+                                    if (*present)
                                     {
-                                        if (*present)
-                                        {
-                                            slotPresent = true;
-                                            totalCores++;
-                                        }
+                                        slotPresent = true;
+                                        totalCores++;
                                     }
                                 }
                             }
@@ -976,21 +962,22 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     }
                 }
             }
-            // In getCpuDataByInterface(), state and health are set
-            // based on the present and functional status. If core
-            // count is zero, then it has a higher precedence.
-            if (slotPresent)
+        }
+        // In getCpuDataByInterface(), state and health are set
+        // based on the present and functional status. If core
+        // count is zero, then it has a higher precedence.
+        if (slotPresent)
+        {
+            if (totalCores == 0)
             {
-                if (totalCores == 0)
-                {
-                    // Slot is not populated, set status end return
-                    aResp->res.jsonValue["Status"]["State"] = "Absent";
-                    aResp->res.jsonValue["Status"]["Health"] = "OK";
-                }
-                aResp->res.jsonValue["TotalCores"] = totalCores;
+                // Slot is not populated, set status end return
+                aResp->res.jsonValue["Status"]["State"] = "Absent";
+                aResp->res.jsonValue["Status"]["Health"] = "OK";
             }
-            return;
-        },
+            aResp->res.jsonValue["TotalCores"] = totalCores;
+        }
+        return;
+    },
         service, "/xyz/openbmc_project/inventory",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
@@ -1006,67 +993,67 @@ inline void getCpuAssetData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         [objPath, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
             const dbus::utility::DBusPropertiesMap& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        const std::string* serialNumber = nullptr;
+        const std::string* model = nullptr;
+        const std::string* manufacturer = nullptr;
+        const std::string* partNumber = nullptr;
+        const std::string* sparePartNumber = nullptr;
+
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), properties, "SerialNumber",
+            serialNumber, "Model", model, "Manufacturer", manufacturer,
+            "PartNumber", partNumber, "SparePartNumber", sparePartNumber);
+
+        if (!success)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        if (serialNumber != nullptr && !serialNumber->empty())
+        {
+            aResp->res.jsonValue["SerialNumber"] = *serialNumber;
+        }
+
+        if ((model != nullptr) && !model->empty())
+        {
+            aResp->res.jsonValue["Model"] = *model;
+        }
+
+        if (manufacturer != nullptr)
+        {
+            aResp->res.jsonValue["Manufacturer"] = *manufacturer;
+
+            // Otherwise would be unexpected.
+            if (manufacturer->find("Intel") != std::string::npos)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
+                aResp->res.jsonValue["ProcessorArchitecture"] = "x86";
+                aResp->res.jsonValue["InstructionSet"] = "x86-64";
             }
-
-            const std::string* serialNumber = nullptr;
-            const std::string* model = nullptr;
-            const std::string* manufacturer = nullptr;
-            const std::string* partNumber = nullptr;
-            const std::string* sparePartNumber = nullptr;
-
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), properties, "SerialNumber",
-                serialNumber, "Model", model, "Manufacturer", manufacturer,
-                "PartNumber", partNumber, "SparePartNumber", sparePartNumber);
-
-            if (!success)
+            else if (manufacturer->find("IBM") != std::string::npos)
             {
-                messages::internalError(aResp->res);
-                return;
+                aResp->res.jsonValue["ProcessorArchitecture"] = "Power";
+                aResp->res.jsonValue["InstructionSet"] = "PowerISA";
             }
+        }
 
-            if (serialNumber != nullptr && !serialNumber->empty())
-            {
-                aResp->res.jsonValue["SerialNumber"] = *serialNumber;
-            }
+        if (partNumber != nullptr)
+        {
+            aResp->res.jsonValue["PartNumber"] = *partNumber;
+        }
 
-            if ((model != nullptr) && !model->empty())
-            {
-                aResp->res.jsonValue["Model"] = *model;
-            }
-
-            if (manufacturer != nullptr)
-            {
-                aResp->res.jsonValue["Manufacturer"] = *manufacturer;
-
-                // Otherwise would be unexpected.
-                if (manufacturer->find("Intel") != std::string::npos)
-                {
-                    aResp->res.jsonValue["ProcessorArchitecture"] = "x86";
-                    aResp->res.jsonValue["InstructionSet"] = "x86-64";
-                }
-                else if (manufacturer->find("IBM") != std::string::npos)
-                {
-                    aResp->res.jsonValue["ProcessorArchitecture"] = "Power";
-                    aResp->res.jsonValue["InstructionSet"] = "PowerISA";
-                }
-            }
-
-            if (partNumber != nullptr)
-            {
-                aResp->res.jsonValue["PartNumber"] = *partNumber;
-            }
-
-            if (sparePartNumber != nullptr && !sparePartNumber->empty())
-            {
-                aResp->res.jsonValue["SparePartNumber"] = *sparePartNumber;
-            }
-        });
+        if (sparePartNumber != nullptr && !sparePartNumber->empty())
+        {
+            aResp->res.jsonValue["SparePartNumber"] = *sparePartNumber;
+        }
+    });
 }
 
 inline void getCpuRevisionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
@@ -1080,30 +1067,29 @@ inline void getCpuRevisionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         [objPath, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
             const dbus::utility::DBusPropertiesMap& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            const std::string* version = nullptr;
+        const std::string* version = nullptr;
 
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), properties, "Version",
-                version);
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), properties, "Version", version);
 
-            if (!success)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (!success)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (version != nullptr)
-            {
-                aResp->res.jsonValue["Version"] = *version;
-            }
-        });
+        if (version != nullptr)
+        {
+            aResp->res.jsonValue["Version"] = *version;
+        }
+    });
 }
 
 inline void getAcceleratorDataByService(
@@ -1117,9 +1103,9 @@ inline void getAcceleratorDataByService(
     std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
         objPath, [aResp](const std::string& rootHealth,
                          const std::string& healthRollup) {
-            aResp->res.jsonValue["Status"]["Health"] = rootHealth;
-            aResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
-        });
+        aResp->res.jsonValue["Status"]["Health"] = rootHealth;
+        aResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+    });
     health->start();
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
@@ -1128,70 +1114,68 @@ inline void getAcceleratorDataByService(
         [acclrtrId, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
             const dbus::utility::DBusPropertiesMap& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            const bool* functional = nullptr;
-            const bool* present = nullptr;
-            const std::string* accType = nullptr;
-            const std::string* operationalState = nullptr;
+        const bool* functional = nullptr;
+        const bool* present = nullptr;
+        const std::string* accType = nullptr;
+        const std::string* operationalState = nullptr;
 
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), properties, "Functional",
-                functional, "Present", present, "Type", accType, "State",
-                operationalState);
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), properties, "Functional",
+            functional, "Present", present, "Type", accType, "State",
+            operationalState);
 
-            if (!success)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (!success)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            std::string state = "Enabled";
+        std::string state = "Enabled";
 #ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-            std::string health = "OK";
+        std::string health = "OK";
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
-            if (present != nullptr && !*present)
-            {
-                state = "Absent";
-            }
+        if (present != nullptr && !*present)
+        {
+            state = "Absent";
+        }
 #ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-            if (functional != nullptr && !*functional)
+        if (functional != nullptr && !*functional)
+        {
+            if (state == "Enabled")
             {
-                if (state == "Enabled")
-                {
-                    health = "Critical";
-                }
+                health = "Critical";
             }
+        }
 #else  // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-            (void)functional;
+        (void)functional;
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
-            aResp->res.jsonValue["Id"] = acclrtrId;
-            aResp->res.jsonValue["Name"] = "Processor";
-            aResp->res.jsonValue["Status"]["State"] = state;
+        aResp->res.jsonValue["Id"] = acclrtrId;
+        aResp->res.jsonValue["Name"] = "Processor";
+        aResp->res.jsonValue["Status"]["State"] = state;
 #ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-            aResp->res.jsonValue["Status"]["Health"] = health;
+        aResp->res.jsonValue["Status"]["Health"] = health;
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
-            if (accType != nullptr && !accType->empty())
-            {
-                aResp->res.jsonValue["ProcessorType"] =
-                    getProcessorType(*accType);
-            }
+        if (accType != nullptr && !accType->empty())
+        {
+            aResp->res.jsonValue["ProcessorType"] = getProcessorType(*accType);
+        }
 
-            if (operationalState != nullptr && !operationalState->empty())
-            {
-                aResp->res.jsonValue["Status"]["State"] =
-                    redfish::chassis_utils::getPowerStateType(
-                        *operationalState);
-            }
-        });
+        if (operationalState != nullptr && !operationalState->empty())
+        {
+            aResp->res.jsonValue["Status"]["State"] =
+                redfish::chassis_utils::getPowerStateType(*operationalState);
+        }
+    });
 }
 
 // OperatingConfig D-Bus Types
@@ -1267,88 +1251,85 @@ inline void getCpuConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         [aResp, cpuId,
          service](const boost::system::error_code ec,
                   const dbus::utility::DBusPropertiesMap& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", " << ec.message();
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        nlohmann::json& json = aResp->res.jsonValue;
+
+        const sdbusplus::message::object_path* appliedConfig = nullptr;
+        const bool* baseSpeedPriorityEnabled = nullptr;
+
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), properties, "AppliedConfig",
+            appliedConfig, "BaseSpeedPriorityEnabled",
+            baseSpeedPriorityEnabled);
+
+        if (!success)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        if (appliedConfig != nullptr)
+        {
+            const std::string& dbusPath = appliedConfig->str;
+            std::string uri = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                              "/Processors/" +
+                              cpuId + "/OperatingConfigs";
+            nlohmann::json::object_t operatingConfig;
+            operatingConfig["@odata.id"] = uri;
+            json["OperatingConfigs"] = std::move(operatingConfig);
+
+            // Reuse the D-Bus config object name for the Redfish
+            // URI
+            size_t baseNamePos = dbusPath.rfind('/');
+            if (baseNamePos == std::string::npos ||
+                baseNamePos == (dbusPath.size() - 1))
             {
-                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                   << ec.message();
+                // If the AppliedConfig was somehow not a valid path,
+                // skip adding any more properties, since everything
+                // else is tied to this applied config.
                 messages::internalError(aResp->res);
                 return;
             }
+            uri += '/';
+            uri += dbusPath.substr(baseNamePos + 1);
+            nlohmann::json::object_t appliedOperatingConfig;
+            appliedOperatingConfig["@odata.id"] = uri;
+            json["AppliedOperatingConfig"] = std::move(appliedOperatingConfig);
 
-            nlohmann::json& json = aResp->res.jsonValue;
-
-            const sdbusplus::message::object_path* appliedConfig = nullptr;
-            const bool* baseSpeedPriorityEnabled = nullptr;
-
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), properties, "AppliedConfig",
-                appliedConfig, "BaseSpeedPriorityEnabled",
-                baseSpeedPriorityEnabled);
-
-            if (!success)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-
-            if (appliedConfig != nullptr)
-            {
-                const std::string& dbusPath = appliedConfig->str;
-                std::string uri = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                  "/Processors/" +
-                                  cpuId + "/OperatingConfigs";
-                nlohmann::json::object_t operatingConfig;
-                operatingConfig["@odata.id"] = uri;
-                json["OperatingConfigs"] = std::move(operatingConfig);
-
-                // Reuse the D-Bus config object name for the Redfish
-                // URI
-                size_t baseNamePos = dbusPath.rfind('/');
-                if (baseNamePos == std::string::npos ||
-                    baseNamePos == (dbusPath.size() - 1))
+            // Once we found the current applied config, queue another
+            // request to read the base freq core ids out of that
+            // config.
+            sdbusplus::asio::getProperty<BaseSpeedPrioritySettingsProperty>(
+                *crow::connections::systemBus, service, dbusPath,
+                "xyz.openbmc_project.Inventory.Item.Cpu."
+                "OperatingConfig",
+                "BaseSpeedPrioritySettings",
+                [aResp](
+                    const boost::system::error_code ec2,
+                    const BaseSpeedPrioritySettingsProperty& baseSpeedList) {
+                if (ec2)
                 {
-                    // If the AppliedConfig was somehow not a valid path,
-                    // skip adding any more properties, since everything
-                    // else is tied to this applied config.
+                    BMCWEB_LOG_WARNING << "D-Bus Property Get error: " << ec2;
                     messages::internalError(aResp->res);
                     return;
                 }
-                uri += '/';
-                uri += dbusPath.substr(baseNamePos + 1);
-                nlohmann::json::object_t appliedOperatingConfig;
-                appliedOperatingConfig["@odata.id"] = uri;
-                json["AppliedOperatingConfig"] =
-                    std::move(appliedOperatingConfig);
 
-                // Once we found the current applied config, queue another
-                // request to read the base freq core ids out of that
-                // config.
-                sdbusplus::asio::getProperty<BaseSpeedPrioritySettingsProperty>(
-                    *crow::connections::systemBus, service, dbusPath,
-                    "xyz.openbmc_project.Inventory.Item.Cpu."
-                    "OperatingConfig",
-                    "BaseSpeedPrioritySettings",
-                    [aResp](const boost::system::error_code ec2,
-                            const BaseSpeedPrioritySettingsProperty&
-                                baseSpeedList) {
-                        if (ec2)
-                        {
-                            BMCWEB_LOG_WARNING << "D-Bus Property Get error: "
-                                               << ec2;
-                            messages::internalError(aResp->res);
-                            return;
-                        }
+                highSpeedCoreIdsHandler(aResp, baseSpeedList);
+            });
+        }
 
-                        highSpeedCoreIdsHandler(aResp, baseSpeedList);
-                    });
-            }
-
-            if (baseSpeedPriorityEnabled != nullptr)
-            {
-                json["BaseSpeedPriorityState"] =
-                    *baseSpeedPriorityEnabled ? "Enabled" : "Disabled";
-            }
-        });
+        if (baseSpeedPriorityEnabled != nullptr)
+        {
+            json["BaseSpeedPriorityState"] =
+                *baseSpeedPriorityEnabled ? "Enabled" : "Disabled";
+        }
+    });
 }
 
 /**
@@ -1369,16 +1350,16 @@ inline void getCpuLocationCode(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Inventory.Decorator.LocationCode", "LocationCode",
         [objPath, aResp{std::move(aResp)}](const boost::system::error_code ec,
                                            const std::string& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            aResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
-                property;
-        });
+        aResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
+            property;
+    });
 }
 
 /**
@@ -1399,16 +1380,16 @@ inline void getCpuLocationType(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Inventory.Decorator.Location", "LocationType",
         [objPath, aResp{std::move(aResp)}](const boost::system::error_code ec,
                                            const std::string& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            aResp->res.jsonValue["Location"]["PartLocation"]["LocationType"] =
-                redfish::dbus_utils::toLocationType(property);
-        });
+        aResp->res.jsonValue["Location"]["PartLocation"]["LocationType"] =
+            redfish::dbus_utils::toLocationType(property);
+    });
 }
 
 /**
@@ -1429,15 +1410,15 @@ inline void getCpuUniqueId(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         "xyz.openbmc_project.Inventory.Decorator.UniqueIdentifier",
         "UniqueIdentifier",
         [aResp](boost::system::error_code ec, const std::string& id) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Failed to read cpu unique id: " << ec;
-                messages::internalError(aResp->res);
-                return;
-            }
-            aResp->res
-                .jsonValue["ProcessorId"]["ProtectedIdentificationNumber"] = id;
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "Failed to read cpu unique id: " << ec;
+            messages::internalError(aResp->res);
+            return;
+        }
+        aResp->res.jsonValue["ProcessorId"]["ProtectedIdentificationNumber"] =
+            id;
+    });
 }
 
 /**
@@ -1458,115 +1439,113 @@ inline void
         "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
         [aResp](const boost::system::error_code ec,
                 const dbus::utility::DBusPropertiesMap& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", " << ec.message();
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        using SpeedConfigProperty = std::tuple<bool, uint32_t>;
+        const SpeedConfigProperty* speedConfig = nullptr;
+        const size_t* availableCoreCount = nullptr;
+        const uint32_t* baseSpeed = nullptr;
+        const uint32_t* maxJunctionTemperature = nullptr;
+        const uint32_t* maxSpeed = nullptr;
+        const uint32_t* minSpeed = nullptr;
+        const uint32_t* operatingSpeed = nullptr;
+        const uint32_t* powerLimit = nullptr;
+        const TurboProfileProperty* turboProfile = nullptr;
+        const BaseSpeedPrioritySettingsProperty* baseSpeedPrioritySettings =
+            nullptr;
+
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), properties, "AvailableCoreCount",
+            availableCoreCount, "BaseSpeed", baseSpeed,
+            "MaxJunctionTemperature", maxJunctionTemperature, "MaxSpeed",
+            maxSpeed, "PowerLimit", powerLimit, "TurboProfile", turboProfile,
+            "BaseSpeedPrioritySettings", baseSpeedPrioritySettings, "MinSpeed",
+            minSpeed, "OperatingSpeed", operatingSpeed, "SpeedConfig",
+            speedConfig);
+
+        if (!success)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        nlohmann::json& json = aResp->res.jsonValue;
+
+        if (availableCoreCount != nullptr)
+        {
+            json["TotalAvailableCoreCount"] = *availableCoreCount;
+        }
+
+        if (baseSpeed != nullptr)
+        {
+            json["BaseSpeedMHz"] = *baseSpeed;
+        }
+
+        if (maxJunctionTemperature != nullptr)
+        {
+            json["MaxJunctionTemperatureCelsius"] = *maxJunctionTemperature;
+        }
+
+        if (maxSpeed != nullptr)
+        {
+            json["MaxSpeedMHz"] = *maxSpeed;
+        }
+
+        if (minSpeed != nullptr)
+        {
+            json["MinSpeedMHz"] = *minSpeed;
+        }
+
+        if (operatingSpeed != nullptr)
+        {
+            json["OperatingSpeedMHz"] = *operatingSpeed;
+        }
+
+        if (operatingSpeed != nullptr)
+        {
+            json["OperatingSpeedMHz"] = *operatingSpeed;
+        }
+
+        if (speedConfig != nullptr)
+        {
+            const auto& [speedLock, speed] = *speedConfig;
+            json["SpeedLocked"] = speedLock;
+            json["SpeedLimitMHz"] = speed;
+        }
+
+        if (turboProfile != nullptr)
+        {
+            nlohmann::json& turboArray = json["TurboProfile"];
+            turboArray = nlohmann::json::array();
+            for (const auto& [turboSpeed, coreCount] : *turboProfile)
             {
-                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                   << ec.message();
-                messages::internalError(aResp->res);
-                return;
+                nlohmann::json::object_t turbo;
+                turbo["ActiveCoreCount"] = coreCount;
+                turbo["MaxSpeedMHz"] = turboSpeed;
+                turboArray.push_back(std::move(turbo));
             }
+        }
 
-            using SpeedConfigProperty = std::tuple<bool, uint32_t>;
-            const SpeedConfigProperty* speedConfig = nullptr;
-            const size_t* availableCoreCount = nullptr;
-            const uint32_t* baseSpeed = nullptr;
-            const uint32_t* maxJunctionTemperature = nullptr;
-            const uint32_t* maxSpeed = nullptr;
-            const uint32_t* minSpeed = nullptr;
-            const uint32_t* operatingSpeed = nullptr;
-            const uint32_t* powerLimit = nullptr;
-            const TurboProfileProperty* turboProfile = nullptr;
-            const BaseSpeedPrioritySettingsProperty* baseSpeedPrioritySettings =
-                nullptr;
-
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), properties,
-                "AvailableCoreCount", availableCoreCount, "BaseSpeed",
-                baseSpeed, "MaxJunctionTemperature", maxJunctionTemperature,
-                "MaxSpeed", maxSpeed, "PowerLimit", powerLimit, "TurboProfile",
-                turboProfile, "BaseSpeedPrioritySettings",
-                baseSpeedPrioritySettings, "MinSpeed", minSpeed,
-                "OperatingSpeed", operatingSpeed, "SpeedConfig", speedConfig);
-
-            if (!success)
+        if (baseSpeedPrioritySettings != nullptr)
+        {
+            nlohmann::json& baseSpeedArray = json["BaseSpeedPrioritySettings"];
+            baseSpeedArray = nlohmann::json::array();
+            for (const auto& [baseSpeedMhz, coreList] :
+                 *baseSpeedPrioritySettings)
             {
-                messages::internalError(aResp->res);
-                return;
+                nlohmann::json::object_t speed;
+                speed["CoreCount"] = coreList.size();
+                speed["CoreIDs"] = coreList;
+                speed["BaseSpeedMHz"] = baseSpeedMhz;
+                baseSpeedArray.push_back(std::move(speed));
             }
-
-            nlohmann::json& json = aResp->res.jsonValue;
-
-            if (availableCoreCount != nullptr)
-            {
-                json["TotalAvailableCoreCount"] = *availableCoreCount;
-            }
-
-            if (baseSpeed != nullptr)
-            {
-                json["BaseSpeedMHz"] = *baseSpeed;
-            }
-
-            if (maxJunctionTemperature != nullptr)
-            {
-                json["MaxJunctionTemperatureCelsius"] = *maxJunctionTemperature;
-            }
-
-            if (maxSpeed != nullptr)
-            {
-                json["MaxSpeedMHz"] = *maxSpeed;
-            }
-
-            if (minSpeed != nullptr)
-            {
-                json["MinSpeedMHz"] = *minSpeed;
-            }
-
-            if (operatingSpeed != nullptr)
-            {
-                json["OperatingSpeedMHz"] = *operatingSpeed;
-            }
-
-            if (operatingSpeed != nullptr)
-            {
-                json["OperatingSpeedMHz"] = *operatingSpeed;
-            }
-
-            if (speedConfig != nullptr)
-            {
-                const auto& [speedLock, speed] = *speedConfig;
-                json["SpeedLocked"] = speedLock;
-                json["SpeedLimitMHz"] = speed;
-            }
-
-            if (turboProfile != nullptr)
-            {
-                nlohmann::json& turboArray = json["TurboProfile"];
-                turboArray = nlohmann::json::array();
-                for (const auto& [turboSpeed, coreCount] : *turboProfile)
-                {
-                    nlohmann::json::object_t turbo;
-                    turbo["ActiveCoreCount"] = coreCount;
-                    turbo["MaxSpeedMHz"] = turboSpeed;
-                    turboArray.push_back(std::move(turbo));
-                }
-            }
-
-            if (baseSpeedPrioritySettings != nullptr)
-            {
-                nlohmann::json& baseSpeedArray =
-                    json["BaseSpeedPrioritySettings"];
-                baseSpeedArray = nlohmann::json::array();
-                for (const auto& [baseSpeedMhz, coreList] :
-                     *baseSpeedPrioritySettings)
-                {
-                    nlohmann::json::object_t speed;
-                    speed["CoreCount"] = coreList.size();
-                    speed["CoreIDs"] = coreList;
-                    speed["BaseSpeedMHz"] = baseSpeedMhz;
-                    baseSpeedArray.push_back(std::move(speed));
-                }
-            }
-        });
+        }
+    });
 }
 
 /**
@@ -1586,41 +1565,39 @@ inline void
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](boost::system::error_code ec,
                        const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", " << ec.message();
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        std::string metricsURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                 "/Processors/";
+        metricsURI += cpuId;
+        metricsURI += "/MemorySummary/MemoryMetrics";
+        json["MemorySummary"]["Metrics"]["@odata.id"] = metricsURI;
+        for (const auto& [key, variant] : properties)
+        {
+            if (key == "CacheSizeInKiB")
             {
-                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                   << ec.message();
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
-            std::string metricsURI =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
-            metricsURI += cpuId;
-            metricsURI += "/MemorySummary/MemoryMetrics";
-            json["MemorySummary"]["Metrics"]["@odata.id"] = metricsURI;
-            for (const auto& [key, variant] : properties)
-            {
-                if (key == "CacheSizeInKiB")
+                const uint64_t* value = std::get_if<uint64_t>(&variant);
+                if (value != nullptr)
                 {
-                    const uint64_t* value = std::get_if<uint64_t>(&variant);
-                    if (value != nullptr)
-                    {
-                        json["MemorySummary"]["TotalCacheSizeMiB"] =
-                            (*value) >> 10;
-                    }
-                }
-                else if (key == "VolatileSizeInKiB")
-                {
-                    const uint64_t* value = std::get_if<uint64_t>(&variant);
-                    if (value != nullptr)
-                    {
-                        json["MemorySummary"]["TotalMemorySizeMiB"] =
-                            (*value) >> 10;
-                    }
+                    json["MemorySummary"]["TotalCacheSizeMiB"] = (*value) >> 10;
                 }
             }
-        },
+            else if (key == "VolatileSizeInKiB")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&variant);
+                if (value != nullptr)
+                {
+                    json["MemorySummary"]["TotalMemorySizeMiB"] = (*value) >>
+                                                                  10;
+                }
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Item.PersistentMemory");
 }
@@ -1632,28 +1609,28 @@ inline void getEccModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](const boost::system::error_code ec,
                        const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            if (property.first == "ECCModeEnabled")
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
-            {
-                if (property.first == "ECCModeEnabled")
+                const bool* eccModeEnabled =
+                    std::get_if<bool>(&property.second);
+                if (eccModeEnabled == nullptr)
                 {
-                    const bool* eccModeEnabled =
-                        std::get_if<bool>(&property.second);
-                    if (eccModeEnabled == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["MemorySummary"]["ECCModeEnabled"] = *eccModeEnabled;
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                json["MemorySummary"]["ECCModeEnabled"] = *eccModeEnabled;
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Memory.MemoryECC");
 }
@@ -1666,28 +1643,28 @@ inline void getEccPendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](const boost::system::error_code ec,
                        const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            if (property.first == "PendingECCState")
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
-            {
-                if (property.first == "PendingECCState")
+                const bool* pendingEccState =
+                    std::get_if<bool>(&property.second);
+                if (pendingEccState == nullptr)
                 {
-                    const bool* pendingEccState =
-                        std::get_if<bool>(&property.second);
-                    if (pendingEccState == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["MemorySummary"]["ECCModeEnabled"] = *pendingEccState;
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                json["MemorySummary"]["ECCModeEnabled"] = *pendingEccState;
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Memory.MemoryECC");
 }
@@ -1697,8 +1674,8 @@ inline void getProcessorEccModeData(
     const std::string& service, const std::string& objPath)
 {
     nlohmann::json& json = aResp->res.jsonValue;
-    std::string metricsURI =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+    std::string metricsURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                             "/Processors/";
     metricsURI += cpuId;
     metricsURI += "/MemorySummary/MemoryMetrics";
     json["MemorySummary"]["Metrics"]["@odata.id"] = metricsURI;
@@ -1712,229 +1689,217 @@ inline void getProcessorResetTypeData(
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](const boost::system::error_code ec,
                        const OperatingConfigProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error on reset interface";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error on reset interface";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const auto& property : properties)
+        for (const auto& property : properties)
+        {
+            if (property.first == "ResetType")
             {
-                if (property.first == "ResetType")
+                const std::string* processorResetType =
+                    std::get_if<std::string>(&property.second);
+                if (processorResetType == nullptr)
                 {
-                    const std::string* processorResetType =
-                        std::get_if<std::string>(&property.second);
-                    if (processorResetType == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Property processorResetType is null";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    const std::string processorResetTypeValue =
-                        getProcessorResetType(*processorResetType);
-                    aResp->res.jsonValue["Actions"]["#Processor.Reset"] = {
-                        {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                   "/Processors/" +
-                                       cpuId + "/Actions/Processor.Reset"},
-                        {"ResetType@Redfish.AllowableValues",
-                         {processorResetTypeValue}}};
+                    BMCWEB_LOG_DEBUG << "Property processorResetType is null";
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                const std::string processorResetTypeValue =
+                    getProcessorResetType(*processorResetType);
+                aResp->res.jsonValue["Actions"]["#Processor.Reset"] = {
+                    {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                               "/Processors/" +
+                                   cpuId + "/Actions/Processor.Reset"},
+                    {"ResetType@Redfish.AllowableValues",
+                     {processorResetTypeValue}}};
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Control.Processor.Reset");
 }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-inline void getPowerBreakThrottleData(
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
-    const std::string& objPath)
+inline void
+    getPowerBreakThrottleData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                              const std::string& service,
+                              const std::string& objPath)
 {
-
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
                          const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            json["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+            if (property.first == "Value")
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
-            {
-                json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
-                if (property.first == "Value")
+                const std::string* state =
+                    std::get_if<std::string>(&property.second);
+                if (state == nullptr)
                 {
-                    const std::string* state =
-                        std::get_if<std::string>(&property.second);
-                    if (state == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Get Power Break Value property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["PowerBreakPerformanceState"] =
-                        redfish::dbus_utils::toPerformanceStateType(*state);
+                    BMCWEB_LOG_DEBUG << "Get Power Break Value property failed";
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                json["Oem"]["Nvidia"]["PowerBreakPerformanceState"] =
+                    redfish::dbus_utils::toPerformanceStateType(*state);
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.State.ProcessorPerformance");
 }
-
 
 inline void
     getProcessorPerformanceData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                 const std::string& service,
                                 const std::string& objPath)
 {
-
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
                          const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            json["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+            if (property.first == "Value")
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
+                const std::string* state =
+                    std::get_if<std::string>(&property.second);
+                if (state == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Get Performance Value property failed";
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                json["Oem"]["Nvidia"]["PerformanceState"] =
+                    redfish::dbus_utils::toPerformanceStateType(*state);
             }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
+
+            if (property.first == "ThrottleReason")
             {
+                std::string reason;
+                const std::vector<std::string>* throttleReasons =
+                    std::get_if<std::vector<std::string>>(&property.second);
+                std::vector<std::string> formattedThrottleReasons{};
+
+                if (throttleReasons == nullptr)
+                {
+                    BMCWEB_LOG_ERROR << "Get Throttle reasons property failed";
+                    messages::internalError(aResp->res);
+                    return;
+                }
+
+                for (auto val : *throttleReasons)
+                {
+                    reason = redfish::dbus_utils::toReasonType(val);
+                    if (!reason.empty())
+                    {
+                        formattedThrottleReasons.push_back(reason);
+                    }
+                }
+
                 json["Oem"]["Nvidia"]["@odata.type"] =
                     "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
-                if (property.first == "Value")
+                json["Oem"]["Nvidia"]["ThrottleReasons"] =
+                    formattedThrottleReasons;
+            }
+            if ((property.first == "PowerLimitThrottleDuration") ||
+                (property.first == "ThermalLimitThrottleDuration"))
+            {
+                auto propName = property.first;
+                const uint64_t* val = std::get_if<uint64_t>(&property.second);
+                if (val == nullptr)
                 {
-                    const std::string* state =
-                        std::get_if<std::string>(&property.second);
-                    if (state == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Get Performance Value property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["PerformanceState"] =
-                        redfish::dbus_utils::toPerformanceStateType(*state);
+                    BMCWEB_LOG_DEBUG
+                        << "Get  power/thermal duration property failed";
+                    messages::internalError(aResp->res);
+                    return;
                 }
 
-                if (property.first == "ThrottleReason")
+                std::optional<std::string> duration =
+                    time_utils::toDurationStringFromNano(*val);
+
+                if (duration)
                 {
-                    std::string reason;
-                    const std::vector<std::string>* throttleReasons =
-                        std::get_if<std::vector<std::string>>(&property.second);
-                    std::vector<std::string> formattedThrottleReasons{};
-
-                    if (throttleReasons == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Get Throttle reasons property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-
-                    for (auto val : *throttleReasons)
-                    {
-                        reason = redfish::dbus_utils::toReasonType(val);
-                        if (!reason.empty())
-                        {
-                            formattedThrottleReasons.push_back(reason);
-                        }
-                    }
-
-                    json["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
-                    json["Oem"]["Nvidia"]["ThrottleReasons"] =
-                        formattedThrottleReasons;
-                }
-                if ((property.first == "PowerLimitThrottleDuration") ||
-                    (property.first == "ThermalLimitThrottleDuration"))
-                {
-                    auto propName = property.first;
-                    const uint64_t* val =
-                        std::get_if<uint64_t>(&property.second);
-                    if (val == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Get  power/thermal duration property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-
-                    std::optional<std::string> duration =
-                        time_utils::toDurationStringFromNano(*val);
-
-                    if (duration)
-                    {
-                        json[propName] = *duration;
-                    }
-                }
-                if ((property.first == "HardwareViolationThrottleDuration") ||
-                    (property.first ==
-                     "GlobalSoftwareViolationThrottleDuration"))
-                {
-                    auto propName = property.first;
-                    const uint64_t* val =
-                        std::get_if<uint64_t>(&property.second);
-                    if (val == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Get  duraiton property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-
-                    std::optional<std::string> duration =
-                        time_utils::toDurationStringFromNano(*val);
-
-                    if (duration)
-                    {
-                        json["Oem"]["Nvidia"][propName] = *duration;
-                    }
-                }
-                if ((property.first == "AccumulatedSMUtilizationDuration") ||
-                    (property.first ==
-                     "AccumulatedGPUContextUtilizationDuration"))
-                {
-                    auto propName = property.first;
-                    const uint32_t* val =
-                        std::get_if<uint32_t>(&property.second);
-                    if (val == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Get  acc duraiton property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-
-                    std::optional<std::string> duration =
-                        time_utils::toDurationStringFromNano(*val);
-
-                    if (duration)
-                    {
-                        json["Oem"]["Nvidia"][propName] = *duration;
-                    }
-                }
-                if ((property.first == "PCIeTXBytes") ||
-                    (property.first == "PCIeRXBytes"))
-                {
-                    auto propName = property.first;
-                    const uint32_t* val =
-                        std::get_if<uint32_t>(&property.second);
-                    if (val == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Get  pcie bytes property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"][propName] = *val;
+                    json[propName] = *duration;
                 }
             }
-        },
+            if ((property.first == "HardwareViolationThrottleDuration") ||
+                (property.first == "GlobalSoftwareViolationThrottleDuration"))
+            {
+                auto propName = property.first;
+                const uint64_t* val = std::get_if<uint64_t>(&property.second);
+                if (val == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Get  duraiton property failed";
+                    messages::internalError(aResp->res);
+                    return;
+                }
+
+                std::optional<std::string> duration =
+                    time_utils::toDurationStringFromNano(*val);
+
+                if (duration)
+                {
+                    json["Oem"]["Nvidia"][propName] = *duration;
+                }
+            }
+            if ((property.first == "AccumulatedSMUtilizationDuration") ||
+                (property.first == "AccumulatedGPUContextUtilizationDuration"))
+            {
+                auto propName = property.first;
+                const uint32_t* val = std::get_if<uint32_t>(&property.second);
+                if (val == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Get  acc duraiton property failed";
+                    messages::internalError(aResp->res);
+                    return;
+                }
+
+                std::optional<std::string> duration =
+                    time_utils::toDurationStringFromNano(*val);
+
+                if (duration)
+                {
+                    json["Oem"]["Nvidia"][propName] = *duration;
+                }
+            }
+            if ((property.first == "PCIeTXBytes") ||
+                (property.first == "PCIeRXBytes"))
+            {
+                auto propName = property.first;
+                const uint32_t* val = std::get_if<uint32_t>(&property.second);
+                if (val == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Get  pcie bytes property failed";
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                json["Oem"]["Nvidia"][propName] = *val;
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.State.ProcessorPerformance");
 }
@@ -1943,82 +1908,81 @@ inline void getGPUNvlinkMetricsData(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath, const std::string& nvlinkMetricsIface)
 {
-
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objPath, nvlinkMetricsIface,
         [aResp](const boost::system::error_code ec,
                 const dbus::utility::DBusPropertiesMap& resp) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "Can't get GPU Nvlink Metrics Iface properties ";
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "Can't get GPU Nvlink Metrics Iface properties ";
+            return;
+        }
 
-            nlohmann::json& json = aResp->res.jsonValue;
+        nlohmann::json& json = aResp->res.jsonValue;
 
-            const double* nvlinkDataRxBandwidthGbps = nullptr;
-            const double* nvlinkDataTxBandwidthGbps = nullptr;
-            const double* nvlinkRawTxBandwidthGbps = nullptr;
-            const double* nvlinkRawRxBandwidthGbps = nullptr;
+        const double* nvlinkDataRxBandwidthGbps = nullptr;
+        const double* nvlinkDataTxBandwidthGbps = nullptr;
+        const double* nvlinkRawTxBandwidthGbps = nullptr;
+        const double* nvlinkRawRxBandwidthGbps = nullptr;
 
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), resp,
-                "NVLinkDataRxBandwidthGbps", nvlinkDataRxBandwidthGbps,
-                "NVLinkDataTxBandwidthGbps", nvlinkDataTxBandwidthGbps,
-                "NVLinkRawRxBandwidthGbps", nvlinkRawRxBandwidthGbps,
-                "NVLinkRawTxBandwidthGbps", nvlinkRawTxBandwidthGbps);
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), resp, "NVLinkDataRxBandwidthGbps",
+            nvlinkDataRxBandwidthGbps, "NVLinkDataTxBandwidthGbps",
+            nvlinkDataTxBandwidthGbps, "NVLinkRawRxBandwidthGbps",
+            nvlinkRawRxBandwidthGbps, "NVLinkRawTxBandwidthGbps",
+            nvlinkRawTxBandwidthGbps);
 
-            if (!success)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (!success)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (nvlinkRawTxBandwidthGbps != nullptr)
-            {
-                json["Oem"]["Nvidia"]["NVLinkRawTxBandwidthGbps"] =
-                    *nvlinkRawTxBandwidthGbps;
-            }
-            else
-            {
-                BMCWEB_LOG_ERROR << "Null value returned "
-                                    "for NVLinkRawTxBandwidthGbps";
-            }
+        if (nvlinkRawTxBandwidthGbps != nullptr)
+        {
+            json["Oem"]["Nvidia"]["NVLinkRawTxBandwidthGbps"] =
+                *nvlinkRawTxBandwidthGbps;
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR << "Null value returned "
+                                "for NVLinkRawTxBandwidthGbps";
+        }
 
-            if (nvlinkRawRxBandwidthGbps != nullptr)
-            {
-                json["Oem"]["Nvidia"]["NVLinkRawRxBandwidthGbps"] =
-                    *nvlinkRawRxBandwidthGbps;
-            }
-            else
-            {
-                BMCWEB_LOG_ERROR << "Null value returned "
-                                    "for NVLinkRawRxBandwidthGbps";
-            }
+        if (nvlinkRawRxBandwidthGbps != nullptr)
+        {
+            json["Oem"]["Nvidia"]["NVLinkRawRxBandwidthGbps"] =
+                *nvlinkRawRxBandwidthGbps;
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR << "Null value returned "
+                                "for NVLinkRawRxBandwidthGbps";
+        }
 
-            if (nvlinkDataTxBandwidthGbps != nullptr)
-            {
-                json["Oem"]["Nvidia"]["NVLinkDataTxBandwidthGbps"] =
-                    *nvlinkDataTxBandwidthGbps;
-            }
-            else
-            {
-                BMCWEB_LOG_ERROR << "Null value returned "
-                                    "for NVLinkDataTxBandwidthGbps";
-            }
+        if (nvlinkDataTxBandwidthGbps != nullptr)
+        {
+            json["Oem"]["Nvidia"]["NVLinkDataTxBandwidthGbps"] =
+                *nvlinkDataTxBandwidthGbps;
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR << "Null value returned "
+                                "for NVLinkDataTxBandwidthGbps";
+        }
 
-            if (nvlinkDataRxBandwidthGbps != nullptr)
-            {
-                json["Oem"]["Nvidia"]["NVLinkDataRxBandwidthGbps"] =
-                    *nvlinkDataRxBandwidthGbps;
-            }
-            else
-            {
-                BMCWEB_LOG_ERROR << "Null value returned "
-                                    "for NVLinkDataRxBandwidthGbps";
-            }
-        });
+        if (nvlinkDataRxBandwidthGbps != nullptr)
+        {
+            json["Oem"]["Nvidia"]["NVLinkDataRxBandwidthGbps"] =
+                *nvlinkDataRxBandwidthGbps;
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR << "Null value returned "
+                                "for NVLinkDataRxBandwidthGbps";
+        }
+    });
 }
 
 inline void
@@ -2026,37 +1990,36 @@ inline void
                              const std::string& service,
                              const std::string& objPath)
 {
-
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
                          const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            json["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+            if (property.first == "Status")
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
-            {
-                json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
-                if (property.first == "Status")
+                const std::string* state =
+                    std::get_if<std::string>(&property.second);
+                if (state == nullptr)
                 {
-                    const std::string* state =
-                        std::get_if<std::string>(&property.second);
-                    if (state == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Get PowerSystemInputs Status property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["EDPViolationState"] =
-                        redfish::dbus_utils::toPowerSystemInputType(*state);
+                    BMCWEB_LOG_DEBUG
+                        << "Get PowerSystemInputs Status property failed";
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                json["Oem"]["Nvidia"]["EDPViolationState"] =
+                    redfish::dbus_utils::toPowerSystemInputType(*state);
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.State.Decorator.PowerSystemInputs");
 }
@@ -2065,32 +2028,30 @@ inline void getMemorySpareChannelPresenceData(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath)
 {
-
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
                          const std::variant<bool>& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
 
-            const bool* memorySpareChannelPresence =
-                std::get_if<bool>(&property);
-            if (memorySpareChannelPresence == nullptr)
-            {
-                BMCWEB_LOG_ERROR
-                    << "Null value returned for memorySpareChannelPresence";
-                messages::internalError(aResp->res);
-                return;
-            }
-            json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
-            json["Oem"]["Nvidia"]["MemorySpareChannelPresence"] =
-                *memorySpareChannelPresence;
-        },
+        const bool* memorySpareChannelPresence = std::get_if<bool>(&property);
+        if (memorySpareChannelPresence == nullptr)
+        {
+            BMCWEB_LOG_ERROR
+                << "Null value returned for memorySpareChannelPresence";
+            messages::internalError(aResp->res);
+            return;
+        }
+        json["Oem"]["Nvidia"]["@odata.type"] =
+            "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+        json["Oem"]["Nvidia"]["MemorySpareChannelPresence"] =
+            *memorySpareChannelPresence;
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "Get",
         "com.nvidia.MemorySpareChannel", "MemorySpareChannelPresence");
 }
@@ -2099,32 +2060,31 @@ inline void getMemoryPageRetirementCountData(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath)
 {
-
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
                          const std::variant<uint32_t>& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
 
-            const uint32_t* memoryPageRetirementCount =
-                std::get_if<uint32_t>(&property);
-            if (memoryPageRetirementCount == nullptr)
-            {
-                BMCWEB_LOG_ERROR
-                    << "Null value returned for MemoryPageRetirementCount";
-                messages::internalError(aResp->res);
-                return;
-            }
-            json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
-            json["Oem"]["Nvidia"]["MemoryPageRetirementCount"] =
-                *memoryPageRetirementCount;
-        },
+        const uint32_t* memoryPageRetirementCount =
+            std::get_if<uint32_t>(&property);
+        if (memoryPageRetirementCount == nullptr)
+        {
+            BMCWEB_LOG_ERROR
+                << "Null value returned for MemoryPageRetirementCount";
+            messages::internalError(aResp->res);
+            return;
+        }
+        json["Oem"]["Nvidia"]["@odata.type"] =
+            "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+        json["Oem"]["Nvidia"]["MemoryPageRetirementCount"] =
+            *memoryPageRetirementCount;
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "Get",
         "com.nvidia.MemoryPageRetirementCount", "MemoryPageRetirementCount");
 }
@@ -2136,30 +2096,30 @@ inline void getMigModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](const boost::system::error_code ec,
                        const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            if (property.first == "MIGModeEnabled")
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
-            {
-                if (property.first == "MIGModeEnabled")
+                const bool* migModeEnabled =
+                    std::get_if<bool>(&property.second);
+                if (migModeEnabled == nullptr)
                 {
-                    const bool* migModeEnabled =
-                        std::get_if<bool>(&property.second);
-                    if (migModeEnabled == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
-                    json["Oem"]["Nvidia"]["MIGModeEnabled"] = *migModeEnabled;
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                json["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+                json["Oem"]["Nvidia"]["MIGModeEnabled"] = *migModeEnabled;
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "com.nvidia.MigMode");
 }
@@ -2179,31 +2139,30 @@ inline void getProcessorRemoteDebugState(
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
                          const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            json["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+            if (property.first == "Enabled")
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
-            {
-                json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
-                if (property.first == "Enabled")
+                const bool* state = std::get_if<bool>(&property.second);
+                if (state == nullptr)
                 {
-                    const bool* state = std::get_if<bool>(&property.second);
-                    if (state == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Get Performance Value property failed";
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["RemoteDebugEnabled"] = *state;
+                    BMCWEB_LOG_DEBUG << "Get Performance Value property failed";
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                json["Oem"]["Nvidia"]["RemoteDebugEnabled"] = *state;
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Control.Processor.RemoteDebug");
 }
@@ -2216,55 +2175,54 @@ inline void getRemoteDebugState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         [aResp, service,
          objPath](const boost::system::error_code& e,
                   std::variant<std::vector<std::string>>& resp) {
-            if (e)
-            {
-                // No state effecter attached.
-                return;
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-            for (const std::string& effecterPath : *data)
-            {
-                BMCWEB_LOG_DEBUG << "State Effecter Object Path "
-                                 << effecterPath;
+        if (e)
+        {
+            // No state effecter attached.
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        for (const std::string& effecterPath : *data)
+        {
+            BMCWEB_LOG_DEBUG << "State Effecter Object Path " << effecterPath;
 
-                const std::array<const char*, 1> effecterInterfaces = {
-                    "xyz.openbmc_project.Control.Processor.RemoteDebug"};
-                // Process sensor reading
-                crow::connections::systemBus->async_method_call(
-                    [aResp, effecterPath](
-                        const boost::system::error_code ec,
-                        const std::vector<std::pair<
-                            std::string, std::vector<std::string>>>& object) {
-                        if (ec)
-                        {
-                            // The path does not implement any state interfaces.
-                            return;
-                        }
+            const std::array<const char*, 1> effecterInterfaces = {
+                "xyz.openbmc_project.Control.Processor.RemoteDebug"};
+            // Process sensor reading
+            crow::connections::systemBus->async_method_call(
+                [aResp, effecterPath](
+                    const boost::system::error_code ec,
+                    const std::vector<std::pair<
+                        std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    // The path does not implement any state interfaces.
+                    return;
+                }
 
-                        for (const auto& [service, interfaces] : object)
-                        {
-                            if (std::find(
-                                    interfaces.begin(), interfaces.end(),
-                                    "xyz.openbmc_project.Control.Processor.RemoteDebug") !=
-                                interfaces.end())
-                            {
-                                getProcessorRemoteDebugState(aResp, service,
-                                                             effecterPath);
-                            }
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetObject",
-                    effecterPath, effecterInterfaces);
-            }
-        },
+                for (const auto& [service, interfaces] : object)
+                {
+                    if (std::find(
+                            interfaces.begin(), interfaces.end(),
+                            "xyz.openbmc_project.Control.Processor.RemoteDebug") !=
+                        interfaces.end())
+                    {
+                        getProcessorRemoteDebugState(aResp, service,
+                                                     effecterPath);
+                    }
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", effecterPath,
+                effecterInterfaces);
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_controls",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -2275,299 +2233,293 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                               const std::string& objPath,
                               const std::string& gpmMetricsIface)
 {
-
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objPath, gpmMetricsIface,
         [aResp](const boost::system::error_code ec,
                 const dbus::utility::DBusPropertiesMap& resp) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR
-                    << "GetPIDValues: Can't get GPM Metrics Iface properties ";
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR
+                << "GetPIDValues: Can't get GPM Metrics Iface properties ";
+            return;
+        }
 
-            nlohmann::json& json = aResp->res.jsonValue;
+        nlohmann::json& json = aResp->res.jsonValue;
 
-            const double* fp16ActivityPercent = nullptr;
-            const double* fp32ActivityPercent = nullptr;
-            const double* fp64ActivityPercent = nullptr;
-            const double* graphicsEngActivityPercent = nullptr;
-            const double* nvDecUtilPercent = nullptr;
-            const double* nvJpgUtilPercent = nullptr;
-            const double* nvOfaUtilPercent = nullptr;
-            const double* smActivityPercent = nullptr;
-            const double* smOccupancyPercent = nullptr;
-            const double* tensorCoreActivityPercent = nullptr;
-            const double* dmmaUtil = nullptr;
-            const double* hmmaUtil = nullptr;
-            const double* immaUtil = nullptr;
-            const double* integerActivityUtil = nullptr;
-            const double* pcieRxBandwidthGbps = nullptr;
-            const double* pcieTxBandwidthGbps = nullptr;
-            const std::vector<double>* nvdecInstanceUtil = nullptr;
-            const std::vector<double>* nvjpgInstanceUtil = nullptr;
+        const double* fp16ActivityPercent = nullptr;
+        const double* fp32ActivityPercent = nullptr;
+        const double* fp64ActivityPercent = nullptr;
+        const double* graphicsEngActivityPercent = nullptr;
+        const double* nvDecUtilPercent = nullptr;
+        const double* nvJpgUtilPercent = nullptr;
+        const double* nvOfaUtilPercent = nullptr;
+        const double* smActivityPercent = nullptr;
+        const double* smOccupancyPercent = nullptr;
+        const double* tensorCoreActivityPercent = nullptr;
+        const double* dmmaUtil = nullptr;
+        const double* hmmaUtil = nullptr;
+        const double* immaUtil = nullptr;
+        const double* integerActivityUtil = nullptr;
+        const double* pcieRxBandwidthGbps = nullptr;
+        const double* pcieTxBandwidthGbps = nullptr;
+        const std::vector<double>* nvdecInstanceUtil = nullptr;
+        const std::vector<double>* nvjpgInstanceUtil = nullptr;
 
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), resp, "FP16ActivityPercent",
-                fp16ActivityPercent, "FP32ActivityPercent", fp32ActivityPercent,
-                "FP64ActivityPercent", fp64ActivityPercent,
-                "GraphicsEngineActivityPercent", graphicsEngActivityPercent,
-                "NVDecUtilizationPercent", nvDecUtilPercent,
-                "NVJpgUtilizationPercent", nvJpgUtilPercent,
-                "NVOfaUtilizationPercent", nvOfaUtilPercent,
-                "PCIeRawRxBandwidthGbps", pcieRxBandwidthGbps,
-                "PCIeRawTxBandwidthGbps", pcieTxBandwidthGbps,
-                "SMActivityPercent", smActivityPercent, "SMOccupancyPercent",
-                smOccupancyPercent, "TensorCoreActivityPercent",
-                tensorCoreActivityPercent, "IntergerActivityUtilizationPercent",
-                integerActivityUtil, "DMMAUtilizationPercent", dmmaUtil,
-                "HMMAUtilizationPercent", hmmaUtil, "IMMAUtilizationPercent",
-                immaUtil, "NVDecInstanceUtilizationPercent", nvdecInstanceUtil,
-                "NVJpgInstanceUtilizationPercent", nvjpgInstanceUtil);
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), resp, "FP16ActivityPercent",
+            fp16ActivityPercent, "FP32ActivityPercent", fp32ActivityPercent,
+            "FP64ActivityPercent", fp64ActivityPercent,
+            "GraphicsEngineActivityPercent", graphicsEngActivityPercent,
+            "NVDecUtilizationPercent", nvDecUtilPercent,
+            "NVJpgUtilizationPercent", nvJpgUtilPercent,
+            "NVOfaUtilizationPercent", nvOfaUtilPercent,
+            "PCIeRawRxBandwidthGbps", pcieRxBandwidthGbps,
+            "PCIeRawTxBandwidthGbps", pcieTxBandwidthGbps, "SMActivityPercent",
+            smActivityPercent, "SMOccupancyPercent", smOccupancyPercent,
+            "TensorCoreActivityPercent", tensorCoreActivityPercent,
+            "IntergerActivityUtilizationPercent", integerActivityUtil,
+            "DMMAUtilizationPercent", dmmaUtil, "HMMAUtilizationPercent",
+            hmmaUtil, "IMMAUtilizationPercent", immaUtil,
+            "NVDecInstanceUtilizationPercent", nvdecInstanceUtil,
+            "NVJpgInstanceUtilizationPercent", nvjpgInstanceUtil);
 
-            if (!success)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (!success)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (graphicsEngActivityPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["GraphicsEngineActivityPercent"] =
-                    *graphicsEngActivityPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for GraphicsEngineActivityPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (graphicsEngActivityPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["GraphicsEngineActivityPercent"] =
+                *graphicsEngActivityPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for GraphicsEngineActivityPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (smActivityPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["SMActivityPercent"] = *smActivityPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for SMActivityPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (smActivityPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["SMActivityPercent"] = *smActivityPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for SMActivityPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (smOccupancyPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["SMOccupancyPercent"] =
-                    *smOccupancyPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for SMOccupancyPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (smOccupancyPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["SMOccupancyPercent"] = *smOccupancyPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for SMOccupancyPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (tensorCoreActivityPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["TensorCoreActivityPercent"] =
-                    *tensorCoreActivityPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for TensorCoreActivityPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (tensorCoreActivityPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["TensorCoreActivityPercent"] =
+                *tensorCoreActivityPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for TensorCoreActivityPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (fp64ActivityPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["FP64ActivityPercent"] =
-                    *fp64ActivityPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for FP64ActivityPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (fp64ActivityPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["FP64ActivityPercent"] = *fp64ActivityPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for FP64ActivityPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (fp32ActivityPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["FP32ActivityPercent"] =
-                    *fp32ActivityPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for FP32ActivityPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (fp32ActivityPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["FP32ActivityPercent"] = *fp32ActivityPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for FP32ActivityPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (fp16ActivityPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["FP16ActivityPercent"] =
-                    *fp16ActivityPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for FP16ActivityPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (fp16ActivityPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["FP16ActivityPercent"] = *fp16ActivityPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for FP16ActivityPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (pcieTxBandwidthGbps != nullptr)
-            {
-                json["Oem"]["Nvidia"]["PCIeRawTxBandwidthGbps"] =
-                    *pcieTxBandwidthGbps;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for PCIeRawTxBandwidthGbps";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (pcieTxBandwidthGbps != nullptr)
+        {
+            json["Oem"]["Nvidia"]["PCIeRawTxBandwidthGbps"] =
+                *pcieTxBandwidthGbps;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for PCIeRawTxBandwidthGbps";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (pcieRxBandwidthGbps != nullptr)
-            {
-                json["Oem"]["Nvidia"]["PCIeRawRxBandwidthGbps"] =
-                    *pcieRxBandwidthGbps;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for PCIeRawRxBandwidthGbps";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (pcieRxBandwidthGbps != nullptr)
+        {
+            json["Oem"]["Nvidia"]["PCIeRawRxBandwidthGbps"] =
+                *pcieRxBandwidthGbps;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for PCIeRawRxBandwidthGbps";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (nvDecUtilPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["NVDecUtilizationPercent"] =
-                    *nvDecUtilPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for NVDecUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (nvDecUtilPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["NVDecUtilizationPercent"] =
+                *nvDecUtilPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for NVDecUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (nvJpgUtilPercent != nullptr)
-            {
-                json["Oem"]["Nvidia"]["NVJpgUtilizationPercent"] =
-                    *nvJpgUtilPercent;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for NVJpgUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (nvJpgUtilPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["NVJpgUtilizationPercent"] =
+                *nvJpgUtilPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for NVJpgUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (nvOfaUtilPercent != nullptr)
+        if (nvOfaUtilPercent != nullptr)
+        {
+            json["Oem"]["Nvidia"]["NVOfaUtilizationPercent"] =
+                *nvOfaUtilPercent;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for NVOfaUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
+        if (integerActivityUtil != nullptr)
+        {
+            json["Oem"]["Nvidia"]["IntergerActivityUtilizationPercent"] =
+                *integerActivityUtil;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for IntergerActivityUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
+        if (dmmaUtil != nullptr)
+        {
+            json["Oem"]["Nvidia"]["DMMAUtilizationPercent"] = *dmmaUtil;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for DMMAUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
+        if (hmmaUtil != nullptr)
+        {
+            json["Oem"]["Nvidia"]["HMMAUtilizationPercent"] = *hmmaUtil;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for HMMAUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
+        if (immaUtil != nullptr)
+        {
+            json["Oem"]["Nvidia"]["IMMAUtilizationPercent"] = *immaUtil;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for IMMAUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
+        if (nvdecInstanceUtil != nullptr)
+        {
+            std::vector<double> nvdecInstanceUtilization{};
+            for (auto val : *nvdecInstanceUtil)
             {
-                json["Oem"]["Nvidia"]["NVOfaUtilizationPercent"] =
-                    *nvOfaUtilPercent;
+                nvdecInstanceUtilization.push_back(val);
             }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for NVOfaUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
-            if (integerActivityUtil != nullptr)
-            {
-                json["Oem"]["Nvidia"]["IntergerActivityUtilizationPercent"] =
-                    *integerActivityUtil;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for IntergerActivityUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
-            if (dmmaUtil != nullptr)
-            {
-                json["Oem"]["Nvidia"]["DMMAUtilizationPercent"] = *dmmaUtil;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for DMMAUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
-            if (hmmaUtil != nullptr)
-            {
-                json["Oem"]["Nvidia"]["HMMAUtilizationPercent"] = *hmmaUtil;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for HMMAUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
-            if (immaUtil != nullptr)
-            {
-                json["Oem"]["Nvidia"]["IMMAUtilizationPercent"] = *immaUtil;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for IMMAUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
-            if (nvdecInstanceUtil != nullptr)
-            {
-                std::vector<double> nvdecInstanceUtilization{};
-                for (auto val : *nvdecInstanceUtil)
-                {
-                    nvdecInstanceUtilization.push_back(val);
-                }
-                json["Oem"]["Nvidia"]["NVDecInstanceUtilizationPercent"] =
-                    nvdecInstanceUtilization;
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for NVDecInstanceUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
+            json["Oem"]["Nvidia"]["NVDecInstanceUtilizationPercent"] =
+                nvdecInstanceUtilization;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for NVDecInstanceUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (nvjpgInstanceUtil != nullptr)
+        if (nvjpgInstanceUtil != nullptr)
+        {
+            std::vector<double> nvjpgInstanceUtilization{};
+            for (auto val : *nvjpgInstanceUtil)
             {
-                std::vector<double> nvjpgInstanceUtilization{};
-                for (auto val : *nvjpgInstanceUtil)
-                {
-                    nvjpgInstanceUtilization.push_back(val);
-                }
-                json["Oem"]["Nvidia"]["NVJpgInstanceUtilizationPercent"] =
-                    nvjpgInstanceUtilization;
+                nvjpgInstanceUtilization.push_back(val);
             }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for NVJpgUtilizationPercent";
-                messages::internalError(aResp->res);
-                return;
-            }
-
-        });
+            json["Oem"]["Nvidia"]["NVJpgInstanceUtilizationPercent"] =
+                nvjpgInstanceUtilization;
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "Null value returned "
+                                "for NVJpgUtilizationPercent";
+            messages::internalError(aResp->res);
+            return;
+        }
+    });
 }
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
@@ -2732,55 +2684,53 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
     crow::connections::systemBus->async_method_call(
         [resp, processorId, migMode](boost::system::error_code ec,
                                      sdbusplus::message::message& msg) {
-            if (!ec)
-            {
-                BMCWEB_LOG_DEBUG << "Set MIG Mode property succeeded";
-                return;
-            }
+        if (!ec)
+        {
+            BMCWEB_LOG_DEBUG << "Set MIG Mode property succeeded";
+            return;
+        }
 
-            BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                             << " set MIG Mode  property failed: " << ec;
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
-                messages::internalError(resp->res);
-                return;
-            }
+        BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                         << " set MIG Mode  property failed: " << ec;
+        // Read and convert dbus error message to redfish error
+        const sd_bus_error* dbusError = msg.get_error();
+        if (dbusError == nullptr)
+        {
+            messages::internalError(resp->res);
+            return;
+        }
 
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(resp->res);
-            }
-            else if (strcmp(dbusError->name,
-                            "xyz.openbmc_project.Common.Error.Unavailable") ==
-                     0)
-            {
-                std::string errBusy = "0x50A";
-                std::string errBusyResolution =
-                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+        {
+            // Service failed to change the config
+            messages::operationFailed(resp->res);
+        }
+        else if (strcmp(dbusError->name,
+                        "xyz.openbmc_project.Common.Error.Unavailable") == 0)
+        {
+            std::string errBusy = "0x50A";
+            std::string errBusyResolution =
+                "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-                // busy error
-                messages::asyncError(resp->res, errBusy, errBusyResolution);
-            }
-            else if (strcmp(dbusError->name,
-                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
-            {
-                std::string errTimeout = "0x600";
-                std::string errTimeoutResolution =
-                    "Settings may/maynot have applied, please check get response before patching";
+            // busy error
+            messages::asyncError(resp->res, errBusy, errBusyResolution);
+        }
+        else if (strcmp(dbusError->name,
+                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
+        {
+            std::string errTimeout = "0x600";
+            std::string errTimeoutResolution =
+                "Settings may/maynot have applied, please check get response before patching";
 
-                // timeout error
-                messages::asyncError(resp->res, errTimeout,
-                                     errTimeoutResolution);
-            }
-            else
-            {
-                messages::internalError(resp->res);
-            }
-        },
+            // timeout error
+            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
+        }
+        else
+        {
+            messages::internalError(resp->res);
+        }
+    },
         *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
         "Set", "com.nvidia.MigMode", "MIGModeEnabled",
         std::variant<bool>(migMode));
@@ -2802,34 +2752,34 @@ inline void setProcessorRemoteDebugState(
     crow::connections::systemBus->async_method_call(
         [aResp, objPath, remoteDebugEnabled](const boost::system::error_code ec,
                                              sdbusplus::message::message& msg) {
-            if (!ec)
-            {
-                BMCWEB_LOG_DEBUG << "Set Processor Remote Debug successed";
-                messages::success(aResp->res);
-                return;
-            }
+        if (!ec)
+        {
+            BMCWEB_LOG_DEBUG << "Set Processor Remote Debug successed";
+            messages::success(aResp->res);
+            return;
+        }
 
-            BMCWEB_LOG_DEBUG << "Set Processor Remote Debug failed: " << ec;
+        BMCWEB_LOG_DEBUG << "Set Processor Remote Debug failed: " << ec;
 
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
+        // Read and convert dbus error message to redfish error
+        const sd_bus_error* dbusError = msg.get_error();
+        if (dbusError == nullptr)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(aResp->res);
-            }
-            else
-            {
-                messages::internalError(aResp->res);
-            }
-        },
+        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+        {
+            // Service failed to change the config
+            messages::operationFailed(aResp->res);
+        }
+        else
+        {
+            messages::internalError(aResp->res);
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Processor.RemoteDebug", "Enabled",
         std::variant<bool>(remoteDebugEnabled));
@@ -2857,61 +2807,58 @@ inline void patchRemoteDebug(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         [aResp,
          remoteDebugEnabled](const boost::system::error_code& e,
                              std::variant<std::vector<std::string>>& resp) {
-            if (e)
-            {
-                // No state effecter attached.
-                BMCWEB_LOG_DEBUG << " No state effecter attached. ";
-                messages::internalError(aResp->res);
-                return;
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-            for (const std::string& effecterPath : *data)
-            {
-                BMCWEB_LOG_DEBUG << "State Effecter Object Path "
-                                 << effecterPath;
+        if (e)
+        {
+            // No state effecter attached.
+            BMCWEB_LOG_DEBUG << " No state effecter attached. ";
+            messages::internalError(aResp->res);
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        for (const std::string& effecterPath : *data)
+        {
+            BMCWEB_LOG_DEBUG << "State Effecter Object Path " << effecterPath;
 
-                const std::array<const char*, 1> effecterInterfaces = {
-                    "xyz.openbmc_project.Control.Processor.RemoteDebug"};
-                // Process sensor reading
-                crow::connections::systemBus->async_method_call(
-                    [aResp, effecterPath, remoteDebugEnabled](
-                        const boost::system::error_code ec,
-                        const std::vector<std::pair<
-                            std::string, std::vector<std::string>>>& object) {
-                        if (ec)
-                        {
-                            // The path does not implement any state interfaces.
-                            BMCWEB_LOG_DEBUG
-                                << " No any state effecter interface. ";
-                            messages::internalError(aResp->res);
-                            return;
-                        }
+            const std::array<const char*, 1> effecterInterfaces = {
+                "xyz.openbmc_project.Control.Processor.RemoteDebug"};
+            // Process sensor reading
+            crow::connections::systemBus->async_method_call(
+                [aResp, effecterPath, remoteDebugEnabled](
+                    const boost::system::error_code ec,
+                    const std::vector<std::pair<
+                        std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    // The path does not implement any state interfaces.
+                    BMCWEB_LOG_DEBUG << " No any state effecter interface. ";
+                    messages::internalError(aResp->res);
+                    return;
+                }
 
-                        for (const auto& [service, interfaces] : object)
-                        {
-                            if (std::find(
-                                    interfaces.begin(), interfaces.end(),
-                                    "xyz.openbmc_project.Control.Processor.RemoteDebug") !=
-                                interfaces.end())
-                            {
-                                setProcessorRemoteDebugState(
-                                    aResp, service, effecterPath,
-                                    remoteDebugEnabled);
-                            }
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetObject",
-                    effecterPath, effecterInterfaces);
-            }
-        },
+                for (const auto& [service, interfaces] : object)
+                {
+                    if (std::find(
+                            interfaces.begin(), interfaces.end(),
+                            "xyz.openbmc_project.Control.Processor.RemoteDebug") !=
+                        interfaces.end())
+                    {
+                        setProcessorRemoteDebugState(
+                            aResp, service, effecterPath, remoteDebugEnabled);
+                    }
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", effecterPath,
+                effecterInterfaces);
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", cpuObjectPath + "/all_controls",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -2957,62 +2904,60 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
     crow::connections::systemBus->async_method_call(
         [resp, processorId, reqSpeedConfig](boost::system::error_code ec,
                                             sdbusplus::message::message& msg) {
-            if (!ec)
-            {
-                BMCWEB_LOG_DEBUG << "Set speed config property succeeded";
-                return;
-            }
+        if (!ec)
+        {
+            BMCWEB_LOG_DEBUG << "Set speed config property succeeded";
+            return;
+        }
 
-            BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                             << " set speed config property failed: " << ec;
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
-                messages::internalError(resp->res);
-                return;
-            }
-            if (strcmp(dbusError->name,
-                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
-            {
-                // Invalid value
-                uint32_t speedLimit = std::get<1>(reqSpeedConfig);
-                messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
-                                                 std::to_string(speedLimit));
-            }
-            else if (strcmp(dbusError->name,
-                            "xyz.openbmc_project.Common.Error.Unavailable") ==
-                     0)
-            {
-                std::string errBusy = "0x50A";
-                std::string errBusyResolution =
-                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+        BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                         << " set speed config property failed: " << ec;
+        // Read and convert dbus error message to redfish error
+        const sd_bus_error* dbusError = msg.get_error();
+        if (dbusError == nullptr)
+        {
+            messages::internalError(resp->res);
+            return;
+        }
+        if (strcmp(dbusError->name,
+                   "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+        {
+            // Invalid value
+            uint32_t speedLimit = std::get<1>(reqSpeedConfig);
+            messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
+                                             std::to_string(speedLimit));
+        }
+        else if (strcmp(dbusError->name,
+                        "xyz.openbmc_project.Common.Error.Unavailable") == 0)
+        {
+            std::string errBusy = "0x50A";
+            std::string errBusyResolution =
+                "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-                // busy error
-                messages::asyncError(resp->res, errBusy, errBusyResolution);
-            }
-            else if (strcmp(dbusError->name,
-                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
-            {
-                std::string errTimeout = "0x600";
-                std::string errTimeoutResolution =
-                    "Settings may/maynot have applied, please check get response before patching";
+            // busy error
+            messages::asyncError(resp->res, errBusy, errBusyResolution);
+        }
+        else if (strcmp(dbusError->name,
+                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
+        {
+            std::string errTimeout = "0x600";
+            std::string errTimeoutResolution =
+                "Settings may/maynot have applied, please check get response before patching";
 
-                // timeout error
-                messages::asyncError(resp->res, errTimeout,
-                                     errTimeoutResolution);
-            }
-            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                             "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(resp->res);
-            }
-            else
-            {
-                messages::internalError(resp->res);
-            }
-        },
+            // timeout error
+            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
+        }
+        else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                         "Device.Error.WriteFailure") == 0)
+        {
+            // Service failed to change the config
+            messages::operationFailed(resp->res);
+        }
+        else
+        {
+            messages::internalError(resp->res);
+        }
+    },
         *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
         "Set", "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
         "SpeedConfig",
@@ -3060,18 +3005,18 @@ inline void patchSpeedLocked(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         [resp, processorId, conName, cpuObjectPath, serviceMap,
          speedLocked](const boost::system::error_code ec,
                       const std::tuple<bool, uint32_t>& speedConfig) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error for SpeedConfig";
-                messages::internalError(resp->res);
-                return;
-            }
-            std::tuple<bool, uint32_t> reqSpeedConfig;
-            uint32_t cachedSpeedLimit = std::get<1>(speedConfig);
-            reqSpeedConfig = std::make_tuple(speedLocked, cachedSpeedLimit);
-            patchSpeedConfig(resp, processorId, reqSpeedConfig, cpuObjectPath,
-                             serviceMap);
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error for SpeedConfig";
+            messages::internalError(resp->res);
+            return;
+        }
+        std::tuple<bool, uint32_t> reqSpeedConfig;
+        uint32_t cachedSpeedLimit = std::get<1>(speedConfig);
+        reqSpeedConfig = std::make_tuple(speedLocked, cachedSpeedLimit);
+        patchSpeedConfig(resp, processorId, reqSpeedConfig, cpuObjectPath,
+                         serviceMap);
+    });
 }
 
 /**
@@ -3117,19 +3062,19 @@ inline void patchSpeedLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         [resp, processorId, conName, cpuObjectPath, serviceMap,
          speedLimit](const boost::system::error_code ec,
                      const std::tuple<bool, uint32_t>& speedConfig) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error for SpeedConfig";
-                messages::internalError(resp->res);
-                return;
-            }
-            std::tuple<bool, uint32_t> reqSpeedConfig;
-            bool cachedSpeedLocked = std::get<0>(speedConfig);
-            reqSpeedConfig = std::make_tuple(cachedSpeedLocked,
-                                             static_cast<uint32_t>(speedLimit));
-            patchSpeedConfig(resp, processorId, reqSpeedConfig, cpuObjectPath,
-                             serviceMap);
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error for SpeedConfig";
+            messages::internalError(resp->res);
+            return;
+        }
+        std::tuple<bool, uint32_t> reqSpeedConfig;
+        bool cachedSpeedLocked = std::get<0>(speedConfig);
+        reqSpeedConfig = std::make_tuple(cachedSpeedLocked,
+                                         static_cast<uint32_t>(speedLimit));
+        patchSpeedConfig(resp, processorId, reqSpeedConfig, cpuObjectPath,
+                         serviceMap);
+    });
 }
 
 /**
@@ -3253,8 +3198,8 @@ inline void patchAppliedOperatingConfig(
     crow::connections::systemBus->async_method_call(
         [resp, appliedConfigUri](const boost::system::error_code ec,
                                  const sdbusplus::message_t& msg) {
-            handleAppliedConfigResponse(resp, appliedConfigUri, ec, msg);
-        },
+        handleAppliedConfigResponse(resp, appliedConfigUri, ec, msg);
+    },
         *controlService, cpuObjectPath, "org.freedesktop.DBus.Properties",
         "Set", "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig",
         "AppliedConfig", dbus::utility::DbusVariantType(std::move(configPath)));
@@ -3262,69 +3207,65 @@ inline void patchAppliedOperatingConfig(
 
 inline void requestRoutesOperatingConfigCollection(App& app)
 {
-
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/Processors/<str>/OperatingConfigs/")
         .privileges(redfish::privileges::getOperatingConfigCollection)
-        .methods(
-            boost::beast::http::verb::
-                get)([&app](const crow::Request& req,
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                            const std::string& cpuName) {
-            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& cpuName) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#OperatingConfigCollection.OperatingConfigCollection";
+        asyncResp->res.jsonValue["@odata.id"] = req.url;
+        asyncResp->res.jsonValue["Name"] = "Operating Config Collection";
+
+        // First find the matching CPU object so we know how to
+        // constrain our search for related Config objects.
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, cpuName](
+                const boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreePathsResponse& objects) {
+            if (ec)
             {
+                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
+                                   << ec.message();
+                messages::internalError(asyncResp->res);
                 return;
             }
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#OperatingConfigCollection.OperatingConfigCollection";
-            asyncResp->res.jsonValue["@odata.id"] = req.url;
-            asyncResp->res.jsonValue["Name"] = "Operating Config Collection";
 
-            // First find the matching CPU object so we know how to
-            // constrain our search for related Config objects.
-            crow::connections::systemBus->async_method_call(
-                [asyncResp,
-                 cpuName](const boost::system::error_code ec,
-                          const dbus::utility::MapperGetSubTreePathsResponse&
-                              objects) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                           << ec.message();
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+            for (const std::string& object : objects)
+            {
+                if (!object.ends_with(cpuName))
+                {
+                    continue;
+                }
 
-                    for (const std::string& object : objects)
-                    {
-                        if (!object.ends_with(cpuName))
-                        {
-                            continue;
-                        }
+                // Not expected that there will be multiple matching
+                // CPU objects, but if there are just use the first
+                // one.
 
-                        // Not expected that there will be multiple matching
-                        // CPU objects, but if there are just use the first
-                        // one.
-
-                        // Use the common search routine to construct the
-                        // Collection of all Config objects under this CPU.
-                        collection_util::getCollectionMembers(
-                            asyncResp,
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/Processors/" +
-                                cpuName + "/OperatingConfigs",
-                            {"xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"},
-                            object.c_str());
-                        return;
-                    }
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-                "/xyz/openbmc_project/inventory", 0,
-                std::array<const char*, 1>{
-                    "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig"});
-        });
+                // Use the common search routine to construct the
+                // Collection of all Config objects under this CPU.
+                collection_util::getCollectionMembers(
+                    asyncResp,
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
+                        cpuName + "/OperatingConfigs",
+                    {"xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"},
+                    object.c_str());
+                return;
+            }
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+            "/xyz/openbmc_project/inventory", 0,
+            std::array<const char*, 1>{
+                "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig"});
+    });
 }
 
 inline void requestRoutesOperatingConfig(App& app)
@@ -3332,64 +3273,59 @@ inline void requestRoutesOperatingConfig(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/Processors/<str>/OperatingConfigs/<str>/")
         .privileges(redfish::privileges::getOperatingConfig)
-        .methods(
-            boost::beast::http::verb::
-                get)([&app](const crow::Request& req,
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                            const std::string& cpuName,
-                            const std::string& configName) {
-            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& cpuName, const std::string& configName) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        // Ask for all objects implementing OperatingConfig so we can search
+        // for one with a matching name
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, cpuName, configName, reqUrl{req.url}](
+                boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreeResponse& subtree) {
+            if (ec)
             {
+                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
+                                   << ec.message();
+                messages::internalError(asyncResp->res);
                 return;
             }
-            // Ask for all objects implementing OperatingConfig so we can search
-            // for one with a matching name
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, cpuName, configName, reqUrl{req.url}](
-                    boost::system::error_code ec,
-                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                           << ec.message();
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    const std::string expectedEnding =
-                        cpuName + '/' + configName;
-                    for (const auto& [objectPath, serviceMap] : subtree)
-                    {
-                        // Ignore any configs without matching cpuX/configY
-                        if (!objectPath.ends_with(expectedEnding) ||
-                            serviceMap.empty())
-                        {
-                            continue;
-                        }
+            const std::string expectedEnding = cpuName + '/' + configName;
+            for (const auto& [objectPath, serviceMap] : subtree)
+            {
+                // Ignore any configs without matching cpuX/configY
+                if (!objectPath.ends_with(expectedEnding) || serviceMap.empty())
+                {
+                    continue;
+                }
 
-                        nlohmann::json& json = asyncResp->res.jsonValue;
-                        json["@odata.type"] =
-                            "#OperatingConfig.v1_0_0.OperatingConfig";
-                        json["@odata.id"] = reqUrl;
-                        json["Name"] = "Processor Profile";
-                        json["Id"] = configName;
+                nlohmann::json& json = asyncResp->res.jsonValue;
+                json["@odata.type"] = "#OperatingConfig.v1_0_0.OperatingConfig";
+                json["@odata.id"] = reqUrl;
+                json["Name"] = "Processor Profile";
+                json["Id"] = configName;
 
-                        // Just use the first implementation of the object - not
-                        // expected that there would be multiple matching
-                        // services
-                        getOperatingConfigData(
-                            asyncResp, serviceMap.begin()->first, objectPath);
-                        return;
-                    }
-                    messages::resourceNotFound(asyncResp->res,
-                                               "OperatingConfig", configName);
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                "/xyz/openbmc_project/inventory", 0,
-                std::array<const char*, 1>{
-                    "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"});
-        });
+                // Just use the first implementation of the object - not
+                // expected that there would be multiple matching
+                // services
+                getOperatingConfigData(asyncResp, serviceMap.begin()->first,
+                                       objectPath);
+                return;
+            }
+            messages::resourceNotFound(asyncResp->res, "OperatingConfig",
+                                       configName);
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+            "/xyz/openbmc_project/inventory", 0,
+            std::array<const char*, 1>{
+                "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"});
+    });
 }
 
 inline void requestRoutesProcessorCollection(App& app)
@@ -3403,30 +3339,29 @@ inline void requestRoutesProcessorCollection(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& systemName) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                if (systemName != PLATFORMSYSTEMID)
-                {
-                    messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                               systemName);
-                    return;
-                }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        if (systemName != PLATFORMSYSTEMID)
+        {
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
 
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#ProcessorCollection.ProcessorCollection";
-                asyncResp->res.jsonValue["Name"] = "Processor Collection";
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#ProcessorCollection.ProcessorCollection";
+        asyncResp->res.jsonValue["Name"] = "Processor Collection";
 
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors";
 
-                collection_util::getCollectionMembers(
-                    asyncResp,
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors",
-                    std::vector<const char*>(processorInterfaces.begin(),
-                                             processorInterfaces.end()));
-            });
+        collection_util::getCollectionMembers(
+            asyncResp, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors",
+            std::vector<const char*>(processorInterfaces.begin(),
+                                     processorInterfaces.end()));
+    });
 }
 
 inline void requestRoutesProcessor(App& app)
@@ -3442,171 +3377,165 @@ inline void requestRoutesProcessor(App& app)
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& systemName,
                    const std::string& processorId) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                if (systemName != PLATFORMSYSTEMID)
-                {
-                    messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                               systemName);
-                    return;
-                }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        if (systemName != PLATFORMSYSTEMID)
+        {
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
 
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#Processor.v1_13_0.Processor";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
-                    processorId;
-                std::string processorMetricsURI =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
-                processorMetricsURI += processorId;
-                processorMetricsURI += "/ProcessorMetrics";
-                asyncResp->res.jsonValue["Metrics"]["@odata.id"] =
-                    processorMetricsURI;
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#Processor.v1_13_0.Processor";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
+            processorId;
+        std::string processorMetricsURI =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+        processorMetricsURI += processorId;
+        processorMetricsURI += "/ProcessorMetrics";
+        asyncResp->res.jsonValue["Metrics"]["@odata.id"] = processorMetricsURI;
 
-                redfish::processor_utils::getProcessorObject(
-                    asyncResp, processorId, getProcessorData);
-                redfish::conditions_utils::populateServiceConditions(
-                    asyncResp, processorId);
-            });
+        redfish::processor_utils::getProcessorObject(asyncResp, processorId,
+                                                     getProcessorData);
+        redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                             processorId);
+    });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/")
         .privileges(redfish::privileges::patchProcessor)
-        .methods(
-            boost::beast::http::verb::
-                patch)([&app](
-                           const crow::Request& req,
-                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& systemName,
-                           const std::string& processorId) {
-            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-            {
-                return;
-            }
-            if (systemName != PLATFORMSYSTEMID)
-            {
-                messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                           systemName);
-                return;
-            }
+        .methods(boost::beast::http::verb::patch)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& systemName,
+                   const std::string& processorId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        if (systemName != PLATFORMSYSTEMID)
+        {
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
 
-            std::optional<int> speedLimit;
-            std::optional<bool> speedLocked;
-            std::optional<nlohmann::json> oemObject;
-            std::optional<nlohmann::json> appliedConfigJson;
-            if (!redfish::json_util::readJsonAction(
-                    req, asyncResp->res, "SpeedLimitMHz", speedLimit,
-                    "SpeedLocked", speedLocked, "AppliedOperatingConfig",
-                    appliedConfigJson, "Oem", oemObject))
-            {
-                return;
-            }
-            // speedlimit is required property for patching speedlocked
-            if (!speedLimit && speedLocked)
-            {
-                BMCWEB_LOG_ERROR << "SpeedLimit value required ";
-                messages::propertyMissing(asyncResp->res, "SpeedLimit");
-            }
+        std::optional<int> speedLimit;
+        std::optional<bool> speedLocked;
+        std::optional<nlohmann::json> oemObject;
+        std::optional<nlohmann::json> appliedConfigJson;
+        if (!redfish::json_util::readJsonAction(
+                req, asyncResp->res, "SpeedLimitMHz", speedLimit, "SpeedLocked",
+                speedLocked, "AppliedOperatingConfig", appliedConfigJson, "Oem",
+                oemObject))
+        {
+            return;
+        }
+        // speedlimit is required property for patching speedlocked
+        if (!speedLimit && speedLocked)
+        {
+            BMCWEB_LOG_ERROR << "SpeedLimit value required ";
+            messages::propertyMissing(asyncResp->res, "SpeedLimit");
+        }
 
-            // speedlocked is required property for patching speedlimit
-            else if (!speedLocked && speedLimit)
-            {
-                BMCWEB_LOG_ERROR << "SpeedLocked value required ";
-                messages::propertyMissing(asyncResp->res, "SpeedLocked");
-            }
-            // Update speed limit
-            else if (speedLimit && speedLocked)
-            {
-                std::tuple<bool, uint32_t> reqSpeedConfig;
-                reqSpeedConfig = std::make_tuple(
-                    *speedLocked, static_cast<uint32_t>(*speedLimit));
-                redfish::processor_utils::getProcessorObject(
-                    asyncResp, processorId,
-                    [reqSpeedConfig](
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
-                        const std::string& processorId1,
-                        const std::string& objectPath,
-                        const MapperServiceMap& serviceMap) {
-                        patchSpeedConfig(asyncResp1, processorId1,
-                                         reqSpeedConfig, objectPath,
-                                         serviceMap);
-                    });
-            }
+        // speedlocked is required property for patching speedlimit
+        else if (!speedLocked && speedLimit)
+        {
+            BMCWEB_LOG_ERROR << "SpeedLocked value required ";
+            messages::propertyMissing(asyncResp->res, "SpeedLocked");
+        }
+        // Update speed limit
+        else if (speedLimit && speedLocked)
+        {
+            std::tuple<bool, uint32_t> reqSpeedConfig;
+            reqSpeedConfig = std::make_tuple(
+                *speedLocked, static_cast<uint32_t>(*speedLimit));
+            redfish::processor_utils::getProcessorObject(
+                asyncResp, processorId,
+                [reqSpeedConfig](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& processorId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                patchSpeedConfig(asyncResp1, processorId1, reqSpeedConfig,
+                                 objectPath, serviceMap);
+            });
+        }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            // Update migMode
-            if (std::optional<nlohmann::json> oemNvidiaObject;
-                oemObject &&
-                redfish::json_util::readJson(*oemObject, asyncResp->res,
-                                             "Nvidia", oemNvidiaObject))
+        // Update migMode
+        if (std::optional<nlohmann::json> oemNvidiaObject;
+            oemObject &&
+            redfish::json_util::readJson(*oemObject, asyncResp->res, "Nvidia",
+                                         oemNvidiaObject))
+        {
+            std::optional<bool> migMode;
+            std::optional<bool> remoteDebugEnabled;
+
+            if (oemNvidiaObject &&
+                redfish::json_util::readJson(
+                    *oemNvidiaObject, asyncResp->res, "MIGModeEnabled", migMode,
+                    "RemoteDebugEnabled", remoteDebugEnabled))
             {
-                std::optional<bool> migMode;
-                std::optional<bool> remoteDebugEnabled;
-
-                if (oemNvidiaObject &&
-                    redfish::json_util::readJson(
-                        *oemNvidiaObject, asyncResp->res, "MIGModeEnabled",
-                        migMode, "RemoteDebugEnabled", remoteDebugEnabled))
+                if (migMode)
                 {
-                    if (migMode)
-                    {
-                        redfish::processor_utils::getProcessorObject(
-                            asyncResp, processorId,
-                            [migMode](const std::shared_ptr<bmcweb::AsyncResp>&
-                                          asyncResp1,
-                                      const std::string& processorId1,
-                                      const std::string& objectPath,
-                                      const MapperServiceMap& serviceMap) {
-                                patchMigMode(asyncResp1, processorId1, *migMode,
-                                             objectPath, serviceMap);
-                            });
-                    }
+                    redfish::processor_utils::getProcessorObject(
+                        asyncResp, processorId,
+                        [migMode](const std::shared_ptr<bmcweb::AsyncResp>&
+                                      asyncResp1,
+                                  const std::string& processorId1,
+                                  const std::string& objectPath,
+                                  const MapperServiceMap& serviceMap) {
+                        patchMigMode(asyncResp1, processorId1, *migMode,
+                                     objectPath, serviceMap);
+                    });
+                }
 
-                    if (remoteDebugEnabled)
-                    {
-                        redfish::processor_utils::getProcessorObject(
-                            asyncResp, processorId,
-                            [remoteDebugEnabled](
-                                const std::shared_ptr<bmcweb::AsyncResp>&
-                                    asyncResp,
-                                const std::string& processorId,
-                                const std::string& objectPath,
-                                [[maybe_unused]] const MapperServiceMap&
-                                    serviceMap) {
-                                patchRemoteDebug(asyncResp, processorId,
-                                                 *remoteDebugEnabled,
-                                                 objectPath);
-                            });
-                    }
+                if (remoteDebugEnabled)
+                {
+                    redfish::processor_utils::getProcessorObject(
+                        asyncResp, processorId,
+                        [remoteDebugEnabled](
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId,
+                            const std::string& objectPath,
+                            [[maybe_unused]] const MapperServiceMap&
+                                serviceMap) {
+                        patchRemoteDebug(asyncResp, processorId,
+                                         *remoteDebugEnabled, objectPath);
+                    });
                 }
             }
+        }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-            std::string appliedConfigUri;
-            if (appliedConfigJson)
+        std::string appliedConfigUri;
+        if (appliedConfigJson)
+        {
+            if (!redfish::json_util::readJson(*appliedConfigJson,
+                                              asyncResp->res, "@odata.id",
+                                              appliedConfigUri))
             {
-                if (!redfish::json_util::readJson(*appliedConfigJson,
-                                                  asyncResp->res, "@odata.id",
-                                                  appliedConfigUri))
-                {
-                    return;
-                }
-                // Check for 404 and find matching D-Bus object, then run
-                // property patch handlers if that all succeeds.
-                redfish::processor_utils::getProcessorObject(
-                    asyncResp, processorId,
-                    [appliedConfigUri = std::move(appliedConfigUri)](
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
-                        const std::string& processorId1,
-                        const std::string& objectPath,
-                        const MapperServiceMap& serviceMap) {
-                        patchAppliedOperatingConfig(asyncResp1, processorId1,
-                                                    appliedConfigUri,
-                                                    objectPath, serviceMap);
-                    });
+                return;
             }
-        });
+            // Check for 404 and find matching D-Bus object, then run
+            // property patch handlers if that all succeeds.
+            redfish::processor_utils::getProcessorObject(
+                asyncResp, processorId,
+                [appliedConfigUri = std::move(appliedConfigUri)](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& processorId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                patchAppliedOperatingConfig(asyncResp1, processorId1,
+                                            appliedConfigUri, objectPath,
+                                            serviceMap);
+            });
+        }
+    });
 }
 
 inline void getProcessorDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
@@ -3617,38 +3546,37 @@ inline void getProcessorDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const OperatingConfigProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const auto& property : properties)
+        for (const auto& property : properties)
+        {
+            if (property.first == "OperatingSpeed")
             {
-                if (property.first == "OperatingSpeed")
+                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint32_t* value =
-                        std::get_if<uint32_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["OperatingSpeedMHz"] = *value;
+                    messages::internalError(aResp->res);
+                    return;
                 }
-                else if (property.first == "Utilization")
-                {
-                    const double* value = std::get_if<double>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["BandwidthPercent"] = *value;
-                }
+                aResp->res.jsonValue["OperatingSpeedMHz"] = *value;
             }
-        },
+            else if (property.first == "Utilization")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["BandwidthPercent"] = *value;
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig");
 }
@@ -3661,41 +3589,39 @@ inline void getProcessorMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const OperatingConfigProperties& properties) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const auto& property : properties)
+        for (const auto& property : properties)
+        {
+            if (property.first == "ceCount")
             {
-                if (property.first == "ceCount")
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["CacheMetricsTotal"]["LifeTime"]
-                                        ["CorrectableECCErrorCount"] = *value;
+                    messages::internalError(aResp->res);
+                    return;
                 }
-                else if (property.first == "ueCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res.jsonValue["CacheMetricsTotal"]["LifeTime"]
-                                        ["UncorrectableECCErrorCount"] = *value;
-                }
+                aResp->res.jsonValue["CacheMetricsTotal"]["LifeTime"]
+                                    ["CorrectableECCErrorCount"] = *value;
             }
-        },
+            else if (property.first == "ueCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["CacheMetricsTotal"]["LifeTime"]
+                                    ["UncorrectableECCErrorCount"] = *value;
+            }
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Memory.MemoryECC");
 }
@@ -3711,35 +3637,34 @@ inline void getVoltageData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             const std::vector<
                 std::pair<std::string, std::variant<std::string, double>>>&
                 propertiesList) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Can't get sensor reading";
+            return;
+        }
+        sdbusplus::message::object_path objectPath(sensorPath);
+        const std::string& sensorName = objectPath.filename();
+        std::string sensorURI =
+            (boost::format("/redfish/v1/Chassis/%s/Sensors/%s") % chassisId %
+             sensorName)
+                .str();
+        aResp->res.jsonValue["CoreVoltage"]["DataSourceUri"] = sensorURI;
+        const double* attributeValue = nullptr;
+        for (const std::pair<std::string, std::variant<std::string, double>>&
+                 property : propertiesList)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "Value")
             {
-                BMCWEB_LOG_DEBUG << "Can't get sensor reading";
-                return;
-            }
-            sdbusplus::message::object_path objectPath(sensorPath);
-            const std::string& sensorName = objectPath.filename();
-            std::string sensorURI =
-                (boost::format("/redfish/v1/Chassis/%s/Sensors/%s") %
-                 chassisId % sensorName)
-                    .str();
-            aResp->res.jsonValue["CoreVoltage"]["DataSourceUri"] = sensorURI;
-            const double* attributeValue = nullptr;
-            for (const std::pair<std::string,
-                                 std::variant<std::string, double>>& property :
-                 propertiesList)
-            {
-                const std::string& propertyName = property.first;
-                if (propertyName == "Value")
+                attributeValue = std::get_if<double>(&property.second);
+                if (attributeValue != nullptr)
                 {
-                    attributeValue = std::get_if<double>(&property.second);
-                    if (attributeValue != nullptr)
-                    {
-                        aResp->res.jsonValue["CoreVoltage"]["Reading"] =
-                            *attributeValue;
-                    }
+                    aResp->res.jsonValue["CoreVoltage"]["Reading"] =
+                        *attributeValue;
                 }
             }
-        },
+        }
+    },
         service, sensorPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Sensor.Value");
 }
@@ -3752,68 +3677,66 @@ inline void getSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         [aResp, service,
          objPath](const boost::system::error_code ec,
                   std::variant<std::vector<std::string>>& resp) {
-            if (ec)
-            {
-                return; // no chassis = no failures
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr && data->size() > 1)
-            {
-                // Object must have single parent chassis
-                return;
-            }
-            const std::string& chassisPath = data->front();
-            sdbusplus::message::object_path objectPath(chassisPath);
-            std::string chassisName = objectPath.filename();
-            if (chassisName.empty())
+        if (ec)
+        {
+            return; // no chassis = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr && data->size() > 1)
+        {
+            // Object must have single parent chassis
+            return;
+        }
+        const std::string& chassisPath = data->front();
+        sdbusplus::message::object_path objectPath(chassisPath);
+        std::string chassisName = objectPath.filename();
+        if (chassisName.empty())
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        const std::string& chassisId = chassisName;
+        crow::connections::systemBus->async_method_call(
+            [aResp, service, objPath,
+             chassisId](const boost::system::error_code& e,
+                        std::variant<std::vector<std::string>>& resp1) {
+            if (e)
             {
                 messages::internalError(aResp->res);
                 return;
             }
-            const std::string& chassisId = chassisName;
-            crow::connections::systemBus->async_method_call(
-                [aResp, service, objPath,
-                 chassisId](const boost::system::error_code& e,
-                            std::variant<std::vector<std::string>>& resp1) {
-                    if (e)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    std::vector<std::string>* data1 =
-                        std::get_if<std::vector<std::string>>(&resp1);
-                    if (data1 == nullptr)
-                    {
-                        return;
-                    }
-                    for (const std::string& sensorPath : *data1)
-                    {
-                        std::vector<std::string> split;
-                        // Reserve space for
-                        // /xyz/openbmc_project/sensors/<name>/<subname>
-                        split.reserve(6);
-                        boost::algorithm::split(split, sensorPath,
-                                                boost::is_any_of("/"));
-                        if (split.size() < 6)
-                        {
-                            BMCWEB_LOG_ERROR
-                                << "Got path that isn't long enough "
-                                << objPath;
-                            continue;
-                        }
-                        const std::string& sensorType = split[4];
-                        if (sensorType == "voltage")
-                        {
-                            getVoltageData(aResp, service, chassisId,
-                                           sensorPath);
-                        }
-                    }
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                chassisPath + "/all_sensors", "org.freedesktop.DBus.Properties",
-                "Get", "xyz.openbmc_project.Association", "endpoints");
+            std::vector<std::string>* data1 =
+                std::get_if<std::vector<std::string>>(&resp1);
+            if (data1 == nullptr)
+            {
+                return;
+            }
+            for (const std::string& sensorPath : *data1)
+            {
+                std::vector<std::string> split;
+                // Reserve space for
+                // /xyz/openbmc_project/sensors/<name>/<subname>
+                split.reserve(6);
+                boost::algorithm::split(split, sensorPath,
+                                        boost::is_any_of("/"));
+                if (split.size() < 6)
+                {
+                    BMCWEB_LOG_ERROR << "Got path that isn't long enough "
+                                     << objPath;
+                    continue;
+                }
+                const std::string& sensorType = split[4];
+                if (sensorType == "voltage")
+                {
+                    getVoltageData(aResp, service, chassisId, sensorPath);
+                }
+            }
         },
+            "xyz.openbmc_project.ObjectMapper", chassisPath + "/all_sensors",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -3821,91 +3744,88 @@ inline void getSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-inline void getPowerBreakThrottle(
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
-    const std::string objPath)
+inline void
+    getPowerBreakThrottle(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          const std::string& service, const std::string objPath)
 {
     BMCWEB_LOG_DEBUG << "Get processor module link";
     crow::connections::systemBus->async_method_call(
         [aResp, objPath,
          service](const boost::system::error_code ec,
                   std::variant<std::vector<std::string>>& resp) {
-            if (ec)
+        if (ec)
+        {
+            return; // no chassis = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr && data->size() > 1)
+        {
+            // Processor must have single parent chassis
+            return;
+        }
+
+        const std::string& chassisPath = data->front();
+
+        BMCWEB_LOG_DEBUG << "Get processor module state sensors";
+        crow::connections::systemBus->async_method_call(
+            [aResp, service,
+             chassisPath](const boost::system::error_code& e,
+                          std::variant<std::vector<std::string>>& resp) {
+            if (e)
             {
-                return; // no chassis = no failures
+                // no state sensors attached.
+                return;
             }
             std::vector<std::string>* data =
                 std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr && data->size() > 1)
+            if (data == nullptr)
             {
-                // Processor must have single parent chassis
+                messages::internalError(aResp->res);
                 return;
             }
+            for (const std::string& sensorpath : *data)
+            {
+                BMCWEB_LOG_DEBUG << "proc module state sensor object path "
+                                 << sensorpath;
 
-            const std::string& chassisPath = data->front();
-
-            BMCWEB_LOG_DEBUG << "Get processor module state sensors";
-            crow::connections::systemBus->async_method_call(
-                [aResp, service,
-                 chassisPath](const boost::system::error_code& e,
-                              std::variant<std::vector<std::string>>& resp) {
-                    if (e)
+                const std::array<const char*, 1> sensorinterfaces = {
+                    "xyz.openbmc_project.State.ProcessorPerformance"};
+                // process sensor reading
+                crow::connections::systemBus->async_method_call(
+                    [aResp, sensorpath](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                    if (ec)
                     {
-                        // no state sensors attached.
+                        // the path does not implement any state
+                        // interfaces.
                         return;
                     }
-                    std::vector<std::string>* data =
-                        std::get_if<std::vector<std::string>>(&resp);
-                    if (data == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    for (const std::string& sensorpath : *data)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "proc module state sensor object path "
-                            << sensorpath;
 
-                        const std::array<const char*, 1> sensorinterfaces = {
-                            "xyz.openbmc_project.State.ProcessorPerformance"};
-                        // process sensor reading
-                        crow::connections::systemBus->async_method_call(
-                            [aResp, sensorpath](
-                                const boost::system::error_code ec,
-                                const std::vector<std::pair<
-                                    std::string, std::vector<std::string>>>&
-                                    object) {
-                                if (ec)
-                                {
-                                    // the path does not implement any state
-                                    // interfaces.
-                                    return;
-                                }
-
-                                for (const auto& [service, interfaces] : object)
-                                {
-                                    if (std::find(
-                                            interfaces.begin(),
-                                            interfaces.end(),
-                                            "xyz.openbmc_project.State.ProcessorPerformance") !=
-                                        interfaces.end())
-                                    {
-                                        getPowerBreakThrottleData(
-                                            aResp, service, sensorpath);
-                                    }
-                                }
-                            },
-                            "xyz.openbmc_project.ObjectMapper",
-                            "/xyz/openbmc_project/object_mapper",
-                            "xyz.openbmc_project.ObjectMapper", "GetObject",
-                            sensorpath, sensorinterfaces);
+                    for (const auto& [service, interfaces] : object)
+                    {
+                        if (std::find(
+                                interfaces.begin(), interfaces.end(),
+                                "xyz.openbmc_project.State.ProcessorPerformance") !=
+                            interfaces.end())
+                        {
+                            getPowerBreakThrottleData(aResp, service,
+                                                      sensorpath);
+                        }
                     }
                 },
-                "xyz.openbmc_project.ObjectMapper", chassisPath + "/all_states",
-                "org.freedesktop.DBus.Properties", "Get",
-                "xyz.openbmc_project.Association", "endpoints");
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorpath,
+                    sensorinterfaces);
+            }
         },
+            "xyz.openbmc_project.ObjectMapper", chassisPath + "/all_states",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -3919,73 +3839,71 @@ inline void
         [aResp, service,
          objPath](const boost::system::error_code& e,
                   std::variant<std::vector<std::string>>& resp) {
-            if (e)
-            {
-                // No state sensors attached.
-                return;
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-            for (const std::string& sensorPath : *data)
-            {
-                BMCWEB_LOG_DEBUG << "State Sensor Object Path " << sensorPath;
+        if (e)
+        {
+            // No state sensors attached.
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        for (const std::string& sensorPath : *data)
+        {
+            BMCWEB_LOG_DEBUG << "State Sensor Object Path " << sensorPath;
 
-                const std::array<const char*, 3> sensorInterfaces = {
-                    "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
-                    "xyz.openbmc_project.State.ProcessorPerformance",
-                    "com.nvidia.MemorySpareChannel"};
-                // Process sensor reading
-                crow::connections::systemBus->async_method_call(
-                    [aResp, sensorPath](
-                        const boost::system::error_code ec,
-                        const std::vector<std::pair<
-                            std::string, std::vector<std::string>>>& object) {
-                        if (ec)
-                        {
-                            // The path does not implement any state interfaces.
-                            return;
-                        }
+            const std::array<const char*, 3> sensorInterfaces = {
+                "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
+                "xyz.openbmc_project.State.ProcessorPerformance",
+                "com.nvidia.MemorySpareChannel"};
+            // Process sensor reading
+            crow::connections::systemBus->async_method_call(
+                [aResp, sensorPath](
+                    const boost::system::error_code ec,
+                    const std::vector<std::pair<
+                        std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    // The path does not implement any state interfaces.
+                    return;
+                }
 
-                        for (const auto& [service, interfaces] : object)
-                        {
-                            if (std::find(
-                                    interfaces.begin(), interfaces.end(),
-                                    "xyz.openbmc_project.State.ProcessorPerformance") !=
-                                interfaces.end())
-                            {
-                                getProcessorPerformanceData(aResp, service,
-                                                            sensorPath);
-                            }
-                            if (std::find(
-                                    interfaces.begin(), interfaces.end(),
-                                    "xyz.openbmc_project.State.Decorator.PowerSystemInputs") !=
-                                interfaces.end())
-                            {
-                                getPowerSystemInputsData(aResp, service,
-                                                         sensorPath);
-                            }
-                            if (std::find(interfaces.begin(), interfaces.end(),
-                                          "com.nvidia.MemorySpareChannel") !=
-                                interfaces.end())
-                            {
-                                getMemorySpareChannelPresenceData(aResp, service,
-                                                         sensorPath);
-                            }
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
-                    sensorInterfaces);
-            }
+                for (const auto& [service, interfaces] : object)
+                {
+                    if (std::find(
+                            interfaces.begin(), interfaces.end(),
+                            "xyz.openbmc_project.State.ProcessorPerformance") !=
+                        interfaces.end())
+                    {
+                        getProcessorPerformanceData(aResp, service, sensorPath);
+                    }
+                    if (std::find(
+                            interfaces.begin(), interfaces.end(),
+                            "xyz.openbmc_project.State.Decorator.PowerSystemInputs") !=
+                        interfaces.end())
+                    {
+                        getPowerSystemInputsData(aResp, service, sensorPath);
+                    }
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "com.nvidia.MemorySpareChannel") !=
+                        interfaces.end())
+                    {
+                        getMemorySpareChannelPresenceData(aResp, service,
+                                                          sensorPath);
+                    }
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                sensorInterfaces);
+        }
 
-            getPowerBreakThrottle(aResp, service, objPath);
-        },
+        getPowerBreakThrottle(aResp, service, objPath);
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -3993,60 +3911,61 @@ inline void
 
 inline void
     getNumericSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                         const std::string& service, const std::string& objPath)
+                           const std::string& service,
+                           const std::string& objPath)
 {
     crow::connections::systemBus->async_method_call(
         [aResp, service,
          objPath](const boost::system::error_code& e,
                   std::variant<std::vector<std::string>>& resp) {
-            if (e)
-            {
-                // No state sensors attached.
-                return;
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
-            for (const std::string& sensorPath : *data)
-            {
-                BMCWEB_LOG_DEBUG << "Numeric Sensor Object Path " << sensorPath;
+        if (e)
+        {
+            // No state sensors attached.
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        for (const std::string& sensorPath : *data)
+        {
+            BMCWEB_LOG_DEBUG << "Numeric Sensor Object Path " << sensorPath;
 
-                const std::array<const char*, 1> sensorInterfaces = {
-                    "com.nvidia.MemoryPageRetirementCount"};
-                // Process sensor reading
-                crow::connections::systemBus->async_method_call(
-                    [aResp, sensorPath](
-                        const boost::system::error_code ec,
-                        const std::vector<std::pair<
-                            std::string, std::vector<std::string>>>& object) {
-                        if (ec)
-                        {
-                            // The path does not implement any numeric sensor interfaces.
-                            return;
-                        }
+            const std::array<const char*, 1> sensorInterfaces = {
+                "com.nvidia.MemoryPageRetirementCount"};
+            // Process sensor reading
+            crow::connections::systemBus->async_method_call(
+                [aResp, sensorPath](
+                    const boost::system::error_code ec,
+                    const std::vector<std::pair<
+                        std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    // The path does not implement any numeric sensor
+                    // interfaces.
+                    return;
+                }
 
-                        for (const auto& [service, interfaces] : object)
-                        {
-                            if (std::find(
-                                    interfaces.begin(), interfaces.end(),
-                                    "com.nvidia.MemoryPageRetirementCount") !=
-                                interfaces.end())
-                            {
-                                getMemoryPageRetirementCountData(aResp, service,
-                                                            sensorPath);
-                            }
-                        }
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
-                    sensorInterfaces);
-            }
-        },
+                for (const auto& [service, interfaces] : object)
+                {
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "com.nvidia.MemoryPageRetirementCount") !=
+                        interfaces.end())
+                    {
+                        getMemoryPageRetirementCountData(aResp, service,
+                                                         sensorPath);
+                    }
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                sensorInterfaces);
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_sensors",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -4065,89 +3984,87 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 std::string, boost::container::flat_map<
                                  std::string, std::vector<std::string>>>&
                 subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
 
-                return;
+            return;
+        }
+        for (const auto& [path, object] : subtree)
+        {
+            if (!boost::ends_with(path, processorId))
+            {
+                continue;
             }
-            for (const auto& [path, object] : subtree)
+            std::string processorMetricsURI =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+            processorMetricsURI += processorId;
+            processorMetricsURI += "/ProcessorMetrics";
+            aResp->res.jsonValue["@odata.type"] =
+                "#ProcessorMetrics.v1_6_1.ProcessorMetrics";
+            aResp->res.jsonValue["@odata.id"] = processorMetricsURI;
+            aResp->res.jsonValue["Id"] = "ProcessorMetrics";
+            aResp->res.jsonValue["Name"] = processorId + " Processor Metrics";
+            for (const auto& [service, interfaces] : object)
             {
-                if (!boost::ends_with(path, processorId))
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Inventory.Item.Cpu."
+                              "OperatingConfig") != interfaces.end())
                 {
-                    continue;
+                    getProcessorDataByService(aResp, service, path);
                 }
-                std::string processorMetricsURI =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
-                processorMetricsURI += processorId;
-                processorMetricsURI += "/ProcessorMetrics";
-                aResp->res.jsonValue["@odata.type"] =
-                    "#ProcessorMetrics.v1_6_1.ProcessorMetrics";
-                aResp->res.jsonValue["@odata.id"] = processorMetricsURI;
-                aResp->res.jsonValue["Id"] = "ProcessorMetrics";
-                aResp->res.jsonValue["Name"] =
-                    processorId + " Processor Metrics";
-                for (const auto& [service, interfaces] : object)
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Memory.MemoryECC") !=
+                    interfaces.end())
                 {
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "xyz.openbmc_project.Inventory.Item.Cpu."
-                                  "OperatingConfig") != interfaces.end())
-                    {
-                        getProcessorDataByService(aResp, service, path);
-                    }
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "xyz.openbmc_project.Memory.MemoryECC") !=
-                        interfaces.end())
-                    {
-                        getProcessorMemoryECCData(aResp, service, path);
-                    }
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "xyz.openbmc_project.PCIe.PCIeECC") !=
-                        interfaces.end())
-                    {
-                        redfish::processor_utils::getPCIeErrorData(
-                            aResp, service, path);
-                    }
+                    getProcessorMemoryECCData(aResp, service, path);
+                }
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.PCIe.PCIeECC") !=
+                    interfaces.end())
+                {
+                    redfish::processor_utils::getPCIeErrorData(aResp, service,
+                                                               path);
+                }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    if (std::find(
-                            interfaces.begin(), interfaces.end(),
-                            "xyz.openbmc_project.State.ProcessorPerformance") !=
-                        interfaces.end())
-                    {
-                        getProcessorPerformanceData(aResp, service, path);
-                    }
+                if (std::find(
+                        interfaces.begin(), interfaces.end(),
+                        "xyz.openbmc_project.State.ProcessorPerformance") !=
+                    interfaces.end())
+                {
+                    getProcessorPerformanceData(aResp, service, path);
+                }
 
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "com.nvidia.NVLink.NVLinkMetrics") !=
-                        interfaces.end())
-                    {
-                        getGPUNvlinkMetricsData(
-                            aResp, service, path,
-                            "com.nvidia.NVLink.NVLinkMetrics");
-                    }
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "com.nvidia.NVLink.NVLinkMetrics") !=
+                    interfaces.end())
+                {
+                    getGPUNvlinkMetricsData(aResp, service, path,
+                                            "com.nvidia.NVLink.NVLinkMetrics");
+                }
 
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "com.nvidia.GPMMetrics") != interfaces.end())
-                    {
-                        getGPMMetricsData(aResp, service, path,
-                                          "com.nvidia.GPMMetrics");
-                    }
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "com.nvidia.GPMMetrics") != interfaces.end())
+                {
+                    getGPMMetricsData(aResp, service, path,
+                                      "com.nvidia.GPMMetrics");
+                }
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    getSensorMetric(aResp, service, path);
+                getSensorMetric(aResp, service, path);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    getStateSensorMetric(aResp, service, path);
-                    getNumericSensorMetric(aResp, service, path);
+                getStateSensorMetric(aResp, service, path);
+                getNumericSensorMetric(aResp, service, path);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                }
-                return;
             }
-            // Object not found
-            messages::resourceNotFound(
-                aResp->res, "#Processor.v1_13_0.Processor", processorId);
-        },
+            return;
+        }
+        // Object not found
+        messages::resourceNotFound(aResp->res, "#Processor.v1_13_0.Processor",
+                                   processorId);
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -4169,12 +4086,12 @@ inline void requestRoutesProcessorMetrics(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& processorId) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                getProcessorMetricsData(asyncResp, processorId);
-            });
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        getProcessorMetricsData(asyncResp, processorId);
+    });
 }
 
 inline void getProcessorMemoryDataByService(
@@ -4186,102 +4103,97 @@ inline void getProcessorMemoryDataByService(
     crow::connections::systemBus->async_method_call(
         [aResp, memoryPath, processorCECount, processorUECount](
             const boost::system::error_code ec, GetSubTreeType& subtree) {
-            if (ec)
+        if (ec)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        // Iterate over all retrieved ObjectPaths.
+        for (const std::pair<
+                 std::string,
+                 std::vector<std::pair<std::string, std::vector<std::string>>>>&
+                 object : subtree)
+        {
+            // Get the processor memory
+            if (object.first != memoryPath)
             {
-                messages::internalError(aResp->res);
-                return;
+                continue;
             }
-            // Iterate over all retrieved ObjectPaths.
-            for (const std::pair<std::string,
-                                 std::vector<std::pair<
-                                     std::string, std::vector<std::string>>>>&
-                     object : subtree)
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                connectionNames = object.second;
+            if (connectionNames.size() < 1)
             {
-                // Get the processor memory
-                if (object.first != memoryPath)
+                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                continue;
+            }
+            const std::string& connectionName = connectionNames[0].first;
+            crow::connections::systemBus->async_method_call(
+                [aResp{aResp}, processorCECount, processorUECount](
+                    const boost::system::error_code ec1,
+                    const OperatingConfigProperties& properties) {
+                if (ec1)
                 {
-                    continue;
-                }
-                const std::vector<
-                    std::pair<std::string, std::vector<std::string>>>&
-                    connectionNames = object.second;
-                if (connectionNames.size() < 1)
-                {
-                    BMCWEB_LOG_ERROR << "Got 0 Connection names";
-                    continue;
-                }
-                const std::string& connectionName = connectionNames[0].first;
-                crow::connections::systemBus->async_method_call(
-                    [aResp{aResp}, processorCECount, processorUECount](
-                        const boost::system::error_code ec1,
-                        const OperatingConfigProperties& properties) {
-                        if (ec1)
-                        {
-                            BMCWEB_LOG_DEBUG << "DBUS response error";
-                            messages::internalError(aResp->res);
+                    BMCWEB_LOG_DEBUG << "DBUS response error";
+                    messages::internalError(aResp->res);
 
+                    return;
+                }
+                for (const auto& property : properties)
+                {
+                    if (property.first == "MemoryConfiguredSpeedInMhz")
+                    {
+                        const uint16_t* value =
+                            std::get_if<uint16_t>(&property.second);
+                        if (value == nullptr)
+                        {
+                            messages::internalError(aResp->res);
                             return;
                         }
-                        for (const auto& property : properties)
+                        aResp->res.jsonValue["OperatingSpeedMHz"] = *value;
+                    }
+                    else if (property.first == "Utilization")
+                    {
+                        const double* value =
+                            std::get_if<double>(&property.second);
+                        if (value == nullptr)
                         {
-                            if (property.first == "MemoryConfiguredSpeedInMhz")
-                            {
-                                const uint16_t* value =
-                                    std::get_if<uint16_t>(&property.second);
-                                if (value == nullptr)
-                                {
-                                    messages::internalError(aResp->res);
-                                    return;
-                                }
-                                aResp->res.jsonValue["OperatingSpeedMHz"] =
-                                    *value;
-                            }
-                            else if (property.first == "Utilization")
-                            {
-                                const double* value =
-                                    std::get_if<double>(&property.second);
-                                if (value == nullptr)
-                                {
-                                    messages::internalError(aResp->res);
-                                    return;
-                                }
-                                aResp->res.jsonValue["BandwidthPercent"] =
-                                    *value;
-                            }
-                            else if (property.first == "ceCount")
-                            {
-                                const int64_t* value =
-                                    std::get_if<int64_t>(&property.second);
-                                if (value == nullptr)
-                                {
-                                    messages::internalError(aResp->res);
-                                    return;
-                                }
-                                aResp->res
-                                    .jsonValue["LifeTime"]
-                                              ["CorrectableECCErrorCount"] =
-                                    *value + processorCECount;
-                            }
-                            else if (property.first == "ueCount")
-                            {
-                                const int64_t* value =
-                                    std::get_if<int64_t>(&property.second);
-                                if (value == nullptr)
-                                {
-                                    messages::internalError(aResp->res);
-                                    return;
-                                }
-                                aResp->res
-                                    .jsonValue["LifeTime"]
-                                              ["UncorrectableECCErrorCount"] =
-                                    *value + processorUECount;
-                            }
+                            messages::internalError(aResp->res);
+                            return;
                         }
-                    },
-                    connectionName, memoryPath,
-                    "org.freedesktop.DBus.Properties", "GetAll", "");
-            }
-        },
+                        aResp->res.jsonValue["BandwidthPercent"] = *value;
+                    }
+                    else if (property.first == "ceCount")
+                    {
+                        const int64_t* value =
+                            std::get_if<int64_t>(&property.second);
+                        if (value == nullptr)
+                        {
+                            messages::internalError(aResp->res);
+                            return;
+                        }
+                        aResp->res
+                            .jsonValue["LifeTime"]["CorrectableECCErrorCount"] =
+                            *value + processorCECount;
+                    }
+                    else if (property.first == "ueCount")
+                    {
+                        const int64_t* value =
+                            std::get_if<int64_t>(&property.second);
+                        if (value == nullptr)
+                        {
+                            messages::internalError(aResp->res);
+                            return;
+                        }
+                        aResp->res.jsonValue["LifeTime"]
+                                            ["UncorrectableECCErrorCount"] =
+                            *value + processorUECount;
+                    }
+                }
+            },
+                connectionName, memoryPath, "org.freedesktop.DBus.Properties",
+                "GetAll", "");
+        }
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree", objPath, 0,
@@ -4298,32 +4210,31 @@ inline void getProcessorMemorySummary(
         [aResp, processorCECount,
          processorUECount](const boost::system::error_code ec,
                            std::variant<std::vector<std::string>>& resp) {
-            if (ec)
+        if (ec)
+        {
+            return; // no memory = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        for (const std::string& memoryPath : *data)
+        {
+            // Get subtree for memory parent path
+            size_t separator = memoryPath.rfind('/');
+            if (separator == std::string::npos)
             {
-                return; // no memory = no failures
+                BMCWEB_LOG_ERROR << "Invalid memory path";
+                continue;
             }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                return;
-            }
-            for (const std::string& memoryPath : *data)
-            {
-                // Get subtree for memory parent path
-                size_t separator = memoryPath.rfind('/');
-                if (separator == std::string::npos)
-                {
-                    BMCWEB_LOG_ERROR << "Invalid memory path";
-                    continue;
-                }
-                std::string parentPath = memoryPath.substr(0, separator);
-                // Get entity subtree
-                getProcessorMemoryDataByService(aResp, parentPath, memoryPath,
-                                                processorCECount,
-                                                processorUECount);
-            }
-        },
+            std::string parentPath = memoryPath.substr(0, separator);
+            // Get entity subtree
+            getProcessorMemoryDataByService(aResp, parentPath, memoryPath,
+                                            processorCECount, processorUECount);
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_memory",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -4341,134 +4252,128 @@ inline void getProcessorMemoryMetricsData(
                 std::string, boost::container::flat_map<
                                  std::string, std::vector<std::string>>>&
                 subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(aResp->res);
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(aResp->res);
 
-                return;
+            return;
+        }
+        for (const auto& [path, object] : subtree)
+        {
+            if (!boost::ends_with(path, processorId))
+            {
+                continue;
             }
-            for (const auto& [path, object] : subtree)
+            std::string memoryMetricsURI =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+            memoryMetricsURI += processorId;
+            memoryMetricsURI += "/MemorySummary/MemoryMetrics";
+            aResp->res.jsonValue["@odata.type"] =
+                "#MemoryMetrics.v1_7_0.MemoryMetrics";
+            aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
+            aResp->res.jsonValue["Id"] = "MemoryMetrics";
+            aResp->res.jsonValue["Name"] = processorId +
+                                           " Memory Summary Metrics";
+            // Get processor cache memory ECC counts
+            for (const auto& [service, interfaces] : object)
             {
-                if (!boost::ends_with(path, processorId))
-                {
-                    continue;
-                }
-                std::string memoryMetricsURI =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
-                memoryMetricsURI += processorId;
-                memoryMetricsURI += "/MemorySummary/MemoryMetrics";
-                aResp->res.jsonValue["@odata.type"] =
-                    "#MemoryMetrics.v1_7_0.MemoryMetrics";
-                aResp->res.jsonValue["@odata.id"] = memoryMetricsURI;
-                aResp->res.jsonValue["Id"] = "MemoryMetrics";
-                aResp->res.jsonValue["Name"] =
-                    processorId + " Memory Summary Metrics";
-                // Get processor cache memory ECC counts
-                for (const auto& [service, interfaces] : object)
-                {
-                    const std::string memoryECCInterface =
-                        "xyz.openbmc_project.Memory.MemoryECC";
-                    const std::string memoryMetricIface =
-                        "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics";
+                const std::string memoryECCInterface =
+                    "xyz.openbmc_project.Memory.MemoryECC";
+                const std::string memoryMetricIface =
+                    "xyz.openbmc_project.Inventory.Item.Dimm.MemoryMetrics";
 
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  memoryECCInterface) != interfaces.end())
-                    {
-                        crow::connections::systemBus->async_method_call(
-                            [path = path, aResp{aResp}](
-                                const boost::system::error_code ec1,
-                                const OperatingConfigProperties& properties) {
-                                if (ec1)
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              memoryECCInterface) != interfaces.end())
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [path = path, aResp{aResp}](
+                            const boost::system::error_code ec1,
+                            const OperatingConfigProperties& properties) {
+                        if (ec1)
+                        {
+                            BMCWEB_LOG_DEBUG << "DBUS response error";
+                            messages::internalError(aResp->res);
+                            return;
+                        }
+                        // Get processor memory error counts to combine
+                        // to memory summary error counts
+                        int64_t processorCECount = 0;
+                        int64_t processorUECount = 0;
+                        for (const auto& property : properties)
+                        {
+                            if (property.first == "ceCount")
+                            {
+                                const int64_t* value =
+                                    std::get_if<int64_t>(&property.second);
+                                if (value == nullptr)
                                 {
-                                    BMCWEB_LOG_DEBUG << "DBUS response error";
                                     messages::internalError(aResp->res);
                                     return;
                                 }
-                                // Get processor memory error counts to combine
-                                // to memory summary error counts
-                                int64_t processorCECount = 0;
-                                int64_t processorUECount = 0;
-                                for (const auto& property : properties)
+                                processorCECount = *value;
+                            }
+                            else if (property.first == "ueCount")
+                            {
+                                const int64_t* value =
+                                    std::get_if<int64_t>(&property.second);
+                                if (value == nullptr)
                                 {
-                                    if (property.first == "ceCount")
-                                    {
-                                        const int64_t* value =
-                                            std::get_if<int64_t>(
-                                                &property.second);
-                                        if (value == nullptr)
-                                        {
-                                            messages::internalError(aResp->res);
-                                            return;
-                                        }
-                                        processorCECount = *value;
-                                    }
-                                    else if (property.first == "ueCount")
-                                    {
-                                        const int64_t* value =
-                                            std::get_if<int64_t>(
-                                                &property.second);
-                                        if (value == nullptr)
-                                        {
-                                            messages::internalError(aResp->res);
-                                            return;
-                                        }
-                                        processorUECount = *value;
-                                    }
-                                }
-                                // Get processor memory summary data
-                                getProcessorMemorySummary(aResp, path,
-                                                          processorCECount,
-                                                          processorUECount);
-                            },
-                            service, path, "org.freedesktop.DBus.Properties",
-                            "GetAll", memoryECCInterface);
-                    }
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  memoryMetricIface) != interfaces.end())
-                    {
-
-                        crow::connections::systemBus->async_method_call(
-                            [aResp{aResp}](
-                                const boost::system::error_code ec,
-                                const OperatingConfigProperties& properties) {
-                                if (ec)
-                                {
-                                    BMCWEB_LOG_DEBUG
-                                        << "DBUS response error for processor memory metrics";
                                     messages::internalError(aResp->res);
                                     return;
                                 }
-
-                                for (const auto& property : properties)
-                                {
-                                    if (property.first ==
-                                        "CapacityUtilizationPercent")
-                                    {
-                                        const uint8_t* value =
-                                            std::get_if<uint8_t>(
-                                                &property.second);
-                                        if (value == nullptr)
-                                        {
-                                            messages::internalError(aResp->res);
-                                            return;
-                                        }
-                                        aResp->res.jsonValue
-                                            ["CapacityUtilizationPercent"] =
-                                            *value;
-                                    }
-                                }
-                            },
-                            service, path, "org.freedesktop.DBus.Properties",
-                            "GetAll", memoryMetricIface);
-                    }
+                                processorUECount = *value;
+                            }
+                        }
+                        // Get processor memory summary data
+                        getProcessorMemorySummary(aResp, path, processorCECount,
+                                                  processorUECount);
+                    },
+                        service, path, "org.freedesktop.DBus.Properties",
+                        "GetAll", memoryECCInterface);
                 }
-                return;
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              memoryMetricIface) != interfaces.end())
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [aResp{aResp}](
+                            const boost::system::error_code ec,
+                            const OperatingConfigProperties& properties) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_DEBUG
+                                << "DBUS response error for processor memory metrics";
+                            messages::internalError(aResp->res);
+                            return;
+                        }
+
+                        for (const auto& property : properties)
+                        {
+                            if (property.first == "CapacityUtilizationPercent")
+                            {
+                                const uint8_t* value =
+                                    std::get_if<uint8_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    messages::internalError(aResp->res);
+                                    return;
+                                }
+                                aResp->res
+                                    .jsonValue["CapacityUtilizationPercent"] =
+                                    *value;
+                            }
+                        }
+                    },
+                        service, path, "org.freedesktop.DBus.Properties",
+                        "GetAll", memoryMetricIface);
+                }
             }
-            // Object not found
-            messages::resourceNotFound(
-                aResp->res, "#Processor.v1_13_0.Processor", processorId);
-        },
+            return;
+        }
+        // Object not found
+        messages::resourceNotFound(aResp->res, "#Processor.v1_13_0.Processor",
+                                   processorId);
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -4490,12 +4395,12 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& processorId) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                getProcessorMemoryMetricsData(asyncResp, processorId);
-            });
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        getProcessorMemoryMetricsData(asyncResp, processorId);
+    });
 }
 
 inline std::string toRequestedApplyTime(const std::string& applyTime)
@@ -4522,78 +4427,74 @@ inline void
     crow::connections::systemBus->async_method_call(
         [aResp, processorId](boost::system::error_code ec,
                              const MapperGetSubTreeResponse& subtree) mutable {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+            messages::internalError(aResp->res);
+            return;
+        }
+        for (const auto& [path, object] : subtree)
+        {
+            if (!boost::ends_with(path, processorId))
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
-                messages::internalError(aResp->res);
-                return;
+                continue;
             }
-            for (const auto& [path, object] : subtree)
+            nlohmann::json& json = aResp->res.jsonValue;
+            json["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Processors/" +
+                                processorId + "/Settings";
+            json["@odata.type"] = "#Processor.v1_13_0.Processor";
+            json["Id"] = "Settings";
+            json["Name"] = processorId + "PendingSettings";
+            for (const auto& [service, interfaces] : object)
             {
-                if (!boost::ends_with(path, processorId))
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Memory.MemoryECC") !=
+                    interfaces.end())
                 {
-                    continue;
+                    getEccPendingData(aResp, processorId, service, path);
                 }
-                nlohmann::json& json = aResp->res.jsonValue;
-                json["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                    "/Processors/" +
-                                    processorId + "/Settings";
-                json["@odata.type"] = "#Processor.v1_13_0.Processor";
-                json["Id"] = "Settings";
-                json["Name"] = processorId + "PendingSettings";
-                for (const auto& [service, interfaces] : object)
-                {
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "xyz.openbmc_project.Memory.MemoryECC") !=
-                        interfaces.end())
-                    {
-                        getEccPendingData(aResp, processorId, service, path);
-                    }
 
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "xyz.openbmc_project.Software.ApplyTime") !=
-                        interfaces.end())
-                    {
-                        crow::connections::systemBus->async_method_call(
-                            [aResp](
-                                const boost::system::error_code ec1,
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Software.ApplyTime") !=
+                    interfaces.end())
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [aResp](const boost::system::error_code ec1,
                                 const OperatingConfigProperties& properties) {
-                                if (ec1)
+                        if (ec1)
+                        {
+                            BMCWEB_LOG_DEBUG << "DBUS response error";
+                            messages::internalError(aResp->res);
+                            return;
+                        }
+                        nlohmann::json& json1 = aResp->res.jsonValue;
+                        for (const auto& property : properties)
+                        {
+                            if (property.first == "RequestedApplyTime")
+                            {
+                                const std::string* applyTime =
+                                    std::get_if<std::string>(&property.second);
+                                if (applyTime == nullptr)
                                 {
-                                    BMCWEB_LOG_DEBUG << "DBUS response error";
                                     messages::internalError(aResp->res);
                                     return;
                                 }
-                                nlohmann::json& json1 = aResp->res.jsonValue;
-                                for (const auto& property : properties)
-                                {
-                                    if (property.first == "RequestedApplyTime")
-                                    {
-                                        const std::string* applyTime =
-                                            std::get_if<std::string>(
-                                                &property.second);
-                                        if (applyTime == nullptr)
-                                        {
-                                            messages::internalError(aResp->res);
-                                            return;
-                                        }
-                                        json1
-                                            ["@Redfish.SettingsApplyTime"]
-                                            ["@odata.type"] =
-                                                "#Settings.v1_3_3.PreferredApplyTime";
-                                        json1["@Redfish.SettingsApplyTime"]
-                                             ["ApplyTime"] =
-                                                 toRequestedApplyTime(
-                                                     *applyTime);
-                                    }
-                                }
-                            },
-                            service, path, "org.freedesktop.DBus.Properties",
-                            "GetAll", "xyz.openbmc_project.Software.ApplyTime");
-                    }
+                                json1["@Redfish.SettingsApplyTime"]
+                                     ["@odata.type"] =
+                                         "#Settings.v1_3_3.PreferredApplyTime";
+                                json1["@Redfish.SettingsApplyTime"]
+                                     ["ApplyTime"] =
+                                         toRequestedApplyTime(*applyTime);
+                            }
+                        }
+                    },
+                        service, path, "org.freedesktop.DBus.Properties",
+                        "GetAll", "xyz.openbmc_project.Software.ApplyTime");
                 }
             }
-        },
+        }
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -4630,56 +4531,54 @@ inline void patchEccMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
     crow::connections::systemBus->async_method_call(
         [resp, processorId, eccModeEnabled](boost::system::error_code ec,
                                             sdbusplus::message::message& msg) {
-            if (!ec)
-            {
-                BMCWEB_LOG_DEBUG << "Set eccModeEnabled succeeded";
-                messages::success(resp->res);
-                return;
-            }
+        if (!ec)
+        {
+            BMCWEB_LOG_DEBUG << "Set eccModeEnabled succeeded";
+            messages::success(resp->res);
+            return;
+        }
 
-            BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                             << " set eccModeEnabled property failed: " << ec;
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
-                messages::internalError(resp->res);
-                return;
-            }
+        BMCWEB_LOG_DEBUG << "CPU:" << processorId
+                         << " set eccModeEnabled property failed: " << ec;
+        // Read and convert dbus error message to redfish error
+        const sd_bus_error* dbusError = msg.get_error();
+        if (dbusError == nullptr)
+        {
+            messages::internalError(resp->res);
+            return;
+        }
 
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(resp->res);
-            }
-            else if (strcmp(dbusError->name,
-                            "xyz.openbmc_project.Common.Error.Unavailable") ==
-                     0)
-            {
-                std::string errBusy = "0x50A";
-                std::string errBusyResolution =
-                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+        {
+            // Service failed to change the config
+            messages::operationFailed(resp->res);
+        }
+        else if (strcmp(dbusError->name,
+                        "xyz.openbmc_project.Common.Error.Unavailable") == 0)
+        {
+            std::string errBusy = "0x50A";
+            std::string errBusyResolution =
+                "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-                // busy error
-                messages::asyncError(resp->res, errBusy, errBusyResolution);
-            }
-            else if (strcmp(dbusError->name,
-                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
-            {
-                std::string errTimeout = "0x600";
-                std::string errTimeoutResolution =
-                    "Settings may/maynot have applied, please check get response before patching";
+            // busy error
+            messages::asyncError(resp->res, errBusy, errBusyResolution);
+        }
+        else if (strcmp(dbusError->name,
+                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
+        {
+            std::string errTimeout = "0x600";
+            std::string errTimeoutResolution =
+                "Settings may/maynot have applied, please check get response before patching";
 
-                // timeout error
-                messages::asyncError(resp->res, errTimeout,
-                                     errTimeoutResolution);
-            }
-            else
-            {
-                messages::internalError(resp->res);
-            }
-        },
+            // timeout error
+            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
+        }
+        else
+        {
+            messages::internalError(resp->res);
+        }
+    },
         *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
         "Set", "xyz.openbmc_project.Memory.MemoryECC", "ECCModeEnabled",
         std::variant<bool>(eccModeEnabled));
@@ -4698,12 +4597,12 @@ inline void requestRoutesProcessorSettings(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& processorId) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                getProcessorSettingsData(asyncResp, processorId);
-            });
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        getProcessorSettingsData(asyncResp, processorId);
+    });
 
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
@@ -4713,34 +4612,31 @@ inline void requestRoutesProcessorSettings(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
-                std::optional<nlohmann::json> memSummary;
-                if (!redfish::json_util::readJsonAction(
-                        req, asyncResp->res, "MemorySummary", memSummary))
-                {
-                    return;
-                }
-                std::optional<bool> eccModeEnabled;
-                if (memSummary)
-                {
-                    if (redfish::json_util::readJson(
-                            *memSummary, asyncResp->res, "ECCModeEnabled",
-                            eccModeEnabled))
-                    {
-                        redfish::processor_utils::getProcessorObject(
-                            asyncResp, processorId,
-                            [eccModeEnabled](
-                                const std::shared_ptr<bmcweb::AsyncResp>&
-                                    asyncResp1,
-                                const std::string& processorId1,
-                                const std::string& objectPath,
-                                const MapperServiceMap& serviceMap) {
-                                patchEccMode(asyncResp1, processorId1,
-                                             *eccModeEnabled, objectPath,
-                                             serviceMap);
-                            });
-                    }
-                }
-            });
+        std::optional<nlohmann::json> memSummary;
+        if (!redfish::json_util::readJsonAction(req, asyncResp->res,
+                                                "MemorySummary", memSummary))
+        {
+            return;
+        }
+        std::optional<bool> eccModeEnabled;
+        if (memSummary)
+        {
+            if (redfish::json_util::readJson(*memSummary, asyncResp->res,
+                                             "ECCModeEnabled", eccModeEnabled))
+            {
+                redfish::processor_utils::getProcessorObject(
+                    asyncResp, processorId,
+                    [eccModeEnabled](
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                        const std::string& processorId1,
+                        const std::string& objectPath,
+                        const MapperServiceMap& serviceMap) {
+                    patchEccMode(asyncResp1, processorId1, *eccModeEnabled,
+                                 objectPath, serviceMap);
+                });
+            }
+        }
+    });
 }
 
 inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
@@ -4772,47 +4668,44 @@ inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         "xyz.openbmc_project.Control.Processor.Reset", "ResetType",
         [resp, resetType, processorId, conName, cpuObjectPath](
             const boost::system::error_code ec, const std::string& property) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "DBus response, error for ResetType ";
-                BMCWEB_LOG_ERROR << ec.message();
-                messages::internalError(resp->res);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "DBus response, error for ResetType ";
+            BMCWEB_LOG_ERROR << ec.message();
+            messages::internalError(resp->res);
+            return;
+        }
 
-            const std::string processorResetType =
-                getProcessorResetType(property);
-            if (processorResetType != resetType)
+        const std::string processorResetType = getProcessorResetType(property);
+        if (processorResetType != resetType)
+        {
+            BMCWEB_LOG_DEBUG << "Property Value Incorrect";
+            messages::actionParameterNotSupported(resp->res, "ResetType",
+                                                  resetType);
+            return;
+        }
+        // Set the property, with handler to check error responses
+        crow::connections::systemBus->async_method_call(
+            [resp, processorId](boost::system::error_code ec1,
+                                const int retValue) {
+            if (!ec1)
             {
-                BMCWEB_LOG_DEBUG << "Property Value Incorrect";
-                messages::actionParameterNotSupported(resp->res, "ResetType",
-                                                      resetType);
-                return;
-            }
-            // Set the property, with handler to check error responses
-            crow::connections::systemBus->async_method_call(
-                [resp, processorId](boost::system::error_code ec1,
-                                    const int retValue) {
-                    if (!ec1)
-                    {
-
-                        if (retValue != 0)
-                        {
-                            BMCWEB_LOG_ERROR << retValue;
-                            messages::internalError(resp->res);
-                        }
-                        BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                                         << " Reset Succeded";
-                        messages::success(resp->res);
-                        return;
-                    }
-                    BMCWEB_LOG_DEBUG << ec1;
+                if (retValue != 0)
+                {
+                    BMCWEB_LOG_ERROR << retValue;
                     messages::internalError(resp->res);
-                    return;
-                },
-                conName, cpuObjectPath,
-                "xyz.openbmc_project.Control.Processor.Reset", "Reset");
-        });
+                }
+                BMCWEB_LOG_DEBUG << "CPU:" << processorId << " Reset Succeded";
+                messages::success(resp->res);
+                return;
+            }
+            BMCWEB_LOG_DEBUG << ec1;
+            messages::internalError(resp->res);
+            return;
+        },
+            conName, cpuObjectPath,
+            "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+    });
 }
 
 inline void requestRoutesProcessorReset(App& app)
@@ -4828,26 +4721,26 @@ inline void requestRoutesProcessorReset(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
-                std::optional<std::string> resetType;
-                if (!json_util::readJsonAction(req, asyncResp->res, "ResetType",
-                                               resetType))
-                {
-                    return;
-                }
-                if (resetType)
-                {
-                    redfish::processor_utils::getProcessorObject(
-                        asyncResp, processorId,
-                        [resetType](const std::shared_ptr<bmcweb::AsyncResp>&
-                                        asyncResp1,
-                                    const std::string& processorId1,
-                                    const std::string& objectPath,
-                                    const MapperServiceMap& serviceMap) {
-                            postResetType(asyncResp1, processorId1, objectPath,
-                                          *resetType, serviceMap);
-                        });
-                }
+        std::optional<std::string> resetType;
+        if (!json_util::readJsonAction(req, asyncResp->res, "ResetType",
+                                       resetType))
+        {
+            return;
+        }
+        if (resetType)
+        {
+            redfish::processor_utils::getProcessorObject(
+                asyncResp, processorId,
+                [resetType](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& processorId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                postResetType(asyncResp1, processorId1, objectPath, *resetType,
+                              serviceMap);
             });
+        }
+    });
 }
 
 inline void requestRoutesProcessorPortCollection(App& app)
@@ -4859,91 +4752,85 @@ inline void requestRoutesProcessorPortCollection(App& app)
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
                  "Ports")
         .privileges(redfish::privileges::getProcessor)
-        .methods(
-            boost::beast::http::verb::
-                get)([&app](const crow::Request& req,
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                            const std::string& processorId) {
-            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        BMCWEB_LOG_DEBUG << "Get available system processor resource";
+        crow::connections::systemBus->async_method_call(
+            [processorId, asyncResp](
+                const boost::system::error_code ec,
+                const boost::container::flat_map<
+                    std::string, boost::container::flat_map<
+                                     std::string, std::vector<std::string>>>&
+                    subtree) {
+            if (ec)
             {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(asyncResp->res);
+
                 return;
             }
-            BMCWEB_LOG_DEBUG << "Get available system processor resource";
-            crow::connections::systemBus->async_method_call(
-                [processorId, asyncResp](
-                    const boost::system::error_code ec,
-                    const boost::container::flat_map<
-                        std::string,
-                        boost::container::flat_map<
-                            std::string, std::vector<std::string>>>& subtree) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
-                        messages::internalError(asyncResp->res);
+            for (const auto& [path, object] : subtree)
+            {
+                if (!boost::ends_with(path, processorId))
+                {
+                    continue;
+                }
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
+                    processorId + "/Ports";
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#PortCollection.PortCollection";
+                asyncResp->res.jsonValue["Name"] = "NVLink Port Collection";
 
-                        return;
-                    }
-                    for (const auto& [path, object] : subtree)
+                for (const auto& [serviceName, interfacesList] : object)
+                {
+                    if (std::find(interfacesList.begin(), interfacesList.end(),
+                                  "xyz.openbmc_project.Inventory.Item.Cpu") !=
+                        interfacesList.end())
                     {
-                        if (!boost::ends_with(path, processorId))
-                        {
-                            continue;
-                        }
-                        asyncResp->res.jsonValue["@odata.id"] =
+                        collection_util::getCollectionMembersByAssociation(
+                            asyncResp,
                             "/redfish/v1/Systems/" PLATFORMSYSTEMID
                             "/Processors/" +
-                            processorId + "/Ports";
-                        asyncResp->res.jsonValue["@odata.type"] =
-                            "#PortCollection.PortCollection";
-                        asyncResp->res.jsonValue["Name"] =
-                            "NVLink Port Collection";
-
-                        for (const auto& [serviceName, interfacesList] : object)
-                        {
-                            if (std::find(
-                                    interfacesList.begin(),
-                                    interfacesList.end(),
-                                    "xyz.openbmc_project.Inventory.Item.Cpu") !=
-                                interfacesList.end())
-                            {
-                                collection_util::getCollectionMembersByAssociation(
-                                    asyncResp,
-                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
-                                    processorId + "/Ports",
-                                    path + "/all_states",
-                                    {"xyz.openbmc_project.Inventory.Item.Port"});
-                            }
-                            else if (
-                                std::find(
-                                    interfacesList.begin(),
-                                    interfacesList.end(),
-                                    "xyz.openbmc_project.Inventory.Item.Accelerator") !=
-                                interfacesList.end())
-                            {
-                                collection_util::getCollectionMembers(
-                                    asyncResp,
-                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                    "/Processors/" +
-                                        processorId + "/Ports",
-                                    {"xyz.openbmc_project.Inventory.Item.Port"},
-                                    path.c_str());
-                            }
-                        }
-                        return;
+                                processorId + "/Ports",
+                            path + "/all_states",
+                            {"xyz.openbmc_project.Inventory.Item.Port"});
                     }
-                    // Object not found
-                    messages::resourceNotFound(asyncResp->res,
-                                               "#Processor.v1_13_0.Processor",
-                                               processorId);
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                "/xyz/openbmc_project/inventory", 0,
-                std::array<const char*, 2>{
-                    "xyz.openbmc_project.Inventory.Item.Cpu",
-                    "xyz.openbmc_project.Inventory.Item.Accelerator"});
-        });
+                    else if (
+                        std::find(
+                            interfacesList.begin(), interfacesList.end(),
+                            "xyz.openbmc_project.Inventory.Item.Accelerator") !=
+                        interfacesList.end())
+                    {
+                        collection_util::getCollectionMembers(
+                            asyncResp,
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/Processors/" +
+                                processorId + "/Ports",
+                            {"xyz.openbmc_project.Inventory.Item.Port"},
+                            path.c_str());
+                    }
+                }
+                return;
+            }
+            // Object not found
+            messages::resourceNotFound(
+                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+            "/xyz/openbmc_project/inventory", 0,
+            std::array<const char*, 2>{
+                "xyz.openbmc_project.Inventory.Item.Cpu",
+                "xyz.openbmc_project.Inventory.Item.Accelerator"});
+    });
 }
 
 inline void
@@ -4957,38 +4844,37 @@ inline void
         [asyncResp, portPath, fabricId,
          switchName](const boost::system::error_code ec,
                      std::variant<std::vector<std::string>>& resp) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Get connected switch failed on" << switchName;
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        nlohmann::json& switchlinksArray =
+            asyncResp->res.jsonValue["Links"]["ConnectedSwitchPorts"];
+        for (const std::string& portPath1 : *data)
+        {
+            sdbusplus::message::object_path objectPath(portPath1);
+            std::string portId = objectPath.filename();
+            if (portId.empty())
             {
-                BMCWEB_LOG_DEBUG << "Get connected switch failed on"
-                                 << switchName;
+                BMCWEB_LOG_DEBUG << "Unable to fetch port";
+                messages::internalError(asyncResp->res);
                 return;
             }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                return;
-            }
-            nlohmann::json& switchlinksArray =
-                asyncResp->res.jsonValue["Links"]["ConnectedSwitchPorts"];
-            for (const std::string& portPath1 : *data)
-            {
-                sdbusplus::message::object_path objectPath(portPath1);
-                std::string portId = objectPath.filename();
-                if (portId.empty())
-                {
-                    BMCWEB_LOG_DEBUG << "Unable to fetch port";
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                nlohmann::json thisPort = nlohmann::json::object();
-                std::string portUri = "/redfish/v1/Fabrics/" + fabricId;
-                portUri += "/Switches/" + switchName + "/Ports/";
-                portUri += portId;
-                thisPort["@odata.id"] = portUri;
-                switchlinksArray.push_back(std::move(thisPort));
-            }
-        },
+            nlohmann::json thisPort = nlohmann::json::object();
+            std::string portUri = "/redfish/v1/Fabrics/" + fabricId;
+            portUri += "/Switches/" + switchName + "/Ports/";
+            portUri += portId;
+            thisPort["@odata.id"] = portUri;
+            switchlinksArray.push_back(std::move(thisPort));
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", portPath + "/switch_port",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -5005,96 +4891,101 @@ inline void
         [asyncResp, switchPath, portPath,
          switchName](const boost::system::error_code ec,
                      std::variant<std::vector<std::string>>& resp) {
-            if (ec)
+        if (ec)
+        {
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            BMCWEB_LOG_DEBUG << "Get connected switch failed on: "
+                             << switchName;
+            return;
+        }
+        for (const std::string& fabricPath : *data)
+        {
+            sdbusplus::message::object_path objectPath(fabricPath);
+            std::string fabricId = objectPath.filename();
+            if (fabricId.empty())
             {
+                messages::internalError(asyncResp->res);
                 return;
             }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                BMCWEB_LOG_DEBUG << "Get connected switch failed on: "
-                                 << switchName;
-                return;
-            }
-            for (const std::string& fabricPath : *data)
-            {
-                sdbusplus::message::object_path objectPath(fabricPath);
-                std::string fabricId = objectPath.filename();
-                if (fabricId.empty())
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                nlohmann::json& switchlinksArray =
-                    asyncResp->res.jsonValue["Links"]["ConnectedSwitches"];
-                nlohmann::json thisSwitch = nlohmann::json::object();
-                std::string switchUri = "/redfish/v1/Fabrics/";
-                switchUri += fabricId;
-                switchUri += "/Switches/";
-                switchUri += switchName;
-                thisSwitch["@odata.id"] = switchUri;
-                switchlinksArray.push_back(std::move(thisSwitch));
-                getConnectedSwitchPorts(asyncResp, portPath, fabricId,
-                                        switchName);
-            }
-        },
+            nlohmann::json& switchlinksArray =
+                asyncResp->res.jsonValue["Links"]["ConnectedSwitches"];
+            nlohmann::json thisSwitch = nlohmann::json::object();
+            std::string switchUri = "/redfish/v1/Fabrics/";
+            switchUri += fabricId;
+            switchUri += "/Switches/";
+            switchUri += switchName;
+            thisSwitch["@odata.id"] = switchUri;
+            switchlinksArray.push_back(std::move(thisSwitch));
+            getConnectedSwitchPorts(asyncResp, portPath, fabricId, switchName);
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", switchPath + "/fabrics",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
 
-inline void
-    getConnectedProcessorPorts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                               const std::string& portPath,
-                               std::vector<std::string>& portNames)
+inline void getConnectedProcessorPorts(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& portPath, std::vector<std::string>& portNames)
 {
     // This is for when the ports are connected to another processor
     crow::connections::systemBus->async_method_call(
-        [asyncResp, portPath, portNames](const boost::system::error_code ec,
-               std::variant<std::vector<std::string>>& resp) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "Get connected processor ports failed on: " << portPath;
-                return;
-            }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                return;
-            }
+        [asyncResp, portPath,
+         portNames](const boost::system::error_code ec,
+                    std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Get connected processor ports failed on: "
+                             << portPath;
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
 
-            nlohmann::json& connectedPortslinksArray =
-                asyncResp->res.jsonValue["Links"]["ConnectedPorts"];
+        nlohmann::json& connectedPortslinksArray =
+            asyncResp->res.jsonValue["Links"]["ConnectedPorts"];
 
-            unsigned int i = 0;
+        unsigned int i = 0;
 
-            for (const std::string& processorPath : *data)
+        for (const std::string& processorPath : *data)
+        {
+            if (!processorPath.empty())
             {
-                if(!processorPath.empty())
+                sdbusplus::message::object_path connectedProcessorPath(
+                    processorPath);
+                std::string processorName = connectedProcessorPath.filename();
+                if (processorName.empty())
                 {
-                    sdbusplus::message::object_path connectedProcessorPath(processorPath);
-                    std::string processorName = connectedProcessorPath.filename();
-                    if (processorName.empty())
-                    {
-                        BMCWEB_LOG_DEBUG << "Get connected processor path failed on: " << portPath;
-                        return;
-                    }
-
-                    nlohmann::json thisProcessorPort = nlohmann::json::object();
-
-                    std::string processorPortUri = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
-                    processorPortUri += processorName;
-                    processorPortUri += "/Ports/";
-                    processorPortUri += portNames[i];
-
-                    thisProcessorPort["@odata.id"] = processorPortUri;
-                    connectedPortslinksArray.push_back(std::move(thisProcessorPort));
-                    i++;
+                    BMCWEB_LOG_DEBUG
+                        << "Get connected processor path failed on: "
+                        << portPath;
+                    return;
                 }
+
+                nlohmann::json thisProcessorPort = nlohmann::json::object();
+
+                std::string processorPortUri =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+                processorPortUri += processorName;
+                processorPortUri += "/Ports/";
+                processorPortUri += portNames[i];
+
+                thisProcessorPort["@odata.id"] = processorPortUri;
+                connectedPortslinksArray.push_back(
+                    std::move(thisProcessorPort));
+                i++;
             }
-        },
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", portPath + "/associated_processor",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -5113,36 +5004,35 @@ inline void
         [asyncResp, portPath, processorId,
          port](const boost::system::error_code ec,
                std::variant<std::vector<std::string>>& resp) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Get associated switch failed on: " << port;
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        nlohmann::json& switchlinksArray =
+            asyncResp->res.jsonValue["Links"]["ConnectedSwitches"];
+        switchlinksArray = nlohmann::json::array();
+        nlohmann::json& portlinksArray =
+            asyncResp->res.jsonValue["Links"]["ConnectedSwitchPorts"];
+        portlinksArray = nlohmann::json::array();
+        for (const std::string& switchPath : *data)
+        {
+            sdbusplus::message::object_path objectPath(switchPath);
+            std::string switchName = objectPath.filename();
+            if (switchName.empty())
             {
-                BMCWEB_LOG_DEBUG << "Get associated switch failed on: " << port;
+                messages::internalError(asyncResp->res);
                 return;
             }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                return;
-            }
-            nlohmann::json& switchlinksArray =
-                asyncResp->res.jsonValue["Links"]["ConnectedSwitches"];
-            switchlinksArray = nlohmann::json::array();
-            nlohmann::json& portlinksArray =
-                asyncResp->res.jsonValue["Links"]["ConnectedSwitchPorts"];
-            portlinksArray = nlohmann::json::array();
-            for (const std::string& switchPath : *data)
-            {
-                sdbusplus::message::object_path objectPath(switchPath);
-                std::string switchName = objectPath.filename();
-                if (switchName.empty())
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                getConnectedSwitches(asyncResp, switchPath, portPath,
-                                     switchName);
-            }
-        },
+            getConnectedSwitches(asyncResp, switchPath, portPath, switchName);
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", portPath + "/associated_switch",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -5152,37 +5042,38 @@ inline void
         [asyncResp, portPath, processorId,
          port](const boost::system::error_code ec,
                std::variant<std::vector<std::string>>& resp) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Get associated processor ports failed on: "
+                             << port;
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        nlohmann::json& connectedPortslinksArray =
+            asyncResp->res.jsonValue["Links"]["ConnectedPorts"];
+        connectedPortslinksArray = nlohmann::json::array();
+        std::vector<std::string> portNames;
+        for (const std::string& connectedPort : *data)
+        {
+            sdbusplus::message::object_path connectedPortPath(connectedPort);
+            std::string portName = connectedPortPath.filename();
+            if (portName.empty())
             {
-                BMCWEB_LOG_DEBUG << "Get associated processor ports failed on: " << port;
+                messages::internalError(asyncResp->res);
                 return;
             }
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                return;
-            }
-            nlohmann::json& connectedPortslinksArray =
-                asyncResp->res.jsonValue["Links"]["ConnectedPorts"];
-            connectedPortslinksArray = nlohmann::json::array();
-            std::vector<std::string> portNames;
-            for (const std::string& connectedPort : *data)
-            {
-                sdbusplus::message::object_path connectedPortPath(connectedPort);
-                std::string portName = connectedPortPath.filename();
-                if (portName.empty())
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
 
-                portNames.push_back(portName);
-            }
-            getConnectedProcessorPorts(asyncResp, portPath, portNames);
-
-        },
-        "xyz.openbmc_project.ObjectMapper", portPath + "/associated_processor_ports",
+            portNames.push_back(portName);
+        }
+        getConnectedProcessorPorts(asyncResp, portPath, portNames);
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        portPath + "/associated_processor_ports",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
@@ -5196,73 +5087,70 @@ inline void getProcessorPortData(
         [aResp, processorId,
          portId](const boost::system::error_code& e,
                  std::variant<std::vector<std::string>>& resp) {
-            if (e)
-            {
-                // no state sensors attached.
-                messages::internalError(aResp->res);
-                return;
-            }
+        if (e)
+        {
+            // no state sensors attached.
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            std::vector<std::string>* data =
-                std::get_if<std::vector<std::string>>(&resp);
-            if (data == nullptr)
-            {
-                messages::internalError(aResp->res);
-                return;
-            }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
 
-            for (const std::string& sensorpath : *data)
-            {
-                // Check Interface in Object or not
-                BMCWEB_LOG_DEBUG << "processor state sensor object path "
-                                 << sensorpath;
-                crow::connections::systemBus->async_method_call(
-                    [aResp, sensorpath, processorId, portId](
-                        const boost::system::error_code ec,
-                        const std::vector<std::pair<
-                            std::string, std::vector<std::string>>>& object) {
-                        if (ec)
-                        {
-                            // the path does not implement any state interfaces
-                            return;
-                        }
+        for (const std::string& sensorpath : *data)
+        {
+            // Check Interface in Object or not
+            BMCWEB_LOG_DEBUG << "processor state sensor object path "
+                             << sensorpath;
+            crow::connections::systemBus->async_method_call(
+                [aResp, sensorpath, processorId,
+                 portId](const boost::system::error_code ec,
+                         const std::vector<std::pair<
+                             std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    // the path does not implement any state interfaces
+                    return;
+                }
 
-                        sdbusplus::message::object_path path(sensorpath);
-                        if (path.filename() != portId || object.size() != 1)
-                        {
-                            return;
-                        }
+                sdbusplus::message::object_path path(sensorpath);
+                if (path.filename() != portId || object.size() != 1)
+                {
+                    return;
+                }
 
-                        std::string portUri =
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/Processors/";
-                        portUri += processorId;
-                        portUri += "/Ports/";
-                        portUri += portId;
-                        aResp->res.jsonValue["@odata.id"] = portUri;
-                        aResp->res.jsonValue["@odata.type"] =
-                            "#Port.v1_4_0.Port";
-                        std::string portName = processorId + " ";
-                        portName += portId + " Port";
-                        aResp->res.jsonValue["Name"] = portName;
-                        aResp->res.jsonValue["Id"] = portId;
+                std::string portUri = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                      "/Processors/";
+                portUri += processorId;
+                portUri += "/Ports/";
+                portUri += portId;
+                aResp->res.jsonValue["@odata.id"] = portUri;
+                aResp->res.jsonValue["@odata.type"] = "#Port.v1_4_0.Port";
+                std::string portName = processorId + " ";
+                portName += portId + " Port";
+                aResp->res.jsonValue["Name"] = portName;
+                aResp->res.jsonValue["Id"] = portId;
 
-                        redfish::port_utils::getCpuPortData(
-                            aResp, object.front().first, sensorpath);
-                        getProcessorPortLinks(aResp, sensorpath, processorId, portId);
-                    },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorpath,
-                    std::array<std::string, 1>(
-                        {"xyz.openbmc_project.Inventory.Item.Port"}));
-            }
-        },
+                redfish::port_utils::getCpuPortData(aResp, object.front().first,
+                                                    sensorpath);
+                getProcessorPortLinks(aResp, sensorpath, processorId, portId);
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorpath,
+                std::array<std::string, 1>(
+                    {"xyz.openbmc_project.Inventory.Item.Port"}));
+        }
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
-
 
 inline void requestRoutesProcessorPort(App& app)
 {
@@ -5273,154 +5161,131 @@ inline void requestRoutesProcessorPort(App& app)
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
                  "Ports/<str>")
         .privileges(redfish::privileges::getProcessor)
-        .methods(
-            boost::beast::http::verb::
-                get)([&app](const crow::Request& req,
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                            const std::string& processorId,
-                            const std::string& port) {
-            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId, const std::string& port) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        BMCWEB_LOG_DEBUG << "Get available system processor resource";
+        crow::connections::systemBus->async_method_call(
+            [processorId, port, asyncResp](
+                const boost::system::error_code ec,
+                const boost::container::flat_map<
+                    std::string, boost::container::flat_map<
+                                     std::string, std::vector<std::string>>>&
+                    subtree) {
+            if (ec)
             {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(asyncResp->res);
+
                 return;
             }
-            BMCWEB_LOG_DEBUG << "Get available system processor resource";
-            crow::connections::systemBus->async_method_call(
-                [processorId, port, asyncResp](
-                    const boost::system::error_code ec,
-                    const boost::container::flat_map<
-                        std::string,
-                        boost::container::flat_map<
-                            std::string, std::vector<std::string>>>& subtree) {
-                    if (ec)
+            for (const auto& [path, object] : subtree)
+            {
+                if (!boost::ends_with(path, processorId))
+                {
+                    continue;
+                }
+                for (const auto& [serviceName, interfacesList] : object)
+                {
+                    if (std::find(interfacesList.begin(), interfacesList.end(),
+                                  "xyz.openbmc_project.Inventory.Item.Cpu") !=
+                        interfacesList.end())
                     {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
-                        messages::internalError(asyncResp->res);
-
-                        return;
+                        getProcessorPortData(asyncResp, path, processorId,
+                                             port);
                     }
-                    for (const auto& [path, object] : subtree)
+                    else if (
+                        std::find(
+                            interfacesList.begin(), interfacesList.end(),
+                            "xyz.openbmc_project.Inventory.Item.Accelerator") !=
+                        interfacesList.end())
                     {
-                        if (!boost::ends_with(path, processorId))
-                        {
-                            continue;
-                        }
-                        for (const auto& [serviceName, interfacesList] : object)
-                        {
-                            if (std::find(
-                                    interfacesList.begin(),
-                                    interfacesList.end(),
-                                    "xyz.openbmc_project.Inventory.Item.Cpu") !=
-                                interfacesList.end())
+                        //
+                        crow::connections::systemBus->async_method_call(
+                            [processorId, port, asyncResp](
+                                const boost::system::error_code ec1,
+                                const boost::container::flat_map<
+                                    std::string,
+                                    boost::container::flat_map<
+                                        std::string, std::vector<std::string>>>&
+                                    subtree1) {
+                            if (ec1)
                             {
-                               getProcessorPortData(asyncResp, path, processorId, port);
+                                BMCWEB_LOG_DEBUG << "DBUS response error";
+                                messages::internalError(asyncResp->res);
+                                return;
                             }
-                            else if (
-                                std::find(
-                                    interfacesList.begin(),
-                                    interfacesList.end(),
-                                    "xyz.openbmc_project.Inventory.Item.Accelerator") !=
-                                interfacesList.end())
+                            for (const auto& [portPath, object1] : subtree1)
                             {
-
-                                //
-                                crow::connections::systemBus->async_method_call(
-                                    [processorId, port, asyncResp](
-                                        const boost::system::error_code ec1,
-                                        const boost::container::flat_map<
-                                            std::string,
-                                            boost::container::flat_map<
-                                                std::string,
-                                                std::vector<std::string>>>&
-                                            subtree1) {
-                                        if (ec1)
-                                        {
-                                            BMCWEB_LOG_DEBUG
-                                                << "DBUS response error";
-                                            messages::internalError(
-                                                asyncResp->res);
-                                            return;
-                                        }
-                                        for (const auto& [portPath, object1] :
-                                             subtree1)
-                                        {
-                                            if (!boost::ends_with(portPath,
-                                                                  port))
-                                            {
-                                                continue;
-                                            }
-                                            std::string portUri =
-                                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                                "/Processors/";
-                                            portUri += processorId;
-                                            portUri += "/Ports/";
-                                            portUri += port;
-                                            asyncResp->res
-                                                .jsonValue["@odata.id"] =
-                                                portUri;
-                                            asyncResp->res
-                                                .jsonValue["@odata.type"] =
-                                                "#Port.v1_4_0.Port";
-                                            asyncResp->res.jsonValue["Name"] =
-                                                port + " Resource";
-                                            asyncResp->res.jsonValue["Id"] =
-                                                port;
-                                            std::string metricsURI =
-                                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                                "/Processors/";
-                                            metricsURI +=
-                                                processorId + "/Ports/";
-                                            metricsURI += port + "/Metrics";
-                                            asyncResp->res
-                                                .jsonValue["Metrics"]
-                                                          ["@odata.id"] =
-                                                metricsURI;
-                                            asyncResp->res
-                                                .jsonValue["Status"]
-                                                          ["Conditions"] =
-                                                nlohmann::json::array();
-                                            for (const auto& [service,
-                                                              interfaces] :
-                                                 object1)
-                                            {
-                                                redfish::port_utils::
-                                                    getPortData(asyncResp,
-                                                                service,
-                                                                portPath);
-                                                getProcessorPortLinks(
-                                                    asyncResp, portPath,
-                                                    processorId, port);
-                                            }
-                                            return;
-                                        }
-                                        // Object not found
-                                        messages::resourceNotFound(
-                                            asyncResp->res, "#Port.v1_4_0.Port",
-                                            port);
-                                    },
-                                    "xyz.openbmc_project.ObjectMapper",
-                                    "/xyz/openbmc_project/object_mapper",
-                                    "xyz.openbmc_project.ObjectMapper",
-                                    "GetSubTree", path, 0,
-                                    std::array<const char*, 1>{
-                                        "xyz.openbmc_project.Inventory.Item.Port"});
-                                //
+                                if (!boost::ends_with(portPath, port))
+                                {
+                                    continue;
+                                }
+                                std::string portUri =
+                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                    "/Processors/";
+                                portUri += processorId;
+                                portUri += "/Ports/";
+                                portUri += port;
+                                asyncResp->res.jsonValue["@odata.id"] = portUri;
+                                asyncResp->res.jsonValue["@odata.type"] =
+                                    "#Port.v1_4_0.Port";
+                                asyncResp->res.jsonValue["Name"] = port +
+                                                                   " Resource";
+                                asyncResp->res.jsonValue["Id"] = port;
+                                std::string metricsURI =
+                                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                    "/Processors/";
+                                metricsURI += processorId + "/Ports/";
+                                metricsURI += port + "/Metrics";
+                                asyncResp->res
+                                    .jsonValue["Metrics"]["@odata.id"] =
+                                    metricsURI;
+                                asyncResp->res
+                                    .jsonValue["Status"]["Conditions"] =
+                                    nlohmann::json::array();
+                                for (const auto& [service, interfaces] :
+                                     object1)
+                                {
+                                    redfish::port_utils::getPortData(
+                                        asyncResp, service, portPath);
+                                    getProcessorPortLinks(asyncResp, portPath,
+                                                          processorId, port);
+                                }
+                                return;
                             }
-                        }
-                        return;
+                            // Object not found
+                            messages::resourceNotFound(
+                                asyncResp->res, "#Port.v1_4_0.Port", port);
+                        },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                            path, 0,
+                            std::array<const char*, 1>{
+                                "xyz.openbmc_project.Inventory.Item.Port"});
+                        //
                     }
-                    // Object not found
-                    messages::resourceNotFound(asyncResp->res,
-                                               "#Processor.v1_13_0.Processor",
-                                               processorId);
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                "/xyz/openbmc_project/inventory", 0,
-                std::array<const char*, 2>{
-                    "xyz.openbmc_project.Inventory.Item.Cpu",
-                    "xyz.openbmc_project.Inventory.Item.Accelerator"});
-        });
+                }
+                return;
+            }
+            // Object not found
+            messages::resourceNotFound(
+                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+            "/xyz/openbmc_project/inventory", 0,
+            std::array<const char*, 2>{
+                "xyz.openbmc_project.Inventory.Item.Cpu",
+                "xyz.openbmc_project.Inventory.Item.Accelerator"});
+    });
 }
 
 inline void getProcessorPortMetricsData(
@@ -5434,327 +5299,298 @@ inline void getProcessorPortMetricsData(
                // std::variant<size_t,uint16_t,uint32_t,uint64_t>>&
                const boost::container::flat_map<
                    std::string, dbus::utility::DbusVariantType>& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "DBUS response error";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        for (const auto& property : properties)
+        {
+            if ((property.first == "TXBytes") || (property.first == "RXBytes"))
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            for (const auto& property : properties)
-            {
-                if ((property.first == "TXBytes") ||
-                    (property.first == "RXBytes"))
+                const size_t* value = std::get_if<size_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const size_t* value = std::get_if<size_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for TX/RX bytes";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue[property.first] = *value;
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for TX/RX bytes";
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
+                asyncResp->res.jsonValue[property.first] = *value;
+            }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                else if (property.first == "RXNoProtocolBytes")
+            else if (property.first == "RXNoProtocolBytes")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint64_t* value =
-                        std::get_if<uint64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for RXNoProtocolBytes";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaPortMetrics.v1_1_0.NvidiaPortMetrics";
-                    asyncResp->res
-                        .jsonValue["Oem"]["Nvidia"]["RXNoProtocolBytes"] =
-                        *value;
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for RXNoProtocolBytes";
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
-                else if (property.first == "TXNoProtocolBytes")
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaPortMetrics.v1_1_0.NvidiaPortMetrics";
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXNoProtocolBytes"] =
+                    *value;
+            }
+            else if (property.first == "TXNoProtocolBytes")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint64_t* value =
-                        std::get_if<uint64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for TXNoProtocolBytes";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res
-                        .jsonValue["Oem"]["Nvidia"]["TXNoProtocolBytes"] =
-                        *value;
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for TXNoProtocolBytes";
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
-                else if (property.first == "DataCRCCount")
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["TXNoProtocolBytes"] =
+                    *value;
+            }
+            else if (property.first == "DataCRCCount")
+            {
+                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint32_t* value =
-                        std::get_if<uint32_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for DataCRCCount";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for DataCRCCount";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
+                                        ["DataCRCCount"] = *value;
+            }
+            else if (property.first == "FlitCRCCount")
+            {
+                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for FlitCRCCount";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
+                                        ["FlitCRCCount"] = *value;
+            }
+            else if (property.first == "RecoveryCount")
+            {
+                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for RecoveryCount";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
+                                        ["RecoveryCount"] = *value;
+            }
+            else if (property.first == "ReplayErrorsCount")
+            {
+                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for ReplayCount";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
+                                        ["ReplayCount"] = *value;
+            }
+            else if (property.first == "RuntimeError")
+            {
+                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned for RuntimeError";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                if (*value != 0)
+                {
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                            ["DataCRCCount"] = *value;
+                                            ["RuntimeError"] = true;
                 }
-                else if (property.first == "FlitCRCCount")
+                else
                 {
-                    const uint32_t* value =
-                        std::get_if<uint32_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for FlitCRCCount";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                            ["FlitCRCCount"] = *value;
+                                            ["RuntimeError"] = false;
                 }
-                else if (property.first == "RecoveryCount")
+            }
+            else if (property.first == "TrainingError")
+            {
+                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint32_t* value =
-                        std::get_if<uint32_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for RecoveryCount";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+                    BMCWEB_LOG_DEBUG << "Null value returned for TrainingError";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                if (*value != 0)
+                {
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                            ["RecoveryCount"] = *value;
+                                            ["TrainingError"] = true;
                 }
-                else if (property.first == "ReplayErrorsCount")
+                else
                 {
-                    const uint32_t* value =
-                        std::get_if<uint32_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for ReplayCount";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                            ["ReplayCount"] = *value;
+                                            ["TrainingError"] = false;
                 }
-                else if (property.first == "RuntimeError")
+            }
+            else if (property.first == "NVLinkDataRxBandwidthGbps")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
                 {
-                    const uint16_t* value =
-                        std::get_if<uint16_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Null value returned for RuntimeError";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    if (*value != 0)
-                    {
-                        asyncResp->res
-                            .jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                      ["RuntimeError"] = true;
-                    }
-                    else
-                    {
-                        asyncResp->res
-                            .jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                      ["RuntimeError"] = false;
-                    }
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for NVLinkDataRxBandwidthGbps";
                 }
-                else if (property.first == "TrainingError")
+                else
                 {
-                    const uint16_t* value =
-                        std::get_if<uint16_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG
-                            << "Null value returned for TrainingError";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    if (*value != 0)
-                    {
-                        asyncResp->res
-                            .jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                      ["TrainingError"] = true;
-                    }
-                    else
-                    {
-                        asyncResp->res
-                            .jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
-                                      ["TrainingError"] = false;
-                    }
-                }
-                else if (property.first == "NVLinkDataRxBandwidthGbps")
-                {
-                    const double* value = std::get_if<double>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for NVLinkDataRxBandwidthGbps";
-                    }
-                    else
-                    {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
-                                                ["NVLinkDataRxBandwidthGbps"] =
-                            *value;
-                    }
-                }
-                else if (property.first == "NVLinkDataTxBandwidthGbps")
-                {
-                    const double* value = std::get_if<double>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for NVLinkDataTxBandwidthGbps";
-                    }
-                    else
-                    {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
-                                                ["NVLinkDataTxBandwidthGbps"] =
-                            *value;
-                    }
-                }
-                else if (property.first == "NVLinkRawRxBandwidthGbps")
-                {
-                    const double* value = std::get_if<double>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for NVLinkRawRxBandwidthGbps";
-                    }
-                    else
-                    {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
-                                                ["NVLinkRawRxBandwidthGbps"] =
-                            *value;
-                    }
-                }
-                else if (property.first == "NVLinkRawTxBandwidthGbps")
-                {
-                    const double* value = std::get_if<double>(&property.second);
-                    if (value == nullptr)
-                    {
-                        BMCWEB_LOG_DEBUG << "Null value returned "
-                                            "for NVLinkRawTxBandwidthGbps";
-                    }
-                    else
-                    {
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
-                                                ["NVLinkRawTxBandwidthGbps"] =
-                            *value;
-                    }
-                }
-
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                else if (property.first == "ceCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res
-                        .jsonValue["PCIeErrors"]["CorrectableErrorCount"] =
-                        *value;
-                }
-                else if (property.first == "nonfeCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res
-                        .jsonValue["PCIeErrors"]["NonFatalErrorCount"] = *value;
-                }
-                else if (property.first == "feCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["PCIeErrors"]["FatalErrorCount"] =
-                        *value;
-                }
-                else if (property.first == "L0ToRecoveryCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res
-                        .jsonValue["PCIeErrors"]["L0ToRecoveryCount"] = *value;
-                }
-                else if (property.first == "ReplayCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["PCIeErrors"]["ReplayCount"] =
-                        *value;
-                }
-                else if (property.first == "ReplayRolloverCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res
-                        .jsonValue["PCIeErrors"]["ReplayRolloverCount"] =
-                        *value;
-                }
-                else if (property.first == "NAKSentCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["PCIeErrors"]["NAKSentCount"] =
-                        *value;
-                }
-                else if (property.first == "NAKReceivedCount")
-                {
-                    const int64_t* value =
-                        std::get_if<int64_t>(&property.second);
-                    if (value == nullptr)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] =
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                            ["NVLinkDataRxBandwidthGbps"] =
                         *value;
                 }
             }
-        },
+            else if (property.first == "NVLinkDataTxBandwidthGbps")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for NVLinkDataTxBandwidthGbps";
+                }
+                else
+                {
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                            ["NVLinkDataTxBandwidthGbps"] =
+                        *value;
+                }
+            }
+            else if (property.first == "NVLinkRawRxBandwidthGbps")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for NVLinkRawRxBandwidthGbps";
+                }
+                else
+                {
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                            ["NVLinkRawRxBandwidthGbps"] =
+                        *value;
+                }
+            }
+            else if (property.first == "NVLinkRawTxBandwidthGbps")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG << "Null value returned "
+                                        "for NVLinkRawTxBandwidthGbps";
+                }
+                else
+                {
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                            ["NVLinkRawTxBandwidthGbps"] =
+                        *value;
+                }
+            }
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            else if (property.first == "ceCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res
+                    .jsonValue["PCIeErrors"]["CorrectableErrorCount"] = *value;
+            }
+            else if (property.first == "nonfeCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeErrors"]["NonFatalErrorCount"] =
+                    *value;
+            }
+            else if (property.first == "feCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeErrors"]["FatalErrorCount"] =
+                    *value;
+            }
+            else if (property.first == "L0ToRecoveryCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeErrors"]["L0ToRecoveryCount"] =
+                    *value;
+            }
+            else if (property.first == "ReplayCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeErrors"]["ReplayCount"] = *value;
+            }
+            else if (property.first == "ReplayRolloverCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeErrors"]["ReplayRolloverCount"] =
+                    *value;
+            }
+            else if (property.first == "NAKSentCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeErrors"]["NAKSentCount"] = *value;
+            }
+            else if (property.first == "NAKReceivedCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] =
+                    *value;
+            }
+        }
+    },
         service, path, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
@@ -5767,103 +5603,97 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
                  "Ports/<str>/Metrics")
         .privileges(redfish::privileges::getProcessor)
-        .methods(
-            boost::beast::http::verb::
-                get)([&app](const crow::Request& req,
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                            const std::string& processorId,
-                            const std::string& port) {
-            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId, const std::string& port) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        BMCWEB_LOG_DEBUG << "Get available system processor resource";
+        crow::connections::systemBus->async_method_call(
+            [processorId, port, asyncResp](
+                const boost::system::error_code ec,
+                const boost::container::flat_map<
+                    std::string, boost::container::flat_map<
+                                     std::string, std::vector<std::string>>>&
+                    subtree) {
+            if (ec)
             {
+                BMCWEB_LOG_DEBUG << "DBUS response error";
+                messages::internalError(asyncResp->res);
+
                 return;
             }
-            BMCWEB_LOG_DEBUG << "Get available system processor resource";
-            crow::connections::systemBus->async_method_call(
-                [processorId, port, asyncResp](
-                    const boost::system::error_code ec,
-                    const boost::container::flat_map<
-                        std::string,
-                        boost::container::flat_map<
-                            std::string, std::vector<std::string>>>& subtree) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
-                        messages::internalError(asyncResp->res);
-
-                        return;
-                    }
-                    for (const auto& [path, object] : subtree)
-                    {
-                        if (!boost::ends_with(path, processorId))
-                        {
-                            continue;
-                        }
-                        crow::connections::systemBus->async_method_call(
-                            [processorId, port, asyncResp](
-                                const boost::system::error_code ec1,
+            for (const auto& [path, object] : subtree)
+            {
+                if (!boost::ends_with(path, processorId))
+                {
+                    continue;
+                }
+                crow::connections::systemBus->async_method_call(
+                    [processorId, port,
+                     asyncResp](const boost::system::error_code ec1,
                                 const boost::container::flat_map<
                                     std::string,
                                     boost::container::flat_map<
                                         std::string, std::vector<std::string>>>&
                                     subtree1) {
-                                if (ec1)
-                                {
-                                    BMCWEB_LOG_DEBUG << "DBUS response error";
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                                for (const auto& [portPath, object1] : subtree1)
-                                {
-                                    if (!boost::ends_with(portPath, port))
-                                    {
-                                        continue;
-                                    }
-                                    asyncResp->res.jsonValue["@odata.type"] =
-                                        "#PortMetrics.v1_3_0.PortMetrics";
-                                    std::string portMetricUri =
-                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                        "/Processors/";
-                                    portMetricUri += processorId + "/Ports/";
-                                    portMetricUri += port + "/Metrics";
-                                    asyncResp->res.jsonValue["@odata.id"] =
-                                        portMetricUri;
-                                    asyncResp->res.jsonValue["Id"] = "Metrics";
-                                    asyncResp->res.jsonValue["Name"] =
-                                        port + " Port Metrics";
-                                    for (const auto& [service, interfaces] :
-                                         object1)
-                                    {
-                                        getProcessorPortMetricsData(
-                                            asyncResp, service, portPath);
-                                    }
+                    if (ec1)
+                    {
+                        BMCWEB_LOG_DEBUG << "DBUS response error";
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    for (const auto& [portPath, object1] : subtree1)
+                    {
+                        if (!boost::ends_with(portPath, port))
+                        {
+                            continue;
+                        }
+                        asyncResp->res.jsonValue["@odata.type"] =
+                            "#PortMetrics.v1_3_0.PortMetrics";
+                        std::string portMetricUri =
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/Processors/";
+                        portMetricUri += processorId + "/Ports/";
+                        portMetricUri += port + "/Metrics";
+                        asyncResp->res.jsonValue["@odata.id"] = portMetricUri;
+                        asyncResp->res.jsonValue["Id"] = "Metrics";
+                        asyncResp->res.jsonValue["Name"] = port +
+                                                           " Port Metrics";
+                        for (const auto& [service, interfaces] : object1)
+                        {
+                            getProcessorPortMetricsData(asyncResp, service,
+                                                        portPath);
+                        }
 
-                                    return;
-                                }
-                                // Object not found
-                                messages::resourceNotFound(
-                                    asyncResp->res, "#Port.v1_4_0.Port", port);
-                            },
-                            "xyz.openbmc_project.ObjectMapper",
-                            "/xyz/openbmc_project/object_mapper",
-                            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                            path, 0,
-                            std::array<const char*, 1>{
-                                "xyz.openbmc_project.Inventory.Item.Port"});
                         return;
                     }
                     // Object not found
                     messages::resourceNotFound(asyncResp->res,
-                                               "#Processor.v1_13_0.Processor",
-                                               processorId);
+                                               "#Port.v1_4_0.Port", port);
                 },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                "/xyz/openbmc_project/inventory", 0,
-                std::array<const char*, 2>{
-                    "xyz.openbmc_project.Inventory.Item.Cpu",
-                    "xyz.openbmc_project.Inventory.Item.Accelerator"});
-        });
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetSubTree", path, 0,
+                    std::array<const char*, 1>{
+                        "xyz.openbmc_project.Inventory.Item.Port"});
+                return;
+            }
+            // Object not found
+            messages::resourceNotFound(
+                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+            "/xyz/openbmc_project/inventory", 0,
+            std::array<const char*, 2>{
+                "xyz.openbmc_project.Inventory.Item.Cpu",
+                "xyz.openbmc_project.Inventory.Item.Accelerator"});
+    });
 }
 
 } // namespace redfish

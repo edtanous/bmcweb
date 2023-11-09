@@ -211,8 +211,8 @@ inline void parseLDAPConfigData(nlohmann::json& jsonResponse,
                                 const LDAPConfigData& confData,
                                 const std::string& ldapType)
 {
-    std::string service =
-        (ldapType == "LDAP") ? "LDAPService" : "ActiveDirectoryService";
+    std::string service = (ldapType == "LDAP") ? "LDAPService"
+                                               : "ActiveDirectoryService";
 
     nlohmann::json& ldap = jsonResponse[ldapType];
 
@@ -264,16 +264,15 @@ inline void handleRoleMapPatch(
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, roleMapObjData, serverType,
                      index](const boost::system::error_code ec) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        asyncResp->res
-                            .jsonValue[serverType]["RemoteRoleMapping"][index] =
-                            nullptr;
-                    },
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.jsonValue[serverType]["RemoteRoleMapping"]
+                                            [index] = nullptr;
+                },
                     ldapDbusService, roleMapObjData[index].first,
                     "xyz.openbmc_project.Object.Delete", "Delete");
             }
@@ -319,17 +318,16 @@ inline void handleRoleMapPatch(
                     crow::connections::systemBus->async_method_call(
                         [asyncResp, roleMapObjData, serverType, index,
                          remoteGroup](const boost::system::error_code ec) {
-                            if (ec)
-                            {
-                                BMCWEB_LOG_ERROR << "DBUS response error: "
-                                                 << ec;
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            asyncResp->res
-                                .jsonValue[serverType]["RemoteRoleMapping"]
-                                          [index]["RemoteGroup"] = *remoteGroup;
-                        },
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res
+                            .jsonValue[serverType]["RemoteRoleMapping"][index]
+                                      ["RemoteGroup"] = *remoteGroup;
+                    },
                         ldapDbusService, roleMapObjData[index].first,
                         propertyInterface, "Set",
                         "xyz.openbmc_project.User.PrivilegeMapperEntry",
@@ -352,17 +350,16 @@ inline void handleRoleMapPatch(
                     crow::connections::systemBus->async_method_call(
                         [asyncResp, roleMapObjData, serverType, index,
                          localRole](const boost::system::error_code ec) {
-                            if (ec)
-                            {
-                                BMCWEB_LOG_ERROR << "DBUS response error: "
-                                                 << ec;
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            asyncResp->res
-                                .jsonValue[serverType]["RemoteRoleMapping"]
-                                          [index]["LocalRole"] = *localRole;
-                        },
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res
+                            .jsonValue[serverType]["RemoteRoleMapping"][index]
+                                      ["LocalRole"] = *localRole;
+                    },
                         ldapDbusService, roleMapObjData[index].first,
                         propertyInterface, "Set",
                         "xyz.openbmc_project.User.PrivilegeMapperEntry",
@@ -374,8 +371,8 @@ inline void handleRoleMapPatch(
             {
                 BMCWEB_LOG_DEBUG
                     << "setRoleMappingProperties: Creating new Object";
-                std::string pathString =
-                    "RemoteRoleMapping/" + std::to_string(index);
+                std::string pathString = "RemoteRoleMapping/" +
+                                         std::to_string(index);
 
                 if (!localRole)
                 {
@@ -414,20 +411,20 @@ inline void handleRoleMapPatch(
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, serverType, localRole,
                      remoteGroup](const boost::system::error_code ec) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        nlohmann::json& remoteRoleJson =
-                            asyncResp->res
-                                .jsonValue[serverType]["RemoteRoleMapping"];
-                        nlohmann::json::object_t roleMapEntry;
-                        roleMapEntry["LocalRole"] = *localRole;
-                        roleMapEntry["RemoteGroup"] = *remoteGroup;
-                        remoteRoleJson.push_back(std::move(roleMapEntry));
-                    },
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    nlohmann::json& remoteRoleJson =
+                        asyncResp->res
+                            .jsonValue[serverType]["RemoteRoleMapping"];
+                    nlohmann::json::object_t roleMapEntry;
+                    roleMapEntry["LocalRole"] = *localRole;
+                    roleMapEntry["RemoteGroup"] = *remoteGroup;
+                    remoteRoleJson.push_back(std::move(roleMapEntry));
+                },
                     ldapDbusService, dbusObjectPath, ldapPrivMapperInterface,
                     "Create", *remoteGroup, role);
             }
@@ -443,174 +440,161 @@ template <typename CallbackFunc>
 inline void getLDAPConfigData(const std::string& ldapType,
                               CallbackFunc&& callback)
 {
-
     const std::array<const char*, 2> interfaces = {ldapEnableInterface,
                                                    ldapConfigInterface};
 
     crow::connections::systemBus->async_method_call(
         [callback, ldapType](const boost::system::error_code ec,
                              const dbus::utility::MapperGetObject& resp) {
-            if (ec || resp.empty())
+        if (ec || resp.empty())
+        {
+            BMCWEB_LOG_ERROR
+                << "DBUS response error during getting of service name: " << ec;
+            LDAPConfigData empty{};
+            callback(false, empty, ldapType);
+            return;
+        }
+        std::string service = resp.begin()->first;
+        crow::connections::systemBus->async_method_call(
+            [callback,
+             ldapType](const boost::system::error_code errorCode,
+                       const dbus::utility::ManagedObjectType& ldapObjects) {
+            LDAPConfigData confData{};
+            if (errorCode)
             {
-                BMCWEB_LOG_ERROR
-                    << "DBUS response error during getting of service name: "
-                    << ec;
-                LDAPConfigData empty{};
-                callback(false, empty, ldapType);
+                callback(false, confData, ldapType);
+                BMCWEB_LOG_ERROR << "D-Bus responses error: " << errorCode;
                 return;
             }
-            std::string service = resp.begin()->first;
-            crow::connections::systemBus->async_method_call(
-                [callback, ldapType](
-                    const boost::system::error_code errorCode,
-                    const dbus::utility::ManagedObjectType& ldapObjects) {
-                    LDAPConfigData confData{};
-                    if (errorCode)
-                    {
-                        callback(false, confData, ldapType);
-                        BMCWEB_LOG_ERROR << "D-Bus responses error: "
-                                         << errorCode;
-                        return;
-                    }
 
-                    std::string ldapDbusType;
-                    std::string searchString;
+            std::string ldapDbusType;
+            std::string searchString;
 
-                    if (ldapType == "LDAP")
-                    {
-                        ldapDbusType =
-                            "xyz.openbmc_project.User.Ldap.Config.Type.OpenLdap";
-                        searchString = "openldap";
-                    }
-                    else if (ldapType == "ActiveDirectory")
-                    {
-                        ldapDbusType =
-                            "xyz.openbmc_project.User.Ldap.Config.Type.ActiveDirectory";
-                        searchString = "active_directory";
-                    }
-                    else
-                    {
-                        BMCWEB_LOG_ERROR
-                            << "Can't get the DbusType for the given type="
-                            << ldapType;
-                        callback(false, confData, ldapType);
-                        return;
-                    }
+            if (ldapType == "LDAP")
+            {
+                ldapDbusType =
+                    "xyz.openbmc_project.User.Ldap.Config.Type.OpenLdap";
+                searchString = "openldap";
+            }
+            else if (ldapType == "ActiveDirectory")
+            {
+                ldapDbusType =
+                    "xyz.openbmc_project.User.Ldap.Config.Type.ActiveDirectory";
+                searchString = "active_directory";
+            }
+            else
+            {
+                BMCWEB_LOG_ERROR << "Can't get the DbusType for the given type="
+                                 << ldapType;
+                callback(false, confData, ldapType);
+                return;
+            }
 
-                    std::string ldapEnableInterfaceStr = ldapEnableInterface;
-                    std::string ldapConfigInterfaceStr = ldapConfigInterface;
+            std::string ldapEnableInterfaceStr = ldapEnableInterface;
+            std::string ldapConfigInterfaceStr = ldapConfigInterface;
 
-                    for (const auto& object : ldapObjects)
+            for (const auto& object : ldapObjects)
+            {
+                // let's find the object whose ldap type is equal to the
+                // given type
+                if (object.first.str.find(searchString) == std::string::npos)
+                {
+                    continue;
+                }
+
+                for (const auto& interface : object.second)
+                {
+                    if (interface.first == ldapEnableInterfaceStr)
                     {
-                        // let's find the object whose ldap type is equal to the
-                        // given type
-                        if (object.first.str.find(searchString) ==
-                            std::string::npos)
+                        // rest of the properties are string.
+                        for (const auto& property : interface.second)
                         {
-                            continue;
-                        }
-
-                        for (const auto& interface : object.second)
-                        {
-                            if (interface.first == ldapEnableInterfaceStr)
+                            if (property.first == "Enabled")
                             {
-                                // rest of the properties are string.
-                                for (const auto& property : interface.second)
+                                const bool* value =
+                                    std::get_if<bool>(&property.second);
+                                if (value == nullptr)
                                 {
-                                    if (property.first == "Enabled")
-                                    {
-                                        const bool* value =
-                                            std::get_if<bool>(&property.second);
-                                        if (value == nullptr)
-                                        {
-                                            continue;
-                                        }
-                                        confData.serviceEnabled = *value;
-                                        break;
-                                    }
+                                    continue;
                                 }
-                            }
-                            else if (interface.first == ldapConfigInterfaceStr)
-                            {
-
-                                for (const auto& property : interface.second)
-                                {
-                                    const std::string* strValue =
-                                        std::get_if<std::string>(
-                                            &property.second);
-                                    if (strValue == nullptr)
-                                    {
-                                        continue;
-                                    }
-                                    if (property.first == "LDAPServerURI")
-                                    {
-                                        confData.uri = *strValue;
-                                    }
-                                    else if (property.first == "LDAPBindDN")
-                                    {
-                                        confData.bindDN = *strValue;
-                                    }
-                                    else if (property.first == "LDAPBaseDN")
-                                    {
-                                        confData.baseDN = *strValue;
-                                    }
-                                    else if (property.first ==
-                                             "LDAPSearchScope")
-                                    {
-                                        confData.searchScope = *strValue;
-                                    }
-                                    else if (property.first ==
-                                             "GroupNameAttribute")
-                                    {
-                                        confData.groupAttribute = *strValue;
-                                    }
-                                    else if (property.first ==
-                                             "UserNameAttribute")
-                                    {
-                                        confData.userNameAttribute = *strValue;
-                                    }
-                                    else if (property.first == "LDAPType")
-                                    {
-                                        confData.serverType = *strValue;
-                                    }
-                                }
-                            }
-                            else if (
-                                interface.first ==
-                                "xyz.openbmc_project.User.PrivilegeMapperEntry")
-                            {
-                                LDAPRoleMapData roleMapData{};
-                                for (const auto& property : interface.second)
-                                {
-                                    const std::string* strValue =
-                                        std::get_if<std::string>(
-                                            &property.second);
-
-                                    if (strValue == nullptr)
-                                    {
-                                        continue;
-                                    }
-
-                                    if (property.first == "GroupName")
-                                    {
-                                        roleMapData.groupName = *strValue;
-                                    }
-                                    else if (property.first == "Privilege")
-                                    {
-                                        roleMapData.privilege = *strValue;
-                                    }
-                                }
-
-                                confData.groupRoleList.emplace_back(
-                                    object.first.str, roleMapData);
+                                confData.serviceEnabled = *value;
+                                break;
                             }
                         }
                     }
-                    callback(true, confData, ldapType);
-                },
-                service, ldapRootObject, dbusObjManagerIntf,
-                "GetManagedObjects");
+                    else if (interface.first == ldapConfigInterfaceStr)
+                    {
+                        for (const auto& property : interface.second)
+                        {
+                            const std::string* strValue =
+                                std::get_if<std::string>(&property.second);
+                            if (strValue == nullptr)
+                            {
+                                continue;
+                            }
+                            if (property.first == "LDAPServerURI")
+                            {
+                                confData.uri = *strValue;
+                            }
+                            else if (property.first == "LDAPBindDN")
+                            {
+                                confData.bindDN = *strValue;
+                            }
+                            else if (property.first == "LDAPBaseDN")
+                            {
+                                confData.baseDN = *strValue;
+                            }
+                            else if (property.first == "LDAPSearchScope")
+                            {
+                                confData.searchScope = *strValue;
+                            }
+                            else if (property.first == "GroupNameAttribute")
+                            {
+                                confData.groupAttribute = *strValue;
+                            }
+                            else if (property.first == "UserNameAttribute")
+                            {
+                                confData.userNameAttribute = *strValue;
+                            }
+                            else if (property.first == "LDAPType")
+                            {
+                                confData.serverType = *strValue;
+                            }
+                        }
+                    }
+                    else if (interface.first ==
+                             "xyz.openbmc_project.User.PrivilegeMapperEntry")
+                    {
+                        LDAPRoleMapData roleMapData{};
+                        for (const auto& property : interface.second)
+                        {
+                            const std::string* strValue =
+                                std::get_if<std::string>(&property.second);
+
+                            if (strValue == nullptr)
+                            {
+                                continue;
+                            }
+
+                            if (property.first == "GroupName")
+                            {
+                                roleMapData.groupName = *strValue;
+                            }
+                            else if (property.first == "Privilege")
+                            {
+                                roleMapData.privilege = *strValue;
+                            }
+                        }
+
+                        confData.groupRoleList.emplace_back(object.first.str,
+                                                            roleMapData);
+                    }
+                }
+            }
+            callback(true, confData, ldapType);
         },
+            service, ldapRootObject, dbusObjManagerIntf, "GetManagedObjects");
+    },
         mapperBusName, mapperObjectPath, mapperIntf, "GetObject",
         ldapConfigObjectName, interfaces);
 }
@@ -698,29 +682,27 @@ inline void handleServiceAddressPatch(
     crow::connections::systemBus->async_method_call(
         [asyncResp, ldapServerElementName,
          serviceAddressList](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG
-                    << "Error Occurred in updating the service address";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            std::vector<std::string> modifiedserviceAddressList = {
-                serviceAddressList.front()};
-            asyncResp->res
-                .jsonValue[ldapServerElementName]["ServiceAddresses"] =
-                modifiedserviceAddressList;
-            if ((serviceAddressList).size() > 1)
-            {
-                messages::propertyValueModified(asyncResp->res,
-                                                "ServiceAddresses",
-                                                serviceAddressList.front());
-                // update the message severity
-                redfish::message_registries::updateMessageSeverity(
-                    asyncResp, "ServiceAddresses", "OK");
-            }
-            BMCWEB_LOG_DEBUG << "Updated the service address";
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG
+                << "Error Occurred in updating the service address";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        std::vector<std::string> modifiedserviceAddressList = {
+            serviceAddressList.front()};
+        asyncResp->res.jsonValue[ldapServerElementName]["ServiceAddresses"] =
+            modifiedserviceAddressList;
+        if ((serviceAddressList).size() > 1)
+        {
+            messages::propertyValueModified(asyncResp->res, "ServiceAddresses",
+                                            serviceAddressList.front());
+            // update the message severity
+            redfish::message_registries::updateMessageSeverity(
+                asyncResp, "ServiceAddresses", "OK");
+        }
+        BMCWEB_LOG_DEBUG << "Updated the service address";
+    },
         ldapDbusService, ldapConfigObject, propertyInterface, "Set",
         ldapConfigInterface, "LDAPServerURI",
         dbus::utility::DbusVariantType(serviceAddressList.front()));
@@ -743,16 +725,16 @@ inline void
     crow::connections::systemBus->async_method_call(
         [asyncResp, username,
          ldapServerElementName](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "Error occurred in updating the username";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            asyncResp->res.jsonValue[ldapServerElementName]["Authentication"]
-                                    ["Username"] = username;
-            BMCWEB_LOG_DEBUG << "Updated the username";
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Error occurred in updating the username";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        asyncResp->res.jsonValue[ldapServerElementName]["Authentication"]
+                                ["Username"] = username;
+        BMCWEB_LOG_DEBUG << "Updated the username";
+    },
         ldapDbusService, ldapConfigObject, propertyInterface, "Set",
         ldapConfigInterface, "LDAPBindDN",
         dbus::utility::DbusVariantType(username));
@@ -775,16 +757,16 @@ inline void
     crow::connections::systemBus->async_method_call(
         [asyncResp, password,
          ldapServerElementName](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "Error occurred in updating the password";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            asyncResp->res.jsonValue[ldapServerElementName]["Authentication"]
-                                    ["Password"] = "";
-            BMCWEB_LOG_DEBUG << "Updated the password";
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Error occurred in updating the password";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        asyncResp->res.jsonValue[ldapServerElementName]["Authentication"]
+                                ["Password"] = "";
+        BMCWEB_LOG_DEBUG << "Updated the password";
+    },
         ldapDbusService, ldapConfigObject, propertyInterface, "Set",
         ldapConfigInterface, "LDAPBindDNPassword",
         dbus::utility::DbusVariantType(password));
@@ -808,29 +790,27 @@ inline void
     crow::connections::systemBus->async_method_call(
         [asyncResp, baseDNList,
          ldapServerElementName](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "Error Occurred in Updating the base DN";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            auto& serverTypeJson =
-                asyncResp->res.jsonValue[ldapServerElementName];
-            auto& searchSettingsJson =
-                serverTypeJson["LDAPService"]["SearchSettings"];
-            std::vector<std::string> modifiedBaseDNList = {baseDNList.front()};
-            searchSettingsJson["BaseDistinguishedNames"] = modifiedBaseDNList;
-            if (baseDNList.size() > 1)
-            {
-                messages::propertyValueModified(asyncResp->res,
-                                                "BaseDistinguishedNames",
-                                                baseDNList.front());
-                // update the message severity
-                redfish::message_registries::updateMessageSeverity(
-                    asyncResp, "BaseDistinguishedNames", "OK");
-            }
-            BMCWEB_LOG_DEBUG << "Updated the base DN";
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Error Occurred in Updating the base DN";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        auto& serverTypeJson = asyncResp->res.jsonValue[ldapServerElementName];
+        auto& searchSettingsJson =
+            serverTypeJson["LDAPService"]["SearchSettings"];
+        std::vector<std::string> modifiedBaseDNList = {baseDNList.front()};
+        searchSettingsJson["BaseDistinguishedNames"] = modifiedBaseDNList;
+        if (baseDNList.size() > 1)
+        {
+            messages::propertyValueModified(
+                asyncResp->res, "BaseDistinguishedNames", baseDNList.front());
+            // update the message severity
+            redfish::message_registries::updateMessageSeverity(
+                asyncResp, "BaseDistinguishedNames", "OK");
+        }
+        BMCWEB_LOG_DEBUG << "Updated the base DN";
+    },
         ldapDbusService, ldapConfigObject, propertyInterface, "Set",
         ldapConfigInterface, "LDAPBaseDN",
         dbus::utility::DbusVariantType(baseDNList.front()));
@@ -853,20 +833,19 @@ inline void
     crow::connections::systemBus->async_method_call(
         [asyncResp, userNameAttribute,
          ldapServerElementName](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "Error Occurred in Updating the "
-                                    "username attribute";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            auto& serverTypeJson =
-                asyncResp->res.jsonValue[ldapServerElementName];
-            auto& searchSettingsJson =
-                serverTypeJson["LDAPService"]["SearchSettings"];
-            searchSettingsJson["UsernameAttribute"] = userNameAttribute;
-            BMCWEB_LOG_DEBUG << "Updated the user name attr.";
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Error Occurred in Updating the "
+                                "username attribute";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        auto& serverTypeJson = asyncResp->res.jsonValue[ldapServerElementName];
+        auto& searchSettingsJson =
+            serverTypeJson["LDAPService"]["SearchSettings"];
+        searchSettingsJson["UsernameAttribute"] = userNameAttribute;
+        BMCWEB_LOG_DEBUG << "Updated the user name attr.";
+    },
         ldapDbusService, ldapConfigObject, propertyInterface, "Set",
         ldapConfigInterface, "UserNameAttribute",
         dbus::utility::DbusVariantType(userNameAttribute));
@@ -889,20 +868,19 @@ inline void handleGroupNameAttrPatch(
     crow::connections::systemBus->async_method_call(
         [asyncResp, groupsAttribute,
          ldapServerElementName](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG << "Error Occurred in Updating the "
-                                    "groupname attribute";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            auto& serverTypeJson =
-                asyncResp->res.jsonValue[ldapServerElementName];
-            auto& searchSettingsJson =
-                serverTypeJson["LDAPService"]["SearchSettings"];
-            searchSettingsJson["GroupsAttribute"] = groupsAttribute;
-            BMCWEB_LOG_DEBUG << "Updated the groupname attr";
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Error Occurred in Updating the "
+                                "groupname attribute";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        auto& serverTypeJson = asyncResp->res.jsonValue[ldapServerElementName];
+        auto& searchSettingsJson =
+            serverTypeJson["LDAPService"]["SearchSettings"];
+        searchSettingsJson["GroupsAttribute"] = groupsAttribute;
+        BMCWEB_LOG_DEBUG << "Updated the groupname attr";
+    },
         ldapDbusService, ldapConfigObject, propertyInterface, "Set",
         ldapConfigInterface, "GroupNameAttribute",
         dbus::utility::DbusVariantType(groupsAttribute));
@@ -924,17 +902,16 @@ inline void handleServiceEnablePatch(
     crow::connections::systemBus->async_method_call(
         [asyncResp, serviceEnabled,
          ldapServerElementName](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG
-                    << "Error Occurred in Updating the service enable";
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            asyncResp->res.jsonValue[ldapServerElementName]["ServiceEnabled"] =
-                serviceEnabled;
-            BMCWEB_LOG_DEBUG << "Updated Service enable = " << serviceEnabled;
-        },
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG << "Error Occurred in Updating the service enable";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        asyncResp->res.jsonValue[ldapServerElementName]["ServiceEnabled"] =
+            serviceEnabled;
+        BMCWEB_LOG_DEBUG << "Updated Service enable = " << serviceEnabled;
+    },
         ldapDbusService, ldapConfigObject, propertyInterface, "Set",
         ldapEnableInterface, "Enabled",
         dbus::utility::DbusVariantType(serviceEnabled));
@@ -1120,13 +1097,12 @@ inline void handleLDAPPatch(nlohmann::json& input,
 
     // Get the existing resource first then keep modifying
     // whenever any property gets updated.
-    getLDAPConfigData(serverType, [asyncResp, userName, password, baseDNList,
-                                   userNameAttribute, groupsAttribute,
-                                   serviceAddressList, serviceEnabled,
-                                   dbusObjectPath, remoteRoleMapData](
-                                      bool success,
-                                      const LDAPConfigData& confData,
-                                      const std::string& serverT) {
+    getLDAPConfigData(
+        serverType,
+        [asyncResp, userName, password, baseDNList, userNameAttribute,
+         groupsAttribute, serviceAddressList, serviceEnabled, dbusObjectPath,
+         remoteRoleMapData](bool success, const LDAPConfigData& confData,
+                            const std::string& serverT) {
         if (!success)
         {
             messages::internalError(asyncResp->res);
@@ -1212,141 +1188,139 @@ inline void updateUserProperties(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         [dbusObjectPath, username, password(std::move(password)),
          roleId(std::move(roleId)), enabled, locked,
          asyncResp{std::move(asyncResp)}](int rc) {
-            if (rc <= 0)
+        if (rc <= 0)
+        {
+            messages::resourceNotFound(asyncResp->res, "ManagerAccount",
+                                       username);
+            return;
+        }
+
+        if (password)
+        {
+            int retval = pamUpdatePassword(username, *password);
+            if (retval == PAM_USER_UNKNOWN)
             {
                 messages::resourceNotFound(asyncResp->res, "ManagerAccount",
                                            username);
+            }
+            else if (retval == PAM_AUTHTOK_ERR ||
+                     retval == PAM_NEW_AUTHTOK_REQD)
+            {
+                // If password is invalid
+                messages::propertyValueFormatError(asyncResp->res, *password,
+                                                   "Password");
+                std::string resolution =
+                    " Password should be " + std::to_string(minPasswordLength) +
+                    " character long including " +
+                    std::to_string(minUcaseCharacters) +
+                    " uppercase character, " +
+                    std::to_string(minLcaseCharacters) +
+                    " lower case character, " + std::to_string(minDigits) +
+                    " digit" + " and " + std::to_string(minSpecCharacters) +
+                    " special character.";
+
+                // update the resolution message and add the password
+                // policy
+                redfish::message_registries::updateResolution(
+                    asyncResp, "Password", resolution);
+                BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
+            }
+            else if (retval != PAM_SUCCESS)
+            {
+                messages::internalError(asyncResp->res);
                 return;
             }
-
-            if (password)
+            else
             {
-                int retval = pamUpdatePassword(username, *password);
-                if (retval == PAM_USER_UNKNOWN)
-                {
-                    messages::resourceNotFound(asyncResp->res, "ManagerAccount",
-                                               username);
-                }
-                else if (retval == PAM_AUTHTOK_ERR ||
-                         retval == PAM_NEW_AUTHTOK_REQD)
-                {
-                    // If password is invalid
-                    messages::propertyValueFormatError(asyncResp->res,
-                                                       *password, "Password");
-                    std::string resolution =
-                        " Password should be " +
-                        std::to_string(minPasswordLength) +
-                        " character long including " +
-                        std::to_string(minUcaseCharacters) +
-                        " uppercase character, " +
-                        std::to_string(minLcaseCharacters) +
-                        " lower case character, " + std::to_string(minDigits) +
-                        " digit" + " and " + std::to_string(minSpecCharacters) +
-                        " special character.";
+                messages::success(asyncResp->res);
+            }
+        }
 
-                    // update the resolution message and add the password
-                    // policy
-                    redfish::message_registries::updateResolution(
-                        asyncResp, "Password", resolution);
-                    BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
-                }
-                else if (retval != PAM_SUCCESS)
+        if (enabled)
+        {
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec) {
+                if (ec)
                 {
+                    BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
                     messages::internalError(asyncResp->res);
                     return;
                 }
-                else
-                {
-                    messages::success(asyncResp->res);
-                }
+                messages::success(asyncResp->res);
+                return;
+            },
+                "xyz.openbmc_project.User.Manager", dbusObjectPath,
+                "org.freedesktop.DBus.Properties", "Set",
+                "xyz.openbmc_project.User.Attributes", "UserEnabled",
+                dbus::utility::DbusVariantType{*enabled});
+        }
+
+        if (roleId)
+        {
+            std::string priv = getPrivilegeFromRoleId(*roleId);
+            if (priv.empty())
+            {
+                messages::propertyValueNotInList(asyncResp->res, *roleId,
+                                                 "RoleId");
+                return;
+            }
+            if (priv == "priv-noaccess")
+            {
+                priv = "";
             }
 
-            if (enabled)
-            {
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        messages::success(asyncResp->res);
-                        return;
-                    },
-                    "xyz.openbmc_project.User.Manager", dbusObjectPath,
-                    "org.freedesktop.DBus.Properties", "Set",
-                    "xyz.openbmc_project.User.Attributes", "UserEnabled",
-                    dbus::utility::DbusVariantType{*enabled});
-            }
-
-            if (roleId)
-            {
-                std::string priv = getPrivilegeFromRoleId(*roleId);
-                if (priv.empty())
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec) {
+                if (ec)
                 {
-                    messages::propertyValueNotInList(asyncResp->res, *roleId,
-                                                     "RoleId");
+                    BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
+                    messages::internalError(asyncResp->res);
                     return;
                 }
-                if (priv == "priv-noaccess")
-                {
-                    priv = "";
-                }
+                messages::success(asyncResp->res);
+            },
+                "xyz.openbmc_project.User.Manager", dbusObjectPath,
+                "org.freedesktop.DBus.Properties", "Set",
+                "xyz.openbmc_project.User.Attributes", "UserPrivilege",
+                dbus::utility::DbusVariantType{priv});
+        }
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        messages::success(asyncResp->res);
-                    },
-                    "xyz.openbmc_project.User.Manager", dbusObjectPath,
-                    "org.freedesktop.DBus.Properties", "Set",
-                    "xyz.openbmc_project.User.Attributes", "UserPrivilege",
-                    dbus::utility::DbusVariantType{priv});
+        if (locked)
+        {
+            // admin can unlock the account which is locked by
+            // successive authentication failures but admin should
+            // not be allowed to lock an account.
+            if (*locked)
+            {
+                messages::propertyValueNotInList(asyncResp->res, "true",
+                                                 "Locked");
+                return;
             }
 
-            if (locked)
-            {
-                // admin can unlock the account which is locked by
-                // successive authentication failures but admin should
-                // not be allowed to lock an account.
-                if (*locked)
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec) {
+                if (ec)
                 {
-                    messages::propertyValueNotInList(asyncResp->res, "true",
-                                                     "Locked");
+                    BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
+                    messages::internalError(asyncResp->res);
                     return;
                 }
-
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        messages::success(asyncResp->res);
-                        return;
-                    },
-                    "xyz.openbmc_project.User.Manager", dbusObjectPath,
-                    "org.freedesktop.DBus.Properties", "Set",
-                    "xyz.openbmc_project.User.Attributes",
-                    "UserLockedForFailedAttempt",
-                    dbus::utility::DbusVariantType{*locked});
-            }
-        });
+                messages::success(asyncResp->res);
+                return;
+            },
+                "xyz.openbmc_project.User.Manager", dbusObjectPath,
+                "org.freedesktop.DBus.Properties", "Set",
+                "xyz.openbmc_project.User.Attributes",
+                "UserLockedForFailedAttempt",
+                dbus::utility::DbusVariantType{*locked});
+        }
+    });
 }
 
 inline void handleAccountServiceHead(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
@@ -1404,49 +1378,48 @@ inline void
         "/xyz/openbmc_project/user", "xyz.openbmc_project.User.AccountPolicy",
         [asyncResp](const boost::system::error_code ec,
                     const dbus::utility::DBusPropertiesMap& propertiesList) {
-            if (ec)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            BMCWEB_LOG_DEBUG << "Got " << propertiesList.size()
-                             << "properties for AccountService";
+        BMCWEB_LOG_DEBUG << "Got " << propertiesList.size()
+                         << "properties for AccountService";
 
-            const uint8_t* minPasswordLength = nullptr;
-            const uint32_t* accountUnlockTimeout = nullptr;
-            const uint16_t* maxLoginAttemptBeforeLockout = nullptr;
+        const uint8_t* minPasswordLength = nullptr;
+        const uint32_t* accountUnlockTimeout = nullptr;
+        const uint16_t* maxLoginAttemptBeforeLockout = nullptr;
 
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), propertiesList,
-                "MinPasswordLength", minPasswordLength, "AccountUnlockTimeout",
-                accountUnlockTimeout, "MaxLoginAttemptBeforeLockout",
-                maxLoginAttemptBeforeLockout);
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), propertiesList,
+            "MinPasswordLength", minPasswordLength, "AccountUnlockTimeout",
+            accountUnlockTimeout, "MaxLoginAttemptBeforeLockout",
+            maxLoginAttemptBeforeLockout);
 
-            if (!success)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (!success)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            if (minPasswordLength != nullptr)
-            {
-                asyncResp->res.jsonValue["MinPasswordLength"] =
-                    *minPasswordLength;
-            }
+        if (minPasswordLength != nullptr)
+        {
+            asyncResp->res.jsonValue["MinPasswordLength"] = *minPasswordLength;
+        }
 
-            if (accountUnlockTimeout != nullptr)
-            {
-                asyncResp->res.jsonValue["AccountLockoutDuration"] =
-                    *accountUnlockTimeout;
-            }
+        if (accountUnlockTimeout != nullptr)
+        {
+            asyncResp->res.jsonValue["AccountLockoutDuration"] =
+                *accountUnlockTimeout;
+        }
 
-            if (maxLoginAttemptBeforeLockout != nullptr)
-            {
-                asyncResp->res.jsonValue["AccountLockoutThreshold"] =
-                    *maxLoginAttemptBeforeLockout;
-            }
-        });
+        if (maxLoginAttemptBeforeLockout != nullptr)
+        {
+            asyncResp->res.jsonValue["AccountLockoutThreshold"] =
+                *maxLoginAttemptBeforeLockout;
+        }
+    });
 
     auto callback = [asyncResp](bool success, const LDAPConfigData& confData,
                                 const std::string& ldapType) {
@@ -1491,13 +1464,13 @@ inline void handleAccountServicePatch(
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec) {
-                if (ec)
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                messages::success(asyncResp->res);
-            },
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            messages::success(asyncResp->res);
+        },
             "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
             "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.User.AccountPolicy", "MinPasswordLength",
@@ -1539,13 +1512,13 @@ inline void handleAccountServicePatch(
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec) {
-                if (ec)
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                messages::success(asyncResp->res);
-            },
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            messages::success(asyncResp->res);
+        },
             "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
             "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.User.AccountPolicy", "AccountUnlockTimeout",
@@ -1555,13 +1528,13 @@ inline void handleAccountServicePatch(
     {
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec) {
-                if (ec)
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                messages::success(asyncResp->res);
-            },
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            messages::success(asyncResp->res);
+        },
             "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
             "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.User.AccountPolicy",
@@ -1574,7 +1547,6 @@ inline void handleAccountCollectionHead(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
@@ -1609,53 +1581,51 @@ inline void handleAccountCollectionGet(
         [asyncResp, thisUser, effectiveUserPrivileges](
             const boost::system::error_code ec,
             const dbus::utility::ManagedObjectType& users) {
-            if (ec)
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        bool userCanSeeAllAccounts =
+            effectiveUserPrivileges.isSupersetOf({"ConfigureUsers"});
+
+        bool userCanSeeSelf =
+            effectiveUserPrivileges.isSupersetOf({"ConfigureSelf"});
+
+        nlohmann::json& memberArray = asyncResp->res.jsonValue["Members"];
+        memberArray = nlohmann::json::array();
+
+        for (const auto& userpath : users)
+        {
+            std::string user = userpath.first.filename();
+            if (user.empty())
             {
                 messages::internalError(asyncResp->res);
+                BMCWEB_LOG_ERROR << "Invalid firmware ID";
+
                 return;
             }
 
-            bool userCanSeeAllAccounts =
-                effectiveUserPrivileges.isSupersetOf({"ConfigureUsers"});
-
-            bool userCanSeeSelf =
-                effectiveUserPrivileges.isSupersetOf({"ConfigureSelf"});
-
-            nlohmann::json& memberArray = asyncResp->res.jsonValue["Members"];
-            memberArray = nlohmann::json::array();
-
-            for (const auto& userpath : users)
+            // As clarified by Redfish here:
+            // https://redfishforum.com/thread/281/manageraccountcollection-change-allows-account-enumeration
+            // Users without ConfigureUsers, only see their own
+            // account. Users with ConfigureUsers, see all
+            // accounts.
+            if (userCanSeeAllAccounts || (thisUser == user && userCanSeeSelf))
             {
-                std::string user = userpath.first.filename();
-                if (user.empty())
+                if (user == "service")
                 {
-                    messages::internalError(asyncResp->res);
-                    BMCWEB_LOG_ERROR << "Invalid firmware ID";
-
-                    return;
+                    continue;
                 }
-
-                // As clarified by Redfish here:
-                // https://redfishforum.com/thread/281/manageraccountcollection-change-allows-account-enumeration
-                // Users without ConfigureUsers, only see their own
-                // account. Users with ConfigureUsers, see all
-                // accounts.
-                if (userCanSeeAllAccounts ||
-                    (thisUser == user && userCanSeeSelf))
-                {
-                    if (user == "service")
-                    {
-                        continue;
-                    }
-                    nlohmann::json::object_t member;
-                    member["@odata.id"] =
-                        "/redfish/v1/AccountService/Accounts/" + user;
-                    memberArray.push_back(std::move(member));
-                }
+                nlohmann::json::object_t member;
+                member["@odata.id"] = "/redfish/v1/AccountService/Accounts/" +
+                                      user;
+                memberArray.push_back(std::move(member));
             }
-            asyncResp->res.jsonValue["Members@odata.count"] =
-                memberArray.size();
-        },
+        }
+        asyncResp->res.jsonValue["Members@odata.count"] = memberArray.size();
+    },
         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
@@ -1704,134 +1674,127 @@ inline void handleAccountCollectionPost(
         [asyncResp, username, password{std::move(password)}, roleId,
          enabled](const boost::system::error_code ec,
                   const dbus::utility::DBusPropertiesMap& propertiesList) {
-            if (ec)
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        BMCWEB_LOG_DEBUG << "Got " << propertiesList.size()
+                         << "properties for AccountService";
+
+        const uint8_t* minPassLength = nullptr;
+        const std::vector<std::string>* allGroupsList = nullptr;
+
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), propertiesList,
+            "MinPasswordLength", minPassLength, "AllGroups", allGroupsList);
+
+        if (!success)
+        {
+            BMCWEB_LOG_ERROR << "getAllProperties dbus call failed.";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        if (minPassLength != nullptr)
+        {
+            BMCWEB_LOG_DEBUG << "MinPasswordLength: "
+                             << std::to_string(*minPassLength);
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR << "MinPasswordLength: nullptr";
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        if (allGroupsList == nullptr)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        if (allGroupsList->empty())
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        BMCWEB_LOG_DEBUG << "User will be added to group list";
+        for (auto& group : *allGroupsList)
+        {
+            BMCWEB_LOG_DEBUG << "Group: " << group;
+        }
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, username, password, minPassLength](
+                const boost::system::error_code ec2, sdbusplus::message_t& m) {
+            if (ec2)
             {
-                messages::internalError(asyncResp->res);
+                userErrorMessageHandler(m.get_error(), asyncResp, username, "");
                 return;
             }
 
-            BMCWEB_LOG_DEBUG << "Got " << propertiesList.size()
-                             << "properties for AccountService";
+            int retval = pamUpdatePassword(username, password);
+            BMCWEB_LOG_DEBUG << "pamUpdatePassword retval=" << retval;
 
-            const uint8_t* minPassLength = nullptr;
-            const std::vector<std::string>* allGroupsList = nullptr;
-
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), propertiesList,
-                "MinPasswordLength", minPassLength, "AllGroups", allGroupsList);
-
-            if (!success)
+            if (retval != PAM_SUCCESS)
             {
-                BMCWEB_LOG_ERROR << "getAllProperties dbus call failed.";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+                // Password Invalid
+                messages::propertyValueFormatError(asyncResp->res, password,
+                                                   "Password");
 
-            if (minPassLength != nullptr)
-            {
-                BMCWEB_LOG_DEBUG << "MinPasswordLength: "
-                                 << std::to_string(*minPassLength);
-            }
-            else
-            {
-                BMCWEB_LOG_ERROR << "MinPasswordLength: nullptr";
-                messages::internalError(asyncResp->res);
-                return;
-            }
+                if (retval == PAM_AUTHTOK_ERR)
+                {
+                    std::string resolution =
+                        "Password should be " + std::to_string(*minPassLength) +
+                        " character long including " +
+                        std::to_string(minUcaseCharacters) +
+                        " uppercase character, " +
+                        std::to_string(minLcaseCharacters) +
+                        " lower case character, " + std::to_string(minDigits) +
+                        " digit and " + std::to_string(minSpecCharacters) +
+                        " special character.";
 
-            if (allGroupsList == nullptr)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
+                    // update the resolution message and add the
+                    // password policy too
+                    redfish::message_registries::updateResolution(
+                        asyncResp, "Password", resolution);
+                    BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
+                }
 
-            if (allGroupsList->empty())
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
+                // At this point we have a user that's been
+                // created, but the password set
+                // failed.Something is wrong, so delete the user
+                // that we've already created
+                sdbusplus::message::object_path tempObjPath(rootUserDbusPath);
+                tempObjPath /= username;
+                const std::string userPath(tempObjPath);
 
-            BMCWEB_LOG_DEBUG << "User will be added to group list";
-            for (auto& group : *allGroupsList)
-            {
-                BMCWEB_LOG_DEBUG << "Group: " << group;
-            }
-
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, username, password,
-                 minPassLength](const boost::system::error_code ec2,
-                                sdbusplus::message_t& m) {
-                    if (ec2)
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, password](const boost::system::error_code ec3) {
+                    if (ec3)
                     {
-                        userErrorMessageHandler(m.get_error(), asyncResp,
-                                                username, "");
+                        messages::internalError(asyncResp->res);
                         return;
                     }
-
-                    int retval = pamUpdatePassword(username, password);
-                    BMCWEB_LOG_DEBUG << "pamUpdatePassword retval=" << retval;
-
-                    if (retval != PAM_SUCCESS)
-                    {
-                        // Password Invalid
-                        messages::propertyValueFormatError(
-                            asyncResp->res, password, "Password");
-
-                        if (retval == PAM_AUTHTOK_ERR)
-                        {
-                            std::string resolution =
-                                "Password should be " +
-                                std::to_string(*minPassLength) +
-                                " character long including " +
-                                std::to_string(minUcaseCharacters) +
-                                " uppercase character, " +
-                                std::to_string(minLcaseCharacters) +
-                                " lower case character, " +
-                                std::to_string(minDigits) + " digit and " +
-                                std::to_string(minSpecCharacters) +
-                                " special character.";
-
-                            // update the resolution message and add the
-                            // password policy too
-                            redfish::message_registries::updateResolution(
-                                asyncResp, "Password", resolution);
-                            BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
-                        }
-
-                        // At this point we have a user that's been
-                        // created, but the password set
-                        // failed.Something is wrong, so delete the user
-                        // that we've already created
-                        sdbusplus::message::object_path tempObjPath(
-                            rootUserDbusPath);
-                        tempObjPath /= username;
-                        const std::string userPath(tempObjPath);
-
-                        crow::connections::systemBus->async_method_call(
-                            [asyncResp,
-                             password](const boost::system::error_code ec3) {
-                                if (ec3)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                            },
-                            "xyz.openbmc_project.User.Manager", userPath,
-                            "xyz.openbmc_project.Object.Delete", "Delete");
-
-                        BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
-                        return;
-                    }
-
-                    messages::created(asyncResp->res);
-                    asyncResp->res.addHeader(
-                        "Location",
-                        "/redfish/v1/AccountService/Accounts/" + username);
                 },
-                "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
-                "xyz.openbmc_project.User.Manager", "CreateUser", username,
-                *allGroupsList, *roleId, *enabled);
-        });
+                    "xyz.openbmc_project.User.Manager", userPath,
+                    "xyz.openbmc_project.Object.Delete", "Delete");
+
+                BMCWEB_LOG_ERROR << "pamUpdatePassword Failed";
+                return;
+            }
+
+            messages::created(asyncResp->res);
+            asyncResp->res.addHeader(
+                "Location", "/redfish/v1/AccountService/Accounts/" + username);
+        },
+            "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
+            "xyz.openbmc_project.User.Manager", "CreateUser", username,
+            *allGroupsList, *roleId, *enabled);
+    });
 }
 
 inline void
@@ -1839,7 +1802,6 @@ inline void
                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       const std::string& /*accountName*/)
 {
-
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
@@ -1888,137 +1850,135 @@ inline void
         [asyncResp,
          accountName](const boost::system::error_code ec,
                       const dbus::utility::ManagedObjectType& users) {
-            if (ec)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            const auto userIt = std::find_if(
-                users.begin(), users.end(),
-                [accountName](
-                    const std::pair<sdbusplus::message::object_path,
-                                    dbus::utility::DBusInteracesMap>& user) {
-                    return accountName == user.first.filename();
-                });
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        const auto userIt = std::find_if(
+            users.begin(), users.end(),
+            [accountName](
+                const std::pair<sdbusplus::message::object_path,
+                                dbus::utility::DBusInteracesMap>& user) {
+            return accountName == user.first.filename();
+        });
 
-            if (userIt == users.end())
-            {
-                messages::resourceNotFound(asyncResp->res, "ManagerAccount",
-                                           accountName);
-                return;
-            }
+        if (userIt == users.end())
+        {
+            messages::resourceNotFound(asyncResp->res, "ManagerAccount",
+                                       accountName);
+            return;
+        }
 
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#ManagerAccount.v1_4_0.ManagerAccount";
-            asyncResp->res.jsonValue["Name"] = "User Account";
-            asyncResp->res.jsonValue["Description"] = "User Account";
-            asyncResp->res.jsonValue["Password"] = nullptr;
-            asyncResp->res.jsonValue["AccountTypes"] = {"Redfish"};
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#ManagerAccount.v1_4_0.ManagerAccount";
+        asyncResp->res.jsonValue["Name"] = "User Account";
+        asyncResp->res.jsonValue["Description"] = "User Account";
+        asyncResp->res.jsonValue["Password"] = nullptr;
+        asyncResp->res.jsonValue["AccountTypes"] = {"Redfish"};
 
-            for (const auto& interface : userIt->second)
+        for (const auto& interface : userIt->second)
+        {
+            if (interface.first == "xyz.openbmc_project.User.Attributes")
             {
-                if (interface.first == "xyz.openbmc_project.User.Attributes")
+                for (const auto& property : interface.second)
                 {
-                    for (const auto& property : interface.second)
+                    if (property.first == "UserEnabled")
                     {
-                        if (property.first == "UserEnabled")
+                        const bool* userEnabled =
+                            std::get_if<bool>(&property.second);
+                        if (userEnabled == nullptr)
                         {
-                            const bool* userEnabled =
-                                std::get_if<bool>(&property.second);
-                            if (userEnabled == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR << "UserEnabled wasn't a bool";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            asyncResp->res.jsonValue["Enabled"] = *userEnabled;
+                            BMCWEB_LOG_ERROR << "UserEnabled wasn't a bool";
+                            messages::internalError(asyncResp->res);
+                            return;
                         }
-                        else if (property.first == "UserLockedForFailedAttempt")
+                        asyncResp->res.jsonValue["Enabled"] = *userEnabled;
+                    }
+                    else if (property.first == "UserLockedForFailedAttempt")
+                    {
+                        const bool* userLocked =
+                            std::get_if<bool>(&property.second);
+                        if (userLocked == nullptr)
                         {
-                            const bool* userLocked =
-                                std::get_if<bool>(&property.second);
-                            if (userLocked == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR << "UserLockedForF"
-                                                    "ailedAttempt "
-                                                    "wasn't a bool";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            asyncResp->res.jsonValue["Locked"] = *userLocked;
-                            asyncResp->res
-                                .jsonValue["Locked@Redfish.AllowableValues"] = {
-                                "false"}; // can only unlock accounts
+                            BMCWEB_LOG_ERROR << "UserLockedForF"
+                                                "ailedAttempt "
+                                                "wasn't a bool";
+                            messages::internalError(asyncResp->res);
+                            return;
                         }
-                        else if (property.first == "UserPrivilege")
+                        asyncResp->res.jsonValue["Locked"] = *userLocked;
+                        asyncResp->res
+                            .jsonValue["Locked@Redfish.AllowableValues"] = {
+                            "false"}; // can only unlock accounts
+                    }
+                    else if (property.first == "UserPrivilege")
+                    {
+                        const std::string* userPrivPtr =
+                            std::get_if<std::string>(&property.second);
+                        if (userPrivPtr == nullptr)
                         {
-                            const std::string* userPrivPtr =
-                                std::get_if<std::string>(&property.second);
-                            if (userPrivPtr == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR << "UserPrivilege wasn't a "
-                                                    "string";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            std::string role =
-                                getRoleIdFromPrivilege(*userPrivPtr);
-                            if (role.empty())
-                            {
-                                BMCWEB_LOG_ERROR << "Invalid user role";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            asyncResp->res.jsonValue["RoleId"] = role;
+                            BMCWEB_LOG_ERROR << "UserPrivilege wasn't a "
+                                                "string";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        std::string role = getRoleIdFromPrivilege(*userPrivPtr);
+                        if (role.empty())
+                        {
+                            BMCWEB_LOG_ERROR << "Invalid user role";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["RoleId"] = role;
 
-                            nlohmann::json& roleEntry =
-                                asyncResp->res.jsonValue["Links"]["Role"];
-                            roleEntry["@odata.id"] =
-                                "/redfish/v1/AccountService/Roles/" + role;
-                        }
-                        else if (property.first == "UserPasswordExpired")
+                        nlohmann::json& roleEntry =
+                            asyncResp->res.jsonValue["Links"]["Role"];
+                        roleEntry["@odata.id"] =
+                            "/redfish/v1/AccountService/Roles/" + role;
+                    }
+                    else if (property.first == "UserPasswordExpired")
+                    {
+                        const bool* userPasswordExpired =
+                            std::get_if<bool>(&property.second);
+                        if (userPasswordExpired == nullptr)
                         {
-                            const bool* userPasswordExpired =
-                                std::get_if<bool>(&property.second);
-                            if (userPasswordExpired == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "UserPasswordExpired wasn't a bool";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            asyncResp->res.jsonValue["PasswordChangeRequired"] =
-                                *userPasswordExpired;
+                            BMCWEB_LOG_ERROR
+                                << "UserPasswordExpired wasn't a bool";
+                            messages::internalError(asyncResp->res);
+                            return;
                         }
-                        else if (property.first == "UserGroups")
+                        asyncResp->res.jsonValue["PasswordChangeRequired"] =
+                            *userPasswordExpired;
+                    }
+                    else if (property.first == "UserGroups")
+                    {
+                        const std::vector<std::string>* userGroups =
+                            std::get_if<std::vector<std::string>>(
+                                &property.second);
+                        if (userGroups == nullptr)
                         {
-                            const std::vector<std::string>* userGroups =
-                                std::get_if<std::vector<std::string>>(
-                                    &property.second);
-                            if (userGroups == nullptr)
-                            {
-                                BMCWEB_LOG_ERROR
-                                    << "userGroups wasn't a string vector";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            if (!translateUserGroup(*userGroups,
-                                                    asyncResp->res))
-                            {
-                                BMCWEB_LOG_ERROR << "userGroups mapping failed";
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
+                            BMCWEB_LOG_ERROR
+                                << "userGroups wasn't a string vector";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        if (!translateUserGroup(*userGroups, asyncResp->res))
+                        {
+                            BMCWEB_LOG_ERROR << "userGroups mapping failed";
+                            messages::internalError(asyncResp->res);
+                            return;
                         }
                     }
                 }
             }
+        }
 
-            asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/AccountService/Accounts/" + accountName;
-            asyncResp->res.jsonValue["Id"] = accountName;
-            asyncResp->res.jsonValue["UserName"] = accountName;
-        },
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/AccountService/Accounts/" + accountName;
+        asyncResp->res.jsonValue["Id"] = accountName;
+        asyncResp->res.jsonValue["UserName"] = accountName;
+    },
         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
@@ -2046,39 +2006,38 @@ inline void
     crow::connections::systemBus->async_method_call(
         [asyncResp, username](const boost::system::error_code ec,
                               sdbusplus::message::message& m) {
-            if (ec)
+        if (ec)
+        {
+            const sd_bus_error* dbusError = m.get_error();
+            if (dbusError && dbusError->name)
             {
-                const sd_bus_error* dbusError = m.get_error();
-                if (dbusError && dbusError->name)
+                if (!strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.NotAllowed"))
                 {
-                    if (!strcmp(dbusError->name,
-                                "xyz.openbmc_project.Common.Error.NotAllowed"))
-                    {
-                        messages::resourceCannotBeDeleted(
-                            asyncResp->res,
-                            "#ManagerAccount.v1_4_0.ManagerAccount", username);
-                    }
-                    else if (!strcmp(
-                                 dbusError->name,
+                    messages::resourceCannotBeDeleted(
+                        asyncResp->res, "#ManagerAccount.v1_4_0.ManagerAccount",
+                        username);
+                }
+                else if (!strcmp(dbusError->name,
                                  "org.freedesktop.DBus.Error.UnknownObject"))
-                    {
-                        messages::resourceNotFound(
-                            asyncResp->res,
-                            "#ManagerAccount.v1_4_0.ManagerAccount", username);
-                    }
-                    else
-                    {
-                        messages::internalError(asyncResp->res);
-                    }
+                {
+                    messages::resourceNotFound(
+                        asyncResp->res, "#ManagerAccount.v1_4_0.ManagerAccount",
+                        username);
                 }
                 else
                 {
                     messages::internalError(asyncResp->res);
                 }
-                return;
             }
-            messages::accountRemoved(asyncResp->res);
-        },
+            else
+            {
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+        messages::accountRemoved(asyncResp->res);
+    },
         "xyz.openbmc_project.User.Manager", userPath,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
@@ -2158,16 +2117,16 @@ inline void
         [asyncResp, username, password(std::move(password)),
          roleId(std::move(roleId)), enabled, newUser{std::string(*newUserName)},
          locked](const boost::system::error_code ec, sdbusplus::message_t& m) {
-            if (ec)
-            {
-                userErrorMessageHandler(m.get_error(), asyncResp, newUser,
-                                        username);
-                return;
-            }
+        if (ec)
+        {
+            userErrorMessageHandler(m.get_error(), asyncResp, newUser,
+                                    username);
+            return;
+        }
 
-            updateUserProperties(asyncResp, newUser, password, enabled, roleId,
-                                 locked);
-        },
+        updateUserProperties(asyncResp, newUser, password, enabled, roleId,
+                             locked);
+    },
         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
         "xyz.openbmc_project.User.Manager", "RenameUser", username,
         *newUserName);
@@ -2175,7 +2134,6 @@ inline void
 
 inline void requestAccountServiceRoutes(App& app)
 {
-
     BMCWEB_ROUTE(app, "/redfish/v1/AccountService/")
         .privileges(redfish::privileges::headAccountService)
         .methods(boost::beast::http::verb::head)(

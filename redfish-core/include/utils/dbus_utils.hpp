@@ -28,7 +28,7 @@ constexpr const char* associationInterface = "xyz.openbmc_project.Association";
 constexpr const char* mapperBusName = "xyz.openbmc_project.ObjectMapper";
 constexpr const char* mapperObjectPath = "/xyz/openbmc_project/object_mapper";
 constexpr const char* mapperIntf = "xyz.openbmc_project.ObjectMapper";
-constexpr char const* objDeleteIntf = "xyz.openbmc_project.Object.Delete";
+constexpr const char* objDeleteIntf = "xyz.openbmc_project.Object.Delete";
 
 inline const char* toPhysicalContext(const std::string& physicalContext)
 {
@@ -238,8 +238,7 @@ inline auto deferTask(Callback&& callback)
         DeferTaskStruct(DeferTaskStruct&&) = delete;
         DeferTaskStruct& operator=(DeferTaskStruct&&) = delete;
 
-        DeferTaskStruct(Callback&& callback) : callback(callback)
-        {}
+        DeferTaskStruct(Callback&& callback) : callback(callback) {}
 
         ~DeferTaskStruct()
         {

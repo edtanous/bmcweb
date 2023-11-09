@@ -120,13 +120,13 @@ inline void handleMessageRoutesMessageRegistryFileGet(
         return;
     }
 
-    asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Registries/" + registry;
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Registries/" +
+                                            registry;
     asyncResp->res.jsonValue["@odata.type"] =
         "#MessageRegistryFile.v1_1_0.MessageRegistryFile";
     asyncResp->res.jsonValue["Name"] = registry + " Message Registry File";
-    asyncResp->res.jsonValue["Description"] =
-        dmtf + registry + " Message Registry File Location";
+    asyncResp->res.jsonValue["Description"] = dmtf + registry +
+                                              " Message Registry File Location";
     asyncResp->res.jsonValue["Id"] = header->registryPrefix;
     asyncResp->res.jsonValue["Registry"] = header->id;
     asyncResp->res.jsonValue["Languages"] = {"en"};

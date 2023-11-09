@@ -23,6 +23,7 @@ class Finalizer
             finalizer();
         }
     }
+
   private:
     std::function<void()> finalizer;
 };

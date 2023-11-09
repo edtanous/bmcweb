@@ -63,29 +63,29 @@ void getMainChassisId(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         [callback,
          asyncResp](const boost::system::error_code ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << ec;
-                return;
-            }
-            if (subtree.empty())
-            {
-                BMCWEB_LOG_DEBUG << "Can't find chassis!";
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << ec;
+            return;
+        }
+        if (subtree.empty())
+        {
+            BMCWEB_LOG_DEBUG << "Can't find chassis!";
+            return;
+        }
 
-            std::size_t idPos = subtree[0].first.rfind('/');
-            if (idPos == std::string::npos ||
-                (idPos + 1) >= subtree[0].first.size())
-            {
-                messages::internalError(asyncResp->res);
-                BMCWEB_LOG_DEBUG << "Can't parse chassis ID!";
-                return;
-            }
-            std::string chassisId = subtree[0].first.substr(idPos + 1);
-            BMCWEB_LOG_DEBUG << "chassisId = " << chassisId;
-            callback(chassisId, asyncResp);
-        },
+        std::size_t idPos = subtree[0].first.rfind('/');
+        if (idPos == std::string::npos ||
+            (idPos + 1) >= subtree[0].first.size())
+        {
+            messages::internalError(asyncResp->res);
+            BMCWEB_LOG_DEBUG << "Can't parse chassis ID!";
+            return;
+        }
+        std::string chassisId = subtree[0].first.substr(idPos + 1);
+        BMCWEB_LOG_DEBUG << "chassisId = " << chassisId;
+        callback(chassisId, asyncResp);
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
@@ -103,72 +103,70 @@ void getPortStatusAndPath(const std::string& serviceName,
         [serviceName, callback{std::forward<CallbackFunc>(callback)}](
             const boost::system::error_code ec,
             const std::vector<UnitStruct>& r) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << ec;
-                // return error code
-                callback(ec, "", false);
-                return;
-            }
-
-            for (const UnitStruct& unit : r)
-            {
-                // Only traverse through <xyz>.socket units
-                const std::string& unitName =
-                    std::get<NET_PROTO_UNIT_NAME>(unit);
-
-                // find "." into unitsName
-                size_t lastCharPos = unitName.rfind('.');
-                if (lastCharPos == std::string::npos)
-                {
-                    continue;
-                }
-
-                // is unitsName end with ".socket"
-                std::string unitNameEnd = unitName.substr(lastCharPos);
-                if (unitNameEnd != ".socket")
-                {
-                    continue;
-                }
-
-                // find "@" into unitsName
-                if (size_t atCharPos = unitName.rfind('@');
-                    atCharPos != std::string::npos)
-                {
-                    lastCharPos = atCharPos;
-                }
-
-                // unitsName without "@eth(x).socket", only <xyz>
-                // unitsName without ".socket", only <xyz>
-                std::string unitNameStr = unitName.substr(0, lastCharPos);
-
-                // We are interested in services, which starts with
-                // mapped service name
-                if (unitNameStr != serviceName)
-                {
-                    continue;
-                }
-
-                const std::string& socketPath =
-                    std::get<NET_PROTO_UNIT_OBJ_PATH>(unit);
-                const std::string& unitState =
-                    std::get<NET_PROTO_UNIT_SUB_STATE>(unit);
-
-                bool isProtocolEnabled =
-                    ((unitState == "running") || (unitState == "listening"));
-                // We found service, return from inner loop.
-                callback(ec, socketPath, isProtocolEnabled);
-                return;
-            }
-
-            //  no service foudn, throw error
-            boost::system::error_code ec1 =
-                boost::system::errc::make_error_code(
-                    boost::system::errc::no_such_process);
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << ec;
             // return error code
-            callback(ec1, "", false);
-            BMCWEB_LOG_ERROR << ec1;
-        },
+            callback(ec, "", false);
+            return;
+        }
+
+        for (const UnitStruct& unit : r)
+        {
+            // Only traverse through <xyz>.socket units
+            const std::string& unitName = std::get<NET_PROTO_UNIT_NAME>(unit);
+
+            // find "." into unitsName
+            size_t lastCharPos = unitName.rfind('.');
+            if (lastCharPos == std::string::npos)
+            {
+                continue;
+            }
+
+            // is unitsName end with ".socket"
+            std::string unitNameEnd = unitName.substr(lastCharPos);
+            if (unitNameEnd != ".socket")
+            {
+                continue;
+            }
+
+            // find "@" into unitsName
+            if (size_t atCharPos = unitName.rfind('@');
+                atCharPos != std::string::npos)
+            {
+                lastCharPos = atCharPos;
+            }
+
+            // unitsName without "@eth(x).socket", only <xyz>
+            // unitsName without ".socket", only <xyz>
+            std::string unitNameStr = unitName.substr(0, lastCharPos);
+
+            // We are interested in services, which starts with
+            // mapped service name
+            if (unitNameStr != serviceName)
+            {
+                continue;
+            }
+
+            const std::string& socketPath =
+                std::get<NET_PROTO_UNIT_OBJ_PATH>(unit);
+            const std::string& unitState =
+                std::get<NET_PROTO_UNIT_SUB_STATE>(unit);
+
+            bool isProtocolEnabled = ((unitState == "running") ||
+                                      (unitState == "listening"));
+            // We found service, return from inner loop.
+            callback(ec, socketPath, isProtocolEnabled);
+            return;
+        }
+
+        //  no service foudn, throw error
+        boost::system::error_code ec1 = boost::system::errc::make_error_code(
+            boost::system::errc::no_such_process);
+        // return error code
+        callback(ec1, "", false);
+        BMCWEB_LOG_ERROR << ec1;
+    },
         "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
         "org.freedesktop.systemd1.Manager", "ListUnits");
 }
@@ -183,46 +181,46 @@ void getPortNumber(const std::string& socketPath, CallbackFunc&& callback)
         [callback{std::forward<CallbackFunc>(callback)}](
             const boost::system::error_code ec,
             const std::vector<std::tuple<std::string, std::string>>& resp) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << ec;
+            callback(ec, 0);
+            return;
+        }
+        if (resp.empty())
+        {
+            // Network Protocol Listen Response Elements is empty
+            boost::system::error_code ec1 =
+                boost::system::errc::make_error_code(
+                    boost::system::errc::bad_message);
+            // return error code
+            callback(ec1, 0);
+            BMCWEB_LOG_ERROR << ec1;
+            return;
+        }
+        const std::string& listenStream =
+            std::get<NET_PROTO_LISTEN_STREAM>(resp[0]);
+        const char* pa = &listenStream[listenStream.rfind(':') + 1];
+        int port{0};
+        if (auto [p, ec2] = std::from_chars(pa, nullptr, port);
+            ec2 != std::errc())
+        {
+            // there is only two possibility invalid_argument and
+            // result_out_of_range
+            boost::system::error_code ec3 =
+                boost::system::errc::make_error_code(
+                    boost::system::errc::invalid_argument);
+            if (ec2 == std::errc::result_out_of_range)
             {
-                BMCWEB_LOG_ERROR << ec;
-                callback(ec, 0);
-                return;
+                ec3 = boost::system::errc::make_error_code(
+                    boost::system::errc::result_out_of_range);
             }
-            if (resp.empty())
-            {
-                // Network Protocol Listen Response Elements is empty
-                boost::system::error_code ec1 =
-                    boost::system::errc::make_error_code(
-                        boost::system::errc::bad_message);
-                // return error code
-                callback(ec1, 0);
-                BMCWEB_LOG_ERROR << ec1;
-                return;
-            }
-            const std::string& listenStream =
-                std::get<NET_PROTO_LISTEN_STREAM>(resp[0]);
-            const char* pa = &listenStream[listenStream.rfind(':') + 1];
-            int port{0};
-            if (auto [p, ec2] = std::from_chars(pa, nullptr, port);
-                ec2 != std::errc())
-            {
-                // there is only two possibility invalid_argument and
-                // result_out_of_range
-                boost::system::error_code ec3 =
-                    boost::system::errc::make_error_code(
-                        boost::system::errc::invalid_argument);
-                if (ec2 == std::errc::result_out_of_range)
-                {
-                    ec3 = boost::system::errc::make_error_code(
-                        boost::system::errc::result_out_of_range);
-                }
-                // return error code
-                callback(ec3, 0);
-                BMCWEB_LOG_ERROR << ec3;
-            }
-            callback(ec, port);
-        });
+            // return error code
+            callback(ec3, 0);
+            BMCWEB_LOG_ERROR << ec3;
+        }
+        callback(ec, port);
+    });
 }
 
 inline void
@@ -236,62 +234,58 @@ inline void
          user](const boost::system::error_code ec,
                const std::map<std::string, dbus::utility::DbusVariantType>&
                    userInfo) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "GetUserInfo failed...";
-                messages::resourceAtUriUnauthorized(
-                    asyncResp->res, req.urlView,
-                    "Invalid username or password");
-                return;
-            }
-            bool userLocked = false;
-            const bool* userLockedPtr = nullptr;
-            auto lockedIter = userInfo.find("UserLockedForFailedAttempt");
-            if (lockedIter != userInfo.end())
-            {
-                userLockedPtr = std::get_if<bool>(&lockedIter->second);
-            }
-            if (userLockedPtr != nullptr)
-            {
-                userLocked = *userLockedPtr;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR << "GetUserInfo failed...";
+            messages::resourceAtUriUnauthorized(asyncResp->res, req.urlView,
+                                                "Invalid username or password");
+            return;
+        }
+        bool userLocked = false;
+        const bool* userLockedPtr = nullptr;
+        auto lockedIter = userInfo.find("UserLockedForFailedAttempt");
+        if (lockedIter != userInfo.end())
+        {
+            userLockedPtr = std::get_if<bool>(&lockedIter->second);
+        }
+        if (userLockedPtr != nullptr)
+        {
+            userLocked = *userLockedPtr;
+        }
 
-            if (userLocked)
-            {
-                sdbusplus::asio::getProperty<uint32_t>(
-                    *crow::connections::systemBus,
-                    "xyz.openbmc_project.User.Manager",
-                    "/xyz/openbmc_project/user",
-                    "xyz.openbmc_project.User.AccountPolicy",
-                    "AccountUnlockTimeout",
-                    [asyncResp, &req](const boost::system::error_code ec,
-                                      const uint32_t& unlockTimeout) {
-                        if (ec)
-                        {
-                            messages::internalError(asyncResp->res);
-                        }
-                        else
-                        {
-                            BMCWEB_LOG_DEBUG << "unlock Timeout: "
-                                             << unlockTimeout;
-                            std::string arg2 =
-                                "Account temporarily locked out for " +
-                                std::to_string(unlockTimeout) +
-                                " seconds"
-                                " due to multiple authentication failures";
-                            messages::resourceAtUriUnauthorized(
-                                asyncResp->res, req.urlView, arg2);
-                        }
-                    });
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG << "User is not locked out";
-                messages::resourceAtUriUnauthorized(
-                    asyncResp->res, req.urlView,
-                    "Invalid username or password");
-            }
-        },
+        if (userLocked)
+        {
+            sdbusplus::asio::getProperty<uint32_t>(
+                *crow::connections::systemBus,
+                "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
+                "xyz.openbmc_project.User.AccountPolicy",
+                "AccountUnlockTimeout",
+                [asyncResp, &req](const boost::system::error_code ec,
+                                  const uint32_t& unlockTimeout) {
+                if (ec)
+                {
+                    messages::internalError(asyncResp->res);
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG << "unlock Timeout: " << unlockTimeout;
+                    std::string arg2 =
+                        "Account temporarily locked out for " +
+                        std::to_string(unlockTimeout) +
+                        " seconds"
+                        " due to multiple authentication failures";
+                    messages::resourceAtUriUnauthorized(asyncResp->res,
+                                                        req.urlView, arg2);
+                }
+            });
+        }
+        else
+        {
+            BMCWEB_LOG_DEBUG << "User is not locked out";
+            messages::resourceAtUriUnauthorized(asyncResp->res, req.urlView,
+                                                "Invalid username or password");
+        }
+    },
         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
         "xyz.openbmc_project.User.Manager", "GetUserInfo", user);
 }

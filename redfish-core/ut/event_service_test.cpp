@@ -41,7 +41,6 @@ class EventServiceInternalImplTest : public ::testing::Test
 /* --------------------------------- Tests --------------------------------- */
 TEST_F(EventServiceInternalImplTest, ClassEventPosTest)
 {
-
     // event without argument and customized fields
     nlohmann::json event1TargetLogEntry = {
         {"MessageId", "ResourceEvent.1.0.ResourceCreated"},

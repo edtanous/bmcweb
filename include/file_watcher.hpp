@@ -123,7 +123,8 @@ class InotifyFileWatcher
         while (offset < bytes)
         {
             // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)
-            auto alignedEvp = static_cast<inotify_event*>(std::malloc(sizeof(inotify_event) + NAME_MAX + 1 - offset));
+            auto alignedEvp = static_cast<inotify_event*>(
+                std::malloc(sizeof(inotify_event) + NAME_MAX + 1 - offset));
             if (alignedEvp == nullptr)
             {
                 BMCWEB_LOG_ERROR << "InotifyFileWatcher malloc error.";

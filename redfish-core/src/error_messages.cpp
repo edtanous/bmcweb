@@ -1932,8 +1932,8 @@ void resourceErrorsDetectedFormatError(crow::Response& res,
                                        const std::string& resolution)
 {
     res.result(boost::beast::http::status::internal_server_error);
-    nlohmann::json responseMessage =
-        resourceErrorsDetectedFormatError(arg1, arg2);
+    nlohmann::json responseMessage = resourceErrorsDetectedFormatError(arg1,
+                                                                       arg2);
     if (!resolution.empty())
     {
         responseMessage["Resolution"] = resolution;
@@ -1992,7 +1992,6 @@ void updateInProgressMsg(crow::Response& res, const std::string& resolution)
  */
 nlohmann::json unsupportedMediaType()
 {
-
     return nlohmann::json{
         {"@odata.type", "#Message.v1_1_1.Message"},
         {"MessageId", "Base.1.15.0.UnsupportedMediaType"},

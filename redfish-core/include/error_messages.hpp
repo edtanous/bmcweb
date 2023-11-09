@@ -1164,7 +1164,8 @@ void updateInProgressMsg(crow::Response& res, const std::string& resolution);
 
 /**
  * @brief Formats UnsupportedMediaType message into JSON
- * Message body: "The request specifies a Content-Type for the body that is not supported"
+ * Message body: "The request specifies a Content-Type for the body that is not
+ * supported"
  * @returns Message UnsupportedMediaType formatted to JSON */
 nlohmann::json unsupportedMediaType();
 

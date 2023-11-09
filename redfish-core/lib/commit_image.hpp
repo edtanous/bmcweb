@@ -40,7 +40,6 @@ struct CommitImageValueEntry
 
 std::vector<CommitImageValueEntry> getAllowableValues()
 {
-
     static std::vector<CommitImageValueEntry> allowableValues;
 
     if (allowableValues.empty() == false)

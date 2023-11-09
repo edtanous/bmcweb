@@ -12,6 +12,7 @@
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 #include <utils/dbus_utils.hpp>
+
 #include <tuple>
 #include <variant>
 #include <vector>
@@ -168,8 +169,10 @@ inline bool parseNumericThresholds(crow::Response& res,
         return false;
     }
 
-    if(numericThresholds.size() == 0){
-        messages::propertyValueIncorrect(res, "numericThresholds", "can't be empty");
+    if (numericThresholds.size() == 0)
+    {
+        messages::propertyValueIncorrect(res, "numericThresholds",
+                                         "can't be empty");
         return false;
     }
 
@@ -218,11 +221,12 @@ inline bool parseDiscreteTriggers(
     crow::Response& res,
     std::optional<std::vector<nlohmann::json>>& discreteTriggers, Context& ctx)
 {
-   std::vector<DiscreteThresholdParams> parsedParams;
+    std::vector<DiscreteThresholdParams> parsedParams;
 
-
-    if(!discreteTriggers|| discreteTriggers->size() == 0 ){
-        messages::propertyValueIncorrect(res, "discreteTriggers", "can't be empty");
+    if (!discreteTriggers || discreteTriggers->size() == 0)
+    {
+        messages::propertyValueIncorrect(res, "discreteTriggers",
+                                         "can't be empty");
         return false;
     }
 
@@ -540,7 +544,7 @@ inline void createTrigger(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         aResp->res.addHeader("Location",
                              std::string_view(locationUrl.string().data(),
                                               locationUrl.string().size()));
-        },
+    },
         service, "/xyz/openbmc_project/Telemetry/Triggers",
         "xyz.openbmc_project.Telemetry.TriggerManager", "AddTrigger",
         "TelemetryService/" + ctx.dbusArgs.id, ctx.dbusArgs.name,
@@ -810,20 +814,19 @@ inline void requestRoutesTriggerCollection(App& app)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#TriggersCollection.TriggersCollection";
-                asyncResp->res.jsonValue["@odata.id"] = telemetry::triggerUri;
-                asyncResp->res.jsonValue["Name"] = "Triggers Collection";
-                const std::vector<const char*> interfaces{
-                    telemetry::triggerInterface};
-                collection_util::getCollectionMembers(
-                    asyncResp, telemetry::triggerUri, interfaces,
-                    "/xyz/openbmc_project/Telemetry/Triggers/TelemetryService");
-        });
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#TriggersCollection.TriggersCollection";
+        asyncResp->res.jsonValue["@odata.id"] = telemetry::triggerUri;
+        asyncResp->res.jsonValue["Name"] = "Triggers Collection";
+        const std::vector<const char*> interfaces{telemetry::triggerInterface};
+        collection_util::getCollectionMembers(
+            asyncResp, telemetry::triggerUri, interfaces,
+            "/xyz/openbmc_project/Telemetry/Triggers/TelemetryService");
+    });
     BMCWEB_ROUTE(app, "/redfish/v1/TelemetryService/Triggers/")
         .privileges(redfish::privileges::postTriggersCollection)
         .methods(boost::beast::http::verb::post)(
@@ -849,25 +852,25 @@ inline void requestRoutesTriggerCollection(App& app)
                 telemetry::getChassisSensorNode(
                     *ctx->parsedInfo.metricProperties, chassisSensors))
         {
-            messages::propertyValueIncorrect(
-                asyncResp->res, error->uri,
-                "MetricProperties/" + std::to_string(error->index));
+            messages::propertyValueIncorrect(asyncResp->res, error->uri,
+                                             "MetricProperties/" +
+                                                 std::to_string(error->index));
             return;
         }
-    
+
         const auto finalizer =
             std::make_shared<utils::Finalizer>([asyncResp, ctx] {
-                if ((asyncResp->res).result() != boost::beast::http::status::ok)
-                {
-                    return;
-                }
-                if (!telemetry::add_trigger::parseMetricProperties(
-                        asyncResp->res, *ctx))
-                {
-                    return;
-                }
-                telemetry::add_trigger::createTrigger(asyncResp, *ctx);
-            });
+            if ((asyncResp->res).result() != boost::beast::http::status::ok)
+            {
+                return;
+            }
+            if (!telemetry::add_trigger::parseMetricProperties(asyncResp->res,
+                                                               *ctx))
+            {
+                return;
+            }
+            telemetry::add_trigger::createTrigger(asyncResp, *ctx);
+        });
 
         for (const auto& [chassis, sensorType] : chassisSensors)
         {
@@ -881,9 +884,9 @@ inline void requestRoutesTriggerCollection(App& app)
                     ctx->uriToDbusMerged.insert(uriToDbus.begin(),
                                                 uriToDbus.end());
                 }
-                });
+            });
         }
-        });
+    });
 }
 
 inline void requestRoutesTrigger(App& app)
@@ -894,40 +897,37 @@ inline void requestRoutesTrigger(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& id) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                sdbusplus::asio::getAllProperties(
-                    *crow::connections::systemBus, telemetry::service,
-                    telemetry::getDbusTriggerPath(id),
-                    telemetry::triggerInterface,
-                    [asyncResp,
-                     id](const boost::system::error_code ec,
-                         const std::vector<std::pair<
-                             std::string, telemetry::TriggerGetParamsVariant>>&
-                             ret) {
-                        if (ec.value() == EBADR ||
-                            ec == boost::system::errc::host_unreachable)
-                        {
-                            messages::resourceNotFound(asyncResp->res,
-                                                       "Triggers", id);
-                            return;
-                        }
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        sdbusplus::asio::getAllProperties(
+            *crow::connections::systemBus, telemetry::service,
+            telemetry::getDbusTriggerPath(id), telemetry::triggerInterface,
+            [asyncResp,
+             id](const boost::system::error_code ec,
+                 const std::vector<std::pair<
+                     std::string, telemetry::TriggerGetParamsVariant>>& ret) {
+            if (ec.value() == EBADR ||
+                ec == boost::system::errc::host_unreachable)
+            {
+                messages::resourceNotFound(asyncResp->res, "Triggers", id);
+                return;
+            }
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
 
-                        if (!redfish::telemetry::get_trigger::fillTrigger(asyncResp->res.jsonValue,
-                                                    id, ret))
-                        {
-                            messages::internalError(asyncResp->res);
-                        }
-                    });
-            });
+            if (!redfish::telemetry::get_trigger::fillTrigger(
+                    asyncResp->res.jsonValue, id, ret))
+            {
+                messages::internalError(asyncResp->res);
+            }
+        });
+    });
 
     BMCWEB_ROUTE(app, "/redfish/v1/TelemetryService/Triggers/<str>/")
         .privileges(redfish::privileges::deleteTriggers)
@@ -935,35 +935,32 @@ inline void requestRoutesTrigger(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& id) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                const std::string triggerPath =
-                    telemetry::getDbusTriggerPath(id);
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        const std::string triggerPath = telemetry::getDbusTriggerPath(id);
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, id](const boost::system::error_code ec) {
-                        if (ec.value() == EBADR)
-                        {
-                            messages::resourceNotFound(asyncResp->res,
-                                                       "Triggers", id);
-                            return;
-                        }
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, id](const boost::system::error_code ec) {
+            if (ec.value() == EBADR)
+            {
+                messages::resourceNotFound(asyncResp->res, "Triggers", id);
+                return;
+            }
 
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
 
-                        asyncResp->res.result(
-                            boost::beast::http::status::no_content);
-                    },
-                    telemetry::service, triggerPath,
-                    "xyz.openbmc_project.Object.Delete", "Delete");
-            });
+            asyncResp->res.result(boost::beast::http::status::no_content);
+        },
+            telemetry::service, triggerPath,
+            "xyz.openbmc_project.Object.Delete", "Delete");
+    });
 }
 
 } // namespace redfish
