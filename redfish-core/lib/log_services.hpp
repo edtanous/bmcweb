@@ -4424,11 +4424,11 @@ inline void getFDRServiceState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
             if (serviceState == "running")
             {
-                aResp->res.jsonValue["ServiceEnabled"] = "True";
+                aResp->res.jsonValue["ServiceEnabled"] = true;
             }
             else
             {
-                aResp->res.jsonValue["ServiceEnabled"] = "False";
+                aResp->res.jsonValue["ServiceEnabled"] = false;
             }
         });
 }
