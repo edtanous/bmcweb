@@ -15,21 +15,40 @@
 */
 #pragma once
 
-#include "health.hpp"
+#include "bmcweb_config.h"
 
+<<<<<<< HEAD
 #include <app.hpp>
 #include <boost/container/flat_map.hpp>
 #include <dbus_utility.hpp>
+=======
+#include "app.hpp"
+#include "dbus_utility.hpp"
+#include "health.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "utils/collection.hpp"
+#include "utils/dbus_utils.hpp"
+#include "utils/hex_utils.hpp"
+#include "utils/json_utils.hpp"
+
+#include <boost/system/error_code.hpp>
+#include <boost/url/format.hpp>
+>>>>>>> origin/master-october-10
 #include <nlohmann/json.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
+<<<<<<< HEAD
 #include <utils/collection.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/hex_utils.hpp>
 #include <utils/json_utils.hpp>
+=======
+
+#include <array>
+#include <string_view>
+>>>>>>> origin/master-october-10
 
 namespace redfish
 {
@@ -149,7 +168,7 @@ inline std::string translateMemoryTypeToRedfish(const std::string& memoryType)
     return "";
 }
 
-inline void dimmPropToHex(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+inline void dimmPropToHex(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const char* key, const uint16_t* value,
                           const nlohmann::json::json_pointer& jsonPtr)
 {
@@ -157,11 +176,11 @@ inline void dimmPropToHex(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     {
         return;
     }
-    aResp->res.jsonValue[jsonPtr][key] = "0x" + intToHexString(*value, 4);
+    asyncResp->res.jsonValue[jsonPtr][key] = "0x" + intToHexString(*value, 4);
 }
 
 inline void getPersistentMemoryProperties(
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const dbus::utility::DBusPropertiesMap& properties,
     const nlohmann::json::json_pointer& jsonPtr)
 {
@@ -218,108 +237,120 @@ inline void getPersistentMemoryProperties(
 
     if (!success)
     {
-        messages::internalError(aResp->res);
+        messages::internalError(asyncResp->res);
         return;
     }
 
-    dimmPropToHex(aResp, "ModuleManufacturerID", moduleManufacturerID, jsonPtr);
-    dimmPropToHex(aResp, "ModuleProductID", moduleProductID, jsonPtr);
-    dimmPropToHex(aResp, "MemorySubsystemControllerManufacturerID",
+    dimmPropToHex(asyncResp, "ModuleManufacturerID", moduleManufacturerID,
+                  jsonPtr);
+    dimmPropToHex(asyncResp, "ModuleProductID", moduleProductID, jsonPtr);
+    dimmPropToHex(asyncResp, "MemorySubsystemControllerManufacturerID",
                   subsystemVendorID, jsonPtr);
-    dimmPropToHex(aResp, "MemorySubsystemControllerProductID",
+    dimmPropToHex(asyncResp, "MemorySubsystemControllerProductID",
                   subsystemDeviceID, jsonPtr);
 
     if (volatileRegionSizeLimitInKiB != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["VolatileRegionSizeLimitMiB"] =
+        asyncResp->res.jsonValue[jsonPtr]["VolatileRegionSizeLimitMiB"] =
             (*volatileRegionSizeLimitInKiB) >> 10;
     }
 
     if (pmRegionSizeLimitInKiB != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["PersistentRegionSizeLimitMiB"] =
+        asyncResp->res.jsonValue[jsonPtr]["PersistentRegionSizeLimitMiB"] =
             (*pmRegionSizeLimitInKiB) >> 10;
     }
 
     if (volatileSizeInKiB != nullptr)
     {
+<<<<<<< HEAD
         aResp->res.jsonValue[jsonPtr]["VolatileSizeMiB"] =
+=======
+        asyncResp->res.jsonValue[jsonPtr]["VolatileSizeMiB"] =
+>>>>>>> origin/master-october-10
             (*volatileSizeInKiB) >> 10;
     }
 
     if (pmSizeInKiB != nullptr)
     {
+<<<<<<< HEAD
         aResp->res.jsonValue[jsonPtr]["NonVolatileSizeMiB"] = (*pmSizeInKiB) >>
                                                               10;
+=======
+        asyncResp->res.jsonValue[jsonPtr]["NonVolatileSizeMiB"] =
+            (*pmSizeInKiB) >> 10;
+>>>>>>> origin/master-october-10
     }
 
     if (cacheSizeInKB != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["CacheSizeMiB"] = (*cacheSizeInKB >> 10);
+        asyncResp->res.jsonValue[jsonPtr]["CacheSizeMiB"] =
+            (*cacheSizeInKB >> 10);
     }
 
     if (voltaileRegionMaxSizeInKib != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["VolatileRegionSizeMaxMiB"] =
+        asyncResp->res.jsonValue[jsonPtr]["VolatileRegionSizeMaxMiB"] =
             (*voltaileRegionMaxSizeInKib) >> 10;
     }
 
     if (pmRegionMaxSizeInKiB != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["PersistentRegionSizeMaxMiB"] =
+        asyncResp->res.jsonValue[jsonPtr]["PersistentRegionSizeMaxMiB"] =
             (*pmRegionMaxSizeInKiB) >> 10;
     }
 
     if (allocationIncrementInKiB != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["AllocationIncrementMiB"] =
+        asyncResp->res.jsonValue[jsonPtr]["AllocationIncrementMiB"] =
             (*allocationIncrementInKiB) >> 10;
     }
 
     if (allocationAlignmentInKiB != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["AllocationAlignmentMiB"] =
+        asyncResp->res.jsonValue[jsonPtr]["AllocationAlignmentMiB"] =
             (*allocationAlignmentInKiB) >> 10;
     }
 
     if (volatileRegionNumberLimit != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["VolatileRegionNumberLimit"] =
+        asyncResp->res.jsonValue[jsonPtr]["VolatileRegionNumberLimit"] =
             *volatileRegionNumberLimit;
     }
 
     if (pmRegionNumberLimit != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["PersistentRegionNumberLimit"] =
+        asyncResp->res.jsonValue[jsonPtr]["PersistentRegionNumberLimit"] =
             *pmRegionNumberLimit;
     }
 
     if (spareDeviceCount != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["SpareDeviceCount"] = *spareDeviceCount;
+        asyncResp->res.jsonValue[jsonPtr]["SpareDeviceCount"] =
+            *spareDeviceCount;
     }
 
     if (isSpareDeviceInUse != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["IsSpareDeviceEnabled"] =
+        asyncResp->res.jsonValue[jsonPtr]["IsSpareDeviceEnabled"] =
             *isSpareDeviceInUse;
     }
 
     if (isRankSpareEnabled != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["IsRankSpareEnabled"] =
+        asyncResp->res.jsonValue[jsonPtr]["IsRankSpareEnabled"] =
             *isRankSpareEnabled;
     }
 
     if (maxAveragePowerLimitmW != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["MaxTDPMilliWatts"] =
+        asyncResp->res.jsonValue[jsonPtr]["MaxTDPMilliWatts"] =
             *maxAveragePowerLimitmW;
     }
 
     if (configurationLocked != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["ConfigurationLocked"] =
+        asyncResp->res.jsonValue[jsonPtr]["ConfigurationLocked"] =
             *configurationLocked;
     }
 
@@ -332,8 +363,8 @@ inline void getPersistentMemoryProperties(
         {
             if (allowedMemoryModes->ends_with(v))
             {
-                aResp->res.jsonValue[jsonPtr]["OperatingMemoryModes"].push_back(
-                    v);
+                asyncResp->res.jsonValue[jsonPtr]["OperatingMemoryModes"]
+                    .push_back(v);
                 break;
             }
         }
@@ -348,7 +379,7 @@ inline void getPersistentMemoryProperties(
         {
             if (memoryMedia->ends_with(v))
             {
-                aResp->res.jsonValue[jsonPtr]["MemoryMedia"].push_back(v);
+                asyncResp->res.jsonValue[jsonPtr]["MemoryMedia"].push_back(v);
                 break;
             }
         }
@@ -356,42 +387,63 @@ inline void getPersistentMemoryProperties(
 
     if (configurationLockCapable != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
-                            ["ConfigurationLockCapable"] =
+        asyncResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                                ["ConfigurationLockCapable"] =
             *configurationLockCapable;
     }
 
     if (dataLockCapable != nullptr)
     {
+<<<<<<< HEAD
         aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
                             ["DataLockCapable"] = *dataLockCapable;
+=======
+        asyncResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                                ["DataLockCapable"] = *dataLockCapable;
+>>>>>>> origin/master-october-10
     }
 
     if (passphraseCapable != nullptr)
     {
+<<<<<<< HEAD
         aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
                             ["PassphraseCapable"] = *passphraseCapable;
+=======
+        asyncResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                                ["PassphraseCapable"] = *passphraseCapable;
+>>>>>>> origin/master-october-10
     }
 
     if (maxPassphraseCount != nullptr)
     {
+<<<<<<< HEAD
         aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
                             ["MaxPassphraseCount"] = *maxPassphraseCount;
+=======
+        asyncResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                                ["MaxPassphraseCount"] = *maxPassphraseCount;
+>>>>>>> origin/master-october-10
     }
 
     if (passphraseLockLimit != nullptr)
     {
+<<<<<<< HEAD
         aResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
                             ["PassphraseLockLimit"] = *passphraseLockLimit;
+=======
+        asyncResp->res.jsonValue[jsonPtr]["SecurityCapabilities"]
+                                ["PassphraseLockLimit"] = *passphraseLockLimit;
+>>>>>>> origin/master-october-10
     }
 }
 
 inline void
     assembleDimmProperties(std::string_view dimmId,
-                           const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const dbus::utility::DBusPropertiesMap& properties,
                            const nlohmann::json::json_pointer& jsonPtr)
 {
+<<<<<<< HEAD
     aResp->res.jsonValue[jsonPtr]["Id"] = dimmId;
     aResp->res.jsonValue[jsonPtr]["Name"] = "DIMM Slot";
     aResp->res.jsonValue[jsonPtr]["Status"]["State"] = "Enabled";
@@ -400,6 +452,13 @@ inline void
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     std::string dimmIdStr{dimmId};
     redfish::conditions_utils::populateServiceConditions(aResp, dimmIdStr);
+=======
+    asyncResp->res.jsonValue[jsonPtr]["Id"] = dimmId;
+    asyncResp->res.jsonValue[jsonPtr]["Name"] = "DIMM Slot";
+    asyncResp->res.jsonValue[jsonPtr]["Status"]["State"] = "Enabled";
+    asyncResp->res.jsonValue[jsonPtr]["Status"]["Health"] = "OK";
+
+>>>>>>> origin/master-october-10
     const uint16_t* memoryDataWidth = nullptr;
     const size_t* memorySizeInKB = nullptr;
     const std::string* partNumber = nullptr;
@@ -411,13 +470,13 @@ inline void
     const std::string* ecc = nullptr;
     const std::string* formFactor = nullptr;
     const std::vector<uint16_t>* allowedSpeedsMT = nullptr;
-    const uint8_t* memoryAttributes = nullptr;
+    const size_t* memoryAttributes = nullptr;
     const uint16_t* memoryConfiguredSpeedInMhz = nullptr;
     const std::string* memoryType = nullptr;
-    const std::string* channel = nullptr;
-    const std::string* memoryController = nullptr;
-    const std::string* slot = nullptr;
-    const std::string* socket = nullptr;
+    const std::uint8_t* channel = nullptr;
+    const std::uint8_t* memoryController = nullptr;
+    const std::uint8_t* slot = nullptr;
+    const std::uint8_t* socket = nullptr;
     const std::string* sparePartNumber = nullptr;
     const std::string* model = nullptr;
     const std::string* locationCode = nullptr;
@@ -442,49 +501,50 @@ inline void
 
     if (!success)
     {
-        messages::internalError(aResp->res);
+        messages::internalError(asyncResp->res);
         return;
     }
 
     if (memoryDataWidth != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["DataWidthBits"] = *memoryDataWidth;
+        asyncResp->res.jsonValue[jsonPtr]["DataWidthBits"] = *memoryDataWidth;
     }
 
     if (memorySizeInKB != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["CapacityMiB"] = (*memorySizeInKB >> 10);
+        asyncResp->res.jsonValue[jsonPtr]["CapacityMiB"] =
+            (*memorySizeInKB >> 10);
     }
 
     if (partNumber != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["PartNumber"] = *partNumber;
+        asyncResp->res.jsonValue[jsonPtr]["PartNumber"] = *partNumber;
     }
 
     if (serialNumber != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["SerialNumber"] = *serialNumber;
+        asyncResp->res.jsonValue[jsonPtr]["SerialNumber"] = *serialNumber;
     }
 
     if (manufacturer != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["Manufacturer"] = *manufacturer;
+        asyncResp->res.jsonValue[jsonPtr]["Manufacturer"] = *manufacturer;
     }
 
     if (revisionCode != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["FirmwareRevision"] =
+        asyncResp->res.jsonValue[jsonPtr]["FirmwareRevision"] =
             std::to_string(*revisionCode);
     }
 
     if (present != nullptr && !*present)
     {
-        aResp->res.jsonValue[jsonPtr]["Status"]["State"] = "Absent";
+        asyncResp->res.jsonValue[jsonPtr]["Status"]["State"] = "Absent";
     }
 
     if (memoryTotalWidth != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["BusWidthBits"] = *memoryTotalWidth;
+        asyncResp->res.jsonValue[jsonPtr]["BusWidthBits"] = *memoryTotalWidth;
     }
 
     if (ecc != nullptr)
@@ -496,7 +556,7 @@ inline void
         {
             if (ecc->ends_with(v))
             {
-                aResp->res.jsonValue[jsonPtr]["ErrorCorrection"] = v;
+                asyncResp->res.jsonValue[jsonPtr]["ErrorCorrection"] = v;
                 break;
             }
         }
@@ -513,7 +573,7 @@ inline void
         {
             if (formFactor->ends_with(v))
             {
-                aResp->res.jsonValue[jsonPtr]["BaseModuleType"] = v;
+                asyncResp->res.jsonValue[jsonPtr]["BaseModuleType"] = v;
                 break;
             }
         }
@@ -522,7 +582,7 @@ inline void
     if (allowedSpeedsMT != nullptr)
     {
         nlohmann::json& jValue =
-            aResp->res.jsonValue[jsonPtr]["AllowedSpeedsMHz"];
+            asyncResp->res.jsonValue[jsonPtr]["AllowedSpeedsMHz"];
         jValue = nlohmann::json::array();
         for (uint16_t subVal : *allowedSpeedsMT)
         {
@@ -532,13 +592,12 @@ inline void
 
     if (memoryAttributes != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["RankCount"] =
-            static_cast<uint64_t>(*memoryAttributes);
+        asyncResp->res.jsonValue[jsonPtr]["RankCount"] = *memoryAttributes;
     }
 
     if (memoryConfiguredSpeedInMhz != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["OperatingSpeedMhz"] =
+        asyncResp->res.jsonValue[jsonPtr]["OperatingSpeedMhz"] =
             *memoryConfiguredSpeedInMhz;
     }
 
@@ -550,54 +609,56 @@ inline void
         // so just leave off
         if (!memoryDeviceType.empty())
         {
-            aResp->res.jsonValue[jsonPtr]["MemoryDeviceType"] =
+            asyncResp->res.jsonValue[jsonPtr]["MemoryDeviceType"] =
                 memoryDeviceType;
         }
         if (memoryType->find("DDR") != std::string::npos ||
             (boost::ends_with(*memoryType, "HBM")) ||
             (boost::ends_with(*memoryType, "HBM2")))
         {
-            aResp->res.jsonValue[jsonPtr]["MemoryType"] = "DRAM";
+            asyncResp->res.jsonValue[jsonPtr]["MemoryType"] = "DRAM";
         }
         else if (memoryType->ends_with("Logical"))
         {
-            aResp->res.jsonValue[jsonPtr]["MemoryType"] = "IntelOptane";
+            asyncResp->res.jsonValue[jsonPtr]["MemoryType"] = "IntelOptane";
         }
     }
 
     if (channel != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["MemoryLocation"]["Channel"] = *channel;
+        asyncResp->res.jsonValue[jsonPtr]["MemoryLocation"]["Channel"] =
+            *channel;
     }
 
     if (memoryController != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["MemoryLocation"]["MemoryController"] =
-            *memoryController;
+        asyncResp->res.jsonValue[jsonPtr]["MemoryLocation"]
+                                ["MemoryController"] = *memoryController;
     }
 
     if (slot != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["MemoryLocation"]["Slot"] = *slot;
+        asyncResp->res.jsonValue[jsonPtr]["MemoryLocation"]["Slot"] = *slot;
     }
 
     if (socket != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["MemoryLocation"]["Socket"] = *socket;
+        asyncResp->res.jsonValue[jsonPtr]["MemoryLocation"]["Socket"] = *socket;
     }
 
     if (sparePartNumber != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["SparePartNumber"] = *sparePartNumber;
+        asyncResp->res.jsonValue[jsonPtr]["SparePartNumber"] = *sparePartNumber;
     }
 
     if (model != nullptr)
     {
-        aResp->res.jsonValue[jsonPtr]["Model"] = *model;
+        asyncResp->res.jsonValue[jsonPtr]["Model"] = *model;
     }
 
     if (locationCode != nullptr)
     {
+<<<<<<< HEAD
         aResp->res.jsonValue[jsonPtr]["Location"]["PartLocation"]
                             ["ServiceLabel"] = *locationCode;
     }
@@ -617,19 +678,24 @@ inline void
     {
         aResp->res.jsonValue[jsonPtr]["Oem"]["Nvidia"]["RowRemappingPending"] =
             *rowMappingPendingState;
+=======
+        asyncResp->res.jsonValue[jsonPtr]["Location"]["PartLocation"]
+                                ["ServiceLabel"] = *locationCode;
+>>>>>>> origin/master-october-10
     }
     aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
         "#NvidiaMemory.v1_0_0.NvidiaMemory";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-    getPersistentMemoryProperties(aResp, properties, jsonPtr);
+    getPersistentMemoryProperties(asyncResp, properties, jsonPtr);
 }
 
-inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
+inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                                  const std::string& dimmId,
                                  const std::string& service,
                                  const std::string& objPath)
 {
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
         objPath, [aResp](const std::string& rootHealth,
@@ -644,25 +710,38 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
     health->selfPath = objPath;
     health->populate();
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE*/
+=======
+    if constexpr (bmcwebEnableHealthPopulate)
+    {
+        auto health = std::make_shared<HealthPopulate>(asyncResp);
+        health->selfPath = objPath;
+        health->populate();
+    }
+>>>>>>> origin/master-october-10
 
-    BMCWEB_LOG_DEBUG << "Get available system components.";
+    BMCWEB_LOG_DEBUG("Get available system components.");
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objPath, "",
-        [dimmId, aResp{std::move(aResp)}](
-            const boost::system::error_code ec,
+        [dimmId, asyncResp{std::move(asyncResp)}](
+            const boost::system::error_code& ec,
             const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
-            messages::internalError(aResp->res);
+            BMCWEB_LOG_DEBUG("DBUS response error");
+            messages::internalError(asyncResp->res);
             return;
         }
+<<<<<<< HEAD
         assembleDimmProperties(dimmId, aResp, properties, ""_json_pointer);
     });
+=======
+        assembleDimmProperties(dimmId, asyncResp, properties, ""_json_pointer);
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void assembleDimmPartitionData(
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const dbus::utility::DBusPropertiesMap& properties,
     const nlohmann::json::json_pointer& regionPtr)
 {
@@ -680,7 +759,7 @@ inline void assembleDimmPartitionData(
 
     if (!success)
     {
-        messages::internalError(aResp->res);
+        messages::internalError(asyncResp->res);
         return;
     }
 
@@ -711,33 +790,39 @@ inline void assembleDimmPartitionData(
         partition["SizeMiB"] = (*sizeInKiB >> 10);
     }
 
-    aResp->res.jsonValue[regionPtr].emplace_back(std::move(partition));
+    asyncResp->res.jsonValue[regionPtr].emplace_back(std::move(partition));
 }
 
-inline void getDimmPartitionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
+inline void getDimmPartitionData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                                  const std::string& service,
                                  const std::string& path)
 {
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, path,
         "xyz.openbmc_project.Inventory.Item.PersistentMemory.Partition",
-        [aResp{std::move(aResp)}](
-            const boost::system::error_code ec,
+        [asyncResp{std::move(asyncResp)}](
+            const boost::system::error_code& ec,
             const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
-            messages::internalError(aResp->res);
+            BMCWEB_LOG_DEBUG("DBUS response error");
+            messages::internalError(asyncResp->res);
 
             return;
         }
         nlohmann::json::json_pointer regionPtr = "/Regions"_json_pointer;
+<<<<<<< HEAD
         assembleDimmPartitionData(aResp, properties, regionPtr);
     }
+=======
+        assembleDimmPartitionData(asyncResp, properties, regionPtr);
+        }
+>>>>>>> origin/master-october-10
 
     );
 }
 
+<<<<<<< HEAD
 /**
  * @brief Fill out links association to parent processor by
  * requesting data from the given D-Bus association object.
@@ -829,17 +914,24 @@ inline void
 }
 
 inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> aResp,
+=======
+inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
+>>>>>>> origin/master-october-10
                         const std::string& dimmId)
 {
-    BMCWEB_LOG_DEBUG << "Get available system dimm resources.";
-    crow::connections::systemBus->async_method_call(
-        [dimmId, aResp{std::move(aResp)}](
-            const boost::system::error_code ec,
+    BMCWEB_LOG_DEBUG("Get available system dimm resources.");
+    constexpr std::array<std::string_view, 2> dimmInterfaces = {
+        "xyz.openbmc_project.Inventory.Item.Dimm",
+        "xyz.openbmc_project.Inventory.Item.PersistentMemory.Partition"};
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project/inventory", 0, dimmInterfaces,
+        [dimmId, asyncResp{std::move(asyncResp)}](
+            const boost::system::error_code& ec,
             const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
-            messages::internalError(aResp->res);
+            BMCWEB_LOG_DEBUG("DBUS response error");
+            messages::internalError(asyncResp->res);
 
             return;
         }
@@ -855,7 +947,8 @@ inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                             "xyz.openbmc_project.Inventory.Item.Dimm" &&
                         path.filename() == dimmId)
                     {
-                        getDimmDataByService(aResp, dimmId, service, rawPath);
+                        getDimmDataByService(asyncResp, dimmId, service,
+                                             rawPath);
                         found = true;
                         // Link association to parent processor
                         getMemoryProcessorLink(aResp, path);
@@ -872,7 +965,7 @@ inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                             "xyz.openbmc_project.Inventory.Item.PersistentMemory.Partition" &&
                         path.parent_path().filename() == dimmId)
                     {
-                        getDimmPartitionData(aResp, service, rawPath);
+                        getDimmPartitionData(asyncResp, service, rawPath);
                     }
                 }
             }
@@ -880,10 +973,11 @@ inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         // Object not found
         if (!found)
         {
-            messages::resourceNotFound(aResp->res, "Memory", dimmId);
+            messages::resourceNotFound(asyncResp->res, "Memory", dimmId);
             return;
         }
         // Set @odata only if object is found
+<<<<<<< HEAD
         aResp->res.jsonValue["@odata.type"] = "#Memory.v1_11_0.Memory";
         aResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/" + dimmId;
@@ -906,6 +1000,13 @@ inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         std::array<const char*, 2>{
             "xyz.openbmc_project.Inventory.Item.Dimm",
             "xyz.openbmc_project.Inventory.Item.PersistentMemory.Partition"});
+=======
+        asyncResp->res.jsonValue["@odata.type"] = "#Memory.v1_11_0.Memory";
+        asyncResp->res.jsonValue["@odata.id"] =
+            boost::urls::format("/redfish/v1/Systems/system/Memory/{}", dimmId);
+        return;
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesMemoryCollection(App& app)
@@ -923,7 +1024,18 @@ inline void requestRoutesMemoryCollection(App& app)
         {
             return;
         }
+<<<<<<< HEAD
         if (systemName != PLATFORMSYSTEMID)
+=======
+        if constexpr (bmcwebEnableMultiHost)
+        {
+            // Option currently returns no systems.  TBD
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
+        if (systemName != "system")
+>>>>>>> origin/master-october-10
         {
             messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                        systemName);
@@ -936,10 +1048,18 @@ inline void requestRoutesMemoryCollection(App& app)
         asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
 
+        constexpr std::array<std::string_view, 1> interfaces{
+            "xyz.openbmc_project.Inventory.Item.Dimm"};
         collection_util::getCollectionMembers(
+<<<<<<< HEAD
             asyncResp, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory",
             {"xyz.openbmc_project.Inventory.Item.Dimm"});
     });
+=======
+            asyncResp, boost::urls::url("/redfish/v1/Systems/system/Memory"),
+            interfaces, "/xyz/openbmc_project/inventory");
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesMemory(App& app)
@@ -957,7 +1077,20 @@ inline void requestRoutesMemory(App& app)
         {
             return;
         }
+<<<<<<< HEAD
         if (systemName != PLATFORMSYSTEMID)
+=======
+
+        if constexpr (bmcwebEnableMultiHost)
+        {
+            // Option currently returns no systems.  TBD
+            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                       systemName);
+            return;
+        }
+
+        if (systemName != "system")
+>>>>>>> origin/master-october-10
         {
             messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                        systemName);

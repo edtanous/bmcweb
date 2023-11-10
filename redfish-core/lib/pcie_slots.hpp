@@ -1,76 +1,35 @@
 #pragma once
 
+#include "app.hpp"
+#include "dbus_utility.hpp"
 #include "error_messages.hpp"
+#include "generated/enums/pcie_slots.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
 #include "utility.hpp"
+#include "utils/dbus_utils.hpp"
+#include "utils/json_utils.hpp"
+#include "utils/pcie_util.hpp"
 
-#include <app.hpp>
-#include <pcie.hpp>
-#include <registries/privilege_registry.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
-#include <utils/dbus_utils.hpp>
-#include <utils/json_utils.hpp>
+
+#include <array>
+#include <string_view>
 
 namespace redfish
 {
 
-inline std::string dbusSlotTypeToRf(const std::string& slotType)
-{
-    if (slotType ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.FullLength")
-    {
-        return "FullLength";
-    }
-    if (slotType ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.HalfLength")
-    {
-        return "HalfLength";
-    }
-    if (slotType ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.LowProfile")
-    {
-        return "LowProfile";
-    }
-    if (slotType ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.Mini")
-    {
-        return "Mini";
-    }
-    if (slotType == "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.M_2")
-    {
-        return "M2";
-    }
-    if (slotType == "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM")
-    {
-        return "OEM";
-    }
-    if (slotType ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OCP3Small")
-    {
-        return "OCP3Small";
-    }
-    if (slotType ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OCP3Large")
-    {
-        return "OCP3Large";
-    }
-    if (slotType == "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.U_2")
-    {
-        return "U2";
-    }
-
-    // Unknown or others
-    return "";
-}
-
 inline void
     onPcieSlotGetAllDone(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const boost::system::error_code ec,
+                         const boost::system::error_code& ec,
                          const dbus::utility::DBusPropertiesMap& propertiesList)
 {
     if (ec)
     {
-        BMCWEB_LOG_ERROR << "Can't get PCIeSlot properties!";
+        BMCWEB_LOG_ERROR("Can't get PCIeSlot properties!");
         messages::internalError(asyncResp->res);
         return;
     }
@@ -81,7 +40,7 @@ inline void
         slots.get_ptr<nlohmann::json::array_t*>();
     if (slotsPtr == nullptr)
     {
-        BMCWEB_LOG_ERROR << "Slots key isn't an array???";
+        BMCWEB_LOG_ERROR("Slots key isn't an array???");
         messages::internalError(asyncResp->res);
         return;
     }
@@ -106,30 +65,46 @@ inline void
 
     if (generation != nullptr)
     {
-        std::optional<std::string> pcieType =
-            redfishPcieGenerationFromDbus(*generation);
+        std::optional<pcie_device::PCIeTypes> pcieType =
+            pcie_util::redfishPcieGenerationFromDbus(*generation);
         if (!pcieType)
         {
-            messages::internalError(asyncResp->res);
-            return;
+            BMCWEB_LOG_WARNING("Unknown PCIe Slot Generation: {}", *generation);
         }
-        slot["PCIeType"] = !pcieType;
+        else
+        {
+            if (*pcieType == pcie_device::PCIeTypes::Invalid)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            slot["PCIeType"] = *pcieType;
+        }
     }
 
-    if (lanes != nullptr)
+    if (lanes != nullptr && *lanes != 0)
     {
         slot["Lanes"] = *lanes;
     }
 
     if (slotType != nullptr)
     {
-        std::string redfishSlotType = dbusSlotTypeToRf(*slotType);
-        if (!slotType.empty())
+        std::optional<pcie_slots::SlotTypes> redfishSlotType =
+            pcie_util::dbusSlotTypeToRf(*slotType);
+        if (!redfishSlotType)
         {
-            messages::internalError(asyncResp->res);
-            return;
+            BMCWEB_LOG_WARNING("Unknown PCIe Slot Type: {}", *slotType);
         }
-        slot["SlotType"] = redfishSlotType;
+        else
+        {
+            if (*redfishSlotType == pcie_slots::SlotTypes::Invalid)
+            {
+                BMCWEB_LOG_ERROR("Unknown PCIe Slot Type: {}", *slotType);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            slot["SlotType"] = *redfishSlotType;
+        }
     }
 
     if (hotPluggable != nullptr)
@@ -143,8 +118,8 @@ inline void
 inline void onMapperAssociationDone(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisID, const std::string& pcieSlotPath,
-    const std::string& connectionName, const boost::system::error_code ec,
-    const std::variant<std::vector<std::string>>& endpoints)
+    const std::string& connectionName, const boost::system::error_code& ec,
+    const dbus::utility::MapperEndPoints& pcieSlotChassis)
 {
     if (ec)
     {
@@ -153,29 +128,19 @@ inline void onMapperAssociationDone(
             // This PCIeSlot have no chassis association.
             return;
         }
-        BMCWEB_LOG_ERROR << "DBUS response error";
+        BMCWEB_LOG_ERROR("DBUS response error");
         messages::internalError(asyncResp->res);
         return;
     }
 
-    const std::vector<std::string>* pcieSlotChassis =
-        std::get_if<std::vector<std::string>>(&(endpoints));
-
-    if (pcieSlotChassis == nullptr)
+    if (pcieSlotChassis.size() != 1)
     {
-        BMCWEB_LOG_ERROR << "Error getting PCIe Slot association!";
+        BMCWEB_LOG_ERROR("PCIe Slot association error! ");
         messages::internalError(asyncResp->res);
         return;
     }
 
-    if (pcieSlotChassis->size() != 1)
-    {
-        BMCWEB_LOG_ERROR << "PCIe Slot association error! ";
-        messages::internalError(asyncResp->res);
-        return;
-    }
-
-    sdbusplus::message::object_path path((*pcieSlotChassis)[0]);
+    sdbusplus::message::object_path path(pcieSlotChassis[0]);
     std::string chassisName = path.filename();
     if (chassisName != chassisID)
     {
@@ -186,21 +151,26 @@ inline void onMapperAssociationDone(
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, connectionName, pcieSlotPath,
         "xyz.openbmc_project.Inventory.Item.PCIeSlot",
-        [asyncResp](const boost::system::error_code ec,
+        [asyncResp](const boost::system::error_code& ec2,
                     const dbus::utility::DBusPropertiesMap& propertiesList) {
+<<<<<<< HEAD
         onPcieSlotGetAllDone(asyncResp, ec, propertiesList);
     });
+=======
+        onPcieSlotGetAllDone(asyncResp, ec2, propertiesList);
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void
     onMapperSubtreeDone(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& chassisID,
-                        const boost::system::error_code ec,
+                        const boost::system::error_code& ec,
                         const dbus::utility::MapperGetSubTreeResponse& subtree)
 {
     if (ec)
     {
-        BMCWEB_LOG_ERROR << "D-Bus response error on GetSubTree " << ec;
+        BMCWEB_LOG_ERROR("D-Bus response error on GetSubTree {}", ec);
         messages::internalError(asyncResp->res);
         return;
     }
@@ -210,13 +180,13 @@ inline void
         return;
     }
 
-    BMCWEB_LOG_DEBUG << "Get properties for PCIeSlots associated to chassis = "
-                     << chassisID;
+    BMCWEB_LOG_DEBUG("Get properties for PCIeSlots associated to chassis = {}",
+                     chassisID);
 
     asyncResp->res.jsonValue["@odata.type"] = "#PCIeSlots.v1_4_1.PCIeSlots";
     asyncResp->res.jsonValue["Name"] = "PCIe Slot Information";
-    asyncResp->res.jsonValue["@odata.id"] = crow::utility::urlFromPieces(
-        "redfish", "v1", "Chassis", chassisID, "PCIeSlots");
+    asyncResp->res.jsonValue["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/PCIeSlots", chassisID);
     asyncResp->res.jsonValue["Id"] = "1";
     asyncResp->res.jsonValue["Slots"] = nlohmann::json::array();
 
@@ -232,17 +202,23 @@ inline void
 
             // The association of this PCIeSlot is used to determine whether
             // it belongs to this ChassisID
-            crow::connections::systemBus->async_method_call(
+            dbus::utility::getAssociationEndPoints(
+                std::string{pcieSlotAssociationPath},
                 [asyncResp, chassisID, pcieSlotPath, connectionName](
-                    const boost::system::error_code ec,
-                    const std::variant<std::vector<std::string>>& endpoints) {
+                    const boost::system::error_code& ec2,
+                    const dbus::utility::MapperEndPoints& endpoints) {
                 onMapperAssociationDone(asyncResp, chassisID, pcieSlotPath,
+<<<<<<< HEAD
                                         connectionName, ec, endpoints);
             },
                 "xyz.openbmc_project.ObjectMapper",
                 std::string{pcieSlotAssociationPath},
                 "org.freedesktop.DBus.Properties", "Get",
                 "xyz.openbmc_project.Association", "endpoints");
+=======
+                                        connectionName, ec2, endpoints);
+                });
+>>>>>>> origin/master-october-10
         }
     }
 }
@@ -257,11 +233,15 @@ inline void handlePCIeSlotCollectionGet(
         return;
     }
 
-    crow::connections::systemBus->async_method_call(
+    constexpr std::array<std::string_view, 1> interfaces = {
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot"};
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project/inventory", 0, interfaces,
         [asyncResp,
-         chassisID](const boost::system::error_code ec,
+         chassisID](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
         onMapperSubtreeDone(asyncResp, chassisID, ec, subtree);
+<<<<<<< HEAD
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -269,6 +249,9 @@ inline void handlePCIeSlotCollectionGet(
         "/xyz/openbmc_project/inventory", int32_t(0),
         std::array<const char*, 1>{
             "xyz.openbmc_project.Inventory.Item.PCIeSlot"});
+=======
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesPCIeSlots(App& app)

@@ -18,18 +18,18 @@
 namespace redfish::registries::resource_event
 {
 const Header header = {
-    "Copyright 2014-2021 DMTF in cooperation with the Storage Networking Industry Association (SNIA). All rights reserved.",
-    "#MessageRegistry.v1_5_0.MessageRegistry",
-    "ResourceEvent.1.2.1",
+    "Copyright 2014-2023 DMTF in cooperation with the Storage Networking Industry Association (SNIA). All rights reserved.",
+    "#MessageRegistry.v1_6_0.MessageRegistry",
+    "ResourceEvent.1.3.0",
     "Resource Event Message Registry",
     "en",
     "This registry defines the messages to use for resource events.",
     "ResourceEvent",
-    "1.2.1",
+    "1.3.0",
     "DMTF",
 };
 constexpr const char* url =
-    "https://redfish.dmtf.org/registries/ResourceEvent.1.2.1.json";
+    "https://redfish.dmtf.org/registries/ResourceEvent.1.3.0.json";
 
 constexpr std::array registry =
 {
@@ -365,6 +365,16 @@ constexpr std::array registry =
             "None.",
         }},
     MessageEntry{
+        "TestMessage",
+        {
+            "A test message used to validate event delivery mechanisms.",
+            "Test message.",
+            "OK",
+            0,
+            {},
+            "None.",
+        }},
+    MessageEntry{
         "URIForResourceChanged",
         {
             "Indicates that the URI for a resource has changed.  Examples for this would be physical component replacement or redistribution.",
@@ -405,6 +415,7 @@ enum class Index
     resourceVersionIncompatible = 22,
     resourceWarningThresholdCleared = 23,
     resourceWarningThresholdExceeded = 24,
-    uRIForResourceChanged = 25,
+    testMessage = 25,
+    uRIForResourceChanged = 26,
 };
 } // namespace redfish::registries::resource_event

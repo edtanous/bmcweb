@@ -16,11 +16,15 @@
 #pragma once
 
 #include "error_messages.hpp"
+#include "http_connection.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
+#include "human_sort.hpp"
 #include "logging.hpp"
-#include "nlohmann/json.hpp"
 
+#include <nlohmann/json.hpp>
+
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -28,6 +32,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -97,21 +102,21 @@ bool checkRange(const FromType& from, std::string_view key)
 {
     if (from > std::numeric_limits<ToType>::max())
     {
-        BMCWEB_LOG_DEBUG << "Value for key " << key
-                         << " was greater than max: " << __PRETTY_FUNCTION__;
+        BMCWEB_LOG_DEBUG("Value for key {} was greater than max: {}", key,
+                         __PRETTY_FUNCTION__);
         return false;
     }
     if (from < std::numeric_limits<ToType>::lowest())
     {
-        BMCWEB_LOG_DEBUG << "Value for key " << key
-                         << " was less than min: " << __PRETTY_FUNCTION__;
+        BMCWEB_LOG_DEBUG("Value for key {} was less than min: {}", key,
+                         __PRETTY_FUNCTION__);
         return false;
     }
     if constexpr (std::is_floating_point_v<ToType>)
     {
         if (std::isnan(from))
         {
-            BMCWEB_LOG_DEBUG << "Value for key " << key << " was NAN";
+            BMCWEB_LOG_DEBUG("Value for key {} was NAN", key);
             return false;
         }
     }
@@ -189,9 +194,8 @@ UnpackErrorCode unpackValueWithErrorCode(nlohmann::json& jsonValue,
         JsonType jsonPtr = jsonValue.get_ptr<JsonType>();
         if (jsonPtr == nullptr)
         {
-            BMCWEB_LOG_DEBUG
-                << "Value for key " << key
-                << " was incorrect type: " << jsonValue.type_name();
+            BMCWEB_LOG_DEBUG("Value for key {} was incorrect type: {}", key,
+                             jsonValue.type_name());
             return UnpackErrorCode::invalidType;
         }
         value = std::move(*jsonPtr);
@@ -216,20 +220,12 @@ bool unpackValue(nlohmann::json& jsonValue, std::string_view key,
     {
         if (!jsonValue.is_array())
         {
-            messages::propertyValueTypeError(
-                res,
-                res.jsonValue.dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace),
-                key);
+            messages::propertyValueTypeError(res, res.jsonValue, key);
             return false;
         }
         if (jsonValue.size() != value.size())
         {
-            messages::propertyValueTypeError(
-                res,
-                res.jsonValue.dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace),
-                key);
+            messages::propertyValueTypeError(res, res.jsonValue, key);
             return false;
         }
         size_t index = 0;
@@ -244,11 +240,7 @@ bool unpackValue(nlohmann::json& jsonValue, std::string_view key,
     {
         if (!jsonValue.is_array())
         {
-            messages::propertyValueTypeError(
-                res,
-                res.jsonValue.dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace),
-                key);
+            messages::propertyValueTypeError(res, res.jsonValue, key);
             return false;
         }
 
@@ -267,19 +259,11 @@ bool unpackValue(nlohmann::json& jsonValue, std::string_view key,
         {
             if (ec == UnpackErrorCode::invalidType)
             {
-                messages::propertyValueTypeError(
-                    res,
-                    jsonValue.dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace),
-                    key);
+                messages::propertyValueTypeError(res, jsonValue, key);
             }
             else if (ec == UnpackErrorCode::outOfRange)
             {
-                messages::propertyValueNotInList(
-                    res,
-                    jsonValue.dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace),
-                    key);
+                messages::propertyValueNotInList(res, jsonValue, key);
             }
             return false;
         }
@@ -404,13 +388,15 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
                            std::span<PerUnpack> toUnpack)
 {
     bool result = true;
-    if (!jsonRequest.is_object())
+    nlohmann::json::object_t* obj =
+        jsonRequest.get_ptr<nlohmann::json::object_t*>();
+    if (obj == nullptr)
     {
-        BMCWEB_LOG_DEBUG << "Json value is not an object";
+        BMCWEB_LOG_DEBUG("Json value is not an object");
         messages::unrecognizedRequestBody(res);
         return false;
     }
-    for (const auto& item : jsonRequest.items())
+    for (auto& item : *obj)
     {
         size_t unpackIndex = 0;
         for (; unpackIndex < toUnpack.size(); unpackIndex++)
@@ -425,7 +411,7 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
                 key = key.substr(0, keysplitIndex);
             }
 
-            if (key != item.key() || unpackSpec.complete)
+            if (key != item.first || unpackSpec.complete)
             {
                 continue;
             }
@@ -436,7 +422,7 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
                 // Include the slash in the key so we can compare later
                 key = unpackSpec.key.substr(0, keysplitIndex + 1);
                 nlohmann::json j;
-                result = details::unpackValue<nlohmann::json>(item.value(), key,
+                result = details::unpackValue<nlohmann::json>(item.second, key,
                                                               res, j) &&
                          result;
                 if (!result)
@@ -465,8 +451,8 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
                 using ContainedT =
                     std::remove_pointer_t<std::decay_t<decltype(val)>>;
                 return details::unpackValue<ContainedT>(
-                    item.value(), unpackSpec.key, res, *val);
-            },
+                    item.second, unpackSpec.key, res, *val);
+                         },
                          unpackSpec.value) &&
                      result;
 
@@ -476,7 +462,7 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
 
         if (unpackIndex == toUnpack.size())
         {
-            messages::propertyUnknown(res, item.key());
+            messages::propertyUnknown(res, item.first);
             result = false;
         }
     }
@@ -548,14 +534,14 @@ inline std::optional<nlohmann::json>
     nlohmann::json jsonRequest;
     if (!json_util::processJsonFromRequest(res, req, jsonRequest))
     {
-        BMCWEB_LOG_DEBUG << "Json value not readable";
+        BMCWEB_LOG_DEBUG("Json value not readable");
         return std::nullopt;
     }
     nlohmann::json::object_t* object =
         jsonRequest.get_ptr<nlohmann::json::object_t*>();
     if (object == nullptr || object->empty())
     {
-        BMCWEB_LOG_DEBUG << "Json value is empty";
+        BMCWEB_LOG_DEBUG("Json value is empty");
         messages::emptyJSON(res);
         return std::nullopt;
     }
@@ -580,7 +566,7 @@ bool readJsonPatch(const crow::Request& req, crow::Response& res,
                    std::string_view key, UnpackTypes&&... in)
 {
     std::optional<nlohmann::json> jsonRequest = readJsonPatchHelper(req, res);
-    if (jsonRequest == std::nullopt)
+    if (!jsonRequest)
     {
         return false;
     }
@@ -595,7 +581,7 @@ bool readJsonAction(const crow::Request& req, crow::Response& res,
     nlohmann::json jsonRequest;
     if (!json_util::processJsonFromRequest(res, req, jsonRequest))
     {
-        BMCWEB_LOG_DEBUG << "Json value not readable";
+        BMCWEB_LOG_DEBUG("Json value not readable");
         return false;
     }
     return readJson(jsonRequest, res, key, std::forward<UnpackTypes&&>(in)...);
@@ -614,6 +600,119 @@ bool getValueFromJsonObject(nlohmann::json& jsonData, const std::string& key,
 
     return details::unpackValue(*it, key, value);
 }
+
+// Determines if two json objects are less, based on the presence of the
+// @odata.id key
+inline int odataObjectCmp(const nlohmann::json& a, const nlohmann::json& b)
+{
+    using object_t = nlohmann::json::object_t;
+    const object_t* aObj = a.get_ptr<const object_t*>();
+    const object_t* bObj = b.get_ptr<const object_t*>();
+
+    if (aObj == nullptr)
+    {
+        if (bObj == nullptr)
+        {
+            return 0;
+        }
+        return -1;
+    }
+    if (bObj == nullptr)
+    {
+        return 1;
+    }
+    object_t::const_iterator aIt = aObj->find("@odata.id");
+    object_t::const_iterator bIt = bObj->find("@odata.id");
+    // If either object doesn't have the key, they get "sorted" to the end.
+    if (aIt == aObj->end())
+    {
+        if (bIt == bObj->end())
+        {
+            return 0;
+        }
+        return -1;
+    }
+    if (bIt == bObj->end())
+    {
+        return 1;
+    }
+    const nlohmann::json::string_t* nameA =
+        aIt->second.get_ptr<const std::string*>();
+    const nlohmann::json::string_t* nameB =
+        bIt->second.get_ptr<const std::string*>();
+    // If either object doesn't have a string as the key, they get "sorted" to
+    // the end.
+    if (nameA == nullptr)
+    {
+        if (nameB == nullptr)
+        {
+            return 0;
+        }
+        return -1;
+    }
+    if (nameB == nullptr)
+    {
+        return 1;
+    }
+    boost::urls::url_view aUrl(*nameA);
+    boost::urls::url_view bUrl(*nameB);
+    auto segmentsAIt = aUrl.segments().begin();
+    auto segmentsBIt = bUrl.segments().begin();
+
+    while (true)
+    {
+        if (segmentsAIt == aUrl.segments().end())
+        {
+            if (segmentsBIt == bUrl.segments().end())
+            {
+                return 0;
+            }
+            return -1;
+        }
+        if (segmentsBIt == bUrl.segments().end())
+        {
+            return 1;
+        }
+        int res = alphanumComp(*segmentsAIt, *segmentsBIt);
+        if (res != 0)
+        {
+            return res;
+        }
+
+        segmentsAIt++;
+        segmentsBIt++;
+    }
+};
+
+struct ODataObjectLess
+{
+    bool operator()(const nlohmann::json& left,
+                    const nlohmann::json& right) const
+    {
+        return odataObjectCmp(left, right) < 0;
+    }
+};
+
+// Sort the JSON array by |element[key]|.
+// Elements without |key| or type of |element[key]| is not string are smaller
+// those whose |element[key]| is string.
+inline void sortJsonArrayByOData(nlohmann::json::array_t& array)
+{
+    std::ranges::sort(array, ODataObjectLess());
+}
+
+// Returns the estimated size of the JSON value
+// The implementation walks through every key and every value, accumulates the
+//  total size of keys and values.
+// Ideally, we should use a custom allocator that nlohmann JSON supports.
+
+// Assumption made:
+//  1. number: 8 characters
+//  2. boolean: 5 characters (False)
+//  3. string: len(str) + 2 characters (quote)
+//  4. bytes: len(bytes) characters
+//  5. null: 4 characters (null)
+uint64_t getEstimatedJsonSize(const nlohmann::json& root);
 
 } // namespace json_util
 } // namespace redfish

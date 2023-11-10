@@ -1,14 +1,19 @@
 #pragma once
 
-#include <app.hpp>
-#include <async_resp.hpp>
-#include <dbus_utility.hpp>
-#include <error_messages.hpp>
-#include <nlohmann/json.hpp>
-#include <utils/collection.hpp>
-#include <utils/hex_utils.hpp>
-#include <utils/json_utils.hpp>
+#include "app.hpp"
+#include "async_resp.hpp"
+#include "dbus_utility.hpp"
+#include "error_messages.hpp"
+#include "utils/collection.hpp"
+#include "utils/hex_utils.hpp"
+#include "utils/json_utils.hpp"
 
+#include <boost/system/error_code.hpp>
+#include <boost/url/format.hpp>
+#include <nlohmann/json.hpp>
+
+#include <array>
+#include <string_view>
 #include <vector>
 
 namespace crow
@@ -37,9 +42,11 @@ inline void handleRootOfTrustCollectionGet(
     asyncResp->res.jsonValue["@odata.id"] = "/google/v1/RootOfTrustCollection";
     asyncResp->res.jsonValue["@odata.type"] =
         "#RootOfTrustCollection.RootOfTrustCollection";
+    const std::array<std::string_view, 1> interfaces{
+        "xyz.openbmc_project.Control.Hoth"};
     redfish::collection_util::getCollectionMembers(
-        asyncResp, "/google/v1/RootOfTrustCollection",
-        {"xyz.openbmc_project.Control.Hoth"}, "/xyz/openbmc_project");
+        asyncResp, boost::urls::url("/google/v1/RootOfTrustCollection"),
+        interfaces, "/xyz/openbmc_project");
 }
 
 // Helper struct to identify a resolved D-Bus object interface
@@ -59,7 +66,7 @@ inline void hothGetSubtreeCallback(
     const std::string& command,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& rotId, const ResolvedEntityHandler& entityHandler,
-    const boost::system::error_code ec,
+    const boost::system::error_code& ec,
     const dbus::utility::MapperGetSubTreeResponse& subtree)
 {
     if (ec)
@@ -93,21 +100,17 @@ inline void resolveRoT(const std::string& command,
                        const std::string& rotId,
                        ResolvedEntityHandler&& entityHandler)
 {
-    std::array<std::string, 1> hothIfaces = {
+    constexpr std::array<std::string_view, 1> hothIfaces = {
         "xyz.openbmc_project.Control.Hoth"};
-    crow::connections::systemBus->async_method_call(
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project", 0, hothIfaces,
         [command, asyncResp, rotId,
          entityHandler{std::forward<ResolvedEntityHandler>(entityHandler)}](
-            const boost::system::error_code ec,
+            const boost::system::error_code& ec,
             const dbus::utility::MapperGetSubTreeResponse& subtree) {
         hothGetSubtreeCallback(command, asyncResp, rotId, entityHandler, ec,
                                subtree);
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-        "/xyz/openbmc_project",
-        /*depth=*/0, hothIfaces);
+        });
 }
 
 inline void populateRootOfTrustEntity(
@@ -116,8 +119,8 @@ inline void populateRootOfTrustEntity(
     const ResolvedEntity& resolvedEntity)
 {
     asyncResp->res.jsonValue["@odata.type"] = "#RootOfTrust.v1_0_0.RootOfTrust";
-    asyncResp->res.jsonValue["@odata.id"] =
-        "/google/v1/RootOfTrustCollection/" + resolvedEntity.id;
+    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+        "/google/v1/RootOfTrustCollection/{}", resolvedEntity.id);
 
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     asyncResp->res.jsonValue["Id"] = resolvedEntity.id;
@@ -145,13 +148,13 @@ inline void
 
 inline void
     invocationCallback(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const boost::system::error_code ec,
+                       const boost::system::error_code& ec,
                        const std::vector<uint8_t>& responseBytes)
 {
     if (ec)
     {
-        BMCWEB_LOG_ERROR << "RootOfTrust.Actions.SendCommand failed: "
-                         << ec.message();
+        BMCWEB_LOG_ERROR("RootOfTrust.Actions.SendCommand failed: {}",
+                         ec.message());
         redfish::messages::internalError(asyncResp->res);
         return;
     }
@@ -168,14 +171,14 @@ inline void
     std::vector<uint8_t> bytes = hexStringToBytes(command);
     if (bytes.empty())
     {
-        BMCWEB_LOG_DEBUG << "Invalid command: " << command;
+        BMCWEB_LOG_DEBUG("Invalid command: {}", command);
         redfish::messages::actionParameterValueTypeError(command, "Command",
                                                          "SendCommand");
         return;
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp{asyncResp}](const boost::system::error_code ec,
+        [asyncResp{asyncResp}](const boost::system::error_code& ec,
                                const std::vector<uint8_t>& responseBytes) {
         invocationCallback(asyncResp, ec, responseBytes);
     },
@@ -192,7 +195,7 @@ inline void handleRoTSendCommandPost(
     if (!redfish::json_util::readJsonAction(request, asyncResp->res, "Command",
                                             command))
     {
-        BMCWEB_LOG_DEBUG << "Missing property Command.";
+        BMCWEB_LOG_DEBUG("Missing property Command.");
         redfish::messages::actionParameterMissing(asyncResp->res, "SendCommand",
                                                   "Command");
         return;

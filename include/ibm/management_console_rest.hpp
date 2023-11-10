@@ -1,16 +1,17 @@
 #pragma once
 
-#include <app.hpp>
-#include <async_resp.hpp>
+#include "app.hpp"
+#include "async_resp.hpp"
+#include "error_messages.hpp"
+#include "event_service_manager.hpp"
+#include "ibm/locks.hpp"
+#include "resource_messages.hpp"
+#include "utils/json_utils.hpp"
+
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/container/flat_set.hpp>
-#include <error_messages.hpp>
-#include <event_service_manager.hpp>
-#include <ibm/locks.hpp>
 #include <nlohmann/json.hpp>
-#include <resource_messages.hpp>
 #include <sdbusplus/message/types.hpp>
-#include <utils/json_utils.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -54,11 +55,11 @@ inline void handleFilePut(const crow::Request& req,
         asyncResp->res.jsonValue["Description"] = contentNotAcceptableMsg;
         return;
     }
-    BMCWEB_LOG_DEBUG
-        << "File upload in application/octet-stream format. Continue..";
+    BMCWEB_LOG_DEBUG(
+        "File upload in application/octet-stream format. Continue..");
 
-    BMCWEB_LOG_DEBUG
-        << "handleIbmPut: Request to create/update the save-area file";
+    BMCWEB_LOG_DEBUG(
+        "handleIbmPut: Request to create/update the save-area file");
     std::string_view path =
         "/var/lib/bmcweb/ibm-management-console/configfiles";
     if (!crow::ibm_utils::createDirectory(path))
@@ -79,9 +80,9 @@ inline void handleFilePut(const crow::Request& req,
         asyncResp->res.result(
             boost::beast::http::status::internal_server_error);
         asyncResp->res.jsonValue["Description"] = internalServerError;
-        BMCWEB_LOG_DEBUG << "handleIbmPut: Failed to prepare save-area "
-                            "directory iterator. ec : "
-                         << ec;
+        BMCWEB_LOG_DEBUG("handleIbmPut: Failed to prepare save-area "
+                         "directory iterator. ec : {}",
+                         ec.message());
         return;
     }
     std::uintmax_t saveAreaDirSize = 0;
@@ -94,9 +95,9 @@ inline void handleFilePut(const crow::Request& req,
                 asyncResp->res.result(
                     boost::beast::http::status::internal_server_error);
                 asyncResp->res.jsonValue["Description"] = internalServerError;
-                BMCWEB_LOG_DEBUG << "handleIbmPut: Failed to find save-area "
-                                    "directory . ec : "
-                                 << ec;
+                BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find save-area "
+                                 "directory . ec : {}",
+                                 ec.message());
                 return;
             }
             std::uintmax_t fileSize = std::filesystem::file_size(it, ec);
@@ -105,19 +106,19 @@ inline void handleFilePut(const crow::Request& req,
                 asyncResp->res.result(
                     boost::beast::http::status::internal_server_error);
                 asyncResp->res.jsonValue["Description"] = internalServerError;
-                BMCWEB_LOG_DEBUG << "handleIbmPut: Failed to find save-area "
-                                    "file size inside the directory . ec : "
-                                 << ec;
+                BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find save-area "
+                                 "file size inside the directory . ec : {}",
+                                 ec.message());
                 return;
             }
             saveAreaDirSize += fileSize;
         }
     }
-    BMCWEB_LOG_DEBUG << "saveAreaDirSize: " << saveAreaDirSize;
+    BMCWEB_LOG_DEBUG("saveAreaDirSize: {}", saveAreaDirSize);
 
     // Get the file size getting uploaded
-    const std::string& data = req.body;
-    BMCWEB_LOG_DEBUG << "data length: " << data.length();
+    const std::string& data = req.body();
+    BMCWEB_LOG_DEBUG("data length: {}", data.length());
 
     if (data.length() < minSaveareaFileSize)
     {
@@ -136,7 +137,7 @@ inline void handleFilePut(const crow::Request& req,
 
     // Form the file path
     loc /= fileID;
-    BMCWEB_LOG_DEBUG << "Writing to the file: " << loc.string();
+    BMCWEB_LOG_DEBUG("Writing to the file: {}", loc.string());
 
     // Check if the same file exists in the directory
     bool fileExists = std::filesystem::exists(loc, ec);
@@ -145,8 +146,8 @@ inline void handleFilePut(const crow::Request& req,
         asyncResp->res.result(
             boost::beast::http::status::internal_server_error);
         asyncResp->res.jsonValue["Description"] = internalServerError;
-        BMCWEB_LOG_DEBUG << "handleIbmPut: Failed to find if file exists. ec : "
-                         << ec;
+        BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find if file exists. ec : {}",
+                         ec.message());
         return;
     }
 
@@ -160,8 +161,8 @@ inline void handleFilePut(const crow::Request& req,
             asyncResp->res.result(
                 boost::beast::http::status::internal_server_error);
             asyncResp->res.jsonValue["Description"] = internalServerError;
-            BMCWEB_LOG_DEBUG << "handleIbmPut: Failed to find file size. ec : "
-                             << ec;
+            BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find file size. ec : {}",
+                             ec.message());
             return;
         }
         // Calculate the difference in the file size.
@@ -174,7 +175,7 @@ inline void handleFilePut(const crow::Request& req,
         {
             newSizeToWrite = data.length() - currentFileSize;
         }
-        BMCWEB_LOG_DEBUG << "newSizeToWrite: " << newSizeToWrite;
+        BMCWEB_LOG_DEBUG("newSizeToWrite: {}", newSizeToWrite);
     }
     else
     {
@@ -183,7 +184,7 @@ inline void handleFilePut(const crow::Request& req,
     }
 
     // Calculate the total dir size before writing the new file
-    BMCWEB_LOG_DEBUG << "total new size: " << saveAreaDirSize + newSizeToWrite;
+    BMCWEB_LOG_DEBUG("total new size: {}", saveAreaDirSize + newSizeToWrite);
 
     if ((saveAreaDirSize + newSizeToWrite) > maxSaveareaDirSize)
     {
@@ -203,7 +204,7 @@ inline void handleFilePut(const crow::Request& req,
 
     if (file.fail())
     {
-        BMCWEB_LOG_DEBUG << "Error while opening the file for writing";
+        BMCWEB_LOG_DEBUG("Error while opening the file for writing");
         asyncResp->res.result(
             boost::beast::http::status::internal_server_error);
         asyncResp->res.jsonValue["Description"] =
@@ -216,19 +217,13 @@ inline void handleFilePut(const crow::Request& req,
     // Push an event
     if (fileExists)
     {
-        BMCWEB_LOG_DEBUG << "config file is updated";
+        BMCWEB_LOG_DEBUG("config file is updated");
         asyncResp->res.jsonValue["Description"] = "File Updated";
-
-        redfish::EventServiceManager::getInstance().sendEvent(
-            redfish::messages::resourceChanged(), origin, "IBMConfigFile");
     }
     else
     {
-        BMCWEB_LOG_DEBUG << "config file is created";
+        BMCWEB_LOG_DEBUG("config file is created");
         asyncResp->res.jsonValue["Description"] = "File Created";
-
-        redfish::EventServiceManager::getInstance().sendEvent(
-            redfish::messages::resourceCreated(), origin, "IBMConfigFile");
     }
 }
 
@@ -243,8 +238,11 @@ inline void
         for (const auto& file : std::filesystem::directory_iterator(loc))
         {
             const std::filesystem::path& pathObj = file.path();
-            pathObjList.push_back("/ibm/v1/Host/ConfigFiles/" +
-                                  pathObj.filename().string());
+            if (std::filesystem::is_regular_file(pathObj))
+            {
+                pathObjList.emplace_back("/ibm/v1/Host/ConfigFiles/" +
+                                         pathObj.filename().string());
+            }
         }
     }
     asyncResp->res.jsonValue["@odata.type"] =
@@ -273,9 +271,9 @@ inline void
             asyncResp->res.result(
                 boost::beast::http::status::internal_server_error);
             asyncResp->res.jsonValue["Description"] = internalServerError;
-            BMCWEB_LOG_DEBUG << "deleteConfigFiles: Failed to delete the "
-                                "config files directory. ec : "
-                             << ec;
+            BMCWEB_LOG_DEBUG("deleteConfigFiles: Failed to delete the "
+                             "config files directory. ec : {}",
+                             ec.message());
         }
     }
 }
@@ -299,12 +297,12 @@ inline void
 inline void handleFileGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& fileID)
 {
-    BMCWEB_LOG_DEBUG << "HandleGet on SaveArea files on path: " << fileID;
+    BMCWEB_LOG_DEBUG("HandleGet on SaveArea files on path: {}", fileID);
     std::filesystem::path loc(
         "/var/lib/bmcweb/ibm-management-console/configfiles/" + fileID);
-    if (!std::filesystem::exists(loc))
+    if (!std::filesystem::exists(loc) || !std::filesystem::is_regular_file(loc))
     {
-        BMCWEB_LOG_ERROR << loc.string() << " Not found";
+        BMCWEB_LOG_WARNING("{} Not found", loc.string());
         asyncResp->res.result(boost::beast::http::status::not_found);
         asyncResp->res.jsonValue["Description"] = resourceNotFoundMsg;
         return;
@@ -313,7 +311,7 @@ inline void handleFileGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     std::ifstream readfile(loc.string());
     if (!readfile)
     {
-        BMCWEB_LOG_ERROR << loc.string() << " Not found";
+        BMCWEB_LOG_WARNING("{} Not found", loc.string());
         asyncResp->res.result(boost::beast::http::status::not_found);
         asyncResp->res.jsonValue["Description"] = resourceNotFoundMsg;
         return;
@@ -335,18 +333,18 @@ inline void
 {
     std::string filePath("/var/lib/bmcweb/ibm-management-console/configfiles/" +
                          fileID);
-    BMCWEB_LOG_DEBUG << "Removing the file : " << filePath << "\n";
+    BMCWEB_LOG_DEBUG("Removing the file : {}", filePath);
     std::ifstream fileOpen(filePath.c_str());
     if (static_cast<bool>(fileOpen))
     {
         if (remove(filePath.c_str()) == 0)
         {
-            BMCWEB_LOG_DEBUG << "File removed!\n";
+            BMCWEB_LOG_DEBUG("File removed!");
             asyncResp->res.jsonValue["Description"] = "File Deleted";
         }
         else
         {
-            BMCWEB_LOG_ERROR << "File not removed!\n";
+            BMCWEB_LOG_ERROR("File not removed!");
             asyncResp->res.result(
                 boost::beast::http::status::internal_server_error);
             asyncResp->res.jsonValue["Description"] = internalServerError;
@@ -354,7 +352,7 @@ inline void
     }
     else
     {
-        BMCWEB_LOG_ERROR << "File not found!\n";
+        BMCWEB_LOG_WARNING("File not found!");
         asyncResp->res.result(boost::beast::http::status::not_found);
         asyncResp->res.jsonValue["Description"] = resourceNotFoundMsg;
     }
@@ -369,17 +367,16 @@ inline void
     if (!redfish::json_util::readJsonPatch(req, asyncResp->res, "Message",
                                            broadcastMsg))
     {
-        BMCWEB_LOG_DEBUG << "Not a Valid JSON";
+        BMCWEB_LOG_DEBUG("Not a Valid JSON");
         asyncResp->res.result(boost::beast::http::status::bad_request);
         return;
     }
     if (broadcastMsg.size() > maxBroadcastMsgSize)
     {
-        BMCWEB_LOG_ERROR << "Message size exceeds maximum allowed size[1KB]";
+        BMCWEB_LOG_ERROR("Message size exceeds maximum allowed size[1KB]");
         asyncResp->res.result(boost::beast::http::status::bad_request);
         return;
     }
-    redfish::EventServiceManager::getInstance().sendBroadcastMsg(broadcastMsg);
 }
 
 inline void handleFileUrl(const crow::Request& req,
@@ -421,14 +418,14 @@ inline void
                                           lockType, "ResourceID", resourceId,
                                           "SegmentFlags", segmentFlags))
         {
-            BMCWEB_LOG_DEBUG << "Not a Valid JSON";
+            BMCWEB_LOG_DEBUG("Not a Valid JSON");
             asyncResp->res.result(boost::beast::http::status::bad_request);
             return;
         }
-        BMCWEB_LOG_DEBUG << lockType;
-        BMCWEB_LOG_DEBUG << resourceId;
+        BMCWEB_LOG_DEBUG("{}", lockType);
+        BMCWEB_LOG_DEBUG("{}", resourceId);
 
-        BMCWEB_LOG_DEBUG << "Segment Flags are present";
+        BMCWEB_LOG_DEBUG("Segment Flags are present");
 
         for (auto& e : segmentFlags)
         {
@@ -443,13 +440,13 @@ inline void
                 return;
             }
 
-            BMCWEB_LOG_DEBUG << "Lockflag : " << lockFlags;
-            BMCWEB_LOG_DEBUG << "SegmentLength : " << segmentLength;
+            BMCWEB_LOG_DEBUG("Lockflag : {}", lockFlags);
+            BMCWEB_LOG_DEBUG("SegmentLength : {}", segmentLength);
 
-            segInfo.push_back(std::make_pair(lockFlags, segmentLength));
+            segInfo.emplace_back(std::make_pair(lockFlags, segmentLength));
         }
 
-        lockRequestStructure.push_back(make_tuple(
+        lockRequestStructure.emplace_back(make_tuple(
             req.session->uniqueId, req.session->clientId.value_or(""), lockType,
             resourceId, segInfo));
     }
@@ -458,14 +455,14 @@ inline void
 
     for (auto& i : lockRequestStructure)
     {
-        BMCWEB_LOG_DEBUG << std::get<0>(i);
-        BMCWEB_LOG_DEBUG << std::get<1>(i);
-        BMCWEB_LOG_DEBUG << std::get<2>(i);
-        BMCWEB_LOG_DEBUG << std::get<3>(i);
+        BMCWEB_LOG_DEBUG("{}", std::get<0>(i));
+        BMCWEB_LOG_DEBUG("{}", std::get<1>(i));
+        BMCWEB_LOG_DEBUG("{}", std::get<2>(i));
+        BMCWEB_LOG_DEBUG("{}", std::get<3>(i));
 
         for (const auto& p : std::get<4>(i))
         {
-            BMCWEB_LOG_DEBUG << p.first << ", " << p.second;
+            BMCWEB_LOG_DEBUG("{}, {}", p.first, p.second);
         }
     }
 
@@ -482,14 +479,14 @@ inline void
 
         if ((!validityStatus.first) && (validityStatus.second == 0))
         {
-            BMCWEB_LOG_DEBUG << "Not a Valid record";
-            BMCWEB_LOG_DEBUG << "Bad json in request";
+            BMCWEB_LOG_DEBUG("Not a Valid record");
+            BMCWEB_LOG_DEBUG("Bad json in request");
             asyncResp->res.result(boost::beast::http::status::bad_request);
             return;
         }
         if (validityStatus.first && (validityStatus.second == 1))
         {
-            BMCWEB_LOG_ERROR << "There is a conflict within itself";
+            BMCWEB_LOG_ERROR("There is a conflict within itself");
             asyncResp->res.result(boost::beast::http::status::conflict);
             return;
         }
@@ -500,7 +497,7 @@ inline void
             std::get<crow::ibm_mc_lock::Rc>(varAcquireLock.second);
         if (!conflictStatus.first)
         {
-            BMCWEB_LOG_DEBUG << "There is no conflict with the locktable";
+            BMCWEB_LOG_DEBUG("There is no conflict with the locktable");
             asyncResp->res.result(boost::beast::http::status::ok);
 
             auto var = std::get<uint32_t>(conflictStatus.second);
@@ -509,7 +506,7 @@ inline void
             asyncResp->res.jsonValue["TransactionID"] = var;
             return;
         }
-        BMCWEB_LOG_DEBUG << "There is a conflict with the lock table";
+        BMCWEB_LOG_DEBUG("There is a conflict with the lock table");
         asyncResp->res.result(boost::beast::http::status::conflict);
         auto var =
             std::get<std::pair<uint32_t, LockRequest>>(conflictStatus.second);
@@ -530,7 +527,7 @@ inline void
         }
 
         returnJson["SegmentFlags"] = myarray;
-        BMCWEB_LOG_ERROR << "Conflicting lock record: " << returnJson;
+        BMCWEB_LOG_ERROR("Conflicting lock record: {}", returnJson);
         asyncResp->res.jsonValue["Record"] = returnJson;
         return;
     }
@@ -548,11 +545,11 @@ inline void
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::vector<uint32_t>& listTransactionIds)
 {
-    BMCWEB_LOG_DEBUG << listTransactionIds.size();
-    BMCWEB_LOG_DEBUG << "Data is present";
+    BMCWEB_LOG_DEBUG("{}", listTransactionIds.size());
+    BMCWEB_LOG_DEBUG("Data is present");
     for (unsigned int listTransactionId : listTransactionIds)
     {
-        BMCWEB_LOG_DEBUG << listTransactionId;
+        BMCWEB_LOG_DEBUG("{}", listTransactionId);
     }
 
     // validate the request ids
@@ -564,7 +561,7 @@ inline void
     if (!varReleaselock.first)
     {
         // validation Failed
-        BMCWEB_LOG_ERROR << "handleReleaseLockAPI: validation failed";
+        BMCWEB_LOG_ERROR("handleReleaseLockAPI: validation failed");
         asyncResp->res.result(boost::beast::http::status::bad_request);
         return;
     }
@@ -578,7 +575,7 @@ inline void
     }
 
     // valid rid, but the current hmc does not own all the locks
-    BMCWEB_LOG_DEBUG << "Current HMC does not own all the locks";
+    BMCWEB_LOG_DEBUG("Current HMC does not own all the locks");
     asyncResp->res.result(boost::beast::http::status::unauthorized);
 
     auto var = statusRelease.second;
@@ -599,7 +596,7 @@ inline void
     }
 
     returnJson["SegmentFlags"] = myArray;
-    BMCWEB_LOG_DEBUG << "handleReleaseLockAPI: lockrecord: " << returnJson;
+    BMCWEB_LOG_DEBUG("handleReleaseLockAPI: lockrecord: {}", returnJson);
     asyncResp->res.jsonValue["Record"] = returnJson;
 }
 
@@ -607,7 +604,7 @@ inline void
     handleGetLockListAPI(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const ListOfSessionIds& listSessionIds)
 {
-    BMCWEB_LOG_DEBUG << listSessionIds.size();
+    BMCWEB_LOG_DEBUG("{}", listSessionIds.size());
 
     auto status =
         crow::ibm_mc_lock::Lock::getInstance().getLockList(listSessionIds);
@@ -650,7 +647,7 @@ inline bool isValidConfigFileName(const std::string& fileName,
 {
     if (fileName.empty())
     {
-        BMCWEB_LOG_ERROR << "Empty filename";
+        BMCWEB_LOG_ERROR("Empty filename");
         res.jsonValue["Description"] = "Empty file path in the url";
         return false;
     }
@@ -661,7 +658,7 @@ inline bool isValidConfigFileName(const std::string& fileName,
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-");
     if (found != std::string::npos)
     {
-        BMCWEB_LOG_ERROR << "Unsupported character in filename: " << fileName;
+        BMCWEB_LOG_ERROR("Unsupported character in filename: {}", fileName);
         res.jsonValue["Description"] = "Unsupported character in filename";
         return false;
     }
@@ -669,9 +666,9 @@ inline bool isValidConfigFileName(const std::string& fileName,
     // Check the filename length
     if (fileName.length() > 20)
     {
-        BMCWEB_LOG_ERROR << "Name must be maximum 20 characters. "
-                            "Input filename length is: "
-                         << fileName.length();
+        BMCWEB_LOG_ERROR("Name must be maximum 20 characters. "
+                         "Input filename length is: {}",
+                         fileName.length());
         res.jsonValue["Description"] = "Filename must be maximum 20 characters";
         return false;
     }
@@ -724,7 +721,7 @@ inline void requestRoutes(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& fileName) {
-        BMCWEB_LOG_DEBUG << "ConfigFile : " << fileName;
+        BMCWEB_LOG_DEBUG("ConfigFile : {}", fileName);
         // Validate the incoming fileName
         if (!isValidConfigFileName(fileName, asyncResp->res))
         {
@@ -751,7 +748,7 @@ inline void requestRoutes(App& app)
         if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Request",
                                                 body))
         {
-            BMCWEB_LOG_DEBUG << "Not a Valid JSON";
+            BMCWEB_LOG_DEBUG("Not a Valid JSON");
             asyncResp->res.result(boost::beast::http::status::bad_request);
             return;
         }
@@ -782,8 +779,7 @@ inline void requestRoutes(App& app)
         }
         else
         {
-            BMCWEB_LOG_DEBUG << " Value of Type : " << type
-                             << "is Not a Valid key";
+            BMCWEB_LOG_DEBUG(" Value of Type : {}is Not a Valid key", type);
             redfish::messages::propertyValueNotInList(asyncResp->res, type,
                                                       "Type");
         }

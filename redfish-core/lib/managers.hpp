@@ -15,13 +15,22 @@
 */
 #pragma once
 
+<<<<<<< HEAD
 // #include "error_messages.hpp"
+=======
+#include "bmcweb_config.h"
+
+#include "app.hpp"
+#include "dbus_utility.hpp"
+>>>>>>> origin/master-october-10
 #include "health.hpp"
 #include "redfish_util.hpp"
 #include "utils/dbus_utils.hpp"
+#include "utils/json_utils.hpp"
 #include "utils/sw_utils.hpp"
 #include "utils/time_utils.hpp"
 
+<<<<<<< HEAD
 #include <app.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time.hpp>
@@ -35,11 +44,20 @@
 #include <utils/hex_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/systemd_utils.hpp>
+=======
+#include <boost/system/error_code.hpp>
+#include <boost/url/format.hpp>
+#include <sdbusplus/asio/property.hpp>
+#include <sdbusplus/unpack_properties.hpp>
+>>>>>>> origin/master-october-10
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
+#include <ranges>
 #include <sstream>
+#include <string_view>
 #include <variant>
 
 namespace redfish
@@ -142,22 +160,26 @@ inline void
     const char* destProperty = "RequestedBMCTransition";
 
     // Create the D-Bus variant for D-Bus call.
-    dbus::utility::DbusVariantType dbusPropertyValue(propertyValue);
-
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, processName, objectPath, interfaceName,
+        destProperty, propertyValue,
+        [asyncResp](const boost::system::error_code& ec) {
         // Use "Set" method to set the property value.
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "[Set] Bad D-Bus request error: " << ec;
+            BMCWEB_LOG_DEBUG("[Set] Bad D-Bus request error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
 
         messages::success(asyncResp->res);
+<<<<<<< HEAD
     },
         processName, objectPath, "org.freedesktop.DBus.Properties", "Set",
         interfaceName, destProperty, dbusPropertyValue);
+=======
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void
@@ -171,19 +193,20 @@ inline void
     const char* destProperty = "RequestedBMCTransition";
 
     // Create the D-Bus variant for D-Bus call.
-    dbus::utility::DbusVariantType dbusPropertyValue(propertyValue);
-
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, processName, objectPath, interfaceName,
+        destProperty, propertyValue,
+        [asyncResp](const boost::system::error_code& ec) {
         // Use "Set" method to set the property value.
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "[Set] Bad D-Bus request error: " << ec;
+            BMCWEB_LOG_DEBUG("[Set] Bad D-Bus request error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
 
         messages::success(asyncResp->res);
+<<<<<<< HEAD
     },
         processName, objectPath, "org.freedesktop.DBus.Properties", "Set",
         interfaceName, destProperty, dbusPropertyValue);
@@ -221,6 +244,9 @@ inline void
     },
         processName, objectPath, "org.freedesktop.DBus.Properties", "Set",
         interfaceName, destProperty, dbusPropertyValue);
+=======
+        });
+>>>>>>> origin/master-october-10
 }
 
 /**
@@ -245,7 +271,7 @@ inline void requestRoutesManagerResetAction(App& app)
         {
             return;
         }
-        BMCWEB_LOG_DEBUG << "Post Manager Reset.";
+        BMCWEB_LOG_DEBUG("Post Manager Reset.");
 
         std::string resetType;
 
@@ -257,16 +283,17 @@ inline void requestRoutesManagerResetAction(App& app)
 
         if (resetType == "GracefulRestart")
         {
-            BMCWEB_LOG_DEBUG << "Proceeding with " << resetType;
+            BMCWEB_LOG_DEBUG("Proceeding with {}", resetType);
             doBMCGracefulRestart(asyncResp);
             return;
         }
         if (resetType == "ForceRestart")
         {
-            BMCWEB_LOG_DEBUG << "Proceeding with " << resetType;
+            BMCWEB_LOG_DEBUG("Proceeding with {}", resetType);
             doBMCForceRestart(asyncResp);
             return;
         }
+<<<<<<< HEAD
         if (resetType == "GracefulShutdown")
         {
             BMCWEB_LOG_DEBUG << "Proceeding with " << resetType;
@@ -275,6 +302,9 @@ inline void requestRoutesManagerResetAction(App& app)
         }
         BMCWEB_LOG_DEBUG << "Invalid property value for ResetType: "
                          << resetType;
+=======
+        BMCWEB_LOG_DEBUG("Invalid property value for ResetType: {}", resetType);
+>>>>>>> origin/master-october-10
         messages::actionParameterNotSupported(asyncResp->res, resetType,
                                               "ResetType");
 
@@ -310,7 +340,7 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
         {
             return;
         }
-        BMCWEB_LOG_DEBUG << "Post ResetToDefaults.";
+        BMCWEB_LOG_DEBUG("Post ResetToDefaults.");
 
         std::string resetType;
         std::string ifnameFactoryReset =
@@ -319,7 +349,7 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
         if (!redfish::json_util::readJsonAction(
                 req, asyncResp->res, "ResetToDefaultsType", resetType))
         {
-            BMCWEB_LOG_DEBUG << "Missing property ResetToDefaultsType.";
+            BMCWEB_LOG_DEBUG("Missing property ResetToDefaultsType.");
 
             messages::actionParameterMissing(asyncResp->res, "ResetToDefaults",
                                              "ResetToDefaultsType");
@@ -328,15 +358,16 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
 
         if (resetType != "ResetAll")
         {
-            BMCWEB_LOG_DEBUG
-                << "Invalid property value for ResetToDefaultsType: "
-                << resetType;
+            BMCWEB_LOG_DEBUG(
+                "Invalid property value for ResetToDefaultsType: {}",
+                resetType);
             messages::actionParameterNotSupported(asyncResp->res, resetType,
                                                   "ResetToDefaultsType");
             return;
         }
 
         crow::connections::systemBus->async_method_call(
+<<<<<<< HEAD
             [asyncResp, ifnameFactoryReset](
                 const boost::system::error_code ec,
                 const std::vector<std::pair<
@@ -344,6 +375,12 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
             if (ec || interfaceNames.size() <= 0)
             {
                 BMCWEB_LOG_ERROR << "Can't find object";
+=======
+            [asyncResp](const boost::system::error_code& ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("Failed to ResetToDefaults: {}", ec);
+>>>>>>> origin/master-october-10
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -473,13 +510,18 @@ inline void requestRoutesManagerResetActionInfo(App& app)
         parameter["DataType"] = "String";
 
         nlohmann::json::array_t allowableValues;
+<<<<<<< HEAD
         allowableValues.push_back("GracefulRestart");
         allowableValues.push_back("ForceRestart");
         allowableValues.push_back("GracefulShutdown");
+=======
+        allowableValues.emplace_back("GracefulRestart");
+        allowableValues.emplace_back("ForceRestart");
+>>>>>>> origin/master-october-10
         parameter["AllowableValues"] = std::move(allowableValues);
 
         nlohmann::json::array_t parameters;
-        parameters.push_back(std::move(parameter));
+        parameters.emplace_back(std::move(parameter));
 
         asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
     });
@@ -1044,14 +1086,19 @@ inline void
                      const std::vector<std::string>& supportedProfiles,
                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+<<<<<<< HEAD
     crow::connections::systemBus->async_method_call(
+=======
+    sdbusplus::message::object_path objPath(path);
+    dbus::utility::getManagedObjects(
+        connection, objPath,
+>>>>>>> origin/master-october-10
         [asyncResp, currentProfile, supportedProfiles](
-            const boost::system::error_code ec,
+            const boost::system::error_code& ec,
             const dbus::utility::ManagedObjectType& managedObj) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << ec;
-            asyncResp->res.jsonValue.clear();
+            BMCWEB_LOG_ERROR("{}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1085,7 +1132,7 @@ inline void
         {
             configRoot["Profile"] = currentProfile;
         }
-        BMCWEB_LOG_ERROR << "profile = " << currentProfile << " !";
+        BMCWEB_LOG_DEBUG("profile = {} !", currentProfile);
 
         for (const auto& pathPair : managedObj)
         {
@@ -1110,7 +1157,7 @@ inline void
                             std::get_if<std::string>(&propPair.second);
                         if (namePtr == nullptr)
                         {
-                            BMCWEB_LOG_ERROR << "Pid Name Field illegal";
+                            BMCWEB_LOG_ERROR("Pid Name Field illegal");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -1124,15 +1171,15 @@ inline void
                                 &propPair.second);
                         if (profiles == nullptr)
                         {
-                            BMCWEB_LOG_ERROR << "Pid Profiles Field illegal";
+                            BMCWEB_LOG_ERROR("Pid Profiles Field illegal");
                             messages::internalError(asyncResp->res);
                             return;
                         }
                         if (std::find(profiles->begin(), profiles->end(),
                                       currentProfile) == profiles->end())
                         {
-                            BMCWEB_LOG_INFO
-                                << name << " not supported in current profile";
+                            BMCWEB_LOG_INFO(
+                                "{} not supported in current profile", name);
                             continue;
                         }
                     }
@@ -1150,6 +1197,7 @@ inline void
                     }
                 }
 
+                boost::urls::url url("/redfish/v1/Managers/bmc");
                 if (intfPair.first == pidZoneConfigurationIface)
                 {
                     std::string chassis;
@@ -1159,11 +1207,20 @@ inline void
                         chassis = "#IllegalValue";
                     }
                     nlohmann::json& zone = zones[name];
+<<<<<<< HEAD
                     zone["Chassis"] = {
                         {"@odata.id", "/redfish/v1/Chassis/" + chassis}};
                     zone["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
                                         "#/Oem/OpenBmc/Fan/FanZones/" +
                                         name;
+=======
+                    zone["Chassis"]["@odata.id"] =
+                        boost::urls::format("/redfish/v1/Chassis/{}", chassis);
+                    url.set_fragment(
+                        ("/Oem/OpenBmc/Fan/FanZones"_json_pointer / name)
+                            .to_string());
+                    zone["@odata.id"] = std::move(url);
+>>>>>>> origin/master-october-10
                     zone["@odata.type"] = "#OemManager.FanZone";
                     config = &zone;
                 }
@@ -1172,18 +1229,26 @@ inline void
                 {
                     if (classPtr == nullptr)
                     {
-                        BMCWEB_LOG_ERROR << "Pid Class Field illegal";
+                        BMCWEB_LOG_ERROR("Pid Class Field illegal");
                         messages::internalError(asyncResp->res);
                         return;
                     }
 
                     nlohmann::json& controller = stepwise[name];
                     config = &controller;
+<<<<<<< HEAD
 
                     controller["@odata.id"] =
                         "/redfish/v1/Managers/" PLATFORMBMCID
                         "#/Oem/OpenBmc/Fan/StepwiseControllers/" +
                         name;
+=======
+                    url.set_fragment(
+                        ("/Oem/OpenBmc/Fan/StepwiseControllers"_json_pointer /
+                         name)
+                            .to_string());
+                    controller["@odata.id"] = std::move(url);
+>>>>>>> origin/master-october-10
                     controller["@odata.type"] =
                         "#OemManager.StepwiseController";
 
@@ -1195,7 +1260,7 @@ inline void
                 {
                     if (classPtr == nullptr)
                     {
-                        BMCWEB_LOG_ERROR << "Pid Class Field illegal";
+                        BMCWEB_LOG_ERROR("Pid Class Field illegal");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -1204,24 +1269,40 @@ inline void
                     config = &element;
                     if (isFan)
                     {
+<<<<<<< HEAD
                         element["@odata.id"] =
                             "/redfish/v1/Managers/" PLATFORMBMCID
                             "#/Oem/OpenBmc/Fan/FanControllers/" +
                             name;
+=======
+                        url.set_fragment(
+                            ("/Oem/OpenBmc/Fan/FanControllers"_json_pointer /
+                             name)
+                                .to_string());
+                        element["@odata.id"] = std::move(url);
+>>>>>>> origin/master-october-10
                         element["@odata.type"] = "#OemManager.FanController";
                     }
                     else
                     {
+<<<<<<< HEAD
                         element["@odata.id"] =
                             "/redfish/v1/Managers/" PLATFORMBMCID
                             "#/Oem/OpenBmc/Fan/PidControllers/" +
                             name;
+=======
+                        url.set_fragment(
+                            ("/Oem/OpenBmc/Fan/PidControllers"_json_pointer /
+                             name)
+                                .to_string());
+                        element["@odata.id"] = std::move(url);
+>>>>>>> origin/master-october-10
                         element["@odata.type"] = "#OemManager.PidController";
                     }
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "Unexpected configuration";
+                    BMCWEB_LOG_ERROR("Unexpected configuration");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1246,8 +1327,8 @@ inline void
                             std::get_if<double>(&propertyPair.second);
                         if (ptr == nullptr)
                         {
-                            BMCWEB_LOG_ERROR << "Field Illegal "
-                                             << propertyPair.first;
+                            BMCWEB_LOG_ERROR("Field Illegal {}",
+                                             propertyPair.first);
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -1265,8 +1346,8 @@ inline void
 
                             if (ptr == nullptr)
                             {
-                                BMCWEB_LOG_ERROR << "Field Illegal "
-                                                 << propertyPair.first;
+                                BMCWEB_LOG_ERROR("Field Illegal {}",
+                                                 propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1283,8 +1364,8 @@ inline void
                             {
                                 if (keys->size() != values->size())
                                 {
-                                    BMCWEB_LOG_ERROR
-                                        << "Reading and Output size don't match ";
+                                    BMCWEB_LOG_ERROR(
+                                        "Reading and Output size don't match ");
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
@@ -1295,7 +1376,7 @@ inline void
                                     nlohmann::json::object_t step;
                                     step["Target"] = (*keys)[ii];
                                     step["Output"] = (*values)[ii];
-                                    steps.push_back(std::move(step));
+                                    steps.emplace_back(std::move(step));
                                 }
                             }
                         }
@@ -1306,8 +1387,8 @@ inline void
                                 std::get_if<double>(&propertyPair.second);
                             if (ptr == nullptr)
                             {
-                                BMCWEB_LOG_ERROR << "Field Illegal "
-                                                 << propertyPair.first;
+                                BMCWEB_LOG_ERROR("Field Illegal {}",
+                                                 propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1327,7 +1408,7 @@ inline void
 
                             if (inputs == nullptr)
                             {
-                                BMCWEB_LOG_ERROR << "Zones Pid Field Illegal";
+                                BMCWEB_LOG_ERROR("Zones Pid Field Illegal");
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1337,11 +1418,21 @@ inline void
                             {
                                 dbus::utility::escapePathForDbus(itemCopy);
                                 nlohmann::json::object_t input;
+<<<<<<< HEAD
                                 input["@odata.id"] =
                                     "/redfish/v1/Managers/" PLATFORMBMCID
                                     "#/Oem/OpenBmc/Fan/FanZones/" +
                                     itemCopy;
                                 data.push_back(std::move(input));
+=======
+                                boost::urls::url managerUrl = boost::urls::format(
+                                    "/redfish/v1/Managers/bmc#{}",
+                                    ("/Oem/OpenBmc/Fan/FanZones"_json_pointer /
+                                     itemCopy)
+                                        .to_string());
+                                input["@odata.id"] = std::move(managerUrl);
+                                data.emplace_back(std::move(input));
+>>>>>>> origin/master-october-10
                             }
                         }
                         // todo(james): may never happen, but this
@@ -1361,8 +1452,8 @@ inline void
 
                             if (inputs == nullptr)
                             {
-                                BMCWEB_LOG_ERROR << "Field Illegal "
-                                                 << propertyPair.first;
+                                BMCWEB_LOG_ERROR("Field Illegal {}",
+                                                 propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1375,8 +1466,8 @@ inline void
 
                             if (ptr == nullptr)
                             {
-                                BMCWEB_LOG_ERROR << "Field Illegal "
-                                                 << propertyPair.first;
+                                BMCWEB_LOG_ERROR("Field Illegal {}",
+                                                 propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1403,7 +1494,7 @@ inline void
                             }
                             else
                             {
-                                BMCWEB_LOG_ERROR << "Value Illegal " << *ptr;
+                                BMCWEB_LOG_ERROR("Value Illegal {}", *ptr);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1427,8 +1518,8 @@ inline void
                                 std::get_if<double>(&propertyPair.second);
                             if (ptr == nullptr)
                             {
-                                BMCWEB_LOG_ERROR << "Field Illegal "
-                                                 << propertyPair.first;
+                                BMCWEB_LOG_ERROR("Field Illegal {}",
+                                                 propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1438,8 +1529,12 @@ inline void
                 }
             }
         }
+<<<<<<< HEAD
     },
         connection, path, objectManagerIface, "GetManagedObjects");
+=======
+        });
+>>>>>>> origin/master-october-10
 }
 
 enum class CreatePIDRet
@@ -1456,8 +1551,8 @@ inline bool
 {
     if (config.empty())
     {
-        BMCWEB_LOG_ERROR << "Empty Zones";
-        messages::propertyValueFormatError(response->res, "[]", "Zones");
+        BMCWEB_LOG_ERROR("Empty Zones");
+        messages::propertyValueFormatError(response->res, config, "Zones");
         return false;
     }
     for (auto& odata : config)
@@ -1475,10 +1570,9 @@ inline bool
         //     0    1     2      3    4    5      6     7      8
         if (!dbus::utility::getNthStringFromPath(path, 8, input))
         {
-            BMCWEB_LOG_ERROR << "Got invalid path " << path;
-            BMCWEB_LOG_ERROR << "Illegal Type Zones";
-            messages::propertyValueFormatError(response->res, odata.dump(),
-                                               "Zones");
+            BMCWEB_LOG_ERROR("Got invalid path {}", path);
+            BMCWEB_LOG_ERROR("Illegal Type Zones");
+            messages::propertyValueFormatError(response->res, odata, "Zones");
             return false;
         }
         std::replace(input.begin(), input.end(), '_', ' ');
@@ -1491,16 +1585,15 @@ inline const dbus::utility::ManagedObjectType::value_type*
     findChassis(const dbus::utility::ManagedObjectType& managedObj,
                 const std::string& value, std::string& chassis)
 {
-    BMCWEB_LOG_DEBUG << "Find Chassis: " << value << "\n";
+    BMCWEB_LOG_DEBUG("Find Chassis: {}", value);
 
     std::string escaped = value;
-    std::replace(escaped.begin(), escaped.end(), '_', ' ');
+    std::replace(escaped.begin(), escaped.end(), ' ', '_');
     escaped = "/" + escaped;
-    auto it = std::find_if(managedObj.begin(), managedObj.end(),
-                           [&escaped](const auto& obj) {
+    auto it = std::ranges::find_if(managedObj, [&escaped](const auto& obj) {
         if (boost::algorithm::ends_with(obj.first.str, escaped))
         {
-            BMCWEB_LOG_DEBUG << "Matched " << obj.first.str << "\n";
+            BMCWEB_LOG_DEBUG("Matched {}", obj.first.str);
             return true;
         }
         return false;
@@ -1545,18 +1638,18 @@ inline CreatePIDRet createPidInterface(
         }
         else
         {
-            BMCWEB_LOG_ERROR << "Illegal Type " << type;
+            BMCWEB_LOG_ERROR("Illegal Type {}", type);
             messages::propertyUnknown(response->res, type);
             return CreatePIDRet::fail;
         }
 
-        BMCWEB_LOG_DEBUG << "del " << path << " " << iface << "\n";
+        BMCWEB_LOG_DEBUG("del {} {}", path, iface);
         // delete interface
         crow::connections::systemBus->async_method_call(
-            [response, path](const boost::system::error_code ec) {
+            [response, path](const boost::system::error_code& ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Error patching " << path << ": " << ec;
+                BMCWEB_LOG_ERROR("Error patching {}: {}", path, ec);
                 messages::internalError(response->res);
                 return;
             }
@@ -1574,10 +1667,10 @@ inline CreatePIDRet createPidInterface(
         managedItem = findChassis(managedObj, it.key(), chassis);
         if (managedItem == nullptr)
         {
-            BMCWEB_LOG_ERROR << "Failed to get chassis from config patch";
-            messages::invalidObject(response->res,
-                                    crow::utility::urlFromPieces(
-                                        "redfish", "v1", "Chassis", chassis));
+            BMCWEB_LOG_ERROR("Failed to get chassis from config patch");
+            messages::invalidObject(
+                response->res,
+                boost::urls::format("/redfish/v1/Chassis/{}", chassis));
             return CreatePIDRet::fail;
         }
     }
@@ -1616,8 +1709,8 @@ inline CreatePIDRet createPidInterface(
                                     &(prop.second));
                             if (curProfiles == nullptr)
                             {
-                                BMCWEB_LOG_ERROR
-                                    << "Illegal profiles in managed object";
+                                BMCWEB_LOG_ERROR(
+                                    "Illegal profiles in managed object");
                                 messages::internalError(response->res);
                                 return CreatePIDRet::fail;
                             }
@@ -1637,8 +1730,7 @@ inline CreatePIDRet createPidInterface(
 
             if (!ifaceFound)
             {
-                BMCWEB_LOG_ERROR
-                    << "Failed to find interface in managed object";
+                BMCWEB_LOG_ERROR("Failed to find interface in managed object");
                 messages::internalError(response->res);
                 return CreatePIDRet::fail;
             }
@@ -1673,10 +1765,6 @@ inline CreatePIDRet createPidInterface(
                 "PositiveHysteresis", doubles["PositiveHysteresis"],
                 "NegativeHysteresis", doubles["NegativeHysteresis"]))
         {
-            BMCWEB_LOG_ERROR
-                << "Illegal Property "
-                << it.value().dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace);
             return CreatePIDRet::fail;
         }
         if (zones)
@@ -1684,51 +1772,37 @@ inline CreatePIDRet createPidInterface(
             std::vector<std::string> zonesStr;
             if (!getZonesFromJsonReq(response, *zones, zonesStr))
             {
-                BMCWEB_LOG_ERROR << "Illegal Zones";
+                BMCWEB_LOG_ERROR("Illegal Zones");
                 return CreatePIDRet::fail;
             }
             if (chassis.empty() &&
                 findChassis(managedObj, zonesStr[0], chassis) == nullptr)
             {
-                BMCWEB_LOG_ERROR << "Failed to get chassis from config patch";
+                BMCWEB_LOG_ERROR("Failed to get chassis from config patch");
                 messages::invalidObject(
-                    response->res, crow::utility::urlFromPieces(
-                                       "redfish", "v1", "Chassis", chassis));
+                    response->res,
+                    boost::urls::format("/redfish/v1/Chassis/{}", chassis));
                 return CreatePIDRet::fail;
             }
             output.emplace_back("Zones", std::move(zonesStr));
         }
-        if (inputs || outputs)
+
+        if (inputs)
         {
-            std::array<
-                std::reference_wrapper<std::optional<std::vector<std::string>>>,
-                2>
-                containers = {inputs, outputs};
-            size_t index = 0;
-            for (std::optional<std::vector<std::string>>& container :
-                 containers)
+            for (std::string& value : *inputs)
             {
-                if (!container)
-                {
-                    index++;
-                    continue;
-                }
-                for (std::string& value : *container)
-                {
-                    std::replace(value.begin(), value.end(), '_', ' ');
-                }
-                std::string key;
-                if (index == 0)
-                {
-                    key = "Inputs";
-                }
-                else
-                {
-                    key = "Outputs";
-                }
-                output.emplace_back(key, *container);
-                index++;
+                std::replace(value.begin(), value.end(), '_', ' ');
             }
+            output.emplace_back("Inputs", *inputs);
+        }
+
+        if (outputs)
+        {
+            for (std::string& value : *outputs)
+            {
+                std::replace(value.begin(), value.end(), '_', ' ');
+            }
+            output.emplace_back("Outputs", *outputs);
         }
 
         if (setpointOffset)
@@ -1752,8 +1826,7 @@ inline CreatePIDRet createPidInterface(
             }
             else
             {
-                BMCWEB_LOG_ERROR << "Invalid setpointoffset "
-                                 << *setpointOffset;
+                BMCWEB_LOG_ERROR("Invalid setpointoffset {}", *setpointOffset);
                 messages::propertyValueNotInList(response->res, it.key(),
                                                  "SetPointOffset");
                 return CreatePIDRet::fail;
@@ -1767,7 +1840,7 @@ inline CreatePIDRet createPidInterface(
             {
                 continue;
             }
-            BMCWEB_LOG_DEBUG << pairs.first << " = " << *pairs.second;
+            BMCWEB_LOG_DEBUG("{} = {}", pairs.first, *pairs.second);
             output.emplace_back(pairs.first, *pairs.second);
         }
     }
@@ -1784,10 +1857,6 @@ inline CreatePIDRet createPidInterface(
                                           failSafePercent, "MinThermalOutput",
                                           minThermalOutput))
         {
-            BMCWEB_LOG_ERROR
-                << "Illegal Property "
-                << it.value().dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace);
             return CreatePIDRet::fail;
         }
 
@@ -1797,21 +1866,16 @@ inline CreatePIDRet createPidInterface(
             if (!redfish::json_util::readJson(*chassisContainer, response->res,
                                               "@odata.id", chassisId))
             {
-                BMCWEB_LOG_ERROR
-                    << "Illegal Property "
-                    << chassisContainer->dump(
-                           2, ' ', true,
-                           nlohmann::json::error_handler_t::replace);
                 return CreatePIDRet::fail;
             }
 
             // /redfish/v1/chassis/chassis_name/
             if (!dbus::utility::getNthStringFromPath(chassisId, 3, chassis))
             {
-                BMCWEB_LOG_ERROR << "Got invalid path " << chassisId;
+                BMCWEB_LOG_ERROR("Got invalid path {}", chassisId);
                 messages::invalidObject(
-                    response->res, crow::utility::urlFromPieces(
-                                       "redfish", "v1", "Chassis", chassisId));
+                    response->res,
+                    boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
                 return CreatePIDRet::fail;
             }
         }
@@ -1840,10 +1904,6 @@ inline CreatePIDRet createPidInterface(
                 "NegativeHysteresis", negativeHysteresis, "Direction",
                 direction))
         {
-            BMCWEB_LOG_ERROR
-                << "Illegal Property "
-                << it.value().dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace);
             return CreatePIDRet::fail;
         }
 
@@ -1852,16 +1912,16 @@ inline CreatePIDRet createPidInterface(
             std::vector<std::string> zonesStrs;
             if (!getZonesFromJsonReq(response, *zones, zonesStrs))
             {
-                BMCWEB_LOG_ERROR << "Illegal Zones";
+                BMCWEB_LOG_ERROR("Illegal Zones");
                 return CreatePIDRet::fail;
             }
             if (chassis.empty() &&
                 findChassis(managedObj, zonesStrs[0], chassis) == nullptr)
             {
-                BMCWEB_LOG_ERROR << "Failed to get chassis from config patch";
+                BMCWEB_LOG_ERROR("Failed to get chassis from config patch");
                 messages::invalidObject(
-                    response->res, crow::utility::urlFromPieces(
-                                       "redfish", "v1", "Chassis", chassis));
+                    response->res,
+                    boost::urls::format("/redfish/v1/Chassis/{}", chassis));
                 return CreatePIDRet::fail;
             }
             output.emplace_back("Zones", std::move(zonesStrs));
@@ -1878,11 +1938,6 @@ inline CreatePIDRet createPidInterface(
                 if (!redfish::json_util::readJson(step, response->res, "Target",
                                                   target, "Output", out))
                 {
-                    BMCWEB_LOG_ERROR
-                        << "Illegal Property "
-                        << it.value().dump(
-                               2, ' ', true,
-                               nlohmann::json::error_handler_t::replace);
                     return CreatePIDRet::fail;
                 }
                 readings.emplace_back(target);
@@ -1911,8 +1966,8 @@ inline CreatePIDRet createPidInterface(
         {
             constexpr const std::array<const char*, 2> allowedDirections = {
                 "Ceiling", "Floor"};
-            if (std::find(allowedDirections.begin(), allowedDirections.end(),
-                          *direction) == allowedDirections.end())
+            if (std::ranges::find(allowedDirections, *direction) ==
+                allowedDirections.end())
             {
                 messages::propertyValueTypeError(response->res, "Direction",
                                                  *direction);
@@ -1923,7 +1978,7 @@ inline CreatePIDRet createPidInterface(
     }
     else
     {
-        BMCWEB_LOG_ERROR << "Illegal Type " << type;
+        BMCWEB_LOG_ERROR("Illegal Type {}", type);
         messages::propertyUnknown(response->res, type);
         return CreatePIDRet::fail;
     }
@@ -1949,17 +2004,22 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
         std::shared_ptr<GetPIDValues> self = shared_from_this();
 
         // get all configurations
-        crow::connections::systemBus->async_method_call(
+        constexpr std::array<std::string_view, 4> interfaces = {
+            pidConfigurationIface, pidZoneConfigurationIface,
+            objectManagerIface, stepwiseConfigurationIface};
+        dbus::utility::getSubTree(
+            "/", 0, interfaces,
             [self](
-                const boost::system::error_code ec,
+                const boost::system::error_code& ec,
                 const dbus::utility::MapperGetSubTreeResponse& subtreeLocal) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << ec;
+                BMCWEB_LOG_ERROR("{}", ec);
                 messages::internalError(self->asyncResp->res);
                 return;
             }
             self->complete.subtree = subtreeLocal;
+<<<<<<< HEAD
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -1967,11 +2027,17 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
             std::array<const char*, 4>{
                 pidConfigurationIface, pidZoneConfigurationIface,
                 objectManagerIface, stepwiseConfigurationIface});
+=======
+            });
+>>>>>>> origin/master-october-10
 
         // at the same time get the selected profile
-        crow::connections::systemBus->async_method_call(
+        constexpr std::array<std::string_view, 1> thermalModeIfaces = {
+            thermalModeIface};
+        dbus::utility::getSubTree(
+            "/", 0, thermalModeIfaces,
             [self](
-                const boost::system::error_code ec,
+                const boost::system::error_code& ec,
                 const dbus::utility::MapperGetSubTreeResponse& subtreeLocal) {
             if (ec || subtreeLocal.empty())
             {
@@ -1980,7 +2046,7 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
             if (subtreeLocal[0].second.size() != 1)
             {
                 // invalid mapper response, should never happen
-                BMCWEB_LOG_ERROR << "GetPIDValues: Mapper Error";
+                BMCWEB_LOG_ERROR("GetPIDValues: Mapper Error");
                 messages::internalError(self->asyncResp->res);
                 return;
             }
@@ -1991,12 +2057,12 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
             sdbusplus::asio::getAllProperties(
                 *crow::connections::systemBus, owner, path, thermalModeIface,
                 [path, owner,
-                 self](const boost::system::error_code ec2,
+                 self](const boost::system::error_code& ec2,
                        const dbus::utility::DBusPropertiesMap& resp) {
                 if (ec2)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "GetPIDValues: Can't get thermalModeIface " << path;
+                    BMCWEB_LOG_ERROR(
+                        "GetPIDValues: Can't get thermalModeIface {}", path);
                     messages::internalError(self->asyncResp->res);
                     return;
                 }
@@ -2016,19 +2082,24 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
 
                 if (current == nullptr || supported == nullptr)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "GetPIDValues: thermal mode iface invalid " << path;
+                    BMCWEB_LOG_ERROR(
+                        "GetPIDValues: thermal mode iface invalid {}", path);
                     messages::internalError(self->asyncResp->res);
                     return;
                 }
                 self->complete.currentProfile = *current;
                 self->complete.supportedProfiles = *supported;
+<<<<<<< HEAD
             });
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", 0,
             std::array<const char*, 1>{thermalModeIface});
+=======
+                });
+            });
+>>>>>>> origin/master-october-10
     }
 
     static void
@@ -2073,8 +2144,8 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
                             objectMgrPaths.find(connectionGroup.first);
                         if (findObjMgr == objectMgrPaths.end())
                         {
-                            BMCWEB_LOG_DEBUG << connectionGroup.first
-                                             << "Has no Object Manager";
+                            BMCWEB_LOG_DEBUG("{}Has no Object Manager",
+                                             connectionGroup.first);
                             continue;
                         }
 
@@ -2123,10 +2194,6 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                 "FanControllers", fanControllers, "FanZones", fanZones,
                 "StepwiseControllers", stepwiseControllers, "Profile", profile))
         {
-            BMCWEB_LOG_ERROR
-                << "Illegal Property "
-                << data.dump(2, ' ', true,
-                             nlohmann::json::error_handler_t::replace);
             return;
         }
         configuration.emplace_back("PidControllers", std::move(pidControllers));
@@ -2152,12 +2219,15 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
 
         // todo(james): might make sense to do a mapper call here if this
         // interface gets more traction
-        crow::connections::systemBus->async_method_call(
-            [self](const boost::system::error_code ec,
+        sdbusplus::message::object_path objPath(
+            "/xyz/openbmc_project/inventory");
+        dbus::utility::getManagedObjects(
+            "xyz.openbmc_project.EntityManager", objPath,
+            [self](const boost::system::error_code& ec,
                    const dbus::utility::ManagedObjectType& mObj) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Error communicating to Entity Manager";
+                BMCWEB_LOG_ERROR("Error communicating to Entity Manager");
                 messages::internalError(self->asyncResp->res);
                 return;
             }
@@ -2169,8 +2239,8 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
             {
                 for (const auto& [interface, _] : object)
                 {
-                    if (std::find(configurations.begin(), configurations.end(),
-                                  interface) != configurations.end())
+                    if (std::ranges::find(configurations, interface) !=
+                        configurations.end())
                     {
                         self->objectCount++;
                         break;
@@ -2178,14 +2248,21 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                 }
             }
             self->managedObj = mObj;
+<<<<<<< HEAD
         },
             "xyz.openbmc_project.EntityManager",
             "/xyz/openbmc_project/inventory", objectManagerIface,
             "GetManagedObjects");
+=======
+            });
+>>>>>>> origin/master-october-10
 
         // at the same time get the profile information
-        crow::connections::systemBus->async_method_call(
-            [self](const boost::system::error_code ec,
+        constexpr std::array<std::string_view, 1> thermalModeIfaces = {
+            thermalModeIface};
+        dbus::utility::getSubTree(
+            "/", 0, thermalModeIfaces,
+            [self](const boost::system::error_code& ec,
                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec || subtree.empty())
             {
@@ -2194,7 +2271,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
             if (subtree[0].second.empty())
             {
                 // invalid mapper response, should never happen
-                BMCWEB_LOG_ERROR << "SetPIDValues: Mapper Error";
+                BMCWEB_LOG_ERROR("SetPIDValues: Mapper Error");
                 messages::internalError(self->asyncResp->res);
                 return;
             }
@@ -2203,12 +2280,12 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
             const std::string& owner = subtree[0].second[0].first;
             sdbusplus::asio::getAllProperties(
                 *crow::connections::systemBus, owner, path, thermalModeIface,
-                [self, path, owner](const boost::system::error_code ec2,
+                [self, path, owner](const boost::system::error_code& ec2,
                                     const dbus::utility::DBusPropertiesMap& r) {
                 if (ec2)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "SetPIDValues: Can't get thermalModeIface " << path;
+                    BMCWEB_LOG_ERROR(
+                        "SetPIDValues: Can't get thermalModeIface {}", path);
                     messages::internalError(self->asyncResp->res);
                     return;
                 }
@@ -2227,8 +2304,8 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
 
                 if (current == nullptr || supported == nullptr)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "SetPIDValues: thermal mode iface invalid " << path;
+                    BMCWEB_LOG_ERROR(
+                        "SetPIDValues: thermal mode iface invalid {}", path);
                     messages::internalError(self->asyncResp->res);
                     return;
                 }
@@ -2236,12 +2313,17 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                 self->supportedProfiles = *supported;
                 self->profileConnection = owner;
                 self->profilePath = path;
+<<<<<<< HEAD
             });
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", 0,
             std::array<const char*, 1>{thermalModeIface});
+=======
+                });
+            });
+>>>>>>> origin/master-october-10
     }
     void pidSetDone()
     {
@@ -2252,25 +2334,31 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
         std::shared_ptr<bmcweb::AsyncResp> response = asyncResp;
         if (profile)
         {
-            if (std::find(supportedProfiles.begin(), supportedProfiles.end(),
-                          *profile) == supportedProfiles.end())
+            if (std::ranges::find(supportedProfiles, *profile) ==
+                supportedProfiles.end())
             {
                 messages::actionParameterUnknown(response->res, "Profile",
                                                  *profile);
                 return;
             }
             currentProfile = *profile;
-            crow::connections::systemBus->async_method_call(
-                [response](const boost::system::error_code ec) {
+            sdbusplus::asio::setProperty(
+                *crow::connections::systemBus, profileConnection, profilePath,
+                thermalModeIface, "Current", *profile,
+                [response](const boost::system::error_code& ec) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "Error patching profile" << ec;
+                    BMCWEB_LOG_ERROR("Error patching profile{}", ec);
                     messages::internalError(response->res);
                 }
+<<<<<<< HEAD
             },
                 profileConnection, profilePath,
                 "org.freedesktop.DBus.Properties", "Set", thermalModeIface,
                 "Current", dbus::utility::DbusVariantType(*profile));
+=======
+                });
+>>>>>>> origin/master-october-10
         }
 
         for (auto& containerPair : configuration)
@@ -2280,7 +2368,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
             {
                 continue;
             }
-            BMCWEB_LOG_DEBUG << *container;
+            BMCWEB_LOG_DEBUG("{}", *container);
 
             const std::string& type = containerPair.first;
 
@@ -2288,6 +2376,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                  it != container->end(); ++it)
             {
                 const auto& name = it.key();
+<<<<<<< HEAD
                 BMCWEB_LOG_DEBUG << "looking for " << name;
 
                 auto pathItr = std::find_if(managedObj.begin(),
@@ -2296,6 +2385,17 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                     return boost::algorithm::ends_with(obj.first.str,
                                                        "/" + name);
                 });
+=======
+                std::string dbusObjName = name;
+                std::replace(dbusObjName.begin(), dbusObjName.end(), ' ', '_');
+                BMCWEB_LOG_DEBUG("looking for {}", name);
+
+                auto pathItr = std::ranges::find_if(
+                    managedObj, [&dbusObjName](const auto& obj) {
+                        return boost::algorithm::ends_with(obj.first.str,
+                                                           "/" + dbusObjName);
+                    });
+>>>>>>> origin/master-october-10
                 dbus::utility::DBusPropertiesMap output;
 
                 output.reserve(16); // The pid interface length
@@ -2303,11 +2403,12 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                 // determines if we're patching entity-manager or
                 // creating a new object
                 bool createNewObject = (pathItr == managedObj.end());
-                BMCWEB_LOG_DEBUG << "Found = " << !createNewObject;
+                BMCWEB_LOG_DEBUG("Found = {}", !createNewObject);
 
                 std::string iface;
                 if (!createNewObject)
                 {
+                    bool findInterface = false;
                     for (const auto& interface : pathItr->second)
                     {
                         if (interface.first == pidConfigurationIface)
@@ -2316,7 +2417,8 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                                 type == "FanControllers")
                             {
                                 iface = pidConfigurationIface;
-                                createNewObject = true;
+                                findInterface = true;
+                                break;
                             }
                         }
                         else if (interface.first == pidZoneConfigurationIface)
@@ -2324,7 +2426,8 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                             if (type == "FanZones")
                             {
                                 iface = pidConfigurationIface;
-                                createNewObject = true;
+                                findInterface = true;
+                                break;
                             }
                         }
                         else if (interface.first == stepwiseConfigurationIface)
@@ -2332,17 +2435,24 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                             if (type == "StepwiseControllers")
                             {
                                 iface = stepwiseConfigurationIface;
-                                createNewObject = true;
+                                findInterface = true;
+                                break;
                             }
                         }
+                    }
+
+                    // create new object if interface not found
+                    if (!findInterface)
+                    {
+                        createNewObject = true;
                     }
                 }
 
                 if (createNewObject && it.value() == nullptr)
                 {
                     // can't delete a non-existent object
-                    messages::propertyValueNotInList(response->res,
-                                                     it.value().dump(), name);
+                    messages::propertyValueNotInList(response->res, it.value(),
+                                                     name);
                     continue;
                 }
 
@@ -2352,7 +2462,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                     path = pathItr->first.str;
                 }
 
-                BMCWEB_LOG_DEBUG << "Create new = " << createNewObject << "\n";
+                BMCWEB_LOG_DEBUG("Create new = {}", createNewObject);
 
                 // arbitrary limit to avoid attacks
                 constexpr const size_t controllerLimit = 500;
@@ -2382,29 +2492,36 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                 {
                     for (const auto& property : output)
                     {
-                        crow::connections::systemBus->async_method_call(
+                        sdbusplus::asio::setProperty(
+                            *crow::connections::systemBus,
+                            "xyz.openbmc_project.EntityManager", path, iface,
+                            property.first, property.second,
                             [response,
                              propertyName{std::string(property.first)}](
-                                const boost::system::error_code ec) {
+                                const boost::system::error_code& ec) {
                             if (ec)
                             {
-                                BMCWEB_LOG_ERROR << "Error patching "
-                                                 << propertyName << ": " << ec;
+                                BMCWEB_LOG_ERROR("Error patching {}: {}",
+                                                 propertyName, ec);
                                 messages::internalError(response->res);
                                 return;
                             }
                             messages::success(response->res);
+<<<<<<< HEAD
                         },
                             "xyz.openbmc_project.EntityManager", path,
                             "org.freedesktop.DBus.Properties", "Set", iface,
                             property.first, property.second);
+=======
+                            });
+>>>>>>> origin/master-october-10
                     }
                 }
                 else
                 {
                     if (chassis.empty())
                     {
-                        BMCWEB_LOG_ERROR << "Failed to get chassis from config";
+                        BMCWEB_LOG_ERROR("Failed to get chassis from config");
                         messages::internalError(response->res);
                         return;
                     }
@@ -2421,20 +2538,19 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                     }
                     if (!foundChassis)
                     {
-                        BMCWEB_LOG_ERROR << "Failed to find chassis on dbus";
+                        BMCWEB_LOG_ERROR("Failed to find chassis on dbus");
                         messages::resourceMissingAtURI(
                             response->res,
-                            crow::utility::urlFromPieces("redfish", "v1",
-                                                         "Chassis", chassis));
+                            boost::urls::format("/redfish/v1/Chassis/{}",
+                                                chassis));
                         return;
                     }
 
                     crow::connections::systemBus->async_method_call(
-                        [response](const boost::system::error_code ec) {
+                        [response](const boost::system::error_code& ec) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR << "Error Adding Pid Object "
-                                             << ec;
+                            BMCWEB_LOG_ERROR("Error Adding Pid Object {}", ec);
                             messages::internalError(response->res);
                             return;
                         }
@@ -2455,7 +2571,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
         }
         catch (...)
         {
-            BMCWEB_LOG_CRITICAL << "pidSetDone threw exception";
+            BMCWEB_LOG_CRITICAL("pidSetDone threw exception");
         }
     }
 
@@ -2580,49 +2696,49 @@ inline void getBMCAssetData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 /**
  * @brief Retrieves BMC manager location data over DBus
  *
- * @param[in] aResp Shared pointer for completing asynchronous calls
+ * @param[in] asyncResp Shared pointer for completing asynchronous calls
  * @param[in] connectionName - service name
  * @param[in] path - object path
  * @return none
  */
-inline void getLocation(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+inline void getLocation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& connectionName,
                         const std::string& path)
 {
-    BMCWEB_LOG_DEBUG << "Get BMC manager Location data.";
+    BMCWEB_LOG_DEBUG("Get BMC manager Location data.");
 
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Inventory.Decorator.LocationCode", "LocationCode",
-        [aResp](const boost::system::error_code ec,
-                const std::string& property) {
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::string& property) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Location";
-            messages::internalError(aResp->res);
+            BMCWEB_LOG_DEBUG("DBUS response error for "
+                             "Location");
+            messages::internalError(asyncResp->res);
             return;
         }
 
-        aResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
+        asyncResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
             property;
     });
 }
 // avoid name collision systems.hpp
 inline void
-    managerGetLastResetTime(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+    managerGetLastResetTime(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    BMCWEB_LOG_DEBUG << "Getting Manager Last Reset Time";
+    BMCWEB_LOG_DEBUG("Getting Manager Last Reset Time");
 
     sdbusplus::asio::getProperty<uint64_t>(
         *crow::connections::systemBus, "xyz.openbmc_project.State.BMC",
         "/xyz/openbmc_project/state/bmc0", "xyz.openbmc_project.State.BMC",
         "LastRebootTime",
-        [aResp](const boost::system::error_code ec,
-                const uint64_t lastResetTime) {
+        [asyncResp](const boost::system::error_code& ec,
+                    const uint64_t lastResetTime) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "D-BUS response error " << ec;
+            BMCWEB_LOG_DEBUG("D-BUS response error {}", ec);
             return;
         }
 
@@ -2631,7 +2747,7 @@ inline void
         uint64_t lastResetTimeStamp = lastResetTime / 1000;
 
         // Convert to ISO 8601 standard
-        aResp->res.jsonValue["LastResetTime"] =
+        asyncResp->res.jsonValue["LastResetTime"] =
             redfish::time_utils::getDateTimeUint(lastResetTimeStamp);
     });
 }
@@ -2639,50 +2755,52 @@ inline void
 /**
  * @brief Set the running firmware image
  *
- * @param[i,o] aResp - Async response object
+ * @param[i,o] asyncResp - Async response object
  * @param[i] runningFirmwareTarget - Image to make the running image
  *
  * @return void
  */
 inline void
-    setActiveFirmwareImage(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    setActiveFirmwareImage(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& runningFirmwareTarget)
 {
     // Get the Id from /redfish/v1/UpdateService/FirmwareInventory/<Id>
     std::string::size_type idPos = runningFirmwareTarget.rfind('/');
     if (idPos == std::string::npos)
     {
-        messages::propertyValueNotInList(aResp->res, runningFirmwareTarget,
+        messages::propertyValueNotInList(asyncResp->res, runningFirmwareTarget,
                                          "@odata.id");
-        BMCWEB_LOG_DEBUG << "Can't parse firmware ID!";
+        BMCWEB_LOG_DEBUG("Can't parse firmware ID!");
         return;
     }
     idPos++;
     if (idPos >= runningFirmwareTarget.size())
     {
-        messages::propertyValueNotInList(aResp->res, runningFirmwareTarget,
+        messages::propertyValueNotInList(asyncResp->res, runningFirmwareTarget,
                                          "@odata.id");
-        BMCWEB_LOG_DEBUG << "Invalid firmware ID.";
+        BMCWEB_LOG_DEBUG("Invalid firmware ID.");
         return;
     }
     std::string firmwareId = runningFirmwareTarget.substr(idPos);
 
     // Make sure the image is valid before setting priority
-    crow::connections::systemBus->async_method_call(
-        [aResp, firmwareId,
-         runningFirmwareTarget](const boost::system::error_code ec,
-                                dbus::utility::ManagedObjectType& subtree) {
+    sdbusplus::message::object_path objPath("/xyz/openbmc_project/software");
+    dbus::utility::getManagedObjects(
+        "xyz.openbmc_project.Software.BMC.Updater", objPath,
+        [asyncResp, firmwareId, runningFirmwareTarget](
+            const boost::system::error_code& ec,
+            const dbus::utility::ManagedObjectType& subtree) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "D-Bus response error getting objects.";
-            messages::internalError(aResp->res);
+            BMCWEB_LOG_DEBUG("D-Bus response error getting objects.");
+            messages::internalError(asyncResp->res);
             return;
         }
 
         if (subtree.empty())
         {
-            BMCWEB_LOG_DEBUG << "Can't find image!";
-            messages::internalError(aResp->res);
+            BMCWEB_LOG_DEBUG("Can't find image!");
+            messages::internalError(asyncResp->res);
             return;
         }
 
@@ -2713,26 +2831,32 @@ inline void
 
         if (!foundImage)
         {
-            messages::propertyValueNotInList(aResp->res, runningFirmwareTarget,
-                                             "@odata.id");
-            BMCWEB_LOG_DEBUG << "Invalid firmware ID.";
+            messages::propertyValueNotInList(
+                asyncResp->res, runningFirmwareTarget, "@odata.id");
+            BMCWEB_LOG_DEBUG("Invalid firmware ID.");
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "Setting firmware version " << firmwareId
-                         << " to priority 0.";
+        BMCWEB_LOG_DEBUG("Setting firmware version {} to priority 0.",
+                         firmwareId);
 
         // Only support Immediate
         // An addition could be a Redfish Setting like
         // ActiveSoftwareImageApplyTime and support OnReset
-        crow::connections::systemBus->async_method_call(
-            [aResp](const boost::system::error_code ec2) {
+        sdbusplus::asio::setProperty(
+            *crow::connections::systemBus,
+            "xyz.openbmc_project.Software.BMC.Updater",
+            "/xyz/openbmc_project/software/" + firmwareId,
+            "xyz.openbmc_project.Software.RedundancyPriority", "Priority",
+            static_cast<uint8_t>(0),
+            [asyncResp](const boost::system::error_code& ec2) {
             if (ec2)
             {
-                BMCWEB_LOG_DEBUG << "D-Bus response error setting.";
-                messages::internalError(aResp->res);
+                BMCWEB_LOG_DEBUG("D-Bus response error setting.");
+                messages::internalError(asyncResp->res);
                 return;
             }
+<<<<<<< HEAD
             doBMCGracefulRestart(aResp);
         },
 
@@ -2745,35 +2869,58 @@ inline void
         "xyz.openbmc_project.Software.BMC.Updater",
         "/xyz/openbmc_project/software", "org.freedesktop.DBus.ObjectManager",
         "GetManagedObjects");
+=======
+            doBMCGracefulRestart(asyncResp);
+            });
+        });
+>>>>>>> origin/master-october-10
 }
 
-inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> aResp,
+inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                         std::string datetime)
 {
-    BMCWEB_LOG_DEBUG << "Set date time: " << datetime;
+    BMCWEB_LOG_DEBUG("Set date time: {}", datetime);
 
-    std::stringstream stream(datetime);
-    // Convert from ISO 8601 to boost local_time
-    // (BMC only has time in UTC)
-    boost::posix_time::ptime posixTime;
-    boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
-    // Facet gets deleted with the stringsteam
-    auto ifc = std::make_unique<boost::local_time::local_time_input_facet>(
-        "%Y-%m-%d %H:%M:%S%F %ZP");
-    stream.imbue(std::locale(stream.getloc(), ifc.release()));
-
-    boost::local_time::local_date_time ldt(boost::local_time::not_a_date_time);
-
-    if (stream >> ldt)
+    std::optional<redfish::time_utils::usSinceEpoch> us =
+        redfish::time_utils::dateStringToEpoch(datetime);
+    if (!us)
     {
-        posixTime = ldt.utc_time();
-        boost::posix_time::time_duration dur = posixTime - epoch;
-        uint64_t durMicroSecs = static_cast<uint64_t>(dur.total_microseconds());
-        crow::connections::systemBus->async_method_call(
-            [aResp{std::move(aResp)}, datetime{std::move(datetime)}](
-                const boost::system::error_code ec) {
-            if (ec)
+        messages::propertyValueFormatError(asyncResp->res, datetime,
+                                           "DateTime");
+        return;
+    }
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Time.Manager",
+        "/xyz/openbmc_project/time/bmc", "xyz.openbmc_project.Time.EpochTime",
+        "Elapsed", us->count(),
+        [asyncResp{std::move(asyncResp)},
+         datetime{std::move(datetime)}](const boost::system::error_code& ec) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("Failed to set elapsed time. "
+                             "DBUS response error {}",
+                             ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        asyncResp->res.jsonValue["DateTime"] = datetime;
+        });
+}
+
+inline void
+    checkForQuiesced(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1/unit/obmc-bmc-service-quiesce@0.target",
+        "org.freedesktop.systemd1.Unit", "ActiveState",
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::string& val) {
+        if (!ec)
+        {
+            if (val == "active")
             {
+<<<<<<< HEAD
                 BMCWEB_LOG_DEBUG << "Failed to set elapsed time. "
                                     "DBUS response error "
                                  << ec;
@@ -3005,6 +3152,16 @@ inline void
         }
         asyncResp->res.jsonValue["CommandShell"]["ServiceEnabled"] = isEnable;
     });
+=======
+                asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
+                asyncResp->res.jsonValue["Status"]["State"] = "Quiesced";
+                return;
+            }
+        }
+        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesManager(App& app)
@@ -3129,8 +3286,11 @@ inline void requestRoutesManager(App& app)
         asyncResp->res.jsonValue["Description"] =
             "Baseboard Management Controller";
         asyncResp->res.jsonValue["PowerState"] = "On";
+<<<<<<< HEAD
         asyncResp->res.jsonValue["Status"]["State"] = "Starting";
         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+=======
+>>>>>>> origin/master-october-10
 
         asyncResp->res.jsonValue["ManagerType"] = "BMC";
         asyncResp->res.jsonValue["UUID"] = systemd_utils::getUuid();
@@ -3336,7 +3496,12 @@ inline void requestRoutesManager(App& app)
         asyncResp->res
             .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] = {"KVMIP"};
 #endif // BMCWEB_ENABLE_KVM
+        if constexpr (!bmcwebEnableMultiHost)
+        {
+            asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] =
+                1;
 
+<<<<<<< HEAD
         asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] = 1;
 
         nlohmann::json::array_t managerForServers;
@@ -3354,6 +3519,22 @@ inline void requestRoutesManager(App& app)
         asyncResp->res.jsonValue["CommandShell"]["MaxConcurrentSessions"] = 1;
         asyncResp->res.jsonValue["CommandShell"]["ConnectTypesSupported"] = {
             "SSH"};
+=======
+            nlohmann::json::array_t managerForServers;
+            nlohmann::json::object_t manager;
+            manager["@odata.id"] = "/redfish/v1/Systems/system";
+            managerForServers.emplace_back(std::move(manager));
+
+            asyncResp->res.jsonValue["Links"]["ManagerForServers"] =
+                std::move(managerForServers);
+        }
+        if constexpr (bmcwebEnableHealthPopulate)
+        {
+            auto health = std::make_shared<HealthPopulate>(asyncResp);
+            health->isManagersHealth = true;
+            health->populate();
+        }
+>>>>>>> origin/master-october-10
 
         getIsCommandShellEnable(asyncResp);
 #endif
@@ -3379,14 +3560,17 @@ inline void requestRoutesManager(App& app)
             aRsp->res.jsonValue["Links"]["ManagerForChassis@odata.count"] = 1;
             nlohmann::json::array_t managerForChassis;
             nlohmann::json::object_t managerObj;
-            managerObj["@odata.id"] = "/redfish/v1/Chassis/" + chassisId;
-            managerForChassis.push_back(std::move(managerObj));
+            boost::urls::url chassiUrl =
+                boost::urls::format("/redfish/v1/Chassis/{}", chassisId);
+            managerObj["@odata.id"] = chassiUrl;
+            managerForChassis.emplace_back(std::move(managerObj));
             aRsp->res.jsonValue["Links"]["ManagerForChassis"] =
                 std::move(managerForChassis);
             aRsp->res.jsonValue["Links"]["ManagerInChassis"]["@odata.id"] =
-                "/redfish/v1/Chassis/" + chassisId;
+                chassiUrl;
         });
 
+<<<<<<< HEAD
         crow::connections::systemBus->async_method_call(
             [asyncResp, bmcId](
                 const boost::system::error_code ec,
@@ -3475,33 +3659,57 @@ inline void requestRoutesManager(App& app)
             "/xyz/openbmc_project/inventory", int32_t(0),
             std::array<const char*, 1>{"xyz.openbmc_project.Inventory."
                                        "Item.ManagementService"});
+=======
+        sdbusplus::asio::getProperty<double>(
+            *crow::connections::systemBus, "org.freedesktop.systemd1",
+            "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
+            "Progress",
+            [asyncResp](const boost::system::error_code& ec, double val) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("Error while getting progress");
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (val < 1.0)
+            {
+                asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+                asyncResp->res.jsonValue["Status"]["State"] = "Starting";
+                return;
+            }
+            checkForQuiesced(asyncResp);
+            });
+>>>>>>> origin/master-october-10
 
-        crow::connections::systemBus->async_method_call(
+        constexpr std::array<std::string_view, 1> interfaces = {
+            "xyz.openbmc_project.Inventory.Item.Bmc"};
+        dbus::utility::getSubTree(
+            "/xyz/openbmc_project/inventory", 0, interfaces,
             [asyncResp](
-                const boost::system::error_code ec,
+                const boost::system::error_code& ec,
                 const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "D-Bus response error on GetSubTree " << ec;
+                BMCWEB_LOG_DEBUG("D-Bus response error on GetSubTree {}", ec);
                 return;
             }
             if (subtree.empty())
             {
-                BMCWEB_LOG_DEBUG << "Can't find bmc D-Bus object!";
+                BMCWEB_LOG_DEBUG("Can't find bmc D-Bus object!");
                 return;
             }
             // Assume only 1 bmc D-Bus object
             // Throw an error if there is more than 1
             if (subtree.size() > 1)
             {
-                BMCWEB_LOG_DEBUG << "Found more than 1 bmc D-Bus object!";
+                BMCWEB_LOG_DEBUG("Found more than 1 bmc D-Bus object!");
                 messages::internalError(asyncResp->res);
                 return;
             }
 
             if (subtree[0].first.empty() || subtree[0].second.size() != 1)
             {
-                BMCWEB_LOG_DEBUG << "Error getting bmc D-Bus object!";
+                BMCWEB_LOG_DEBUG("Error getting bmc D-Bus object!");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3517,12 +3725,12 @@ inline void requestRoutesManager(App& app)
                     sdbusplus::asio::getAllProperties(
                         *crow::connections::systemBus, connectionName, path,
                         "xyz.openbmc_project.Inventory.Decorator.Asset",
-                        [asyncResp](const boost::system::error_code ec2,
+                        [asyncResp](const boost::system::error_code& ec2,
                                     const dbus::utility::DBusPropertiesMap&
                                         propertiesList) {
                         if (ec2)
                         {
-                            BMCWEB_LOG_DEBUG << "Can't get bmc asset!";
+                            BMCWEB_LOG_DEBUG("Can't get bmc asset!");
                             return;
                         }
 
@@ -3580,6 +3788,7 @@ inline void requestRoutesManager(App& app)
                     getLocation(asyncResp, connectionName, path);
                 }
             }
+<<<<<<< HEAD
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -3588,6 +3797,10 @@ inline void requestRoutesManager(App& app)
             std::array<const char*, 1>{
                 "xyz.openbmc_project.Inventory.Item.Bmc"});
     });
+=======
+            });
+        });
+>>>>>>> origin/master-october-10
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/")
         .privileges(redfish::privileges::patchManager)
@@ -3616,10 +3829,6 @@ inline void requestRoutesManager(App& app)
             if (!redfish::json_util::readJson(*oem, asyncResp->res, "OpenBmc",
                                               openbmc, "Nvidia", nvidia))
             {
-                BMCWEB_LOG_ERROR
-                    << "Illegal Property "
-                    << oem->dump(2, ' ', true,
-                                 nlohmann::json::error_handler_t::replace);
                 return;
             }
             if (openbmc)
@@ -3629,11 +3838,6 @@ inline void requestRoutesManager(App& app)
                 if (!redfish::json_util::readJson(*openbmc, asyncResp->res,
                                                   "Fan", fan))
                 {
-                    BMCWEB_LOG_ERROR
-                        << "Illegal Property "
-                        << openbmc->dump(
-                               2, ' ', true,
-                               nlohmann::json::error_handler_t::replace);
                     return;
                 }
                 if (fan)

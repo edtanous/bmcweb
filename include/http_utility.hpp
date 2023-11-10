@@ -8,6 +8,7 @@
 #include <cctype>
 #include <iomanip>
 #include <ostream>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -26,6 +27,7 @@ enum class ContentType
     HTML,
     JSON,
     OctetStream,
+    EventStream,
 };
 
 struct ContentTypePair
@@ -34,21 +36,22 @@ struct ContentTypePair
     ContentType contentTypeEnum;
 };
 
-constexpr std::array<ContentTypePair, 4> contentTypes{{
+constexpr std::array<ContentTypePair, 5> contentTypes{{
     {"application/cbor", ContentType::CBOR},
     {"application/json", ContentType::JSON},
     {"application/octet-stream", ContentType::OctetStream},
     {"text/html", ContentType::HTML},
+    {"text/event-stream", ContentType::EventStream},
 }};
 
-inline ContentType getPreferedContentType(std::string_view header,
-                                          std::span<ContentType> preferedOrder)
+inline ContentType
+    getPreferedContentType(std::string_view header,
+                           std::span<const ContentType> preferedOrder)
 {
-    size_t index = 0;
     size_t lastIndex = 0;
     while (lastIndex < header.size() + 1)
     {
-        index = header.find(',', lastIndex);
+        size_t index = header.find(',', lastIndex);
         if (index == std::string_view::npos)
         {
             index = header.size();
@@ -73,11 +76,10 @@ inline ContentType getPreferedContentType(std::string_view header,
         {
             return ContentType::ANY;
         }
-        const auto* knownContentType =
-            std::find_if(contentTypes.begin(), contentTypes.end(),
-                         [encoding](const ContentTypePair& pair) {
-            return pair.contentTypeString == encoding;
-        });
+        const auto* knownContentType = std::ranges::find_if(
+            contentTypes, [encoding](const ContentTypePair& pair) {
+                return pair.contentTypeString == encoding;
+            });
 
         if (knownContentType == contentTypes.end())
         {
@@ -86,8 +88,9 @@ inline ContentType getPreferedContentType(std::string_view header,
         }
 
         // Not one of the types requested
-        if (std::find(preferedOrder.begin(), preferedOrder.end(),
-                      knownContentType->contentTypeEnum) == preferedOrder.end())
+        if (std::ranges::find(preferedOrder,
+                              knownContentType->contentTypeEnum) ==
+            preferedOrder.end())
         {
             continue;
         }
@@ -109,28 +112,4 @@ inline bool isContentTypeAllowed(std::string_view header, ContentType type,
     return type == allowed;
 }
 
-inline std::string urlEncode(const std::string_view value)
-{
-    std::ostringstream escaped;
-    escaped.fill('0');
-    escaped << std::hex;
-
-    for (const char c : value)
-    {
-        // Keep alphanumeric and other accepted characters intact
-        if ((isalnum(c) != 0) || c == '-' || c == '_' || c == '.' || c == '~')
-        {
-            escaped << c;
-            continue;
-        }
-
-        // Any other characters are percent-encoded
-        escaped << std::uppercase;
-        escaped << '%' << std::setw(2)
-                << static_cast<int>(static_cast<unsigned char>(c));
-        escaped << std::nouppercase;
-    }
-
-    return escaped.str();
-}
 } // namespace http_helpers

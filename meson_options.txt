@@ -136,6 +136,16 @@ option(
 )
 option('redfish-dbus-event', type : 'feature', value : 'disabled', description : 'Enable Redfish event service pushes based on DBUS signals of DBUS log service transactions.')
 option(
+    'redfish-enable-proccessor-memory-status',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enable/disable the deprecated processor and memory summary
+                    status. The default condition is disabling the processor
+                    and memory summary status. This option will be removed in
+                    1Q 2024.'''
+)
+
+option(
     'redfish-provisioning-feature',
     type: 'feature',
     value: 'disabled',
@@ -145,9 +155,13 @@ option(
 
 option(
     'bmcweb-logging',
-    type: 'feature',
+    type: 'combo',
+    choices : [ 'disabled', 'enabled', 'debug', 'info', 'warning', 'error', 'critical' ],
     value: 'disabled',
-    description: 'Enable output the extended debug logs'
+    description: '''Enable output the extended logging level.
+                    - disabled: disable bmcweb log traces.
+                    - enabled: treated as 'debug'
+                    - For the other logging level option, see DEVELOPING.md.'''
 )
 
 option(
@@ -235,16 +249,6 @@ option(
 )
 
 option(
-    'redfish-post-to-old-updateservice',
-    type: 'feature',
-    value: 'enabled',
-    description: '''Allows POST to /redfish/v1/UpdateService, counter to
-                    the redfish specification.  Option provided to allow
-                    potential users to move away from using this endpoint.
-                    Option will be removed Q4 2022.'''
-)
-
-option(
     'redfish-oem-manager-fan-data',
     type: 'feature',
     value: 'enabled',
@@ -254,12 +258,31 @@ option(
 )
 
 option(
+    'redfish-health-populate',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enables HealthPopulate and generate the Status property for
+                    the resource. This option will be removed Q1 2024'''
+)
+
+option(
     'https_port',
     type: 'integer',
     min: 1,
     max: 65535,
     value: 443,
     description: 'HTTPS Port number.'
+)
+
+option(
+    'dns-resolver',
+    type: 'combo',
+    choices: ['systemd-dbus', 'asio'],
+    value: 'systemd-dbus',
+    description: '''Sets which DNS resolver backend should be used.
+    systemd-dbus uses the Systemd ResolveHostname on dbus, but requires dbus
+    support.  asio relies on boost::asio::tcp::resolver, but cannot resolve
+    names when boost threading is disabled.'''
 )
 
 option(
@@ -295,6 +318,25 @@ option ('reset-bios-by-clear-nonvolatile', type : 'feature', value : 'disabled',
 option ('fencing-privilege', type : 'feature', value : 'disabled', description : 'Enables feature to set/unset the fencing privilege to satelite BMC.')
 option ('dot-support', type : 'feature', value : 'disabled', description : 'Enables DOT token support.')
 option ('debug-interface-support', type : 'feature', value : 'disabled', description : 'Enables debug interface support.')
+option(
+    'experimental-redfish-multi-computer-system',
+    type: 'feature',
+    value: 'disabled',
+    description: '''This is a temporary option flag for staging the
+    ComputerSystemCollection transition to multi-host.  It, as well as the code
+    still beneath it will be removed on 9/1/2023.  Do not enable in a
+    production environment, or where API stability is required.'''
+)
+
+option(
+    'experimental-http2',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enable HTTP/2 protocol support using nghttp2.  Do not rely
+                    on this option for any production systems.  It may have
+                    behavior changes or be removed at any time.'''
+)
+
 # Insecure options. Every option that starts with a `insecure` flag should
 # not be enabled by default for any platform, unless the author fully comprehends
 # the implications of doing so.In general, enabling these options will cause security
@@ -345,6 +387,16 @@ option(
     value: 'disabled',
     description: '''Enable SCP based firmware update transactions through
                     Redfish UpdateService.SimpleUpdate.'''
+)
+option(
+    'insecure-ignore-content-type',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Allows parsing PUT/POST/PATCH content as JSON regardless
+                    of the presence of the content-type header.  Enabling this
+                    conflicts with the input parsing guidelines, but may be
+                    required to support old clients that may not set the
+                    Content-Type header on payloads.'''
 )
 
 option(

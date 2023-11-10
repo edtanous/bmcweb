@@ -1,21 +1,23 @@
 #pragma once
 
-#include <app.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <dbus_singleton.hpp>
-#include <dbus_utility.hpp>
+#include "app.hpp"
+#include "dbus_singleton.hpp"
+#include "dbus_utility.hpp"
+#include "ossl_random.hpp"
+
+#include <sdbusplus/bus/match.hpp>
 
 #include <cstdio>
 #include <fstream>
 #include <memory>
+#include <ranges>
 
 namespace crow
 {
 namespace image_upload
 {
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::unique_ptr<sdbusplus::bus::match_t> fwUpdateMatcher;
 
 inline void
@@ -42,11 +44,11 @@ inline void
             // expected, we were canceled before the timer completed.
             return;
         }
-        BMCWEB_LOG_ERROR << "Timed out waiting for Version interface";
+        BMCWEB_LOG_ERROR("Timed out waiting for Version interface");
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Async_wait failed " << ec;
+            BMCWEB_LOG_ERROR("Async_wait failed {}", ec);
             return;
         }
 
@@ -59,16 +61,15 @@ inline void
 
     std::function<void(sdbusplus::message_t&)> callback =
         [asyncResp](sdbusplus::message_t& m) {
-        BMCWEB_LOG_DEBUG << "Match fired";
+        BMCWEB_LOG_DEBUG("Match fired");
 
         sdbusplus::message::object_path path;
-        dbus::utility::DBusInteracesMap interfaces;
+        dbus::utility::DBusInterfacesMap interfaces;
         m.read(path, interfaces);
 
-        if (std::find_if(interfaces.begin(), interfaces.end(),
-                         [](const auto& i) {
-            return i.first == "xyz.openbmc_project.Software.Version";
-        }) != interfaces.end())
+        if (std::ranges::find_if(interfaces, [](const auto& i) {
+                return i.first == "xyz.openbmc_project.Software.Version";
+            }) != interfaces.end())
         {
             timeout.cancel();
             std::string leaf = path.filename();
@@ -80,7 +81,7 @@ inline void
             asyncResp->res.jsonValue["data"] = leaf;
             asyncResp->res.jsonValue["message"] = "200 OK";
             asyncResp->res.jsonValue["status"] = "ok";
-            BMCWEB_LOG_DEBUG << "ending response";
+            BMCWEB_LOG_DEBUG("ending response");
             fwUpdateMatcher = nullptr;
         }
     };
@@ -90,13 +91,11 @@ inline void
         "member='InterfacesAdded',path='/xyz/openbmc_project/software'",
         callback);
 
-    std::string filepath(
-        "/tmp/images/" +
-        boost::uuids::to_string(boost::uuids::random_generator()()));
-    BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
+    std::string filepath("/tmp/images/" + bmcweb::getRandomUUID());
+    BMCWEB_LOG_DEBUG("Writing file to {}", filepath);
     std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
                                     std::ofstream::trunc);
-    out << req.body;
+    out << req.body();
     out.close();
     timeout.async_wait(timeoutHandler);
 }

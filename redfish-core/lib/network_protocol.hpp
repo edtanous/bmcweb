@@ -15,19 +15,22 @@
 */
 #pragma once
 
+#include "app.hpp"
+#include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "openbmc_dbus_rest.hpp"
+#include "query.hpp"
 #include "redfish_util.hpp"
+#include "registries/privilege_registry.hpp"
+#include "utils/json_utils.hpp"
+#include "utils/stl_utils.hpp"
 
-#include <app.hpp>
-#include <dbus_utility.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
+#include <boost/system/error_code.hpp>
 #include <sdbusplus/asio/property.hpp>
-#include <utils/json_utils.hpp>
-#include <utils/stl_utils.hpp>
 
+#include <array>
 #include <optional>
+#include <string_view>
 #include <variant>
 
 namespace redfish
@@ -36,13 +39,16 @@ namespace redfish
 void getNTPProtocolEnabled(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp);
 std::string getHostName();
 
-static constexpr const char* sshServiceName = "dropbear";
-static constexpr const char* httpsServiceName = "bmcweb";
-static constexpr const char* ipmiServiceName = "phosphor-ipmi-net";
-static constexpr std::array<std::pair<const char*, const char*>, 3>
-    protocolToService = {{{"SSH", sshServiceName},
-                          {"HTTPS", httpsServiceName},
-                          {"IPMI", ipmiServiceName}}};
+static constexpr std::string_view sshServiceName = "dropbear";
+static constexpr std::string_view httpsServiceName = "bmcweb";
+static constexpr std::string_view ipmiServiceName = "phosphor-ipmi-net";
+
+// Mapping from Redfish NetworkProtocol key name to backend service that hosts
+// that protocol.
+static constexpr std::array<std::pair<std::string_view, std::string_view>, 3>
+    networkProtocolToDbus = {{{"SSH", sshServiceName},
+                              {"HTTPS", httpsServiceName},
+                              {"IPMI", ipmiServiceName}}};
 
 inline void extractNTPServersAndDomainNamesData(
     const dbus::utility::ManagedObjectType& dbusData,
@@ -60,14 +66,15 @@ inline void extractNTPServersAndDomainNamesData(
 
             for (const auto& propertyPair : ifacePair.second)
             {
-                if (propertyPair.first == "NTPServers")
+                if (propertyPair.first == "StaticNTPServers")
                 {
                     const std::vector<std::string>* ntpServers =
                         std::get_if<std::vector<std::string>>(
                             &propertyPair.second);
                     if (ntpServers != nullptr)
                     {
-                        ntpData = *ntpServers;
+                        ntpData.insert(ntpData.end(), ntpServers->begin(),
+                                       ntpServers->end());
                     }
                 }
                 else if (propertyPair.first == "DomainName")
@@ -77,26 +84,30 @@ inline void extractNTPServersAndDomainNamesData(
                             &propertyPair.second);
                     if (domainNames != nullptr)
                     {
-                        dnData = *domainNames;
+                        dnData.insert(dnData.end(), domainNames->begin(),
+                                      domainNames->end());
                     }
                 }
             }
         }
     }
     stl_utils::removeDuplicate(ntpData);
+    stl_utils::removeDuplicate(dnData);
 }
 
 template <typename CallbackFunc>
 void getEthernetIfaceData(CallbackFunc&& callback)
 {
-    crow::connections::systemBus->async_method_call(
+    sdbusplus::message::object_path path("/xyz/openbmc_project/network");
+    dbus::utility::getManagedObjects(
+        "xyz.openbmc_project.Network", path,
         [callback{std::forward<CallbackFunc>(callback)}](
-            const boost::system::error_code errorCode,
+            const boost::system::error_code& ec,
             const dbus::utility::ManagedObjectType& dbusData) {
         std::vector<std::string> ntpServers;
         std::vector<std::string> domainNames;
 
-        if (errorCode)
+        if (ec)
         {
             callback(false, ntpServers, domainNames);
             return;
@@ -105,14 +116,59 @@ void getEthernetIfaceData(CallbackFunc&& callback)
         extractNTPServersAndDomainNamesData(dbusData, ntpServers, domainNames);
 
         callback(true, ntpServers, domainNames);
+<<<<<<< HEAD
     },
         "xyz.openbmc_project.Network", "/xyz/openbmc_project/network",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+=======
+        });
+}
+
+inline void afterNetworkPortRequest(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const boost::system::error_code& ec,
+    const std::vector<std::tuple<std::string, std::string, bool>>& socketData)
+{
+    if (ec)
+    {
+        messages::internalError(asyncResp->res);
+        return;
+    }
+    for (const auto& data : socketData)
+    {
+        const std::string& socketPath = get<0>(data);
+        const std::string& protocolName = get<1>(data);
+        bool isProtocolEnabled = get<2>(data);
+
+        asyncResp->res.jsonValue[protocolName]["ProtocolEnabled"] =
+            isProtocolEnabled;
+        asyncResp->res.jsonValue[protocolName]["Port"] = nullptr;
+        getPortNumber(socketPath, [asyncResp, protocolName](
+                                      const boost::system::error_code& ec2,
+                                      int portNumber) {
+            if (ec2)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.jsonValue[protocolName]["Port"] = portNumber;
+        });
+    }
+>>>>>>> origin/master-october-10
 }
 
 inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const crow::Request& req)
 {
+    if (req.session == nullptr)
+    {
+        messages::internalError(asyncResp->res);
+        return;
+    }
+
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/NetworkProtocol.json>; rel=describedby");
     asyncResp->res.jsonValue["@odata.type"] =
         "#ManagerNetworkProtocol.v1_5_0.ManagerNetworkProtocol";
     asyncResp->res.jsonValue["@odata.id"] =
@@ -128,6 +184,7 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // but from security perspective it is not recommended to use.
     // Hence using protocolEnabled as false to make it OCP and security-wise
     // compliant
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_SSL
     if (persistent_data::getConfig().isTLSAuthEnabled())
     {
@@ -139,6 +196,21 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     {
         asyncResp->res.jsonValue["HTTP"]["Port"] = 80;
         asyncResp->res.jsonValue["HTTP"]["ProtocolEnabled"] = true;
+    }
+=======
+    asyncResp->res.jsonValue["HTTP"]["Port"] = nullptr;
+    asyncResp->res.jsonValue["HTTP"]["ProtocolEnabled"] = false;
+>>>>>>> origin/master-october-10
+
+    // The ProtocolEnabled of the following protocols is determined by
+    // inspecting the state of associated systemd sockets. If these protocols
+    // have been disabled, then the systemd socket unit files will not be found
+    // and the protocols will not be returned in this Redfish query. Set some
+    // defaults to ensure something is always returned.
+    for (const auto& nwkProtocol : networkProtocolToDbus)
+    {
+        asyncResp->res.jsonValue[nwkProtocol.first]["Port"] = nullptr;
+        asyncResp->res.jsonValue[nwkProtocol.first]["ProtocolEnabled"] = false;
     }
 
     std::string hostName = getHostName();
@@ -177,7 +249,7 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     });
 
     Privileges effectiveUserPrivileges =
-        redfish::getUserPrivileges(req.userRole);
+        redfish::getUserPrivileges(*req.session);
 
     // /redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates is
     // something only ConfigureManager can access then only display when
@@ -190,6 +262,7 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             "/NetworkProtocol/HTTPS/Certificates";
     }
 
+<<<<<<< HEAD
     for (const auto& protocol : protocolToService)
     {
         const std::string& protocolName = protocol.first;
@@ -246,6 +319,10 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             });
         });
     }
+=======
+    getPortStatusAndPath(std::span(networkProtocolToDbus),
+                         std::bind_front(afterNetworkPortRequest, asyncResp));
+>>>>>>> origin/master-october-10
 } // namespace redfish
 
 inline void handleNTPProtocolEnabled(
@@ -262,6 +339,7 @@ inline void handleNTPProtocolEnabled(
             "xyz.openbmc_project.Time.Synchronization.Method.Manual";
     }
 
+<<<<<<< HEAD
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code errorCode) {
         if (errorCode)
@@ -271,8 +349,18 @@ inline void handleNTPProtocolEnabled(
     },
         "xyz.openbmc_project.Settings", "/xyz/openbmc_project/time/sync_method",
         "org.freedesktop.DBus.Properties", "Set",
+=======
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/time/sync_method",
+>>>>>>> origin/master-october-10
         "xyz.openbmc_project.Time.Synchronization", "TimeSyncMethod",
-        dbus::utility::DbusVariantType{timeSyncMethod});
+        timeSyncMethod, [asyncResp](const boost::system::error_code& ec) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+            }
+        });
 }
 
 inline void
@@ -353,13 +441,16 @@ inline void
     // Any remaining array elements should be removed
     currentNtpServers.erase(currentNtpServer, currentNtpServers.end());
 
-    crow::connections::systemBus->async_method_call(
+    constexpr std::array<std::string_view, 1> ethInterfaces = {
+        "xyz.openbmc_project.Network.EthernetInterface"};
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project", 0, ethInterfaces,
         [asyncResp, currentNtpServers](
-            boost::system::error_code ec,
+            const boost::system::error_code& ec,
             const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
         {
-            BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", " << ec.message();
+            BMCWEB_LOG_WARNING("D-Bus error: {}, {}", ec, ec.message());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -376,13 +467,16 @@ inline void
                         continue;
                     }
 
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp](const boost::system::error_code ec2) {
+                    sdbusplus::asio::setProperty(
+                        *crow::connections::systemBus, service, objectPath,
+                        interface, "StaticNTPServers", currentNtpServers,
+                        [asyncResp](const boost::system::error_code& ec2) {
                         if (ec2)
                         {
                             messages::internalError(asyncResp->res);
                             return;
                         }
+<<<<<<< HEAD
                     },
                         service, objectPath, "org.freedesktop.DBus.Properties",
                         "Set", interface, "NTPServers",
@@ -397,6 +491,13 @@ inline void
         "/xyz/openbmc_project", 0,
         std::array<const char*, 1>{
             "xyz.openbmc_project.Network.EthernetInterface"});
+=======
+                        });
+                }
+            }
+        }
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void
@@ -404,9 +505,12 @@ inline void
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& netBasePath)
 {
-    crow::connections::systemBus->async_method_call(
+    constexpr std::array<std::string_view, 1> interfaces = {
+        "xyz.openbmc_project.Control.Service.Attributes"};
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project/control/service", 0, interfaces,
         [protocolEnabled, asyncResp,
-         netBasePath](const boost::system::error_code ec,
+         netBasePath](const boost::system::error_code& ec,
                       const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
         {
@@ -418,13 +522,18 @@ inline void
         {
             if (boost::algorithm::starts_with(entry.first, netBasePath))
             {
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec2) {
+                sdbusplus::asio::setProperty(
+                    *crow::connections::systemBus, entry.second.begin()->first,
+                    entry.first,
+                    "xyz.openbmc_project.Control.Service.Attributes", "Running",
+                    protocolEnabled,
+                    [asyncResp](const boost::system::error_code& ec2) {
                     if (ec2)
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
+<<<<<<< HEAD
                 },
                     entry.second.begin()->first, entry.first,
                     "org.freedesktop.DBus.Properties", "Set",
@@ -433,11 +542,21 @@ inline void
 
                 crow::connections::systemBus->async_method_call(
                     [asyncResp](const boost::system::error_code ec2) {
+=======
+                    });
+                sdbusplus::asio::setProperty(
+                    *crow::connections::systemBus, entry.second.begin()->first,
+                    entry.first,
+                    "xyz.openbmc_project.Control.Service.Attributes", "Enabled",
+                    protocolEnabled,
+                    [asyncResp](const boost::system::error_code& ec2) {
+>>>>>>> origin/master-october-10
                     if (ec2)
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
+<<<<<<< HEAD
                 },
                     entry.second.begin()->first, entry.first,
                     "org.freedesktop.DBus.Properties", "Set",
@@ -452,6 +571,12 @@ inline void
         "/xyz/openbmc_project/control/service", 0,
         std::array<const char*, 1>{
             "xyz.openbmc_project.Control.Service.Attributes"});
+=======
+                    });
+            }
+        }
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline std::string getHostName()
@@ -473,9 +598,9 @@ inline void
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/time/sync_method",
         "xyz.openbmc_project.Time.Synchronization", "TimeSyncMethod",
-        [asyncResp](const boost::system::error_code errorCode,
+        [asyncResp](const boost::system::error_code& ec,
                     const std::string& timeSyncMethod) {
-        if (errorCode)
+        if (ec)
         {
             return;
         }
@@ -493,7 +618,7 @@ inline void
     });
 }
 
-inline std::string encodeServiceObjectPath(const std::string& serviceName)
+inline std::string encodeServiceObjectPath(std::string_view serviceName)
 {
     sdbusplus::message::object_path objPath(
         "/xyz/openbmc_project/control/service");
@@ -501,8 +626,11 @@ inline std::string encodeServiceObjectPath(const std::string& serviceName)
     return objPath.str;
 }
 
-inline void requestRoutesNetworkProtocol(App& app)
+inline void handleBmcNetworkProtocolHead(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
         .privileges(redfish::privileges::patchManagerNetworkProtocol)
         .methods(boost::beast::http::verb::patch)(
@@ -525,6 +653,32 @@ inline void requestRoutesNetworkProtocol(App& app)
         std::optional<bool> sshEnabled;
 #endif
         // clang-format off
+=======
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/ManagerNetworkProtocol.json>; rel=describedby");
+}
+
+inline void handleManagersNetworkProtocolPatch(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    std::optional<std::string> newHostName;
+    std::optional<std::vector<nlohmann::json>> ntpServerObjects;
+    std::optional<bool> ntpEnabled;
+    std::optional<bool> ipmiEnabled;
+    std::optional<bool> sshEnabled;
+
+    // clang-format off
+>>>>>>> origin/master-october-10
         if (!json_util::readJsonPatch(
                 req, asyncResp->res,
                 "HostName", newHostName
@@ -546,15 +700,16 @@ inline void requestRoutesNetworkProtocol(App& app)
         {
             return;
         }
-        // clang-format on
+    // clang-format on
 
-        asyncResp->res.result(boost::beast::http::status::no_content);
-        if (newHostName)
-        {
-            messages::propertyNotWritable(asyncResp->res, "HostName");
-            return;
-        }
+    asyncResp->res.result(boost::beast::http::status::no_content);
+    if (newHostName)
+    {
+        messages::propertyNotWritable(asyncResp->res, "HostName");
+        return;
+    }
 
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_NTP
         if (ntpEnabled)
         {
@@ -594,10 +749,79 @@ inline void requestRoutesNetworkProtocol(App& app)
         }
 #endif
     });
+=======
+    if (ntpEnabled)
+    {
+        handleNTPProtocolEnabled(*ntpEnabled, asyncResp);
+    }
+    if (ntpServerObjects)
+    {
+        getEthernetIfaceData(
+            [asyncResp, ntpServerObjects](
+                const bool success, std::vector<std::string>& currentNtpServers,
+                const std::vector<std::string>& /*domainNames*/) {
+            if (!success)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            handleNTPServersPatch(asyncResp, *ntpServerObjects,
+                                  std::move(currentNtpServers));
+        });
+    }
+
+    if (ipmiEnabled)
+    {
+        handleProtocolEnabled(
+            *ipmiEnabled, asyncResp,
+            encodeServiceObjectPath(std::string(ipmiServiceName) + '@'));
+    }
+
+    if (sshEnabled)
+    {
+        handleProtocolEnabled(*sshEnabled, asyncResp,
+                              encodeServiceObjectPath(sshServiceName));
+    }
+}
+
+inline void handleManagersNetworkProtocolHead(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/ManagerNetworkProtocol.json>; rel=describedby");
+}
+
+inline void handleManagersNetworkProtocolGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    handleManagersNetworkProtocolHead(app, req, asyncResp);
+    getNetworkData(asyncResp, req);
+}
+
+inline void requestRoutesNetworkProtocol(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/NetworkProtocol/")
+        .privileges(redfish::privileges::patchManagerNetworkProtocol)
+        .methods(boost::beast::http::verb::patch)(
+            std::bind_front(handleManagersNetworkProtocolPatch, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/NetworkProtocol/")
+        .privileges(redfish::privileges::headManagerNetworkProtocol)
+        .methods(boost::beast::http::verb::head)(
+            std::bind_front(handleManagersNetworkProtocolHead, std::ref(app)));
+>>>>>>> origin/master-october-10
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
         .privileges(redfish::privileges::getManagerNetworkProtocol)
         .methods(boost::beast::http::verb::get)(
+<<<<<<< HEAD
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -609,6 +833,9 @@ inline void requestRoutesNetworkProtocol(App& app)
             boost::beast::http::field::link,
             "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/ManagerNetworkProtocol.json>; rel=describedby");
     });
+=======
+            std::bind_front(handleManagersNetworkProtocolGet, std::ref(app)));
+>>>>>>> origin/master-october-10
 }
 
 } // namespace redfish

@@ -15,14 +15,15 @@
 */
 #pragma once
 
+#include "app.hpp"
 #include "error_messages.hpp"
+#include "http/utility.hpp"
 #include "persistent_data.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "utils/json_utils.hpp"
 
-#include <app.hpp>
-#include <http/utility.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
-#include <utils/json_utils.hpp>
+#include <boost/url/format.hpp>
 
 namespace redfish
 {
@@ -32,8 +33,13 @@ inline void fillSessionObject(crow::Response& res,
 {
     res.jsonValue["Id"] = session.uniqueId;
     res.jsonValue["UserName"] = session.username;
+<<<<<<< HEAD
     res.jsonValue["@odata.id"] = "/redfish/v1/SessionService/Sessions/" +
                                  session.uniqueId;
+=======
+    res.jsonValue["@odata.id"] = boost::urls::format(
+        "/redfish/v1/SessionService/Sessions/{}", session.uniqueId);
+>>>>>>> origin/master-october-10
     res.jsonValue["@odata.type"] = "#Session.v1_5_0.Session";
     res.jsonValue["Name"] = "User Session";
     res.jsonValue["Description"] = "Manager User Session";
@@ -42,12 +48,6 @@ inline void fillSessionObject(crow::Response& res,
     {
         res.jsonValue["Context"] = *session.clientId;
     }
-// The below implementation is deprecated in leiu of Session.Context
-#ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
-    res.jsonValue["Oem"]["OpenBMC"]["@odata.type"] =
-        "#OemSession.v1_0_0.Session";
-    res.jsonValue["Oem"]["OpenBMC"]["ClientID"] = session.clientId.value_or("");
-#endif
 }
 
 inline void
@@ -69,7 +69,13 @@ inline void
                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& sessionId)
 {
-    handleSessionHead(app, req, asyncResp, sessionId);
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/Session/Session.json>; rel=describedby");
 
     // Note that control also reaches here via doPost and doDelete.
     auto session =
@@ -111,7 +117,7 @@ inline void
         session->username != req.session->username)
     {
         Privileges effectiveUserPrivileges =
-            redfish::getUserPrivileges(req.userRole);
+            redfish::getUserPrivileges(*req.session);
 
         if (!effectiveUserPrivileges.isSupersetOf({"ConfigureUsers"}))
         {
@@ -133,8 +139,9 @@ inline nlohmann::json getSessionCollectionMembers()
     for (const std::string* uid : sessionIds)
     {
         nlohmann::json::object_t session;
-        session["@odata.id"] = "/redfish/v1/SessionService/Sessions/" + *uid;
-        ret.push_back(std::move(session));
+        session["@odata.id"] =
+            boost::urls::format("/redfish/v1/SessionService/Sessions/{}", *uid);
+        ret.emplace_back(std::move(session));
     }
     return ret;
 }
@@ -156,7 +163,14 @@ inline void handleSessionCollectionGet(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    handleSessionCollectionHead(app, req, asyncResp);
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/SessionCollection.json>; rel=describedby");
+
     asyncResp->res.jsonValue["Members"] = getSessionCollectionMembers();
     asyncResp->res.jsonValue["Members@odata.count"] =
         asyncResp->res.jsonValue["Members"].size();
@@ -189,11 +203,9 @@ inline void handleSessionCollectionPost(
     }
     std::string username;
     std::string password;
-    std::optional<nlohmann::json> oemObject;
     std::optional<std::string> clientId;
     if (!json_util::readJsonPatch(req, asyncResp->res, "UserName", username,
-                                  "Password", password, "Context", clientId,
-                                  "Oem", oemObject))
+                                  "Password", password, "Context", clientId))
     {
         return;
     }
@@ -218,36 +230,14 @@ inline void handleSessionCollectionPost(
     bool isConfigureSelfOnly = pamrc == PAM_NEW_AUTHTOK_REQD;
     if ((pamrc != PAM_SUCCESS) && !isConfigureSelfOnly)
     {
+<<<<<<< HEAD
         handleAccountLocked(username, asyncResp, req);
+=======
+        messages::resourceAtUriUnauthorized(asyncResp->res, req.url(),
+                                            "Invalid username or password");
+>>>>>>> origin/master-october-10
         return;
     }
-#ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
-    if (oemObject)
-    {
-        std::optional<nlohmann::json> bmcOem;
-        if (!json_util::readJson(*oemObject, asyncResp->res, "OpenBMC", bmcOem))
-        {
-            return;
-        }
-
-        std::optional<std::string> oemClientId;
-        if (!json_util::readJson(*bmcOem, asyncResp->res, "ClientID",
-                                 oemClientId))
-        {
-            BMCWEB_LOG_ERROR << "Could not read ClientId";
-            return;
-        }
-        if (oemClientId)
-        {
-            if (clientId)
-            {
-                messages::propertyValueConflict(*oemClientId, *clientId);
-                return;
-            }
-            clientId = *oemClientId;
-        }
-    }
-#endif
 
     // User is authenticated - create session
     std::shared_ptr<persistent_data::UserSession> session =
@@ -268,8 +258,8 @@ inline void handleSessionCollectionPost(
     {
         messages::passwordChangeRequired(
             asyncResp->res,
-            crow::utility::urlFromPieces("redfish", "v1", "AccountService",
-                                         "Accounts", session->username));
+            boost::urls::format("/redfish/v1/AccountService/Accounts/{}",
+                                session->username));
     }
 
     fillSessionObject(asyncResp->res, *session);
@@ -291,7 +281,14 @@ inline void
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
 {
-    handleSessionServiceHead(app, req, asyncResp);
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/SessionService/SessionService.json>; rel=describedby");
+
     asyncResp->res.jsonValue["@odata.type"] =
         "#SessionService.v1_0_2.SessionService";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/SessionService/";
@@ -341,8 +338,7 @@ inline void handleSessionServicePatch(
         }
         else
         {
-            messages::propertyValueNotInList(asyncResp->res,
-                                             std::to_string(*sessionTimeout),
+            messages::propertyValueNotInList(asyncResp->res, *sessionTimeout,
                                              "SessionTimeOut");
         }
     }

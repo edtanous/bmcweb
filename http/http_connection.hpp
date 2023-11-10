@@ -1,11 +1,19 @@
 #pragma once
 #include "bmcweb_config.h"
 
+#include "async_resp.hpp"
 #include "authentication.hpp"
+#include "complete_response_fields.hpp"
+#include "http2_connection.hpp"
 #include "http_response.hpp"
 #include "http_utility.hpp"
 #include "logging.hpp"
+<<<<<<< HEAD
 #include "persistent_data.hpp"
+=======
+#include "mutual_tls.hpp"
+#include "ssl_key_handler.hpp"
+>>>>>>> origin/master-october-10
 #include "utility.hpp"
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -14,17 +22,21 @@
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
+#include <boost/beast/http/error.hpp>
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/serializer.hpp>
 #include <boost/beast/http/write.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
+<<<<<<< HEAD
 #include <boost/url/url_view.hpp>
 #include <json_html_serializer.hpp>
 #include <redfish_util.hpp>
 #include <security_headers.hpp>
 #include <ssl_key_handler.hpp>
+=======
+>>>>>>> origin/master-october-10
 
 #include <atomic>
 #include <chrono>
@@ -33,14 +45,7 @@
 namespace crow
 {
 
-inline void prettyPrintJson(crow::Response& res)
-{
-    json_html_util::dumpHtml(res.body(), res.jsonValue);
-
-    res.addHeader(boost::beast::http::field::content_type,
-                  "text/html;charset=UTF-8");
-}
-
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static int connectionCount = 0;
 
 // request body limit size set by the bmcwebHttpReqBodyLimitMb option
@@ -55,6 +60,8 @@ template <typename Adaptor, typename Handler>
 class Connection :
     public std::enable_shared_from_this<Connection<Adaptor, Handler>>
 {
+    using self_type = Connection<Adaptor, Handler>;
+
   public:
     Connection(Handler* handlerIn, boost::asio::steady_timer&& timerIn,
                std::function<std::string()>& getCachedDateStrF,
@@ -78,8 +85,8 @@ class Connection :
 
         connectionCount++;
 
-        BMCWEB_LOG_DEBUG << this << " Connection open, total "
-                         << connectionCount;
+        BMCWEB_LOG_DEBUG("{} Connection open, total {}", logPtr(this),
+                         connectionCount);
     }
 
     ~Connection()
@@ -88,14 +95,37 @@ class Connection :
         cancelDeadlineTimer();
 
         connectionCount--;
-        BMCWEB_LOG_DEBUG << this << " Connection closed, total "
-                         << connectionCount;
+        BMCWEB_LOG_DEBUG("{} Connection closed, total {}", logPtr(this),
+                         connectionCount);
     }
 
     Connection(const Connection&) = delete;
     Connection(Connection&&) = delete;
     Connection& operator=(const Connection&) = delete;
     Connection& operator=(Connection&&) = delete;
+
+    bool tlsVerifyCallback(bool preverified,
+                           boost::asio::ssl::verify_context& ctx)
+    {
+        // We always return true to allow full auth flow for resources that
+        // don't require auth
+        if (preverified)
+        {
+            boost::asio::ip::address ipAddress;
+            if (getClientIp(ipAddress))
+            {
+                return true;
+            }
+
+            mtlsSession = verifyMtlsUser(ipAddress, ctx);
+            if (mtlsSession)
+            {
+                BMCWEB_LOG_DEBUG("{} Generating TLS session: {}", logPtr(this),
+                                 mtlsSession->uniqueId);
+            }
+        }
+        return true;
+    }
 
     void prepareMutualTls()
     {
@@ -118,11 +148,12 @@ class Connection :
                 static_cast<unsigned int>(id.length()));
             if (ret == 0)
             {
-                BMCWEB_LOG_ERROR << this << " failed to set SSL id";
+                BMCWEB_LOG_ERROR("{} failed to set SSL id", logPtr(this));
             }
         }
 
         adaptor.set_verify_callback(
+<<<<<<< HEAD
             [this](bool preverified, boost::asio::ssl::verify_context& ctx) {
             // do nothing if TLS is disabled
             if (!persistent_data::SessionStore::getInstance()
@@ -284,6 +315,9 @@ class Connection :
             }
             return true;
         });
+=======
+            std::bind_front(&self_type::tlsVerifyCallback, this));
+>>>>>>> origin/master-october-10
     }
 
     Adaptor& socket()
@@ -295,7 +329,8 @@ class Connection :
     {
         if (connectionCount >= 100)
         {
-            BMCWEB_LOG_CRITICAL << this << "Max connection count exceeded.";
+            BMCWEB_LOG_CRITICAL("{}Max connection count exceeded.",
+                                logPtr(this));
             return;
         }
 
@@ -314,7 +349,7 @@ class Connection :
                 {
                     return;
                 }
-                doReadHeaders();
+                afterSslHandshake();
             });
         }
         else
@@ -323,13 +358,47 @@ class Connection :
         }
     }
 
+    void afterSslHandshake()
+    {
+        // If http2 is enabled, negotiate the protocol
+        if constexpr (bmcwebEnableHTTP2)
+        {
+            const unsigned char* alpn = nullptr;
+            unsigned int alpnlen = 0;
+            SSL_get0_alpn_selected(adaptor.native_handle(), &alpn, &alpnlen);
+            if (alpn != nullptr)
+            {
+                std::string_view selectedProtocol(
+                    std::bit_cast<const char*>(alpn), alpnlen);
+                BMCWEB_LOG_DEBUG("ALPN selected protocol \"{}\" len: {}",
+                                 selectedProtocol, alpnlen);
+                if (selectedProtocol == "h2")
+                {
+                    auto http2 =
+                        std::make_shared<HTTP2Connection<Adaptor, Handler>>(
+                            std::move(adaptor), handler, getCachedDateStr);
+                    http2->start();
+                    return;
+                }
+            }
+        }
+
+        doReadHeaders();
+    }
+
     void handle()
     {
         std::error_code reqEc;
+        if (!parser)
+        {
+            return;
+        }
         crow::Request& thisReq = req.emplace(parser->release(), reqEc);
         if (reqEc)
         {
-            BMCWEB_LOG_DEBUG << "Request failed to construct" << reqEc;
+            BMCWEB_LOG_DEBUG("Request failed to construct{}", reqEc.message());
+            res.result(boost::beast::http::status::bad_request);
+            completeRequest(res);
             return;
         }
         thisReq.session = userSession;
@@ -348,11 +417,10 @@ class Connection :
             }
         }
 
-        BMCWEB_LOG_INFO << "Request: "
-                        << " " << this << " HTTP/" << thisReq.version() / 10
-                        << "." << thisReq.version() % 10 << ' '
-                        << thisReq.methodString() << " " << thisReq.target()
-                        << " " << thisReq.ipAddress.to_string();
+        BMCWEB_LOG_INFO("Request:  {} HTTP/{}.{} {} {} {}", logPtr(this),
+                        thisReq.version() / 10, thisReq.version() % 10,
+                        thisReq.methodString(), thisReq.target(),
+                        thisReq.ipAddress.to_string());
 
         res.isAliveHelper = [this]() -> bool { return isAlive(); };
 
@@ -364,7 +432,9 @@ class Connection :
             completeRequest(res);
             return;
         }
+        keepAlive = thisReq.keepAlive();
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
+<<<<<<< HEAD
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
             if (!crow::authentication::isOnAllowlist(req->url, req->method()) &&
@@ -386,26 +456,54 @@ class Connection :
                 redfish::handleAccountLocked(user, asyncResp, *req);
                 return;
             }
+=======
+        if (!crow::authentication::isOnAllowlist(req->url().path(),
+                                                 req->method()) &&
+            thisReq.session == nullptr)
+        {
+            BMCWEB_LOG_WARNING("Authentication failed");
+            forward_unauthorized::sendUnauthorized(
+                req->url().encoded_path(),
+                req->getHeaderValue("X-Requested-With"),
+                req->getHeaderValue("Accept"), res);
+            completeRequest(res);
+            return;
+>>>>>>> origin/master-october-10
         }
 #endif // BMCWEB_INSECURE_DISABLE_AUTHX
         auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
-        BMCWEB_LOG_DEBUG << "Setting completion handler";
+        BMCWEB_LOG_DEBUG("Setting completion handler");
         asyncResp->res.setCompleteRequestHandler(
             [self(shared_from_this())](crow::Response& thisRes) {
             self->completeRequest(thisRes);
         });
-
-        if (thisReq.isUpgrade() &&
-            boost::iequals(
-                thisReq.getHeaderValue(boost::beast::http::field::upgrade),
-                "websocket"))
+        bool isSse =
+            isContentTypeAllowed(req->getHeaderValue("Accept"),
+                                 http_helpers::ContentType::EventStream, false);
+        if ((thisReq.isUpgrade() &&
+             boost::iequals(
+                 thisReq.getHeaderValue(boost::beast::http::field::upgrade),
+                 "websocket")) ||
+            isSse)
         {
-            handler->handleUpgrade(thisReq, res, std::move(adaptor));
-            // delete lambda with self shared_ptr
-            // to enable connection destruction
-            asyncResp->res.setCompleteRequestHandler(nullptr);
+            asyncResp->res.setCompleteRequestHandler(
+                [self(shared_from_this())](crow::Response& thisRes) {
+                if (thisRes.result() != boost::beast::http::status::ok)
+                {
+                    // When any error occurs before handle upgradation,
+                    // the result in response will be set to respective
+                    // error. By default the Result will be OK (200),
+                    // which implies successful handle upgrade. Response
+                    // needs to be sent over this connection only on
+                    // failure.
+                    self->completeRequest(thisRes);
+                    return;
+                }
+            });
+            handler->handleUpgrade(thisReq, asyncResp, std::move(adaptor));
             return;
         }
+<<<<<<< HEAD
 
         std::string url(thisReq.target());
         std::size_t dumpPos = url.rfind("Dump");
@@ -429,6 +527,14 @@ class Connection :
             return;
         }
 
+=======
+        std::string_view expected =
+            req->getHeaderValue(boost::beast::http::field::if_none_match);
+        if (!expected.empty())
+        {
+            res.setExpectedHash(expected);
+        }
+>>>>>>> origin/master-october-10
         handler->handle(thisReq, asyncResp);
     }
 
@@ -452,18 +558,21 @@ class Connection :
                                          boost::asio::ip::tcp::socket>>)
         {
             adaptor.next_layer().close();
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
             if (persistent_data::getConfig().isTLSAuthEnabled() &&
                 userSession != nullptr)
 #else
             if (sessionIsFromTransport && userSession != nullptr)
 #endif
+=======
+            if (mtlsSession != nullptr)
+>>>>>>> origin/master-october-10
             {
-                BMCWEB_LOG_DEBUG
-                    << this
-                    << " Removing TLS session: " << userSession->uniqueId;
+                BMCWEB_LOG_DEBUG("{} Removing TLS session: {}", logPtr(this),
+                                 mtlsSession->uniqueId);
                 persistent_data::SessionStore::getInstance().removeSession(
-                    userSession);
+                    mtlsSession);
             }
         }
         else
@@ -479,67 +588,15 @@ class Connection :
             return;
         }
         res = std::move(thisRes);
-        BMCWEB_LOG_INFO << "Response: " << this << ' ' << req->url << ' '
-                        << res.resultInt() << " keepalive=" << req->keepAlive();
+        res.keepAlive(keepAlive);
 
-        addSecurityHeaders(*req, res);
-
-        crow::authentication::cleanupTempSession(*req);
+        completeResponseFields(*req, res);
 
         if (!isAlive())
         {
-            // BMCWEB_LOG_DEBUG << this << " delete (socket is closed) " <<
-            // isReading
-            // << ' ' << isWriting;
-            // delete this;
-
-            // delete lambda with self shared_ptr
-            // to enable connection destruction
             res.setCompleteRequestHandler(nullptr);
             return;
         }
-        if (res.body().empty() && !res.jsonValue.empty())
-        {
-            using http_helpers::ContentType;
-            std::array<ContentType, 2> allowed{ContentType::JSON,
-                                               ContentType::HTML};
-            ContentType prefered =
-                getPreferedContentType(req->getHeaderValue("Accept"), allowed);
-
-            if (prefered == ContentType::HTML)
-            {
-                prettyPrintJson(res);
-            }
-            else
-            {
-                // Technically prefered could also be NoMatch here, but we'd
-                // like to default to something rather than return 400 for
-                // backward compatibility.
-                res.addHeader(boost::beast::http::field::content_type,
-                              "application/json");
-                res.body() = res.jsonValue.dump(
-                    2, ' ', true, nlohmann::json::error_handler_t::replace);
-            }
-        }
-
-        if (res.resultInt() >= 400 && res.body().empty())
-        {
-            res.body() = std::string(res.reason());
-        }
-
-        if (res.result() == boost::beast::http::status::no_content)
-        {
-            // Boost beast throws if content is provided on a no-content
-            // response.  Ideally, this would never happen, but in the case that
-            // it does, we don't want to throw.
-            BMCWEB_LOG_CRITICAL
-                << this << " Response content provided but code was no-content";
-            res.body().clear();
-        }
-
-        res.addHeader(boost::beast::http::field::date, getCachedDateStr());
-
-        res.keepAlive(req->keepAlive());
 
         doWrite(res);
 
@@ -556,13 +613,17 @@ class Connection :
         {
             return;
         }
+        if (!req)
+        {
+            return;
+        }
         req->ipAddress = ip;
     }
 
     boost::system::error_code getClientIp(boost::asio::ip::address& ip)
     {
         boost::system::error_code ec;
-        BMCWEB_LOG_DEBUG << "Fetch the client IP address";
+        BMCWEB_LOG_DEBUG("Fetch the client IP address");
         boost::asio::ip::tcp::endpoint endpoint =
             boost::beast::get_lowest_layer(adaptor).remote_endpoint(ec);
 
@@ -570,8 +631,8 @@ class Connection :
         {
             // If remote endpoint fails keep going. "ClientOriginIPAddress"
             // will be empty.
-            BMCWEB_LOG_ERROR << "Failed to get the client's IP Address. ec : "
-                             << ec;
+            BMCWEB_LOG_ERROR("Failed to get the client's IP Address. ec : {}",
+                             ec);
             return ec;
         }
         ip = endpoint.address();
@@ -581,29 +642,37 @@ class Connection :
   private:
     void doReadHeaders()
     {
-        BMCWEB_LOG_DEBUG << this << " doReadHeaders";
-
+        BMCWEB_LOG_DEBUG("{} doReadHeaders", logPtr(this));
+        if (!parser)
+        {
+            return;
+        }
         // Clean up any previous Connection.
         boost::beast::http::async_read_header(
             adaptor, buffer, *parser,
             [this,
              self(shared_from_this())](const boost::system::error_code& ec,
                                        std::size_t bytesTransferred) {
-            BMCWEB_LOG_DEBUG << this << " async_read_header "
-                             << bytesTransferred << " Bytes";
+            BMCWEB_LOG_DEBUG("{} async_read_header {} Bytes", logPtr(this),
+                             bytesTransferred);
             bool errorWhileReading = false;
             if (ec)
             {
                 errorWhileReading = true;
-                if (ec == boost::asio::error::eof)
+                if (ec == boost::beast::http::error::end_of_stream)
                 {
-                    BMCWEB_LOG_WARNING
-                        << this << " Error while reading: " << ec.message();
+                    BMCWEB_LOG_WARNING("{} Error while reading: {}",
+                                       logPtr(this), ec.message());
                 }
                 else
                 {
+<<<<<<< HEAD
                     BMCWEB_LOG_DEBUG
                         << this << " Error while reading: " << ec.message();
+=======
+                    BMCWEB_LOG_ERROR("{} Error while reading: {}", logPtr(this),
+                                     ec.message());
+>>>>>>> origin/master-october-10
                 }
             }
             else
@@ -622,7 +691,7 @@ class Connection :
             if (errorWhileReading)
             {
                 close();
-                BMCWEB_LOG_DEBUG << this << " from read(1)";
+                BMCWEB_LOG_DEBUG("{} from read(1)", logPtr(this));
                 return;
             }
 
@@ -631,11 +700,19 @@ class Connection :
             boost::asio::ip::address ip;
             if (getClientIp(ip))
             {
-                BMCWEB_LOG_DEBUG << "Unable to get client IP";
+                BMCWEB_LOG_DEBUG("Unable to get client IP");
             }
-            sessionIsFromTransport = false;
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
+<<<<<<< HEAD
             if (persistent_data::getConfig().isTLSAuthEnabled())
+=======
+            boost::beast::http::verb method = parser->get().method();
+            userSession = crow::authentication::authenticate(
+                ip, res, method, parser->get().base(), mtlsSession);
+
+            bool loggedIn = userSession != nullptr;
+            if (!loggedIn)
+>>>>>>> origin/master-october-10
             {
                 boost::beast::http::verb method = parser->get().method();
                 userSession = crow::authentication::authenticate(
@@ -644,6 +721,7 @@ class Connection :
                 bool loggedIn = userSession != nullptr;
                 if (!loggedIn)
                 {
+<<<<<<< HEAD
                     const boost::optional<uint64_t> contentLength =
                         parser->content_length();
                     if (contentLength &&
@@ -659,74 +737,107 @@ class Connection :
                 }
             }
 #endif // BMCWEB_INSECURE_DISABLE_AUTHX
+=======
+                    BMCWEB_LOG_DEBUG("Content length greater than limit {}",
+                                     *contentLength);
+                    close();
+                    return;
+                }
+
+                BMCWEB_LOG_DEBUG("Starting quick deadline");
+            }
+#endif // BMCWEB_INSECURE_DISABLE_AUTHX
+
+            if (parser->is_done())
+            {
+                handle();
+                return;
+            }
+
+>>>>>>> origin/master-october-10
             doRead();
         });
     }
 
     void doRead()
     {
-        BMCWEB_LOG_DEBUG << this << " doRead";
+        BMCWEB_LOG_DEBUG("{} doRead", logPtr(this));
+        if (!parser)
+        {
+            return;
+        }
         startDeadline();
-        boost::beast::http::async_read(adaptor, buffer, *parser,
-                                       [this, self(shared_from_this())](
-                                           const boost::system::error_code& ec,
-                                           std::size_t bytesTransferred) {
-            BMCWEB_LOG_DEBUG << this << " async_read " << bytesTransferred
-                             << " Bytes";
-            cancelDeadlineTimer();
+        boost::beast::http::async_read_some(
+            adaptor, buffer, *parser,
+            [this,
+             self(shared_from_this())](const boost::system::error_code& ec,
+                                       std::size_t bytesTransferred) {
+            BMCWEB_LOG_DEBUG("{} async_read_some {} Bytes", logPtr(this),
+                             bytesTransferred);
+
             if (ec)
             {
-                BMCWEB_LOG_ERROR << this
-                                 << " Error while reading: " << ec.message();
+                BMCWEB_LOG_ERROR("{} Error while reading: {}", logPtr(this),
+                                 ec.message());
                 close();
-                BMCWEB_LOG_DEBUG << this << " from read(1)";
+                BMCWEB_LOG_DEBUG("{} from read(1)", logPtr(this));
                 return;
             }
+
+            // If the user is logged in, allow them to send files incrementally
+            // one piece at a time. If authentication is disabled then there is
+            // no user session hence always allow to send one piece at a time.
+            if (userSession != nullptr)
+            {
+                cancelDeadlineTimer();
+            }
+            if (!parser->is_done())
+            {
+                doRead();
+                return;
+            }
+
+            cancelDeadlineTimer();
             handle();
-        });
+            });
     }
 
     void doWrite(crow::Response& thisRes)
     {
-        BMCWEB_LOG_DEBUG << this << " doWrite";
+        BMCWEB_LOG_DEBUG("{} doWrite", logPtr(this));
         thisRes.preparePayload();
-        serializer.emplace(*thisRes.stringResponse);
+        serializer.emplace(thisRes.stringResponse);
         startDeadline();
         boost::beast::http::async_write(adaptor, *serializer,
                                         [this, self(shared_from_this())](
                                             const boost::system::error_code& ec,
                                             std::size_t bytesTransferred) {
-            BMCWEB_LOG_DEBUG << this << " async_write " << bytesTransferred
-                             << " bytes";
+            BMCWEB_LOG_DEBUG("{} async_write {} bytes", logPtr(this),
+                             bytesTransferred);
 
             cancelDeadlineTimer();
 
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << this << " from write(2)";
+                BMCWEB_LOG_DEBUG("{} from write(2)", logPtr(this));
                 return;
             }
-            if (!res.keepAlive())
+            if (!keepAlive)
             {
                 close();
-                BMCWEB_LOG_DEBUG << this << " from write(1)";
+                BMCWEB_LOG_DEBUG("{} from write(1)", logPtr(this));
                 return;
             }
 
             serializer.reset();
-            BMCWEB_LOG_DEBUG << this << " Clearing response";
+            BMCWEB_LOG_DEBUG("{} Clearing response", logPtr(this));
             res.clear();
             parser.emplace(std::piecewise_construct, std::make_tuple());
             parser->body_limit(httpReqBodyLimit); // reset body limit for
                                                   // newly created parser
             buffer.consume(buffer.size());
 
-            // If the session was built from the transport, we don't need to
-            // clear it.  All other sessions are generated per request.
-            if (!sessionIsFromTransport)
-            {
-                userSession = nullptr;
-            }
+            userSession = nullptr;
 
             // Destroy the Request via the std::optional
             req.reset();
@@ -741,30 +852,39 @@ class Connection :
 
     void startDeadline()
     {
+<<<<<<< HEAD
         cancelDeadlineTimer();
 
         std::chrono::seconds timeout(60);
         // allow slow uploads for logged in users
         bool loggedIn = userSession != nullptr;
         if (loggedIn)
+=======
+        // Timer is already started so no further action is required.
+        if (timerStarted)
+>>>>>>> origin/master-october-10
         {
-            timeout = std::chrono::seconds(60);
             return;
         }
 
+        std::chrono::seconds timeout(15);
+
         std::weak_ptr<Connection<Adaptor, Handler>> weakSelf = weak_from_this();
         timer.expires_after(timeout);
-        timer.async_wait([weakSelf](const boost::system::error_code ec) {
+        timer.async_wait([weakSelf](const boost::system::error_code& ec) {
             // Note, we are ignoring other types of errors here;  If the timer
             // failed for any reason, we should still close the connection
-
             std::shared_ptr<Connection<Adaptor, Handler>> self =
                 weakSelf.lock();
             if (!self)
             {
-                BMCWEB_LOG_CRITICAL << self << " Failed to capture connection";
+                BMCWEB_LOG_CRITICAL("{} Failed to capture connection",
+                                    logPtr(self.get()));
                 return;
             }
+
+            self->timerStarted = false;
+
             if (ec == boost::asio::error::operation_aborted)
             {
                 // Canceled wait means the path succeeeded.
@@ -772,15 +892,18 @@ class Connection :
             }
             if (ec)
             {
-                BMCWEB_LOG_CRITICAL << self << " timer failed " << ec;
+                BMCWEB_LOG_CRITICAL("{} timer failed {}", logPtr(self.get()),
+                                    ec);
             }
 
-            BMCWEB_LOG_WARNING << self << "Connection timed out, closing";
+            BMCWEB_LOG_WARNING("{}Connection timed out, closing",
+                               logPtr(self.get()));
 
             self->close();
         });
 
-        BMCWEB_LOG_DEBUG << this << " timer started";
+        timerStarted = true;
+        BMCWEB_LOG_DEBUG("{} timer started", logPtr(this));
     }
 
     /* @brief : This function is used to get the user from the Authorization
@@ -841,10 +964,14 @@ class Connection :
     std::optional<crow::Request> req;
     crow::Response res;
 
-    bool sessionIsFromTransport = false;
     std::shared_ptr<persistent_data::UserSession> userSession;
+    std::shared_ptr<persistent_data::UserSession> mtlsSession;
 
     boost::asio::steady_timer timer;
+
+    bool keepAlive = true;
+
+    bool timerStarted = false;
 
     std::function<std::string()>& getCachedDateStr;
 

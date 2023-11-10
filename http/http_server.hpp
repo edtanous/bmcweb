@@ -3,7 +3,10 @@
 #include "file_watcher.hpp"
 #include "http_connection.hpp"
 #include "logging.hpp"
+<<<<<<< HEAD
 #include "lsp.hpp"
+=======
+>>>>>>> origin/master-october-10
 #include "ssl_key_handler.hpp"
 
 #include <boost/asio/ip/address.hpp>
@@ -12,7 +15,10 @@
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
+<<<<<<< HEAD
 #include <boost/date_time/posix_time/posix_time.hpp>
+=======
+>>>>>>> origin/master-october-10
 
 #include <atomic>
 #include <chrono>
@@ -71,7 +77,11 @@ class Server
         gmtime_r(&lastTimeT, &myTm);
 
         dateStr.resize(100);
+<<<<<<< HEAD
         size_t dateStrSz = strftime(&dateStr[0], 99,
+=======
+        size_t dateStrSz = strftime(dateStr.data(), dateStr.size() - 1,
+>>>>>>> origin/master-october-10
                                     "%a, %d %b %Y %H:%M:%S GMT", &myTm);
         dateStr.resize(dateStrSz);
     }
@@ -92,11 +102,11 @@ class Server
                 lastDateUpdate = std::chrono::steady_clock::now();
                 updateDateStr();
             }
-            return this->dateStr;
+            return dateStr;
         };
 
-        BMCWEB_LOG_INFO << "bmcweb server is running, local endpoint "
-                        << acceptor->local_endpoint().address().to_string();
+        BMCWEB_LOG_INFO("bmcweb server is running, local endpoint {}",
+                        acceptor->local_endpoint().address().to_string());
         startAsyncWaitForSignal();
         doAccept();
     }
@@ -161,6 +171,7 @@ class Server
             std::vector<char>& pwd = lsp::getLsp();
             ensuressl::encryptCredentials(filename, &pwd);
         }
+<<<<<<< HEAD
     }
 
     void watchCertificateChange()
@@ -178,6 +189,17 @@ class Server
                 }
             }
         });
+=======
+        fs::path certFile = certPath / "server.pem";
+        BMCWEB_LOG_INFO("Building SSL Context file={}", certFile.string());
+        std::string sslPemFile(certFile);
+        ensuressl::ensureOpensslKeyPresentAndValid(sslPemFile);
+        std::shared_ptr<boost::asio::ssl::context> sslContext =
+            ensuressl::getSslContext(sslPemFile);
+        adaptorCtx = sslContext;
+        handler->ssl(std::move(sslContext));
+#endif
+>>>>>>> origin/master-october-10
     }
 
     void startAsyncWaitForSignal()
@@ -186,23 +208,23 @@ class Server
             [this](const boost::system::error_code& ec, int signalNo) {
             if (ec)
             {
-                BMCWEB_LOG_INFO << "Error in signal handler" << ec.message();
+                BMCWEB_LOG_INFO("Error in signal handler{}", ec.message());
             }
             else
             {
                 if (signalNo == SIGHUP)
                 {
-                    BMCWEB_LOG_INFO << "Receivied reload signal";
+                    BMCWEB_LOG_INFO("Receivied reload signal");
                     loadCertificate();
                     boost::system::error_code ec2;
                     acceptor->cancel(ec2);
                     if (ec2)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "Error while canceling async operations:"
-                            << ec2.message();
+                        BMCWEB_LOG_ERROR(
+                            "Error while canceling async operations:{}",
+                            ec2.message());
                     }
-                    this->startAsyncWaitForSignal();
+                    startAsyncWaitForSignal();
                 }
                 else
                 {
@@ -237,10 +259,10 @@ class Server
         }
         acceptor->async_accept(
             boost::beast::get_lowest_layer(connection->socket()),
-            [this, connection](boost::system::error_code ec) {
+            [this, connection](const boost::system::error_code& ec) {
             if (!ec)
             {
-                boost::asio::post(*this->ioService,
+                boost::asio::post(*ioService,
                                   [connection] { connection->start(); });
             }
             doAccept();

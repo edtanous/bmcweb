@@ -1,12 +1,21 @@
 #pragma once
-#include <async_resp.hpp>
-#include <dbus_utility.hpp>
+#include "async_resp.hpp"
+#include "dbus_utility.hpp"
+#include "error_messages.hpp"
+#include "generated/enums/resource.hpp"
+#include "http/utility.hpp"
+#include "utils/dbus_utils.hpp"
+
+#include <boost/system/error_code.hpp>
+#include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
-#include <utils/dbus_utils.hpp>
 
 #include <algorithm>
+#include <array>
+#include <ranges>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace redfish
@@ -24,36 +33,34 @@ constexpr const char* bmcPurpose =
 /**
  * @brief Populate the running software version and image links
  *
- * @param[i,o] aResp             Async response object
+ * @param[i,o] asyncResp             Async response object
  * @param[i]   swVersionPurpose  Indicates what target to look for
- * @param[i]   activeVersionPropName  Index in aResp->res.jsonValue to write
+ * @param[i]   activeVersionPropName  Index in asyncResp->res.jsonValue to write
  * the running software version to
- * @param[i]   populateLinkToImages  Populate aResp->res "Links"
+ * @param[i]   populateLinkToImages  Populate asyncResp->res "Links"
  * "ActiveSoftwareImage" with a link to the running software image and
  * "SoftwareImages" with a link to the all its software images
  *
  * @return void
  */
-inline void
-    populateSoftwareInformation(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                                const std::string& swVersionPurpose,
-                                const std::string& activeVersionPropName,
-                                const bool populateLinkToImages)
+inline void populateSoftwareInformation(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& swVersionPurpose,
+    const std::string& activeVersionPropName, const bool populateLinkToImages)
 {
     // Used later to determine running (known on Redfish as active) Sw images
-    sdbusplus::asio::getProperty<std::vector<std::string>>(
-        *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
+    dbus::utility::getAssociationEndPoints(
         "/xyz/openbmc_project/software/functional",
-        "xyz.openbmc_project.Association", "endpoints",
-        [aResp, swVersionPurpose, activeVersionPropName,
-         populateLinkToImages](const boost::system::error_code ec,
-                               const std::vector<std::string>& functionalSw) {
-        BMCWEB_LOG_DEBUG << "populateSoftwareInformation enter";
+        [asyncResp, swVersionPurpose, activeVersionPropName,
+         populateLinkToImages](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperEndPoints& functionalSw) {
+        BMCWEB_LOG_DEBUG("populateSoftwareInformation enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "error_code = " << ec;
-            BMCWEB_LOG_ERROR << "error msg = " << ec.message();
-            messages::internalError(aResp->res);
+            BMCWEB_LOG_ERROR("error_code = {}", ec);
+            BMCWEB_LOG_ERROR("error msg = {}", ec.message());
+            messages::internalError(asyncResp->res);
             return;
         }
 
@@ -61,8 +68,8 @@ inline void
         {
             // Could keep going and try to populate SoftwareImages but
             // something is seriously wrong, so just fail
-            BMCWEB_LOG_ERROR << "Zero functional software in system";
-            messages::internalError(aResp->res);
+            BMCWEB_LOG_ERROR("Zero functional software in system");
+            messages::internalError(asyncResp->res);
             return;
         }
 
@@ -82,20 +89,23 @@ inline void
             functionalSwIds.push_back(leaf);
         }
 
-        crow::connections::systemBus->async_method_call(
-            [aResp, swVersionPurpose, activeVersionPropName,
+        constexpr std::array<std::string_view, 1> interfaces = {
+            "xyz.openbmc_project.Software.Version"};
+        dbus::utility::getSubTree(
+            "/xyz/openbmc_project/software", 0, interfaces,
+            [asyncResp, swVersionPurpose, activeVersionPropName,
              populateLinkToImages, functionalSwIds](
-                const boost::system::error_code ec2,
+                const boost::system::error_code& ec2,
                 const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR << "error_code = " << ec2;
-                BMCWEB_LOG_ERROR << "error msg = " << ec2.message();
-                messages::internalError(aResp->res);
+                BMCWEB_LOG_ERROR("error_code = {}", ec2);
+                BMCWEB_LOG_ERROR("error msg = {}", ec2.message());
+                messages::internalError(asyncResp->res);
                 return;
             }
 
-            BMCWEB_LOG_DEBUG << "Found " << subtree.size() << " images";
+            BMCWEB_LOG_DEBUG("Found {} images", subtree.size());
 
             for (const std::pair<std::string,
                                  std::vector<std::pair<
@@ -106,8 +116,8 @@ inline void
                 std::string swId = path.filename();
                 if (swId.empty())
                 {
-                    messages::internalError(aResp->res);
-                    BMCWEB_LOG_ERROR << "Invalid software ID";
+                    messages::internalError(asyncResp->res);
+                    BMCWEB_LOG_ERROR("Invalid software ID");
 
                     return;
                 }
@@ -116,8 +126,8 @@ inline void
                 // Look at Ids from
                 // /xyz/openbmc_project/software/functional
                 // to determine if this is a running image
-                if (std::find(functionalSwIds.begin(), functionalSwIds.end(),
-                              swId) != functionalSwIds.end())
+                if (std::ranges::find(functionalSwIds, swId) !=
+                    functionalSwIds.end())
                 {
                     runningImage = true;
                 }
@@ -126,13 +136,14 @@ inline void
                 sdbusplus::asio::getAllProperties(
                     *crow::connections::systemBus, obj.second[0].first,
                     obj.first, "xyz.openbmc_project.Software.Version",
-                    [aResp, swId, runningImage, swVersionPurpose,
+                    [asyncResp, swId, runningImage, swVersionPurpose,
                      activeVersionPropName, populateLinkToImages](
-                        const boost::system::error_code ec3,
+                        const boost::system::error_code& ec3,
                         const dbus::utility::DBusPropertiesMap&
                             propertiesList) {
                     if (ec3)
                     {
+<<<<<<< HEAD
                         BMCWEB_LOG_ERROR << "error_code = " << ec3;
                         BMCWEB_LOG_ERROR << "error msg = " << ec3.message();
                         // Have seen the code update app delete the
@@ -140,11 +151,19 @@ inline void
                         // the call to mapper and here. Just leave
                         // these properties off if resource not
                         // found.
+=======
+                        BMCWEB_LOG_ERROR("error_code = {}", ec3);
+                        BMCWEB_LOG_ERROR("error msg = {}", ec3.message());
+                        // Have seen the code update app delete the D-Bus
+                        // object, during code update, between the call to
+                        // mapper and here. Just leave these properties off if
+                        // resource not found.
+>>>>>>> origin/master-october-10
                         if (ec3.value() == EBADR)
                         {
                             return;
                         }
-                        messages::internalError(aResp->res);
+                        messages::internalError(asyncResp->res);
                         return;
                     }
                     // example propertiesList
@@ -161,10 +180,18 @@ inline void
 
                     if (!success)
                     {
-                        messages::internalError(aResp->res);
+                        messages::internalError(asyncResp->res);
                         return;
                     }
 
+<<<<<<< HEAD
+=======
+                    if (version == nullptr || version->empty())
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+>>>>>>> origin/master-october-10
                     if (swInvPurpose == nullptr ||
                         *swInvPurpose != swVersionPurpose)
                     {
@@ -172,6 +199,7 @@ inline void
                         return;
                     }
 
+<<<<<<< HEAD
                     if (version == nullptr || version->empty())
                     {
                         messages::internalError(aResp->res);
@@ -181,38 +209,65 @@ inline void
                     BMCWEB_LOG_DEBUG << "Image ID: " << swId;
                     BMCWEB_LOG_DEBUG << "Running image: " << runningImage;
                     BMCWEB_LOG_DEBUG << "Image purpose: " << *swInvPurpose;
+=======
+                    BMCWEB_LOG_DEBUG("Image ID: {}", swId);
+                    BMCWEB_LOG_DEBUG("Running image: {}", runningImage);
+                    BMCWEB_LOG_DEBUG("Image purpose: {}", *swInvPurpose);
+>>>>>>> origin/master-october-10
 
                     if (populateLinkToImages)
                     {
                         nlohmann::json& softwareImageMembers =
-                            aResp->res.jsonValue["Links"]["SoftwareImages"];
+                            asyncResp->res.jsonValue["Links"]["SoftwareImages"];
                         // Firmware images are at
                         // /redfish/v1/UpdateService/FirmwareInventory/<Id>
                         // e.g. .../FirmwareInventory/82d3ec86
+<<<<<<< HEAD
                         softwareImageMembers.push_back(
                             {{"@odata.id", "/redfish/v1/UpdateService/"
                                            "FirmwareInventory/" +
                                                swId}});
                         aResp->res
+=======
+                        nlohmann::json::object_t member;
+                        member["@odata.id"] = boost::urls::format(
+                            "/redfish/v1/UpdateService/FirmwareInventory/{}",
+                            swId);
+                        softwareImageMembers.emplace_back(std::move(member));
+                        asyncResp->res
+>>>>>>> origin/master-october-10
                             .jsonValue["Links"]["SoftwareImages@odata.count"] =
                             softwareImageMembers.size();
 
                         if (runningImage)
                         {
+<<<<<<< HEAD
                             // Create the link to the running image
                             aResp->res
                                 .jsonValue["Links"]["ActiveSoftwareImage"] = {
                                 {"@odata.id", "/redfish/v1/UpdateService/"
                                               "FirmwareInventory/" +
                                                   swId}};
+=======
+                            nlohmann::json::object_t runningMember;
+                            runningMember["@odata.id"] = boost::urls::format(
+                                "/redfish/v1/UpdateService/FirmwareInventory/{}",
+                                swId);
+                            // Create the link to the running image
+                            asyncResp->res
+                                .jsonValue["Links"]["ActiveSoftwareImage"] =
+                                std::move(runningMember);
+>>>>>>> origin/master-october-10
                         }
                     }
                     if (!activeVersionPropName.empty() && runningImage)
                     {
-                        aResp->res.jsonValue[activeVersionPropName] = *version;
+                        asyncResp->res.jsonValue[activeVersionPropName] =
+                            *version;
                     }
                 });
             }
+<<<<<<< HEAD
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -220,6 +275,10 @@ inline void
             "/xyz/openbmc_project/software", static_cast<int32_t>(0),
             std::array<const char*, 1>{"xyz.openbmc_project.Software.Version"});
     });
+=======
+            });
+        });
+>>>>>>> origin/master-october-10
 }
 
 /**
@@ -231,24 +290,24 @@ inline void
  *
  * @return The corresponding Redfish state
  */
-inline std::string getRedfishSwState(const std::string& swState)
+inline resource::State getRedfishSwState(const std::string& swState)
 {
     if (swState == "xyz.openbmc_project.Software.Activation.Activations.Active")
     {
-        return "Enabled";
+        return resource::State::Enabled;
     }
     if (swState == "xyz.openbmc_project.Software.Activation."
                    "Activations.Activating")
     {
-        return "Updating";
+        return resource::State::Updating;
     }
     if (swState == "xyz.openbmc_project.Software.Activation."
                    "Activations.StandbySpare")
     {
-        return "StandbySpare";
+        return resource::State::StandbySpare;
     }
-    BMCWEB_LOG_DEBUG << "Default sw state " << swState << " to Disabled";
-    return "Disabled";
+    BMCWEB_LOG_DEBUG("Default sw state {} to Disabled", swState);
+    return resource::State::Disabled;
 }
 
 /**
@@ -271,7 +330,7 @@ inline std::string getRedfishSwHealth(const std::string& swState)
     {
         return "OK";
     }
-    BMCWEB_LOG_DEBUG << "Sw state " << swState << " to Warning";
+    BMCWEB_LOG_DEBUG("Sw state {} to Warning", swState);
     return "Warning";
 }
 
@@ -281,7 +340,7 @@ inline std::string getRedfishSwHealth(const std::string& swState)
  * This function will put the appropriate Redfish state of the input
  * software id to ["Status"]["State"] within the json response
  *
- * @param[i,o] aResp    Async response object
+ * @param[i,o] asyncResp    Async response object
  * @param[i]   swId     The software ID to get status for
  * @param[i]   dbusSvc  The dbus service implementing the software object
  *
@@ -291,16 +350,16 @@ inline void getSwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::shared_ptr<std::string>& swId,
                         const std::string& dbusSvc)
 {
-    BMCWEB_LOG_DEBUG << "getSwStatus: swId " << *swId << " svc " << dbusSvc;
+    BMCWEB_LOG_DEBUG("getSwStatus: swId {} svc {}", *swId, dbusSvc);
 
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, dbusSvc,
         "/xyz/openbmc_project/software/" + *swId,
         "xyz.openbmc_project.Software.Activation",
         [asyncResp,
-         swId](const boost::system::error_code errorCode,
+         swId](const boost::system::error_code& ec,
                const dbus::utility::DBusPropertiesMap& propertiesList) {
-        if (errorCode)
+        if (ec)
         {
             // not all swtypes are updateable, this is ok
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -325,7 +384,7 @@ inline void getSwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "getSwStatus: Activation " << *swInvActivation;
+        BMCWEB_LOG_DEBUG("getSwStatus: Activation {}", *swInvActivation);
         asyncResp->res.jsonValue["Status"]["State"] =
             getRedfishSwState(*swInvActivation);
         asyncResp->res.jsonValue["Status"]["Health"] =
@@ -347,24 +406,21 @@ inline void
     getSwUpdatableStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::shared_ptr<std::string>& swId)
 {
-    sdbusplus::asio::getProperty<std::vector<std::string>>(
-        *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
+    dbus::utility::getAssociationEndPoints(
         "/xyz/openbmc_project/software/updateable",
-        "xyz.openbmc_project.Association", "endpoints",
-        [asyncResp, swId](const boost::system::error_code ec,
-                          const std::vector<std::string>& objPaths) {
+        [asyncResp, swId](const boost::system::error_code& ec,
+                          const dbus::utility::MapperEndPoints& objPaths) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << " error_code = " << ec
-                             << " error msg =  " << ec.message();
+            BMCWEB_LOG_DEBUG(" error_code = {} error msg =  {}", ec,
+                             ec.message());
             // System can exist with no updateable software,
             // so don't throw error here.
             return;
         }
         std::string reqSwObjPath = "/xyz/openbmc_project/software/" + *swId;
 
-        if (std::find(objPaths.begin(), objPaths.end(), reqSwObjPath) !=
-            objPaths.end())
+        if (std::ranges::find(objPaths, reqSwObjPath) != objPaths.end())
         {
             asyncResp->res.jsonValue["Updateable"] = true;
             return;

@@ -1,8 +1,9 @@
 #pragma once
+#include "async_resp.hpp"
 #include "http_request.hpp"
 
-#include <async_resp.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/websocket.hpp>
 
 #include <array>
@@ -17,16 +18,16 @@ namespace crow
 namespace websocket
 {
 
+enum class MessageType
+{
+    Binary,
+    Text,
+};
+
 struct Connection : std::enable_shared_from_this<Connection>
 {
   public:
-    explicit Connection(const crow::Request& reqIn) :
-        req(reqIn.req), userdataPtr(nullptr)
-    {}
-
-    explicit Connection(const crow::Request& reqIn, std::string user) :
-        req(reqIn.req), userName{std::move(user)}, userdataPtr(nullptr)
-    {}
+    explicit Connection(const crow::Request& reqIn) : req(reqIn.req) {}
 
     Connection(const Connection&) = delete;
     Connection(Connection&&) = delete;
@@ -35,32 +36,17 @@ struct Connection : std::enable_shared_from_this<Connection>
 
     virtual void sendBinary(std::string_view msg) = 0;
     virtual void sendBinary(std::string&& msg) = 0;
+    virtual void sendEx(MessageType type, std::string_view msg,
+                        std::function<void()>&& onDone) = 0;
     virtual void sendText(std::string_view msg) = 0;
     virtual void sendText(std::string&& msg) = 0;
     virtual void close(std::string_view msg = "quit") = 0;
+    virtual void deferRead() = 0;
+    virtual void resumeRead() = 0;
     virtual boost::asio::io_context& getIoContext() = 0;
     virtual ~Connection() = default;
-
-    void userdata(void* u)
-    {
-        userdataPtr = u;
-    }
-    void* userdata()
-    {
-        return userdataPtr;
-    }
-
-    const std::string& getUserName() const
-    {
-        return userName;
-    }
-
+    virtual boost::urls::url_view url() = 0;
     boost::beast::http::request<boost::beast::http::string_body> req;
-    crow::Response res;
-
-  private:
-    std::string userName{};
-    void* userdataPtr;
 };
 
 template <typename Adaptor>
@@ -68,24 +54,28 @@ class ConnectionImpl : public Connection
 {
   public:
     ConnectionImpl(
-        const crow::Request& reqIn, Adaptor adaptorIn,
-        std::function<void(Connection&)> openHandlerIn,
+        const crow::Request& reqIn, boost::urls::url_view urlViewIn,
+        Adaptor adaptorIn, std::function<void(Connection&)> openHandlerIn,
         std::function<void(Connection&, const std::string&, bool)>
             messageHandlerIn,
+        std::function<void(crow::websocket::Connection&, std::string_view,
+                           crow::websocket::MessageType type,
+                           std::function<void()>&& whenComplete)>
+            messageExHandlerIn,
         std::function<void(Connection&, const std::string&)> closeHandlerIn,
         std::function<void(Connection&)> errorHandlerIn) :
-        Connection(reqIn, reqIn.session == nullptr ? std::string{}
-                                                   : reqIn.session->username),
-        ws(std::move(adaptorIn)), inBuffer(inString, 131088),
+        Connection(reqIn),
+        uri(urlViewIn), ws(std::move(adaptorIn)), inBuffer(inString, 131088),
         openHandler(std::move(openHandlerIn)),
         messageHandler(std::move(messageHandlerIn)),
+        messageExHandler(std::move(messageExHandlerIn)),
         closeHandler(std::move(closeHandlerIn)),
         errorHandler(std::move(errorHandlerIn)), session(reqIn.session)
     {
         /* Turn on the timeouts on websocket stream to server role */
         ws.set_option(boost::beast::websocket::stream_base::timeout::suggested(
             boost::beast::role_type::server));
-        BMCWEB_LOG_DEBUG << "Creating new connection " << this;
+        BMCWEB_LOG_DEBUG("Creating new connection {}", logPtr(this));
     }
 
     boost::asio::io_context& getIoContext() override
@@ -96,7 +86,7 @@ class ConnectionImpl : public Connection
 
     void start()
     {
-        BMCWEB_LOG_DEBUG << "starting connection " << this;
+        BMCWEB_LOG_DEBUG("starting connection {}", logPtr(this));
 
         using bf = boost::beast::http::field;
 
@@ -114,7 +104,7 @@ class ConnectionImpl : public Connection
                     !crow::utility::constantTimeStringCompare(
                         protocol, session->csrfToken))
                 {
-                    BMCWEB_LOG_ERROR << "Websocket CSRF error";
+                    BMCWEB_LOG_ERROR("Websocket CSRF error");
                     m.result(boost::beast::http::status::unauthorized);
                     return;
                 }
@@ -138,101 +128,155 @@ class ConnectionImpl : public Connection
 
         // Perform the websocket upgrade
         ws.async_accept(req, [this, self(shared_from_this())](
-                                 boost::system::error_code ec) {
+                                 const boost::system::error_code& ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Error in ws.async_accept " << ec;
+                BMCWEB_LOG_ERROR("Error in ws.async_accept {}", ec);
                 return;
             }
             acceptDone();
         });
     }
 
-    void sendBinary(const std::string_view msg) override
+    void sendBinary(std::string_view msg) override
     {
         ws.binary(true);
-        outBuffer.emplace_back(msg);
+        outBuffer.commit(boost::asio::buffer_copy(outBuffer.prepare(msg.size()),
+                                                  boost::asio::buffer(msg)));
         doWrite();
+    }
+
+    void sendEx(MessageType type, std::string_view msg,
+                std::function<void()>&& onDone) override
+    {
+        if (doingWrite)
+        {
+            BMCWEB_LOG_CRITICAL(
+                "Cannot mix sendEx usage with sendBinary or sendText");
+            onDone();
+            return;
+        }
+        ws.binary(type == MessageType::Binary);
+
+        ws.async_write(boost::asio::buffer(msg),
+                       [weak(weak_from_this()), onDone{std::move(onDone)}](
+                           const boost::beast::error_code& ec, size_t) {
+            std::shared_ptr<Connection> self = weak.lock();
+
+            // Call the done handler regardless of whether we
+            // errored, but before we close things out
+            onDone();
+
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("Error in ws.async_write {}", ec);
+                self->close("write error");
+            }
+        });
     }
 
     void sendBinary(std::string&& msg) override
     {
         ws.binary(true);
-        outBuffer.emplace_back(std::move(msg));
+        outBuffer.commit(boost::asio::buffer_copy(outBuffer.prepare(msg.size()),
+                                                  boost::asio::buffer(msg)));
         doWrite();
     }
 
-    void sendText(const std::string_view msg) override
+    void sendText(std::string_view msg) override
     {
         ws.text(true);
-        outBuffer.emplace_back(msg);
+        outBuffer.commit(boost::asio::buffer_copy(outBuffer.prepare(msg.size()),
+                                                  boost::asio::buffer(msg)));
         doWrite();
     }
 
     void sendText(std::string&& msg) override
     {
         ws.text(true);
-        outBuffer.emplace_back(std::move(msg));
+        outBuffer.commit(boost::asio::buffer_copy(outBuffer.prepare(msg.size()),
+                                                  boost::asio::buffer(msg)));
         doWrite();
     }
 
-    void close(const std::string_view msg) override
+    void close(std::string_view msg) override
     {
         ws.async_close(
             {boost::beast::websocket::close_code::normal, msg},
-            [self(shared_from_this())](boost::system::error_code ec) {
+            [self(shared_from_this())](const boost::system::error_code& ec) {
             if (ec == boost::asio::error::operation_aborted)
             {
                 return;
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Error closing websocket " << ec;
+                BMCWEB_LOG_ERROR("Error closing websocket {}", ec);
                 return;
             }
         });
     }
 
+    boost::urls::url_view url() override
+    {
+        return uri;
+    }
+
     void acceptDone()
     {
-        BMCWEB_LOG_DEBUG << "Websocket accepted connection";
-
-        doRead();
+        BMCWEB_LOG_DEBUG("Websocket accepted connection");
 
         if (openHandler)
         {
             openHandler(*this);
         }
+        doRead();
+    }
+
+    void deferRead() override
+    {
+        readingDefered = true;
+
+        // If we're not actively reading, we need to take ownership of
+        // ourselves for a small portion of time, do that, and clear when we
+        // resume.
+        selfOwned = shared_from_this();
+    }
+
+    void resumeRead() override
+    {
+        readingDefered = false;
+        doRead();
+
+        // No longer need to keep ourselves alive now that read is active.
+        selfOwned.reset();
     }
 
     void doRead()
     {
-        ws.async_read(inBuffer,
-                      [this, self(shared_from_this())](
-                          boost::beast::error_code ec, std::size_t bytesRead) {
+        if (readingDefered)
+        {
+            return;
+        }
+        ws.async_read(inBuffer, [this, self(shared_from_this())](
+                                    const boost::beast::error_code& ec,
+                                    size_t bytesRead) {
             if (ec)
             {
                 if (ec != boost::beast::websocket::error::closed)
                 {
-                    BMCWEB_LOG_ERROR << "doRead error " << ec;
+                    BMCWEB_LOG_ERROR("doRead error {}", ec);
                 }
                 if (closeHandler)
                 {
-                    std::string_view reason = ws.reason().reason;
-                    closeHandler(*this, std::string(reason));
+                    std::string reason{ws.reason().reason.c_str()};
+                    closeHandler(*this, reason);
                 }
                 return;
             }
-            if (messageHandler)
-            {
-                messageHandler(*this, inString, ws.got_text());
-            }
-            inBuffer.consume(bytesRead);
-            inString.clear();
-            doRead();
+
+            handleMessage(bytesRead);
         });
     }
-
     void doWrite()
     {
         // If we're already doing a write, ignore the request, it will be picked
@@ -242,17 +286,17 @@ class ConnectionImpl : public Connection
             return;
         }
 
-        if (outBuffer.empty())
+        if (outBuffer.size() == 0)
         {
             // Done for now
             return;
         }
         doingWrite = true;
-        ws.async_write(boost::asio::buffer(outBuffer.front()),
-                       [this, self(shared_from_this())](
-                           boost::beast::error_code ec, std::size_t) {
+        ws.async_write(outBuffer.data(), [this, self(shared_from_this())](
+                                             const boost::beast::error_code& ec,
+                                             size_t bytesSent) {
             doingWrite = false;
-            outBuffer.erase(outBuffer.begin());
+            outBuffer.consume(bytesSent);
             if (ec == boost::beast::websocket::error::closed)
             {
                 // Do nothing here.  doRead handler will call the
@@ -262,7 +306,7 @@ class ConnectionImpl : public Connection
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Error in ws.async_write " << ec;
+                BMCWEB_LOG_ERROR("Error in ws.async_write {}", ec);
                 return;
             }
             doWrite();
@@ -270,21 +314,61 @@ class ConnectionImpl : public Connection
     }
 
   private:
+    void handleMessage(size_t bytesRead)
+    {
+        if (messageExHandler)
+        {
+            // Note, because of the interactions with the read buffers,
+            // this message handler overrides the normal message handler
+            messageExHandler(*this, inString, MessageType::Binary,
+                             [this, self(shared_from_this()), bytesRead]() {
+                if (self == nullptr)
+                {
+                    return;
+                }
+
+                inBuffer.consume(bytesRead);
+                inString.clear();
+
+                doRead();
+            });
+            return;
+        }
+
+        if (messageHandler)
+        {
+            messageHandler(*this, inString, ws.got_text());
+        }
+        inBuffer.consume(bytesRead);
+        inString.clear();
+        doRead();
+    }
+
+    boost::urls::url uri;
+
     boost::beast::websocket::stream<Adaptor, false> ws;
 
+    bool readingDefered = false;
     std::string inString;
     boost::asio::dynamic_string_buffer<std::string::value_type,
                                        std::string::traits_type,
                                        std::string::allocator_type>
         inBuffer;
-    std::vector<std::string> outBuffer;
+
+    boost::beast::multi_buffer outBuffer;
     bool doingWrite = false;
 
     std::function<void(Connection&)> openHandler;
     std::function<void(Connection&, const std::string&, bool)> messageHandler;
+    std::function<void(crow::websocket::Connection&, std::string_view,
+                       crow::websocket::MessageType type,
+                       std::function<void()>&& whenComplete)>
+        messageExHandler;
     std::function<void(Connection&, const std::string&)> closeHandler;
     std::function<void(Connection&)> errorHandler;
     std::shared_ptr<persistent_data::UserSession> session;
+
+    std::shared_ptr<Connection> selfOwned;
 };
 } // namespace websocket
 } // namespace crow

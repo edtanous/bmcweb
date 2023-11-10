@@ -18,18 +18,30 @@
 namespace redfish::registries::base
 {
 const Header header = {
-    "Copyright 2014-2022 DMTF. All rights reserved.",
+    "Copyright 2014-2023 DMTF. All rights reserved.",
     "#MessageRegistry.v1_5_0.MessageRegistry",
+<<<<<<< HEAD
     "Base.1.15.0",
+=======
+    "Base.1.16.0",
+>>>>>>> origin/master-october-10
     "Base Message Registry",
     "en",
     "This registry defines the base messages for Redfish",
     "Base",
+<<<<<<< HEAD
     "1.15.0",
     "DMTF",
 };
 constexpr const char* url =
     "https://redfish.dmtf.org/registries/Base.1.15.0.json";
+=======
+    "1.16.0",
+    "DMTF",
+};
+constexpr const char* url =
+    "https://redfish.dmtf.org/registries/Base.1.16.0.json";
+>>>>>>> origin/master-october-10
 
 constexpr std::array registry =
 {
@@ -246,12 +258,44 @@ constexpr std::array registry =
             "Correct the value for the parameter in the request body and resubmit the request if the operation failed.",
         }},
     MessageEntry{
+<<<<<<< HEAD
+=======
+        "ArraySizeTooLong",
+        {
+            "Indicates that the size of the array exceeded the maximum number of elements.",
+            "The array provided for property %1 exceeds the size limit %2.",
+            "Warning",
+            2,
+            {
+                "string",
+                "number",
+            },
+            "Resubmit the request with an appropriate array size.",
+        }},
+    MessageEntry{
+        "ArraySizeTooShort",
+        {
+            "Indicates that the size of the array is under the minimum number of elements.",
+            "The array provided for property %1 is under the minimum size limit %2.",
+            "Warning",
+            2,
+            {
+                "string",
+                "number",
+            },
+            "Resubmit the request with an appropriate array size.",
+        }},
+    MessageEntry{
+>>>>>>> origin/master-october-10
         "AuthenticationTokenRequired",
         {
             "Indicates that the request could not be performed because an authentication token was not provided.",
             "The request could not be performed because an authentication token was not provided.",
             "Critical",
+<<<<<<< HEAD
             "Critical",
+=======
+>>>>>>> origin/master-october-10
             0,
             {},
             "Obtain an authentication token and resubmit the request.",
@@ -495,6 +539,18 @@ constexpr std::array registry =
                 "string",
             },
             "Provide a valid URI and resubmit the request.",
+        }},
+    MessageEntry{
+        "LicenseRequired",
+        {
+            "Indicates that a license is required to perform the requested operation.",
+            "A license is required for this operation: %1.",
+            "Critical",
+            1,
+            {
+                "string",
+            },
+            "Install the requested license and resubmit the request.",
         }},
     MessageEntry{
         "MalformedJSON",
@@ -949,7 +1005,10 @@ constexpr std::array registry =
             "Indicates that a query parameter is not supported.",
             "Query parameter '%1' is not supported.",
             "Warning",
+<<<<<<< HEAD
             "Warning",
+=======
+>>>>>>> origin/master-october-10
             1,
             {
                 "string",
@@ -1318,6 +1377,19 @@ constexpr std::array registry =
             "Resubmit the request with an appropriate string length.",
         }},
     MessageEntry{
+        "StringValueTooShort",
+        {
+            "Indicates that a string value passed to the given resource was under its minimum required length.  An example is when a higher minimum length is imposed by an implementation than that allowed by the specification.",
+            "The string '%1' was under the minimum required length %2.",
+            "Warning",
+            2,
+            {
+                "string",
+                "number",
+            },
+            "Resubmit the request with an appropriate string length.",
+        }},
+    MessageEntry{
         "SubscriptionTerminated",
         {
             "An event subscription has been terminated by the service.  No further events will be delivered.",
@@ -1384,6 +1456,7 @@ enum class Index
     actionParameterValueFormatError = 13,
     actionParameterValueNotInList = 14,
     actionParameterValueTypeError = 15,
+<<<<<<< HEAD
     authenticationTokenRequired = 16,
     chassisPowerStateOffRequired = 17,
     chassisPowerStateOnRequired = 18,
@@ -1474,5 +1547,101 @@ enum class Index
     success = 103,
     undeterminedFault = 104,
     unrecognizedRequestBody = 105,
+=======
+    arraySizeTooLong = 16,
+    arraySizeTooShort = 17,
+    authenticationTokenRequired = 18,
+    chassisPowerStateOffRequired = 19,
+    chassisPowerStateOnRequired = 20,
+    conditionInRelatedResource = 21,
+    couldNotEstablishConnection = 22,
+    createFailedMissingReqProperties = 23,
+    createLimitReachedForResource = 24,
+    created = 25,
+    emptyJSON = 26,
+    eventBufferExceeded = 27,
+    eventSubscriptionLimitExceeded = 28,
+    generalError = 29,
+    headerInvalid = 30,
+    headerMissing = 31,
+    insufficientPrivilege = 32,
+    insufficientStorage = 33,
+    internalError = 34,
+    invalidIndex = 35,
+    invalidJSON = 36,
+    invalidObject = 37,
+    invalidURI = 38,
+    licenseRequired = 39,
+    malformedJSON = 40,
+    maximumErrorsExceeded = 41,
+    missingOrMalformedPart = 42,
+    networkNameResolutionNotConfigured = 43,
+    networkNameResolutionNotSupported = 44,
+    noOperation = 45,
+    noValidSession = 46,
+    operationFailed = 47,
+    operationNotAllowed = 48,
+    operationTimeout = 49,
+    passwordChangeRequired = 50,
+    payloadTooLarge = 51,
+    preconditionFailed = 52,
+    preconditionRequired = 53,
+    propertyDeprecated = 54,
+    propertyDuplicate = 55,
+    propertyMissing = 56,
+    propertyNotUpdated = 57,
+    propertyNotWritable = 58,
+    propertyUnknown = 59,
+    propertyValueConflict = 60,
+    propertyValueDeprecated = 61,
+    propertyValueError = 62,
+    propertyValueExternalConflict = 63,
+    propertyValueFormatError = 64,
+    propertyValueIncorrect = 65,
+    propertyValueModified = 66,
+    propertyValueNotInList = 67,
+    propertyValueOutOfRange = 68,
+    propertyValueResourceConflict = 69,
+    propertyValueTypeError = 70,
+    queryCombinationInvalid = 71,
+    queryNotSupported = 72,
+    queryNotSupportedOnOperation = 73,
+    queryNotSupportedOnResource = 74,
+    queryParameterOutOfRange = 75,
+    queryParameterUnsupported = 76,
+    queryParameterValueError = 77,
+    queryParameterValueFormatError = 78,
+    queryParameterValueTypeError = 79,
+    resetRecommended = 80,
+    resetRequired = 81,
+    resourceAlreadyExists = 82,
+    resourceAtUriInUnknownFormat = 83,
+    resourceAtUriUnauthorized = 84,
+    resourceCannotBeDeleted = 85,
+    resourceCreationConflict = 86,
+    resourceDeprecated = 87,
+    resourceExhaustion = 88,
+    resourceInStandby = 89,
+    resourceInUse = 90,
+    resourceMissingAtURI = 91,
+    resourceNotFound = 92,
+    resourceTypeIncompatible = 93,
+    restrictedPrivilege = 94,
+    restrictedRole = 95,
+    serviceDisabled = 96,
+    serviceInUnknownState = 97,
+    serviceShuttingDown = 98,
+    serviceTemporarilyUnavailable = 99,
+    sessionLimitExceeded = 100,
+    sessionTerminated = 101,
+    sourceDoesNotSupportProtocol = 102,
+    strictAccountTypes = 103,
+    stringValueTooLong = 104,
+    stringValueTooShort = 105,
+    subscriptionTerminated = 106,
+    success = 107,
+    undeterminedFault = 108,
+    unrecognizedRequestBody = 109,
+>>>>>>> origin/master-october-10
 };
 } // namespace redfish::registries::base

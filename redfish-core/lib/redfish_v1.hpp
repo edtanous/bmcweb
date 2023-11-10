@@ -1,13 +1,17 @@
 #pragma once
 
+#include "app.hpp"
 #include "error_messages.hpp"
+#include "http_request.hpp"
+#include "http_response.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "schemas.hpp"
 #include "utility.hpp"
 
-#include <app.hpp>
-#include <http_request.hpp>
-#include <http_response.hpp>
-#include <schemas.hpp>
+#include <boost/url/format.hpp>
 
+#include <ranges>
 #include <string>
 
 namespace redfish
@@ -36,14 +40,13 @@ inline void redfish404(App& app, const crow::Request& req,
         return;
     }
 
-    BMCWEB_LOG_ERROR << "404 on path " << path;
+    BMCWEB_LOG_WARNING("404 on path {}", path);
 
-    boost::urls::string_value name = req.urlView.segments().back();
-    std::string_view nameStr(name.data(), name.size());
+    std::string name = req.url().segments().back();
     // Note, if we hit the wildcard route, we don't know the "type" the user was
     // actually requesting, but giving them a return with an empty string is
     // still better than nothing.
-    messages::resourceNotFound(asyncResp->res, "", nameStr);
+    messages::resourceNotFound(asyncResp->res, "", name);
 }
 
 inline void redfish405(App& app, const crow::Request& req,
@@ -57,7 +60,7 @@ inline void redfish405(App& app, const crow::Request& req,
         return;
     }
 
-    BMCWEB_LOG_ERROR << "405 on path " << path;
+    BMCWEB_LOG_WARNING("405 on path {}", path);
     asyncResp->res.result(boost::beast::http::status::method_not_allowed);
     if (req.method() == boost::beast::http::verb::delete_)
     {
@@ -79,18 +82,16 @@ inline void
     }
     nlohmann::json& json = asyncResp->res.jsonValue;
     json["@odata.id"] = "/redfish/v1/JsonSchemas";
-    json["@odata.context"] =
-        "/redfish/v1/$metadata#JsonSchemaFileCollection.JsonSchemaFileCollection";
     json["@odata.type"] = "#JsonSchemaFileCollection.JsonSchemaFileCollection";
     json["Name"] = "JsonSchemaFile Collection";
     json["Description"] = "Collection of JsonSchemaFiles";
     nlohmann::json::array_t members;
-    for (const std::string_view schema : schemas)
+    for (std::string_view schema : schemas)
     {
         nlohmann::json::object_t member;
-        member["@odata.id"] = crow::utility::urlFromPieces(
-            "redfish", "v1", "JsonSchemas", schema);
-        members.push_back(std::move(member));
+        member["@odata.id"] = boost::urls::format("/redfish/v1/JsonSchemas/{}",
+                                                  schema);
+        members.emplace_back(std::move(member));
     }
     json["Members"] = std::move(members);
     json["Members@odata.count"] = schemas.size();
@@ -105,17 +106,22 @@ inline void jsonSchemaGet(App& app, const crow::Request& req,
         return;
     }
 
-    if (std::find(schemas.begin(), schemas.end(), schema) == schemas.end())
+    if (std::ranges::find(schemas, schema) == schemas.end())
     {
         messages::resourceNotFound(asyncResp->res, "JsonSchemaFile", schema);
         return;
     }
 
     nlohmann::json& json = asyncResp->res.jsonValue;
+<<<<<<< HEAD
     json["@odata.context"] =
         "/redfish/v1/$metadata#JsonSchemaFile.JsonSchemaFile";
     json["@odata.id"] = crow::utility::urlFromPieces("redfish", "v1",
                                                      "JsonSchemas", schema);
+=======
+    json["@odata.id"] = boost::urls::format("/redfish/v1/JsonSchemas/{}",
+                                            schema);
+>>>>>>> origin/master-october-10
     json["@odata.type"] = "#JsonSchemaFile.v1_0_2.JsonSchemaFile";
     json["Name"] = schema + " Schema File";
     json["Description"] = schema + " Schema File Location";
@@ -134,8 +140,13 @@ inline void jsonSchemaGet(App& app, const crow::Request& req,
     locationEntry["Language"] = "en";
     locationEntry["PublicationUri"] = "http://redfish.dmtf.org/schemas/v1/" +
                                       schema + ".json";
+<<<<<<< HEAD
     locationEntry["Uri"] = crow::utility::urlFromPieces(
         "redfish", "v1", "JsonSchemas", schema, std::string(schema) + ".json");
+=======
+    locationEntry["Uri"] = boost::urls::format(
+        "/redfish/v1/JsonSchemas/{}/{}", schema, std::string(schema) + ".json");
+>>>>>>> origin/master-october-10
 
     locationArray.emplace_back(locationEntry);
 
@@ -150,19 +161,25 @@ inline void requestRoutesRedfish(App& app)
             std::bind_front(redfishGet, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/JsonSchemas/<str>/")
+        .privileges(redfish::privileges::getJsonSchemaFileCollection)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(jsonSchemaGet, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/JsonSchemas/")
+        .privileges(redfish::privileges::getJsonSchemaFile)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(jsonSchemaIndexGet, std::ref(app)));
 
     // Note, this route must always be registered last
     BMCWEB_ROUTE(app, "/redfish/<path>")
-        .notFound()(std::bind_front(redfish404, std::ref(app)));
+        .notFound()
+        .privileges(redfish::privileges::privilegeSetLogin)(
+            std::bind_front(redfish404, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/<path>")
-        .methodNotAllowed()(std::bind_front(redfish405, std::ref(app)));
+        .methodNotAllowed()
+        .privileges(redfish::privileges::privilegeSetLogin)(
+            std::bind_front(redfish405, std::ref(app)));
 }
 
 } // namespace redfish

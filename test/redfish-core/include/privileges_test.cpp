@@ -60,8 +60,8 @@ TEST(PrivilegeTest, PrivilegeCheckForSingleCaseFailure)
 
 TEST(PrivilegeTest, PrivilegeCheckForANDCaseSuccess)
 {
-    auto userPrivileges =
-        Privileges{"Login", "ConfigureManager", "ConfigureSelf"};
+    auto userPrivileges = Privileges{"Login", "ConfigureManager",
+                                     "ConfigureSelf"};
     OperationMap entityPrivileges{
         {boost::beast::http::verb::get,
          {{"Login", "ConfigureManager", "ConfigureSelf"}}}};
@@ -134,5 +134,14 @@ TEST(PrivilegeTest, GetActivePrivilegeNames)
                              expectedPrivileges[2], expectedPrivileges[3],
                              expectedPrivileges[4]));
 }
+
+TEST(PrivilegeTest, PrivilegeHostConsoleConstructor)
+{
+    Privileges privileges{"OpenBMCHostConsole"};
+
+    EXPECT_THAT(privileges.getActivePrivilegeNames(PrivilegeType::OEM),
+                UnorderedElementsAre("OpenBMCHostConsole"));
+}
+
 } // namespace
 } // namespace redfish

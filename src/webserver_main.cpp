@@ -1,8 +1,30 @@
-#include <bmcweb_config.h>
+#include "bmcweb_config.h"
+
+#include "app.hpp"
+#include "cors_preflight.hpp"
+#include "dbus_monitor.hpp"
+#include "dbus_singleton.hpp"
+#include "google/google_service_root.hpp"
+#include "hostname_monitor.hpp"
+#include "ibm/management_console_rest.hpp"
+#include "image_upload.hpp"
+#include "kvm_websocket.hpp"
+#include "login_routes.hpp"
+#include "nbd_proxy.hpp"
+#include "obmc_console.hpp"
+#include "openbmc_dbus_rest.hpp"
+#include "redfish.hpp"
+#include "redfish_aggregator.hpp"
+#include "security_headers.hpp"
+#include "ssl_key_handler.hpp"
+#include "user_monitor.hpp"
+#include "vm_websocket.hpp"
+#include "webassets.hpp"
+
 #include <systemd/sd-daemon.h>
 
-#include <app.hpp>
 #include <boost/asio/io_context.hpp>
+<<<<<<< HEAD
 #include <cors_preflight.hpp>
 #include <dbus_monitor.hpp>
 #include <dbus_singleton.hpp>
@@ -26,6 +48,11 @@
 #include <vm_websocket.hpp>
 #include <webassets.hpp>
 #include <watchdog.hpp>
+=======
+#include <sdbusplus/asio/connection.hpp>
+#include <sdbusplus/bus.hpp>
+#include <sdbusplus/server.hpp>
+>>>>>>> origin/master-october-10
 
 #include <exception>
 #include <memory>
@@ -38,34 +65,37 @@ inline void setupSocket(crow::App& app)
     int listenFd = sd_listen_fds(0);
     if (1 == listenFd)
     {
-        BMCWEB_LOG_INFO << "attempting systemd socket activation";
+        BMCWEB_LOG_INFO("attempting systemd socket activation");
         if (sd_is_socket_inet(SD_LISTEN_FDS_START, AF_UNSPEC, SOCK_STREAM, 1,
                               0) != 0)
         {
-            BMCWEB_LOG_INFO << "Starting webserver on socket handle "
-                            << SD_LISTEN_FDS_START;
+            BMCWEB_LOG_INFO("Starting webserver on socket handle {}",
+                            SD_LISTEN_FDS_START);
             app.socket(SD_LISTEN_FDS_START);
         }
         else
         {
-            BMCWEB_LOG_INFO
-                << "bad incoming socket, starting webserver on port "
-                << defaultPort;
+            BMCWEB_LOG_INFO(
+                "bad incoming socket, starting webserver on port {}",
+                defaultPort);
             app.port(defaultPort);
         }
     }
     else
     {
-        BMCWEB_LOG_INFO << "Starting webserver on port " << defaultPort;
+        BMCWEB_LOG_INFO("Starting webserver on port {}", defaultPort);
         app.port(defaultPort);
     }
 }
 
 static int run()
 {
+<<<<<<< HEAD
     crow::Logger::setLogLevel(
         static_cast<crow::LogLevel>(bmcwebLogLevel));
 
+=======
+>>>>>>> origin/master-october-10
     auto io = std::make_shared<boost::asio::io_context>();
     App app(io);
 
@@ -88,15 +118,12 @@ static int run()
 #ifdef BMCWEB_ENABLE_REDFISH
     redfish::RedfishService redfish(app);
 
-    // Create HttpClient instance and initialize Config
-    crow::HttpClient::getInstance();
-
     // Create EventServiceManager instance and initialize Config
-    redfish::EventServiceManager::getInstance();
+    redfish::EventServiceManager::getInstance(&*io);
 
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     // Create RedfishAggregator instance and initialize Config
-    redfish::RedfishAggregator::getInstance();
+    redfish::RedfishAggregator::getInstance(&*io);
 #endif
 #endif
 
@@ -140,12 +167,13 @@ static int run()
     int rc = redfish::EventServiceManager::startEventLogMonitor(*io);
     if (rc != 0)
     {
-        BMCWEB_LOG_ERROR << "Redfish event handler setup failed...";
+        BMCWEB_LOG_ERROR("Redfish event handler setup failed...");
         return rc;
     }
 #endif
 
 #ifdef BMCWEB_ENABLE_SSL
+<<<<<<< HEAD
     if (persistent_data::getConfig().isTLSAuthEnabled())
     {
         BMCWEB_LOG_INFO << "Start Hostname Monitor Service...";
@@ -155,7 +183,13 @@ static int run()
 
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
     crow::obmc_dump::requestRoutes(app);
+=======
+    BMCWEB_LOG_INFO("Start Hostname Monitor Service...");
+    crow::hostname_monitor::registerHostnameSignal();
+>>>>>>> origin/master-october-10
 #endif
+
+    bmcweb::registerUserRemovedSignal();
 
     app.run();
     io->run();
@@ -173,12 +207,12 @@ int main(int /*argc*/, char** /*argv*/)
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_CRITICAL << "Threw exception to main: " << e.what();
+        BMCWEB_LOG_CRITICAL("Threw exception to main: {}", e.what());
         return -1;
     }
     catch (...)
     {
-        BMCWEB_LOG_CRITICAL << "Threw exception to main";
+        BMCWEB_LOG_CRITICAL("Threw exception to main");
         return -1;
     }
 }

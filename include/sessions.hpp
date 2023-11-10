@@ -1,17 +1,18 @@
 #pragma once
 
 #include "logging.hpp"
-#include "random.hpp"
+#include "ossl_random.hpp"
 #include "utility.hpp"
+#include "utils/ip_utils.hpp"
 
 #include <nlohmann/json.hpp>
-#include <utils/ip_utils.hpp>
 
+#include <algorithm>
 #include <csignal>
 #include <optional>
 #include <random>
 #ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
-#include <ibm/locks.hpp>
+#include "ibm/locks.hpp"
 #endif
 
 namespace persistent_data
@@ -40,6 +41,8 @@ struct UserSession
     PersistenceType persistence{PersistenceType::TIMEOUT};
     bool cookieAuth = false;
     bool isConfigureSelfOnly = false;
+    std::string userRole{};
+    std::vector<std::string> userGroups{};
 
     // There are two sources of truth for isConfigureSelfOnly:
     //  1. When pamAuthenticateUser() returns PAM_NEW_AUTHTOK_REQD.
@@ -69,8 +72,9 @@ struct UserSession
                 element.value().get_ptr<const std::string*>();
             if (thisValue == nullptr)
             {
-                BMCWEB_LOG_ERROR << "Error reading persistent store.  Property "
-                                 << element.key() << " was not of type string";
+                BMCWEB_LOG_ERROR(
+                    "Error reading persistent store.  Property {} was not of type string",
+                    element.key());
                 continue;
             }
             if (element.key() == "unique_id")
@@ -100,9 +104,9 @@ struct UserSession
 
             else
             {
-                BMCWEB_LOG_ERROR
-                    << "Got unexpected property reading persistent file: "
-                    << element.key();
+                BMCWEB_LOG_ERROR(
+                    "Got unexpected property reading persistent file: {}",
+                    element.key());
                 continue;
             }
         }
@@ -113,8 +117,8 @@ struct UserSession
         if (userSession->uniqueId.empty() || userSession->username.empty() ||
             userSession->sessionToken.empty() || userSession->csrfToken.empty())
         {
-            BMCWEB_LOG_DEBUG << "Session missing required security "
-                                "information, refusing to restore";
+            BMCWEB_LOG_DEBUG("Session missing required security "
+                             "information, refusing to restore");
             return nullptr;
         }
 
@@ -201,8 +205,7 @@ class SessionStore
 {
   public:
     std::shared_ptr<UserSession> generateUserSession(
-        const std::string_view username,
-        const boost::asio::ip::address& clientIp,
+        std::string_view username, const boost::asio::ip::address& clientIp,
         const std::optional<std::string>& clientId,
         PersistenceType persistence = PersistenceType::TIMEOUT,
         bool isConfigureSelfOnly = false)
@@ -264,8 +267,7 @@ class SessionStore
         return it.first->second;
     }
 
-    std::shared_ptr<UserSession>
-        loginSessionByToken(const std::string_view token)
+    std::shared_ptr<UserSession> loginSessionByToken(std::string_view token)
     {
         applySessionTimeouts();
         if (token.size() != sessionTokenSize)
@@ -282,7 +284,7 @@ class SessionStore
         return userSession;
     }
 
-    std::shared_ptr<UserSession> getSessionByUid(const std::string_view uid)
+    std::shared_ptr<UserSession> getSessionByUid(std::string_view uid)
     {
         applySessionTimeouts();
         // TODO(Ed) this is inefficient
@@ -323,6 +325,17 @@ class SessionStore
             }
         }
         return ret;
+    }
+
+    void removeSessionsByUsername(std::string_view username)
+    {
+        std::erase_if(authTokens, [username](const auto& value) {
+            if (value.second == nullptr)
+            {
+                return false;
+            }
+            return value.second->username == username;
+        });
     }
 
     void updateAuthMethodsConfig(const AuthConfigMethods& config)

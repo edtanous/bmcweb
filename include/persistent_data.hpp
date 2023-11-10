@@ -1,15 +1,13 @@
 #pragma once
 
-#include <app.hpp>
+#include "event_service_store.hpp"
+#include "http_request.hpp"
+#include "http_response.hpp"
+#include "ossl_random.hpp"
+#include "sessions.hpp"
+
 #include <boost/beast/http/fields.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <event_service_store.hpp>
-#include <http_request.hpp>
-#include <http_response.hpp>
 #include <nlohmann/json.hpp>
-#include <sessions.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -82,8 +80,7 @@ class ConfigFile
             auto data = nlohmann::json::parse(persistentFile, nullptr, false);
             if (data.is_discarded())
             {
-                BMCWEB_LOG_ERROR
-                    << "Error parsing persistent data in json file.";
+                BMCWEB_LOG_ERROR("Error parsing persistent data in json file.");
             }
             else
             {
@@ -97,7 +94,7 @@ class ConfigFile
                             item.value().get_ptr<const uint64_t*>();
                         if (uintPtr == nullptr)
                         {
-                            BMCWEB_LOG_ERROR << "Failed to read revision flag";
+                            BMCWEB_LOG_ERROR("Failed to read revision flag");
                         }
                         else
                         {
@@ -137,15 +134,15 @@ class ConfigFile
 
                             if (newSession == nullptr)
                             {
-                                BMCWEB_LOG_ERROR << "Problem reading session "
-                                                    "from persistent store";
+                                BMCWEB_LOG_ERROR("Problem reading session "
+                                                 "from persistent store");
                                 continue;
                             }
 
-                            BMCWEB_LOG_DEBUG
-                                << "Restored session: " << newSession->csrfToken
-                                << " " << newSession->uniqueId << " "
-                                << newSession->sessionToken;
+                            BMCWEB_LOG_DEBUG("Restored session: {} {} {}",
+                                             newSession->csrfToken,
+                                             newSession->uniqueId,
+                                             newSession->sessionToken);
                             SessionStore::getInstance().authTokens.emplace(
                                 newSession->sessionToken, newSession);
                         }
@@ -156,13 +153,13 @@ class ConfigFile
                             item.value().get_ptr<int64_t*>();
                         if (jTimeout == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG
-                                << "Problem reading session timeout value";
+                            BMCWEB_LOG_DEBUG(
+                                "Problem reading session timeout value");
                             continue;
                         }
                         std::chrono::seconds sessionTimeoutInseconds(*jTimeout);
-                        BMCWEB_LOG_DEBUG << "Restored Session Timeout: "
-                                         << sessionTimeoutInseconds.count();
+                        BMCWEB_LOG_DEBUG("Restored Session Timeout: {}",
+                                         sessionTimeoutInseconds.count());
                         SessionStore::getInstance().updateSessionTimeout(
                             sessionTimeoutInseconds);
                     }
@@ -181,15 +178,14 @@ class ConfigFile
 
                             if (newSubscription == nullptr)
                             {
-                                BMCWEB_LOG_ERROR
-                                    << "Problem reading subscription "
-                                       "from persistent store";
+                                BMCWEB_LOG_ERROR("Problem reading subscription "
+                                                 "from persistent store");
                                 continue;
                             }
 
-                            BMCWEB_LOG_DEBUG << "Restored subscription: "
-                                             << newSubscription->id << " "
-                                             << newSubscription->customText;
+                            BMCWEB_LOG_DEBUG("Restored subscription: {} {}",
+                                             newSubscription->id,
+                                             newSubscription->customText);
                             EventServiceStore::getInstance()
                                 .subscriptionsConfigMap.emplace(
                                     newSubscription->id, newSubscription);
@@ -223,8 +219,7 @@ class ConfigFile
 
         if (systemUuid.empty())
         {
-            systemUuid =
-                boost::uuids::to_string(boost::uuids::random_generator()());
+            systemUuid = bmcweb::getRandomUUID();
             needWrite = true;
         }
         if (fileRevision < jsonRevision)
@@ -285,11 +280,12 @@ class ConfigFile
                 session["username"] = p.second->username;
                 session["csrf_token"] = p.second->csrfToken;
                 session["client_ip"] = p.second->clientIp;
-                if (p.second->clientId)
+                const std::optional<std::string>& clientId = p.second->clientId;
+                if (clientId)
                 {
-                    session["client_id"] = *p.second->clientId;
+                    session["client_id"] = *clientId;
                 }
-                sessions.push_back(std::move(session));
+                sessions.emplace_back(std::move(session));
             }
         }
         nlohmann::json& subscriptions = data["subscriptions"];
@@ -300,8 +296,7 @@ class ConfigFile
             std::shared_ptr<UserSubscription> subValue = it.second;
             if (subValue->subscriptionType == "SSE")
             {
-                BMCWEB_LOG_DEBUG
-                    << "The subscription type is SSE, so skipping.";
+                BMCWEB_LOG_DEBUG("The subscription type is SSE, so skipping.");
                 continue;
             }
             nlohmann::json::object_t headers;
@@ -332,7 +327,7 @@ class ConfigFile
             subscription["MetricReportDefinitions"] =
                 subValue->metricReportDefinitions;
 
-            subscriptions.push_back(std::move(subscription));
+            subscriptions.emplace_back(std::move(subscription));
         }
         persistentFile << data;
     }

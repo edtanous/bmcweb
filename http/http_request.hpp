@@ -8,7 +8,7 @@
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/string_body.hpp>
 #include <boost/beast/websocket.hpp>
-#include <boost/url/url_view.hpp>
+#include <boost/url/url.hpp>
 
 #include <string>
 #include <string_view>
@@ -20,13 +20,12 @@ namespace crow
 struct Request
 {
     boost::beast::http::request<boost::beast::http::string_body> req;
-    boost::beast::http::fields& fields;
-    std::string_view url{};
-    boost::urls::url_view urlView{};
 
+  private:
+    boost::urls::url urlBase{};
+
+  public:
     bool isSecure{false};
-
-    std::string& body;
 
     boost::asio::io_context* ioService{};
     boost::asio::ip::address ipAddress{};
@@ -36,8 +35,7 @@ struct Request
     std::string userRole{};
     Request(boost::beast::http::request<boost::beast::http::string_body> reqIn,
             std::error_code& ec) :
-        req(std::move(reqIn)),
-        fields(req.base()), body(req.body())
+        req(std::move(reqIn))
     {
         if (!setUrlInfo())
         {
@@ -45,6 +43,21 @@ struct Request
         }
     }
 
+<<<<<<< HEAD
+=======
+    Request(std::string_view bodyIn, std::error_code& /*ec*/) : req({}, bodyIn)
+    {}
+
+    Request() = default;
+
+    Request(const Request& other) = default;
+    Request(Request&& other) = default;
+
+    Request& operator=(const Request&) = default;
+    Request& operator=(Request&&) = default;
+    ~Request() = default;
+
+>>>>>>> origin/master-october-10
     boost::beast::http::verb method() const
     {
         return req.method();
@@ -70,7 +83,22 @@ struct Request
         return req.target();
     }
 
-    bool target(const std::string_view target)
+    boost::urls::url_view url() const
+    {
+        return {urlBase};
+    }
+
+    const boost::beast::http::fields& fields() const
+    {
+        return req.base();
+    }
+
+    const std::string& body() const
+    {
+        return req.body();
+    }
+
+    bool target(std::string_view target)
     {
         req.target(target);
         return setUrlInfo();
@@ -94,16 +122,13 @@ struct Request
   private:
     bool setUrlInfo()
     {
-        auto result = boost::urls::parse_relative_ref(
-            boost::urls::string_view(target().data(), target().size()));
+        auto result = boost::urls::parse_relative_ref(target());
 
         if (!result)
         {
             return false;
         }
-        urlView = *result;
-        url = std::string_view(urlView.encoded_path().data(),
-                               urlView.encoded_path().size());
+        urlBase = *result;
         return true;
     }
 };

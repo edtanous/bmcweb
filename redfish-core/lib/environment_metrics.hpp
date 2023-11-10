@@ -1,5 +1,6 @@
 #pragma once
 
+<<<<<<< HEAD
 #include <app.hpp>
 #include <boost/format.hpp>
 #include <utils/chassis_utils.hpp>
@@ -8,10 +9,23 @@
 #include <utils/processor_utils.hpp>
 
 #include <tuple>
+=======
+#include "app.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "utils/chassis_utils.hpp"
+
+#include <boost/url/format.hpp>
+
+#include <memory>
+#include <optional>
+#include <string>
+>>>>>>> origin/master-october-10
 
 namespace redfish
 {
 
+<<<<<<< HEAD
 using SetPointProperties =
     std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>;
 
@@ -1081,11 +1095,72 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", objectPath,
         powerCapInterfaces);
+=======
+inline void handleEnvironmentMetricsHead(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    auto respHandler = [asyncResp, chassisId](
+                           const std::optional<std::string>& validChassisPath) {
+        if (!validChassisPath)
+        {
+            messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+            return;
+        }
+
+        asyncResp->res.addHeader(
+            boost::beast::http::field::link,
+            "</redfish/v1/JsonSchemas/EnvironmentMetrics/EnvironmentMetrics.json>; rel=describedby");
+    };
+
+    redfish::chassis_utils::getValidChassisPath(asyncResp, chassisId,
+                                                std::move(respHandler));
+}
+
+inline void handleEnvironmentMetricsGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    auto respHandler = [asyncResp, chassisId](
+                           const std::optional<std::string>& validChassisPath) {
+        if (!validChassisPath)
+        {
+            messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+            return;
+        }
+
+        asyncResp->res.addHeader(
+            boost::beast::http::field::link,
+            "</redfish/v1/JsonSchemas/EnvironmentMetrics/EnvironmentMetrics.json>; rel=describedby");
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#EnvironmentMetrics.v1_3_0.EnvironmentMetrics";
+        asyncResp->res.jsonValue["Name"] = "Chassis Environment Metrics";
+        asyncResp->res.jsonValue["Id"] = "EnvironmentMetrics";
+        asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+            "/redfish/v1/Chassis/{}/EnvironmentMetrics", chassisId);
+    };
+
+    redfish::chassis_utils::getValidChassisPath(asyncResp, chassisId,
+                                                std::move(respHandler));
+>>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesEnvironmentMetrics(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/EnvironmentMetrics/")
+<<<<<<< HEAD
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -1989,4 +2064,16 @@ inline void requestRoutesEdppReset(App& app)
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
+=======
+        .privileges(redfish::privileges::headEnvironmentMetrics)
+        .methods(boost::beast::http::verb::head)(
+            std::bind_front(handleEnvironmentMetricsHead, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/EnvironmentMetrics/")
+        .privileges(redfish::privileges::getEnvironmentMetrics)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleEnvironmentMetricsGet, std::ref(app)));
+}
+
+>>>>>>> origin/master-october-10
 } // namespace redfish

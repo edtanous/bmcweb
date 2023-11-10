@@ -52,10 +52,9 @@
 # respond to such requests in the timeframe required by the CVE process, and
 # ideally should have a track record of doing it in the past.
 #
-# - Understand the webui variants (webui-vue and phosphor-webui) that bmcweb
-# can optionally host, its use cases, and how they differ from "normal" client
-# based use cases, as well as an understanding of hosting web services in
-# general.
+# - Understand webui-vue, that bmcweb can optionally host, its use cases, and
+# how they differ from "normal" client-based use cases, as well as an
+# understanding of hosting web services in general.
 #
 # If you believe you meet the qualifications for the above, please open a
 # patchset, adding your name to the list below, documenting some evidence of
@@ -71,35 +70,30 @@ owners:
 # included on code reviews to stay informed of progress.
 
 reviewers:
-- krzysztof.grobelny@intel.com
 - nanzhoumails@gmail.com
 
 matchers:
 # unit tests
 - suffix: _test.cpp
   owners:
-      nanzhoumails@gmail.com
+      - nanzhoumails@gmail.com
 
 # Redfish schemas
 - exact: redfish-core/include/query.hpp
-      nanzhoumails@gmail.com
+  owners:
+      - nanzhoumails@gmail.com
 - exact: redfish-core/include/utils/query_param.hpp
-      nanzhoumails@gmail.com
+  owners:
+      - nanzhoumails@gmail.com
 - exact: redfish-core/lib/certificate_service.hpp
-      nanzhoumails@gmail.com
-- exact: redfish-core/lib/log_service.hpp
-      nanzhoumails@gmail.com
+  owners:
+      - nanzhoumails@gmail.com
+- exact: redfish-core/lib/log_services.hpp
+  owners:
+      - nanzhoumails@gmail.com
 - exact: redfish-core/lib/memory.hpp
-      nanzhoumails@gmail.com
+  owners:
+      - nanzhoumails@gmail.com
 - exact: redfish-core/lib/sensors.hpp
-      nanzhoumails@gmail.com
-      krzysztof.grobelny@intel.com
-- exact: redfish-core/lib/event_service.hpp
-      krzysztof.grobelny@intel.com
-- exact: redfish-core/lib/power.hpp
-      krzysztof.grobelny@intel.com
-- exact: redfish-core/lib/thermal.hpp
-      krzysztof.grobelny@intel.com
-- exact: redfish-core/lib/virtual_media.hpp
-      krzysztof.grobelny@intel.com
-
+  owners:
+      - nanzhoumails@gmail.com

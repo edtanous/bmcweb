@@ -1,26 +1,36 @@
 #pragma once
 
+<<<<<<< HEAD
 #include "bmcweb_config.h"
 
 #include "thermal_metrics.hpp"
+=======
+#include "app.hpp"
+#include "dbus_utility.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+>>>>>>> origin/master-october-10
 #include "utils/collection.hpp"
 #include "utils/metric_report_utils.hpp"
 #include "utils/telemetry_utils.hpp"
 #include "utils/time_utils.hpp"
 
-#include <app.hpp>
-#include <dbus_utility.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
+#include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
 
+<<<<<<< HEAD
 #include <chrono>
+=======
+#include <array>
+#include <string_view>
+>>>>>>> origin/master-october-10
 
 namespace redfish
 {
 
 namespace telemetry
 {
+<<<<<<< HEAD
 constexpr const char* metricReportDefinitionUriStr =
     "/redfish/v1/TelemetryService/MetricReportDefinitions";
 constexpr const char* metricReportUri =
@@ -28,20 +38,33 @@ constexpr const char* metricReportUri =
 
 using Readings =
     std::vector<std::tuple<std::string, std::string, double, uint64_t>>;
+=======
+
+using Readings = std::vector<std::tuple<std::string, double, uint64_t>>;
+>>>>>>> origin/master-october-10
 using TimestampReadings = std::tuple<uint64_t, Readings>;
 
 inline nlohmann::json toMetricValues(const Readings& readings)
 {
     nlohmann::json metricValues = nlohmann::json::array_t();
 
-    for (const auto& [id, metadata, sensorValue, timestamp] : readings)
+    for (const auto& [metadata, sensorValue, timestamp] : readings)
     {
+<<<<<<< HEAD
         metricValues.push_back({
             {"MetricId", id},
             {"MetricProperty", metadata},
             {"MetricValue", std::to_string(sensorValue)},
             {"Timestamp", redfish::time_utils::getDateTimeUintMs(timestamp)},
         });
+=======
+        nlohmann::json::object_t metricReport;
+        metricReport["MetricProperty"] = metadata;
+        metricReport["MetricValue"] = std::to_string(sensorValue);
+        metricReport["Timestamp"] =
+            redfish::time_utils::getDateTimeUintMs(timestamp);
+        metricValues.emplace_back(std::move(metricReport));
+>>>>>>> origin/master-october-10
     }
 
     return metricValues;
@@ -50,17 +73,21 @@ inline nlohmann::json toMetricValues(const Readings& readings)
 inline bool fillReport(nlohmann::json& json, const std::string& id,
                        const TimestampReadings& timestampReadings)
 {
+<<<<<<< HEAD
     json["@odata.type"] = "#MetricReport.v1_4_2.MetricReport";
     json["@odata.id"] = crow::utility::urlFromPieces("redfish", "v1",
                                                      "TelemetryService",
                                                      "MetricReports", id)
                             .string();
+=======
+    json["@odata.type"] = "#MetricReport.v1_3_0.MetricReport";
+    json["@odata.id"] = boost::urls::format(
+        "/redfish/v1/TelemetryService/MetricReports/{}", id);
+>>>>>>> origin/master-october-10
     json["Id"] = id;
     json["Name"] = id;
-    json["MetricReportDefinition"]["@odata.id"] =
-        crow::utility::urlFromPieces("redfish", "v1", "TelemetryService",
-                                     "MetricReportDefinitions", id)
-            .string();
+    json["MetricReportDefinition"]["@odata.id"] = boost::urls::format(
+        "/redfish/v1/TelemetryService/MetricReportDefinitions/{}", id);
 
     const auto& [timestamp, readings] = timestampReadings;
     json["Timestamp"] = redfish::time_utils::getDateTimeUintMs(timestamp);
@@ -168,13 +195,20 @@ inline void requestRoutesMetricReportCollection(App& app)
         asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/TelemetryService/MetricReports";
         asyncResp->res.jsonValue["Name"] = "Metric Report Collection";
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
         addMetricReportMembers(asyncResp);
         return;
 #endif
         const std::vector<const char*> interfaces{telemetry::reportInterface};
+=======
+        constexpr std::array<std::string_view, 1> interfaces{
+            telemetry::reportInterface};
+>>>>>>> origin/master-october-10
         collection_util::getCollectionMembers(
-            asyncResp, telemetry::metricReportUri, interfaces,
+            asyncResp,
+            boost::urls::url("/redfish/v1/TelemetryService/MetricReports"),
+            interfaces,
             "/xyz/openbmc_project/Telemetry/Reports/TelemetryService");
     });
 }
@@ -729,7 +763,7 @@ inline void requestRoutesMetricReport(App& app)
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
+                BMCWEB_LOG_ERROR("respHandler DBus error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -737,11 +771,11 @@ inline void requestRoutesMetricReport(App& app)
             sdbusplus::asio::getProperty<telemetry::TimestampReadings>(
                 *crow::connections::systemBus, telemetry::service, reportPath,
                 telemetry::reportInterface, "Readings",
-                [asyncResp, id](const boost::system::error_code ec2,
+                [asyncResp, id](const boost::system::error_code& ec2,
                                 const telemetry::TimestampReadings& ret) {
                 if (ec2)
                 {
-                    BMCWEB_LOG_ERROR << "respHandler DBus error " << ec2;
+                    BMCWEB_LOG_ERROR("respHandler DBus error {}", ec2);
                     messages::internalError(asyncResp->res);
                     return;
                 }

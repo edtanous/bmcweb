@@ -17,6 +17,7 @@
 
 #include "account_service.hpp"
 #include "assembly.hpp"
+#include "aggregation_service.hpp"
 #include "bios.hpp"
 #include "boot_options.hpp"
 #include "cable.hpp"
@@ -24,12 +25,15 @@
 #include "chassis.hpp"
 #include "component_integrity.hpp"
 #include "control.hpp"
-#include "environment_metrics.hpp"
 #include "erot_chassis.hpp"
-#include "ethernet.hpp"
-#include "event_service.hpp"
 #include "fabric.hpp"
 #include "host_interface.hpp"
+#include "environment_metrics.hpp"
+#include "ethernet.hpp"
+#include "event_service.hpp"
+#include "eventservice_sse.hpp"
+#include "fabric_adapters.hpp"
+#include "fan.hpp"
 #include "hypervisor_system.hpp"
 #include "log_services.hpp"
 #include "manager_diagnostic_data.hpp"
@@ -51,6 +55,7 @@
 #include "nvidia_oem_dpu.hpp"
 #include "pcie.hpp"
 #include "pcieslots.hpp"
+#include "pcie_slots.hpp"
 #include "power.hpp"
 #include "power_subsystem.hpp"
 #include "power_supply.hpp"
@@ -91,16 +96,21 @@ class RedfishService
      */
     explicit RedfishService(App& app)
     {
-        if (persistent_data::getConfig().isTLSAuthEnabled())
-        {
-            requestAccountServiceRoutes(app);
-        }
         requestAssemblyRoutes(app);
         requestPcieSlotsRoutes(app);
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
-            requestRoutesRoles(app);
-            requestRoutesRoleCollection(app);
+        requestAccountServiceRoutes(app);
+        }
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+        requestRoutesAggregationService(app);
+        requestRoutesAggregationSourceCollection(app);
+        requestRoutesAggregationSource(app);
+#endif
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+        requestRoutesRoles(app);
+        requestRoutesRoleCollection(app);
         }
         requestRoutesServiceRoot(app);
         requestRoutesNetworkProtocol(app);
@@ -129,9 +139,13 @@ class RedfishService
 #endif
 
 #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
+        requestRoutesEnvironmentMetrics(app);
         requestRoutesPowerSubsystem(app);
-        requestRoutesPowerSupplyCollection(app);
         requestRoutesPowerSupply(app);
+        requestRoutesPowerSupplyCollection(app);
+        requestRoutesThermalSubsystem(app);
+        requestRoutesFan(app);
+        requestRoutesFanCollection(app);
 #endif
         requestRoutesManagerCollection(app);
         requestRoutesManager(app);
@@ -158,6 +172,8 @@ class RedfishService
 
         requestRoutesStorageCollection(app);
         requestRoutesStorage(app);
+        requestRoutesStorageControllerCollection(app);
+        requestRoutesStorageController(app);
         requestRoutesDrive(app);
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesCable(app);
@@ -266,13 +282,13 @@ class RedfishService
         requestRoutesMemory(app);
         requestRoutesMemoryMetrics(app);
 
-        requestRoutesSystemsCollection(app);
         requestRoutesSystems(app);
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesSystemActionsReset(app);
         requestRoutesSystemResetActionInfo(app);
 #endif
 #ifdef BMCWEB_ENABLE_BIOS
+
         requestRoutesBiosService(app);
         requestRoutesBiosSettings(app);
         requestRoutesBiosReset(app);
@@ -335,11 +351,14 @@ class RedfishService
         requestRoutesTaskCollection(app);
         requestRoutesTask(app);
         requestRoutesEventService(app);
+        requestRoutesEventServiceSse(app);
         requestRoutesEventDestinationCollection(app);
         requestRoutesEventDestination(app);
+        requestRoutesFabricAdapters(app);
+        requestRoutesFabricAdapterCollection(app);
         requestRoutesSubmitTestEvent(app);
 
-        hypervisor::requestRoutesHypervisorSystems(app);
+        requestRoutesHypervisorSystems(app);
 
         requestRoutesTelemetryService(app);
         requestRoutesMetricReportDefinitionCollection(app);

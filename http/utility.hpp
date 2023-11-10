@@ -1,10 +1,13 @@
 #pragma once
 
-#include <bmcweb_config.h>
+#include "bmcweb_config.h"
+
 #include <openssl/crypto.h>
 
 #include <boost/callable_traits.hpp>
+#include <boost/url/parse.hpp>
 #include <boost/url/url.hpp>
+#include <boost/url/url_view.hpp>
 #include <nlohmann/json.hpp>
 
 #include <array>
@@ -25,18 +28,15 @@
 
 namespace crow
 {
-namespace black_magic
+namespace utility
 {
 
 enum class TypeCode : uint8_t
 {
     Unspecified = 0,
-    Integer = 1,
-    UnsignedInteger = 2,
-    Float = 3,
-    String = 4,
-    Path = 5,
-    Max = 6,
+    String = 1,
+    Path = 2,
+    Max = 3,
 };
 
 // Remove when we have c++23
@@ -44,119 +44,6 @@ template <typename E>
 constexpr typename std::underlying_type<E>::type toUnderlying(E e) noexcept
 {
     return static_cast<typename std::underlying_type<E>::type>(e);
-}
-
-template <typename T>
-constexpr TypeCode getParameterTag()
-{
-    if constexpr (std::is_same_v<int, T>)
-    {
-        return TypeCode::Integer;
-    }
-    if constexpr (std::is_same_v<char, T>)
-    {
-        return TypeCode::Integer;
-    }
-    if constexpr (std::is_same_v<short, T>)
-    {
-        return TypeCode::Integer;
-    }
-    if constexpr (std::is_same_v<long, T>)
-    {
-        return TypeCode::Integer;
-    }
-    if constexpr (std::is_same_v<long long, T>)
-    {
-        return TypeCode::Integer;
-    }
-    if constexpr (std::is_same_v<unsigned int, T>)
-    {
-        return TypeCode::UnsignedInteger;
-    }
-    if constexpr (std::is_same_v<unsigned char, T>)
-    {
-        return TypeCode::UnsignedInteger;
-    }
-    if constexpr (std::is_same_v<unsigned short, T>)
-    {
-        return TypeCode::UnsignedInteger;
-    }
-    if constexpr (std::is_same_v<unsigned long, T>)
-    {
-        return TypeCode::UnsignedInteger;
-    }
-    if constexpr (std::is_same_v<unsigned long long, T>)
-    {
-        return TypeCode::UnsignedInteger;
-    }
-    if constexpr (std::is_same_v<double, T>)
-    {
-        return TypeCode::Float;
-    }
-    if constexpr (std::is_same_v<std::string, T>)
-    {
-        return TypeCode::String;
-    }
-    return TypeCode::Unspecified;
-}
-
-template <typename... Args>
-struct computeParameterTagFromArgsList;
-
-template <>
-struct computeParameterTagFromArgsList<>
-{
-    static constexpr int value = 0;
-};
-
-template <typename Arg, typename... Args>
-struct computeParameterTagFromArgsList<Arg, Args...>
-{
-    static constexpr int subValue =
-        computeParameterTagFromArgsList<Args...>::value;
-    static constexpr int value =
-        getParameterTag<typename std::decay<Arg>::type>() !=
-                TypeCode::Unspecified
-            ? static_cast<unsigned long>(subValue *
-                                         toUnderlying(TypeCode::Max)) +
-                  static_cast<uint64_t>(
-                      getParameterTag<typename std::decay<Arg>::type>())
-            : subValue;
-};
-
-inline bool isParameterTagCompatible(uint64_t a, uint64_t b)
-{
-    while (true)
-    {
-        if (a == 0 && b == 0)
-        {
-            // Both tags were equivalent, parameters are compatible
-            return true;
-        }
-        if (a == 0 || b == 0)
-        {
-            // one of the tags had more parameters than the other
-            return false;
-        }
-        TypeCode sa = static_cast<TypeCode>(a % toUnderlying(TypeCode::Max));
-        TypeCode sb = static_cast<TypeCode>(b % toUnderlying(TypeCode::Max));
-
-        if (sa == TypeCode::Path)
-        {
-            sa = TypeCode::String;
-        }
-        if (sb == TypeCode::Path)
-        {
-            sb = TypeCode::String;
-        }
-        if (sa != sb)
-        {
-            return false;
-        }
-        a /= toUnderlying(TypeCode::Max);
-        b /= toUnderlying(TypeCode::Max);
-    }
-    return false;
 }
 
 constexpr inline uint64_t getParameterTag(std::string_view url)
@@ -193,22 +80,9 @@ constexpr inline uint64_t getParameterTag(std::string_view url)
             uint64_t insertIndex = 1;
             for (size_t unused = 0; unused < paramIndex; unused++)
             {
-                insertIndex *= 6;
+                insertIndex *= 3;
             }
 
-            if (tag == "<int>")
-            {
-                tagValue += insertIndex * toUnderlying(TypeCode::Integer);
-            }
-            if (tag == "<uint>")
-            {
-                tagValue += insertIndex *
-                            toUnderlying(TypeCode::UnsignedInteger);
-            }
-            if (tag == "<float>" || tag == "<double>")
-            {
-                tagValue += insertIndex * toUnderlying(TypeCode::Float);
-            }
             if (tag == "<str>" || tag == "<string>")
             {
                 tagValue += insertIndex * toUnderlying(TypeCode::String);
@@ -228,154 +102,19 @@ constexpr inline uint64_t getParameterTag(std::string_view url)
     return tagValue;
 }
 
-template <typename... T>
-struct S
+constexpr size_t numArgsFromTag(int tag)
 {
-    template <typename U>
-    using push = S<U, T...>;
-    template <typename U>
-    using push_back = S<T..., U>;
-    template <template <typename... Args> class U>
-    using rebind = U<T...>;
+    size_t ret = 0;
+    while (tag > 0)
+    {
+        // Move to the next tag by removing the bottom bits from the number
+        tag /= toUnderlying(TypeCode::Max);
+        ret++;
+    }
+    return ret;
 };
 
-template <typename F, typename Set>
-struct CallHelper;
-
-template <typename F, typename... Args>
-struct CallHelper<F, S<Args...>>
-{
-    template <typename F1, typename... Args1,
-              typename = decltype(std::declval<F1>()(std::declval<Args1>()...))>
-    static char test(int);
-
-    template <typename...>
-    static int test(...);
-
-    static constexpr bool value = sizeof(test<F, Args...>(0)) == sizeof(char);
-};
-
-template <uint64_t N>
-struct SingleTagToType
-{};
-
-template <>
-struct SingleTagToType<1>
-{
-    using type = int64_t;
-};
-
-template <>
-struct SingleTagToType<2>
-{
-    using type = uint64_t;
-};
-
-template <>
-struct SingleTagToType<3>
-{
-    using type = double;
-};
-
-template <>
-struct SingleTagToType<4>
-{
-    using type = std::string;
-};
-
-template <>
-struct SingleTagToType<5>
-{
-    using type = std::string;
-};
-
-template <uint64_t Tag>
-struct Arguments
-{
-    using subarguments = typename Arguments<Tag / 6>::type;
-    using type = typename subarguments::template push<
-        typename SingleTagToType<Tag % 6>::type>;
-};
-
-template <>
-struct Arguments<0>
-{
-    using type = S<>;
-};
-
-template <typename T>
-struct Promote
-{
-    using type = T;
-};
-
-template <typename T>
-using PromoteT = typename Promote<T>::type;
-
-template <>
-struct Promote<char>
-{
-    using type = int64_t;
-};
-template <>
-struct Promote<short>
-{
-    using type = int64_t;
-};
-template <>
-struct Promote<int>
-{
-    using type = int64_t;
-};
-template <>
-struct Promote<long>
-{
-    using type = int64_t;
-};
-template <>
-struct Promote<long long>
-{
-    using type = int64_t;
-};
-template <>
-struct Promote<unsigned char>
-{
-    using type = uint64_t;
-};
-template <>
-struct Promote<unsigned short>
-{
-    using type = uint64_t;
-};
-template <>
-struct Promote<unsigned int>
-{
-    using type = uint64_t;
-};
-template <>
-struct Promote<unsigned long>
-{
-    using type = uint64_t;
-};
-template <>
-struct Promote<unsigned long long>
-{
-    using type = uint64_t;
-};
-
-} // namespace black_magic
-
-namespace utility
-{
-
-template <typename T>
-struct FunctionTraits
-{
-    template <size_t i>
-    using arg = std::tuple_element_t<i, boost::callable_traits::args_t<T>>;
-};
-
-inline std::string base64encode(const std::string_view data)
+inline std::string base64encode(std::string_view data)
 {
     const std::array<char, 64> key = {
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -435,7 +174,7 @@ inline std::string base64encode(const std::string_view data)
 
 // TODO this is temporary and should be deleted once base64 is refactored out of
 // crow
-inline bool base64Decode(const std::string_view input, std::string& output)
+inline bool base64Decode(std::string_view input, std::string& output)
 {
     static const char nop = static_cast<char>(-1);
     // See note on encoding_data[] in above function
@@ -483,7 +222,6 @@ inline bool base64Decode(const std::string_view input, std::string& output)
         char base64code0 = 0;
         char base64code1 = 0;
         char base64code2 = 0; // initialized to 0 to suppress warnings
-        char base64code3 = 0;
 
         base64code0 = getCodeValue(input[i]);
         if (base64code0 == nop)
@@ -526,7 +264,7 @@ inline bool base64Decode(const std::string_view input, std::string& output)
             { // padding , end of input
                 return (base64code2 & 0x03) == 0;
             }
-            base64code3 = getCodeValue(input[i]);
+            char base64code3 = getCodeValue(input[i]);
             if (base64code3 == nop)
             { // non base64 character
                 return false;
@@ -539,8 +277,7 @@ inline bool base64Decode(const std::string_view input, std::string& output)
     return true;
 }
 
-inline bool constantTimeStringCompare(const std::string_view a,
-                                      const std::string_view b)
+inline bool constantTimeStringCompare(std::string_view a, std::string_view b)
 {
     // Important note, this function is ONLY constant time if the two input
     // sizes are the same
@@ -553,7 +290,7 @@ inline bool constantTimeStringCompare(const std::string_view a,
 
 struct ConstantTimeCompare
 {
-    bool operator()(const std::string_view a, const std::string_view b) const
+    bool operator()(std::string_view a, std::string_view b) const
     {
         return constantTimeStringCompare(a, b);
     }
@@ -565,30 +302,17 @@ inline boost::urls::url
     appendUrlPieces(boost::urls::url& url,
                     const std::initializer_list<std::string_view> args)
 {
-    for (const std::string_view& arg : args)
+    for (std::string_view arg : args)
     {
         url.segments().push_back(arg);
     }
     return url;
 }
 
-inline boost::urls::url
-    urlFromPiecesDetail(const std::initializer_list<std::string_view> args)
-{
-    boost::urls::url url("/");
-    appendUrlPieces(url, args);
-    return url;
-}
 } // namespace details
 
 class OrMorePaths
 {};
-
-template <typename... AV>
-inline boost::urls::url urlFromPieces(const AV... args)
-{
-    return details::urlFromPiecesDetail({args...});
-}
 
 template <typename... AV>
 inline void appendUrlPieces(boost::urls::url& url, const AV... args)
@@ -616,13 +340,13 @@ class UrlSegmentMatcherVisitor
   public:
     UrlParseResult operator()(std::string& output)
     {
-        output = std::string_view(segment.data(), segment.size());
+        output = segment;
         return UrlParseResult::Continue;
     }
 
     UrlParseResult operator()(std::string_view expected)
     {
-        if (std::string_view(segment.data(), segment.size()) == expected)
+        if (segment == expected)
         {
             return UrlParseResult::Continue;
         }
@@ -634,19 +358,18 @@ class UrlSegmentMatcherVisitor
         return UrlParseResult::Done;
     }
 
-    explicit UrlSegmentMatcherVisitor(
-        const boost::urls::string_value& segmentIn) :
+    explicit UrlSegmentMatcherVisitor(std::string_view segmentIn) :
         segment(segmentIn)
     {}
 
   private:
-    const boost::urls::string_value& segment;
+    std::string_view segment;
 };
 
-inline bool readUrlSegments(const boost::urls::url_view& urlView,
+inline bool readUrlSegments(boost::urls::url_view url,
                             std::initializer_list<UrlSegment>&& segments)
 {
-    const boost::urls::segments_view& urlSegments = urlView.segments();
+    boost::urls::segments_view urlSegments = url.segments();
 
     if (!urlSegments.is_absolute())
     {
@@ -687,17 +410,16 @@ inline bool readUrlSegments(const boost::urls::url_view& urlView,
 } // namespace details
 
 template <typename... Args>
-inline bool readUrlSegments(const boost::urls::url_view& urlView,
-                            Args&&... args)
+inline bool readUrlSegments(boost::urls::url_view url, Args&&... args)
 {
-    return details::readUrlSegments(urlView, {std::forward<Args>(args)...});
+    return details::readUrlSegments(url, {std::forward<Args>(args)...});
 }
 
-inline boost::urls::url replaceUrlSegment(const boost::urls::url_view& urlView,
+inline boost::urls::url replaceUrlSegment(boost::urls::url_view urlView,
                                           const uint replaceLoc,
-                                          const std::string_view newSegment)
+                                          std::string_view newSegment)
 {
-    const boost::urls::segments_view& urlSegments = urlView.segments();
+    boost::urls::segments_view urlSegments = urlView.segments();
     boost::urls::url url("/");
 
     if (!urlSegments.is_absolute())
@@ -723,88 +445,55 @@ inline boost::urls::url replaceUrlSegment(const boost::urls::url_view& urlView,
     return url;
 }
 
-inline std::string setProtocolDefaults(const boost::urls::url_view& url)
+inline void setProtocolDefaults(boost::urls::url& url,
+                                std::string_view protocol)
 {
-    if (url.scheme() == "https")
+    if (url.has_scheme())
     {
-        return "https";
+        return;
     }
-    if (url.scheme() == "http")
+    if (protocol == "Redfish" || protocol.empty())
     {
-        if (bmcwebInsecureEnableHttpPushStyleEventing)
+        if (url.port_number() == 443)
         {
-            return "http";
+            url.set_scheme("https");
         }
-        return "";
+        if (url.port_number() == 80)
+        {
+            if (bmcwebInsecureEnableHttpPushStyleEventing)
+            {
+                url.set_scheme("http");
+            }
+        }
     }
-    return "";
+    else if (protocol == "SNMPv2c")
+    {
+        url.set_scheme("snmp");
+    }
 }
 
-inline uint16_t setPortDefaults(const boost::urls::url_view& url)
+inline void setPortDefaults(boost::urls::url& url)
 {
     uint16_t port = url.port_number();
     if (port != 0)
     {
-        // user picked a port already.
-        return port;
+        return;
     }
 
     // If the user hasn't explicitly stated a port, pick one explicitly for them
     // based on the protocol defaults
     if (url.scheme() == "http")
     {
-        return 80;
+        url.set_port_number(80);
     }
     if (url.scheme() == "https")
     {
-        return 443;
+        url.set_port_number(443);
     }
-    return 0;
-}
-
-inline bool validateAndSplitUrl(std::string_view destUrl, std::string& urlProto,
-                                std::string& host, uint16_t& port,
-                                std::string& path)
-{
-    auto imageUrl = std::string(destUrl.begin(), destUrl.end());
-    boost::urls::result<boost::urls::url_view> url =
-        boost::urls::parse_uri(boost::string_view(imageUrl));
-    if (!url)
+    if (url.scheme() == "snmp")
     {
-        return false;
+        url.set_port_number(162);
     }
-    urlProto = setProtocolDefaults(url.value());
-    if (urlProto.empty())
-    {
-        return false;
-    }
-
-    port = setPortDefaults(url.value());
-
-    host = std::string_view(url->encoded_host().data(),
-                            url->encoded_host().size());
-
-    path = std::string_view(url->encoded_path().data(),
-                            url->encoded_path().size());
-    if (path.empty())
-    {
-        path = "/";
-    }
-    if (url->has_fragment())
-    {
-        path += '#';
-        path += std::string_view(url->encoded_fragment().data(),
-                                 url->encoded_fragment().size());
-    }
-
-    if (url->has_query())
-    {
-        path += '?';
-        path += std::string_view(url->encoded_query().data(),
-                                 url->encoded_query().size());
-    }
-
-    return true;
 }
 
 } // namespace utility
@@ -819,7 +508,7 @@ struct adl_serializer<boost::urls::url>
     // NOLINTNEXTLINE(readability-identifier-naming)
     static void to_json(json& j, const boost::urls::url& url)
     {
-        j = url.string();
+        j = url.buffer();
     }
 };
 
@@ -827,9 +516,9 @@ template <>
 struct adl_serializer<boost::urls::url_view>
 {
     // NOLINTNEXTLINE(readability-identifier-naming)
-    static void to_json(json& j, const boost::urls::url_view& url)
+    static void to_json(json& j, boost::urls::url_view url)
     {
-        j = url.string();
+        j = url.buffer();
     }
 };
 } // namespace nlohmann

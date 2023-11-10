@@ -1,14 +1,15 @@
 #pragma once
 
+#include "app.hpp"
+#include "dbus_utility.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "utils/dbus_utils.hpp"
 #include "utils/telemetry_utils.hpp"
+#include "utils/time_utils.hpp"
 
-#include <app.hpp>
-#include <dbus_utility.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
-#include <utils/dbus_utils.hpp>
 
 namespace redfish
 {
@@ -40,7 +41,7 @@ inline void handleTelemetryServiceGet(
         *crow::connections::systemBus, telemetry::service,
         "/xyz/openbmc_project/Telemetry/Reports",
         "xyz.openbmc_project.Telemetry.ReportManager",
-        [asyncResp](const boost::system::error_code ec,
+        [asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::DBusPropertiesMap& ret) {
         if (ec == boost::system::errc::host_unreachable)
         {
@@ -49,7 +50,7 @@ inline void handleTelemetryServiceGet(
         }
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
+            BMCWEB_LOG_ERROR("respHandler DBus error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -80,7 +81,19 @@ inline void handleTelemetryServiceGet(
                 time_utils::toDurationString(std::chrono::milliseconds(
                     static_cast<time_t>(*minInterval)));
         }
+<<<<<<< HEAD
     });
+=======
+        nlohmann::json::array_t supportedCollectionFunctions;
+        supportedCollectionFunctions.emplace_back("Maximum");
+        supportedCollectionFunctions.emplace_back("Minimum");
+        supportedCollectionFunctions.emplace_back("Average");
+        supportedCollectionFunctions.emplace_back("Summation");
+
+        asyncResp->res.jsonValue["SupportedCollectionFunctions"] =
+            std::move(supportedCollectionFunctions);
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesTelemetryService(App& app)

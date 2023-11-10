@@ -121,7 +121,8 @@ TEST(ReadJson, JsonArrayAreUnpackedCorrectly)
     ASSERT_TRUE(readJson(jsonRequest, res, "TestJson", jsonVec));
     EXPECT_EQ(res.result(), boost::beast::http::status::ok);
     EXPECT_THAT(res.jsonValue, IsEmpty());
-    EXPECT_EQ(jsonVec, R"([{"hello": "yes"}, [{"there": "no"}, "nice"]])"_json);
+    EXPECT_THAT(jsonVec, ElementsAre(R"({"hello": "yes"})"_json,
+                                     R"([{"there": "no"}, "nice"])"_json));
 }
 
 TEST(ReadJson, JsonSubElementValueAreUnpackedCorrectly)
@@ -271,9 +272,10 @@ TEST(ReadJsonPatch, ValidElementsReturnsTrueResponseOkValuesUnpackedCorrectly)
 {
     crow::Response res;
     std::error_code ec;
-    crow::Request req({}, ec);
+    crow::Request req("{\"integer\": 1}", ec);
+
     // Ignore errors intentionally
-    req.body = "{\"integer\": 1}";
+    req.req.set(boost::beast::http::field::content_type, "application/json");
 
     int64_t integer = 0;
     ASSERT_TRUE(readJsonPatch(req, res, "integer", integer));
@@ -286,9 +288,8 @@ TEST(ReadJsonPatch, EmptyObjectReturnsFalseResponseBadRequest)
 {
     crow::Response res;
     std::error_code ec;
-    crow::Request req({}, ec);
+    crow::Request req("{}", ec);
     // Ignore errors intentionally
-    req.body = "{}";
 
     std::optional<int64_t> integer = 0;
     ASSERT_FALSE(readJsonPatch(req, res, "integer", integer));
@@ -300,9 +301,9 @@ TEST(ReadJsonPatch, OdataIgnored)
 {
     crow::Response res;
     std::error_code ec;
-    crow::Request req({}, ec);
+    crow::Request req(R"({"@odata.etag": "etag", "integer": 1})", ec);
+    req.req.set(boost::beast::http::field::content_type, "application/json");
     // Ignore errors intentionally
-    req.body = R"({"@odata.etag": "etag", "integer": 1})";
 
     std::optional<int64_t> integer = 0;
     ASSERT_TRUE(readJsonPatch(req, res, "integer", integer));
@@ -315,9 +316,8 @@ TEST(ReadJsonPatch, OnlyOdataGivesNoOperation)
 {
     crow::Response res;
     std::error_code ec;
-    crow::Request req({}, ec);
+    crow::Request req(R"({"@odata.etag": "etag"})", ec);
     // Ignore errors intentionally
-    req.body = R"({"@odata.etag": "etag"})";
 
     std::optional<int64_t> integer = 0;
     ASSERT_FALSE(readJsonPatch(req, res, "integer", integer));
@@ -329,9 +329,9 @@ TEST(ReadJsonAction, ValidElementsReturnsTrueResponseOkValuesUnpackedCorrectly)
 {
     crow::Response res;
     std::error_code ec;
-    crow::Request req({}, ec);
+    crow::Request req("{\"integer\": 1}", ec);
+    req.req.set(boost::beast::http::field::content_type, "application/json");
     // Ignore errors intentionally
-    req.body = "{\"integer\": 1}";
 
     int64_t integer = 0;
     ASSERT_TRUE(readJsonAction(req, res, "integer", integer));
@@ -344,14 +344,121 @@ TEST(ReadJsonAction, EmptyObjectReturnsTrueResponseOk)
 {
     crow::Response res;
     std::error_code ec;
-    crow::Request req({}, ec);
+    crow::Request req({"{}"}, ec);
+    req.req.set(boost::beast::http::field::content_type, "application/json");
     // Ignore errors intentionally
-    req.body = "{}";
 
     std::optional<int64_t> integer = 0;
     ASSERT_TRUE(readJsonAction(req, res, "integer", integer));
     EXPECT_EQ(res.result(), boost::beast::http::status::ok);
     EXPECT_THAT(res.jsonValue, IsEmpty());
+}
+
+TEST(odataObjectCmp, PositiveCases)
+{
+    EXPECT_EQ(0, odataObjectCmp(R"({"@odata.id": "/redfish/v1/1"})"_json,
+                                R"({"@odata.id": "/redfish/v1/1"})"_json));
+    EXPECT_EQ(0, odataObjectCmp(R"({"@odata.id": ""})"_json,
+                                R"({"@odata.id": ""})"_json));
+    EXPECT_EQ(0, odataObjectCmp(R"({"@odata.id": 42})"_json,
+                                R"({"@odata.id": 0})"_json));
+    EXPECT_EQ(0, odataObjectCmp(R"({})"_json, R"({})"_json));
+
+    EXPECT_GT(0, odataObjectCmp(R"({"@odata.id": "/redfish/v1"})"_json,
+                                R"({"@odata.id": "/redfish/v1/1"})"_json));
+    EXPECT_LT(0, odataObjectCmp(R"({"@odata.id": "/redfish/v1/1"})"_json,
+                                R"({"@odata.id": "/redfish/v1"})"_json));
+
+    EXPECT_LT(0, odataObjectCmp(R"({"@odata.id": "/10"})"_json,
+                                R"({"@odata.id": "/1"})"_json));
+    EXPECT_GT(0, odataObjectCmp(R"({"@odata.id": "/1"})"_json,
+                                R"({"@odata.id": "/10"})"_json));
+
+    EXPECT_GT(0, odataObjectCmp(R"({})"_json, R"({"@odata.id": "/1"})"_json));
+    EXPECT_LT(0, odataObjectCmp(R"({"@odata.id": "/1"})"_json, R"({})"_json));
+
+    EXPECT_GT(0, odataObjectCmp(R"({"@odata.id": 4})"_json,
+                                R"({"@odata.id": "/1"})"_json));
+    EXPECT_LT(0, odataObjectCmp(R"({"@odata.id": "/1"})"_json,
+                                R"({"@odata.id": 4})"_json));
+}
+
+TEST(SortJsonArrayByKey, ElementMissingKeyReturnsFalseArrayIsPartlySorted)
+{
+    nlohmann::json::array_t array =
+        R"([{"@odata.id" : "/redfish/v1/100"}, {"@odata.id": "/redfish/v1/1"}, {"@odata.id" : "/redfish/v1/20"}])"_json;
+    sortJsonArrayByOData(array);
+    // Objects with other keys are always larger than those with the specified
+    // key.
+    EXPECT_THAT(array,
+                ElementsAre(R"({"@odata.id": "/redfish/v1/1"})"_json,
+                            R"({"@odata.id" : "/redfish/v1/20"})"_json,
+                            R"({"@odata.id" : "/redfish/v1/100"})"_json));
+}
+
+TEST(SortJsonArrayByKey, SortedByStringValueOnSuccessArrayIsSorted)
+{
+    nlohmann::json::array_t array =
+        R"([{"@odata.id": "/redfish/v1/20"}, {"@odata.id" : "/redfish/v1"}, {"@odata.id" : "/redfish/v1/100"}])"_json;
+    sortJsonArrayByOData(array);
+    EXPECT_THAT(array,
+                ElementsAre(R"({"@odata.id": "/redfish/v1"})"_json,
+                            R"({"@odata.id" : "/redfish/v1/20"})"_json,
+                            R"({"@odata.id" : "/redfish/v1/100"})"_json));
+}
+TEST(GetEstimatedJsonSize, NumberIs8Bytpes)
+{
+    EXPECT_EQ(getEstimatedJsonSize(nlohmann::json(123)), 8);
+    EXPECT_EQ(getEstimatedJsonSize(nlohmann::json(77777777777)), 8);
+    EXPECT_EQ(getEstimatedJsonSize(nlohmann::json(3.14)), 8);
+}
+
+TEST(GetEstimatedJsonSize, BooleanIs5Byte)
+{
+    EXPECT_EQ(getEstimatedJsonSize(nlohmann::json(true)), 5);
+    EXPECT_EQ(getEstimatedJsonSize(nlohmann::json(false)), 5);
+}
+
+TEST(GetEstimatedJsonSize, NullIs4Byte)
+{
+    EXPECT_EQ(getEstimatedJsonSize(nlohmann::json()), 4);
+}
+
+TEST(GetEstimatedJsonSize, StringAndBytesReturnsLengthAndQuote)
+{
+    EXPECT_EQ(getEstimatedJsonSize(nlohmann::json("1234")), 6);
+    EXPECT_EQ(getEstimatedJsonSize(nlohmann::json::binary({1, 2, 3, 4})), 4);
+}
+
+TEST(GetEstimatedJsonSize, ArrayReturnsSum)
+{
+    nlohmann::json arr = {1, 3.14, "123", nlohmann::json::binary({1, 2, 3, 4})};
+    EXPECT_EQ(getEstimatedJsonSize(arr), 8 + 8 + 5 + 4);
+}
+
+TEST(GetEstimatedJsonSize, ObjectsReturnsSumWithKeyAndValue)
+{
+    nlohmann::json obj = R"(
+{
+  "key0": 123,
+  "key1": "123",
+  "key2": [1, 2, 3],
+  "key3": {"key4": "123"}
+}
+)"_json;
+
+    uint64_t expected = 0;
+    // 5 keys of length 4
+    expected += uint64_t(5) * 4;
+    // 5 colons, 5 quote pairs, and 5 spaces for 5 keys
+    expected += uint64_t(5) * (1 + 2 + 1);
+    // 2 string values of length 3
+    expected += uint64_t(2) * (3 + 2);
+    // 1 number value
+    expected += 8;
+    // 1 array value of 3 numbers
+    expected += uint64_t(3) * 8;
+    EXPECT_EQ(getEstimatedJsonSize(obj), expected);
 }
 
 } // namespace

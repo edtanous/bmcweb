@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
+import argparse
 import json
 import os
 
 import requests
-import argparse
 
-PRAGMA_ONCE = '''#pragma once
-'''
+PRAGMA_ONCE = """#pragma once
+"""
 
-WARNING = '''/****************************************************************
+WARNING = """/****************************************************************
  *                 READ THIS WARNING FIRST
  * This is an auto-generated header which contains definitions
  * for Redfish DMTF defined messages.
@@ -17,9 +17,12 @@ WARNING = '''/****************************************************************
  * this file are owned by DMTF.  Any modifications to these files
  * should be first pushed to the relevant registry in the DMTF
  * github organization.
- ***************************************************************/'''
+ ***************************************************************/"""
 
-REGISTRY_HEADER = PRAGMA_ONCE + WARNING + '''
+REGISTRY_HEADER = (
+    PRAGMA_ONCE
+    + WARNING
+    + """
 #include "registries.hpp"
 
 #include <array>
@@ -28,30 +31,44 @@ REGISTRY_HEADER = PRAGMA_ONCE + WARNING + '''
 
 namespace redfish::registries::{}
 {{
-'''
+"""
+)
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 include_path = os.path.realpath(
-    os.path.join(
-        SCRIPT_DIR,
-        "..",
-        "redfish-core",
-        "include",
-        "registries"))
+    os.path.join(SCRIPT_DIR, "..", "redfish-core", "include", "registries")
+)
 
-proxies = {
-    'https': os.environ.get("https_proxy", None)
-}
+proxies = {"https": os.environ.get("https_proxy", None)}
 
 
 def make_getter(dmtf_name, header_name, type_name):
-    url = 'https://redfish.dmtf.org/registries/{}'.format(dmtf_name)
+    url = "https://redfish.dmtf.org/registries/{}".format(dmtf_name)
     dmtf = requests.get(url, proxies=proxies)
     dmtf.raise_for_status()
     json_file = json.loads(dmtf.text)
     path = os.path.join(include_path, header_name)
     return (path, json_file, type_name, url)
+
+
+def openbmc_local_getter():
+    url = ""
+    with open(
+        os.path.join(
+            SCRIPT_DIR,
+            "..",
+            "redfish-core",
+            "include",
+            "registries",
+            "openbmc.json",
+        ),
+        "rb",
+    ) as json_file:
+        json_file = json.load(json_file)
+
+    path = os.path.join(include_path, "openbmc_message_registry.hpp")
+    return (path, json_file, "openbmc", url)
 
 
 def update_registries(files):
@@ -62,73 +79,75 @@ def update_registries(files):
         except BaseException:
             print("{} not found".format(file))
 
-        with open(file, 'w') as registry:
+        with open(file, "w") as registry:
             registry.write(REGISTRY_HEADER.format(namespace))
             # Parse the Registry header info
             registry.write(
                 "const Header header = {{\n"
-                "    \"{json_dict[@Redfish.Copyright]}\",\n"
-                "    \"{json_dict[@odata.type]}\",\n"
-                "    \"{json_dict[Id]}\",\n"
-                "    \"{json_dict[Name]}\",\n"
-                "    \"{json_dict[Language]}\",\n"
-                "    \"{json_dict[Description]}\",\n"
-                "    \"{json_dict[RegistryPrefix]}\",\n"
-                "    \"{json_dict[RegistryVersion]}\",\n"
-                "    \"{json_dict[OwningEntity]}\",\n"
+                '    "{json_dict[@Redfish.Copyright]}",\n'
+                '    "{json_dict[@odata.type]}",\n'
+                '    "{json_dict[Id]}",\n'
+                '    "{json_dict[Name]}",\n'
+                '    "{json_dict[Language]}",\n'
+                '    "{json_dict[Description]}",\n'
+                '    "{json_dict[RegistryPrefix]}",\n'
+                '    "{json_dict[RegistryVersion]}",\n'
+                '    "{json_dict[OwningEntity]}",\n'
                 "}};\n"
                 "constexpr const char* url =\n"
-                "    \"{url}\";\n"
+                '    "{url}";\n'
                 "\n"
                 "constexpr std::array registry =\n"
                 "{{\n".format(
                     json_dict=json_dict,
                     url=url,
-                ))
+                )
+            )
 
             messages_sorted = sorted(json_dict["Messages"].items())
             for messageId, message in messages_sorted:
                 registry.write(
                     "    MessageEntry{{\n"
-                    "        \"{messageId}\",\n"
+                    '        "{messageId}",\n'
                     "        {{\n"
+<<<<<<< HEAD
                     "            \"{message[Description]}\",\n"
                     "            \"{message[Message]}\",\n"
                     "            \"{message[Severity]}\",\n"
                     "            \"{message[MessageSeverity]}\",\n"
+=======
+                    '            "{message[Description]}",\n'
+                    '            "{message[Message]}",\n'
+                    '            "{message[MessageSeverity]}",\n'
+>>>>>>> origin/master-october-10
                     "            {message[NumberOfArgs]},\n"
                     "            {{".format(
-                        messageId=messageId,
-                        message=message
-                    ))
+                        messageId=messageId, message=message
+                    )
+                )
                 paramTypes = message.get("ParamTypes")
                 if paramTypes:
                     for paramType in paramTypes:
                         registry.write(
-                            "\n"
-                            "                \"{}\",".format(paramType)
+                            '\n                "{}",'.format(paramType)
                         )
                     registry.write("\n            },\n")
                 else:
                     registry.write("},\n")
                 registry.write(
-                    "            \"{message[Resolution]}\",\n"
-                    "        }}}},\n".format(message=message))
+                    '            "{message[Resolution]}",\n'
+                    "        }}}},\n".format(message=message)
+                )
 
-            registry.write(
-                "\n};\n"
-                "\n"
-                "enum class Index\n"
-                "{\n"
-            )
+            registry.write("\n};\n\nenum class Index\n{\n")
             for index, (messageId, message) in enumerate(messages_sorted):
                 messageId = messageId[0].lower() + messageId[1:]
-                registry.write(
-                    "    {} = {},\n".format(messageId, index))
+                registry.write("    {} = {},\n".format(messageId, index))
             registry.write(
-                "}};\n"
-                "}} // namespace redfish::registries::{}\n"
-                .format(namespace))
+                "}};\n}} // namespace redfish::registries::{}\n".format(
+                    namespace
+                )
+            )
 
 
 def get_privilege_string_from_list(privilege_list):
@@ -139,9 +158,9 @@ def get_privilege_string_from_list(privilege_list):
         for privilege in privileges:
             if privilege == "NoAuth":
                 continue
-            privilege_string += "\""
+            privilege_string += '"'
             privilege_string += privilege
-            privilege_string += "\",\n"
+            privilege_string += '",\n'
         if privilege != "NoAuth":
             privilege_string = privilege_string[:-2]
         privilege_string += "}"
@@ -159,7 +178,10 @@ def get_variable_name_for_privilege_set(privilege_list):
     return "Or".join(names)
 
 
-PRIVILEGE_HEADER = PRAGMA_ONCE + WARNING + '''
+PRIVILEGE_HEADER = (
+    PRAGMA_ONCE
+    + WARNING
+    + """
 #include "privileges.hpp"
 
 #include <array>
@@ -168,29 +190,34 @@ PRIVILEGE_HEADER = PRAGMA_ONCE + WARNING + '''
 
 namespace redfish::privileges
 {
-'''
+"""
+)
 
 
 def make_privilege_registry():
-    path, json_file, type_name, url = \
-        make_getter('Redfish_1.3.0_PrivilegeRegistry.json',
-                    'privilege_registry.hpp', 'privilege')
-    with open(path, 'w') as registry:
+    path, json_file, type_name, url = make_getter(
+        "Redfish_1.3.0_PrivilegeRegistry.json",
+        "privilege_registry.hpp",
+        "privilege",
+    )
+    with open(path, "w") as registry:
         registry.write(PRIVILEGE_HEADER)
 
         privilege_dict = {}
         for mapping in json_file["Mappings"]:
             # first pass, identify all the unique privilege sets
             for operation, privilege_list in mapping["OperationMap"].items():
-                privilege_dict[get_privilege_string_from_list(
-                    privilege_list)] = (privilege_list, )
+                privilege_dict[
+                    get_privilege_string_from_list(privilege_list)
+                ] = (privilege_list,)
         for index, key in enumerate(privilege_dict):
-            (privilege_list, ) = privilege_dict[key]
+            (privilege_list,) = privilege_dict[key]
             name = get_variable_name_for_privilege_set(privilege_list)
             registry.write(
                 "const std::array<Privileges, {length}> "
-                "privilegeSet{name} = {key};\n"
-                .format(length=len(privilege_list), name=name, key=key)
+                "privilegeSet{name} = {key};\n".format(
+                    length=len(privilege_list), name=name, key=key
+                )
             )
             privilege_dict[key] = (privilege_list, name)
 
@@ -199,26 +226,35 @@ def make_privilege_registry():
             registry.write("// {}\n".format(entity))
             for operation, privilege_list in mapping["OperationMap"].items():
                 privilege_string = get_privilege_string_from_list(
-                    privilege_list)
+                    privilege_list
+                )
                 operation = operation.lower()
 
                 registry.write(
                     "const static auto& {}{} = privilegeSet{};\n".format(
-                        operation,
-                        entity,
-                        privilege_dict[privilege_string][1]))
+                        operation, entity, privilege_dict[privilege_string][1]
+                    )
+                )
             registry.write("\n")
         registry.write(
-            "} // namespace redfish::privileges\n"
-            "// clang-format on\n")
+            "} // namespace redfish::privileges\n// clang-format on\n"
+        )
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+<<<<<<< HEAD
         '--registries', type=str,
         default="base,task_event,resource_event,update_event,privilege",
         help="Comma delimited list of registries to update")
+=======
+        "--registries",
+        type=str,
+        default="base,task_event,resource_event,privilege,openbmc",
+        help="Comma delimited list of registries to update",
+    )
+>>>>>>> origin/master-october-10
 
     args = parser.parse_args()
 
@@ -226,14 +262,27 @@ def main():
     files = []
 
     if "base" in registries:
+<<<<<<< HEAD
         files.append(make_getter('Base.1.15.0.json',
                                  'base_message_registry.hpp',
                                  'base'))
+=======
+        files.append(
+            make_getter(
+                "Base.1.16.0.json", "base_message_registry.hpp", "base"
+            )
+        )
+>>>>>>> origin/master-october-10
     if "task_event" in registries:
-        files.append(make_getter('TaskEvent.1.0.3.json',
-                                 'task_event_message_registry.hpp',
-                                 'task_event'))
+        files.append(
+            make_getter(
+                "TaskEvent.1.0.3.json",
+                "task_event_message_registry.hpp",
+                "task_event",
+            )
+        )
     if "resource_event" in registries:
+<<<<<<< HEAD
         files.append(make_getter('ResourceEvent.1.2.1.json',
                                  'resource_event_message_registry.hpp',
                                  'resource_event'))
@@ -241,6 +290,17 @@ def main():
         files.append(make_getter('Update.1.0.1.json',
                             'update_event_message_registry.hpp',
                             'update_event'))
+=======
+        files.append(
+            make_getter(
+                "ResourceEvent.1.3.0.json",
+                "resource_event_message_registry.hpp",
+                "resource_event",
+            )
+        )
+    if "openbmc" in registries:
+        files.append(openbmc_local_getter())
+>>>>>>> origin/master-october-10
 
     update_registries(files)
 

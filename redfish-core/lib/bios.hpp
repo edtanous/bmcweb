@@ -1,5 +1,6 @@
 #pragma once
 
+<<<<<<< HEAD
 #include "nlohmann/json.hpp"
 
 #include <app.hpp>
@@ -7,6 +8,12 @@
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/sw_utils.hpp>
+=======
+#include "app.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "utils/sw_utils.hpp"
+>>>>>>> origin/master-october-10
 
 #include <fstream>
 #include <iostream>
@@ -1987,6 +1994,7 @@ inline void
     {
         return;
     }
+<<<<<<< HEAD
     nlohmann::json pendingAttrJson;
     if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Attributes",
                                             pendingAttrJson))
@@ -2007,6 +2015,16 @@ inline void
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+=======
+    if constexpr (bmcwebEnableMultiHost)
+    {
+        // Option currently returns no systems.  TBD
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+    if (systemName != "system")
+>>>>>>> origin/master-october-10
     {
         return;
     }
@@ -2051,11 +2069,29 @@ inline void
         return;
     }
 
+<<<<<<< HEAD
+=======
+    if constexpr (bmcwebEnableMultiHost)
+    {
+        // Option currently returns no systems.  TBD
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+
+    if (systemName != "system")
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+
+>>>>>>> origin/master-october-10
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+        [asyncResp](const boost::system::error_code& ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Failed to reset bios: " << ec;
+            BMCWEB_LOG_ERROR("Failed to reset bios: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }

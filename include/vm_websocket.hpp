@@ -1,11 +1,12 @@
 #pragma once
 
-#include <app.hpp>
+#include "app.hpp"
+#include "websocket.hpp"
+
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/process/async_pipe.hpp>
 #include <boost/process/child.hpp>
 #include <boost/process/io.hpp>
-#include <websocket.hpp>
 
 #include <csignal>
 
@@ -14,6 +15,7 @@ namespace crow
 namespace obmc_vm
 {
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static crow::websocket::Connection* session = nullptr;
 
 // The max network block device buffer size is 128kb plus 16bytes
@@ -44,21 +46,22 @@ class Handler : public std::enable_shared_from_this<Handler>
         int rc = kill(proxy.id(), SIGTERM);
         if (rc != 0)
         {
+            BMCWEB_LOG_ERROR("Failed to terminate nbd-proxy: {}", errno);
             return;
         }
+
         proxy.wait();
     }
 
     void connect()
     {
         std::error_code ec;
-        proxy = boost::process::child("/usr/sbin/nbd-proxy", media,
+        proxy = boost::process::child("/usr/bin/nbd-proxy", media,
                                       boost::process::std_out > pipeOut,
                                       boost::process::std_in < pipeIn, ec);
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Couldn't connect to nbd-proxy: "
-                             << ec.message();
+            BMCWEB_LOG_ERROR("Couldn't connect to nbd-proxy: {}", ec.message());
             if (session != nullptr)
             {
                 session->close("Error connecting to nbd-proxy");
@@ -73,22 +76,22 @@ class Handler : public std::enable_shared_from_this<Handler>
     {
         if (doingWrite)
         {
-            BMCWEB_LOG_DEBUG << "Already writing.  Bailing out";
+            BMCWEB_LOG_DEBUG("Already writing.  Bailing out");
             return;
         }
 
         if (inputBuffer->size() == 0)
         {
-            BMCWEB_LOG_DEBUG << "inputBuffer empty.  Bailing out";
+            BMCWEB_LOG_DEBUG("inputBuffer empty.  Bailing out");
             return;
         }
 
         doingWrite = true;
         pipeIn.async_write_some(
             inputBuffer->data(),
-            [this, self(shared_from_this())](boost::beast::error_code ec,
+            [this, self(shared_from_this())](const boost::beast::error_code& ec,
                                              std::size_t bytesWritten) {
-            BMCWEB_LOG_DEBUG << "Wrote " << bytesWritten << "bytes";
+            BMCWEB_LOG_DEBUG("Wrote {}bytes", bytesWritten);
             doingWrite = false;
             inputBuffer->consume(bytesWritten);
 
@@ -104,7 +107,7 @@ class Handler : public std::enable_shared_from_this<Handler>
             if (ec)
             {
                 session->close("Error in writing to proxy port");
-                BMCWEB_LOG_ERROR << "Error in VM socket write " << ec;
+                BMCWEB_LOG_ERROR("Error in VM socket write {}", ec);
                 return;
             }
             doWrite();
@@ -119,10 +122,10 @@ class Handler : public std::enable_shared_from_this<Handler>
             outputBuffer->prepare(bytes),
             [this, self(shared_from_this())](
                 const boost::system::error_code& ec, std::size_t bytesRead) {
-            BMCWEB_LOG_DEBUG << "Read done.  Read " << bytesRead << " bytes";
+            BMCWEB_LOG_DEBUG("Read done.  Read {} bytes", bytesRead);
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Couldn't read from VM port: " << ec;
+                BMCWEB_LOG_ERROR("Couldn't read from VM port: {}", ec);
                 if (session != nullptr)
                 {
                     session->close("Error in connecting to VM port");
@@ -157,6 +160,7 @@ class Handler : public std::enable_shared_from_this<Handler>
         inputBuffer;
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::shared_ptr<Handler> handler;
 
 inline void requestRoutes(App& app)
@@ -165,7 +169,7 @@ inline void requestRoutes(App& app)
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .websocket()
         .onopen([](crow::websocket::Connection& conn) {
-        BMCWEB_LOG_DEBUG << "Connection " << &conn << " opened";
+            BMCWEB_LOG_DEBUG("Connection {} opened", logPtr(&conn));
 
         if (session != nullptr)
         {
@@ -202,14 +206,14 @@ inline void requestRoutes(App& app)
     })
         .onmessage([](crow::websocket::Connection& conn,
                       const std::string& data, bool) {
-        if (data.length() >
-            handler->inputBuffer->capacity() - handler->inputBuffer->size())
-        {
-            BMCWEB_LOG_ERROR << "Buffer overrun when writing " << data.length()
-                             << " bytes";
-            conn.close("Buffer overrun");
-            return;
-        }
+            if (data.length() >
+                handler->inputBuffer->capacity() - handler->inputBuffer->size())
+            {
+                BMCWEB_LOG_ERROR("Buffer overrun when writing {} bytes",
+                                 data.length());
+                conn.close("Buffer overrun");
+                return;
+            }
 
         boost::asio::buffer_copy(handler->inputBuffer->prepare(data.size()),
                                  boost::asio::buffer(data));

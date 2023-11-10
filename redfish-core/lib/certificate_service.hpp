@@ -1,16 +1,25 @@
 #pragma once
 
+#include "app.hpp"
+#include "async_resp.hpp"
+#include "dbus_utility.hpp"
+#include "http/parsing.hpp"
+#include "http_response.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
 #include "utils/dbus_utils.hpp"
+#include "utils/json_utils.hpp"
+#include "utils/time_utils.hpp"
 
-#include <app.hpp>
-#include <async_resp.hpp>
 #include <boost/system/linux_error.hpp>
-#include <dbus_utility.hpp>
-#include <http_response.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
+#include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
+#include <sdbusplus/bus/match.hpp>
 #include <sdbusplus/unpack_properties.hpp>
+
+#include <array>
+#include <memory>
+#include <string_view>
 
 namespace redfish
 {
@@ -27,13 +36,21 @@ constexpr const char* httpsServiceName =
 constexpr const char* ldapServiceName =
     "xyz.openbmc_project.Certs.Manager.Client.Ldap";
 constexpr const char* authorityServiceName =
+<<<<<<< HEAD
     "xyz.openbmc_project.Certs.Manager.Authority.Ldap";
+=======
+    "xyz.openbmc_project.Certs.Manager.Authority.Truststore";
+>>>>>>> origin/master-october-10
 constexpr const char* baseObjectPath = "/xyz/openbmc_project/certs";
 constexpr const char* httpsObjectPath =
     "/xyz/openbmc_project/certs/server/https";
 constexpr const char* ldapObjectPath = "/xyz/openbmc_project/certs/client/ldap";
 constexpr const char* authorityObjectPath =
+<<<<<<< HEAD
     "/xyz/openbmc_project/certs/authority/ldap";
+=======
+    "/xyz/openbmc_project/certs/authority/truststore";
+>>>>>>> origin/master-october-10
 } // namespace certs
 
 /**
@@ -42,21 +59,16 @@ constexpr const char* authorityObjectPath =
  * are installed.
  */
 
-// TODO: Issue#61 No entries are available for Certificate
-// service at https://www.dmtf.org/standards/redfish
-// "redfish standard registries". Need to modify after DMTF
-// publish Privilege details for certificate service
-
 inline std::string getCertificateFromReqBody(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const crow::Request& req)
 {
-    nlohmann::json reqJson = nlohmann::json::parse(req.body, nullptr, false);
-
-    if (reqJson.is_discarded())
+    nlohmann::json reqJson;
+    JsonParseResult ret = parseRequestAsJson(req, reqJson);
+    if (ret != JsonParseResult::Success)
     {
         // We did not receive JSON request, proceed as it is RAW data
-        return req.body;
+        return req.body();
     }
 
     std::string certificate;
@@ -66,7 +78,7 @@ inline std::string getCertificateFromReqBody(
                                   certificate, "CertificateType",
                                   certificateType))
     {
-        BMCWEB_LOG_ERROR << "Required parameters are missing";
+        BMCWEB_LOG_ERROR("Required parameters are missing");
         messages::internalError(asyncResp->res);
         return {};
     }
@@ -107,22 +119,22 @@ class CertificateFile
                                                    std::ofstream::trunc);
             out << certString;
             out.close();
-            BMCWEB_LOG_DEBUG << "Creating certificate file"
-                             << certificateFile.string();
+            BMCWEB_LOG_DEBUG("Creating certificate file{}",
+                             certificateFile.string());
         }
     }
     ~CertificateFile()
     {
         if (std::filesystem::exists(certDirectory))
         {
-            BMCWEB_LOG_DEBUG << "Removing certificate file"
-                             << certificateFile.string();
+            BMCWEB_LOG_DEBUG("Removing certificate file{}",
+                             certificateFile.string());
             std::error_code ec;
             std::filesystem::remove_all(certDirectory, ec);
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Failed to remove temp directory"
-                                 << certDirectory.string();
+                BMCWEB_LOG_ERROR("Failed to remove temp directory{}",
+                                 certDirectory.string());
             }
         }
     }
@@ -145,7 +157,7 @@ class CertificateFile
  * @return None
  */
 static void updateCertIssuerOrSubject(nlohmann::json& out,
-                                      const std::string_view value)
+                                      std::string_view value)
 {
     // example: O=openbmc-project.xyz,CN=localhost
     std::string_view::iterator i = value.begin();
@@ -154,22 +166,20 @@ static void updateCertIssuerOrSubject(nlohmann::json& out,
         std::string_view::iterator tokenBegin = i;
         while (i != value.end() && *i != '=')
         {
-            ++i;
+            std::advance(i, 1);
         }
         if (i == value.end())
         {
             break;
         }
-        const std::string_view key(tokenBegin,
-                                   static_cast<size_t>(i - tokenBegin));
-        ++i;
+        std::string_view key(tokenBegin, static_cast<size_t>(i - tokenBegin));
+        std::advance(i, 1);
         tokenBegin = i;
         while (i != value.end() && *i != ',')
         {
-            ++i;
+            std::advance(i, 1);
         }
-        const std::string_view val(tokenBegin,
-                                   static_cast<size_t>(i - tokenBegin));
+        std::string_view val(tokenBegin, static_cast<size_t>(i - tokenBegin));
         if (key == "L")
         {
             out["City"] = val;
@@ -197,7 +207,7 @@ static void updateCertIssuerOrSubject(nlohmann::json& out,
         // skip comma character
         if (i != value.end())
         {
-            ++i;
+            std::advance(i, 1);
         }
     }
 }
@@ -217,13 +227,16 @@ static void
                        const nlohmann::json::json_pointer& listPtr,
                        const nlohmann::json::json_pointer& countPtr)
 {
-    crow::connections::systemBus->async_method_call(
+    constexpr std::array<std::string_view, 1> interfaces = {
+        certs::certPropIntf};
+    dbus::utility::getSubTreePaths(
+        basePath, 0, interfaces,
         [asyncResp, listPtr, countPtr](
-            const boost::system::error_code ec,
+            const boost::system::error_code& ec,
             const dbus::utility::MapperGetSubTreePathsResponse& certPaths) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Certificate collection query failed: " << ec;
+            BMCWEB_LOG_ERROR("Certificate collection query failed: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -236,28 +249,39 @@ static void
             std::string certId = objPath.filename();
             if (certId.empty())
             {
-                BMCWEB_LOG_ERROR << "Invalid certificate objPath " << certPath;
+                BMCWEB_LOG_ERROR("Invalid certificate objPath {}", certPath);
                 continue;
             }
 
             boost::urls::url certURL;
             if (objPath.parent_path() == certs::httpsObjectPath)
             {
+<<<<<<< HEAD
                 certURL = crow::utility::urlFromPieces(
                     "redfish", "v1", "Managers", PLATFORMBMCID,
                     "NetworkProtocol", "HTTPS", "Certificates", certId);
+=======
+                certURL = boost::urls::format(
+                    "/redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates/{}",
+                    certId);
+>>>>>>> origin/master-october-10
             }
             else if (objPath.parent_path() == certs::ldapObjectPath)
             {
-                certURL = crow::utility::urlFromPieces("redfish", "v1",
-                                                       "AccountService", "LDAP",
-                                                       "Certificates", certId);
+                certURL = boost::urls::format(
+                    "/redfish/v1/AccountService/LDAP/Certificates/{}", certId);
             }
             else if (objPath.parent_path() == certs::authorityObjectPath)
             {
+<<<<<<< HEAD
                 certURL = crow::utility::urlFromPieces(
                     "redfish", "v1", "Managers", PLATFORMBMCID, "Truststore",
                     "Certificates", certId);
+=======
+                certURL = boost::urls::format(
+                    "/redfish/v1/Managers/bmc/Truststore/Certificates/{}",
+                    certId);
+>>>>>>> origin/master-october-10
             }
             else
             {
@@ -270,11 +294,15 @@ static void
         }
 
         asyncResp->res.jsonValue[countPtr] = links.size();
+<<<<<<< HEAD
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", basePath, 0,
         std::array<const char*, 1>{certs::certPropIntf});
+=======
+        });
+>>>>>>> origin/master-october-10
 }
 
 /**
@@ -294,16 +322,16 @@ static void getCertificateProperties(
     const std::string& certId, const boost::urls::url& certURL,
     const std::string& name)
 {
-    BMCWEB_LOG_DEBUG << "getCertificateProperties Path=" << objectPath
-                     << " certId=" << certId << " certURl=" << certURL;
+    BMCWEB_LOG_DEBUG("getCertificateProperties Path={} certId={} certURl={}",
+                     objectPath, certId, certURL);
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objectPath, certs::certPropIntf,
         [asyncResp, certURL, certId,
-         name](const boost::system::error_code ec,
+         name](const boost::system::error_code& ec,
                const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::resourceNotFound(asyncResp->res, "Certificate", certId);
             return;
         }
@@ -383,13 +411,13 @@ static void
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp,
-         id{objectPath.filename()}](const boost::system::error_code ec) {
+         id{objectPath.filename()}](const boost::system::error_code& ec) {
         if (ec)
         {
             messages::resourceNotFound(asyncResp->res, "Certificate", id);
             return;
         }
-        BMCWEB_LOG_INFO << "Certificate deleted";
+        BMCWEB_LOG_INFO("Certificate deleted");
         asyncResp->res.result(boost::beast::http::status::no_content);
     },
         service, objectPath, certs::objDeleteIntf, "Delete");
@@ -404,6 +432,12 @@ inline void handleCertificateServiceGet(
         return;
     }
 
+    if (req.session == nullptr)
+    {
+        messages::internalError(asyncResp->res);
+        return;
+    }
+
     asyncResp->res.jsonValue["@odata.type"] =
         "#CertificateService.v1_0_0.CertificateService";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/CertificateService";
@@ -415,7 +449,7 @@ inline void handleCertificateServiceGet(
     // only ConfigureManager can access then only display when the user
     // has permissions ConfigureManager
     Privileges effectiveUserPrivileges =
-        redfish::getUserPrivileges(req.userRole);
+        redfish::getUserPrivileges(*req.session);
     if (isOperationAllowedWithPrivileges({{"ConfigureManager"}},
                                          effectiveUserPrivileges))
     {
@@ -427,7 +461,7 @@ inline void handleCertificateServiceGet(
     replace["target"] =
         "/redfish/v1/CertificateService/Actions/CertificateService.ReplaceCertificate";
     nlohmann::json::array_t allowed;
-    allowed.push_back("PEM");
+    allowed.emplace_back("PEM");
     replace["CertificateType@Redfish.AllowableValues"] = std::move(allowed);
     actions["#CertificateService.GenerateCSR"]["target"] =
         "/redfish/v1/CertificateService/Actions/CertificateService.GenerateCSR";
@@ -473,8 +507,7 @@ inline void handleReplaceCertificateAction(
                                    certificateUri, "CertificateType",
                                    certificateType))
     {
-        BMCWEB_LOG_ERROR << "Required parameters are missing";
-        messages::internalError(asyncResp->res);
+        BMCWEB_LOG_ERROR("Required parameters are missing");
         return;
     }
 
@@ -498,9 +531,9 @@ inline void handleReplaceCertificateAction(
                                          "CertificateUri");
         return;
     }
-    BMCWEB_LOG_INFO << "Certificate URI to replace: " << certURI;
+    BMCWEB_LOG_INFO("Certificate URI to replace: {}", certURI);
 
-    boost::urls::result<boost::urls::url_view> parsedUrl =
+    boost::system::result<boost::urls::url> parsedUrl =
         boost::urls::parse_relative_ref(certURI);
     if (!parsedUrl)
     {
@@ -550,11 +583,16 @@ inline void handleReplaceCertificateAction(
     std::shared_ptr<CertificateFile> certFile =
         std::make_shared<CertificateFile>(certificate);
     crow::connections::systemBus->async_method_call(
+<<<<<<< HEAD
         [asyncResp, certFile, objectPath, service, url{*parsedUrl}, id, name,
          certURI](const boost::system::error_code ec) {
+=======
+        [asyncResp, certFile, objectPath, service, url{*parsedUrl}, id,
+         name](const boost::system::error_code& ec) {
+>>>>>>> origin/master-october-10
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             if (ec.value() ==
                 boost::system::linux_error::bad_request_descriptor)
             {
@@ -564,15 +602,23 @@ inline void handleReplaceCertificateAction(
             messages::internalError(asyncResp->res);
             return;
         }
+<<<<<<< HEAD
         BMCWEB_LOG_DEBUG << "HTTPS certificate install file="
                          << certFile->getCertFilePath();
         asyncResp->res.addHeader(boost::beast::http::field::location, certURI);
         asyncResp->res.result(boost::beast::http::status::no_content);
     },
+=======
+        getCertificateProperties(asyncResp, objectPath, service, id, url, name);
+        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}",
+                         certFile->getCertFilePath());
+        },
+>>>>>>> origin/master-october-10
         service, objectPath, certs::certReplaceIntf, "Replace",
         certFile->getCertFilePath());
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::unique_ptr<sdbusplus::bus::match_t> csrMatcher;
 /**
  * @brief Read data from CSR D-bus object and set to response
@@ -589,21 +635,20 @@ static void getCSR(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& certObjPath,
                    const std::string& csrObjPath)
 {
-    BMCWEB_LOG_DEBUG << "getCSR CertObjectPath" << certObjPath
-                     << " CSRObjectPath=" << csrObjPath
-                     << " service=" << service;
+    BMCWEB_LOG_DEBUG("getCSR CertObjectPath{} CSRObjectPath={} service={}",
+                     certObjPath, csrObjPath, service);
     crow::connections::systemBus->async_method_call(
-        [asyncResp, certURI](const boost::system::error_code ec,
+        [asyncResp, certURI](const boost::system::error_code& ec,
                              const std::string& csr) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
         if (csr.empty())
         {
-            BMCWEB_LOG_ERROR << "CSR read is empty";
+            BMCWEB_LOG_ERROR("CSR read is empty");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -713,8 +758,8 @@ inline void
     // RSA algorithm due to time consumed in generating private key
     if (*optKeyPairAlgorithm == "RSA" && *optKeyBitLength > rsaKeyBitLength)
     {
-        messages::propertyValueNotInList(
-            asyncResp->res, std::to_string(*optKeyBitLength), "KeyBitLength");
+        messages::propertyValueNotInList(asyncResp->res, *optKeyBitLength,
+                                         "KeyBitLength");
         return;
     }
 
@@ -724,7 +769,7 @@ inline void
     {
         if (optKeyUsage->empty())
         {
-            optKeyUsage->push_back("ServerAuthentication");
+            optKeyUsage->emplace_back("ServerAuthentication");
         }
         else if (optKeyUsage->size() == 1)
         {
@@ -747,7 +792,7 @@ inline void
     {
         if (optKeyUsage->empty())
         {
-            optKeyUsage->push_back("ClientAuthentication");
+            optKeyUsage->emplace_back("ClientAuthentication");
         }
         else if (optKeyUsage->size() == 1)
         {
@@ -787,16 +832,16 @@ inline void
             // before completion.
             if (ec != boost::asio::error::operation_aborted)
             {
-                BMCWEB_LOG_ERROR << "Async_wait failed " << ec;
+                BMCWEB_LOG_ERROR("Async_wait failed {}", ec);
             }
             return;
         }
-        BMCWEB_LOG_ERROR << "Timed out waiting for Generating CSR";
+        BMCWEB_LOG_ERROR("Timed out waiting for Generating CSR");
         messages::internalError(asyncResp->res);
     });
 
     // create a matcher to wait on CSR object
-    BMCWEB_LOG_DEBUG << "create matcher with path " << objectPath;
+    BMCWEB_LOG_DEBUG("create matcher with path {}", objectPath);
     std::string match("type='signal',"
                       "interface='org.freedesktop.DBus.ObjectManager',"
                       "path='" +
@@ -809,16 +854,16 @@ inline void
         timeout.cancel();
         if (m.is_method_error())
         {
-            BMCWEB_LOG_ERROR << "Dbus method error!!!";
+            BMCWEB_LOG_ERROR("Dbus method error!!!");
             messages::internalError(asyncResp->res);
             return;
         }
 
-        dbus::utility::DBusInteracesMap interfacesProperties;
+        dbus::utility::DBusInterfacesMap interfacesProperties;
 
         sdbusplus::message::object_path csrObjectPath;
         m.read(csrObjectPath, interfacesProperties);
-        BMCWEB_LOG_DEBUG << "CSR object added" << csrObjectPath.str;
+        BMCWEB_LOG_DEBUG("CSR object added{}", csrObjectPath.str);
         for (const auto& interface : interfacesProperties)
         {
             if (interface.first == "xyz.openbmc_project.Certs.CSR")
@@ -830,10 +875,10 @@ inline void
         }
     });
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec, const std::string&) {
+        [asyncResp](const boost::system::error_code& ec, const std::string&) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec.message();
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec.message());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -904,7 +949,7 @@ inline void handleHTTPSCertificateCollectionPost(
     {
         return;
     }
-    BMCWEB_LOG_DEBUG << "HTTPSCertificateCollection::doPost";
+    BMCWEB_LOG_DEBUG("HTTPSCertificateCollection::doPost");
 
     asyncResp->res.jsonValue["Name"] = "HTTPS Certificate";
     asyncResp->res.jsonValue["Description"] = "HTTPS Certificate";
@@ -913,7 +958,7 @@ inline void handleHTTPSCertificateCollectionPost(
 
     if (certFileBody.empty())
     {
-        BMCWEB_LOG_ERROR << "Cannot get certificate from request body.";
+        BMCWEB_LOG_ERROR("Cannot get certificate from request body.");
         messages::unrecognizedRequestBody(asyncResp->res);
         return;
     }
@@ -922,17 +967,18 @@ inline void handleHTTPSCertificateCollectionPost(
         std::make_shared<CertificateFile>(certFileBody);
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, certFile](const boost::system::error_code ec,
+        [asyncResp, certFile](const boost::system::error_code& ec,
                               const std::string& objectPath) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
 
         sdbusplus::message::object_path path(objectPath);
         std::string certId = path.filename();
+<<<<<<< HEAD
         const boost::urls::url certURL = crow::utility::urlFromPieces(
             "redfish", "v1", "Managers", PLATFORMBMCID, "NetworkProtocol",
             "HTTPS", "Certificates", certId);
@@ -941,6 +987,16 @@ inline void handleHTTPSCertificateCollectionPost(
         BMCWEB_LOG_DEBUG << "HTTPS certificate install file="
                          << certFile->getCertFilePath();
     },
+=======
+        const boost::urls::url certURL = boost::urls::format(
+            "/redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates/{}",
+            certId);
+        getCertificateProperties(asyncResp, objectPath, certs::httpsServiceName,
+                                 certId, certURL, "HTTPS Certificate");
+        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}",
+                         certFile->getCertFilePath());
+        },
+>>>>>>> origin/master-october-10
         certs::httpsServiceName, certs::httpsObjectPath, certs::certInstallIntf,
         "Install", certFile->getCertFilePath());
 }
@@ -954,10 +1010,16 @@ inline void handleHTTPSCertificateGet(
         return;
     }
 
+<<<<<<< HEAD
     BMCWEB_LOG_DEBUG << "HTTPS Certificate ID=" << id;
     const boost::urls::url certURL = crow::utility::urlFromPieces(
         "redfish", "v1", "Managers", PLATFORMBMCID, "NetworkProtocol", "HTTPS",
         "Certificates", id);
+=======
+    BMCWEB_LOG_DEBUG("HTTPS Certificate ID={}", id);
+    const boost::urls::url certURL = boost::urls::format(
+        "/redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates/{}", id);
+>>>>>>> origin/master-october-10
     std::string objPath =
         sdbusplus::message::object_path(certs::httpsObjectPath) / id;
     getCertificateProperties(asyncResp, objPath, certs::httpsServiceName, id,
@@ -1019,7 +1081,7 @@ inline void handleLDAPCertificateCollectionPost(
 
     if (certFileBody.empty())
     {
-        BMCWEB_LOG_ERROR << "Cannot get certificate from request body.";
+        BMCWEB_LOG_ERROR("Cannot get certificate from request body.");
         messages::unrecognizedRequestBody(asyncResp->res);
         return;
     }
@@ -1028,24 +1090,30 @@ inline void handleLDAPCertificateCollectionPost(
         std::make_shared<CertificateFile>(certFileBody);
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, certFile](const boost::system::error_code ec,
+        [asyncResp, certFile](const boost::system::error_code& ec,
                               const std::string& objectPath) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
 
         sdbusplus::message::object_path path(objectPath);
         std::string certId = path.filename();
-        const boost::urls::url certURL = crow::utility::urlFromPieces(
-            "redfish", "v1", "AccountService", "LDAP", "Certificates", certId);
+        const boost::urls::url certURL = boost::urls::format(
+            "/redfish/v1/AccountService/LDAP/Certificates/{}", certId);
         getCertificateProperties(asyncResp, objectPath, certs::ldapServiceName,
                                  certId, certURL, "LDAP Certificate");
+<<<<<<< HEAD
         BMCWEB_LOG_DEBUG << "LDAP certificate install file="
                          << certFile->getCertFilePath();
     },
+=======
+        BMCWEB_LOG_DEBUG("LDAP certificate install file={}",
+                         certFile->getCertFilePath());
+        },
+>>>>>>> origin/master-october-10
         certs::ldapServiceName, certs::ldapObjectPath, certs::certInstallIntf,
         "Install", certFile->getCertFilePath());
 }
@@ -1059,9 +1127,9 @@ inline void handleLDAPCertificateGet(
         return;
     }
 
-    BMCWEB_LOG_DEBUG << "LDAP Certificate ID=" << id;
-    const boost::urls::url certURL = crow::utility::urlFromPieces(
-        "redfish", "v1", "AccountService", "LDAP", "Certificates", id);
+    BMCWEB_LOG_DEBUG("LDAP Certificate ID={}", id);
+    const boost::urls::url certURL = boost::urls::format(
+        "/redfish/v1/AccountService/LDAP/Certificates/{}", id);
     std::string objPath =
         sdbusplus::message::object_path(certs::ldapObjectPath) / id;
     getCertificateProperties(asyncResp, objPath, certs::ldapServiceName, id,
@@ -1077,7 +1145,7 @@ inline void handleLDAPCertificateDelete(
         return;
     }
 
-    BMCWEB_LOG_DEBUG << "Delete LDAP Certificate ID=" << id;
+    BMCWEB_LOG_DEBUG("Delete LDAP Certificate ID={}", id);
     std::string objPath =
         sdbusplus::message::object_path(certs::ldapObjectPath) / id;
 
@@ -1141,7 +1209,7 @@ inline void handleTrustStoreCertificateCollectionPost(
 
     if (certFileBody.empty())
     {
-        BMCWEB_LOG_ERROR << "Cannot get certificate from request body.";
+        BMCWEB_LOG_ERROR("Cannot get certificate from request body.");
         messages::unrecognizedRequestBody(asyncResp->res);
         return;
     }
@@ -1149,17 +1217,18 @@ inline void handleTrustStoreCertificateCollectionPost(
     std::shared_ptr<CertificateFile> certFile =
         std::make_shared<CertificateFile>(certFileBody);
     crow::connections::systemBus->async_method_call(
-        [asyncResp, certFile](const boost::system::error_code ec,
+        [asyncResp, certFile](const boost::system::error_code& ec,
                               const std::string& objectPath) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
 
         sdbusplus::message::object_path path(objectPath);
         std::string certId = path.filename();
+<<<<<<< HEAD
         const boost::urls::url certURL = crow::utility::urlFromPieces(
             "redfish", "v1", "Managers", PLATFORMBMCID, "Truststore",
             "Certificates", certId);
@@ -1169,6 +1238,16 @@ inline void handleTrustStoreCertificateCollectionPost(
         BMCWEB_LOG_DEBUG << "TrustStore certificate install file="
                          << certFile->getCertFilePath();
     },
+=======
+        const boost::urls::url certURL = boost::urls::format(
+            "/redfish/v1/Managers/bmc/Truststore/Certificates/{}", certId);
+        getCertificateProperties(asyncResp, objectPath,
+                                 certs::authorityServiceName, certId, certURL,
+                                 "TrustStore Certificate");
+        BMCWEB_LOG_DEBUG("TrustStore certificate install file={}",
+                         certFile->getCertFilePath());
+        },
+>>>>>>> origin/master-october-10
         certs::authorityServiceName, certs::authorityObjectPath,
         certs::certInstallIntf, "Install", certFile->getCertFilePath());
 }
@@ -1182,10 +1261,16 @@ inline void handleTrustStoreCertificateGet(
         return;
     }
 
+<<<<<<< HEAD
     BMCWEB_LOG_DEBUG << "Truststore Certificate ID=" << id;
     const boost::urls::url certURL =
         crow::utility::urlFromPieces("redfish", "v1", "Managers", PLATFORMBMCID,
                                      "Truststore", "Certificates", id);
+=======
+    BMCWEB_LOG_DEBUG("Truststore Certificate ID={}", id);
+    const boost::urls::url certURL = boost::urls::format(
+        "/redfish/v1/Managers/bmc/Truststore/Certificates/{}", id);
+>>>>>>> origin/master-october-10
     std::string objPath =
         sdbusplus::message::object_path(certs::authorityObjectPath) / id;
     getCertificateProperties(asyncResp, objPath, certs::authorityServiceName,
@@ -1201,7 +1286,7 @@ inline void handleTrustStoreCertificateDelete(
         return;
     }
 
-    BMCWEB_LOG_DEBUG << "Delete TrustStore Certificate ID=" << id;
+    BMCWEB_LOG_DEBUG("Delete TrustStore Certificate ID={}", id);
     std::string objPath =
         sdbusplus::message::object_path(certs::authorityObjectPath) / id;
 

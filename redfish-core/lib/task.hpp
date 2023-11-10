@@ -14,17 +14,33 @@
 // limitations under the License.
 */
 #pragma once
+#include "bmcweb_config.h"
 
-#include <app.hpp>
+#include "app.hpp"
+#include "dbus_utility.hpp"
+#include "event_service_manager.hpp"
+#include "health.hpp"
+#include "http/parsing.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "task_messages.hpp"
+
 #include <boost/asio/post.hpp>
 #include <boost/asio/steady_timer.hpp>
+<<<<<<< HEAD
 #include <boost/container/flat_map.hpp>
 #include <dbus_utility.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <task_messages.hpp>
+=======
+#include <boost/url/format.hpp>
+#include <sdbusplus/bus/match.hpp>
+>>>>>>> origin/master-october-10
 
 #include <chrono>
+#include <memory>
+#include <ranges>
 #include <variant>
 
 namespace redfish
@@ -34,17 +50,21 @@ namespace task
 {
 constexpr size_t maxTaskCount = 100; // arbitrary limit
 
+<<<<<<< HEAD
 using TaskQueue = std::deque<std::shared_ptr<struct TaskData>>;
 static TaskQueue tasks;
+=======
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static std::deque<std::shared_ptr<struct TaskData>> tasks;
+>>>>>>> origin/master-october-10
 
 constexpr bool completed = true;
 
 struct Payload
 {
     explicit Payload(const crow::Request& req) :
-        targetUri(req.url), httpOperation(req.methodString()),
-        httpHeaders(nlohmann::json::array()),
-        jsonBody(nlohmann::json::parse(req.body, nullptr, false))
+        targetUri(req.url().encoded_path()), httpOperation(req.methodString()),
+        httpHeaders(nlohmann::json::array())
     {
         using field_ns = boost::beast::http::field;
         constexpr const std::array<boost::beast::http::field, 7>
@@ -53,15 +73,16 @@ struct Payload
                                field_ns::connection, field_ns::content_length,
                                field_ns::upgrade};
 
-        if (jsonBody.is_discarded())
+        JsonParseResult ret = parseRequestAsJson(req, jsonBody);
+        if (ret != JsonParseResult::Success)
         {
-            jsonBody = nullptr;
+            return;
         }
 
-        for (const auto& field : req.fields)
+        for (const auto& field : req.fields())
         {
-            if (std::find(headerWhitelist.begin(), headerWhitelist.end(),
-                          field.name()) == headerWhitelist.end())
+            if (std::ranges::find(headerWhitelist, field.name()) ==
+                headerWhitelist.end())
             {
                 continue;
             }
@@ -320,7 +341,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
         });
     }
 
-    static void sendTaskEvent(const std::string_view state, size_t index)
+    static void sendTaskEvent(std::string_view state, size_t index)
     {
         std::string origin = "/redfish/v1/TaskService/Tasks/" +
                              std::to_string(index);
@@ -387,7 +408,7 @@ struct TaskData : std::enable_shared_from_this<TaskData>
         }
         else
         {
-            BMCWEB_LOG_INFO << "sendTaskEvent: No events to send";
+            BMCWEB_LOG_INFO("sendTaskEvent: No events to send");
         }
     }
 
@@ -463,8 +484,8 @@ inline void requestRoutesTaskMonitor(App& app)
         {
             return;
         }
-        auto find = std::find_if(
-            task::tasks.begin(), task::tasks.end(),
+        auto find = std::ranges::find_if(
+            task::tasks,
             [&strParam](const std::shared_ptr<task::TaskData>& task) {
             if (!task)
             {
@@ -534,8 +555,8 @@ inline void requestRoutesTask(App& app)
         {
             return;
         }
-        auto find = std::find_if(
-            task::tasks.begin(), task::tasks.end(),
+        auto find = std::ranges::find_if(
+            task::tasks,
             [&strParam](const std::shared_ptr<task::TaskData>& task) {
             if (!task)
             {
@@ -569,12 +590,15 @@ inline void requestRoutesTask(App& app)
         asyncResp->res.jsonValue["TaskStatus"] = ptr->getTaskStatus();
         asyncResp->res.jsonValue["Messages"] = ptr->messages;
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/TaskService/Tasks/" + strParam;
+            boost::urls::format("/redfish/v1/TaskService/Tasks/{}", strParam);
         if (!ptr->gave204)
         {
             asyncResp->res.jsonValue["TaskMonitor"] =
                 "/redfish/v1/TaskService/Tasks/" + strParam + "/Monitor";
         }
+
+        asyncResp->res.jsonValue["HidePayload"] = !ptr->payload;
+
         if (ptr->payload)
         {
             const task::Payload& p = *(ptr->payload);
@@ -687,9 +711,17 @@ inline void requestRoutesTaskCollection(App& app)
             {
                 continue; // shouldn't be possible
             }
+<<<<<<< HEAD
             members.emplace_back(
                 nlohmann::json{{"@odata.id", "/redfish/v1/TaskService/Tasks/" +
                                                  std::to_string(task->index)}});
+=======
+            nlohmann::json::object_t member;
+            member["@odata.id"] =
+                boost::urls::format("/redfish/v1/TaskService/Tasks/{}",
+                                    std::to_string(task->index));
+            members.emplace_back(std::move(member));
+>>>>>>> origin/master-october-10
         }
     });
 }
@@ -716,8 +748,11 @@ inline void requestRoutesTaskService(App& app)
 
         asyncResp->res.jsonValue["LifeCycleEventOnTaskStateChange"] = true;
 
-        auto health = std::make_shared<HealthPopulate>(asyncResp);
-        health->populate();
+        if constexpr (bmcwebEnableHealthPopulate)
+        {
+            auto health = std::make_shared<HealthPopulate>(asyncResp);
+            health->populate();
+        }
         asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
         asyncResp->res.jsonValue["ServiceEnabled"] = true;
         asyncResp->res.jsonValue["Tasks"]["@odata.id"] =

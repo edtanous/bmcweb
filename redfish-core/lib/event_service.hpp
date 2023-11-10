@@ -14,6 +14,7 @@
 // limitations under the License.
 */
 #pragma once
+<<<<<<< HEAD
 #include <app.hpp>
 #include <boost/beast/http/fields.hpp>
 #include <event_service_manager.hpp>
@@ -22,7 +23,27 @@
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 
+=======
+#include "app.hpp"
+#include "event_service_manager.hpp"
+#include "http/utility.hpp"
+#include "logging.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "snmp_trap_event_clients.hpp"
+
+#include <boost/beast/http/fields.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/url/parse.hpp>
+#include <sdbusplus/unpack_properties.hpp>
+#include <utils/dbus_utils.hpp>
+
+#include <charconv>
+#include <memory>
+#include <ranges>
+>>>>>>> origin/master-october-10
 #include <span>
+#include <string>
 
 namespace redfish
 {
@@ -34,15 +55,8 @@ static constexpr const std::array<const char*, 4> supportedRegPrefixes = {
 static constexpr const std::array<const char*, 3> supportedRetryPolicies = {
     "TerminateAfterRetries", "SuspendRetries", "RetryForever"};
 
-#ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
-static constexpr const std::array<const char*, 2> supportedResourceTypes = {
-    "IBMConfigFile", "Task"};
-#else
 static constexpr const std::array<const char*, 1> supportedResourceTypes = {
     "Task"};
-#endif
-
-static constexpr const uint8_t maxNoOfSubscriptions = 20;
 
 inline void requestRoutesEventService(App& app)
 {
@@ -61,6 +75,9 @@ inline void requestRoutesEventService(App& app)
             "#EventService.v1_7_2.EventService";
         asyncResp->res.jsonValue["Id"] = "EventService";
         asyncResp->res.jsonValue["Name"] = "Event Service";
+        asyncResp->res.jsonValue["ServerSentEventUri"] =
+            "/redfish/v1/EventService/SSE";
+
         asyncResp->res.jsonValue["Subscriptions"]["@odata.id"] =
             "/redfish/v1/EventService/Subscriptions";
         asyncResp->res
@@ -141,12 +158,12 @@ inline void requestRoutesEventService(App& app)
 
         if (retryInterval)
         {
-            // Supported range [30 - 180]
-            if ((*retryInterval < 30) || (*retryInterval > 180))
+            // Supported range [5 - 180]
+            if ((*retryInterval < 5) || (*retryInterval > 180))
             {
                 messages::queryParameterOutOfRange(
                     asyncResp->res, std::to_string(*retryInterval),
-                    "DeliveryRetryIntervalSeconds", "[30-180]");
+                    "DeliveryRetryIntervalSeconds", "[5-180]");
             }
             else
             {
@@ -269,6 +286,39 @@ inline void requestRoutesSubmitTestEvent(App& app)
     });
 }
 
+inline void doSubscriptionCollection(
+    const boost::system::error_code& ec,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const dbus::utility::ManagedObjectType& resp)
+{
+    if (ec)
+    {
+        if (ec.value() == EBADR || ec.value() == EHOSTUNREACH)
+        {
+            // This is an optional process so just return if it isn't there
+            return;
+        }
+
+        BMCWEB_LOG_ERROR("D-Bus response error on GetManagedObjects {}", ec);
+        messages::internalError(asyncResp->res);
+        return;
+    }
+    nlohmann::json& memberArray = asyncResp->res.jsonValue["Members"];
+    for (const auto& objpath : resp)
+    {
+        sdbusplus::message::object_path path(objpath.first);
+        const std::string snmpId = path.filename();
+        if (snmpId.empty())
+        {
+            BMCWEB_LOG_ERROR("The SNMP client ID is wrong");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        getSnmpSubscriptionList(asyncResp, snmpId, memberArray);
+    }
+}
+
 inline void requestRoutesEventDestinationCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/")
@@ -296,11 +346,28 @@ inline void requestRoutesEventDestinationCollection(App& app)
         for (const std::string& id : subscripIds)
         {
             nlohmann::json::object_t member;
+<<<<<<< HEAD
             member["@odata.id"] = "/redfish/v1/EventService/Subscriptions/" +
                                   id;
             memberArray.push_back(std::move(member));
         }
     });
+=======
+            member["@odata.id"] = boost::urls::format(
+                "/redfish/v1/EventService/Subscriptions/{}" + id);
+            memberArray.emplace_back(std::move(member));
+        }
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code& ec,
+                        const dbus::utility::ManagedObjectType& resp) {
+            doSubscriptionCollection(ec, asyncResp, resp);
+            },
+            "xyz.openbmc_project.Network.SNMP",
+            "/xyz/openbmc_project/network/snmp/manager",
+            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        });
+
+>>>>>>> origin/master-october-10
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/")
         .privileges(redfish::privileges::postEventDestinationCollection)
         .methods(boost::beast::http::verb::post)(
@@ -345,6 +412,15 @@ inline void requestRoutesEventDestinationCollection(App& app)
             return;
         }
 
+        // https://stackoverflow.com/questions/417142/what-is-the-maximum-length-of-a-url-in-different-browsers
+        static constexpr const uint16_t maxDestinationSize = 2000;
+        if (destUrl.size() > maxDestinationSize)
+        {
+            messages::stringValueTooLong(asyncResp->res, "Destination",
+                                         maxDestinationSize);
+            return;
+        }
+
         if (regPrefixes && msgIds)
         {
             if (regPrefixes->size() && msgIds->size())
@@ -355,21 +431,32 @@ inline void requestRoutesEventDestinationCollection(App& app)
             }
         }
 
-        std::string host;
-        std::string urlProto;
-        uint16_t port = 0;
-        std::string path;
-
-        if (!crow::utility::validateAndSplitUrl(destUrl, urlProto, host, port,
-                                                path))
+        boost::system::result<boost::urls::url> url =
+            boost::urls::parse_absolute_uri(destUrl);
+        if (!url)
         {
-            BMCWEB_LOG_WARNING
-                << "Failed to validate and split destination url";
+            BMCWEB_LOG_WARNING("Failed to validate and split destination url");
+            messages::propertyValueFormatError(asyncResp->res, destUrl,
+                                               "Destination");
+            return;
+        }
+        url->normalize();
+        crow::utility::setProtocolDefaults(*url, protocol);
+        crow::utility::setPortDefaults(*url);
+
+        if (url->path().empty())
+        {
+            url->set_path("/");
+        }
+
+        if (url->has_userinfo())
+        {
             messages::propertyValueFormatError(asyncResp->res, destUrl,
                                                "Destination");
             return;
         }
 
+<<<<<<< HEAD
         if (urlProto == "http")
         {
 #ifndef BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING
@@ -390,14 +477,74 @@ inline void requestRoutesEventDestinationCollection(App& app)
             }
         }
         if (path.empty())
+=======
+        if (protocol == "SNMPv2c")
+>>>>>>> origin/master-october-10
         {
-            path = "/";
+            if (context)
+            {
+                messages::propertyValueConflict(asyncResp->res, "Context",
+                                                "Protocol");
+                return;
+            }
+            if (eventFormatType2)
+            {
+                messages::propertyValueConflict(asyncResp->res,
+                                                "EventFormatType", "Protocol");
+                return;
+            }
+            if (retryPolicy)
+            {
+                messages::propertyValueConflict(asyncResp->res, "RetryPolicy",
+                                                "Protocol");
+                return;
+            }
+            if (msgIds)
+            {
+                messages::propertyValueConflict(asyncResp->res, "MessageIds",
+                                                "Protocol");
+                return;
+            }
+            if (regPrefixes)
+            {
+                messages::propertyValueConflict(asyncResp->res,
+                                                "RegistryPrefixes", "Protocol");
+                return;
+            }
+            if (resTypes)
+            {
+                messages::propertyValueConflict(asyncResp->res, "ResourceTypes",
+                                                "Protocol");
+                return;
+            }
+            if (headers)
+            {
+                messages::propertyValueConflict(asyncResp->res, "HttpHeaders",
+                                                "Protocol");
+                return;
+            }
+            if (mrdJsonArray)
+            {
+                messages::propertyValueConflict(
+                    asyncResp->res, "MetricReportDefinitions", "Protocol");
+                return;
+            }
+            if (url->scheme() != "snmp")
+            {
+                messages::propertyValueConflict(asyncResp->res, "Destination",
+                                                "Protocol");
+                return;
+            }
+
+            addSnmpTrapClient(asyncResp, url->host_address(),
+                              url->port_number());
+            return;
         }
 
         std::shared_ptr<Subscription> subValue =
-            std::make_shared<Subscription>(host, port, path, urlProto);
+            std::make_shared<Subscription>(*url, app.ioContext());
 
-        subValue->destinationUrl = destUrl;
+        subValue->destinationUrl = std::move(*url);
 
         if (subscriptionType)
         {
@@ -424,9 +571,8 @@ inline void requestRoutesEventDestinationCollection(App& app)
 
         if (eventFormatType2)
         {
-            if (std::find(supportedEvtFormatTypes.begin(),
-                          supportedEvtFormatTypes.end(),
-                          *eventFormatType2) == supportedEvtFormatTypes.end())
+            if (std::ranges::find(supportedEvtFormatTypes, *eventFormatType2) ==
+                supportedEvtFormatTypes.end())
             {
                 messages::propertyValueNotInList(
                     asyncResp->res, *eventFormatType2, "EventFormatType");
@@ -442,13 +588,35 @@ inline void requestRoutesEventDestinationCollection(App& app)
 
         if (context)
         {
+            // This value is selected aribitrarily.
+            constexpr const size_t maxContextSize = 256;
+            if (context->size() > maxContextSize)
+            {
+                messages::stringValueTooLong(asyncResp->res, "Context",
+                                             maxContextSize);
+                return;
+            }
             subValue->customText = *context;
         }
 
         if (headers)
         {
+            size_t cumulativeLen = 0;
+
             for (const nlohmann::json& headerChunk : *headers)
             {
+                std::string hdr{headerChunk.dump(
+                    -1, ' ', true, nlohmann::json::error_handler_t::replace)};
+                cumulativeLen += hdr.length();
+
+                // This value is selected to mirror http_connection.hpp
+                constexpr const uint16_t maxHeaderSizeED = 8096;
+                if (cumulativeLen > maxHeaderSizeED)
+                {
+                    messages::arraySizeTooLong(asyncResp->res, "HttpHeaders",
+                                               maxHeaderSizeED);
+                    return;
+                }
                 for (const auto& item : headerChunk.items())
                 {
                     const std::string* value =
@@ -456,7 +624,11 @@ inline void requestRoutesEventDestinationCollection(App& app)
                     if (value == nullptr)
                     {
                         messages::propertyValueFormatError(
+<<<<<<< HEAD
                             asyncResp->res, item.value().dump(2, true),
+=======
+                            asyncResp->res, item.value(),
+>>>>>>> origin/master-october-10
                             "HttpHeaders/" + item.key());
                         return;
                     }
@@ -469,9 +641,8 @@ inline void requestRoutesEventDestinationCollection(App& app)
         {
             for (const std::string& it : *regPrefixes)
             {
-                if (std::find(supportedRegPrefixes.begin(),
-                              supportedRegPrefixes.end(),
-                              it) == supportedRegPrefixes.end())
+                if (std::ranges::find(supportedRegPrefixes, it) ==
+                    supportedRegPrefixes.end())
                 {
                     messages::propertyValueNotInList(asyncResp->res, it,
                                                      "RegistryPrefixes");
@@ -485,9 +656,8 @@ inline void requestRoutesEventDestinationCollection(App& app)
         {
             for (const std::string& it : *resTypes)
             {
-                if (std::find(supportedResourceTypes.begin(),
-                              supportedResourceTypes.end(),
-                              it) == supportedResourceTypes.end())
+                if (std::ranges::find(supportedResourceTypes, it) ==
+                    supportedResourceTypes.end())
                 {
                     messages::propertyValueNotInList(asyncResp->res, it,
                                                      "ResourceTypes");
@@ -524,8 +694,8 @@ inline void requestRoutesEventDestinationCollection(App& app)
                         registry =
                             redfish::registries::getRegistryFromPrefix(it);
 
-                    if (std::any_of(
-                            registry.begin(), registry.end(),
+                    if (std::ranges::any_of(
+                            registry,
                             [&id](const redfish::registries::MessageEntry&
                                       messageEntry) {
                         return !id.compare(messageEntry.first);
@@ -549,9 +719,8 @@ inline void requestRoutesEventDestinationCollection(App& app)
 
         if (retryPolicy)
         {
-            if (std::find(supportedRetryPolicies.begin(),
-                          supportedRetryPolicies.end(),
-                          *retryPolicy) == supportedRetryPolicies.end())
+            if (std::ranges::find(supportedRetryPolicies, *retryPolicy) ==
+                supportedRetryPolicies.end())
             {
                 messages::propertyValueNotInList(asyncResp->res, *retryPolicy,
                                                  "DeliveryRetryPolicy");
@@ -639,6 +808,13 @@ inline void requestRoutesEventDestination(App& app)
         {
             return;
         }
+
+        if (param.starts_with("snmp"))
+        {
+            getSnmpTrapClient(asyncResp, param);
+            return;
+        }
+
         std::shared_ptr<Subscription> subValue =
             EventServiceManager::getInstance().getSubscription(param);
         if (subValue == nullptr)
@@ -648,11 +824,19 @@ inline void requestRoutesEventDestination(App& app)
         }
         const std::string& id = param;
 
+<<<<<<< HEAD
         asyncResp->res.jsonValue = {
             {"@odata.type", "#EventDestination.v1_11_0.EventDestination"},
             {"Protocol", "Redfish"}};
         asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/EventService/Subscriptions/" + id;
+=======
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#EventDestination.v1_8_0.EventDestination";
+        asyncResp->res.jsonValue["Protocol"] = "Redfish";
+        asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+            "/redfish/v1/EventService/Subscriptions/{}", id);
+>>>>>>> origin/master-october-10
         asyncResp->res.jsonValue["Id"] = id;
         asyncResp->res.jsonValue["Name"] = "Event Destination " + id;
         asyncResp->res.jsonValue["Destination"] = subValue->destinationUrl;
@@ -727,7 +911,7 @@ inline void requestRoutesEventDestination(App& app)
                     if (value == nullptr)
                     {
                         messages::propertyValueFormatError(
-                            asyncResp->res, it.value().dump(2, ' ', true),
+                            asyncResp->res, it.value(),
                             "HttpHeaders/" + it.key());
                         return;
                     }
@@ -739,16 +923,14 @@ inline void requestRoutesEventDestination(App& app)
 
         if (retryPolicy)
         {
-            if (std::find(supportedRetryPolicies.begin(),
-                          supportedRetryPolicies.end(),
-                          *retryPolicy) == supportedRetryPolicies.end())
+            if (std::ranges::find(supportedRetryPolicies, *retryPolicy) ==
+                supportedRetryPolicies.end())
             {
                 messages::propertyValueNotInList(asyncResp->res, *retryPolicy,
                                                  "DeliveryRetryPolicy");
                 return;
             }
             subValue->retryPolicy = *retryPolicy;
-            subValue->updateRetryPolicy();
         }
 
         EventServiceManager::getInstance().updateSubscriptionData();
@@ -767,6 +949,14 @@ inline void requestRoutesEventDestination(App& app)
         {
             return;
         }
+
+        if (param.starts_with("snmp"))
+        {
+            deleteSnmpTrapClient(asyncResp, param);
+            EventServiceManager::getInstance().deleteSubscription(param);
+            return;
+        }
+
         if (!EventServiceManager::getInstance().isSubscriptionExist(param))
         {
             asyncResp->res.result(boost::beast::http::status::not_found);

@@ -1,16 +1,15 @@
 #pragma once
 
 #include "persistent_data.hpp"
+#include "common.hpp"
+#include "forward_unauthorized.hpp"
+#include "http_request.hpp"
+#include "http_response.hpp"
+#include "http_utility.hpp"
+#include "pam_authenticate.hpp"
 #include "webroutes.hpp"
 
-#include <app.hpp>
 #include <boost/container/flat_set.hpp>
-#include <common.hpp>
-#include <forward_unauthorized.hpp>
-#include <http_request.hpp>
-#include <http_response.hpp>
-#include <http_utility.hpp>
-#include <pam_authenticate.hpp>
 
 #include <random>
 #include <utility>
@@ -21,7 +20,7 @@ namespace crow
 namespace authentication
 {
 
-static void cleanupTempSession(const Request& req)
+inline void cleanupTempSession(const Request& req)
 {
     // TODO(ed) THis should really be handled by the persistent data
     // middleware, but because it is upstream, it doesn't have access to the
@@ -40,7 +39,7 @@ static std::shared_ptr<persistent_data::UserSession>
     performBasicAuth(const boost::asio::ip::address& clientIp,
                      std::string_view authHeader)
 {
-    BMCWEB_LOG_DEBUG << "[AuthMiddleware] Basic authentication";
+    BMCWEB_LOG_DEBUG("[AuthMiddleware] Basic authentication");
 
     if (!authHeader.starts_with("Basic "))
     {
@@ -68,9 +67,9 @@ static std::shared_ptr<persistent_data::UserSession>
     }
     std::string pass = authData.substr(separator);
 
-    BMCWEB_LOG_DEBUG << "[AuthMiddleware] Authenticating user: " << user;
-    BMCWEB_LOG_DEBUG << "[AuthMiddleware] User IPAddress: "
-                     << clientIp.to_string();
+    BMCWEB_LOG_DEBUG("[AuthMiddleware] Authenticating user: {}", user);
+    BMCWEB_LOG_DEBUG("[AuthMiddleware] User IPAddress: {}",
+                     clientIp.to_string());
 
     int pamrc = pamAuthenticateUser(user, pass);
     bool isConfigureSelfOnly = pamrc == PAM_NEW_AUTHTOK_REQD;
@@ -95,7 +94,7 @@ static std::shared_ptr<persistent_data::UserSession>
 static std::shared_ptr<persistent_data::UserSession>
     performTokenAuth(std::string_view authHeader)
 {
-    BMCWEB_LOG_DEBUG << "[AuthMiddleware] Token authentication";
+    BMCWEB_LOG_DEBUG("[AuthMiddleware] Token authentication");
     if (!authHeader.starts_with("Token "))
     {
         return nullptr;
@@ -111,7 +110,7 @@ static std::shared_ptr<persistent_data::UserSession>
 static std::shared_ptr<persistent_data::UserSession>
     performXtokenAuth(const boost::beast::http::header<true>& reqHeader)
 {
-    BMCWEB_LOG_DEBUG << "[AuthMiddleware] X-Auth-Token authentication";
+    BMCWEB_LOG_DEBUG("[AuthMiddleware] X-Auth-Token authentication");
 
     std::string_view token = reqHeader["X-Auth-Token"];
     if (token.empty())
@@ -126,10 +125,10 @@ static std::shared_ptr<persistent_data::UserSession>
 
 #ifdef BMCWEB_ENABLE_COOKIE_AUTHENTICATION
 static std::shared_ptr<persistent_data::UserSession>
-    performCookieAuth(boost::beast::http::verb method,
+    performCookieAuth(boost::beast::http::verb method [[maybe_unused]],
                       const boost::beast::http::header<true>& reqHeader)
 {
-    BMCWEB_LOG_DEBUG << "[AuthMiddleware] Cookie authentication";
+    BMCWEB_LOG_DEBUG("[AuthMiddleware] Cookie authentication");
 
     std::string_view cookieValue = reqHeader["Cookie"];
     if (cookieValue.empty())
@@ -158,6 +157,7 @@ static std::shared_ptr<persistent_data::UserSession>
     {
         return nullptr;
     }
+    sessionOut->cookieAuth = true;
 #ifndef BMCWEB_INSECURE_DISABLE_CSRF_PREVENTION
     // RFC7231 defines methods that need csrf protection
     if (method != boost::beast::http::verb::get)
@@ -196,26 +196,23 @@ static std::shared_ptr<persistent_data::UserSession>
         // set cookie only if this is req from the browser.
         if (reqHeader["User-Agent"].empty())
         {
-            BMCWEB_LOG_DEBUG << " TLS session: " << sp->uniqueId
-                             << " will be used for this request.";
+            BMCWEB_LOG_DEBUG(" TLS session: {} will be used for this request.",
+                             sp->uniqueId);
             return sp;
         }
-        std::string_view cookieValue = reqHeader["Cookie"];
-        if (cookieValue.empty() ||
-            cookieValue.find("SESSION=") == std::string::npos)
-        {
-            // TODO: change this to not switch to cookie auth
-            res.addHeader(
-                "Set-Cookie",
-                "XSRF-TOKEN=" + sp->csrfToken +
-                    "; SameSite=Strict; Secure\r\nSet-Cookie: SESSION=" +
-                    sp->sessionToken +
-                    "; SameSite=Strict; Secure; HttpOnly\r\nSet-Cookie: "
-                    "IsAuthenticated=true; Secure");
-            BMCWEB_LOG_DEBUG << " TLS session: " << sp->uniqueId
-                             << " with cookie will be used for this request.";
-            return sp;
-        }
+        // TODO: change this to not switch to cookie auth
+        res.addHeader(boost::beast::http::field::set_cookie,
+                      "XSRF-TOKEN=" + sp->csrfToken +
+                          "; SameSite=Strict; Secure");
+        res.addHeader(boost::beast::http::field::set_cookie,
+                      "SESSION=" + sp->sessionToken +
+                          "; SameSite=Strict; Secure; HttpOnly");
+        res.addHeader(boost::beast::http::field::set_cookie,
+                      "IsAuthenticated=true; Secure");
+        BMCWEB_LOG_DEBUG(
+            " TLS session: {} with cookie will be used for this request.",
+            sp->uniqueId);
+        return sp;
     }
     return nullptr;
 }
@@ -290,7 +287,7 @@ static std::shared_ptr<persistent_data::UserSession>
     }
 #endif
     std::string_view authHeader = reqHeader["Authorization"];
-    BMCWEB_LOG_DEBUG << "authHeader=" << authHeader;
+    BMCWEB_LOG_DEBUG("authHeader={}", authHeader);
 
     if (sessionOut == nullptr && authMethodsConfig.sessionToken)
     {

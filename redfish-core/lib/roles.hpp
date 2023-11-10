@@ -15,10 +15,12 @@
 */
 #pragma once
 
-#include <app.hpp>
-#include <dbus_utility.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
+#include "app.hpp"
+#include "dbus_utility.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+
+#include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
 
 #include <variant>
@@ -39,10 +41,6 @@ inline std::string getRoleFromPrivileges(std::string_view priv)
     {
         return "Operator";
     }
-    if (priv == "priv-noaccess")
-    {
-        return "NoAccess";
-    }
     return "";
 }
 
@@ -61,10 +59,6 @@ inline bool getAssignedPrivFromRole(std::string_view role,
     else if (role == "ReadOnly")
     {
         privArray = {"Login", "ConfigureSelf"};
-    }
-    else if (role == "NoAccess")
-    {
-        privArray = nlohmann::json::array();
     }
     else
     {
@@ -101,7 +95,7 @@ inline void requestRoutesRoles(App& app)
         asyncResp->res.jsonValue["Id"] = roleId;
         asyncResp->res.jsonValue["RoleId"] = roleId;
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/AccountService/Roles/" + roleId;
+            boost::urls::format("/redfish/v1/AccountService/Roles/{}", roleId);
         asyncResp->res.jsonValue["AssignedPrivileges"] = std::move(privArray);
     });
 }
@@ -129,7 +123,7 @@ inline void requestRoutesRoleCollection(App& app)
             *crow::connections::systemBus, "xyz.openbmc_project.User.Manager",
             "/xyz/openbmc_project/user", "xyz.openbmc_project.User.Manager",
             "AllPrivileges",
-            [asyncResp](const boost::system::error_code ec,
+            [asyncResp](const boost::system::error_code& ec,
                         const std::vector<std::string>& privList) {
             if (ec)
             {
@@ -144,9 +138,15 @@ inline void requestRoutesRoleCollection(App& app)
                 if (!role.empty())
                 {
                     nlohmann::json::object_t member;
+<<<<<<< HEAD
                     member["@odata.id"] = "/redfish/v1/AccountService/Roles/" +
                                           role;
                     memberArray.push_back(std::move(member));
+=======
+                    member["@odata.id"] = boost::urls::format(
+                        "/redfish/v1/AccountService/Roles/{}", role);
+                    memberArray.emplace_back(std::move(member));
+>>>>>>> origin/master-october-10
                 }
             }
             asyncResp->res.jsonValue["Members@odata.count"] =

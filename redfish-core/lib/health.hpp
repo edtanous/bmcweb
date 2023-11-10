@@ -15,18 +15,27 @@
 */
 #pragma once
 
+#include "app.hpp"
 #include "async_resp.hpp"
+#include "dbus_singleton.hpp"
+#include "dbus_utility.hpp"
 
+<<<<<<< HEAD
 #include <app.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/container/flat_set.hpp>
 #include <dbus_singleton.hpp>
 #include <dbus_utility.hpp>
+=======
+>>>>>>> origin/master-october-10
 #include <nlohmann/json.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/message.hpp>
 
+#include <array>
+#include <ranges>
+#include <string_view>
 #include <variant>
 
 namespace redfish
@@ -71,7 +80,6 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
 
         for (const auto& [path, interfaces] : statuses)
         {
-            bool isChild = false;
             bool isSelf = false;
             if (selfPath)
             {
@@ -89,6 +97,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                 // of this association is an inventory item, or one of the
                 // endpoints in this association is a child
 
+                bool isChild = false;
                 for (const std::string& child : inventory)
                 {
                     if (path.str.starts_with(child))
@@ -116,16 +125,15 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                                 std::get_if<std::vector<std::string>>(&value);
                             if (endpoints == nullptr)
                             {
-                                BMCWEB_LOG_ERROR << "Illegal association at "
-                                                 << path.str;
+                                BMCWEB_LOG_ERROR("Illegal association at {}",
+                                                 path.str);
                                 continue;
                             }
                             bool containsChild = false;
                             for (const std::string& endpoint : *endpoints)
                             {
-                                if (std::find(inventory.begin(),
-                                              inventory.end(),
-                                              endpoint) != inventory.end())
+                                if (std::ranges::find(inventory, endpoint) !=
+                                    inventory.end())
                                 {
                                     containsChild = true;
                                     break;
@@ -195,9 +203,12 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
 
     void getGlobalPath()
     {
+        constexpr std::array<std::string_view, 1> interfaces = {
+            "xyz.openbmc_project.Inventory.Item.Global"};
         std::shared_ptr<HealthPopulate> self = shared_from_this();
-        crow::connections::systemBus->async_method_call(
-            [self](const boost::system::error_code ec,
+        dbus::utility::getSubTreePaths(
+            "/", 0, interfaces,
+            [self](const boost::system::error_code& ec,
                    const dbus::utility::MapperGetSubTreePathsResponse& resp) {
             if (ec || resp.size() != 1)
             {
@@ -205,19 +216,25 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                 return;
             }
             self->globalInventoryPath = resp[0];
+<<<<<<< HEAD
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/", 0,
             std::array<const char*, 1>{
                 "xyz.openbmc_project.Inventory.Item.Global"});
+=======
+            });
+>>>>>>> origin/master-october-10
     }
 
     void getAllStatusAssociations()
     {
         std::shared_ptr<HealthPopulate> self = shared_from_this();
-        crow::connections::systemBus->async_method_call(
-            [self](const boost::system::error_code ec,
+        sdbusplus::message::object_path path("/");
+        dbus::utility::getManagedObjects(
+            "xyz.openbmc_project.ObjectMapper", path,
+            [self](const boost::system::error_code& ec,
                    const dbus::utility::ManagedObjectType& resp) {
             if (ec)
             {
@@ -234,9 +251,13 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                 }
                 it = self->statuses.erase(it);
             }
+<<<<<<< HEAD
         },
             "xyz.openbmc_project.ObjectMapper", "/",
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+=======
+            });
+>>>>>>> origin/master-october-10
     }
 
     std::shared_ptr<bmcweb::AsyncResp> asyncResp;

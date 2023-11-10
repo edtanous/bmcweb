@@ -1,23 +1,24 @@
-# Redfish #
+# Redfish
 
-bmcweb provides an implementation of the [Redfish][1] API.  This document
-details the Redfish schemas supported by bmcweb. This document also discusses
-some of the details of that implementation and different implementations
-available for certain areas.
+bmcweb provides an implementation of the [Redfish][1] API. This document details
+the Redfish schemas supported by bmcweb. This document also discusses some of
+the details of that implementation and different implementations available for
+certain areas.
 
 ## Redfish Schema
 
-The redfish implementation shall pass the [Redfish Service
-Validator](https://github.com/DMTF/Redfish-Service-Validator "Validator") with
-no warnings or errors
+The redfish implementation shall pass the
+[Redfish Service Validator](https://github.com/DMTF/Redfish-Service-Validator "Validator")
+with no warnings or errors
 
-The following redfish schemas and fields are targeted for OpenBMC.  This is a
+The following redfish schemas and fields are targeted for OpenBMC. This is a
 living document, and these schemas are subject to change.
 
-The latest Redfish schemas can be found [here](https://redfish.dmtf.org/schemas/)
+The latest Redfish schemas can be found
+[here](https://redfish.dmtf.org/schemas/)
 
 If using a previously unused schema, you will need to add it to the included
-schema list in scripts/update_schemas.py and run update_schemas.py.
+schema list in `scripts/update_schemas.py` and run `update_schemas.py`.
 
 Fields common to all schemas
 
@@ -26,14 +27,18 @@ Fields common to all schemas
 - Id
 - Name
 
+### /redfish/v1/
 
-#### /redfish/v1/
-##### ServiceRoot
+#### ServiceRoot
+
 - AccountService
+- AggregationService
+- Cables
 - CertificateService
 - Chassis
 - EventService
 - JsonSchemas
+- Links/ManagerProvidingService
 - Links/Sessions
 - Managers
 - RedfishVersion
@@ -45,8 +50,10 @@ Fields common to all schemas
 - UUID
 - UpdateService
 
-#### /redfish/v1/AccountService/
-##### AccountService
+### /redfish/v1/AccountService/
+
+#### AccountService
+
 - AccountLockoutDuration
 - AccountLockoutThreshold
 - Accounts
@@ -62,14 +69,40 @@ Fields common to all schemas
 - Roles
 - ServiceEnabled
 
-#### /redfish/v1/AccountService/Accounts/
-##### ManagerAccountCollection
+### /redfish/v1/AggregationService/
+
+#### AggregationService
+
+- AggregationSources
+- Description
+- ServiceEnabled
+
+### /redfish/v1/AggregationService/AggregationSources
+
+#### AggregationSourceCollection
+
+- Members
+- Members@odata.count
+
+### /redfish/v1/AggregationService/AggregationSources/{AggregationSourceId}
+
+#### AggregationSource
+
+- HostName
+- Password
+
+### /redfish/v1/AccountService/Accounts/
+
+#### ManagerAccountCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/AccountService/Accounts/{ManagerAccountId}/
-##### ManagerAccount
+### /redfish/v1/AccountService/Accounts/{ManagerAccountId}/
+
+#### ManagerAccount
+
 - AccountTypes
 - Description
 - Enabled
@@ -79,99 +112,143 @@ Fields common to all schemas
 - Password
 - PasswordChangeRequired
 - RoleId
+- StrictAccountTypes
 - UserName
 
-#### /redfish/v1/AccountService/LDAP/Certificates/
-##### CertificateCollection
+### /redfish/v1/AccountService/LDAP/Certificates/
+
+#### CertificateCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/AccountService/Roles/
-##### RoleCollection
+### /redfish/v1/AccountService/Roles/
+
+#### RoleCollection
+
 - Description
 - Members
   - By default will contain 3 roles, "Administrator", "Operator", and "ReadOnly"
 - Members@odata.count
 
-#### /redfish/v1/AccountService/Roles/{RoleId}/
-##### Role
+### /redfish/v1/AccountService/Roles/{RoleId}/
+
+#### Role
+
 - AssignedPrivileges
-  - For the default roles, the following privileges will be assigned by
-    default
-      - Administrator: Login, ConfigureManager, ConfigureUsers, ConfigureSelf,
-        ConfigureComponents
-      - Operator: Login, ConfigureComponents, ConfigureSelf
-      - ReadOnly: Login, ConfigureSelf
+  - For the default roles, the following privileges will be assigned by default
+    - Administrator: Login, ConfigureManager, ConfigureUsers, ConfigureSelf,
+      ConfigureComponents
+    - Operator: Login, ConfigureComponents, ConfigureSelf
+    - ReadOnly: Login, ConfigureSelf
 - Description
 - IsPredefined
-  - Will be set to true for all default roles.  If the given role is
-    non-default, or has been modified from default, will be marked as false.
+  - Will be set to true for all default roles. If the given role is non-default,
+    or has been modified from default, will be marked as false.
 - OemPrivileges
 - RoleId
 
-#### /redfish/v1/CertificateService/
-##### CertificateService
+### /redfish/v1/Cables/
+
+#### CableCollection
+
+- Description
+- Members
+- Members@odata.count
+
+### /redfish/v1/Cables/{CableId}/
+
+#### Cable
+
+- CableType
+- LengthMeters
+- Status
+
+### /redfish/v1/CertificateService/
+
+#### CertificateService
+
 - Actions
 - CertificateLocations
 - Description
 
-#### /redfish/v1/CertificateService/CertificateLocations/
-##### CertificateLocations
+### /redfish/v1/CertificateService/CertificateLocations/
+
+#### CertificateLocations
+
 - Description
 - Links/Certificates
 - Links/Certificates@odata.count
 
-#### /redfish/v1/Chassis/
-##### ChassisCollection
+### /redfish/v1/Chassis/
+
+#### ChassisCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Chassis/{ChassisId}/
-##### Chassis
+### /redfish/v1/Chassis/{ChassisId}/
+
+#### Chassis
+
 - Actions
 - ChassisType
+- HotPluggable
 - Links/ComputerSystems
 - Links/ManagedBy
 - PCIeDevices
 - Power
-  - Shall be included if component contains voltage/current sensing
-    components, otherwise will be omitted.
+  - Shall be included if component contains voltage/current sensing components,
+    otherwise will be omitted.
 - PowerState
 - Sensors
 - Status
 - Thermal
-  - Shall be included if component contains temperature sensors, otherwise
-    shall be omitted.
+  - Shall be included if component contains temperature sensors, otherwise shall
+    be omitted.
 
-#### /redfish/v1/Chassis/{ChassisId}/Drive/
-#### Drive
-- Members
-(This is dependent on a entity manager association from
-Chassis to Drives, The name of the association is "chassis<->drive")
+### /redfish/v1/Chassis/{ChassisId}/Drive/
 
-#### /redfish/v1/Chassis/{ChassisId}/Drive/{DriveId}/
 #### Drive
+
+- Members (This is dependent on a entity manager association from Chassis to
+  Drives, The name of the association is `chassis<->drive`)
+
+### /redfish/v1/Chassis/{ChassisId}/Drive/{DriveId}/
+
+#### Drive
+
 - Drives
 - Drives@odata.count
-- Status
-(this is dependant on a entity manager association from Chassis to Drives)
+- Status (this is dependant on a entity manager association from Chassis to
+  Drives)
 
-#### /redfish/v1/Chassis/{ChassisId}/Power/
-##### Power
+### /redfish/v1/Chassis/{ChassisId}/EnvironmentMetrics/
+
+#### EnvironmentMetrics
+
+### /redfish/v1/Chassis/{ChassisId}/Power/
+
+#### Power
+
 - PowerControl
 - PowerSupplies
 - Redundancy
 - Voltages
 
-#### /redfish/v1/Chassis/{ChassisId}/Sensors/
-##### SensorCollection
+### /redfish/v1/Chassis/{ChassisId}/Sensors/
+
+#### SensorCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Chassis/{ChassisId}/Sensors/{Id}/
-##### Sensor
+### /redfish/v1/Chassis/{ChassisId}/Sensors/{Id}/
+
+#### Sensor
+
 - Reading
 - ReadingRangeMax
 - ReadingRangeMin
@@ -180,14 +257,18 @@ Chassis to Drives, The name of the association is "chassis<->drive")
 - Status
 - Thresholds
 
-#### /redfish/v1/Chassis/{ChassisId}/Thermal/
-##### Thermal
+### /redfish/v1/Chassis/{ChassisId}/Thermal/
+
+#### Thermal
+
 - Fans
 - Redundancy
 - Temperatures
 
-#### /redfish/v1/Chassis/{ChassisId}/Thermal#/Temperatures/{SensorName}/
-##### Temperature
+### /redfish/v1/Chassis/{ChassisId}/Thermal#/Temperatures/{SensorName}/
+
+#### Temperature
+
 - MemberId
 - Status
 - ReadingCelsius
@@ -196,11 +277,13 @@ Chassis to Drives, The name of the association is "chassis<->drive")
 - LowerThresholdNonCritical
 - LowerThresholdCritical
 - MinReadingRange
-- MaxReadingRange
-*threshold fields only present if defined for sensor, otherwise absent*
+- MaxReadingRange _threshold fields only present if defined for sensor,
+  otherwise absent_
 
-#### /redfish/v1/Chassis/{ChassisId}/Thermal#/Fans/{FanName}/
-##### Fan
+### /redfish/v1/Chassis/{ChassisId}/Thermal#/Fans/{FanName}/
+
+#### Fan
+
 - MemberId
 - Status
 - Reading
@@ -211,11 +294,13 @@ Chassis to Drives, The name of the association is "chassis<->drive")
 - LowerThresholdCritical
 - MinReadingRange
 - MaxReadingRange
-- Redundancy
-*threshold fields only present if defined for sensor, otherwise absent*
+- Redundancy _threshold fields only present if defined for sensor, otherwise
+  absent_
 
-#### /redfish/v1/Chassis/{ChassisId}/Thermal#/Redundancy/{RedundancyName}/
-##### Redundancy
+### /redfish/v1/Chassis/{ChassisId}/Thermal#/Redundancy/{RedundancyName}/
+
+#### Redundancy
+
 - MemberId
 - RedundancySet
 - Mode
@@ -223,9 +308,10 @@ Chassis to Drives, The name of the association is "chassis<->drive")
 - MinNumNeeded
 - MaxNumSupported
 
-#### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem
+### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem
 
-##### ThermalSubsystem
+#### ThermalSubsystem
+
 - Status
 - ThermalMetrics
 
@@ -236,12 +322,30 @@ Chassis to Drives, The name of the association is "chassis<->drive")
 - TemperatureReadingsCelsius
 
 
-#### /redfish/v1/Chassis/{ChassisId}/Power/
-##### Power
-PowerControl Voltages PowerSupplies Redundancy
+#### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Fans
 
-#### /redfish/v1/Chassis/{ChassisId}/Power#/PowerControl/{ControlName}/
-##### PowerControl
+##### FansCollection
+
+- Description
+- Members
+- Members@odata.count
+
+#### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Fans/{FanName}/
+
+#### Fan
+
+- Location
+- Manufacturer
+- Model
+- PartNumber
+- SerialNumber
+- SparePartNumber
+- Status
+
+### /redfish/v1/Chassis/{ChassisId}/Power#/PowerControl/{ControlName}/
+
+#### PowerControl
+
 - MemberId
 - PowerConsumedWatts
 - PowerMetrics/IntervalInMin
@@ -251,8 +355,10 @@ PowerControl Voltages PowerSupplies Redundancy
 - RelatedItem
   - Should list systems and related chassis
 
-#### /redfish/v1/Chassis/{ChassisId}/Power#/Voltages/{VoltageName}/
-##### Voltage
+### /redfish/v1/Chassis/{ChassisId}/Power#/Voltages/{VoltageName}/
+
+#### Voltage
+
 - MemberId
 - Status
 - ReadingVolts
@@ -265,8 +371,10 @@ PowerControl Voltages PowerSupplies Redundancy
 - PhysicalContext
 - RelatedItem
 
-#### /redfish/v1/Chassis/{ChassisId}/Power#/PowerSupplies/{PSUName}/
-##### PowerSupply
+### /redfish/v1/Chassis/{ChassisId}/Power#/PowerSupplies/{PSUName}/
+
+#### PowerSupply
+
 - MemberId
 - Status
 - LininputVoltage
@@ -278,8 +386,10 @@ PowerControl Voltages PowerSupplies Redundancy
 - RelatedItem
 - Redundancy
 
-#### /redfish/v1/Chassis/{ChassisId}/Power#/Redundancy/{RedundancyName}/
-##### Redundancy
+### /redfish/v1/Chassis/{ChassisId}/Power#/Redundancy/{RedundancyName}/
+
+#### Redundancy
+
 - MemberId
 - RedundancySet
 - Mode
@@ -287,8 +397,33 @@ PowerControl Voltages PowerSupplies Redundancy
 - MinNumNeeded
 - MaxNumSupported
 
-#### /redfish/v1/EventService/
-##### EventService
+#### /redfish/v1/Chassis/{ChassisId}/PowerSubsystem/PowerSupplies
+
+##### PowerSupplies
+
+- Description
+- Members
+- Members@odata.count
+
+#### /redfish/v1/Chassis/{ChassisId}/PowerSubsystem/PowerSupplies/{PowerSupplyId}
+
+##### PowerSupply
+
+- EfficiencyRatings
+  - EfficiencyPercent
+- FirmwareVersion
+- Location
+- Manufacturer
+- Model
+- PartNumber
+- SerialNumber
+- SparePartNumber
+- Status
+
+### /redfish/v1/EventService/
+
+#### EventService
+
 - Actions
 - DeliveryRetryAttempts
   - Defaults to 3
@@ -301,13 +436,17 @@ PowerControl Voltages PowerSupplies Redundancy
 - Status
 - Subscriptions
 
-#### /redfish/v1/EventService/Subscriptions/
-##### EventDestinationCollection
+### /redfish/v1/EventService/Subscriptions/
+
+#### EventDestinationCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/EventService/Subscriptions/{EventName}/
-##### EventDestination
+### /redfish/v1/EventService/Subscriptions/{EventName}/
+
+#### EventDestination
+
 - Id
 - Destination
 - EventTypes
@@ -315,14 +454,18 @@ PowerControl Voltages PowerSupplies Redundancy
 - OriginResources
 - Protocol
 
-#### /redfish/v1/JsonSchemas/
-##### JsonSchemaFileCollection
+### /redfish/v1/JsonSchemas/
+
+#### JsonSchemaFileCollection
+
 - Description
 - Members@odata.count
 - Members
 
-#### /redfish/v1/JsonSchemas/{Id}/
-##### JsonSchemaFile
+### /redfish/v1/JsonSchemas/{Id}/
+
+#### JsonSchemaFile
+
 - Schema
 - Description
 - Languages
@@ -330,13 +473,17 @@ PowerControl Voltages PowerSupplies Redundancy
 - Location
 - Location@odata.count
 
-#### /redfish/v1/Managers/
-##### ManagerCollection
+### /redfish/v1/Managers/
+
+#### ManagerCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Managers/bmc/
-##### Manager
+### /redfish/v1/Managers/bmc/
+
+#### Manager
+
 - Actions
 - DateTime
 - DateTimeLocalOffset
@@ -368,17 +515,22 @@ PowerControl Voltages PowerSupplies Redundancy
 - Status
 - UUID
 
-#### /redfish/v1/Managers/bmc/EthernetInterfaces/
-##### EthernetInterfaceCollection
+### /redfish/v1/Managers/bmc/EthernetInterfaces/
+
+#### EthernetInterfaceCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Managers/bmc/EthernetInterfaces/{EthernetInterfaceId}/
-##### EthernetInterface
+### /redfish/v1/Managers/bmc/EthernetInterfaces/{EthernetInterfaceId}/
+
+#### EthernetInterface
+
 - DHCPv4
 - DHCPv6
 - Description
+- EthernetInterfaceType
 - FQDN
 - HostName
 - IPv4Addresses
@@ -388,20 +540,19 @@ PowerControl Voltages PowerSupplies Redundancy
 - IPv6DefaultGateway
 - IPv6StaticAddresses
 - InterfaceEnabled
+- Links/RelatedInterfaces
 - LinkStatus
 - MACAddress
 - NameServers
 - SpeedMbps
+- StatelessAddressAutoConfig
 - StaticNameServers
 - Status
-- VLANs
+- VLAN/VLANEnable
+- VLAN/VLANId
+- VLAN/Tagged
 
-#### /redfish/v1/Managers/bmc/EthernetInterfaces/{EthernetInterfaceId}/VLANs/
-##### VLanNetworkInterfaceCollection
-- Members
-- Members@odata.count
-
-#### /redfish/v1/Managers/bmc/LogServices/
+### /redfish/v1/Managers/bmc/LogServices/
 
 The [LogService][2] resource provides properties for monitoring and configuring
 events for the service or resource to which it is associated.
@@ -409,8 +560,8 @@ events for the service or resource to which it is associated.
 Within bmcweb, the LogService object resides under the System resource. It
 tracks all events for the system.
 
-The LogService supports multiple log entry types. bmcweb has support for
-the `Event` type. This is the new Redfish-defined type.
+The LogService supports multiple log entry types. bmcweb has support for the
+`Event` type. This is the new Redfish-defined type.
 
 bmcweb supports two different implementations of the
 `LogService/EventLog/Entries` URI.
@@ -425,17 +576,19 @@ with the `-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES=ON` option. This will cause
 bmcweb to look to [phosphor-logging][4] for any D-Bus log entries. These will
 then be translated to Redfish EventLog Entries.
 
-These two implementations do not work together, so choosing one will disable
-the other.
+These two implementations do not work together, so choosing one will disable the
+other.
 
-#### /redfish/v1/Managers/bmc/LogServices/
-##### LogServiceCollection
+#### LogServiceCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Managers/bmc/LogServices/RedfishLog/
-##### LogService
+### /redfish/v1/Managers/bmc/LogServices/RedfishLog/
+
+#### LogService
+
 - Entries
 - OverWritePolicy
 - Actions
@@ -443,14 +596,24 @@ the other.
 - DateTime
 - MaxNumberOfRecords
 
-#### /redfish/v1/Managers/bmc/LogServices/RedfishLog/Entries/{LogEntryId}/
-##### LogEntry
+### /redfish/v1/Managers/bmc/LogServices/RedfishLog/Entries/{LogEntryId}/
+
+#### LogEntry
+
 - Message
 - Created
 - EntryType
 
-#### /redfish/v1/Managers/bmc/NetworkProtocol/
-##### ManagerNetworkProtocol
+### /redfish/v1/Managers/bmc/ManagerDiagnosticData/
+
+#### ManagerDiagnosticData
+
+- ServiceRootUptimeSeconds
+
+### /redfish/v1/Managers/bmc/NetworkProtocol/
+
+#### ManagerNetworkProtocol
+
 - Description
 - FQDN
 - HTTP
@@ -461,14 +624,18 @@ the other.
 - SSH
 - Status
 
-#### /redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates/
-##### CertificateCollection
+### /redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates/
+
+#### CertificateCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates/{CertificateId}/
-##### Certificate
+### /redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates/{CertificateId}/
+
+#### Certificate
+
 - CertificateString
 - Description
 - Issuer
@@ -477,21 +644,26 @@ the other.
 - ValidNotAfter
 - ValidNotBefore
 
-#### /redfish/v1/Managers/bmc/Truststore/Certificates/
-##### CertificateCollection
+### /redfish/v1/Managers/bmc/Truststore/Certificates/
+
+#### CertificateCollection
+
 - Description
 - error
 
+### /redfish/v1/Registries/
 
-#### /redfish/v1/Registries/
-##### MessageRegistryFileCollection
+#### MessageRegistryFileCollection
+
 - Description
 - Members
   - Should support Base, CommonMessages, and EventingMessages
 - Members@odata.count
 
-#### /redfish/v1/Registries/{MessageRegistryFileId}/
-##### MessageRegistryFile
+### /redfish/v1/Registries/{MessageRegistryFileId}/
+
+#### MessageRegistryFile
+
 - Description
 - Languages
 - Languages@odata.count
@@ -499,42 +671,54 @@ the other.
 - Location@odata.count
 - Registry
 
-#### /redfish/v1/SessionService/
-##### SessionService
+### /redfish/v1/SessionService/
+
+#### SessionService
+
 - Description
 - ServiceEnabled
 - SessionTimeout
 - Sessions
 
-#### /redfish/v1/SessionService/Sessions/
-##### SessionCollection
+### /redfish/v1/SessionService/Sessions/
+
+#### SessionCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/SessionService/Sessions/{SessionId}/
-##### Session
+### /redfish/v1/SessionService/Sessions/{SessionId}/
+
+#### Session
+
 - ClientOriginIPAddress
 - Description
 - Oem
 - UserName
 
-#### /redfish/v1/Systems/
-##### ComputerSystemCollection
+### /redfish/v1/Systems/
+
+#### ComputerSystemCollection
+
 - Members
   - Should support one system
 - Members@odata.count
 
-#### /redfish/v1/Systems/system/Bios/
-##### Bios
+### /redfish/v1/Systems/system/Bios/
+
+#### Bios
+
 - Actions
 - Description
 - Links/ActiveSoftwareImage
 - Links/SoftwareImages
 - Links/SoftwareImages@odata.count
 
-#### /redfish/v1/Systems/system/
-##### ComputerSystem
+### /redfish/v1/Systems/system/
+
+#### ComputerSystem
+
 - Actions
 - AssetTag
 - Bios
@@ -570,21 +754,45 @@ the other.
 - SubModel
 - SystemType
 
-#### /redfish/v1/Systems/system/EthernetInterfaces/
-##### EthernetInterfaceCollection
+### /redfish/v1/Systems/system/EthernetInterfaces/
+
+#### EthernetInterfaceCollection
+
 - Members
 - Members@odata.count
 - Description
 
-#### /redfish/v1/Systems/system/LogServices/
-##### LogServiceCollection
+### /redfish/v1/Systems/system/FabricAdapters/
+
+#### FabricAdapterCollection
+
+- Members
+- Members@odata.count
+
+### /redfish/v1/Systems/system/FabricAdapters/{FabricAdapterId}/
+
+#### FabricAdapter
+
+- Location
+- Model
+- PartNumber
+- SerialNumber
+- SparePartNumber
+- Status
+
+### /redfish/v1/Systems/system/LogServices/
+
+#### LogServiceCollection
+
 - Description
 - Members
   - Should default to one member, named SEL
 - Members@odata.count
 
-#### /redfish/v1/Systems/system/LogServices/EventLog/
-##### LogService
+### /redfish/v1/Systems/system/LogServices/EventLog/
+
+#### LogService
+
 - Actions
 - DateTime
 - DateTimeLocalOffset
@@ -592,14 +800,18 @@ the other.
 - Entries
 - OverWritePolicy
 
-#### /redfish/v1/Systems/system/LogServices/EventLog/Entries/
-##### LogEntryCollection
+### /redfish/v1/Systems/system/LogServices/EventLog/Entries/
+
+#### LogEntryCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Systems/system/LogServices/EventLog/Entries/{LogEntryId}/
-##### LogEntry
+### /redfish/v1/Systems/system/LogServices/EventLog/Entries/{LogEntryId}/
+
+#### LogEntry
+
 - AdditionalDataURI
 - Created
 - EntryType
@@ -608,15 +820,19 @@ the other.
 - Resolved
 - Severity
 
-#### /redfish/v1/Systems/system/LogServices/SEL/Entries/
-##### LogEntryCollection
+### /redfish/v1/Systems/system/LogServices/SEL/Entries/
+
+#### LogEntryCollection
+
 - Members
 - Members@odata.count
 - Description
 - @odata.nextLink
 
-#### /redfish/v1/Systems/system/LogServices/SEL/Entries/{LogEntryId}/
-##### LogEntry
+### /redfish/v1/Systems/system/LogServices/SEL/Entries/{LogEntryId}/
+
+#### LogEntry
+
 - MessageArgs
 - Severity
 - SensorType
@@ -626,13 +842,17 @@ the other.
 - EntryCode
 - EntryType
 
-#### /redfish/v1/Systems/system/Memory/
-##### MemoryCollection
+### /redfish/v1/Systems/system/Memory/
+
+#### MemoryCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Systems/system/Memory/{MemoryId}/
-##### Memory
+### /redfish/v1/Systems/system/Memory/{MemoryId}/
+
+#### Memory
+
 - AllowedSpeedsMHz
 - BaseModuleType
 - BusWidthBits
@@ -649,25 +869,51 @@ the other.
 - SparePartNumber
 - Status
 
-#### /redfish/v1/Systems/system/Memory/{MemoryId}/MemoryMetrics/
-##### MemoryMetrics
+### /redfish/v1/Systems/system/Memory/{MemoryId}/MemoryMetrics/
+
+#### MemoryMetrics
+
 - Description
 - HealthData
 
-#### /redfish/v1/Systems/system/PCIeDevices/
-##### PCIeDeviceCollection
+### /redfish/v1/Systems/system/PCIeDevices/
+
+#### PCIeDeviceCollection
+
 - Description
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Systems/system/Processors/
-##### ProcessorCollection
+### /redfish/v1/Systems/system/PCIeDevices/{PCIeDevice}/
+
+- Manufacturer
+- Model
+- PartNumber
+- PCIeInterface
+  - LanesInUse
+  - MaxLanes
+  - MaxPCIeType
+  - PCIeType
+- SerialNumber
+- Slot
+  - Lanes
+  - PCIeType
+  - SlotType
+- SparePartNumber
+- Status
+
+### /redfish/v1/Systems/system/Processors/
+
+#### ProcessorCollection
+
 - Members
   - Should Support CPU1 and CPU2 for dual socket systems
 - Members@odata.count
 
-#### /redfish/v1/Systems/system/Processors/{ProcessorId}/
-##### Processor
+### /redfish/v1/Systems/system/Processors/{ProcessorId}/
+
+#### Processor
+
 - InstructionSet
 - Manufacturer
 - MaxSpeedMHz
@@ -679,29 +925,40 @@ the other.
 - Socket
 - SparePartNumber
 - Status
+- ThrottleCauses
+- Throttled
 - TotalCores
 - TotalThreads
 - Version
 
-#### /redfish/v1/Systems/system/Storage/
-##### StorageCollection
+### /redfish/v1/Systems/system/Storage/
+
+#### StorageCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/Systems/system/Storage/{StorageId}/
-##### Storage
+### /redfish/v1/Systems/system/Storage/{StorageId}/
+
+#### Storage
+
 - Drives
 - Drives@odata.count
 - Status
 
-#### /redfish/v1/Systems/system/Storage/{StorageId}/Drive/{DriveId}/
-##### Storage
+### /redfish/v1/Systems/system/Storage/{StorageId}/Drive/{DriveId}/
+
+#### Storage
+
 - CapacityBytes
+- EncryptionStatus
 - Links
 - Status
 
-#### /redfish/v1/TaskService/
-##### TaskService
+### /redfish/v1/TaskService/
+
+#### TaskService
+
 - CompletedTaskOverWritePolicy
 - DateTime
 - LifeCycleEventOnTaskStateChange
@@ -709,37 +966,76 @@ the other.
 - Status
 - Tasks
 
-#### /redfish/v1/TaskService/Tasks/
-##### TaskCollection
+### /redfish/v1/TaskService/Tasks/
+
+#### TaskCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/TelemetryService/
-##### TelemetryService
+### /redfish/v1/TelemetryService/
+
+#### TelemetryService
+
 - MaxReports
 - MetricReportDefinitions
 - MetricReports
 - MinCollectionInterval
 - Status
 - Triggers
+- SupportedCollectionFunctions
 
-#### /redfish/v1/TelemetryService/MetricReportDefinitions/
-##### MetricReportDefinitionCollection
+### /redfish/v1/TelemetryService/MetricReportDefinitions/
+
+#### MetricReportDefinitionCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/TelemetryService/MetricReports/
-##### MetricReportCollection
+### /redfish/v1/TelemetryService/MetricReportDefinitions/{MetricReportDefinitionId}/
+
+#### MetricReportDefinition
+
+- AppendLimit
+- Id
+- MetricReport
+- MetricReportDefinitionEnabled
+- MetricReportDefinitionType
+- Metrics
+- Name
+- ReportActions
+- ReportUpdates
+- Schedule
+- Status
+
+### /redfish/v1/TelemetryService/MetricReports/
+
+#### MetricReportCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/TelemetryService/Triggers/
-##### TriggersCollection
+### /redfish/v1/TelemetryService/MetricReports/{MetricReportId}/
+
+#### MetricReport
+
+- Id
+- MetricReportDefinition
+- MetricValues
+- Name
+- Timestamp
+
+### /redfish/v1/TelemetryService/Triggers/
+
+#### TriggersCollection
+
 - Members
 - Members@odata.count
 
-#### /redfish/v1/UpdateService/
-##### UpdateService
+### /redfish/v1/UpdateService/
+
+#### UpdateService
+
 - Actions
 - Description
 - FirmwareInventory
@@ -751,14 +1047,18 @@ the other.
 - MaxImageSizeBytes
 - ServiceEnabled
 
-#### /redfish/v1/UpdateService/FirmwareInventory/
-##### SoftwareInventoryCollection
+### /redfish/v1/UpdateService/FirmwareInventory/
+
+#### SoftwareInventoryCollection
+
 - Members
   - Should Support BMC, ME, CPLD and BIOS
 - Members@odata.count
 
-#### /redfish/v1/UpdateService/FirmwareInventory/{SoftwareInventoryId}/
-##### SoftwareInventory
+### /redfish/v1/UpdateService/FirmwareInventory/{SoftwareInventoryId}/
+
+#### SoftwareInventory
+
 - Description
 - RelatedItem@odata.count
 - RelatedItem
@@ -768,5 +1068,6 @@ the other.
 
 [1]: https://www.dmtf.org/standards/redfish
 [2]: https://redfish.dmtf.org/schemas/v1/LogService.json
-[3]: https://github.com/openbmc/docs/blob/master/architecture/redfish-logging-in-bmcweb.md
+[3]:
+  https://github.com/openbmc/docs/blob/master/architecture/redfish-logging-in-bmcweb.md
 [4]: https://github.com/openbmc/phosphor-logging

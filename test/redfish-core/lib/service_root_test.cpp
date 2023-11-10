@@ -2,8 +2,9 @@
 
 #include "async_resp.hpp"
 #include "http_response.hpp"
-#include "nlohmann/json.hpp"
 #include "service_root.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <memory>
 #include <vector>
@@ -47,12 +48,15 @@ void assertServiceRootGet(crow::Response& res)
               "/redfish/v1/SessionService/Sessions");
     EXPECT_EQ(json["Links"].size(), 2);
     EXPECT_EQ(json["Links"]["Sessions"].size(), 1);
+    EXPECT_EQ(json["Links"]["ManagerProvidingService"].size(), 1);
+    EXPECT_EQ(json["Links"]["ManagerProvidingService"]["@odata.id"],
+              "/redfish/v1/Managers/bmc");
 
     EXPECT_EQ(json["Managers"]["@odata.id"], "/redfish/v1/Managers");
     EXPECT_EQ(json["Managers"].size(), 1);
 
     EXPECT_EQ(json["Name"], "Root Service");
-    EXPECT_EQ(json["RedfishVersion"], "1.9.0");
+    EXPECT_EQ(json["RedfishVersion"], "1.17.0");
 
     EXPECT_EQ(json["Registries"]["@odata.id"], "/redfish/v1/Registries");
     EXPECT_EQ(json["Registries"].size(), 1);

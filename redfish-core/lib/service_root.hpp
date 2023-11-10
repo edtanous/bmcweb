@@ -15,16 +15,17 @@
 */
 #pragma once
 
-#include <bmcweb_config.h>
+#include "bmcweb_config.h"
 
-#include <app.hpp>
-#include <async_resp.hpp>
-#include <http_request.hpp>
+#include "app.hpp"
+#include "async_resp.hpp"
+#include "http_request.hpp"
+#include "persistent_data.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
+#include "utils/systemd_utils.hpp"
+
 #include <nlohmann/json.hpp>
-#include <persistent_data.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
-#include <utils/systemd_utils.hpp>
 
 namespace redfish
 {
@@ -173,12 +174,17 @@ inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 inline void handleServiceRootGetImpl(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/ServiceRoot/ServiceRoot.json>; rel=describedby");
+
     std::string uuid = persistent_data::getConfig().systemUuid;
     asyncResp->res.jsonValue["@odata.type"] =
         "#ServiceRoot.v1_15_0.ServiceRoot";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1";
     asyncResp->res.jsonValue["Id"] = "RootService";
     asyncResp->res.jsonValue["Name"] = "Root Service";
+<<<<<<< HEAD
     asyncResp->res.jsonValue["RedfishVersion"] = "1.9.0";
     asyncResp->res.jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
         "/redfish/v1/Managers/" PLATFORMBMCID;
@@ -190,6 +196,17 @@ inline void handleServiceRootGetImpl(
         asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
             "/redfish/v1/AccountService";
     }
+=======
+    asyncResp->res.jsonValue["RedfishVersion"] = "1.17.0";
+    asyncResp->res.jsonValue["Links"]["Sessions"]["@odata.id"] =
+        "/redfish/v1/SessionService/Sessions";
+    asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
+        "/redfish/v1/AccountService";
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
+        "/redfish/v1/AggregationService";
+#endif
+>>>>>>> origin/master-october-10
     asyncResp->res.jsonValue["Chassis"]["@odata.id"] = "/redfish/v1/Chassis";
     asyncResp->res.jsonValue["ComponentIntegrity"]["@odata.id"] =
         "/redfish/v1/ComponentIntegrity";
@@ -224,6 +241,9 @@ inline void handleServiceRootGetImpl(
     asyncResp->res.jsonValue["Cables"]["@odata.id"] = "/redfish/v1/Cables";
 #endif
 
+    asyncResp->res.jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
+        "/redfish/v1/Managers/bmc";
+
     nlohmann::json& protocolFeatures =
         asyncResp->res.jsonValue["ProtocolFeaturesSupported"];
     protocolFeatures["ExcerptQuery"] = false;
@@ -250,7 +270,11 @@ inline void
     handleServiceRootGet(App& app, const crow::Request& req,
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    handleServiceRootHead(app, req, asyncResp);
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
     handleServiceRootGetImpl(asyncResp);
 }
 

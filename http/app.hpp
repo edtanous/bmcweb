@@ -24,9 +24,9 @@
 #include <string>
 #include <utility>
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage, clang-diagnostic-unused-macros)
 #define BMCWEB_ROUTE(app, url)                                                 \
-    app.template route<crow::black_magic::getParameterTag(url)>(url)
+    app.template route<crow::utility::getParameterTag(url)>(url)
 
 namespace crow
 {
@@ -56,7 +56,7 @@ class App
     }
     ~App()
     {
-        this->stop();
+        stop();
     }
 
     App(const App&) = delete;
@@ -65,9 +65,11 @@ class App
     App& operator=(const App&&) = delete;
 
     template <typename Adaptor>
-    void handleUpgrade(const Request& req, Response& res, Adaptor&& adaptor)
+    void handleUpgrade(Request& req,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       Adaptor&& adaptor)
     {
-        router.handleUpgrade(req, res, std::forward<Adaptor>(adaptor));
+        router.handleUpgrade(req, asyncResp, std::forward<Adaptor>(adaptor));
     }
 
     void handle(Request& req,
@@ -116,6 +118,7 @@ class App
 #ifdef BMCWEB_ENABLE_SSL
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
+<<<<<<< HEAD
             BMCWEB_LOG_DEBUG << "TLS RUN";
             if (-1 == socketFd)
             {
@@ -128,6 +131,24 @@ class App
                                                            sslContext, io);
             }
             sslServer->run();
+=======
+            sslServer = std::make_unique<ssl_server_t>(
+                this, bindaddrStr, portUint, sslContext, io);
+        }
+        else
+        {
+            sslServer = std::make_unique<ssl_server_t>(this, socketFd,
+                                                       sslContext, io);
+        }
+        sslServer->run();
+
+#else
+
+        if (-1 == socketFd)
+        {
+            server = std::make_unique<server_t>(this, bindaddrStr, portUint,
+                                                nullptr, io);
+>>>>>>> origin/master-october-10
         }
         else
 #endif
@@ -154,7 +175,7 @@ class App
 
     void debugPrint()
     {
-        BMCWEB_LOG_DEBUG << "Routing:";
+        BMCWEB_LOG_DEBUG("Routing:");
         router.debugPrint();
     }
 
@@ -172,8 +193,8 @@ class App
     App& ssl(std::shared_ptr<boost::asio::ssl::context>&& ctx)
     {
         sslContext = std::move(ctx);
-        BMCWEB_LOG_INFO << "app::ssl context use_count="
-                        << sslContext.use_count();
+        BMCWEB_LOG_INFO("app::ssl context use_count={}",
+                        sslContext.use_count());
         return *this;
     }
 
@@ -192,6 +213,11 @@ class App
         return *this;
     }
 #endif
+
+    boost::asio::io_context& ioContext()
+    {
+        return *io;
+    }
 
   private:
     std::shared_ptr<boost::asio::io_context> io;

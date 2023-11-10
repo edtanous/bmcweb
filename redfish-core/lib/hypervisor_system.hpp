@@ -1,26 +1,24 @@
 #pragma once
 
+#include "app.hpp"
+#include "dbus_singleton.hpp"
+#include "dbus_utility.hpp"
+#include "error_messages.hpp"
+#include "ethernet.hpp"
+#include "query.hpp"
+#include "registries/privilege_registry.hpp"
 #include "utils/ip_utils.hpp"
+#include "utils/json_utils.hpp"
 
-#include <app.hpp>
-#include <boost/container/flat_set.hpp>
-#include <dbus_singleton.hpp>
-#include <dbus_utility.hpp>
-#include <error_messages.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
+#include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
-#include <utils/json_utils.hpp>
 
+#include <array>
 #include <optional>
+#include <string_view>
 #include <utility>
 
-// TODO(ed) requestRoutesHypervisorSystems seems to have copy-pasted a
-// lot of code, and has a number of methods that have name conflicts with the
-// normal ethernet internfaces in ethernet.hpp.  For the moment, we'll put
-// hypervisor in a namespace to isolate it, but these methods eventually need
-// deduplicated
-namespace redfish::hypervisor
+namespace redfish
 {
 
 /**
@@ -29,66 +27,67 @@ namespace redfish::hypervisor
  * The hypervisor state object is optional so this function will only set the
  * state variables if the object is found
  *
- * @param[in] aResp     Shared pointer for completing asynchronous calls.
+ * @param[in] asyncResp     Shared pointer for completing asynchronous calls.
  *
  * @return None.
  */
-inline void getHypervisorState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+inline void
+    getHypervisorState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    BMCWEB_LOG_DEBUG << "Get hypervisor state information.";
+    BMCWEB_LOG_DEBUG("Get hypervisor state information.");
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, "xyz.openbmc_project.State.Hypervisor",
         "/xyz/openbmc_project/state/hypervisor0",
         "xyz.openbmc_project.State.Host", "CurrentHostState",
-        [aResp](const boost::system::error_code ec,
-                const std::string& hostState) {
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::string& hostState) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
             // This is an optional D-Bus object so just return if
             // error occurs
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "Hypervisor state: " << hostState;
+        BMCWEB_LOG_DEBUG("Hypervisor state: {}", hostState);
         // Verify Host State
         if (hostState == "xyz.openbmc_project.State.Host.HostState.Running")
         {
-            aResp->res.jsonValue["PowerState"] = "On";
-            aResp->res.jsonValue["Status"]["State"] = "Enabled";
+            asyncResp->res.jsonValue["PowerState"] = "On";
+            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
         }
         else if (hostState == "xyz.openbmc_project.State.Host.HostState."
                               "Quiesced")
         {
-            aResp->res.jsonValue["PowerState"] = "On";
-            aResp->res.jsonValue["Status"]["State"] = "Quiesced";
+            asyncResp->res.jsonValue["PowerState"] = "On";
+            asyncResp->res.jsonValue["Status"]["State"] = "Quiesced";
         }
         else if (hostState == "xyz.openbmc_project.State.Host.HostState."
                               "Standby")
         {
-            aResp->res.jsonValue["PowerState"] = "On";
-            aResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
+            asyncResp->res.jsonValue["PowerState"] = "On";
+            asyncResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
         }
         else if (hostState == "xyz.openbmc_project.State.Host.HostState."
                               "TransitioningToRunning")
         {
-            aResp->res.jsonValue["PowerState"] = "PoweringOn";
-            aResp->res.jsonValue["Status"]["State"] = "Starting";
+            asyncResp->res.jsonValue["PowerState"] = "PoweringOn";
+            asyncResp->res.jsonValue["Status"]["State"] = "Starting";
         }
         else if (hostState == "xyz.openbmc_project.State.Host.HostState."
                               "TransitioningToOff")
         {
-            aResp->res.jsonValue["PowerState"] = "PoweringOff";
-            aResp->res.jsonValue["Status"]["State"] = "Enabled";
+            asyncResp->res.jsonValue["PowerState"] = "PoweringOff";
+            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
         }
         else if (hostState == "xyz.openbmc_project.State.Host.HostState.Off")
         {
-            aResp->res.jsonValue["PowerState"] = "Off";
-            aResp->res.jsonValue["Status"]["State"] = "Disabled";
+            asyncResp->res.jsonValue["PowerState"] = "Off";
+            asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
         }
         else
         {
-            messages::internalError(aResp->res);
+            messages::internalError(asyncResp->res);
             return;
         }
     });
@@ -100,22 +99,25 @@ inline void getHypervisorState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
  * The hypervisor state object is optional so this function will only set the
  * Action if the object is found
  *
- * @param[in] aResp     Shared pointer for completing asynchronous calls.
+ * @param[in] asyncResp     Shared pointer for completing asynchronous calls.
  *
  * @return None.
  */
 inline void
-    getHypervisorActions(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+    getHypervisorActions(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    BMCWEB_LOG_DEBUG << "Get hypervisor actions.";
-    crow::connections::systemBus->async_method_call(
-        [aResp](
-            const boost::system::error_code ec,
+    BMCWEB_LOG_DEBUG("Get hypervisor actions.");
+    constexpr std::array<std::string_view, 1> interfaces = {
+        "xyz.openbmc_project.State.Host"};
+    dbus::utility::getDbusObject(
+        "/xyz/openbmc_project/state/hypervisor0", interfaces,
+        [asyncResp](
+            const boost::system::error_code& ec,
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
                 objInfo) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
             // This is an optional D-Bus object so just return if
             // error occurs
             return;
@@ -132,11 +134,12 @@ inline void
         {
             // More then one hypervisor object is not supported and is an
             // error
-            messages::internalError(aResp->res);
+            messages::internalError(asyncResp->res);
             return;
         }
 
         // Object present so system support limited ComputerSystem Action
+<<<<<<< HEAD
         aResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"] = {
             {"target",
              "/redfish/v1/Systems/hypervisor/Actions/ComputerSystem.Reset"},
@@ -148,13 +151,21 @@ inline void
         "xyz.openbmc_project.ObjectMapper", "GetObject",
         "/xyz/openbmc_project/state/hypervisor0",
         std::array<const char*, 1>{"xyz.openbmc_project.State.Host"});
+=======
+        nlohmann::json& reset =
+            asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"];
+        reset["target"] =
+            "/redfish/v1/Systems/hypervisor/Actions/ComputerSystem.Reset";
+        reset["@Redfish.ActionInfo"] =
+            "/redfish/v1/Systems/hypervisor/ResetActionInfo";
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline bool extractHypervisorInterfaceData(
     const std::string& ethIfaceId,
     const dbus::utility::ManagedObjectType& dbusData,
-    EthernetInterfaceData& ethData,
-    boost::container::flat_set<IPv4AddressData>& ipv4Config)
+    EthernetInterfaceData& ethData, std::vector<IPv4AddressData>& ipv4Config)
 {
     bool idFound = false;
     for (const auto& objpath : dbusData)
@@ -203,10 +214,7 @@ inline bool extractHypervisorInterfaceData(
             if (objpath.first == "/xyz/openbmc_project/network/hypervisor/" +
                                      ethIfaceId + "/ipv4/addr0")
             {
-                std::pair<boost::container::flat_set<IPv4AddressData>::iterator,
-                          bool>
-                    it = ipv4Config.insert(IPv4AddressData{});
-                IPv4AddressData& ipv4Address = *it.first;
+                IPv4AddressData& ipv4Address = ipv4Config.emplace_back();
                 if (ifacePair.first == "xyz.openbmc_project.Object.Enable")
                 {
                     for (const auto& property : ifacePair.second)
@@ -265,9 +273,9 @@ inline bool extractHypervisorInterfaceData(
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR
-                                << "Got extra property: " << property.first
-                                << " on the " << objpath.first.str << " object";
+                            BMCWEB_LOG_ERROR(
+                                "Got extra property: {} on the {} object",
+                                property.first, objpath.first.str);
                         }
                     }
                 }
@@ -317,14 +325,16 @@ template <typename CallbackFunc>
 void getHypervisorIfaceData(const std::string& ethIfaceId,
                             CallbackFunc&& callback)
 {
-    crow::connections::systemBus->async_method_call(
+    sdbusplus::message::object_path path("/");
+    dbus::utility::getManagedObjects(
+        "xyz.openbmc_project.Settings", path,
         [ethIfaceId{std::string{ethIfaceId}},
          callback{std::forward<CallbackFunc>(callback)}](
-            const boost::system::error_code error,
+            const boost::system::error_code& ec,
             const dbus::utility::ManagedObjectType& resp) {
         EthernetInterfaceData ethData{};
-        boost::container::flat_set<IPv4AddressData> ipv4Data;
-        if (error)
+        std::vector<IPv4AddressData> ipv4Data;
+        if (ec)
         {
             callback(false, ethData, ipv4Data);
             return;
@@ -334,37 +344,44 @@ void getHypervisorIfaceData(const std::string& ethIfaceId,
                                                     ipv4Data);
         if (!found)
         {
-            BMCWEB_LOG_INFO << "Hypervisor Interface not found";
+            BMCWEB_LOG_INFO("Hypervisor Interface not found");
         }
         callback(found, ethData, ipv4Data);
+<<<<<<< HEAD
     },
         "xyz.openbmc_project.Settings", "/",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+=======
+        });
+>>>>>>> origin/master-october-10
 }
 
 /**
  * @brief Sets the Hypervisor Interface IPAddress DBUS
  *
- * @param[in] aResp          Shared pointer for generating response message.
+ * @param[in] asyncResp          Shared pointer for generating response message.
  * @param[in] ipv4Address    Address from the incoming request
  * @param[in] ethIfaceId     Hypervisor Interface Id
  *
  * @return None.
  */
-inline void
-    setHypervisorIPv4Address(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                             const std::string& ethIfaceId,
-                             const std::string& ipv4Address)
+inline void setHypervisorIPv4Address(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& ethIfaceId, const std::string& ipv4Address)
 {
-    BMCWEB_LOG_DEBUG << "Setting the Hypervisor IPaddress : " << ipv4Address
-                     << " on Iface: " << ethIfaceId;
-    crow::connections::systemBus->async_method_call(
-        [aResp](const boost::system::error_code ec) {
+    BMCWEB_LOG_DEBUG("Setting the Hypervisor IPaddress : {} on Iface: {}",
+                     ipv4Address, ethIfaceId);
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/network/hypervisor/" + ethIfaceId + "/ipv4/addr0",
+        "xyz.openbmc_project.Network.IP", "Address", ipv4Address,
+        [asyncResp](const boost::system::error_code& ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
             return;
         }
+<<<<<<< HEAD
         BMCWEB_LOG_DEBUG << "Hypervisor IPaddress is Set";
     },
         "xyz.openbmc_project.Settings",
@@ -372,31 +389,39 @@ inline void
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.IP", "Address",
         dbus::utility::DbusVariantType(ipv4Address));
+=======
+        BMCWEB_LOG_DEBUG("Hypervisor IPaddress is Set");
+        });
+>>>>>>> origin/master-october-10
 }
 
 /**
  * @brief Sets the Hypervisor Interface SubnetMask DBUS
  *
- * @param[in] aResp     Shared pointer for generating response message.
+ * @param[in] asyncResp     Shared pointer for generating response message.
  * @param[in] subnet    SubnetMask from the incoming request
  * @param[in] ethIfaceId Hypervisor Interface Id
  *
  * @return None.
  */
 inline void
-    setHypervisorIPv4Subnet(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    setHypervisorIPv4Subnet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& ethIfaceId, const uint8_t subnet)
 {
-    BMCWEB_LOG_DEBUG << "Setting the Hypervisor subnet : " << subnet
-                     << " on Iface: " << ethIfaceId;
+    BMCWEB_LOG_DEBUG("Setting the Hypervisor subnet : {} on Iface: {}", subnet,
+                     ethIfaceId);
 
-    crow::connections::systemBus->async_method_call(
-        [aResp](const boost::system::error_code ec) {
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/network/hypervisor/" + ethIfaceId + "/ipv4/addr0",
+        "xyz.openbmc_project.Network.IP", "PrefixLength", subnet,
+        [asyncResp](const boost::system::error_code& ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
             return;
         }
+<<<<<<< HEAD
         BMCWEB_LOG_DEBUG << "SubnetMask is Set";
     },
         "xyz.openbmc_project.Settings",
@@ -404,24 +429,29 @@ inline void
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.IP", "PrefixLength",
         dbus::utility::DbusVariantType(subnet));
+=======
+        BMCWEB_LOG_DEBUG("SubnetMask is Set");
+        });
+>>>>>>> origin/master-october-10
 }
 
 /**
  * @brief Sets the Hypervisor Interface Gateway DBUS
  *
- * @param[in] aResp          Shared pointer for generating response message.
+ * @param[in] asyncResp          Shared pointer for generating response message.
  * @param[in] gateway        Gateway from the incoming request
  * @param[in] ethIfaceId     Hypervisor Interface Id
  *
  * @return None.
  */
-inline void
-    setHypervisorIPv4Gateway(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                             const std::string& gateway)
+inline void setHypervisorIPv4Gateway(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& gateway)
 {
-    BMCWEB_LOG_DEBUG
-        << "Setting the DefaultGateway to the last configured gateway";
+    BMCWEB_LOG_DEBUG(
+        "Setting the DefaultGateway to the last configured gateway");
 
+<<<<<<< HEAD
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec) {
         if (ec)
@@ -432,10 +462,20 @@ inline void
         BMCWEB_LOG_DEBUG << "Default Gateway is Set";
     },
         "xyz.openbmc_project.Settings",
+=======
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+>>>>>>> origin/master-october-10
         "/xyz/openbmc_project/network/hypervisor",
-        "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.SystemConfiguration", "DefaultGateway",
-        dbus::utility::DbusVariantType(gateway));
+        gateway, [asyncResp](const boost::system::error_code& ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error {}", ec);
+                return;
+            }
+            BMCWEB_LOG_DEBUG("Default Gateway is Set");
+        });
 }
 
 /**
@@ -479,14 +519,14 @@ inline void
     setHypervisorIPv4Subnet(asyncResp, ifaceId, prefixLength);
 }
 
-inline void parseInterfaceData(
-    nlohmann::json& jsonResponse, const std::string& ifaceId,
-    const EthernetInterfaceData& ethData,
-    const boost::container::flat_set<IPv4AddressData>& ipv4Data)
+inline void parseInterfaceData(nlohmann::json& jsonResponse,
+                               const std::string& ifaceId,
+                               const EthernetInterfaceData& ethData,
+                               const std::vector<IPv4AddressData>& ipv4Data)
 {
     jsonResponse["Id"] = ifaceId;
-    jsonResponse["@odata.id"] =
-        "/redfish/v1/Systems/hypervisor/EthernetInterfaces/" + ifaceId;
+    jsonResponse["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Systems/hypervisor/EthernetInterfaces/{}", ifaceId);
     jsonResponse["InterfaceEnabled"] = true;
     jsonResponse["MACAddress"] = ethData.macAddress;
 
@@ -512,30 +552,36 @@ inline void parseInterfaceData(
             {
                 ipv4StaticArray.push_back(ipv4);
             }
-            ipv4Array.push_back(std::move(ipv4));
+            ipv4Array.emplace_back(std::move(ipv4));
         }
     }
 }
 
-inline void setDHCPEnabled(const std::string& ifaceId,
-                           const bool& ipv4DHCPEnabled,
+inline void setDHCPEnabled(const std::string& ifaceId, bool ipv4DHCPEnabled,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     const std::string dhcp = getDhcpEnabledEnumeration(ipv4DHCPEnabled, false);
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/network/hypervisor/" + ifaceId,
+        "xyz.openbmc_project.Network.EthernetInterface", "DHCPEnabled", dhcp,
+        [asyncResp](const boost::system::error_code& ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
+            BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
+<<<<<<< HEAD
     },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.EthernetInterface", "DHCPEnabled",
         dbus::utility::DbusVariantType{dhcp});
+=======
+        });
+>>>>>>> origin/master-october-10
 
     // Set the IPv4 address origin to the DHCP / Static as per the new value
     // of the DHCPEnabled property
@@ -551,14 +597,18 @@ inline void setDHCPEnabled(const std::string& ifaceId,
         deleteHypervisorIPv4(ifaceId, asyncResp);
         origin = "xyz.openbmc_project.Network.IP.AddressOrigin.DHCP";
     }
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/network/hypervisor/" + ifaceId + "/ipv4/addr0",
+        "xyz.openbmc_project.Network.IP", "Origin", origin,
+        [asyncResp](const boost::system::error_code& ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
+<<<<<<< HEAD
         BMCWEB_LOG_DEBUG << "Hypervisor IPaddress Origin is Set";
     },
         "xyz.openbmc_project.Settings",
@@ -566,6 +616,10 @@ inline void setDHCPEnabled(const std::string& ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.IP", "Origin",
         dbus::utility::DbusVariantType(origin));
+=======
+        BMCWEB_LOG_DEBUG("Hypervisor IPaddress Origin is Set");
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void handleHypervisorIPv4StaticPatch(
@@ -574,7 +628,7 @@ inline void handleHypervisorIPv4StaticPatch(
 {
     if ((!input.is_array()) || input.empty())
     {
-        messages::propertyValueTypeError(asyncResp->res, input.dump(),
+        messages::propertyValueTypeError(asyncResp->res, input,
                                          "IPv4StaticAddresses");
         return;
     }
@@ -584,11 +638,10 @@ inline void handleHypervisorIPv4StaticPatch(
     // address
     const nlohmann::json& thisJson = input[0];
 
-    // For the error string
-    std::string pathString = "IPv4StaticAddresses/1";
-
     if (!thisJson.is_null() && !thisJson.empty())
     {
+        // For the error string
+        std::string pathString = "IPv4StaticAddresses/1";
         std::optional<std::string> address;
         std::optional<std::string> subnetMask;
         std::optional<std::string> gateway;
@@ -597,11 +650,8 @@ inline void handleHypervisorIPv4StaticPatch(
                                  address, "SubnetMask", subnetMask, "Gateway",
                                  gateway))
         {
-            messages::propertyValueFormatError(
-                asyncResp->res,
-                thisJson.dump(2, ' ', true,
-                              nlohmann::json::error_handler_t::replace),
-                pathString);
+            messages::propertyValueFormatError(asyncResp->res, thisJson,
+                                               pathString);
             return;
         }
 
@@ -659,8 +709,8 @@ inline void handleHypervisorIPv4StaticPatch(
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "Calling createHypervisorIPv4 on : " << ifaceId
-                         << "," << *address;
+        BMCWEB_LOG_DEBUG("Calling createHypervisorIPv4 on : {},{}", ifaceId,
+                         *address);
         createHypervisorIPv4(ifaceId, prefixLength, *gateway, *address,
                              asyncResp);
         // Set the DHCPEnabled to false since the Static IPv4 is set
@@ -675,9 +725,9 @@ inline void handleHypervisorIPv4StaticPatch(
     }
 }
 
-inline void
-    handleHostnamePatch(const std::string& hostName,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void handleHypervisorHostnamePatch(
+    const std::string& hostName,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     if (!isHostnameValid(hostName))
     {
@@ -687,55 +737,74 @@ inline void
     }
 
     asyncResp->res.jsonValue["HostName"] = hostName;
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/network/hypervisor/",
+        "xyz.openbmc_project.Network.SystemConfiguration", "HostName", hostName,
+        [asyncResp](const boost::system::error_code& ec) {
         if (ec)
         {
             messages::internalError(asyncResp->res);
         }
+<<<<<<< HEAD
     },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.SystemConfiguration", "HostName",
         dbus::utility::DbusVariantType(hostName));
+=======
+        });
+>>>>>>> origin/master-october-10
 }
 
 inline void
-    setIPv4InterfaceEnabled(const std::string& ifaceId, const bool& isActive,
+    setIPv4InterfaceEnabled(const std::string& ifaceId, bool isActive,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/network/hypervisor/" + ifaceId + "/ipv4/addr0",
+        "xyz.openbmc_project.Object.Enable", "Enabled", isActive,
+        [asyncResp](const boost::system::error_code& ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
             messages::internalError(asyncResp->res);
-            return;
         }
+<<<<<<< HEAD
     },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor/" + ifaceId + "/ipv4/addr0",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Object.Enable", "Enabled",
         dbus::utility::DbusVariantType(isActive));
+=======
+        });
+>>>>>>> origin/master-october-10
 }
 
-inline void requestRoutesHypervisorSystems(App& app)
+inline void handleHypervisorEthernetInterfaceCollectionGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    /**
-     * Hypervisor Systems derived class for delivering Computer Systems Schema.
-     */
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    constexpr std::array<std::string_view, 1> interfaces = {
+        "xyz.openbmc_project.Network.EthernetInterface"};
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/hypervisor/")
-        .privileges(redfish::privileges::getComputerSystem)
-        .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    dbus::utility::getSubTreePaths(
+        "/xyz/openbmc_project/network/hypervisor", 0, interfaces,
+        [asyncResp](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetSubTreePathsResponse& ifaceList) {
+        if (ec)
         {
+            messages::resourceNotFound(asyncResp->res, "System", "hypervisor");
             return;
         }
+<<<<<<< HEAD
         sdbusplus::asio::getProperty<std::string>(
             *crow::connections::systemBus, "xyz.openbmc_project.Settings",
             "/xyz/openbmc_project/network/hypervisor",
@@ -783,48 +852,30 @@ inline void requestRoutesHypervisorSystems(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+=======
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#EthernetInterfaceCollection."
+            "EthernetInterfaceCollection";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/hypervisor/EthernetInterfaces";
+        asyncResp->res.jsonValue["Name"] = "Hypervisor Ethernet "
+                                           "Interface Collection";
+        asyncResp->res.jsonValue["Description"] =
+            "Collection of Virtual Management "
+            "Interfaces for the hypervisor";
+
+        nlohmann::json& ifaceArray = asyncResp->res.jsonValue["Members"];
+        ifaceArray = nlohmann::json::array();
+        for (const std::string& iface : ifaceList)
+>>>>>>> origin/master-october-10
         {
-            return;
-        }
-        const std::array<const char*, 1> interfaces = {
-            "xyz.openbmc_project.Network.EthernetInterface"};
-
-        crow::connections::systemBus->async_method_call(
-            [asyncResp](
-                const boost::system::error_code error,
-                const dbus::utility::MapperGetSubTreePathsResponse& ifaceList) {
-            if (error)
+            sdbusplus::message::object_path path(iface);
+            std::string name = path.filename();
+            if (name.empty())
             {
-                messages::resourceNotFound(asyncResp->res, "System",
-                                           "hypervisor");
-                return;
+                continue;
             }
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#EthernetInterfaceCollection."
-                "EthernetInterfaceCollection";
-            asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/hypervisor/EthernetInterfaces";
-            asyncResp->res.jsonValue["Name"] = "Hypervisor Ethernet "
-                                               "Interface Collection";
-            asyncResp->res.jsonValue["Description"] =
-                "Collection of Virtual Management "
-                "Interfaces for the hypervisor";
-
-            nlohmann::json& ifaceArray = asyncResp->res.jsonValue["Members"];
-            ifaceArray = nlohmann::json::array();
-            for (const std::string& iface : ifaceList)
-            {
-                sdbusplus::message::object_path path(iface);
-                std::string name = path.filename();
-                if (name.empty())
-                {
-                    continue;
-                }
-                nlohmann::json::object_t ethIface;
-                ethIface["@odata.id"] =
-                    "/redfish/v1/Systems/hypervisor/EthernetInterfaces/" + name;
-                ifaceArray.push_back(std::move(ethIface));
-            }
+<<<<<<< HEAD
             asyncResp->res.jsonValue["Members@odata.count"] = ifaceArray.size();
         },
             "xyz.openbmc_project.ObjectMapper",
@@ -832,23 +883,29 @@ inline void requestRoutesHypervisorSystems(App& app)
             "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
             "/xyz/openbmc_project/network/hypervisor", 0, interfaces);
     });
-
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/hypervisor/EthernetInterfaces/<str>/")
-        .privileges(redfish::privileges::getEthernetInterface)
-        .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                   const std::string& id) {
-        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-        {
-            return;
+=======
+            nlohmann::json::object_t ethIface;
+            ethIface["@odata.id"] = boost::urls::format(
+                "/redfish/v1/Systems/hypervisor/EthernetInterfaces/{}", name);
+            ifaceArray.emplace_back(std::move(ethIface));
         }
-        getHypervisorIfaceData(
-            id,
-            [asyncResp, ifaceId{std::string(id)}](
-                const bool& success, const EthernetInterfaceData& ethData,
-                const boost::container::flat_set<IPv4AddressData>& ipv4Data) {
+        asyncResp->res.jsonValue["Members@odata.count"] = ifaceArray.size();
+        });
+}
+>>>>>>> origin/master-october-10
+
+inline void handleHypervisorEthernetInterfaceGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    getHypervisorIfaceData(
+        id, [asyncResp, ifaceId{std::string(id)}](
+                bool success, const EthernetInterfaceData& ethData,
+                const std::vector<IPv4AddressData>& ipv4Data) {
             if (!success)
             {
                 messages::resourceNotFound(asyncResp->res, "EthernetInterface",
@@ -856,125 +913,145 @@ inline void requestRoutesHypervisorSystems(App& app)
                 return;
             }
             asyncResp->res.jsonValue["@odata.type"] =
-                "#EthernetInterface.v1_6_0.EthernetInterface";
+                "#EthernetInterface.v1_9_0.EthernetInterface";
             asyncResp->res.jsonValue["Name"] = "Hypervisor Ethernet Interface";
             asyncResp->res.jsonValue["Description"] =
                 "Hypervisor's Virtual Management Ethernet Interface";
             parseInterfaceData(asyncResp->res.jsonValue, ifaceId, ethData,
                                ipv4Data);
         });
+<<<<<<< HEAD
     });
+=======
+}
+>>>>>>> origin/master-october-10
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/hypervisor/EthernetInterfaces/<str>/")
-        .privileges(redfish::privileges::patchEthernetInterface)
-        .methods(boost::beast::http::verb::patch)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                   const std::string& ifaceId) {
-        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+inline void handleHypervisorSystemGet(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/network/hypervisor",
+        "xyz.openbmc_project.Network.SystemConfiguration", "HostName",
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::string& /*hostName*/) {
+        if (ec)
+        {
+            messages::resourceNotFound(asyncResp->res, "System", "hypervisor");
+            return;
+        }
+        BMCWEB_LOG_DEBUG("Hypervisor is available");
+
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#ComputerSystem.v1_6_0.ComputerSystem";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/hypervisor";
+        asyncResp->res.jsonValue["Description"] = "Hypervisor";
+        asyncResp->res.jsonValue["Name"] = "Hypervisor";
+        asyncResp->res.jsonValue["Id"] = "hypervisor";
+        asyncResp->res.jsonValue["SystemType"] = "OS";
+        nlohmann::json::array_t managedBy;
+        nlohmann::json::object_t manager;
+        manager["@odata.id"] = "/redfish/v1/Managers/bmc";
+        managedBy.emplace_back(std::move(manager));
+        asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
+        asyncResp->res.jsonValue["EthernetInterfaces"]["@odata.id"] =
+            "/redfish/v1/Systems/hypervisor/EthernetInterfaces";
+        getHypervisorState(asyncResp);
+        getHypervisorActions(asyncResp);
+        // TODO: Add "SystemType" : "hypervisor"
+        });
+}
+
+inline void handleHypervisorEthernetInterfacePatch(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& ifaceId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    std::optional<std::string> hostName;
+    std::optional<std::vector<nlohmann::json>> ipv4StaticAddresses;
+    std::optional<nlohmann::json> ipv4Addresses;
+    std::optional<nlohmann::json> dhcpv4;
+    std::optional<bool> ipv4DHCPEnabled;
+
+    if (!json_util::readJsonPatch(req, asyncResp->res, "HostName", hostName,
+                                  "IPv4StaticAddresses", ipv4StaticAddresses,
+                                  "IPv4Addresses", ipv4Addresses, "DHCPv4",
+                                  dhcpv4))
+    {
+        return;
+    }
+
+    if (ipv4Addresses)
+    {
+        messages::propertyNotWritable(asyncResp->res, "IPv4Addresses");
+        return;
+    }
+
+    if (dhcpv4)
+    {
+        if (!json_util::readJson(*dhcpv4, asyncResp->res, "DHCPEnabled",
+                                 ipv4DHCPEnabled))
         {
             return;
         }
-        std::optional<std::string> hostName;
-        std::optional<std::vector<nlohmann::json>> ipv4StaticAddresses;
-        std::optional<nlohmann::json> ipv4Addresses;
-        std::optional<nlohmann::json> dhcpv4;
-        std::optional<bool> ipv4DHCPEnabled;
+    }
 
-        if (!json_util::readJsonPatch(req, asyncResp->res, "HostName", hostName,
-                                      "IPv4StaticAddresses",
-                                      ipv4StaticAddresses, "IPv4Addresses",
-                                      ipv4Addresses, "DHCPv4", dhcpv4))
+    getHypervisorIfaceData(
+        ifaceId,
+        [asyncResp, ifaceId, hostName = std::move(hostName),
+         ipv4StaticAddresses = std::move(ipv4StaticAddresses), ipv4DHCPEnabled,
+         dhcpv4 = std::move(dhcpv4)](bool success,
+                                     const EthernetInterfaceData& ethData,
+                                     const std::vector<IPv4AddressData>&) {
+        if (!success)
         {
+            messages::resourceNotFound(asyncResp->res, "EthernetInterface",
+                                       ifaceId);
             return;
         }
 
-        if (ipv4Addresses)
+        if (ipv4StaticAddresses)
         {
-            messages::propertyNotWritable(asyncResp->res, "IPv4Addresses");
-            return;
-        }
-
-        if (dhcpv4)
-        {
-            if (!json_util::readJson(*dhcpv4, asyncResp->res, "DHCPEnabled",
-                                     ipv4DHCPEnabled))
+            const nlohmann::json& ipv4Static = *ipv4StaticAddresses;
+            if (ipv4Static.begin() == ipv4Static.end())
             {
+                messages::propertyValueTypeError(asyncResp->res, ipv4Static,
+                                                 "IPv4StaticAddresses");
                 return;
             }
-        }
 
-        getHypervisorIfaceData(
-            ifaceId,
-            [asyncResp, ifaceId, hostName = std::move(hostName),
-             ipv4StaticAddresses = std::move(ipv4StaticAddresses),
-             ipv4DHCPEnabled, dhcpv4 = std::move(dhcpv4)](
-                const bool& success, const EthernetInterfaceData& ethData,
-                const boost::container::flat_set<IPv4AddressData>&) {
-            if (!success)
+            // One and only one hypervisor instance supported
+            if (ipv4Static.size() != 1)
             {
-                messages::resourceNotFound(asyncResp->res, "EthernetInterface",
-                                           ifaceId);
+                messages::propertyValueFormatError(asyncResp->res, ipv4Static,
+                                                   "IPv4StaticAddresses");
                 return;
             }
 
-            if (ipv4StaticAddresses)
+            const nlohmann::json& ipv4Json = ipv4Static[0];
+            // Check if the param is 'null'. If its null, it means
+            // that user wants to delete the IP address. Deleting
+            // the IP address is allowed only if its statically
+            // configured. Deleting the address originated from DHCP
+            // is not allowed.
+            if ((ipv4Json.is_null()) &&
+                (translateDhcpEnabledToBool(ethData.dhcpEnabled, true)))
             {
-                const nlohmann::json& ipv4Static = *ipv4StaticAddresses;
-                if (ipv4Static.begin() == ipv4Static.end())
-                {
-                    messages::propertyValueTypeError(
-                        asyncResp->res,
-                        ipv4Static.dump(
-                            2, ' ', true,
-                            nlohmann::json::error_handler_t::replace),
-                        "IPv4StaticAddresses");
-                    return;
-                }
-
-                // One and only one hypervisor instance supported
-                if (ipv4Static.size() != 1)
-                {
-                    messages::propertyValueFormatError(
-                        asyncResp->res,
-                        ipv4Static.dump(
-                            2, ' ', true,
-                            nlohmann::json::error_handler_t::replace),
-                        "IPv4StaticAddresses");
-                    return;
-                }
-
-                const nlohmann::json& ipv4Json = ipv4Static[0];
-                // Check if the param is 'null'. If its null, it means
-                // that user wants to delete the IP address. Deleting
-                // the IP address is allowed only if its statically
-                // configured. Deleting the address originated from DHCP
-                // is not allowed.
-                if ((ipv4Json.is_null()) &&
-                    (translateDhcpEnabledToBool(ethData.dhcpEnabled, true)))
-                {
-                    BMCWEB_LOG_INFO
-                        << "Ignoring the delete on ipv4StaticAddresses "
-                           "as the interface is DHCP enabled";
-                }
-                else
-                {
-                    handleHypervisorIPv4StaticPatch(ifaceId, ipv4Static,
-                                                    asyncResp);
-                }
+                BMCWEB_LOG_INFO("Ignoring the delete on ipv4StaticAddresses "
+                                "as the interface is DHCP enabled");
             }
-
-            if (hostName)
+            else
             {
-                handleHostnamePatch(*hostName, asyncResp);
+                handleHypervisorIPv4StaticPatch(ifaceId, ipv4Static, asyncResp);
             }
+        }
 
-            if (dhcpv4)
-            {
-                setDHCPEnabled(ifaceId, *ipv4DHCPEnabled, asyncResp);
-            }
-
+<<<<<<< HEAD
             // Set this interface to disabled/inactive. This will be set
             // to enabled/active by the pldm once the hypervisor
             // consumes the updated settings from the user.
@@ -982,44 +1059,51 @@ inline void requestRoutesHypervisorSystems(App& app)
         });
         asyncResp->res.result(boost::beast::http::status::accepted);
     });
-
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/hypervisor/ResetActionInfo/")
-        .privileges(redfish::privileges::getActionInfo)
-        .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+=======
+        if (hostName)
         {
-            return;
+            handleHypervisorHostnamePatch(*hostName, asyncResp);
         }
-        // Only return action info if hypervisor D-Bus object present
-        crow::connections::systemBus->async_method_call(
-            [asyncResp](const boost::system::error_code ec,
-                        const std::vector<std::pair<
-                            std::string, std::vector<std::string>>>& objInfo) {
-            if (ec)
+>>>>>>> origin/master-october-10
+
+        if (dhcpv4)
+        {
+            setDHCPEnabled(ifaceId, *ipv4DHCPEnabled, asyncResp);
+        }
+
+        // Set this interface to disabled/inactive. This will be set
+        // to enabled/active by the pldm once the hypervisor
+        // consumes the updated settings from the user.
+        setIPv4InterfaceEnabled(ifaceId, false, asyncResp);
+        });
+    asyncResp->res.result(boost::beast::http::status::accepted);
+}
+
+inline void handleHypervisorResetActionGet(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    // Only return action info if hypervisor D-Bus object present
+    constexpr std::array<std::string_view, 1> interfaces = {
+        "xyz.openbmc_project.State.Host"};
+    dbus::utility::getDbusObject(
+        "/xyz/openbmc_project/state/hypervisor0", interfaces,
+        [asyncResp](
+            const boost::system::error_code& ec,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
+
+            // No hypervisor objects found by mapper
+            if (ec.value() == boost::system::errc::io_error)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
-
-                // No hypervisor objects found by mapper
-                if (ec.value() == boost::system::errc::io_error)
-                {
-                    messages::resourceNotFound(asyncResp->res, "hypervisor",
-                                               "ResetActionInfo");
-                    return;
-                }
-
-                messages::internalError(asyncResp->res);
+                messages::resourceNotFound(asyncResp->res, "hypervisor",
+                                           "ResetActionInfo");
                 return;
             }
 
-            // One and only one hypervisor instance supported
-            if (objInfo.size() != 1)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-
+<<<<<<< HEAD
             // The hypervisor object only support the ability to
             // turn On The system object Action should be utilized
             // for other operations
@@ -1063,48 +1147,95 @@ inline void requestRoutesHypervisorSystems(App& app)
                                        resetType))
         {
             // readJson adds appropriate error to response
+=======
+            messages::internalError(asyncResp->res);
+>>>>>>> origin/master-october-10
             return;
         }
 
-        if (!resetType)
+        // One and only one hypervisor instance supported
+        if (objInfo.size() != 1)
         {
-            messages::actionParameterMissing(
-                asyncResp->res, "ComputerSystem.Reset", "ResetType");
+            messages::internalError(asyncResp->res);
             return;
         }
 
-        // Hypervisor object only support On operation
-        if (resetType != "On")
+        // The hypervisor object only support the ability to
+        // turn On The system object Action should be utilized
+        // for other operations
+
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#ActionInfo.v1_1_2.ActionInfo";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/hypervisor/ResetActionInfo";
+        asyncResp->res.jsonValue["Name"] = "Reset Action Info";
+        asyncResp->res.jsonValue["Id"] = "ResetActionInfo";
+        nlohmann::json::array_t parameters;
+        nlohmann::json::object_t parameter;
+        parameter["Name"] = "ResetType";
+        parameter["Required"] = true;
+        parameter["DataType"] = "String";
+        nlohmann::json::array_t allowed;
+        allowed.emplace_back("On");
+        parameter["AllowableValues"] = std::move(allowed);
+        parameters.emplace_back(std::move(parameter));
+        asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+        });
+}
+
+inline void handleHypervisorSystemResetPost(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    std::optional<std::string> resetType;
+    if (!json_util::readJsonAction(req, asyncResp->res, "ResetType", resetType))
+    {
+        // readJson adds appropriate error to response
+        return;
+    }
+
+    if (!resetType)
+    {
+        messages::actionParameterMissing(asyncResp->res, "ComputerSystem.Reset",
+                                         "ResetType");
+        return;
+    }
+
+    // Hypervisor object only support On operation
+    if (resetType != "On")
+    {
+        messages::propertyValueNotInList(asyncResp->res, *resetType,
+                                         "ResetType");
+        return;
+    }
+
+    std::string command = "xyz.openbmc_project.State.Host.Transition.On";
+
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, "xyz.openbmc_project.State.Hypervisor",
+        "/xyz/openbmc_project/state/hypervisor0",
+        "xyz.openbmc_project.State.Host", "RequestedHostTransition", command,
+        [asyncResp, resetType](const boost::system::error_code& ec) {
+        if (ec)
         {
-            messages::propertyValueNotInList(asyncResp->res, *resetType,
-                                             "ResetType");
-            return;
-        }
-
-        std::string command = "xyz.openbmc_project.State.Host.Transition.On";
-
-        crow::connections::systemBus->async_method_call(
-            [asyncResp, resetType](const boost::system::error_code ec) {
-            if (ec)
+            BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);
+            if (ec.value() == boost::asio::error::invalid_argument)
             {
-                BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
-                if (ec.value() == boost::asio::error::invalid_argument)
-                {
-                    messages::actionParameterNotSupported(asyncResp->res,
-                                                          *resetType, "Reset");
-                    return;
-                }
-
-                if (ec.value() == boost::asio::error::host_unreachable)
-                {
-                    messages::resourceNotFound(asyncResp->res, "Actions",
-                                               "Reset");
-                    return;
-                }
-
-                messages::internalError(asyncResp->res);
+                messages::actionParameterNotSupported(asyncResp->res,
+                                                      *resetType, "Reset");
                 return;
             }
+
+            if (ec.value() == boost::asio::error::host_unreachable)
+            {
+                messages::resourceNotFound(asyncResp->res, "Actions", "Reset");
+                return;
+            }
+<<<<<<< HEAD
             messages::success(asyncResp->res);
         },
             "xyz.openbmc_project.State.Hypervisor",
@@ -1113,5 +1244,44 @@ inline void requestRoutesHypervisorSystems(App& app)
             "xyz.openbmc_project.State.Host", "RequestedHostTransition",
             dbus::utility::DbusVariantType{std::move(command)});
     });
+=======
+
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        messages::success(asyncResp->res);
+        });
+>>>>>>> origin/master-october-10
 }
-} // namespace redfish::hypervisor
+
+inline void requestRoutesHypervisorSystems(App& app)
+{
+    /**
+     * HypervisorInterfaceCollection class to handle the GET and PATCH on
+     * Hypervisor Interface
+     */
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/hypervisor/EthernetInterfaces/")
+        .privileges(redfish::privileges::getEthernetInterfaceCollection)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleHypervisorEthernetInterfaceCollectionGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/hypervisor/EthernetInterfaces/<str>/")
+        .privileges(redfish::privileges::getEthernetInterface)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleHypervisorEthernetInterfaceGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/hypervisor/EthernetInterfaces/<str>/")
+        .privileges(redfish::privileges::patchEthernetInterface)
+        .methods(boost::beast::http::verb::patch)(std::bind_front(
+            handleHypervisorEthernetInterfacePatch, std::ref(app)));
+
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/hypervisor/Actions/ComputerSystem.Reset/")
+        .privileges(redfish::privileges::postComputerSystem)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleHypervisorSystemResetPost, std::ref(app)));
+}
+} // namespace redfish

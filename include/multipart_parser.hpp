@@ -74,13 +74,13 @@ class MultipartParser
         indexBoundary();
         lookbehind.resize(boundary.size() + 8);
         state = State::START;
-        const std::string& buffer = req.body;
-        size_t len = req.body.size();
+
+        const std::string& buffer = req.body();
+        size_t len = buffer.size();
         char cl = 0;
 
         for (size_t i = 0; i < len; i++)
         {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             char c = buffer[i];
             switch (state)
             {
@@ -141,9 +141,8 @@ class MultipartParser
                         {
                             return ParserError::ERROR_EMPTY_HEADER;
                         }
-                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                        currentHeaderName.append(buffer.data() +
-                                                     headerFieldMark,
+
+                        currentHeaderName.append(&buffer[headerFieldMark],
                                                  i - headerFieldMark);
                         state = State::HEADER_VALUE_START;
                         break;
@@ -198,7 +197,6 @@ class MultipartParser
                 {
                     if (index == 0)
                     {
-                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                         skipNonBoundary(buffer, boundary.size() - 1, i);
                         c = buffer[i];
                     }
@@ -250,7 +248,6 @@ class MultipartParser
         // boyer-moore derived algorithm to safely skip non-boundary data
         while (i + boundary.size() <= buffer.length())
         {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             if (isBoundaryChar(buffer[i + boundaryEnd]))
             {
                 break;
@@ -268,8 +265,7 @@ class MultipartParser
             {
                 if (index == 0)
                 {
-                    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                    const char* start = buffer.data() + partDataMark;
+                    const char* start = &buffer[partDataMark];
                     size_t size = i - partDataMark;
                     mime_fields.rbegin()->content += std::string_view(start,
                                                                       size);

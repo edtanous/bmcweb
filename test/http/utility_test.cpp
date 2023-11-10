@@ -24,7 +24,7 @@ namespace crow::utility
 namespace
 {
 
-using ::crow::black_magic::getParameterTag;
+using ::crow::utility::getParameterTag;
 
 TEST(Utility, Base64DecodeAuthString)
 {
@@ -81,24 +81,9 @@ TEST(Utility, Base64EncodeDecodeString)
     EXPECT_EQ(data, decoded);
 }
 
-TEST(Utility, UrlFromPieces)
-{
-    boost::urls::url url = urlFromPieces("redfish", "v1", "foo");
-    EXPECT_EQ(std::string_view(url.data(), url.size()), "/redfish/v1/foo");
-
-    url = urlFromPieces("/", "badString");
-    EXPECT_EQ(std::string_view(url.data(), url.size()), "/%2f/badString");
-
-    url = urlFromPieces("bad?tring");
-    EXPECT_EQ(std::string_view(url.data(), url.size()), "/bad%3ftring");
-
-    url = urlFromPieces("/", "bad&tring");
-    EXPECT_EQ(std::string_view(url.data(), url.size()), "/%2f/bad&tring");
-}
-
 TEST(Utility, readUrlSegments)
 {
-    boost::urls::result<boost::urls::url_view> parsed =
+    boost::system::result<boost::urls::url_view> parsed =
         boost::urls::parse_relative_ref("/redfish/v1/Chassis#/Fans/0/Reading");
 
     EXPECT_TRUE(readUrlSegments(*parsed, "redfish", "v1", "Chassis"));
@@ -155,64 +140,11 @@ TEST(Utility, readUrlSegments)
     EXPECT_TRUE(readUrlSegments(*parsed, OrMorePaths()));
 }
 
-TEST(Utility, ValidateAndSplitUrlPositive)
-{
-    std::string host;
-    std::string urlProto;
-    uint16_t port = 0;
-    std::string path;
-    ASSERT_TRUE(validateAndSplitUrl("https://foo.com:18080/bar", urlProto, host,
-                                    port, path));
-    EXPECT_EQ(host, "foo.com");
-    EXPECT_EQ(urlProto, "https");
-    EXPECT_EQ(port, 18080);
-
-    EXPECT_EQ(path, "/bar");
-
-    // query string
-    ASSERT_TRUE(validateAndSplitUrl("https://foo.com:18080/bar?foobar=1",
-                                    urlProto, host, port, path));
-    EXPECT_EQ(path, "/bar?foobar=1");
-
-    // fragment
-    ASSERT_TRUE(validateAndSplitUrl("https://foo.com:18080/bar#frag", urlProto,
-                                    host, port, path));
-    EXPECT_EQ(path, "/bar#frag");
-
-    // Missing port
-    ASSERT_TRUE(
-        validateAndSplitUrl("https://foo.com/bar", urlProto, host, port, path));
-    EXPECT_EQ(port, 443);
-
-    // Missing path defaults to "/"
-    ASSERT_TRUE(
-        validateAndSplitUrl("https://foo.com/", urlProto, host, port, path));
-    EXPECT_EQ(path, "/");
-
-    // If http push eventing is allowed, allow http and pick a default port of
-    // 80, if it's not, parse should fail.
-    ASSERT_EQ(
-        validateAndSplitUrl("http://foo.com/bar", urlProto, host, port, path),
-        bmcwebInsecureEnableHttpPushStyleEventing);
-    if constexpr (bmcwebInsecureEnableHttpPushStyleEventing)
-    {
-        EXPECT_EQ(port, 80);
-    }
-}
-
 TEST(Router, ParameterTagging)
 {
-    EXPECT_EQ(6 * 6 + 6 * 3 + 2, getParameterTag("<uint><double><int>"));
-    EXPECT_EQ(1, getParameterTag("<int>"));
-    EXPECT_EQ(2, getParameterTag("<uint>"));
-    EXPECT_EQ(3, getParameterTag("<float>"));
-    EXPECT_EQ(3, getParameterTag("<double>"));
-    EXPECT_EQ(4, getParameterTag("<str>"));
-    EXPECT_EQ(4, getParameterTag("<string>"));
-    EXPECT_EQ(5, getParameterTag("<path>"));
-    EXPECT_EQ(6 * 6 + 6 + 1, getParameterTag("<int><int><int>"));
-    EXPECT_EQ(6 * 6 + 6 + 2, getParameterTag("<uint><int><int>"));
-    EXPECT_EQ(6 * 6 + 6 * 3 + 2, getParameterTag("<uint><double><int>"));
+    EXPECT_EQ(1, getParameterTag("<str>"));
+    EXPECT_EQ(1, getParameterTag("<string>"));
+    EXPECT_EQ(2, getParameterTag("<path>"));
 }
 
 TEST(URL, JsonEncoding)
@@ -224,7 +156,7 @@ TEST(URL, JsonEncoding)
 
 TEST(AppendUrlFromPieces, PiecesAreAppendedViaDelimiters)
 {
-    boost::urls::url url = urlFromPieces("redfish", "v1", "foo");
+    boost::urls::url url("/redfish/v1/foo");
     EXPECT_EQ(std::string_view(url.data(), url.size()), "/redfish/v1/foo");
 
     appendUrlPieces(url, "bar");
@@ -232,7 +164,7 @@ TEST(AppendUrlFromPieces, PiecesAreAppendedViaDelimiters)
 
     appendUrlPieces(url, "/", "bad&tring");
     EXPECT_EQ(std::string_view(url.data(), url.size()),
-              "/redfish/v1/foo/bar/%2f/bad&tring");
+              "/redfish/v1/foo/bar/%2F/bad&tring");
 }
 
 } // namespace

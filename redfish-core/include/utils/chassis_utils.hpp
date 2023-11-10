@@ -2,6 +2,13 @@
 #include "background_copy.hpp"
 #include "in_band.hpp"
 
+#include "async_resp.hpp"
+#include "dbus_utility.hpp"
+#include "error_messages.hpp"
+
+#include <array>
+#include <string_view>
+
 #include <async_resp.hpp>
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/asio/property.hpp>
@@ -168,34 +175,35 @@ template <typename Callback>
 void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::string& chassisId, Callback&& callback)
 {
-    BMCWEB_LOG_DEBUG << "checkChassisId enter";
-    const std::array<const char*, 2> interfaces = {
+    BMCWEB_LOG_DEBUG("checkChassisId enter");
+    constexpr std::array<std::string_view, 2> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Board",
         "xyz.openbmc_project.Inventory.Item.Chassis"};
 
-    auto respHandler =
+    // Get the Chassis Collection
+    dbus::utility::getSubTreePaths(
+        "/xyz/openbmc_project/inventory", 0, interfaces,
         [callback{std::forward<Callback>(callback)}, asyncResp,
-         chassisId](const boost::system::error_code ec,
+         chassisId](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreePathsResponse&
                         chassisPaths) mutable {
-        BMCWEB_LOG_DEBUG << "getValidChassisPath respHandler enter";
+        BMCWEB_LOG_DEBUG("getValidChassisPath respHandler enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "getValidChassisPath respHandler DBUS error: "
-                             << ec;
+            BMCWEB_LOG_ERROR("getValidChassisPath respHandler DBUS error: {}",
+                             ec);
             messages::internalError(asyncResp->res);
             return;
         }
 
         std::optional<std::string> chassisPath;
-        std::string chassisName;
         for (const std::string& chassis : chassisPaths)
         {
             sdbusplus::message::object_path path(chassis);
-            chassisName = path.filename();
+            std::string chassisName = path.filename();
             if (chassisName.empty())
             {
-                BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassis;
+                BMCWEB_LOG_ERROR("Failed to find '/' in {}", chassis);
                 continue;
             }
             if (chassisName == chassisId)
@@ -205,15 +213,8 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
         }
         callback(chassisPath);
-    };
-
-    // Get the Chassis Collection
-    crow::connections::systemBus->async_method_call(
-        respHandler, "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-        "/xyz/openbmc_project/inventory", 0, interfaces);
-    BMCWEB_LOG_DEBUG << "checkChassisId exit";
+        });
+    BMCWEB_LOG_DEBUG("checkChassisId exit");
 }
 
 inline std::string getChassisType(const std::string& chassisType)
