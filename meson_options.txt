@@ -291,6 +291,7 @@ option ('platform-chassis-name', type : 'string', value : 'HGX_Chassis_0', descr
 
 option ('tls-auth-opt-in', type : 'feature', value : 'disabled', description : 'Enables feature to opt-in to TLS-Authentication at runtime.')
 option ('host-os-features', type : 'feature', value : 'enabled', description : 'Enables feature specific to host os.')
+option ('host-auxpower-features', type : 'feature', value : 'disabled', description : 'disabled feature specific to host aux power.')
 option ('redfish-system-faultlog-dump-log', type : 'feature', value : 'disabled', description : 'Enable Redfish System faultlog dump log services.')
 option ('reset-bios-by-clear-nonvolatile', type : 'feature', value : 'disabled', description : 'Enable using DBUS xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables for Bios.ResetBios action.')
 option ('fencing-privilege', type : 'feature', value : 'disabled', description : 'Enables feature to set/unset the fencing privilege to satelite BMC.')

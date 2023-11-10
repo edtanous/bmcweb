@@ -116,6 +116,7 @@ feature_map = {
   'dhcp-configuration-update'                   : '-DBMCWEB_DHCP_CONFIGURATION_UPDATE',
   'host-os-features'                            : '-DBMCWEB_ENABLE_HOST_OS_FEATURE',
   'fencing-privilege'                           : '-DBMCWEB_ENABLE_FENCING_PRIVILEGE',
+  'host-auxpower-features'                            : '-DBMCWEB_ENABLE_HOST_AUX_POWER',
   'nic-configuration-update'                    : '-DBMCWEB_NIC_CONFIGURATION_UPDATE',
   'command-shell'                               : '-DBMCWEB_ENABLE_IPMI_SOL',
   'redfish-system-faultlog-dump-log'            : '-DBMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG',

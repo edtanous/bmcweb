@@ -1129,6 +1129,15 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         .jsonValue["Actions"]["#Chassis.Reset"]["@Redfish.ActionInfo"] =
         "/redfish/v1/Chassis/" + chassisId + "/ResetActionInfo";
 #endif
+#ifdef BMCWEB_ENABLE_HOST_AUX_POWER
+    if (chassisId == PLATFORMCHASSISNAME)
+    {
+        asyncResp->res.jsonValue["Actions"]["Oem"]
+                                ["#NvidiaChassis.AuxPowerReset"]["target"] =
+            "/redfish/v1/Chassis/" + chassisId +
+            "/Actions/Oem/NvidiaChassis.AuxPowerReset";
+    }
+#endif
     asyncResp->res.jsonValue["PCIeDevices"] = {
         {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/PCIeDevices"}};
 
@@ -2132,6 +2141,76 @@ inline void handleChassisResetActionInfoPost(
     powerCycle(asyncResp);
 }
 
+#ifdef BMCWEB_ENABLE_HOST_AUX_POWER
+inline void handleOemChassisResetActionInfoPost(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId)
+{
+    if (chassisId != PLATFORMCHASSISNAME)
+    {
+        messages::internalError(asyncResp->res);
+        return;
+    } 
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    std::string resetType;
+    if (!json_util::readJsonAction(req, asyncResp->res, "ResetType", resetType))
+    {
+        return;
+    }
+
+    if (resetType != "AuxPowerCycle")
+    {
+        messages::actionParameterValueError(asyncResp->res, "ResetType",
+                                            "NvidiaChassis.AuxPowerReset");
+        return;
+    }
+
+    // check power status
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
+        "/xyz/openbmc_project/state/host0", "xyz.openbmc_project.State.Host",
+        "CurrentHostState",
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::string& hostState) {
+            if (ec)
+            {
+                if (ec == boost::system::errc::host_unreachable)
+                {
+                    // Service not available, no error, just don't
+                    // return host state info
+                    BMCWEB_LOG_DEBUG << "Service not available " << ec;
+                    return;
+                }
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (hostState == "xyz.openbmc_project.State.Host.HostState.Off")
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code& ec) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                    },
+                    "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                    "org.freedesktop.systemd1.Manager", "StartUnit",
+                    "nvidia-aux-power.service", "replace");
+            }
+            else
+            {
+                messages::chassisPowerStateOffRequired(asyncResp->res, "0");
+            }
+        });
+}
+#endif
+
 /**
  * ChassisResetAction class supports the POST method for the Reset
  * action.
@@ -2145,6 +2224,14 @@ inline void requestRoutesChassisResetAction(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleChassisResetActionInfoPost, std::ref(app)));
+#ifdef BMCWEB_ENABLE_HOST_AUX_POWER
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Chassis/<str>/Actions/Oem/NvidiaChassis.AuxPowerReset")
+        .privileges(redfish::privileges::postChassis)
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleOemChassisResetActionInfoPost, std::ref(app)));
+
+#endif
 }
 
 inline void handleChassisResetActionInfoGet(
