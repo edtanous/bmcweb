@@ -258,6 +258,8 @@ class RedfishService
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesEdppReset(app);
         requestRoutesNvidiaManagerResetToDefaultsAction(app);
+        requestRoutesNvidiaManagerEmmcSecureErase(app);
+        requestRoutesManagerEmmcSecureEraseActionInfo(app);
 
         requestRouteSyncRawOobCommand(app);
         requestRouteAsyncRawOobCommand(app);

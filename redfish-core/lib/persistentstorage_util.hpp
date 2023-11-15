@@ -76,11 +76,9 @@ std::optional<ErrorMapping> getEMMCErrorMessageFromExitCode(ExitCode exitCode)
     {
         return emmcServiceErrorMapping[exitCode];
     }
-    else
-    {
-        BMCWEB_LOG_ERROR << "No mapping found for ExitCode: " << exitCode;
-        return std::nullopt;
-    }
+
+    BMCWEB_LOG_ERROR << "No mapping found for ExitCode: " << exitCode;
+    return std::nullopt;
 }
 
 using AsyncResponseCallback = std::function<void(

@@ -42,6 +42,8 @@
 #include <sstream>
 #include <variant>
 
+#include "persistentstorage_util.hpp"
+
 namespace redfish
 {
 
@@ -452,6 +454,72 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
                     "xyz.openbmc_project.ObjectMapper", "GetObject",
                     "/xyz/openbmc_project/software",
                     std::array<const char*, 1>{ifnameCompleteReset.c_str()});
+            });
+}
+
+/**
+ * eMMCSecureErase class supports POST method for eMMC Secure Erase
+ */
+inline void requestRoutesNvidiaManagerEmmcSecureErase(App& app)
+{
+
+    /**
+     * Function handles ResetToDefaults POST method request.
+     *
+     */
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/Actions/Oem/eMMC.SecureErase")
+        .privileges(redfish::privileges::postManager)
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+
+                std::string setCommand = "/sbin/fw_setenv emmc_secure_erase yes";
+                PersistentStorageUtil persistentStorageUtil;
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                BMCWEB_LOG_DEBUG << "Post eMMC Secure Erase.";
+                auto resetEMMCSecureEraseCallback =
+                    []([[maybe_unused]] const crow::Request& req,
+                    [[maybe_unused]] const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    [[maybe_unused]] const std::string& stdOut,
+                    [[maybe_unused]] const std::string& stdErr,
+                    [[maybe_unused]] const boost::system::error_code& ec,
+                    [[maybe_unused]] int errorCode) -> void {
+                    BMCWEB_LOG_INFO << "Setting eMMC Secure Erase uboot env";
+                    return;
+                };
+                persistentStorageUtil.executeEnvCommand(req, asyncResp, setCommand,
+                                                        std::move(resetEMMCSecureEraseCallback));
+                doBMCGracefulRestart(asyncResp);
+            });
+}
+
+inline void requestRoutesManagerEmmcSecureEraseActionInfo(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/EmmcSecureEraseActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#ActionInfo.v1_1_2.ActionInfo";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/EmmcSecureEraseActionInfo";
+                asyncResp->res.jsonValue["Name"] = "Emmc Secure Erase Action Info";
+                asyncResp->res.jsonValue["Id"] = "EmmcSecureEraseActionInfo";
             });
 }
 
@@ -3401,6 +3469,13 @@ inline void requestRoutesManager(App& app)
                                 "/redfish/v1/Managers/" PLATFORMBMCID
                                 "/Oem/Nvidia/AsyncOOBRawCommandActionInfo";
 
+            oemActions["#eMMC.SecureErase"]["target"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Actions/Oem/eMMC.SecureErase";
+            oemActions["#eMMC.SecureErase"]
+                        ["@Redfish.ActionInfo"] =
+                            "/redfish/v1/Managers/" PLATFORMBMCID
+                            "/Oem/EmmcSecureEraseActionInfo";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
             std::pair<std::string, std::string> redfishDateTimeOffset =
