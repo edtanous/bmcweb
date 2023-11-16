@@ -230,12 +230,7 @@ inline void handleSessionCollectionPost(
     bool isConfigureSelfOnly = pamrc == PAM_NEW_AUTHTOK_REQD;
     if ((pamrc != PAM_SUCCESS) && !isConfigureSelfOnly)
     {
-<<<<<<< HEAD
-        handleAccountLocked(username, asyncResp, req);
-=======
-        messages::resourceAtUriUnauthorized(asyncResp->res, req.url(),
-                                            "Invalid username or password");
->>>>>>> origin/master-october-10
+        //handleAccountLocked(username, asyncResp, req);
         return;
     }
 

@@ -43,8 +43,7 @@ inline void trustedComponentGetAllProperties(
                         propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "DBUS response error for trustedComponent properties";
+            BMCWEB_LOG_ERROR("DBUS response error for trustedComponent properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -89,7 +88,7 @@ inline void handleTrustedComponentsCollectionGet(
          chassisID](const std::optional<std::string>& validChassisPath) {
         if (!validChassisPath)
         {
-            BMCWEB_LOG_ERROR << "Cannot get validChassisPath";
+            BMCWEB_LOG_ERROR("Cannot get validChassisPath");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -121,7 +120,7 @@ inline void handleTrustedComponentGet(
          componentID](const std::optional<std::string>& validChassisPath) {
         if (!validChassisPath)
         {
-            BMCWEB_LOG_ERROR << "Cannot get validChassisPath";
+            BMCWEB_LOG_ERROR("Cannot get validChassisPath");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -132,8 +131,8 @@ inline void handleTrustedComponentGet(
                 const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "error_code = " << ec;
-                BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+                BMCWEB_LOG_ERROR("error_code = {}", ec);
+                BMCWEB_LOG_ERROR("error msg = {}", ec.message());
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -175,7 +174,7 @@ inline void handleTrustedComponentGet(
                 return; // component has been found
             }
 
-            BMCWEB_LOG_ERROR << "Cannot find trustedComponent";
+            BMCWEB_LOG_ERROR("Cannot find trustedComponent");
             messages::internalError(asyncResp->res);
             return;
         },

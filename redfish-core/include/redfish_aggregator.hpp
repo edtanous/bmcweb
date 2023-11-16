@@ -85,8 +85,7 @@ inline bool searchCollectionsArray(std::string_view uri,
             uri.substr(serviceRootUri.size(), parseCount));
     if (!parsedUrl)
     {
-        BMCWEB_LOG_ERROR("Failed to get target URI from {}",
-                         uri.substr(serviceRootUri.size()));
+        BMCWEB_LOG_ERROR("Failed to get target URI from {}", uri.substr(serviceRootUri.size()));
         return false;
     }
 
@@ -393,8 +392,7 @@ class RedfishAggregator
             return;
         }
 
-        BMCWEB_LOG_DEBUG("There were {} satellite configs found at startup",
-                         std::to_string(satelliteInfo.size()));
+        BMCWEB_LOG_DEBUG("There were {} satellite configs found at startup", std::to_string(satelliteInfo.size()));
     }
 
     // Search D-Bus objects for satellite config objects and add their
@@ -410,13 +408,11 @@ class RedfishAggregator
                 if (interface.first ==
                     "xyz.openbmc_project.Configuration.SatelliteController")
                 {
-                    BMCWEB_LOG_DEBUG("Found Satellite Controller at {}",
-                                     objectPath.first.str);
+                    BMCWEB_LOG_DEBUG("Found Satellite Controller at {}", objectPath.first.str);
 
                     if (!satelliteInfo.empty())
                     {
-                        BMCWEB_LOG_ERROR(
-                            "Redfish Aggregation only supports one satellite!");
+                        BMCWEB_LOG_ERROR( "Redfish Aggregation only supports one satellite!");
                         BMCWEB_LOG_DEBUG("Clearing all satellite data");
                         satelliteInfo.clear();
                         return;
@@ -485,9 +481,7 @@ class RedfishAggregator
                 // with the satellite BMC
                 if (*propVal != "None")
                 {
-                    BMCWEB_LOG_ERROR(
-                        "Unsupported AuthType value: {}, only \"none\" is supported",
-                        *propVal);
+                    BMCWEB_LOG_ERROR( "Unsupported AuthType value: {}, only \"none\" is supported", *propVal);
                     return;
                 }
                 url.set_scheme("http");
@@ -524,9 +518,7 @@ class RedfishAggregator
             resultString = "Updated existing satellite config ";
         }
 
-        BMCWEB_LOG_DEBUG("{}{} at {}://{}", resultString, name,
-                         result.first->second.scheme(),
-                         result.first->second.encoded_host_and_port());
+        BMCWEB_LOG_DEBUG("{}{} at {}://{}", resultString, name, result.first->second.scheme(), result.first->second.encoded_host_and_port());
     }
 
     enum AggregationType
@@ -544,15 +536,13 @@ class RedfishAggregator
         {
             if (aggType == AggregationType::Collection)
             {
-                BMCWEB_LOG_DEBUG(
-                    "Only aggregate GET requests to top level collections");
+                BMCWEB_LOG_DEBUG( "Only aggregate GET requests to top level collections");
                 return;
             }
 
             if (aggType == AggregationType::ContainsSubordinate)
             {
-                BMCWEB_LOG_DEBUG(
-                    "Only aggregate GET requests when uptree of a top level collection");
+                BMCWEB_LOG_DEBUG( "Only aggregate GET requests when uptree of a top level collection");
                 return;
             }
         }
@@ -638,8 +628,7 @@ class RedfishAggregator
         }
 
         const crow::Request& thisReq = *sharedReq;
-        BMCWEB_LOG_DEBUG("Aggregation is enabled, begin processing of {}",
-                         thisReq.target());
+        BMCWEB_LOG_DEBUG("Aggregation is enabled, begin processing of {}", thisReq.target());
 
         // We previously determined the request is for a collection.  No need to
         // check again
@@ -657,8 +646,7 @@ class RedfishAggregator
         // collection.  No need to check again
         if (aggType == AggregationType::ContainsSubordinate)
         {
-            BMCWEB_LOG_DEBUG(
-                "Aggregating what may have a subordinate collection");
+            BMCWEB_LOG_DEBUG( "Aggregating what may have a subordinate collection");
             // We need to use a specific response handler and send the
             // request to all known satellites
             getInstance().forwardContainsSubordinateRequests(thisReq, asyncResp,
@@ -718,8 +706,7 @@ class RedfishAggregator
         if (pos == std::string::npos)
         {
             // If this fails then something went wrong
-            BMCWEB_LOG_ERROR("Error removing prefix \"{}_\" from request URI",
-                             prefix);
+            BMCWEB_LOG_ERROR("Error removing prefix \"{}_\" from request URI", prefix);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -825,8 +812,7 @@ class RedfishAggregator
             std::unordered_map<std::string, boost::urls::url> satelliteInfo;
             if (ec)
             {
-                BMCWEB_LOG_ERROR("DBUS response error {}, {}", ec.value(),
-                                 ec.message());
+                BMCWEB_LOG_ERROR("DBUS response error {}, {}", ec.value(), ec.message());
                 handler(ec, satelliteInfo);
                 return;
             }
@@ -838,14 +824,11 @@ class RedfishAggregator
 
             if (!satelliteInfo.empty())
             {
-                BMCWEB_LOG_DEBUG(
-                    "Redfish Aggregation enabled with {} satellite BMCs",
-                    std::to_string(satelliteInfo.size()));
+                BMCWEB_LOG_DEBUG( "Redfish Aggregation enabled with {} satellite BMCs", std::to_string(satelliteInfo.size()));
             }
             else
             {
-                BMCWEB_LOG_DEBUG(
-                    "No satellite BMCs detected.  Redfish Aggregation not enabled");
+                BMCWEB_LOG_DEBUG( "No satellite BMCs detected.  Redfish Aggregation not enabled");
             }
             handler(ec, satelliteInfo);
             });
@@ -920,9 +903,7 @@ class RedfishAggregator
 
         if (resp.resultInt() != 200)
         {
-            BMCWEB_LOG_DEBUG(
-                "Collection resource does not exist in satellite BMC \"{}\"",
-                prefix);
+            BMCWEB_LOG_DEBUG( "Collection resource does not exist in satellite BMC \"{}\"", prefix);
             // Return the error if we haven't had any successes
             if (asyncResp->res.resultInt() != 200)
             {
@@ -971,13 +952,11 @@ class RedfishAggregator
                 if ((!jsonVal.contains("Members")) &&
                     (!jsonVal["Members"].is_array()))
                 {
-                    BMCWEB_LOG_DEBUG(
-                        "Skipping aggregating unsupported resource");
+                    BMCWEB_LOG_DEBUG( "Skipping aggregating unsupported resource");
                     return;
                 }
 
-                BMCWEB_LOG_DEBUG(
-                    "Collection does not exist, overwriting asyncResp");
+                BMCWEB_LOG_DEBUG( "Collection does not exist, overwriting asyncResp");
                 asyncResp->res.result(resp.result());
                 asyncResp->res.jsonValue = std::move(jsonVal);
                 asyncResp->res.addHeader("Content-Type", "application/json");
@@ -992,14 +971,11 @@ class RedfishAggregator
                     (!asyncResp->res.jsonValue["Members"].is_array()))
 
                 {
-                    BMCWEB_LOG_DEBUG(
-                        "Skipping aggregating unsupported resource");
+                    BMCWEB_LOG_DEBUG( "Skipping aggregating unsupported resource");
                     return;
                 }
 
-                BMCWEB_LOG_DEBUG(
-                    "Adding aggregated resources from \"{}\" to collection",
-                    prefix);
+                BMCWEB_LOG_DEBUG( "Adding aggregated resources from \"{}\" to collection", prefix);
 
                 // TODO: This is a potential race condition with multiple
                 // satellites and the aggregating bmc attempting to write to
@@ -1023,8 +999,7 @@ class RedfishAggregator
         }
         else
         {
-            BMCWEB_LOG_ERROR("Received unparsable response from \"{}\"",
-                             prefix);
+            BMCWEB_LOG_ERROR("Received unparsable response from \"{}\"", prefix);
             // We received a response that was not a json.
             // Notify the user only if we did not receive any valid responses
             // and if the resource collection does not already exist on the
@@ -1054,9 +1029,7 @@ class RedfishAggregator
 
         if (resp.resultInt() != 200)
         {
-            BMCWEB_LOG_DEBUG(
-                "Resource uptree from Collection does not exist in satellite BMC \"{}\"",
-                prefix);
+            BMCWEB_LOG_DEBUG( "Resource uptree from Collection does not exist in satellite BMC \"{}\"", prefix);
             // Return the error if we haven't had any successes
             if (asyncResp->res.resultInt() != 200)
             {
@@ -1125,8 +1098,7 @@ class RedfishAggregator
                 if (!asyncResp->res.jsonValue.contains(prop.first))
                 {
                     // Only add the property if it did not already exist
-                    BMCWEB_LOG_DEBUG("Adding link for {} from BMC {}",
-                                     *strValue, prefix);
+                    BMCWEB_LOG_DEBUG("Adding link for {} from BMC {}", *strValue, prefix);
                     asyncResp->res.jsonValue[prop.first]["@odata.id"] =
                         *strValue;
                     continue;
@@ -1170,8 +1142,7 @@ class RedfishAggregator
         }
         else
         {
-            BMCWEB_LOG_ERROR("Received unparsable response from \"{}\"",
-                             prefix);
+            BMCWEB_LOG_ERROR("Received unparsable response from \"{}\"", prefix);
             // We received as response that was not a json
             // Notify the user only if we did not receive any valid responses,
             // and if the resource does not already exist on the aggregating BMC

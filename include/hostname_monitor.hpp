@@ -26,8 +26,7 @@ inline void installCertificate(const std::filesystem::path& certPath)
             return;
         }
 
-        BMCWEB_LOG_INFO("Replace HTTPs Certificate Success, "
-                        "remove temporary certificate file..");
+        BMCWEB_LOG_INFO("Replace HTTPs Certificate Success, " "remove temporary certificate file..");
         remove(certPath.c_str());
     },
         "xyz.openbmc_project.Certs.Manager.Server.Https",
@@ -97,9 +96,7 @@ inline int onPropertyUpdate(sd_bus_message* m, void* /* userdata */,
     int isSelfSigned = X509_verify(cert, pPubKey);
     EVP_PKEY_free(pPubKey);
 
-    BMCWEB_LOG_DEBUG(
-        "Current HTTPs Certificate Subject CN: {}, New HostName: {}, isSelfSigned: {}",
-        cnValue, *hostname, isSelfSigned);
+    BMCWEB_LOG_DEBUG( "Current HTTPs Certificate Subject CN: {}, New HostName: {}, isSelfSigned: {}", cnValue, *hostname, isSelfSigned);
 
     ASN1_IA5STRING* asn1 = static_cast<ASN1_IA5STRING*>(
         X509_get_ext_d2i(cert, NID_netscape_comment, nullptr, nullptr));
@@ -113,9 +110,7 @@ inline int onPropertyUpdate(sd_bus_message* m, void* /* userdata */,
         if (ensuressl::x509Comment == comment && isSelfSigned == 1 &&
             cnValue != *hostname)
         {
-            BMCWEB_LOG_INFO(
-                "Ready to generate new HTTPs certificate with subject cn: {}",
-                *hostname);
+            BMCWEB_LOG_INFO( "Ready to generate new HTTPs certificate with subject cn: {}", *hostname);
 
             std::vector<char>& pwd = lsp::getLsp();
             ensuressl::generateSslCertificate("/tmp/hostname_cert.tmp",

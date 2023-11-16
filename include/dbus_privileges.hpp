@@ -48,8 +48,7 @@ inline bool
     if (userRolePtr != nullptr)
     {
         req.session->userRole = *userRolePtr;
-        BMCWEB_LOG_DEBUG("userName = {} userRole = {}", req.session->username,
-                         *userRolePtr);
+        BMCWEB_LOG_DEBUG("userName = {} userRole = {}", req.session->username, *userRolePtr);
     }
 
     if (remoteUser == nullptr)
@@ -64,8 +63,7 @@ inline bool
     {
         if (!*remoteUser)
         {
-            BMCWEB_LOG_ERROR("UserPasswordExpired property is expected for"
-                             " local user but is missing or wrong type");
+            BMCWEB_LOG_ERROR("UserPasswordExpired property is expected for" " local user but is missing or wrong type");
             asyncResp->res.result(
                 boost::beast::http::status::internal_server_error);
             return false;

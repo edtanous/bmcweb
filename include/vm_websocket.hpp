@@ -209,8 +209,7 @@ inline void requestRoutes(App& app)
             if (data.length() >
                 handler->inputBuffer->capacity() - handler->inputBuffer->size())
             {
-                BMCWEB_LOG_ERROR("Buffer overrun when writing {} bytes",
-                                 data.length());
+                BMCWEB_LOG_ERROR("Buffer overrun when writing {} bytes", data.length());
                 conn.close("Buffer overrun");
                 return;
             }

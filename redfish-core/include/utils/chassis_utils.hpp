@@ -119,7 +119,7 @@ template <typename Callback>
 void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& chassisID, Callback&& callback)
 {
-    BMCWEB_LOG_DEBUG << "checkChassisId enter";
+    BMCWEB_LOG_DEBUG("checkChassisId enter");
     const std::array<const char*, 2> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Board",
         "xyz.openbmc_project.Inventory.Item.Chassis"};
@@ -128,11 +128,10 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         [callback{std::forward<Callback>(callback)}, asyncResp,
          chassisID](const boost::system::error_code ec,
                     const std::vector<std::string>& chassisPaths) {
-        BMCWEB_LOG_DEBUG << "getValidChassisID respHandler enter";
+        BMCWEB_LOG_DEBUG("getValidChassisID respHandler enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "getValidChassisID respHandler DBUS error: "
-                             << ec;
+            BMCWEB_LOG_ERROR("getValidChassisID respHandler DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -145,7 +144,7 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             chassisName = path.filename();
             if (chassisName.empty())
             {
-                BMCWEB_LOG_ERROR << "Failed to find chassisName in " << chassis;
+                BMCWEB_LOG_ERROR("Failed to find chassisName in {}", chassis);
                 continue;
             }
             if (chassisName == chassisID)
@@ -163,7 +162,7 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
         "/xyz/openbmc_project/inventory", 0, interfaces);
-    BMCWEB_LOG_DEBUG << "checkChassisId exit";
+    BMCWEB_LOG_DEBUG("checkChassisId exit");
 }
 
 /**
@@ -190,8 +189,7 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         BMCWEB_LOG_DEBUG("getValidChassisPath respHandler enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR("getValidChassisPath respHandler DBUS error: {}",
-                             ec);
+            BMCWEB_LOG_ERROR("getValidChassisPath respHandler DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -269,7 +267,7 @@ inline void
     getChassisLinksContainedBy(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get parent chassis link";
+    BMCWEB_LOG_DEBUG("Get parent chassis link");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
@@ -312,7 +310,7 @@ inline void
                     const std::string& property) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for Location";
+            BMCWEB_LOG_DEBUG("DBUS response error for Location");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -388,7 +386,7 @@ inline void setBackgroundCopyEnabled(
                  const dbus::utility::ManagedObjectType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
+            BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -445,9 +443,7 @@ inline void setBackgroundCopyEnabled(
             }
             else
             {
-                BMCWEB_LOG_DEBUG
-                    << "Can not find relevant MCTP endpoint for chassis "
-                    << chassisId;
+                BMCWEB_LOG_DEBUG("Can not find relevant MCTP endpoint for chassis {}", chassisId);
                 messages::resourceMissingAtURI(
                     asyncResp->res, crow::utility::urlFromPieces(
                                         "redfish", "v1", "Chassis", chassisId));
@@ -496,7 +492,7 @@ inline void
                  const dbus::utility::ManagedObjectType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
+            BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -553,9 +549,7 @@ inline void
             }
             else
             {
-                BMCWEB_LOG_DEBUG
-                    << "Can not find relevant MCTP endpoint for chassis "
-                    << chassisId;
+                BMCWEB_LOG_DEBUG("Can not find relevant MCTP endpoint for chassis {}", chassisId);
                 messages::resourceMissingAtURI(
                     asyncResp->res, crow::utility::urlFromPieces(
                                         "redfish", "v1", "Chassis", chassisId));
@@ -600,7 +594,7 @@ inline void getBackgroundCopyAndInBandInfo(
                  const dbus::utility::ManagedObjectType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
+            BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -661,9 +655,7 @@ inline void getBackgroundCopyAndInBandInfo(
             }
             else
             {
-                BMCWEB_LOG_DEBUG
-                    << "Can not find relevant MCTP endpoint for chassis "
-                    << chassisUUID;
+                BMCWEB_LOG_DEBUG("Can not find relevant MCTP endpoint for chassis {}", chassisUUID);
             }
         }
     },
@@ -692,7 +684,7 @@ inline void getChassisUUID(const crow::Request& req,
                                  const std::string& chassisUUID) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
+            BMCWEB_LOG_DEBUG("DBUS response error for UUID");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -716,7 +708,7 @@ inline void getChassisName(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     const std::string& chassisName) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for chassis name";
+            BMCWEB_LOG_DEBUG("DBUS response error for chassis name");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -735,7 +727,7 @@ inline void getChassisType(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     const std::string& chassisType) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
+            BMCWEB_LOG_DEBUG("DBUS response error for UUID");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -755,7 +747,7 @@ inline void
                     const std::string& manufacturer) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for Manufacturer";
+            BMCWEB_LOG_DEBUG("DBUS response error for Manufacturer");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -774,7 +766,7 @@ inline void getChassisSKU(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     const std::string& chassisSKU) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for chassisSKU";
+            BMCWEB_LOG_DEBUG("DBUS response error for chassisSKU");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -794,7 +786,7 @@ inline void
                     const std::string& serialNumber) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for SerialNumber";
+            BMCWEB_LOG_DEBUG("DBUS response error for SerialNumber");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -829,7 +821,7 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
 
         if (objIt == subtree.end())
         {
-            BMCWEB_LOG_DEBUG << "Dbus Object not found:" << chassisID;
+            BMCWEB_LOG_DEBUG("Dbus Object not found:{}", chassisID);
             callback(false);
             return;
         }
@@ -852,11 +844,7 @@ inline void getAssociationEndpoint(const std::string& objPath,
                             std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "D-Bus responses error: " << ec << " (busctl call "
-                << dbus_utils::mapperBusName << " " << objPath << " "
-                << dbus_utils::propertyInterface << " Get ss "
-                << dbus_utils::associationInterface << " endpoints)";
+            BMCWEB_LOG_ERROR("D-Bus responses error: {} (busctl call {} {} {} Get ss {} endpoints)", ec, dbus_utils::mapperBusName, objPath, dbus_utils::propertyInterface, dbus_utils::associationInterface);
             callback(false, std::string(""));
             return; // should have associated inventory object.
         }
@@ -864,11 +852,7 @@ inline void getAssociationEndpoint(const std::string& objPath,
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr || data->size() == 0)
         {
-            BMCWEB_LOG_ERROR
-                << ((data == nullptr) ? "Data is null. " : "Data is empty")
-                << "(busctl call " << dbus_utils::mapperBusName << " "
-                << objPath << " " << dbus_utils::propertyInterface << " Get ss "
-                << dbus_utils::associationInterface << " endpoints)";
+            BMCWEB_LOG_ERROR("{}(busctl call {} {} {} Get ss {} endpoints)", ((data == nullptr) ? "Data is null. " : "Data is empty"), dbus_utils::mapperBusName, objPath, dbus_utils::propertyInterface, dbus_utils::associationInterface);
             /*
                             Object must have associated inventory object.
                             Exemplary test on hardware:
@@ -897,15 +881,14 @@ template <typename CallbackFunc>
 inline void getRedfishURL(const std::filesystem::path& invObjPath,
                           CallbackFunc&& callback)
 {
-    BMCWEB_LOG_DEBUG << "getRedfishURL(" << invObjPath << ")";
+    BMCWEB_LOG_DEBUG("getRedfishURL({})", invObjPath);
     crow::connections::systemBus->async_method_call(
         [invObjPath, callback](const boost::system::error_code ec,
                                const GetObjectType& resp) {
         std::string url;
         if (ec || resp.empty())
         {
-            BMCWEB_LOG_ERROR
-                << "DBUS response error during getting of service name: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error during getting of service name: {}", ec);
             callback(false, url);
             return;
         }
@@ -941,8 +924,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                     url = std::string("/redfish/v1/Systems/" PLATFORMSYSTEMID
                                       "/Processors/") +
                           invObjPath.filename().string();
-                    BMCWEB_LOG_DEBUG << service << " "
-                                     << interface << " => URL: " << url;
+                    BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface, url);
                     callback(true, url);
                     return;
                 }
@@ -960,10 +942,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                     // This is NVSwitch or PCIeSwitch
                     std::string switchID = invObjPath.filename();
                     // Now get the fabric ID
-                    BMCWEB_LOG_DEBUG
-                        << "DBUS resp: " << service << " "
-                        << interface << " => getAssociationEndpoint("
-                        << invObjPath.string() << "/fabrics, CALLBACK)";
+                    BMCWEB_LOG_DEBUG("DBUS resp: {} {} => getAssociationEndpoint({}/fabrics, CALLBACK)", service, interface, invObjPath.string());
                     getAssociationEndpoint(
                         invObjPath.string() + "/fabrics",
                         [switchID, callback](const bool& status,
@@ -971,8 +950,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                         std::string url;
                         if (!status)
                         {
-                            BMCWEB_LOG_DEBUG
-                                << "Unable to get the association endpoint";
+                            BMCWEB_LOG_DEBUG("Unable to get the association endpoint");
 
                             callback(false, url);
                             return;
@@ -993,16 +971,14 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                 if (interface == bmcInvInterf)
                 {
                     url = std::string("/redfish/v1/Managers/" PLATFORMBMCID);
-                    BMCWEB_LOG_DEBUG << service << " "
-                                     << interface << " => URL: " << url;
+                    BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface, url);
                     callback(true, url);
                     return;
                 }
             }
-            BMCWEB_LOG_DEBUG << "Not found proper interface for service "
-                             << service;
+            BMCWEB_LOG_DEBUG("Not found proper interface for service {}", service);
         }
-        BMCWEB_LOG_ERROR << "Failed to find proper URL";
+        BMCWEB_LOG_ERROR("Failed to find proper URL");
         callback(false, url);
     },
         dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,

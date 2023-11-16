@@ -37,8 +37,7 @@ inline void
     getfanSpeedsPercent(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& chassisID)
 {
-    BMCWEB_LOG_DEBUG << "Get properties for getFan associated to chassis = "
-                     << chassisID;
+    BMCWEB_LOG_DEBUG("Get properties for getFan associated to chassis = {}", chassisID);
     const std::array<std::string, 1> sensorInterfaces = {
         "xyz.openbmc_project.Sensor.Value"};
     crow::connections::systemBus->async_method_call(
@@ -50,7 +49,7 @@ inline void
                 sensorsubtree) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "D-Bus response error on GetSubTree " << ec;
+            BMCWEB_LOG_DEBUG("D-Bus response error on GetSubTree {}", ec);
             if (ec.value() == boost::system::errc::io_error)
             {
                 messages::resourceNotFound(asyncResp->res, "Chassis",
@@ -67,7 +66,7 @@ inline void
         {
             if (objectPath.empty() || serviceName.size() != 1)
             {
-                BMCWEB_LOG_DEBUG << "Error getting D-Bus object!";
+                BMCWEB_LOG_DEBUG("Error getting D-Bus object!");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -80,16 +79,14 @@ inline void
             boost::algorithm::split(split, validPath, boost::is_any_of("/"));
             if (split.size() < 6)
             {
-                BMCWEB_LOG_ERROR << "Got path that isn't long enough "
-                                 << validPath;
+                BMCWEB_LOG_ERROR("Got path that isn't long enough {}", validPath);
                 continue;
             }
             // These indexes aren't intuitive, as boost::split puts an empty
             // string at the beginning
             const std::string& sensorType = split[4];
             const std::string& sensorName = split[5];
-            BMCWEB_LOG_DEBUG << "sensorName " << sensorName << " sensorType "
-                             << sensorType;
+            BMCWEB_LOG_DEBUG("sensorName {} sensorType {}", sensorName, sensorType);
             if (sensorType == "fan" || sensorType == "fan_tach" ||
                 sensorType == "fan_pwm")
             {
@@ -99,7 +96,7 @@ inline void
                                  const std::variant<double>& value) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "Can't get Fan speed!";
+                        BMCWEB_LOG_DEBUG("Can't get Fan speed!");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -125,9 +122,7 @@ inline void
             }
             else
             {
-                BMCWEB_LOG_DEBUG
-                    << "This is not a fan-related sensor,sensortype = "
-                    << sensorType;
+                BMCWEB_LOG_DEBUG("This is not a fan-related sensor,sensortype = {}", sensorType);
                 continue;
             }
         }
@@ -182,12 +177,11 @@ inline void patchEdppSetPoint(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                                       sdbusplus::message::message& msg) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG << "Set point property succeeded";
+            BMCWEB_LOG_DEBUG("Set point property succeeded");
             return;
         }
 
-        BMCWEB_LOG_ERROR << "Processor ID: " << processorId
-                         << " set point property failed: " << ec;
+        BMCWEB_LOG_ERROR("Processor ID: {} set point property failed: {}", processorId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -247,8 +241,7 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 std::string, std::variant<std::string>>>& propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Chassis properties";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Chassis properties");
             return;
         }
         for (const std::pair<std::string, std::variant<std::string>>& property :
@@ -261,8 +254,7 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -324,7 +316,7 @@ inline void getPowerWattsBySensorName(
                         std::string, std::vector<std::string>>>& object) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error";
+                    BMCWEB_LOG_DEBUG("DBUS response error");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -337,7 +329,7 @@ inline void getPowerWattsBySensorName(
                                     const std::variant<double>& value) {
                         if (ec)
                         {
-                            BMCWEB_LOG_DEBUG << "Can't get Power Watts!";
+                            BMCWEB_LOG_DEBUG("Can't get Power Watts!");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -436,7 +428,7 @@ inline void getEnergyJoulesBySensorName(
                         std::string, std::vector<std::string>>>& object) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error";
+                    BMCWEB_LOG_DEBUG("DBUS response error");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -449,7 +441,7 @@ inline void getEnergyJoulesBySensorName(
                                     const std::variant<double>& value) {
                         if (ec)
                         {
-                            BMCWEB_LOG_DEBUG << "Can't get Energy Joules!";
+                            BMCWEB_LOG_DEBUG("Can't get Energy Joules!");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -547,14 +539,14 @@ inline void
                          std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "get power control sensor failed";
+            BMCWEB_LOG_ERROR("get power control sensor failed");
             return; // no endpoints = no failures
         }
         std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_ERROR << "null value returned for  control sensor";
+            BMCWEB_LOG_ERROR("null value returned for  control sensor");
             return;
         }
         // power control sensor
@@ -570,7 +562,7 @@ inline void
                             const std::variant<double>& value) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "Can't get Power Watts!";
+                    BMCWEB_LOG_DEBUG("Can't get Power Watts!");
                     return;
                 }
                 const double* attributeValue = std::get_if<double>(&value);
@@ -605,8 +597,7 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 objInfo) {
         if (errorno)
         {
-            BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                             << errorno;
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", errorno);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -626,8 +617,7 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         propertiesList) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                        "Chassis properties";
+                    BMCWEB_LOG_DEBUG("DBUS response error for " "Chassis properties");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -641,8 +631,7 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             std::get_if<uint32_t>(&property.second);
                         if (value == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG << "Null value returned "
-                                                "for type";
+                            BMCWEB_LOG_DEBUG("Null value returned " "for type");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -655,8 +644,7 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             std::get_if<uint32_t>(&property.second);
                         if (value == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG << "Null value returned "
-                                                "for type";
+                            BMCWEB_LOG_DEBUG("Null value returned " "for type");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -669,8 +657,7 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             std::get_if<uint32_t>(&property.second);
                         if (value == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG << "Null value returned "
-                                                "for type";
+                            BMCWEB_LOG_DEBUG("Null value returned " "for type");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -682,8 +669,7 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const bool* value = std::get_if<bool>(&property.second);
                         if (value == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG << "Null value returned "
-                                                "for type";
+                            BMCWEB_LOG_DEBUG("Null value returned " "for type");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -725,8 +711,7 @@ inline void getEDPpData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                   const SetPointProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "procesor EDPp scaling properties";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "procesor EDPp scaling properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -754,8 +739,7 @@ inline void getEDPpData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const size_t* value = std::get_if<size_t>(&variant);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -767,8 +751,7 @@ inline void getEDPpData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const size_t* value = std::get_if<size_t>(&variant);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -793,8 +776,7 @@ inline void getPowerLimits(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Chassis properties";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Chassis properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -807,8 +789,7 @@ inline void getPowerLimits(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -820,8 +801,7 @@ inline void getPowerLimits(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -845,8 +825,7 @@ inline void getControlMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Chassis properties";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Chassis properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -859,8 +838,7 @@ inline void getControlMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -910,7 +888,7 @@ inline void
 
             if (connectionNames.size() < 1)
             {
-                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                BMCWEB_LOG_ERROR("Got 0 Connection names");
                 continue;
             }
 
@@ -968,9 +946,7 @@ inline void
                           const std::string& chassisID,
                           const std::string& chassisPath)
 {
-    BMCWEB_LOG_DEBUG
-        << "Get properties for EnvironmentMetrics associated to chassis = "
-        << chassisID;
+    BMCWEB_LOG_DEBUG("Get properties for EnvironmentMetrics associated to chassis = {}", chassisID);
     asyncResp->res.jsonValue["@odata.type"] =
         "#EnvironmentMetrics.v1_2_0.EnvironmentMetrics";
     asyncResp->res.jsonValue["Name"] = "Chassis Environment Metrics";
@@ -1013,8 +989,7 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 objInfo) {
         if (errorno)
         {
-            BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                             << errorno;
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", errorno);
             messages::internalError(resp->res);
             return;
         }
@@ -1027,13 +1002,12 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                                sdbusplus::message::message& msg) {
                 if (!ec)
                 {
-                    BMCWEB_LOG_DEBUG << "Set power limit property succeeded";
+                    BMCWEB_LOG_DEBUG("Set power limit property succeeded");
                     messages::success(resp->res);
                     return;
                 }
 
-                BMCWEB_LOG_ERROR << resourceType << ": " << resourceId
-                                 << " set power limit property failed: " << ec;
+                BMCWEB_LOG_ERROR("{}: {} set power limit property failed: {}", resourceType, resourceId, ec);
                 // Read and convert dbus error message to redfish error
                 const sd_bus_error* dbusError = msg.get_error();
                 if (dbusError == nullptr)
@@ -1171,7 +1145,7 @@ inline void requestRoutesEnvironmentMetrics(App& app)
              chassisID](const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -1237,7 +1211,7 @@ inline void requestRoutesEnvironmentMetrics(App& app)
 
                         if (connectionNames.size() < 1)
                         {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                            BMCWEB_LOG_ERROR("Got 0 Connection names");
                             continue;
                         }
 
@@ -1309,7 +1283,7 @@ inline void getSensorDataByService(
     const std::string& chassisId, const std::string& objPath,
     const std::string& resourceType)
 {
-    BMCWEB_LOG_DEBUG << "Get sensor data.";
+    BMCWEB_LOG_DEBUG("Get sensor data.");
     using PropertyType =
         std::variant<std::string, double, uint64_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
@@ -1319,7 +1293,7 @@ inline void getSensorDataByService(
                   const PropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Can't get sensor reading for";
+            BMCWEB_LOG_DEBUG("Can't get sensor reading for");
             // Not reporting Internal Failure for services that dont host
             // sensor path in case of Processor Env Eg: GpuOobRecovery in
             // case of FPGA Processor
@@ -1344,16 +1318,14 @@ inline void getSensorDataByService(
                 boost::algorithm::split(split, objPath, boost::is_any_of("/"));
                 if (split.size() < 6)
                 {
-                    BMCWEB_LOG_ERROR << "Got path that isn't long enough "
-                                     << objPath;
+                    BMCWEB_LOG_ERROR("Got path that isn't long enough {}", objPath);
                     return;
                 }
                 // These indexes aren't intuitive, as boost::split puts an
                 // empty string at the beginning
                 const std::string& sensorType = split[4];
                 const std::string& sensorName = split[5];
-                BMCWEB_LOG_DEBUG << "sensorName " << sensorName
-                                 << " sensorType " << sensorType;
+                BMCWEB_LOG_DEBUG("sensorName {} sensorType {}", sensorName, sensorType);
 
                 std::string sensorURI =
                     (boost::format("/redfish/v1/Chassis/%s/Sensors/%s") %
@@ -1398,7 +1370,7 @@ inline void getSensorDataService(
     [[maybe_unused]] const std::string& service, const std::string& chassisId,
     const std::string& objPath, const std::string& resourceType)
 {
-    BMCWEB_LOG_DEBUG << "Get sensor service.";
+    BMCWEB_LOG_DEBUG("Get sensor service.");
 
     const std::array<const char*, 1> sensorInterfaces = {
         "xyz.openbmc_project.Sensor.Value"};
@@ -1435,7 +1407,7 @@ inline void getEnvironmentMetricsDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath, const std::string& resourceType)
 {
-    BMCWEB_LOG_DEBUG << "Get environment metrics data.";
+    BMCWEB_LOG_DEBUG("Get environment metrics data.");
     // Get parent chassis for sensors URI
     crow::connections::systemBus->async_method_call(
         [aResp, service, resourceType,
@@ -1495,7 +1467,7 @@ inline void getCpuEnvironmentMetricsDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get CPU environment metrics data.";
+    BMCWEB_LOG_DEBUG("Get CPU environment metrics data.");
     crow::connections::systemBus->async_method_call(
         [aResp, service,
          objPath](const boost::system::error_code& e,
@@ -1537,7 +1509,7 @@ inline void getCpuPowerCapData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                const std::string& objPath,
                                const std::string& cpuId, bool persistence)
 {
-    BMCWEB_LOG_DEBUG << "Get CPU power cap data.";
+    BMCWEB_LOG_DEBUG("Get CPU power cap data.");
     crow::connections::systemBus->async_method_call(
         [aResp, service, objPath, cpuId,
          persistence](const boost::system::error_code& e,
@@ -1584,7 +1556,7 @@ inline void
                           const std::string& service,
                           const std::string& objPath, const std::string& cpuId)
 {
-    BMCWEB_LOG_DEBUG << "Get CPU power cap service.";
+    BMCWEB_LOG_DEBUG("Get CPU power cap service.");
 
     const std::array<const char*, 1> sensorInterfaces = {
         "xyz.openbmc_project.Control.Power.Cap"};
@@ -1621,7 +1593,7 @@ inline void
                             const std::string& service,
                             const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get CPU power Cap";
+    BMCWEB_LOG_DEBUG("Get CPU power Cap");
     crow::connections::systemBus->async_method_call(
         [aResp, service,
          objPath](const boost::system::error_code& e,
@@ -1661,7 +1633,7 @@ inline void
     getProcessorEnvironmentMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                        const std::string& processorId)
 {
-    BMCWEB_LOG_DEBUG << "Get available system processor resource";
+    BMCWEB_LOG_DEBUG("Get available system processor resource");
     crow::connections::systemBus->async_method_call(
         [processorId, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -1671,7 +1643,7 @@ inline void
                 subtree) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
 
             return;
@@ -1814,7 +1786,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                                              "SetPoint", setPoint,
                                              "Persistency", persistency))
                     {
-                        BMCWEB_LOG_ERROR << "Cannot read values from Edpp tag";
+                        BMCWEB_LOG_ERROR("Cannot read values from Edpp tag");
                         return;
                     }
 
@@ -1893,7 +1865,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 
                         if (connectionNames.size() < 1)
                         {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                            BMCWEB_LOG_ERROR("Got 0 Connection names");
                             continue;
                         }
 
@@ -1930,7 +1902,7 @@ inline void
     getMemoryEnvironmentMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                     const std::string& dimmId)
 {
-    BMCWEB_LOG_DEBUG << "Get available system memory resource";
+    BMCWEB_LOG_DEBUG("Get available system memory resource");
     crow::connections::systemBus->async_method_call(
         [dimmId, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -1940,7 +1912,7 @@ inline void
                 subtree) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
 
             return;
@@ -2024,14 +1996,14 @@ inline void postEdppReset(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         {
             if (retValue != 0)
             {
-                BMCWEB_LOG_ERROR << retValue;
+                BMCWEB_LOG_ERROR("{}", retValue);
                 messages::operationFailed(resp->res);
             }
-            BMCWEB_LOG_DEBUG << "CPU:" << processorId << " Edpp Reset Succeded";
+            BMCWEB_LOG_DEBUG("CPU:{} Edpp Reset Succeded", processorId);
             messages::success(resp->res);
             return;
         }
-        BMCWEB_LOG_DEBUG << ec;
+        BMCWEB_LOG_DEBUG("{}", ec);
         messages::internalError(resp->res);
         return;
     },

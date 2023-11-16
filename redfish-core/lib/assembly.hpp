@@ -41,25 +41,25 @@ inline void
                      const std::string& service, const std::string& objPath,
                      const std::string& chassisId)
 {
-    BMCWEB_LOG_DEBUG << "Get Assemblies Data";
+    BMCWEB_LOG_DEBUG("Get Assemblies Data");
     // Get Assembly ID
     size_t devStart = objPath.rfind('/');
     if (devStart == std::string::npos)
     {
-        BMCWEB_LOG_ERROR << "Assembly not found " << objPath;
+        BMCWEB_LOG_ERROR("Assembly not found {}", objPath);
         return;
     }
     std::string assemblyName = objPath.substr(devStart + 1);
     if (assemblyName.empty())
     {
-        BMCWEB_LOG_ERROR << "Empty assembly";
+        BMCWEB_LOG_ERROR("Empty assembly");
         return;
     }
     std::regex assemblyRegex("[^0-9]*([0-9]+).*");
     std::cmatch match;
     if (!regex_match(assemblyName.c_str(), match, assemblyRegex))
     {
-        BMCWEB_LOG_ERROR << "Assembly Id not found";
+        BMCWEB_LOG_ERROR("Assembly Id not found");
         return;
     }
     const std::string& assemblyId = match[1].first;
@@ -71,7 +71,7 @@ inline void
                 std::string, std::variant<std::string>>>& propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for assembly properties";
+            BMCWEB_LOG_DEBUG("DBUS response error for assembly properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -94,8 +94,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for asset properties";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for asset properties");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -107,8 +106,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for manufacturer";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for manufacturer");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -120,8 +118,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for build date";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for build date");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -133,8 +130,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for LocationType";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for LocationType");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -147,8 +143,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for PhysicalContext";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for PhysicalContext");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -174,7 +169,7 @@ inline void requestAssemblyRoutes(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisId) {
-        BMCWEB_LOG_DEBUG << "Assembly doGet enter";
+        BMCWEB_LOG_DEBUG("Assembly doGet enter");
         const std::array<const char*, 1> interface = {
             "xyz.openbmc_project.Inventory.Item.Chassis"};
         // Get chassis collection
@@ -186,7 +181,7 @@ inline void requestAssemblyRoutes(App& app)
                 "xyz.openbmc_project.Inventory.Item.Assembly"};
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
+                BMCWEB_LOG_DEBUG("DBUS response error");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -227,7 +222,7 @@ inline void requestAssemblyRoutes(App& app)
                         const std::vector<std::string>& assemblyList) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
+                        BMCWEB_LOG_DEBUG("DBUS response error");
                         messages::internalError(asyncResp->res);
                         return;
                     }

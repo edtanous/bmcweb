@@ -23,7 +23,7 @@ inline void getIsOemNvidiaRshimEnable(
 
     if (!std::filesystem::exists(rshimDir))
     {
-        BMCWEB_LOG_DEBUG << "No /dev/rshim0. Interface not started";
+        BMCWEB_LOG_DEBUG("No /dev/rshim0. Interface not started");
         asyncResp->res.jsonValue["BmcRShim"]["BmcRShimEnabled"] = false;
         return;
     }
@@ -35,8 +35,7 @@ inline void getIsOemNvidiaRshimEnable(
                     const std::string& rshimActiveState) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "DBUS response error for getIsOemNvidiaRshimEnable";
+            BMCWEB_LOG_ERROR("DBUS response error for getIsOemNvidiaRshimEnable");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -55,14 +54,13 @@ inline void
         "/org/freedesktop/systemd1/unit/rshim_2eservice";
     std::string method = bmcRshimEnabled ? "Start" : "Stop";
 
-    BMCWEB_LOG_DEBUG << "requestOemNvidiaRshim: " << method.c_str()
-                     << " rshim interface";
+    BMCWEB_LOG_DEBUG("requestOemNvidiaRshim: {} rshim interface", method.c_str());
 
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error for rshim enable/disable";
+            BMCWEB_LOG_ERROR("DBUS response error for rshim enable/disable");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -100,10 +98,7 @@ inline void requestRoutesNvidiaOemBf(App& app)
         if (!redfish::json_util::readJsonPatch(req, asyncResp->res, "BmcRShim",
                                                bmcRshim))
         {
-            BMCWEB_LOG_ERROR
-                << "Illegal Property "
-                << asyncResp->res.jsonValue.dump(
-                       2, ' ', true, nlohmann::json::error_handler_t::replace);
+            BMCWEB_LOG_ERROR("Illegal Property {}", asyncResp->res.jsonValue.dump( 2, ' ', true, nlohmann::json::error_handler_t::replace));
             return;
         }
         if (bmcRshim)
@@ -113,11 +108,7 @@ inline void requestRoutesNvidiaOemBf(App& app)
                                               "BmcRShimEnabled",
                                               bmcRshimEnabled))
             {
-                BMCWEB_LOG_ERROR
-                    << "Illegal Property "
-                    << asyncResp->res.jsonValue.dump(
-                           2, ' ', true,
-                           nlohmann::json::error_handler_t::replace);
+                BMCWEB_LOG_ERROR("Illegal Property {}", asyncResp->res.jsonValue.dump( 2, ' ', true, nlohmann::json::error_handler_t::replace));
                 return;
             }
 

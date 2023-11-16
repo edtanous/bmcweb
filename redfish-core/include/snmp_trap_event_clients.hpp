@@ -95,8 +95,7 @@ inline void
                         dbus::utility::ManagedObjectType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("D-Bus response error on GetManagedObjects {}",
-                             ec);
+            BMCWEB_LOG_ERROR("D-Bus response error on GetManagedObjects {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }

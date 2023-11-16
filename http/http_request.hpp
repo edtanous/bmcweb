@@ -43,8 +43,6 @@ struct Request
         }
     }
 
-<<<<<<< HEAD
-=======
     Request(std::string_view bodyIn, std::error_code& /*ec*/) : req({}, bodyIn)
     {}
 
@@ -57,7 +55,6 @@ struct Request
     Request& operator=(Request&&) = default;
     ~Request() = default;
 
->>>>>>> origin/master-october-10
     boost::beast::http::verb method() const
     {
         return req.method();

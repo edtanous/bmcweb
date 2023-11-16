@@ -95,8 +95,7 @@ class Resolver
                 handler(ec, endpointList);
                 return;
             }
-            BMCWEB_LOG_DEBUG("ResolveHostname returned: {}:{}", hostName,
-                             flagNum);
+            BMCWEB_LOG_DEBUG("ResolveHostname returned: {}:{}", hostName, flagNum);
             // Extract the IP address from the response
             for (const std::tuple<int32_t, int32_t, std::vector<uint8_t>>&
                      resolveList : resp)
@@ -110,8 +109,7 @@ class Resolver
                         boost::system::errc::address_not_available);
                     handler(ecErr, endpointList);
                 }
-                BMCWEB_LOG_DEBUG("resolved endpoint is : {}",
-                                 endpoint.address().to_string());
+                BMCWEB_LOG_DEBUG("resolved endpoint is : {}", endpoint.address().to_string());
                 endpointList.push_back(endpoint);
             }
             // All the resolved data is filled in the endpointList

@@ -16,24 +16,19 @@
 #pragma once
 #ifndef BMCWEB_ENABLE_REDFISH_ONE_CHASSIS
 
-<<<<<<< HEAD
-#include <dbus_utility.hpp>
-#include <error_messages.hpp>
-=======
+// #include <dbus_utility.hpp>
+// #include <error_messages.hpp>
 #include "async_resp.hpp"
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
+#include <sdbusplus/message.hpp>
 
 #include <boost/system/error_code.hpp>
->>>>>>> origin/master-october-10
 #include <sdbusplus/asio/property.hpp>
 
 #include <array>
 #include <charconv>
-<<<<<<< HEAD
-=======
 #include <ranges>
->>>>>>> origin/master-october-10
 #include <string_view>
 
 namespace redfish
@@ -102,7 +97,6 @@ void getMainChassisId(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         std::string chassisId = subtree[0].first.substr(idPos + 1);
         BMCWEB_LOG_DEBUG("chassisId = {}", chassisId);
         callback(chassisId, asyncResp);
-<<<<<<< HEAD
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -111,9 +105,6 @@ void getMainChassisId(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         std::array<const char*, 2>{
             "xyz.openbmc_project.Inventory.Item.Board",
             "xyz.openbmc_project.Inventory.Item.Chassis"});
-=======
-        });
->>>>>>> origin/master-october-10
 }
 
 template <typename CallbackFunc>
@@ -180,22 +171,6 @@ void getPortStatusAndPath(
                 const std::string& unitState =
                     std::get<NET_PROTO_UNIT_SUB_STATE>(unit);
 
-<<<<<<< HEAD
-            bool isProtocolEnabled = ((unitState == "running") ||
-                                      (unitState == "listening"));
-            // We found service, return from inner loop.
-            callback(ec, socketPath, isProtocolEnabled);
-            return;
-        }
-
-        //  no service foudn, throw error
-        boost::system::error_code ec1 = boost::system::errc::make_error_code(
-            boost::system::errc::no_such_process);
-        // return error code
-        callback(ec1, "", false);
-        BMCWEB_LOG_ERROR << ec1;
-    },
-=======
                 bool isProtocolEnabled = ((unitState == "running") ||
                                           (unitState == "listening"));
 
@@ -217,9 +192,7 @@ void getPortStatusAndPath(
                     {
                         // Already registered as enabled or current one is not
                         // enabled, nothing to do
-                        BMCWEB_LOG_DEBUG(
-                            "protocolName: {}, already true or current one is false: {}",
-                            kv.first, isProtocolEnabled);
+                        BMCWEB_LOG_DEBUG( "protocolName: {}, already true or current one is false: {}", kv.first, isProtocolEnabled);
                         break;
                     }
                     // Remove existing entry and replace with new one (below)
@@ -235,7 +208,6 @@ void getPortStatusAndPath(
 
         callback(ec, socketData);
         },
->>>>>>> origin/master-october-10
         "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
         "org.freedesktop.systemd1.Manager", "ListUnits");
 }
@@ -292,71 +264,71 @@ void getPortNumber(const std::string& socketPath, CallbackFunc&& callback)
     });
 }
 
-inline void
-    handleAccountLocked(const std::string_view username,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const crow::Request& req)
-{
-    const std::string user(username);
-    crow::connections::systemBus->async_method_call(
-        [asyncResp, &req,
-         user](const boost::system::error_code ec,
-               const std::map<std::string, dbus::utility::DbusVariantType>&
-                   userInfo) {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR << "GetUserInfo failed...";
-            messages::resourceAtUriUnauthorized(asyncResp->res, req.urlView,
-                                                "Invalid username or password");
-            return;
-        }
-        bool userLocked = false;
-        const bool* userLockedPtr = nullptr;
-        auto lockedIter = userInfo.find("UserLockedForFailedAttempt");
-        if (lockedIter != userInfo.end())
-        {
-            userLockedPtr = std::get_if<bool>(&lockedIter->second);
-        }
-        if (userLockedPtr != nullptr)
-        {
-            userLocked = *userLockedPtr;
-        }
+// inline void
+//     handleAccountLocked(const std::string_view username,
+//                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+//                         const crow::Request& req)
+// {
+//     const std::string user(username);
+//     crow::connections::systemBus->async_method_call(
+//         [asyncResp, &req,
+//          user](const boost::system::error_code& ec,
+//                const std::map<std::string, dbus::utility::DbusVariantType>&
+//                    userInfo) {
+//         if (ec)
+//         {
+//             BMCWEB_LOG_ERROR("GetUserInfo failed...");
+//             // messages::resourceAtUriUnauthorized(asyncResp->res, req.urlView,
+//             //                                     "Invalid username or password");
+//             return;
+//         }
+//         bool userLocked = false;
+//         const bool* userLockedPtr = nullptr;
+//         auto lockedIter = userInfo.find("UserLockedForFailedAttempt");
+//         if (lockedIter != userInfo.end())
+//         {
+//             userLockedPtr = std::get_if<bool>(&lockedIter->second);
+//         }
+//         if (userLockedPtr != nullptr)
+//         {
+//             userLocked = *userLockedPtr;
+//         }
 
-        if (userLocked)
-        {
-            sdbusplus::asio::getProperty<uint32_t>(
-                *crow::connections::systemBus,
-                "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
-                "xyz.openbmc_project.User.AccountPolicy",
-                "AccountUnlockTimeout",
-                [asyncResp, &req](const boost::system::error_code ec,
-                                  const uint32_t& unlockTimeout) {
-                if (ec)
-                {
-                    messages::internalError(asyncResp->res);
-                }
-                else
-                {
-                    BMCWEB_LOG_DEBUG << "unlock Timeout: " << unlockTimeout;
-                    std::string arg2 =
-                        "Account temporarily locked out for " +
-                        std::to_string(unlockTimeout) +
-                        " seconds"
-                        " due to multiple authentication failures";
-                    messages::resourceAtUriUnauthorized(asyncResp->res,
-                                                        req.urlView, arg2);
-                }
-            });
-        }
-        else
-        {
-            BMCWEB_LOG_DEBUG << "User is not locked out";
-            messages::resourceAtUriUnauthorized(asyncResp->res, req.urlView,
-                                                "Invalid username or password");
-        }
-    },
-        "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
-        "xyz.openbmc_project.User.Manager", "GetUserInfo", user);
-}
+//         if (userLocked)
+//         {
+//             sdbusplus::asio::getProperty<uint32_t>(
+//                 *crow::connections::systemBus,
+//                 "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
+//                 "xyz.openbmc_project.User.AccountPolicy",
+//                 "AccountUnlockTimeout",
+//                 [asyncResp, &req](const boost::system::error_code ec,
+//                                   const uint32_t& unlockTimeout) {
+//                 if (ec)
+//                 {
+//                     messages::internalError(asyncResp->res);
+//                 }
+//                 else
+//                 {
+//                     BMCWEB_LOG_DEBUG("unlock Timeout: {}", unlockTimeout);
+//                     std::string arg2 =
+//                         "Account temporarily locked out for " +
+//                         std::to_string(unlockTimeout) +
+//                         " seconds"
+//                         " due to multiple authentication failures";
+//                     // messages::resourceAtUriUnauthorized(asyncResp->res,
+//                     //                                     req.urlView, arg2);
+//                 }
+//             });
+//         }
+//         else
+//         {
+//             BMCWEB_LOG_DEBUG("User is not locked out");
+//             // messages::resourceAtUriUnauthorized(asyncResp->res, req.urlView,
+//             //                                     "Invalid username or password");
+//         }
+//     },
+//         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
+//         "xyz.openbmc_project.User.Manager", "GetUserInfo", user);
+// }
 } // namespace redfish
 #endif

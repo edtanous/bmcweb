@@ -3,10 +3,7 @@
 #include "file_watcher.hpp"
 #include "http_connection.hpp"
 #include "logging.hpp"
-<<<<<<< HEAD
 #include "lsp.hpp"
-=======
->>>>>>> origin/master-october-10
 #include "ssl_key_handler.hpp"
 
 #include <boost/asio/ip/address.hpp>
@@ -15,10 +12,7 @@
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
-<<<<<<< HEAD
 #include <boost/date_time/posix_time/posix_time.hpp>
-=======
->>>>>>> origin/master-october-10
 
 #include <atomic>
 #include <chrono>
@@ -77,18 +71,14 @@ class Server
         gmtime_r(&lastTimeT, &myTm);
 
         dateStr.resize(100);
-<<<<<<< HEAD
-        size_t dateStrSz = strftime(&dateStr[0], 99,
-=======
         size_t dateStrSz = strftime(dateStr.data(), dateStr.size() - 1,
->>>>>>> origin/master-october-10
                                     "%a, %d %b %Y %H:%M:%S GMT", &myTm);
         dateStr.resize(dateStrSz);
     }
 
     void run()
     {
-        BMCWEB_LOG_INFO << "Server<Handler,Adaptor>::run()";
+        BMCWEB_LOG_INFO("Server<Handler,Adaptor>::run()");
         loadCertificate();
         watchCertificateChange();
         updateDateStr();
@@ -105,8 +95,7 @@ class Server
             return dateStr;
         };
 
-        BMCWEB_LOG_INFO("bmcweb server is running, local endpoint {}",
-                        acceptor->local_endpoint().address().to_string());
+        BMCWEB_LOG_INFO("bmcweb server is running, local endpoint {}", acceptor->local_endpoint().address().to_string());
         startAsyncWaitForSignal();
         doAccept();
     }
@@ -134,7 +123,7 @@ class Server
                 fs::create_directories(certPath);
             }
             fs::path certFile = certPath / "server.pem";
-            BMCWEB_LOG_INFO << "Building SSL Context file=" << certFile;
+            BMCWEB_LOG_INFO("Building SSL Context file={}", certFile.string());
             std::string sslPemFile(certFile);
             std::vector<char>& pwd = lsp::getLsp();
             ensuressl::ensureOpensslKeyPresentEncryptedAndValid(
@@ -152,11 +141,10 @@ class Server
         FILE* fp = fopen(filename.c_str(), "r");
         if (fp == nullptr)
         {
-            BMCWEB_LOG_ERROR << "Cannot open filename for reading: " << filename
-                             << "\n";
+            BMCWEB_LOG_ERROR("Cannot open filename for reading: {}", filename);
             return false;
         }
-        BMCWEB_LOG_INFO << "Opened " << filename << "\n";
+        BMCWEB_LOG_INFO("Opened {}", filename);
         return PEM_read_PrivateKey(fp, nullptr, lsp::passwordCallback,
                                    nullptr) != nullptr;
     }
@@ -167,11 +155,10 @@ class Server
         asn1::pemPkeyIsEncrypted(filename, &isEncrypted);
         if (!isEncrypted)
         {
-            BMCWEB_LOG_INFO << "Credentials are not encrypted, encrypting.\n";
+            BMCWEB_LOG_INFO("Credentials are not encrypted, encrypting.");
             std::vector<char>& pwd = lsp::getLsp();
             ensuressl::encryptCredentials(filename, &pwd);
         }
-<<<<<<< HEAD
     }
 
     void watchCertificateChange()
@@ -184,22 +171,11 @@ class Server
                 std::string filename = ev.path + ev.name;
                 if (fileHasCredentials(filename))
                 {
-                    BMCWEB_LOG_INFO << "Written file has credentials.";
+                    BMCWEB_LOG_INFO("Written file has credentials.");
                     ensureCredentialsAreEncrypted(filename);
                 }
             }
         });
-=======
-        fs::path certFile = certPath / "server.pem";
-        BMCWEB_LOG_INFO("Building SSL Context file={}", certFile.string());
-        std::string sslPemFile(certFile);
-        ensuressl::ensureOpensslKeyPresentAndValid(sslPemFile);
-        std::shared_ptr<boost::asio::ssl::context> sslContext =
-            ensuressl::getSslContext(sslPemFile);
-        adaptorCtx = sslContext;
-        handler->ssl(std::move(sslContext));
-#endif
->>>>>>> origin/master-october-10
     }
 
     void startAsyncWaitForSignal()
@@ -220,9 +196,7 @@ class Server
                     acceptor->cancel(ec2);
                     if (ec2)
                     {
-                        BMCWEB_LOG_ERROR(
-                            "Error while canceling async operations:{}",
-                            ec2.message());
+                        BMCWEB_LOG_ERROR( "Error while canceling async operations:{}", ec2.message());
                     }
                     startAsyncWaitForSignal();
                 }

@@ -178,7 +178,7 @@ inline void afterChassisDriveCollectionSubtree(
             sdbusplus::message::object_path object(drive);
             if (object.filename().empty())
             {
-                BMCWEB_LOG_ERROR << "Failed to find filename in " << drive;
+                BMCWEB_LOG_ERROR("Failed to find filename in {}", drive);
                 return;
             }
 
@@ -814,8 +814,7 @@ inline void
                     convertDriveType(*value);
                 if (!mediaType)
                 {
-                    BMCWEB_LOG_WARNING("UnknownDriveType Interface: {}",
-                                       *value);
+                    BMCWEB_LOG_WARNING("UnknownDriveType Interface: {}", *value);
                     continue;
                 }
                 if (*mediaType == drive::MediaType::Invalid)
@@ -859,8 +858,7 @@ inline void
                     convertDriveProtocol(*value);
                 if (!proto)
                 {
-                    BMCWEB_LOG_WARNING("Unknown DrivePrototype Interface: {}",
-                                       *value);
+                    BMCWEB_LOG_WARNING("Unknown DrivePrototype Interface: {}", *value);
                     continue;
                 }
                 if (*proto == protocol::Protocol::Invalid)
@@ -876,7 +874,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Illegal property: FormFactor";
+                    BMCWEB_LOG_ERROR("Illegal property: FormFactor");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -884,8 +882,7 @@ inline void
                     convertDriveFormFactor(*value);
                 if (!formFactor)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "Unsupported Drive FormFactor Interface: " << *value;
+                    BMCWEB_LOG_ERROR("Unsupported Drive FormFactor Interface: {}", *value);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -897,8 +894,7 @@ inline void
                     std::get_if<uint8_t>(&property.second);
                 if (lifeLeft == nullptr)
                 {
-                    BMCWEB_LOG_ERROR(
-                        "Illegal property: PredictedMediaLifeLeftPercent");
+                    BMCWEB_LOG_ERROR( "Illegal property: PredictedMediaLifeLeftPercent");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -983,7 +979,7 @@ inline void
                 const size_t* maxSpeed = std::get_if<size_t>(&property.second);
                 if (maxSpeed == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Illegal property: MaxSpeed";
+                    BMCWEB_LOG_ERROR("Illegal property: MaxSpeed");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -995,7 +991,7 @@ inline void
                 const size_t* speed = std::get_if<size_t>(&property.second);
                 if (speed == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Illegal property: NegotiatedSpeedGbs";
+                    BMCWEB_LOG_ERROR("Illegal property: NegotiatedSpeedGbs");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1050,7 +1046,7 @@ inline void getDriveStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                               const bool functional) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "fail to get drive status";
+            BMCWEB_LOG_ERROR("fail to get drive status");
             return;
         }
         if (!functional)
@@ -1084,7 +1080,7 @@ inline void
                                           const std::string& sw) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "fail to get drive smart";
+            BMCWEB_LOG_ERROR("fail to get drive smart");
             return;
         }
         getDriveStatus(asyncResp, connectionName, path, sw);
@@ -1102,7 +1098,7 @@ inline void
                                           const uint8_t prog) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "fail to get drive progress";
+            BMCWEB_LOG_ERROR("fail to get drive progress");
             return;
         }
         asyncResp->res.jsonValue["Operations"]["PercentageComplete"] = prog;
@@ -1121,7 +1117,7 @@ inline void
                                           const std::string& op) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "fail to get drive progress";
+            BMCWEB_LOG_ERROR("fail to get drive progress");
             return;
         }
 
@@ -1213,7 +1209,7 @@ inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (connectionNames.empty())
             {
-                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                BMCWEB_LOG_ERROR("Got 0 Connection names");
                 continue;
             }
 
@@ -1316,7 +1312,7 @@ inline void createSanitizeProgressTask(
         }
         taskData->percentComplete = static_cast<int>(*progress);
 
-        BMCWEB_LOG_ERROR << taskData->percentComplete;
+        BMCWEB_LOG_ERROR("{}", taskData->percentComplete);
         taskData->messages.emplace_back(messages::taskProgressChanged(
             index, static_cast<size_t>(*progress)));
 
@@ -1375,7 +1371,7 @@ inline void
                  const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Drive mapper call error";
+            BMCWEB_LOG_ERROR("Drive mapper call error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1397,8 +1393,7 @@ inline void
         const dbus::utility::MapperServiceMap& connNames = drive->second;
         if (connNames.size() != 1)
         {
-            BMCWEB_LOG_ERROR << "Connection size " << connNames.size()
-                             << ", not equal to 1";
+            BMCWEB_LOG_ERROR("Connection size {}, not equal to 1", connNames.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1430,8 +1425,7 @@ inline void
                         "the sanitize operation once it is complete.";
                     redfish::messages::updateInProgressMsg(asyncResp->res,
                                                            resolution);
-                    BMCWEB_LOG_ERROR << "Sanitize on drive" << driveId
-                                     << " already in progress.";
+                    BMCWEB_LOG_ERROR("Sanitize on drive{} already in progress.", driveId);
                 }
                 if (ec)
                 {
@@ -1466,7 +1460,7 @@ inline void handleDriveSanitizetActionInfoGet(
                   const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Drive mapper call error";
+            BMCWEB_LOG_ERROR("Drive mapper call error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1488,8 +1482,7 @@ inline void handleDriveSanitizetActionInfoGet(
         const dbus::utility::MapperServiceMap& connNames = drive->second;
         if (connNames.size() != 1)
         {
-            BMCWEB_LOG_ERROR << "Connection size " << connNames.size()
-                             << ", not equal to 1";
+            BMCWEB_LOG_ERROR("Connection size {}, not equal to 1", connNames.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1509,7 +1502,7 @@ inline void handleDriveSanitizetActionInfoGet(
                             const std::vector<std::string>& cap) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "fail to get drive Progress";
+                    BMCWEB_LOG_ERROR("fail to get drive Progress");
                     return;
                 }
                 nlohmann::json::array_t parameters;
@@ -1617,8 +1610,7 @@ inline void afterGetSubtreeSystemsStorageDrive(
 
     if (connectionNames.size() != 1)
     {
-        BMCWEB_LOG_ERROR("Connection size {}, not equal to 1",
-                         connectionNames.size());
+        BMCWEB_LOG_ERROR("Connection size {}, not equal to 1", connectionNames.size());
         messages::internalError(asyncResp->res);
         return;
     }
@@ -1704,7 +1696,7 @@ inline void
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Drive mapper call error";
+            BMCWEB_LOG_ERROR("Drive mapper call error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1940,7 +1932,7 @@ inline void chassisDriveCollectionGet(
 
             if (connectionNames.empty())
             {
-                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                BMCWEB_LOG_ERROR("Got 0 Connection names");
                 continue;
             }
 
@@ -1960,7 +1952,7 @@ inline void chassisDriveCollectionGet(
                                        const std::vector<std::string>& resp) {
                 if (ec3)
                 {
-                    BMCWEB_LOG_ERROR << "Error in chassis Drive association ";
+                    BMCWEB_LOG_ERROR("Error in chassis Drive association ");
                 }
                 nlohmann::json& members = asyncResp->res.jsonValue["Members"];
                 // important if array is empty
@@ -2317,8 +2309,7 @@ inline void getStorageControllerHandler(
 
         if (interfaceDict.size() != 1)
         {
-            BMCWEB_LOG_ERROR("Connection size {}, greater than 1",
-                             interfaceDict.size());
+            BMCWEB_LOG_ERROR("Connection size {}, greater than 1", interfaceDict.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2367,8 +2358,7 @@ inline void handleSystemsStorageControllerCollectionGet(
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
-        BMCWEB_LOG_DEBUG(
-            "Failed to setup Redfish Route for StorageController Collection");
+        BMCWEB_LOG_DEBUG( "Failed to setup Redfish Route for StorageController Collection");
         return;
     }
     if (systemName != "system")

@@ -42,8 +42,7 @@ inline void handleSecureBootGet(crow::App& app, const crow::Request& req,
                 const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error on SecureBoot GetAll: "
-                             << ec;
+            BMCWEB_LOG_ERROR("DBUS response error on SecureBoot GetAll: {}", ec);
             messages::internalError(aResp->res);
             return;
         }
@@ -211,7 +210,7 @@ inline void
                 [aResp](const boost::system::error_code ec) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -229,7 +228,7 @@ inline void
                 [aResp](const boost::system::error_code ec) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -247,7 +246,7 @@ inline void
                 [aResp](const boost::system::error_code ec) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                     messages::internalError(aResp->res);
                     return;
                 }

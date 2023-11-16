@@ -274,14 +274,14 @@ static std::string getBiosDefaultSettingsMode(const std::string& biosMode)
     setResetBiosSettings(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const bool& resetBiosToDefaultsPending)
 {
-    BMCWEB_LOG_DEBUG << "Set Reset Bios Settings to Defaults Pending Status";
+    BMCWEB_LOG_DEBUG("Set Reset Bios Settings to Defaults Pending Status");
     crow::connections::systemBus->async_method_call(
         [asyncResp, resetBiosToDefaultsPending](
             const boost::system::error_code ec,
             const dbus::utility::MapperGetObject& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            BMCWEB_LOG_DEBUG("GetObject for path {}", biosConfigObj);
             return;
         }
 
@@ -303,8 +303,7 @@ static std::string getBiosDefaultSettingsMode(const std::string& biosMode)
             [asyncResp](const boost::system::error_code ec2) {
             if (ec2)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                    "Set Reset BIOS setting to default status.";
+                BMCWEB_LOG_DEBUG("DBUS response error for " "Set Reset BIOS setting to default status.");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -331,13 +330,13 @@ static std::string getBiosDefaultSettingsMode(const std::string& biosMode)
 static void
     getResetBiosSettings(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    BMCWEB_LOG_DEBUG << "Get Reset Bios Settings to Defaults Pending Status";
+    BMCWEB_LOG_DEBUG("Get Reset Bios Settings to Defaults Pending Status");
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
                     const dbus::utility::MapperGetObject& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            BMCWEB_LOG_DEBUG("GetObject for path {}", biosConfigObj);
             return;
         }
 
@@ -349,8 +348,7 @@ static void
                 const std::variant<std::string>& resetBiosSettingsMode) {
             if (ec2)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                    "Get Reset BIOS setting to default status.";
+                BMCWEB_LOG_DEBUG("DBUS response error for " "Get Reset BIOS setting to default status.");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -358,8 +356,7 @@ static void
                 std::get_if<std::string>(&resetBiosSettingsMode);
             if (value == nullptr)
             {
-                BMCWEB_LOG_DEBUG
-                    << "Null value returned for Reset BIOS Settings status";
+                BMCWEB_LOG_DEBUG("Null value returned for Reset BIOS Settings status");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -377,7 +374,7 @@ static void
             }
             else
             {
-                BMCWEB_LOG_DEBUG << "Invalid Reset BIOS Settings Status";
+                BMCWEB_LOG_DEBUG("Invalid Reset BIOS Settings Status");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -407,7 +404,7 @@ static void
                     const dbus::utility::MapperGetObject& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            BMCWEB_LOG_DEBUG("GetObject for path {}", biosConfigObj);
             return;
         }
 
@@ -417,8 +414,7 @@ static void
                         const std::variant<BaseBIOSTable>& baseBiosTableResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR << "Get BaseBIOSTable DBus response error"
-                                 << ec2;
+                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}", ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -430,7 +426,7 @@ static void
                 asyncResp->res.jsonValue["Attributes"];
             if (baseBiosTable == nullptr)
             {
-                BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
+                BMCWEB_LOG_ERROR("Empty BaseBIOSTable");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -496,7 +492,7 @@ static void
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "Attribute type not supported";
+                    BMCWEB_LOG_ERROR("Attribute type not supported");
                 }
             }
         },
@@ -538,14 +534,14 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (!attrJson.contains(key))
         {
             messages::propertyMissing(asyncResp->res, key);
-            BMCWEB_LOG_ERROR << "Required propery missing in req!";
+            BMCWEB_LOG_ERROR("Required propery missing in req!");
             return false;
         }
         if (!attrJson[key].is_string())
         {
             messages::propertyValueTypeError(asyncResp->res,
                                              attrJson[key].dump(), key);
-            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            BMCWEB_LOG_ERROR("Attribute type is not valid in req!");
             return false;
         }
     }
@@ -555,14 +551,14 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (!attrJson.contains(key))
         {
             messages::propertyMissing(asyncResp->res, key);
-            BMCWEB_LOG_ERROR << "Required propery missing in req!";
+            BMCWEB_LOG_ERROR("Required propery missing in req!");
             return false;
         }
         if (!attrJson[key].is_boolean())
         {
             messages::propertyValueTypeError(asyncResp->res,
                                              attrJson[key].dump(), key);
-            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            BMCWEB_LOG_ERROR("Attribute type is not valid in req!");
             return false;
         }
     }
@@ -572,7 +568,7 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (!attrJson.contains(key))
         {
             messages::propertyMissing(asyncResp->res, key);
-            BMCWEB_LOG_ERROR << "Required propery missing in req!";
+            BMCWEB_LOG_ERROR("Required propery missing in req!");
             return false;
         }
 
@@ -590,7 +586,7 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             messages::propertyValueTypeError(asyncResp->res,
                                              attrJson[key].dump(), key);
-            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            BMCWEB_LOG_ERROR("Attribute type is not valid in req!");
             return false;
         }
     }
@@ -602,14 +598,14 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             if (!attrJson.contains(key))
             {
                 messages::propertyMissing(asyncResp->res, key);
-                BMCWEB_LOG_ERROR << "Required propery missing in req!";
+                BMCWEB_LOG_ERROR("Required propery missing in req!");
                 return false;
             }
             if (!attrJson[key].is_number())
             {
                 messages::propertyValueTypeError(asyncResp->res,
                                                  attrJson[key].dump(), key);
-                BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+                BMCWEB_LOG_ERROR("Attribute type is not valid in req!");
                 return false;
             }
         }
@@ -622,14 +618,14 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             if (!attrJson.contains(key))
             {
                 messages::propertyMissing(asyncResp->res, key);
-                BMCWEB_LOG_ERROR << "Required propery missing in req!";
+                BMCWEB_LOG_ERROR("Required propery missing in req!");
                 return false;
             }
             if (!attrJson[key].is_number())
             {
                 messages::propertyValueTypeError(asyncResp->res,
                                                  attrJson[key].dump(), key);
-                BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+                BMCWEB_LOG_ERROR("Attribute type is not valid in req!");
                 return false;
             }
         }
@@ -641,28 +637,28 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (!attrJson.contains(key))
         {
             messages::propertyMissing(asyncResp->res, key);
-            BMCWEB_LOG_ERROR << "Required propery missing in req!";
+            BMCWEB_LOG_ERROR("Required propery missing in req!");
             return false;
         }
         if (!attrJson[key].is_array())
         {
             messages::propertyValueTypeError(asyncResp->res,
                                              attrJson[key].dump(), key);
-            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            BMCWEB_LOG_ERROR("Attribute type is not valid in req!");
             return false;
         }
         if (attrJson[key].empty())
         {
             messages::propertyValueIncorrect(asyncResp->res, key,
                                              attrJson[key].dump());
-            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            BMCWEB_LOG_ERROR("Attribute type is not valid in req!");
             return false;
         }
         if (!attrJson[key][0].is_string())
         {
             messages::propertyValueIncorrect(asyncResp->res, key,
                                              attrJson[key].dump());
-            BMCWEB_LOG_ERROR << "Attribute type is not valid in req!";
+            BMCWEB_LOG_ERROR("Attribute type is not valid in req!");
             return false;
         }
     }
@@ -671,7 +667,7 @@ static bool isValidAttrJson(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     {
         messages::propertyValueIncorrect(asyncResp->res, "AttributeName",
                                          "empty");
-        BMCWEB_LOG_ERROR << "AttributeName is not valid in req!";
+        BMCWEB_LOG_ERROR("AttributeName is not valid in req!");
         return false;
     }
     return true;
@@ -695,7 +691,7 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         // Check all the fields are present
         if (!isValidAttrJson(asyncResp, attrJson))
         {
-            BMCWEB_LOG_ERROR << "Req attributes are missing!";
+            BMCWEB_LOG_ERROR("Req attributes are missing!");
             return;
         }
 
@@ -824,7 +820,7 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         else
         {
             messages::propertyValueIncorrect(asyncResp->res, "Type", "UNKNOWN");
-            BMCWEB_LOG_ERROR << "Attribute Type is not valid in req!";
+            BMCWEB_LOG_ERROR("Attribute Type is not valid in req!");
             return;
         }
     }
@@ -833,7 +829,7 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         [asyncResp, baseBiosTable](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Error occurred in setting BaseBIOSTable";
+            BMCWEB_LOG_DEBUG("Error occurred in setting BaseBIOSTable");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -863,7 +859,7 @@ static void
                     const dbus::utility::MapperGetObject& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            BMCWEB_LOG_DEBUG("GetObject for path {}", biosConfigObj);
             return;
         }
 
@@ -873,8 +869,7 @@ static void
                         const std::variant<PendingAttrType>& pendingAttrsResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR << "Get PendingAttributes DBus response error"
-                                 << ec2;
+                BMCWEB_LOG_ERROR("Get PendingAttributes DBus response error{}", ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -886,7 +881,7 @@ static void
                 asyncResp->res.jsonValue["Attributes"];
             if (pendingAttrs == nullptr)
             {
-                BMCWEB_LOG_ERROR << "Empty Pending Attributes";
+                BMCWEB_LOG_ERROR("Empty Pending Attributes");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -955,7 +950,7 @@ static void
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "Attribute type not supported";
+                    BMCWEB_LOG_ERROR("Attribute type not supported");
                 }
             }
         },
@@ -1001,7 +996,7 @@ static void setBiosCurrentOrPendingAttr(
                    const dbus::utility::MapperGetObject& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            BMCWEB_LOG_DEBUG("GetObject for path {}", biosConfigObj);
             return;
         }
 
@@ -1012,8 +1007,7 @@ static void setBiosCurrentOrPendingAttr(
                        const std::variant<BaseBIOSTable>& baseBiosTableResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR << "Get BaseBIOSTable DBus response error"
-                                 << ec2;
+                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}", ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1021,7 +1015,7 @@ static void setBiosCurrentOrPendingAttr(
                 std::get_if<BaseBIOSTable>(&baseBiosTableResp);
             if (p == nullptr)
             {
-                BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
+                BMCWEB_LOG_ERROR("Empty BaseBIOSTable");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1034,8 +1028,7 @@ static void setBiosCurrentOrPendingAttr(
                 auto attrIt = baseBiosTable->find(pendingAttrIt.key());
                 if (attrIt == baseBiosTable->end())
                 {
-                    BMCWEB_LOG_ERROR << "Not Found Attribute "
-                                     << pendingAttrIt.key();
+                    BMCWEB_LOG_ERROR("Not Found Attribute {}", pendingAttrIt.key());
                     messages::propertyValueNotInList(
                         asyncResp->res, pendingAttrIt.key(), "Attributes");
                     return;
@@ -1051,7 +1044,7 @@ static void setBiosCurrentOrPendingAttr(
                 {
                     if (!pendingAttrIt.value().is_string())
                     {
-                        BMCWEB_LOG_ERROR << "Requested Attribute Value invalid";
+                        BMCWEB_LOG_ERROR("Requested Attribute Value invalid");
                         messages::propertyValueTypeError(
                             asyncResp->res, std::string(pendingAttrIt.value()),
                             pendingAttrIt.key());
@@ -1088,7 +1081,7 @@ static void setBiosCurrentOrPendingAttr(
                                         boundValueIt));
                                 if (currBoundVal == nullptr)
                                 {
-                                    BMCWEB_LOG_ERROR << "Bound Value not found";
+                                    BMCWEB_LOG_ERROR("Bound Value not found");
                                     continue;
                                 }
                                 if (attrReqVal == *currBoundVal)
@@ -1104,8 +1097,7 @@ static void setBiosCurrentOrPendingAttr(
 
                         if (!found)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "Requested Attribute Value invalid";
+                            BMCWEB_LOG_ERROR("Requested Attribute Value invalid");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -1136,7 +1128,7 @@ static void setBiosCurrentOrPendingAttr(
                                         boundValueIt));
                                 if (currBoundVal == nullptr)
                                 {
-                                    BMCWEB_LOG_ERROR << "Bound Value not found";
+                                    BMCWEB_LOG_ERROR("Bound Value not found");
                                     continue;
                                 }
                                 if (static_cast<int64_t>(attrReqVal.size()) <
@@ -1154,7 +1146,7 @@ static void setBiosCurrentOrPendingAttr(
                                         boundValueIt));
                                 if (currBoundVal == nullptr)
                                 {
-                                    BMCWEB_LOG_ERROR << "Bound Value not found";
+                                    BMCWEB_LOG_ERROR("Bound Value not found");
                                     continue;
                                 }
                                 if (static_cast<int64_t>(attrReqVal.size()) >
@@ -1171,8 +1163,7 @@ static void setBiosCurrentOrPendingAttr(
 
                         if (!valid)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "Requested Attribute Value invalid";
+                            BMCWEB_LOG_ERROR("Requested Attribute Value invalid");
                             messages::propertyValueOutOfRange(
                                 asyncResp->res, attrReqVal,
                                 pendingAttrIt.key());
@@ -1196,7 +1187,7 @@ static void setBiosCurrentOrPendingAttr(
                 {
                     if (!pendingAttrIt.value().is_boolean())
                     {
-                        BMCWEB_LOG_ERROR << "Requested Attribute Value invalid";
+                        BMCWEB_LOG_ERROR("Requested Attribute Value invalid");
                         messages::propertyValueTypeError(
                             asyncResp->res, std::string(pendingAttrIt.value()),
                             pendingAttrIt.key());
@@ -1220,7 +1211,7 @@ static void setBiosCurrentOrPendingAttr(
                 {
                     if (!pendingAttrIt.value().is_number())
                     {
-                        BMCWEB_LOG_ERROR << "Requested Attribute Value invalid";
+                        BMCWEB_LOG_ERROR("Requested Attribute Value invalid");
                         messages::propertyValueTypeError(
                             asyncResp->res, std::string(pendingAttrIt.value()),
                             pendingAttrIt.key());
@@ -1241,7 +1232,7 @@ static void setBiosCurrentOrPendingAttr(
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "Unknown Attribute Type" << attrType;
+                    BMCWEB_LOG_ERROR("Unknown Attribute Type{}", attrType);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1253,8 +1244,7 @@ static void setBiosCurrentOrPendingAttr(
                      baseBiosTable](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG
-                            << "Error occurred in setting BaseBIOSTable";
+                        BMCWEB_LOG_DEBUG("Error occurred in setting BaseBIOSTable");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -1271,7 +1261,7 @@ static void setBiosCurrentOrPendingAttr(
                 [asyncResp](const boost::system::error_code ec3) {
                 if (ec3)
                 {
-                    BMCWEB_LOG_ERROR << "Set PendingAttributes failed " << ec3;
+                    BMCWEB_LOG_ERROR("Set PendingAttributes failed {}", ec3);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1339,7 +1329,7 @@ static void setBiosServicCurrentAttr(
                     const dbus::utility::MapperGetObject& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            BMCWEB_LOG_DEBUG("GetObject for path {}", biosConfigObj);
             return;
         }
 
@@ -1349,8 +1339,7 @@ static void setBiosServicCurrentAttr(
                         const std::variant<BaseBIOSTable>& baseBiosTableResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR << "Get BaseBIOSTable DBus response error"
-                                 << ec2;
+                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}", ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1363,7 +1352,7 @@ static void setBiosServicCurrentAttr(
 
             if (baseBiosTable == nullptr)
             {
-                BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
+                BMCWEB_LOG_ERROR("Empty BaseBIOSTable");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1377,7 +1366,7 @@ static void setBiosServicCurrentAttr(
 
                 if (attrType == "UNKNOWN")
                 {
-                    BMCWEB_LOG_ERROR << "Attribute type not supported";
+                    BMCWEB_LOG_ERROR("Attribute type not supported");
                     continue;
                 }
 
@@ -1506,7 +1495,7 @@ static void setBiosServicCurrentAttr(
 
                     if (boundValType == "UNKNOWN")
                     {
-                        BMCWEB_LOG_ERROR << "Attribute type not supported";
+                        BMCWEB_LOG_ERROR("Attribute type not supported");
                         continue;
                     }
 
@@ -1651,7 +1640,7 @@ static void setBiosServicCurrentAttr(
 
                 if (attrType == "Enumeration" && boundValArray.empty())
                 {
-                    BMCWEB_LOG_ERROR << "Bound Values Array is empty";
+                    BMCWEB_LOG_ERROR("Bound Values Array is empty");
                     continue;
                 }
                 if (attrType == "Enumeration")
@@ -1687,7 +1676,7 @@ static void
                     const dbus::utility::MapperGetObject& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_DEBUG << "GetObject for path " << biosConfigObj;
+            BMCWEB_LOG_DEBUG("GetObject for path {}", biosConfigObj);
             return;
         }
 
@@ -1697,8 +1686,7 @@ static void
                         const std::variant<BaseBIOSTable>& baseBiosTableResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR << "Get BaseBIOSTable DBus response error"
-                                 << ec2;
+                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}", ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1708,7 +1696,7 @@ static void
 
             if (baseBiosTable == nullptr)
             {
-                BMCWEB_LOG_ERROR << "Empty BaseBIOSTable";
+                BMCWEB_LOG_ERROR("Empty BaseBIOSTable");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1766,7 +1754,7 @@ static void
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "Attribute type not supported";
+                    BMCWEB_LOG_ERROR("Attribute type not supported");
                 }
             }
             asyncResp->res.jsonValue = redfish::bios::BiosRegistryJson;
@@ -1800,7 +1788,7 @@ inline void
                         userInfo) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "GetUserInfo failed";
+            BMCWEB_LOG_ERROR("GetUserInfo failed");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1816,7 +1804,7 @@ inline void
 
         if (userGroupPtr == nullptr)
         {
-            BMCWEB_LOG_ERROR << "User Group not found";
+            BMCWEB_LOG_ERROR("User Group not found");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1830,7 +1818,7 @@ inline void
         // perform PUT operations
         if (found == userGroupPtr->end())
         {
-            BMCWEB_LOG_ERROR << "Not Sufficient Privilage";
+            BMCWEB_LOG_ERROR("Not Sufficient Privilage");
             messages::insufficientPrivilege(asyncResp->res);
             return;
         }
@@ -1838,7 +1826,7 @@ inline void
         if (!redfish::json_util::readJsonAction(
                 req, asyncResp->res, "Attributes", baseBiosTableJson))
         {
-            BMCWEB_LOG_ERROR << "No 'Attributes' found";
+            BMCWEB_LOG_ERROR("No 'Attributes' found");
             messages::unrecognizedRequestBody(asyncResp->res);
             return;
         }
@@ -1913,7 +1901,7 @@ inline void
                         userInfo) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "GetUserInfo failed";
+            BMCWEB_LOG_ERROR("GetUserInfo failed");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1929,7 +1917,7 @@ inline void
 
         if (userGroupPtr == nullptr)
         {
-            BMCWEB_LOG_ERROR << "User Group not found";
+            BMCWEB_LOG_ERROR("User Group not found");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1943,7 +1931,7 @@ inline void
         // perform PUT operations
         if (found == userGroupPtr->end())
         {
-            BMCWEB_LOG_ERROR << "Not Sufficient Privilage";
+            BMCWEB_LOG_ERROR("Not Sufficient Privilage");
             messages::insufficientPrivilege(asyncResp->res);
             return;
         }
@@ -1952,7 +1940,7 @@ inline void
         if (!redfish::json_util::readJsonAction(req, asyncResp->res,
                                                 "Attributes", pendingAttrJson))
         {
-            BMCWEB_LOG_ERROR << "No 'Attributes' found";
+            BMCWEB_LOG_ERROR("No 'Attributes' found");
             messages::unrecognizedRequestBody(asyncResp->res);
             return;
         }
@@ -1999,7 +1987,7 @@ inline void
     if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Attributes",
                                             pendingAttrJson))
     {
-        BMCWEB_LOG_ERROR << "No 'Attributes' found";
+        BMCWEB_LOG_ERROR("No 'Attributes' found");
         messages::unrecognizedRequestBody(asyncResp->res);
         return;
     }
@@ -2121,11 +2109,11 @@ inline void setClearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          sdbusplus::message::message& msg) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG << "Set ClearUefiVariable successed";
+            BMCWEB_LOG_DEBUG("Set ClearUefiVariable successed");
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "Set ClearUefiVariable failed: " << ec.what();
+        BMCWEB_LOG_DEBUG("Set ClearUefiVariable failed: {}", ec.what());
 
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
@@ -2161,9 +2149,7 @@ inline void handleClearSecureStateSubtree(
     {
         if (clearServices.size() != 1)
         {
-            BMCWEB_LOG_ERROR
-                << "Number of ClearNonVolatileVariables provider is not 1. size="
-                << clearServices.size();
+            BMCWEB_LOG_ERROR("Number of ClearNonVolatileVariables provider is not 1. size={}", clearServices.size());
             messages::internalError(aResp->res);
             return;
         }
@@ -2288,11 +2274,11 @@ inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         [aResp](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
             messages::internalError(aResp->res);
             return;
         }
-        BMCWEB_LOG_DEBUG << "Boot override CMOSClear update done.";
+        BMCWEB_LOG_DEBUG("Boot override CMOSClear update done.");
     },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/control/host0/boot",
@@ -2304,11 +2290,11 @@ inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         [aResp](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
             messages::internalError(aResp->res);
             return;
         }
-        BMCWEB_LOG_DEBUG << "Boot override enable update done.";
+        BMCWEB_LOG_DEBUG("Boot override enable update done.");
     },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/control/host0/boot",
@@ -2382,7 +2368,7 @@ inline void handleBiosChangePasswordPost(
                       const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec || subtree.size() != 1)
         {
-            BMCWEB_LOG_ERROR << "Failed to find BIOS Password object: " << ec;
+            BMCWEB_LOG_ERROR("Failed to find BIOS Password object: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2390,7 +2376,7 @@ inline void handleBiosChangePasswordPost(
 
         if (services.size() != 1)
         {
-            BMCWEB_LOG_ERROR << "Failed to find BIOS Password object: " << ec;
+            BMCWEB_LOG_ERROR("Failed to find BIOS Password object: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2406,8 +2392,7 @@ inline void handleBiosChangePasswordPost(
                         error,
                         "xyz.openbmc_project.BIOSConfig.Common.Error.InvalidCurrentPassword"))
                 {
-                    BMCWEB_LOG_ERROR << "Failed to change password message: "
-                                     << error->name;
+                    BMCWEB_LOG_ERROR("Failed to change password message: {}", error->name);
                     messages::actionParameterValueError(
                         asyncResp->res, "OldPassword", "ChangePassword");
                     return;
@@ -2454,8 +2439,7 @@ inline void handleBiosAttrRegistryGet(
     std::ifstream inputFile(redfish::bios::BiosRegistryJsonFileName);
     if (!inputFile.is_open())
     {
-        BMCWEB_LOG_DEBUG << "Can't opening file for reading: "
-                         << redfish::bios::BiosRegistryJsonFileName;
+        BMCWEB_LOG_DEBUG("Can't opening file for reading: {}", redfish::bios::BiosRegistryJsonFileName);
 
         // Return empty json object if file not found
         redfish::bios::BiosRegistryJson = nlohmann::json();
@@ -2508,7 +2492,7 @@ inline void handleBiosAttrRegistryPut(
                         userInfo) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "GetUserInfo failed";
+            BMCWEB_LOG_ERROR("GetUserInfo failed");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2523,7 +2507,7 @@ inline void handleBiosAttrRegistryPut(
 
         if (userGroupPtr == nullptr)
         {
-            BMCWEB_LOG_ERROR << "User Group not found";
+            BMCWEB_LOG_ERROR("User Group not found");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2537,7 +2521,7 @@ inline void handleBiosAttrRegistryPut(
         // perform PUT operations
         if (found == userGroupPtr->end())
         {
-            BMCWEB_LOG_ERROR << "Not Sufficient Privilage";
+            BMCWEB_LOG_ERROR("Not Sufficient Privilage");
             messages::insufficientPrivilege(asyncResp->res);
             return;
         }
@@ -2545,7 +2529,7 @@ inline void handleBiosAttrRegistryPut(
         if (!json_util::processJsonFromRequest(asyncResp->res, req,
                                                redfish::bios::BiosRegistryJson))
         {
-            BMCWEB_LOG_ERROR << "Json value not readable";
+            BMCWEB_LOG_ERROR("Json value not readable");
             return;
         }
 
@@ -2554,8 +2538,7 @@ inline void handleBiosAttrRegistryPut(
                                  std::ios::trunc);
         if (!outputFile.is_open())
         {
-            BMCWEB_LOG_ERROR << "Error opening file for writing: "
-                             << redfish::bios::BiosRegistryJsonFileName;
+            BMCWEB_LOG_ERROR("Error opening file for writing: {}", redfish::bios::BiosRegistryJsonFileName);
             return;
         }
         outputFile << redfish::bios::BiosRegistryJson.dump();

@@ -99,14 +99,13 @@ static void oocUtilServiceConditions(
     const std::string& messageId)
 {
     nlohmann::json j;
-    BMCWEB_LOG_DEBUG << "Generating MessageRegistry for [" << messageId << "]";
+    BMCWEB_LOG_DEBUG("Generating MessageRegistry for [{}]", messageId);
     const redfish::registries::Message* msg =
         redfish::message_registries::getMessage(messageId);
 
     if (msg == nullptr)
     {
-        BMCWEB_LOG_ERROR << "Failed to lookup the message for MessageId["
-                         << messageId << "]";
+        BMCWEB_LOG_ERROR("Failed to lookup the message for MessageId[{}]", messageId);
         return;
     }
 
@@ -142,8 +141,7 @@ static void oocUtilServiceConditions(
                                  id;
     if (ooc.size() > 0)
     {
-        BMCWEB_LOG_DEBUG << "Populating service conditions with ooc " << ooc
-                         << "\n";
+        BMCWEB_LOG_DEBUG("Populating service conditions with ooc {}", ooc);
         j["OriginOfCondition"]["@odata.id"] = ooc;
     }
     if (asyncResp->res.jsonValue.contains("Conditions"))
@@ -232,9 +230,7 @@ inline void convertDbusObjectToOriginOfCondition(
     }
     oocUtil(asyncResp, logEntry, id, std::string(""), severity, messageArgs,
             timestamp, messageId);
-    BMCWEB_LOG_ERROR
-        << "No Matching prefix found for OriginOfCondition DBus object Path: "
-        << path << "\n";
+    BMCWEB_LOG_ERROR("No Matching prefix found for OriginOfCondition DBus object Path: {}", path);
     return;
 }
 

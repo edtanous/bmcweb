@@ -74,7 +74,7 @@ static void
                         const dbus::utility::ManagedObjectType& objects) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -86,7 +86,7 @@ static void
                                 std::variant<std::vector<std::string>>& resp) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "Didn't find the inventory object";
+                    BMCWEB_LOG_ERROR("Didn't find the inventory object");
                     return; // should have associoated inventory object.
                 }
                 std::vector<std::string>* data =
@@ -122,7 +122,7 @@ static void
                                 {
                                     slot =
                                         std::get_if<uint8_t>(&property.second);
-                                    BMCWEB_LOG_DEBUG << "Slot ID:" << *slot;
+                                    BMCWEB_LOG_DEBUG("Slot ID:{}", *slot);
                                 }
                             }
                         }
@@ -187,8 +187,7 @@ inline void getChassisOEMComponentProtected(
         [objPath, asyncResp](const bool& status, const std::string& ep) {
         if (!status)
         {
-            BMCWEB_LOG_DEBUG << "Unable to get the association endpoint for "
-                             << objPath;
+            BMCWEB_LOG_DEBUG("Unable to get the association endpoint for {}", objPath);
             // inventory association is not created for
             // HMC and PcieSwitch
             // if we don't get the association
@@ -209,8 +208,7 @@ inline void getChassisOEMComponentProtected(
             std::string redfishURL = url;
             if (!status)
             {
-                BMCWEB_LOG_DEBUG << "Unable to get the Redfish URL for object="
-                                 << ep;
+                BMCWEB_LOG_DEBUG("Unable to get the Redfish URL for object={}", ep);
             }
             else
             {
@@ -273,7 +271,7 @@ inline void getEROTChassis(const crow::Request& req,
 
             if (connectionNames.size() < 1)
             {
-                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                BMCWEB_LOG_ERROR("Got 0 Connection names");
                 continue;
             }
 #ifdef BMCWEB_ENABLE_DOT
@@ -389,17 +387,17 @@ inline void requestRoutesEROTChassisCertificate(App& app)
             chassisID, [req, asyncResp, chassisID, certificateID](bool isEROT) {
             if (!isEROT)
             {
-                BMCWEB_LOG_DEBUG << "Not a EROT chassis";
+                BMCWEB_LOG_DEBUG("Not a EROT chassis");
                 messages::internalError(asyncResp->res);
                 return;
             }
             if (certificateID != "CertChain")
             {
-                BMCWEB_LOG_DEBUG << "Not a valid Certificate ID";
+                BMCWEB_LOG_DEBUG("Not a valid Certificate ID");
                 messages::internalError(asyncResp->res);
                 return;
             }
-            BMCWEB_LOG_DEBUG << "URL=" << req.url;
+            BMCWEB_LOG_DEBUG("URL={}", req.url);
 
             std::string objectPath =
                 "/xyz/openbmc_project/inventory/system/chassis/" + chassisID;
@@ -516,7 +514,7 @@ inline void
                                 const std::string& chassisUUID) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error for UUID";
+                    BMCWEB_LOG_DEBUG("DBUS response error for UUID");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -567,7 +565,7 @@ bool getBinaryKeyFromPem(const std::string& pem, std::vector<uint8_t>& key)
                                                     &::BIO_free};
     if (!bio)
     {
-        BMCWEB_LOG_ERROR << "openssl BIO allocation failed";
+        BMCWEB_LOG_ERROR("openssl BIO allocation failed");
         return false;
     }
 
@@ -575,7 +573,7 @@ bool getBinaryKeyFromPem(const std::string& pem, std::vector<uint8_t>& key)
     int ret = BIO_write_ex(bio.get(), pem.data(), pem.size(), &written);
     if (ret != 1 || written != pem.size())
     {
-        BMCWEB_LOG_ERROR << "BIO_write_ex failed";
+        BMCWEB_LOG_ERROR("BIO_write_ex failed");
         return false;
     }
 
@@ -585,7 +583,7 @@ bool getBinaryKeyFromPem(const std::string& pem, std::vector<uint8_t>& key)
         &::EVP_PKEY_free};
     if (!pubKey)
     {
-        BMCWEB_LOG_ERROR << "PEM_read_bio_PUBKEY failed";
+        BMCWEB_LOG_ERROR("PEM_read_bio_PUBKEY failed");
         return false;
     }
 
@@ -593,20 +591,20 @@ bool getBinaryKeyFromPem(const std::string& pem, std::vector<uint8_t>& key)
         EVP_PKEY_get1_EC_KEY(pubKey.get()), &::EC_KEY_free};
     if (!ecKey)
     {
-        BMCWEB_LOG_ERROR << "EVP_PKEY_get1_EC_KEY failed";
+        BMCWEB_LOG_ERROR("EVP_PKEY_get1_EC_KEY failed");
         return false;
     }
 
     const EC_GROUP* group = EC_KEY_get0_group(ecKey.get());
     if (!group)
     {
-        BMCWEB_LOG_ERROR << "EC_KEY_get0_group failed";
+        BMCWEB_LOG_ERROR("EC_KEY_get0_group failed");
         return false;
     }
     const EC_POINT* point = EC_KEY_get0_public_key(ecKey.get());
     if (!point)
     {
-        BMCWEB_LOG_ERROR << "EC_KEY_get0_group failed";
+        BMCWEB_LOG_ERROR("EC_KEY_get0_group failed");
         return false;
     }
 
@@ -618,7 +616,7 @@ bool getBinaryKeyFromPem(const std::string& pem, std::vector<uint8_t>& key)
         key.size(), nullptr);
     if (resultSize == 0)
     {
-        BMCWEB_LOG_ERROR << "EC_POINT_point2oct failed";
+        BMCWEB_LOG_ERROR("EC_POINT_point2oct failed");
         return false;
     }
 
@@ -638,7 +636,7 @@ void createDotErrorResponse(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
     catch (const std::invalid_argument&)
     {
-        BMCWEB_LOG_ERROR << "Invalid error code hex octet: " << hexErrorCode;
+        BMCWEB_LOG_ERROR("Invalid error code hex octet: {}", hexErrorCode);
         decErrorCode = -1;
     }
     asyncResp->res.jsonValue["@odata.type"] = "#Message.v1_1_1.Message";
@@ -663,8 +661,7 @@ void executeDotCommand(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (tokens.size() != DOT_MCTP_VDM_UTIL_MCTP_STATUS_RESPONSE_SIZE &&
             tokens.size() != DOT_MCTP_VDM_UTIL_DOT_RESPONSE_SIZE)
         {
-            BMCWEB_LOG_ERROR << "mctp-vdm-util RX response has invalid length: "
-                             << output;
+            BMCWEB_LOG_ERROR("mctp-vdm-util RX response has invalid length: {}", output);
             messages::resourceErrorsDetectedFormatError(
                 asyncResp->res, "mctp-vdm-util response", "invalid length");
         }
@@ -693,7 +690,7 @@ void executeDotCommand(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     };
     auto errorHandler = [asyncResp](const std::string& desc,
                                     const std::string& error) {
-        BMCWEB_LOG_ERROR << desc << ": " << error;
+        BMCWEB_LOG_ERROR("{}: {}", desc, error);
         messages::resourceErrorsDetectedFormatError(asyncResp->res, desc,
                                                     error);
         boost::asio::post(crow::connections::systemBus->get_io_context(),
@@ -845,7 +842,7 @@ inline void requestRoutesEROTChassisDOT(App& app)
                const std::string& chassisID) -> void {
         if (req.body.size() != DOT_TOKEN_SIZE)
         {
-            BMCWEB_LOG_ERROR << "Invalid DOT token size: " << req.body.size();
+            BMCWEB_LOG_ERROR("Invalid DOT token size: {}", req.body.size());
             messages::invalidUpload(asyncResp->res, "DOT token install",
                                     "filesize has to be equal to " +
                                         std::to_string(DOT_TOKEN_SIZE));

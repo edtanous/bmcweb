@@ -180,8 +180,7 @@ inline void
         return;
     }
 
-    BMCWEB_LOG_DEBUG("Get properties for PCIeSlots associated to chassis = {}",
-                     chassisID);
+    BMCWEB_LOG_DEBUG("Get properties for PCIeSlots associated to chassis = {}", chassisID);
 
     asyncResp->res.jsonValue["@odata.type"] = "#PCIeSlots.v1_4_1.PCIeSlots";
     asyncResp->res.jsonValue["Name"] = "PCIe Slot Information";

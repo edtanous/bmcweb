@@ -566,8 +566,7 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // optional param inserted must be true
     if (actionParams.inserted && !*actionParams.inserted)
     {
-        BMCWEB_LOG_ERROR(
-            "Request action optional parameter Inserted must be true.");
+        BMCWEB_LOG_ERROR( "Request action optional parameter Inserted must be true.");
 
         messages::actionParameterNotSupported(asyncResp->res, "Inserted",
                                               "InsertMedia");
@@ -579,8 +578,7 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (actionParams.transferMethod &&
         (*actionParams.transferMethod != "Stream"))
     {
-        BMCWEB_LOG_ERROR("Request action optional parameter "
-                         "TransferMethod must be Stream.");
+        BMCWEB_LOG_ERROR("Request action optional parameter " "TransferMethod must be Stream.");
 
         messages::actionParameterNotSupported(asyncResp->res, "TransferMethod",
                                               "InsertMedia");
@@ -605,9 +603,7 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (uriTransferProtocolType &&
         *uriTransferProtocolType == TransferProtocol::invalid)
     {
-        BMCWEB_LOG_ERROR("Request action parameter ImageUrl must "
-                         "contain specified protocol type from list: "
-                         "(smb, https).");
+        BMCWEB_LOG_ERROR("Request action parameter ImageUrl must " "contain specified protocol type from list: " "(smb, https).");
 
         messages::resourceAtUriInUnknownFormat(asyncResp->res, *url);
 
@@ -618,9 +614,7 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (paramTransferProtocolType &&
         *paramTransferProtocolType == TransferProtocol::invalid)
     {
-        BMCWEB_LOG_ERROR("Request action parameter TransferProtocolType "
-                         "must be provided with value from list: "
-                         "(CIFS, HTTPS).");
+        BMCWEB_LOG_ERROR("Request action parameter TransferProtocolType " "must be provided with value from list: " "(CIFS, HTTPS).");
 
         messages::propertyValueNotInList(
             asyncResp->res, actionParams.transferProtocolType.value_or(""),
@@ -631,9 +625,7 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // valid transfer protocol not provided either with URI nor param
     if (!uriTransferProtocolType && !paramTransferProtocolType)
     {
-        BMCWEB_LOG_ERROR("Request action parameter ImageUrl must "
-                         "contain specified protocol type or param "
-                         "TransferProtocolType must be provided.");
+        BMCWEB_LOG_ERROR("Request action parameter ImageUrl must " "contain specified protocol type or param " "TransferProtocolType must be provided.");
 
         messages::resourceAtUriInUnknownFormat(asyncResp->res, *url);
 
@@ -647,10 +639,7 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (*paramTransferProtocolType != *uriTransferProtocolType)
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_ERROR << "Request action parameter "
-                                "TransferProtocolType must  contain the "
-                                "same protocol type as protocol type "
-                                "provided with param imageUrl.";
+            BMCWEB_LOG_ERROR("Request action parameter " "TransferProtocolType must  contain the " "same protocol type as protocol type " "provided with param imageUrl.");
 
             messages::actionParameterValueTypeError(res, *transferProtocolType,
                                                     "TransferProtocolType",
@@ -745,10 +734,7 @@ class CredentialsProvider
         return credentials.user();
     }
 =======
-            BMCWEB_LOG_ERROR("Request action parameter "
-                             "TransferProtocolType must  contain the "
-                             "same protocol type as protocol type "
-                             "provided with param imageUrl.");
+            BMCWEB_LOG_ERROR("Request action parameter " "TransferProtocolType must  contain the " "same protocol type as protocol type " "provided with param imageUrl.");
 >>>>>>> origin/master-october-10
 
             messages::actionParameterValueTypeError(
@@ -782,12 +768,12 @@ class CredentialsProvider
                                 bool success) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Bad D-Bus request error: " << ec;
+            BMCWEB_LOG_ERROR("Bad D-Bus request error: {}", ec);
             messages::internalError(asyncResp->res);
         }
         else if (!success)
         {
-            BMCWEB_LOG_ERROR << "Service responded with error";
+            BMCWEB_LOG_ERROR("Service responded with error");
             messages::generalError(asyncResp->res);
         }
     },
@@ -905,8 +891,7 @@ inline void handleManagersVirtualMediaActionInsertPost(
             if (ec2)
             {
                 // Not possible in proxy mode
-                BMCWEB_LOG_DEBUG("InsertMedia not "
-                                 "allowed in proxy mode");
+                BMCWEB_LOG_DEBUG("InsertMedia not " "allowed in proxy mode");
                 messages::resourceNotFound(asyncResp->res, action, resName);
 
                 return;

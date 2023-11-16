@@ -20,28 +20,16 @@ namespace redfish::registries::base
 const Header header = {
     "Copyright 2014-2023 DMTF. All rights reserved.",
     "#MessageRegistry.v1_5_0.MessageRegistry",
-<<<<<<< HEAD
-    "Base.1.15.0",
-=======
     "Base.1.16.0",
->>>>>>> origin/master-october-10
     "Base Message Registry",
     "en",
     "This registry defines the base messages for Redfish",
     "Base",
-<<<<<<< HEAD
-    "1.15.0",
-    "DMTF",
-};
-constexpr const char* url =
-    "https://redfish.dmtf.org/registries/Base.1.15.0.json";
-=======
     "1.16.0",
     "DMTF",
 };
 constexpr const char* url =
     "https://redfish.dmtf.org/registries/Base.1.16.0.json";
->>>>>>> origin/master-october-10
 
 constexpr std::array registry =
 {
@@ -258,12 +246,11 @@ constexpr std::array registry =
             "Correct the value for the parameter in the request body and resubmit the request if the operation failed.",
         }},
     MessageEntry{
-<<<<<<< HEAD
-=======
         "ArraySizeTooLong",
         {
             "Indicates that the size of the array exceeded the maximum number of elements.",
             "The array provided for property %1 exceeds the size limit %2.",
+            "Warning",
             "Warning",
             2,
             {
@@ -278,6 +265,7 @@ constexpr std::array registry =
             "Indicates that the size of the array is under the minimum number of elements.",
             "The array provided for property %1 is under the minimum size limit %2.",
             "Warning",
+            "Warning",
             2,
             {
                 "string",
@@ -286,16 +274,12 @@ constexpr std::array registry =
             "Resubmit the request with an appropriate array size.",
         }},
     MessageEntry{
->>>>>>> origin/master-october-10
         "AuthenticationTokenRequired",
         {
             "Indicates that the request could not be performed because an authentication token was not provided.",
             "The request could not be performed because an authentication token was not provided.",
             "Critical",
-<<<<<<< HEAD
             "Critical",
-=======
->>>>>>> origin/master-october-10
             0,
             {},
             "Obtain an authentication token and resubmit the request.",
@@ -545,6 +529,7 @@ constexpr std::array registry =
         {
             "Indicates that a license is required to perform the requested operation.",
             "A license is required for this operation: %1.",
+            "Critical",
             "Critical",
             1,
             {
@@ -1005,10 +990,7 @@ constexpr std::array registry =
             "Indicates that a query parameter is not supported.",
             "Query parameter '%1' is not supported.",
             "Warning",
-<<<<<<< HEAD
             "Warning",
-=======
->>>>>>> origin/master-october-10
             1,
             {
                 "string",
@@ -1382,6 +1364,7 @@ constexpr std::array registry =
             "Indicates that a string value passed to the given resource was under its minimum required length.  An example is when a higher minimum length is imposed by an implementation than that allowed by the specification.",
             "The string '%1' was under the minimum required length %2.",
             "Warning",
+            "Warning",
             2,
             {
                 "string",
@@ -1456,98 +1439,6 @@ enum class Index
     actionParameterValueFormatError = 13,
     actionParameterValueNotInList = 14,
     actionParameterValueTypeError = 15,
-<<<<<<< HEAD
-    authenticationTokenRequired = 16,
-    chassisPowerStateOffRequired = 17,
-    chassisPowerStateOnRequired = 18,
-    conditionInRelatedResource = 19,
-    couldNotEstablishConnection = 20,
-    createFailedMissingReqProperties = 21,
-    createLimitReachedForResource = 22,
-    created = 23,
-    emptyJSON = 24,
-    eventBufferExceeded = 25,
-    eventSubscriptionLimitExceeded = 26,
-    generalError = 27,
-    headerInvalid = 28,
-    headerMissing = 29,
-    insufficientPrivilege = 30,
-    insufficientStorage = 31,
-    internalError = 32,
-    invalidIndex = 33,
-    invalidJSON = 34,
-    invalidObject = 35,
-    invalidURI = 36,
-    malformedJSON = 37,
-    maximumErrorsExceeded = 38,
-    missingOrMalformedPart = 39,
-    networkNameResolutionNotConfigured = 40,
-    networkNameResolutionNotSupported = 41,
-    noOperation = 42,
-    noValidSession = 43,
-    operationFailed = 44,
-    operationNotAllowed = 45,
-    operationTimeout = 46,
-    passwordChangeRequired = 47,
-    payloadTooLarge = 48,
-    preconditionFailed = 49,
-    preconditionRequired = 50,
-    propertyDeprecated = 51,
-    propertyDuplicate = 52,
-    propertyMissing = 53,
-    propertyNotUpdated = 54,
-    propertyNotWritable = 55,
-    propertyUnknown = 56,
-    propertyValueConflict = 57,
-    propertyValueDeprecated = 58,
-    propertyValueError = 59,
-    propertyValueExternalConflict = 60,
-    propertyValueFormatError = 61,
-    propertyValueIncorrect = 62,
-    propertyValueModified = 63,
-    propertyValueNotInList = 64,
-    propertyValueOutOfRange = 65,
-    propertyValueResourceConflict = 66,
-    propertyValueTypeError = 67,
-    queryCombinationInvalid = 68,
-    queryNotSupported = 69,
-    queryNotSupportedOnOperation = 70,
-    queryNotSupportedOnResource = 71,
-    queryParameterOutOfRange = 72,
-    queryParameterUnsupported = 73,
-    queryParameterValueError = 74,
-    queryParameterValueFormatError = 75,
-    queryParameterValueTypeError = 76,
-    resetRecommended = 77,
-    resetRequired = 78,
-    resourceAlreadyExists = 79,
-    resourceAtUriInUnknownFormat = 80,
-    resourceAtUriUnauthorized = 81,
-    resourceCannotBeDeleted = 82,
-    resourceCreationConflict = 83,
-    resourceDeprecated = 84,
-    resourceExhaustion = 85,
-    resourceInStandby = 86,
-    resourceInUse = 87,
-    resourceMissingAtURI = 88,
-    resourceNotFound = 89,
-    resourceTypeIncompatible = 90,
-    restrictedPrivilege = 91,
-    restrictedRole = 92,
-    serviceDisabled = 93,
-    serviceInUnknownState = 94,
-    serviceShuttingDown = 95,
-    serviceTemporarilyUnavailable = 96,
-    sessionLimitExceeded = 97,
-    sessionTerminated = 98,
-    sourceDoesNotSupportProtocol = 99,
-    strictAccountTypes = 100,
-    stringValueTooLong = 101,
-    subscriptionTerminated = 102,
-    success = 103,
-    undeterminedFault = 104,
-    unrecognizedRequestBody = 105,
-=======
     arraySizeTooLong = 16,
     arraySizeTooShort = 17,
     authenticationTokenRequired = 18,
@@ -1642,6 +1533,5 @@ enum class Index
     success = 107,
     undeterminedFault = 108,
     unrecognizedRequestBody = 109,
->>>>>>> origin/master-october-10
 };
 } // namespace redfish::registries::base

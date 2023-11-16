@@ -61,7 +61,7 @@ class InotifyFileWatcher
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         if (fcntl(inotifyFd, F_SETFL, O_NONBLOCK) < 0)
         {
-            BMCWEB_LOG_ERROR << "Error initializing inotify.\n";
+            BMCWEB_LOG_ERROR("Error initializing inotify.");
             return;
         }
         sd = std::make_unique<boost::asio::posix::stream_descriptor>(*io,
@@ -78,7 +78,7 @@ class InotifyFileWatcher
         int inotifyWd = inotify_add_watch(inotifyFd, path.c_str(), mask);
         if (inotifyWd == -1)
         {
-            BMCWEB_LOG_ERROR << "Could not watch path: " << path << "\n";
+            BMCWEB_LOG_ERROR("Could not watch path: {}", path);
             return;
         }
         watchedDirs[inotifyWd] = path;
@@ -113,7 +113,7 @@ class InotifyFileWatcher
     {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "InotifyFileWatcher error code: " << ec;
+            BMCWEB_LOG_ERROR("InotifyFileWatcher error code: {}", ec);
             return;
         }
 
@@ -127,7 +127,7 @@ class InotifyFileWatcher
                 std::malloc(sizeof(inotify_event) + NAME_MAX + 1 - offset));
             if (alignedEvp == nullptr)
             {
-                BMCWEB_LOG_ERROR << "InotifyFileWatcher malloc error.";
+                BMCWEB_LOG_ERROR("InotifyFileWatcher malloc error.");
                 return;
             }
             std::memcpy(alignedEvp, (buf.data() + offset),

@@ -747,9 +747,7 @@ inline bool parseMetricProperties(crow::Response& res, Context& ctx)
         auto el = ctx.uriToDbusMerged.find(uri);
         if (el == ctx.uriToDbusMerged.end())
         {
-            BMCWEB_LOG_ERROR << "Failed to find DBus sensor "
-                                "corsresponding to URI "
-                             << uri;
+            BMCWEB_LOG_ERROR("Failed to find DBus sensor " "corsresponding to URI {}", uri);
             messages::propertyValueNotInList(
                 res, uri, "MetricProperties/" + std::to_string(uriIdx));
             return false;
@@ -942,7 +940,7 @@ inline void createTrigger(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (ec)
         {
             messages::internalError(aResp->res);
-            BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
+            BMCWEB_LOG_ERROR("respHandler DBus error {}", ec);
             return;
         }
 
@@ -951,8 +949,7 @@ inline void createTrigger(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (!triggerId)
         {
             messages::internalError(aResp->res);
-            BMCWEB_LOG_ERROR << "Unknown data returned by "
-                                "AddTrigger DBus method";
+            BMCWEB_LOG_ERROR("Unknown data returned by " "AddTrigger DBus method");
             return;
         }
 
@@ -1005,8 +1002,7 @@ inline void afterCreateTrigger(
     if (!triggerId)
     {
         messages::internalError(asyncResp->res);
-        BMCWEB_LOG_ERROR("Unknown data returned by "
-                         "AddTrigger DBus method");
+        BMCWEB_LOG_ERROR("Unknown data returned by " "AddTrigger DBus method");
         return;
     }
 
@@ -1119,8 +1115,7 @@ inline std::optional<nlohmann::json> getMetricReportDefinitions(
         if (reportId.empty())
         {
             {
-                BMCWEB_LOG_ERROR("Property Reports contains invalid value: {}",
-                                 path.str);
+                BMCWEB_LOG_ERROR("Property Reports contains invalid value: {}", path.str);
                 return std::nullopt;
             }
         }
@@ -1176,8 +1171,7 @@ inline bool fillTrigger(
             getTriggerActions(*triggerActions);
         if (!redfishTriggerActions)
         {
-            BMCWEB_LOG_ERROR(
-                "Property TriggerActions is invalid in Trigger: {}", id);
+            BMCWEB_LOG_ERROR( "Property TriggerActions is invalid in Trigger: {}", id);
             return false;
         }
         json["TriggerActions"] = *redfishTriggerActions;
@@ -1204,9 +1198,7 @@ inline bool fillTrigger(
 
             if (!discreteTriggers)
             {
-                BMCWEB_LOG_ERROR("Property Thresholds is invalid for discrete "
-                                 "triggers in Trigger: {}",
-                                 id);
+                BMCWEB_LOG_ERROR("Property Thresholds is invalid for discrete " "triggers in Trigger: {}", id);
                 return false;
             }
 
@@ -1222,9 +1214,7 @@ inline bool fillTrigger(
 
             if (!numericThresholds)
             {
-                BMCWEB_LOG_ERROR("Property Thresholds is invalid for numeric "
-                                 "thresholds in Trigger: {}",
-                                 id);
+                BMCWEB_LOG_ERROR("Property Thresholds is invalid for numeric " "thresholds in Trigger: {}", id);
                 return false;
             }
 

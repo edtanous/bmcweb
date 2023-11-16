@@ -50,11 +50,11 @@ inline void
         [aResp, fwVersionPurpose, activeVersionPropName,
          populateLinkToImages](const boost::system::error_code ec,
                                const std::vector<std::string>& functionalFw) {
-        BMCWEB_LOG_DEBUG << "populateFirmwareInformation enter";
+        BMCWEB_LOG_DEBUG("populateFirmwareInformation enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "error_code = " << ec;
-            BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+            BMCWEB_LOG_ERROR("error_code = {}", ec);
+            BMCWEB_LOG_ERROR("error msg = {}", ec.message());
             messages::internalError(aResp->res);
             return;
         }
@@ -63,7 +63,7 @@ inline void
         {
             // Could keep going and try to populate SoftwareImages but
             // something is seriously wrong, so just fail
-            BMCWEB_LOG_ERROR << "Zero functional software in system";
+            BMCWEB_LOG_ERROR("Zero functional software in system");
             messages::internalError(aResp->res);
             return;
         }
@@ -94,13 +94,13 @@ inline void
                     subtree) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR << "error_code = " << ec2;
-                BMCWEB_LOG_ERROR << "error msg = " << ec2.message();
+                BMCWEB_LOG_ERROR("error_code = {}", ec2);
+                BMCWEB_LOG_ERROR("error msg = {}", ec2.message());
                 messages::internalError(aResp->res);
                 return;
             }
 
-            BMCWEB_LOG_DEBUG << "Found " << subtree.size() << " images";
+            BMCWEB_LOG_DEBUG("Found {} images", subtree.size());
 
             for (const std::pair<std::string,
                                  std::vector<std::pair<
@@ -112,7 +112,7 @@ inline void
                 if (swId.empty())
                 {
                     messages::internalError(aResp->res);
-                    BMCWEB_LOG_ERROR << "Invalid firmware ID";
+                    BMCWEB_LOG_ERROR("Invalid firmware ID");
 
                     return;
                 }
@@ -137,8 +137,8 @@ inline void
                             propertiesList) {
                     if (ec3)
                     {
-                        BMCWEB_LOG_ERROR << "error_code = " << ec3;
-                        BMCWEB_LOG_ERROR << "error msg = " << ec3.message();
+                        BMCWEB_LOG_ERROR("error_code = {}", ec3);
+                        BMCWEB_LOG_ERROR("error msg = {}", ec3.message());
                         messages::internalError(aResp->res);
                         return;
                     }
@@ -154,7 +154,7 @@ inline void
                         propertiesList.find("Purpose");
                     if (it == propertiesList.end())
                     {
-                        BMCWEB_LOG_ERROR << "Can't find property \"Purpose\"!";
+                        BMCWEB_LOG_ERROR("Can't find property \"Purpose\"!");
                         messages::internalError(aResp->res);
                         return;
                     }
@@ -162,15 +162,14 @@ inline void
                         std::get_if<std::string>(&it->second);
                     if (swInvPurpose == nullptr)
                     {
-                        BMCWEB_LOG_ERROR << "wrong types for "
-                                            "property \"Purpose\"!";
+                        BMCWEB_LOG_ERROR("wrong types for " "property \"Purpose\"!");
                         messages::internalError(aResp->res);
                         return;
                     }
 
-                    BMCWEB_LOG_DEBUG << "Image ID: " << swId;
-                    BMCWEB_LOG_DEBUG << "Image purpose: " << *swInvPurpose;
-                    BMCWEB_LOG_DEBUG << "Running image: " << runningImage;
+                    BMCWEB_LOG_DEBUG("Image ID: {}", swId);
+                    BMCWEB_LOG_DEBUG("Image purpose: {}", *swInvPurpose);
+                    BMCWEB_LOG_DEBUG("Running image: {}", runningImage);
 
                     if (*swInvPurpose != fwVersionPurpose)
                     {
@@ -208,8 +207,7 @@ inline void
                         it = propertiesList.find("Version");
                         if (it == propertiesList.end())
                         {
-                            BMCWEB_LOG_ERROR << "Can't find property "
-                                                "\"Version\"!";
+                            BMCWEB_LOG_ERROR("Can't find property " "\"Version\"!");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -217,7 +215,7 @@ inline void
                             std::get_if<std::string>(&it->second);
                         if (version == nullptr)
                         {
-                            BMCWEB_LOG_ERROR << "Error getting fw version";
+                            BMCWEB_LOG_ERROR("Error getting fw version");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -265,7 +263,7 @@ inline std::string getRedfishFWState(const std::string& fwState)
     {
         return "StandbySpare";
     }
-    BMCWEB_LOG_DEBUG << "Default fw state " << fwState << " to Disabled";
+    BMCWEB_LOG_DEBUG("Default fw state {} to Disabled", fwState);
     return "Disabled";
 }
 
@@ -289,7 +287,7 @@ inline std::string getRedfishFWHealth(const std::string& fwState)
     {
         return "OK";
     }
-    BMCWEB_LOG_DEBUG << "FW state " << fwState << " to Warning";
+    BMCWEB_LOG_DEBUG("FW state {} to Warning", fwState);
     return "Warning";
 }
 
@@ -309,7 +307,7 @@ inline void getFwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::shared_ptr<std::string>& swId,
                         const std::string& dbusSvc)
 {
-    BMCWEB_LOG_DEBUG << "getFwStatus: swId " << *swId << " svc " << dbusSvc;
+    BMCWEB_LOG_DEBUG("getFwStatus: swId {} svc {}", *swId, dbusSvc);
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, swId](
@@ -327,7 +325,7 @@ inline void getFwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             propertiesList.find("Activation");
         if (it == propertiesList.end())
         {
-            BMCWEB_LOG_DEBUG << "Can't find property \"Activation\"!";
+            BMCWEB_LOG_DEBUG("Can't find property \"Activation\"!");
             messages::propertyMissing(asyncResp->res, "Activation");
             return;
         }
@@ -335,11 +333,11 @@ inline void getFwStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             std::get_if<std::string>(&it->second);
         if (swInvActivation == nullptr)
         {
-            BMCWEB_LOG_DEBUG << "wrong types for property\"Activation\"!";
+            BMCWEB_LOG_DEBUG("wrong types for property\"Activation\"!");
             messages::propertyValueTypeError(asyncResp->res, "", "Activation");
             return;
         }
-        BMCWEB_LOG_DEBUG << "getFwStatus: Activation " << *swInvActivation;
+        BMCWEB_LOG_DEBUG("getFwStatus: Activation {}", *swInvActivation);
         asyncResp->res.jsonValue["Status"]["State"] =
             getRedfishFWState(*swInvActivation);
         asyncResp->res.jsonValue["Status"]["Health"] =
@@ -366,8 +364,7 @@ inline void getFwWriteProtectedStatus(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::shared_ptr<std::string>& swId, const std::string& dbusSvc)
 {
-    BMCWEB_LOG_DEBUG << "getFwWriteProtectedStatus: swId " << *swId
-                     << " serviceName " << dbusSvc;
+    BMCWEB_LOG_DEBUG("getFwWriteProtectedStatus: swId {} serviceName {}", *swId, dbusSvc);
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, swId](
@@ -383,13 +380,13 @@ inline void getFwWriteProtectedStatus(
             propertiesList.find("WriteProtected");
         if (it == propertiesList.end())
         {
-            BMCWEB_LOG_DEBUG << "Can't find property \"WriteProtected\"!";
+            BMCWEB_LOG_DEBUG("Can't find property \"WriteProtected\"!");
             return;
         }
         const bool* writeProtected = std::get_if<bool>(&it->second);
         if (writeProtected == nullptr)
         {
-            BMCWEB_LOG_DEBUG << "wrong types for property\"WriteProtected\"!";
+            BMCWEB_LOG_DEBUG("wrong types for property\"WriteProtected\"!");
             messages::propertyValueTypeError(asyncResp->res, "",
                                              "WriteProtected");
             return;
@@ -418,20 +415,18 @@ inline void patchFwWriteProtectedStatus(
     const std::shared_ptr<std::string>& swId, const std::string& dbusSvc,
     const bool writeProtected)
 {
-    BMCWEB_LOG_DEBUG << "patchFwWriteProtectedStatus: swId " << *swId
-                     << " serviceName " << dbusSvc;
+    BMCWEB_LOG_DEBUG("patchFwWriteProtectedStatus: swId {} serviceName {}", *swId, dbusSvc);
     crow::connections::systemBus->async_method_call(
         [asyncResp, swId](const boost::system::error_code ec,
                           sdbusplus::message::message& msg) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG << "Set WriteProtect succeeded";
+            BMCWEB_LOG_DEBUG("Set WriteProtect succeeded");
             messages::success(asyncResp->res);
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "SWInventory:" << *swId
-                         << " set writeprotect property failed: " << ec;
+        BMCWEB_LOG_DEBUG("SWInventory:{} set writeprotect property failed: {}", *swId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -491,8 +486,7 @@ inline void
                         const std::vector<std::string>& objPaths) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << " error_code = " << ec
-                             << " error msg =  " << ec.message();
+            BMCWEB_LOG_DEBUG(" error_code = {} error msg =  {}", ec, ec.message());
             // System can exist with no updateable firmware,
             // so don't throw error here.
             return;

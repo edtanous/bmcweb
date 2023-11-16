@@ -516,9 +516,7 @@ inline void extractIPV6Data(const std::string& ethifaceId,
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR(
-                                "Got extra property: {} on the {} object",
-                                property.first, objpath.first.str);
+                            BMCWEB_LOG_ERROR( "Got extra property: {} on the {} object", property.first, objpath.first.str);
                         }
                     }
                 }
@@ -614,9 +612,7 @@ inline void extractIPData(const std::string& ethifaceId,
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR(
-                                "Got extra property: {} on the {} object",
-                                property.first, objpath.first.str);
+                            BMCWEB_LOG_ERROR( "Got extra property: {} on the {} object", property.first, objpath.first.str);
                         }
                     }
                     // Check if given address is local, or global

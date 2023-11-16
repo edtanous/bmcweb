@@ -40,16 +40,12 @@ struct Response
         stringResponse.insert(key, value);
     }
 
-<<<<<<< HEAD
-    Response() : stringResponse(response_type{}) {}
-=======
     void clearHeader(boost::beast::http::field key)
     {
         stringResponse.erase(key);
     }
 
     Response() = default;
->>>>>>> origin/master-october-10
 
     Response(Response&& res) noexcept :
         stringResponse(std::move(res.stringResponse)),
@@ -73,8 +69,7 @@ struct Response
 
     Response& operator=(Response&& r) noexcept
     {
-        BMCWEB_LOG_DEBUG("Moving response containers; this: {}; other: {}",
-                         logPtr(this), logPtr(&r));
+        BMCWEB_LOG_DEBUG("Moving response containers; this: {}; other: {}", logPtr(this), logPtr(&r));
         if (this == &r)
         {
             return *this;
@@ -173,9 +168,7 @@ struct Response
                 (is1XXReturn || stringResponse.result() == status::no_content ||
                  stringResponse.result() == status::not_modified))
             {
-                BMCWEB_LOG_CRITICAL(
-                    "{} Response content provided but code was no-content or not_modified, which aren't allowed to have a body",
-                    logPtr(this));
+                BMCWEB_LOG_CRITICAL( "{} Response content provided but code was no-content or not_modified, which aren't allowed to have a body", logPtr(this));
                 pSize = 0;
                 body().clear();
             }
@@ -235,7 +228,7 @@ struct Response
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "no completion handler, ";
+            BMCWEB_LOG_DEBUG("no completion handler, ");
         }
     }
 
@@ -256,8 +249,7 @@ struct Response
 
     std::function<void(Response&)> releaseCompleteRequestHandler()
     {
-        BMCWEB_LOG_DEBUG("{} releasing completion handler{}", logPtr(this),
-                         static_cast<bool>(completeRequestHandler));
+        BMCWEB_LOG_DEBUG("{} releasing completion handler{}", logPtr(this), static_cast<bool>(completeRequestHandler));
         std::function<void(Response&)> ret = completeRequestHandler;
         completeRequestHandler = nullptr;
         completed = true;
@@ -333,7 +325,7 @@ struct DynamicResponse
 
     DynamicResponse& operator=(DynamicResponse&& r) noexcept
     {
-        BMCWEB_LOG_DEBUG << "Moving response containers";
+        BMCWEB_LOG_DEBUG("Moving response containers");
         bufferResponse = std::move(r.bufferResponse);
         r.bufferResponse.emplace(response_type{});
         completed = r.completed;
@@ -384,7 +376,7 @@ struct DynamicResponse
 
     void clear()
     {
-        BMCWEB_LOG_DEBUG << this << " Clearing response containers";
+        BMCWEB_LOG_DEBUG("{} Clearing response containers", logPtr(this));
         bufferResponse.emplace(response_type{});
         completed = false;
     }
@@ -393,18 +385,18 @@ struct DynamicResponse
     {
         if (completed)
         {
-            BMCWEB_LOG_DEBUG << "Dynamic response was ended twice";
+            BMCWEB_LOG_DEBUG("Dynamic response was ended twice");
             return;
         }
         completed = true;
         if (completeRequestHandler)
         {
-            BMCWEB_LOG_DEBUG << "calling completion handler";
+            BMCWEB_LOG_DEBUG("calling completion handler");
             completeRequestHandler();
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "completion was NULL, skipping";
+            BMCWEB_LOG_DEBUG("completion was NULL, skipping");
         }
     }
 

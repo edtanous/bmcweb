@@ -57,9 +57,7 @@ inline void requestRoutes(App& app)
     std::filesystem::recursive_directory_iterator dirIter(rootpath, ec);
     if (ec)
     {
-        BMCWEB_LOG_ERROR(
-            "Unable to find or open {} static file hosting disabled",
-            rootpath.string());
+        BMCWEB_LOG_ERROR( "Unable to find or open {} static file hosting disabled", rootpath.string());
         return;
     }
 
@@ -137,9 +135,7 @@ inline void requestRoutes(App& app)
 
             if (contentType == nullptr)
             {
-                BMCWEB_LOG_ERROR(
-                    "Cannot determine content-type for {} with extension {}",
-                    absolutePath.string(), extension);
+                BMCWEB_LOG_ERROR( "Cannot determine content-type for {} with extension {}", absolutePath.string(), extension);
             }
 
             if (webpath == "/")

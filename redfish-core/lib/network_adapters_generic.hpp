@@ -32,8 +32,7 @@ void getValidNetworkAdapterPath(
                                networkAdapterPaths) mutable {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "getValidNetworkAdapterPath respHandler DBUS error: " << ec;
+            BMCWEB_LOG_ERROR("getValidNetworkAdapterPath respHandler DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -46,7 +45,7 @@ void getValidNetworkAdapterPath(
             networkAdapterName = path.filename();
             if (networkAdapterName.empty())
             {
-                BMCWEB_LOG_ERROR << "Failed to find '/' in " << networkAdapter;
+                BMCWEB_LOG_ERROR("Failed to find '/' in {}", networkAdapter);
                 continue;
             }
             if (networkAdapterName == networkAdapterId)
@@ -73,7 +72,7 @@ inline void doNetworkAdaptersCollection(
 {
     if (!validChassisPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid chassis ID" << chassisId;
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         return;
     }
@@ -96,7 +95,7 @@ inline void doNetworkAdaptersCollection(
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec.value();
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -178,8 +177,7 @@ inline void getHealthData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Null value returned "
-                                        "for port type";
+                    BMCWEB_LOG_ERROR("Null value returned " "for port type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -333,7 +331,7 @@ inline void
 {
     if (!validNetworkAdapterPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid networkAdapter ID" << networkAdapterId;
+        BMCWEB_LOG_ERROR("Not a valid networkAdapter ID{}", networkAdapterId);
         messages::resourceNotFound(asyncResp->res, "NetworkAdapter",
                                    networkAdapterId);
         return;
@@ -362,7 +360,7 @@ inline void
 {
     if (!validChassisPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid chassis ID" << chassisId;
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         return;
     }
@@ -386,7 +384,7 @@ inline void
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec.value();
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -442,7 +440,7 @@ inline void handleNetworkAdapterGetNext(
 {
     if (!validChassisPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid chassis ID" << chassisId;
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         return;
     }
@@ -522,8 +520,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Null value returned "
-                                        "for port type";
+                    BMCWEB_LOG_ERROR("Null value returned " "for port type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -535,8 +532,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Null value returned "
-                                        "for current speed";
+                    BMCWEB_LOG_ERROR("Null value returned " "for current speed");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -548,8 +544,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Null value returned "
-                                        "for protocol type";
+                    BMCWEB_LOG_ERROR("Null value returned " "for protocol type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -562,8 +557,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Null value returned "
-                                        "for link status";
+                    BMCWEB_LOG_ERROR("Null value returned " "for link status");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -587,8 +581,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Null value returned "
-                                        "for link state";
+                    BMCWEB_LOG_ERROR("Null value returned " "for link state");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -689,7 +682,7 @@ inline void doPort(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 {
     if (!validNetworkAdapterPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid networkAdapter ID" << networkAdapterId;
+        BMCWEB_LOG_ERROR("Not a valid networkAdapter ID{}", networkAdapterId);
         messages::resourceNotFound(asyncResp->res, "networkAdapter",
                                    networkAdapterId);
         return;
@@ -707,7 +700,7 @@ inline void doPortWithValidChassisId(
 {
     if (!validChassisPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid chassis ID" << chassisId;
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         return;
     }

@@ -145,7 +145,7 @@ inline void
         }
         else
         {
-            BMCWEB_LOG_ERROR << "Unknwon value type for key " << key;
+            BMCWEB_LOG_ERROR("Unknwon value type for key {}", key);
         }
     }
 }
@@ -164,14 +164,14 @@ inline void updatePCIeSlotsProcessorLinks(
     const std::map<std::string, propertyTypes>& dbusProperties,
     const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "updatePCIeSlotsPrcoessorLinks ";
+    BMCWEB_LOG_DEBUG("updatePCIeSlotsPrcoessorLinks ");
     crow::connections::systemBus->async_method_call(
         [asyncResp, objPath,
          dbusProperties](const boost::system::error_code ec,
                          std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "processor port not found for  pcieslot ";
+            BMCWEB_LOG_ERROR("processor port not found for  pcieslot ");
             return; // no processors identified for pcieslotpath
         }
 
@@ -179,7 +179,7 @@ inline void updatePCIeSlotsProcessorLinks(
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_ERROR << "processor data null for pcieslot ";
+            BMCWEB_LOG_ERROR("processor data null for pcieslot ");
             return;
         }
 
@@ -195,7 +195,7 @@ inline void updatePCIeSlotsProcessorLinks(
                                  std::variant<std::vector<std::string>>& resp) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "port not found for pcieslot ";
+                    BMCWEB_LOG_ERROR("port not found for pcieslot ");
                     return;
                 }
 
@@ -203,7 +203,7 @@ inline void updatePCIeSlotsProcessorLinks(
                     std::get_if<std::vector<std::string>>(&resp);
                 if (data == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "port data null for pcieslot ";
+                    BMCWEB_LOG_ERROR("port data null for pcieslot ");
                     return;
                 }
 
@@ -269,7 +269,7 @@ inline void updatePCIeSlotsSwitchLinks(
     const std::map<std::string, propertyTypes>& dbusProperties,
     const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "updatePCIeSlotsSwitchLinks ";
+    BMCWEB_LOG_DEBUG("updatePCIeSlotsSwitchLinks ");
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, objPath,
@@ -277,7 +277,7 @@ inline void updatePCIeSlotsSwitchLinks(
                          std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "fabric data not found for pcieslot";
+            BMCWEB_LOG_ERROR("fabric data not found for pcieslot");
             return;
         }
         // fabric identified for pcieslot
@@ -285,7 +285,7 @@ inline void updatePCIeSlotsSwitchLinks(
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_ERROR << "fabric data null  for pcieslot ";
+            BMCWEB_LOG_ERROR("fabric data null  for pcieslot ");
             return;
         }
         std::string fabricId; // pcieslot fabric id
@@ -301,7 +301,7 @@ inline void updatePCIeSlotsSwitchLinks(
                            std::variant<std::vector<std::string>>& resp) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "switch not found for pcieslot ";
+                    BMCWEB_LOG_ERROR("switch not found for pcieslot ");
                     return;
                 }
 
@@ -310,7 +310,7 @@ inline void updatePCIeSlotsSwitchLinks(
 
                 if (data == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "switch data null for pcieslot ";
+                    BMCWEB_LOG_ERROR("switch data null for pcieslot ");
                     return;
                 }
 
@@ -326,7 +326,7 @@ inline void updatePCIeSlotsSwitchLinks(
                             std::variant<std::vector<std::string>>& resp) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR << "port not found for pcieslot ";
+                            BMCWEB_LOG_ERROR("port not found for pcieslot ");
                             return;
                         }
 
@@ -336,7 +336,7 @@ inline void updatePCIeSlotsSwitchLinks(
 
                         if (data == nullptr)
                         {
-                            BMCWEB_LOG_ERROR << "port data null for pcieslot ";
+                            BMCWEB_LOG_ERROR("port data null for pcieslot ");
                             return;
                         }
 
@@ -398,7 +398,7 @@ inline void updatePCIeSlotsNoLinks(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::map<std::string, propertyTypes>& dbusProperties)
 {
-    BMCWEB_LOG_DEBUG << "updatePCIeSlotsNoLinks ";
+    BMCWEB_LOG_DEBUG("updatePCIeSlotsNoLinks ");
 
     nlohmann::json pcieSlotRes;
     fillProperties(pcieSlotRes, dbusProperties);
@@ -421,7 +421,7 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& objPath,
                             const std::string& chassisId)
 {
-    BMCWEB_LOG_DEBUG << "updatePCIeSlots ";
+    BMCWEB_LOG_DEBUG("updatePCIeSlots ");
 
     // Get interface properties
     crow::connections::systemBus->async_method_call(
@@ -431,7 +431,7 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error for pcieslot properties";
+            BMCWEB_LOG_ERROR("DBUS response error for pcieslot properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -451,8 +451,7 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for Generation ";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for Generation ");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -474,8 +473,7 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for SlotType";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for SlotType");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -508,8 +506,7 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "Null value returned "
-                                        "for Lanes";
+                    BMCWEB_LOG_ERROR("Null value returned " "for Lanes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -520,8 +517,7 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for LocationCode";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for LocationCode");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -537,8 +533,7 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                              std::vector<std::string>& resp) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "errno = " << ec << ", \"" << ec.message()
-                                 << "\"";
+                BMCWEB_LOG_ERROR("errno = {}, \"{}\"", ec, ec.message());
                 return; // no links found for this pcie slot
             }
 
@@ -583,7 +578,7 @@ inline void requestPcieSlotsRoutes(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisId) {
-        BMCWEB_LOG_DEBUG << "PCIeSlot doGet enter";
+        BMCWEB_LOG_DEBUG("PCIeSlot doGet enter");
         const std::array<const char*, 1> interface = {
             "xyz.openbmc_project.Inventory.Item.Chassis"};
         // Get chassis collection
@@ -595,7 +590,7 @@ inline void requestPcieSlotsRoutes(App& app)
                 "xyz.openbmc_project.Inventory.Item.PCIeSlot"};
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
+                BMCWEB_LOG_DEBUG("DBUS response error");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -626,7 +621,7 @@ inline void requestPcieSlotsRoutes(App& app)
                             pcieSlotSubtree) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
+                        BMCWEB_LOG_DEBUG("DBUS response error");
                         messages::internalError(asyncResp->res);
                         return;
                     }

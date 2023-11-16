@@ -46,9 +46,7 @@ class GzFileReader
         int errNum = 0;
         const char* errMsg = gzerror(logStream, &errNum);
 
-        BMCWEB_LOG_ERROR(
-            "Error reading gz compressed data.\nError Message: {}\nError Number: {}",
-            errMsg, errNum);
+        BMCWEB_LOG_ERROR( "Error reading gz compressed data.\nError Message: {}\nError Number: {}", errMsg, errNum);
     }
 
     bool readFile(gzFile logStream, uint64_t skip, uint64_t top,
@@ -114,9 +112,7 @@ class GzFileReader
                     totalFilesSize += logEntry.size();
                     if (totalFilesSize > maxTotalFilesSize)
                     {
-                        BMCWEB_LOG_ERROR(
-                            "File size exceeds maximum allowed size of {}",
-                            maxTotalFilesSize);
+                        BMCWEB_LOG_ERROR( "File size exceeds maximum allowed size of {}", maxTotalFilesSize);
                         return false;
                     }
                     logEntries.push_back(logEntry);
@@ -145,9 +141,7 @@ class GzFileReader
                         totalFilesSize++;
                         if (totalFilesSize > maxTotalFilesSize)
                         {
-                            BMCWEB_LOG_ERROR(
-                                "File size exceeds maximum allowed size of {}",
-                                maxTotalFilesSize);
+                            BMCWEB_LOG_ERROR( "File size exceeds maximum allowed size of {}", maxTotalFilesSize);
                             return false;
                         }
                         logEntries.emplace_back("\n");
@@ -188,9 +182,7 @@ class GzFileReader
                 size_t tmpMessageSize = totalFilesSize + lastMessage.size();
                 if (tmpMessageSize > maxTotalFilesSize)
                 {
-                    BMCWEB_LOG_ERROR(
-                        "File size exceeds maximum allowed size of {}",
-                        maxTotalFilesSize);
+                    BMCWEB_LOG_ERROR( "File size exceeds maximum allowed size of {}", maxTotalFilesSize);
                     return false;
                 }
             }

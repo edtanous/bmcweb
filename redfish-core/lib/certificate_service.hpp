@@ -119,22 +119,19 @@ class CertificateFile
                                                    std::ofstream::trunc);
             out << certString;
             out.close();
-            BMCWEB_LOG_DEBUG("Creating certificate file{}",
-                             certificateFile.string());
+            BMCWEB_LOG_DEBUG("Creating certificate file{}", certificateFile.string());
         }
     }
     ~CertificateFile()
     {
         if (std::filesystem::exists(certDirectory))
         {
-            BMCWEB_LOG_DEBUG("Removing certificate file{}",
-                             certificateFile.string());
+            BMCWEB_LOG_DEBUG("Removing certificate file{}", certificateFile.string());
             std::error_code ec;
             std::filesystem::remove_all(certDirectory, ec);
             if (ec)
             {
-                BMCWEB_LOG_ERROR("Failed to remove temp directory{}",
-                                 certDirectory.string());
+                BMCWEB_LOG_ERROR("Failed to remove temp directory{}", certDirectory.string());
             }
         }
     }
@@ -322,8 +319,7 @@ static void getCertificateProperties(
     const std::string& certId, const boost::urls::url& certURL,
     const std::string& name)
 {
-    BMCWEB_LOG_DEBUG("getCertificateProperties Path={} certId={} certURl={}",
-                     objectPath, certId, certURL);
+    BMCWEB_LOG_DEBUG("getCertificateProperties Path={} certId={} certURl={}", objectPath, certId, certURL);
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objectPath, certs::certPropIntf,
         [asyncResp, certURL, certId,
@@ -603,15 +599,13 @@ inline void handleReplaceCertificateAction(
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "HTTPS certificate install file="
-                         << certFile->getCertFilePath();
+        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}", certFile->getCertFilePath());
         asyncResp->res.addHeader(boost::beast::http::field::location, certURI);
         asyncResp->res.result(boost::beast::http::status::no_content);
     },
 =======
         getCertificateProperties(asyncResp, objectPath, service, id, url, name);
-        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}",
-                         certFile->getCertFilePath());
+        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}", certFile->getCertFilePath());
         },
 >>>>>>> origin/master-october-10
         service, objectPath, certs::certReplaceIntf, "Replace",
@@ -635,8 +629,7 @@ static void getCSR(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& certObjPath,
                    const std::string& csrObjPath)
 {
-    BMCWEB_LOG_DEBUG("getCSR CertObjectPath{} CSRObjectPath={} service={}",
-                     certObjPath, csrObjPath, service);
+    BMCWEB_LOG_DEBUG("getCSR CertObjectPath{} CSRObjectPath={} service={}", certObjPath, csrObjPath, service);
     crow::connections::systemBus->async_method_call(
         [asyncResp, certURI](const boost::system::error_code& ec,
                              const std::string& csr) {
@@ -984,8 +977,7 @@ inline void handleHTTPSCertificateCollectionPost(
             "HTTPS", "Certificates", certId);
         getCertificateProperties(asyncResp, objectPath, certs::httpsServiceName,
                                  certId, certURL, "HTTPS Certificate");
-        BMCWEB_LOG_DEBUG << "HTTPS certificate install file="
-                         << certFile->getCertFilePath();
+        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}", certFile->getCertFilePath());
     },
 =======
         const boost::urls::url certURL = boost::urls::format(
@@ -993,8 +985,7 @@ inline void handleHTTPSCertificateCollectionPost(
             certId);
         getCertificateProperties(asyncResp, objectPath, certs::httpsServiceName,
                                  certId, certURL, "HTTPS Certificate");
-        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}",
-                         certFile->getCertFilePath());
+        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}", certFile->getCertFilePath());
         },
 >>>>>>> origin/master-october-10
         certs::httpsServiceName, certs::httpsObjectPath, certs::certInstallIntf,
@@ -1011,7 +1002,7 @@ inline void handleHTTPSCertificateGet(
     }
 
 <<<<<<< HEAD
-    BMCWEB_LOG_DEBUG << "HTTPS Certificate ID=" << id;
+    BMCWEB_LOG_DEBUG("HTTPS Certificate ID={}", id);
     const boost::urls::url certURL = crow::utility::urlFromPieces(
         "redfish", "v1", "Managers", PLATFORMBMCID, "NetworkProtocol", "HTTPS",
         "Certificates", id);
@@ -1106,12 +1097,10 @@ inline void handleLDAPCertificateCollectionPost(
         getCertificateProperties(asyncResp, objectPath, certs::ldapServiceName,
                                  certId, certURL, "LDAP Certificate");
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "LDAP certificate install file="
-                         << certFile->getCertFilePath();
+        BMCWEB_LOG_DEBUG("LDAP certificate install file={}", certFile->getCertFilePath());
     },
 =======
-        BMCWEB_LOG_DEBUG("LDAP certificate install file={}",
-                         certFile->getCertFilePath());
+        BMCWEB_LOG_DEBUG("LDAP certificate install file={}", certFile->getCertFilePath());
         },
 >>>>>>> origin/master-october-10
         certs::ldapServiceName, certs::ldapObjectPath, certs::certInstallIntf,
@@ -1235,8 +1224,7 @@ inline void handleTrustStoreCertificateCollectionPost(
         getCertificateProperties(asyncResp, objectPath,
                                  certs::authorityServiceName, certId, certURL,
                                  "TrustStore Certificate");
-        BMCWEB_LOG_DEBUG << "TrustStore certificate install file="
-                         << certFile->getCertFilePath();
+        BMCWEB_LOG_DEBUG("TrustStore certificate install file={}", certFile->getCertFilePath());
     },
 =======
         const boost::urls::url certURL = boost::urls::format(
@@ -1244,8 +1232,7 @@ inline void handleTrustStoreCertificateCollectionPost(
         getCertificateProperties(asyncResp, objectPath,
                                  certs::authorityServiceName, certId, certURL,
                                  "TrustStore Certificate");
-        BMCWEB_LOG_DEBUG("TrustStore certificate install file={}",
-                         certFile->getCertFilePath());
+        BMCWEB_LOG_DEBUG("TrustStore certificate install file={}", certFile->getCertFilePath());
         },
 >>>>>>> origin/master-october-10
         certs::authorityServiceName, certs::authorityObjectPath,
@@ -1262,7 +1249,7 @@ inline void handleTrustStoreCertificateGet(
     }
 
 <<<<<<< HEAD
-    BMCWEB_LOG_DEBUG << "Truststore Certificate ID=" << id;
+    BMCWEB_LOG_DEBUG("Truststore Certificate ID={}", id);
     const boost::urls::url certURL =
         crow::utility::urlFromPieces("redfish", "v1", "Managers", PLATFORMBMCID,
                                      "Truststore", "Certificates", id);

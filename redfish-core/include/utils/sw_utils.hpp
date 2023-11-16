@@ -143,22 +143,12 @@ inline void populateSoftwareInformation(
                             propertiesList) {
                     if (ec3)
                     {
-<<<<<<< HEAD
-                        BMCWEB_LOG_ERROR << "error_code = " << ec3;
-                        BMCWEB_LOG_ERROR << "error msg = " << ec3.message();
-                        // Have seen the code update app delete the
-                        // D-Bus object, during code update, between
-                        // the call to mapper and here. Just leave
-                        // these properties off if resource not
-                        // found.
-=======
                         BMCWEB_LOG_ERROR("error_code = {}", ec3);
                         BMCWEB_LOG_ERROR("error msg = {}", ec3.message());
                         // Have seen the code update app delete the D-Bus
                         // object, during code update, between the call to
                         // mapper and here. Just leave these properties off if
                         // resource not found.
->>>>>>> origin/master-october-10
                         if (ec3.value() == EBADR)
                         {
                             return;
@@ -184,14 +174,11 @@ inline void populateSoftwareInformation(
                         return;
                     }
 
-<<<<<<< HEAD
-=======
                     if (version == nullptr || version->empty())
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
->>>>>>> origin/master-october-10
                     if (swInvPurpose == nullptr ||
                         *swInvPurpose != swVersionPurpose)
                     {
@@ -199,21 +186,9 @@ inline void populateSoftwareInformation(
                         return;
                     }
 
-<<<<<<< HEAD
-                    if (version == nullptr || version->empty())
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-
-                    BMCWEB_LOG_DEBUG << "Image ID: " << swId;
-                    BMCWEB_LOG_DEBUG << "Running image: " << runningImage;
-                    BMCWEB_LOG_DEBUG << "Image purpose: " << *swInvPurpose;
-=======
                     BMCWEB_LOG_DEBUG("Image ID: {}", swId);
                     BMCWEB_LOG_DEBUG("Running image: {}", runningImage);
                     BMCWEB_LOG_DEBUG("Image purpose: {}", *swInvPurpose);
->>>>>>> origin/master-october-10
 
                     if (populateLinkToImages)
                     {
@@ -222,33 +197,17 @@ inline void populateSoftwareInformation(
                         // Firmware images are at
                         // /redfish/v1/UpdateService/FirmwareInventory/<Id>
                         // e.g. .../FirmwareInventory/82d3ec86
-<<<<<<< HEAD
-                        softwareImageMembers.push_back(
-                            {{"@odata.id", "/redfish/v1/UpdateService/"
-                                           "FirmwareInventory/" +
-                                               swId}});
-                        aResp->res
-=======
                         nlohmann::json::object_t member;
                         member["@odata.id"] = boost::urls::format(
                             "/redfish/v1/UpdateService/FirmwareInventory/{}",
                             swId);
                         softwareImageMembers.emplace_back(std::move(member));
                         asyncResp->res
->>>>>>> origin/master-october-10
                             .jsonValue["Links"]["SoftwareImages@odata.count"] =
                             softwareImageMembers.size();
 
                         if (runningImage)
                         {
-<<<<<<< HEAD
-                            // Create the link to the running image
-                            aResp->res
-                                .jsonValue["Links"]["ActiveSoftwareImage"] = {
-                                {"@odata.id", "/redfish/v1/UpdateService/"
-                                              "FirmwareInventory/" +
-                                                  swId}};
-=======
                             nlohmann::json::object_t runningMember;
                             runningMember["@odata.id"] = boost::urls::format(
                                 "/redfish/v1/UpdateService/FirmwareInventory/{}",
@@ -257,7 +216,6 @@ inline void populateSoftwareInformation(
                             asyncResp->res
                                 .jsonValue["Links"]["ActiveSoftwareImage"] =
                                 std::move(runningMember);
->>>>>>> origin/master-october-10
                         }
                     }
                     if (!activeVersionPropName.empty() && runningImage)
@@ -267,18 +225,8 @@ inline void populateSoftwareInformation(
                     }
                 });
             }
-<<<<<<< HEAD
-        },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-            "/xyz/openbmc_project/software", static_cast<int32_t>(0),
-            std::array<const char*, 1>{"xyz.openbmc_project.Software.Version"});
-    });
-=======
             });
         });
->>>>>>> origin/master-october-10
 }
 
 /**
@@ -412,8 +360,7 @@ inline void
                           const dbus::utility::MapperEndPoints& objPaths) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG(" error_code = {} error msg =  {}", ec,
-                             ec.message());
+            BMCWEB_LOG_DEBUG(" error_code = {} error msg =  {}", ec, ec.message());
             // System can exist with no updateable software,
             // so don't throw error here.
             return;

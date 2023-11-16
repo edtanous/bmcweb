@@ -44,8 +44,7 @@ inline int onPropertyUpdate(sd_bus_message* m, void* userdata,
     auto thisSession = sessions.find(connection);
     if (thisSession == sessions.end())
     {
-        BMCWEB_LOG_ERROR("Couldn't find dbus connection {}",
-                         logPtr(connection));
+        BMCWEB_LOG_ERROR("Couldn't find dbus connection {}", logPtr(connection));
         return 0;
     }
     sdbusplus::message_t message(m);
@@ -203,8 +202,7 @@ inline void requestRoutes(App& app)
                 // interfaces
                 if (thisSession.interfaces.empty())
                 {
-                    BMCWEB_LOG_DEBUG("Creating match {}",
-                                     propertiesMatchString);
+                    BMCWEB_LOG_DEBUG("Creating match {}", propertiesMatchString);
 
                     thisSession.matches.emplace_back(
                         std::make_unique<sdbusplus::bus::match_t>(
@@ -219,8 +217,7 @@ inline void requestRoutes(App& app)
                     {
                         if (!std::regex_match(interface, validInterface))
                         {
-                            BMCWEB_LOG_ERROR("Invalid interface name {}",
-                                             interface);
+                            BMCWEB_LOG_ERROR("Invalid interface name {}", interface);
                             conn.close();
                             return;
                         }

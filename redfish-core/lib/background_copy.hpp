@@ -148,9 +148,7 @@ inline void updateBackgroundCopyStatus(
         }
         else
         {
-            BMCWEB_LOG_ERROR
-                << "Invalid response for background_copy_query_progress: "
-                << stdOut;
+            BMCWEB_LOG_ERROR("Invalid response for background_copy_query_progress: {}", stdOut);
         }
         return;
     };
@@ -263,8 +261,7 @@ inline void
             redfish::messages::success(asyncResp->res);
         }
     };
-    BMCWEB_LOG_INFO << "Initializing background init for inventoryURI:"
-                    << inventoryURI;
+    BMCWEB_LOG_INFO("Initializing background init for inventoryURI:{}", inventoryURI);
     mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_INIT, req,
                            asyncResp, responseCallback);
     return;

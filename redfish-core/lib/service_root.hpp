@@ -59,7 +59,7 @@ inline void getBmcAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                             const std::string& service,
                             const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get BMC Asset Data";
+    BMCWEB_LOG_DEBUG("Get BMC Asset Data");
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objPath,
         "xyz.openbmc_project.Inventory.Decorator.Asset",
@@ -68,7 +68,7 @@ inline void getBmcAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
             const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error";
+            BMCWEB_LOG_ERROR("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -83,7 +83,7 @@ inline void getBmcAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
 
         if (!success)
         {
-            BMCWEB_LOG_ERROR << "Unpack Error while fetching BMC Asset data";
+            BMCWEB_LOG_ERROR("Unpack Error while fetching BMC Asset data");
             return;
         }
 
@@ -106,70 +106,70 @@ inline void getBmcAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
     });
 }
 
-inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-    BMCWEB_LOG_DEBUG << "Get available BMC resources.";
+// inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+// {
+//     BMCWEB_LOG_DEBUG("Get available BMC resources.");
 
-    // GetSubTree on all interfaces which provide info about BMC
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](boost::system::error_code ec,
-                    const MapperGetSubTreeResponse& subtree) mutable {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        for (const auto& [objectPath, serviceMap] : subtree)
-        {
-            // Ignore any objects which don't end with our desired bmcid
-            if (!boost::ends_with(objectPath, PLATFORMBMCID))
-            {
-                continue;
-            }
+//     // GetSubTree on all interfaces which provide info about BMC
+//     crow::connections::systemBus->async_method_call(
+//         [asyncResp](boost::system::error_code ec,
+//                     const MapperGetSubTreeResponse& subtree) mutable {
+//         if (ec)
+//         {
+//             BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
+//             messages::internalError(asyncResp->res);
+//             return;
+//         }
+//         for (const auto& [objectPath, serviceMap] : subtree)
+//         {
+//             // Ignore any objects which don't end with our desired bmcid
+//             if (!boost::ends_with(objectPath, PLATFORMBMCID))
+//             {
+//                 continue;
+//             }
 
-            bool found = false;
-            // Filter out objects that don't have the BMC-specific
-            // interfaces to make sure we can return 404 on non-BMC
-            for (const auto& [serviceName, interfaceList] : serviceMap)
-            {
-                if (std::find_first_of(
-                        interfaceList.begin(), interfaceList.end(),
-                        bmcInterfaces.begin(),
-                        bmcInterfaces.end()) != interfaceList.end())
-                {
-                    found = true;
-                    break;
-                }
-            }
+//             bool found = false;
+//             // Filter out objects that don't have the BMC-specific
+//             // interfaces to make sure we can return 404 on non-BMC
+//             for (const auto& [serviceName, interfaceList] : serviceMap)
+//             {
+//                 if (std::find_first_of(
+//                         interfaceList.begin(), interfaceList.end(),
+//                         bmcInterfaces.begin(),
+//                         bmcInterfaces.end()) != interfaceList.end())
+//                 {
+//                     found = true;
+//                     break;
+//                 }
+//             }
 
-            if (!found)
-            {
-                continue;
-            }
+//             if (!found)
+//             {
+//                 continue;
+//             }
 
-            for (const auto& [serviceName, interfaceList] : serviceMap)
-            {
-                for (const auto& interface : interfaceList)
-                {
-                    if (interface ==
-                        "xyz.openbmc_project.Inventory.Decorator.Asset")
-                    {
-                        getBmcAssetData(asyncResp, serviceName, objectPath);
-                    }
-                }
-            }
+//             for (const auto& [serviceName, interfaceList] : serviceMap)
+//             {
+//                 for (const auto& interface : interfaceList)
+//                 {
+//                     if (interface ==
+//                         "xyz.openbmc_project.Inventory.Decorator.Asset")
+//                     {
+//                         getBmcAssetData(asyncResp, serviceName, objectPath);
+//                     }
+//                 }
+//             }
 
-            return;
-        }
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-        "/xyz/openbmc_project/inventory", 0,
-        std::array<const char*, 1>{
-            "xyz.openbmc_project.Inventory.Decorator.Asset"});
-}
+//             return;
+//         }
+//     },
+//     "xyz.openbmc_project.ObjectMapper",
+//     "/xyz/openbmc_project/object_mapper",
+//     "xyz.openbmc_project.ObjectMapper", 
+//     "GetSubTree",
+//     "/xyz/openbmc_project/inventory", 0,
+//     std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Decorator.Asset"});
+// }
 
 inline void handleServiceRootGetImpl(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
@@ -184,29 +184,20 @@ inline void handleServiceRootGetImpl(
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1";
     asyncResp->res.jsonValue["Id"] = "RootService";
     asyncResp->res.jsonValue["Name"] = "Root Service";
-<<<<<<< HEAD
-    asyncResp->res.jsonValue["RedfishVersion"] = "1.9.0";
-    asyncResp->res.jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
-        "/redfish/v1/Managers/" PLATFORMBMCID;
-
+    asyncResp->res.jsonValue["RedfishVersion"] = "1.17.0";
     if (persistent_data::getConfig().isTLSAuthEnabled())
     {
-        asyncResp->res.jsonValue["Links"]["Sessions"]["@odata.id"] =
-            "/redfish/v1/SessionService/Sessions";
-        asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
-            "/redfish/v1/AccountService";
-    }
-=======
-    asyncResp->res.jsonValue["RedfishVersion"] = "1.17.0";
     asyncResp->res.jsonValue["Links"]["Sessions"]["@odata.id"] =
         "/redfish/v1/SessionService/Sessions";
     asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
         "/redfish/v1/AccountService";
+    }
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
         "/redfish/v1/AggregationService";
 #endif
->>>>>>> origin/master-october-10
+    asyncResp->res.jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
+        "/redfish/v1/Managers/" PLATFORMBMCID;
     asyncResp->res.jsonValue["Chassis"]["@odata.id"] = "/redfish/v1/Chassis";
     asyncResp->res.jsonValue["ComponentIntegrity"]["@odata.id"] =
         "/redfish/v1/ComponentIntegrity";
@@ -241,8 +232,7 @@ inline void handleServiceRootGetImpl(
     asyncResp->res.jsonValue["Cables"]["@odata.id"] = "/redfish/v1/Cables";
 #endif
 
-    asyncResp->res.jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
-        "/redfish/v1/Managers/bmc";
+
 
     nlohmann::json& protocolFeatures =
         asyncResp->res.jsonValue["ProtocolFeaturesSupported"];
@@ -264,7 +254,7 @@ inline void handleServiceRootGetImpl(
     protocolFeatures["SelectQuery"] = true;
     protocolFeatures["DeepOperations"]["DeepPOST"] = false;
     protocolFeatures["DeepOperations"]["DeepPATCH"] = false;
-    getBMCObject(asyncResp);
+    //getBMCObject(asyncResp);
 }
 inline void
     handleServiceRootGet(App& app, const crow::Request& req,

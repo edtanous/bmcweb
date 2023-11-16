@@ -36,7 +36,7 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                                const std::string& processorId,
                                Handler&& handler)
 {
-    BMCWEB_LOG_DEBUG << "Get available system processor resources.";
+    BMCWEB_LOG_DEBUG("Get available system processor resources.");
 
     // GetSubTree on all interfaces which provide info about a Processor
     crow::connections::systemBus->async_method_call(
@@ -45,7 +45,7 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             const MapperGetSubTreeResponse& subtree) mutable {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error: {}", ec);
             messages::internalError(resp->res);
             return;
         }
@@ -114,7 +114,7 @@ inline void getPCIeErrorData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                   const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }

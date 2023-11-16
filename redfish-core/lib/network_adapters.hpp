@@ -15,7 +15,7 @@ inline void getNetworkAdapterCollectionMembers(
     const bool& isNDF, const std::vector<const char*>& interfaces,
     const char* subtree = "/xyz/openbmc_project/inventory")
 {
-    BMCWEB_LOG_DEBUG << "Get collection members for: " << collectionPath;
+    BMCWEB_LOG_DEBUG("Get collection members for: {}", collectionPath);
     crow::connections::systemBus->async_method_call(
         [collectionPath, isNDF, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -32,7 +32,7 @@ inline void getNetworkAdapterCollectionMembers(
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec.value();
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
             messages::internalError(aResp->res);
             return;
         }
@@ -86,7 +86,7 @@ inline void doNetworkAdaptersCollection(
 {
     if (!validChassisPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid chassis ID" << chassisId;
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         return;
     }
@@ -109,7 +109,7 @@ inline void doNetworkAdaptersCollection(
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec.value();
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -154,7 +154,7 @@ inline void
 {
     if (!validChassisPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid chassis ID" << chassisId;
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         return;
     }
@@ -186,7 +186,7 @@ inline void
 {
     if (!validChassisPath)
     {
-        BMCWEB_LOG_ERROR << "Not a valid chassis ID" << chassisId;
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         return;
     }
@@ -304,7 +304,7 @@ inline void doPort(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     const GetManagedPropertyType& properties) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec.value();
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -316,7 +316,7 @@ inline void doPort(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Cannot read LinkUp property";
+                    BMCWEB_LOG_ERROR("Cannot read LinkUp property");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -334,7 +334,7 @@ inline void doPort(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Cannot read Speed property";
+                    BMCWEB_LOG_ERROR("Cannot read Speed property");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -373,7 +373,7 @@ inline void doNDF(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     const GetManagedPropertyType& properties) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec.value();
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -387,7 +387,7 @@ inline void doNDF(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Cannot read MTU property";
+                    BMCWEB_LOG_ERROR("Cannot read MTU property");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -399,7 +399,7 @@ inline void doNDF(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Cannot read MACAddress property";
+                    BMCWEB_LOG_ERROR("Cannot read MACAddress property");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -429,7 +429,7 @@ inline void handleGet(App& app, const crow::Request& req,
         std::string dpuString = "host0";
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec.value();
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
             messages::internalError(asyncResp->res);
             return;
         }

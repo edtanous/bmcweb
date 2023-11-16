@@ -38,7 +38,7 @@ inline void
                         propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Can't get PowerSupply asset!";
+            BMCWEB_LOG_ERROR("Can't get PowerSupply asset!");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -79,7 +79,7 @@ inline void
                         propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Can't get PowerSupply location!";
+            BMCWEB_LOG_ERROR("Can't get PowerSupply location!");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -258,9 +258,7 @@ inline void getValidPowerSupplyPath(
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR(
-                    "DBUS response error for getAssociatedSubTreePaths{}",
-                    ec.value());
+                BMCWEB_LOG_ERROR( "DBUS response error for getAssociatedSubTreePaths{}", ec.value());
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -303,7 +301,7 @@ inline void
                     const std::variant<bool> state) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Can't get PowerSupply state!";
+            BMCWEB_LOG_ERROR("Can't get PowerSupply state!");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -332,8 +330,7 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for State {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for State {}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -361,7 +358,7 @@ inline void
                     const std::variant<bool> health) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Can't get PowerSupply health!";
+            BMCWEB_LOG_ERROR("Can't get PowerSupply health!");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -396,19 +393,18 @@ inline void
                 subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "Get PowerSupply attributes respHandler DBus error " << ec;
+            BMCWEB_LOG_ERROR("Get PowerSupply attributes respHandler DBus error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
         if (subtree.size() == 0)
         {
-            BMCWEB_LOG_DEBUG << "Can't find Power Supply efficiency ratings!";
+            BMCWEB_LOG_DEBUG("Can't find Power Supply efficiency ratings!");
             return;
         }
         if (subtree[0].second.empty())
         {
-            BMCWEB_LOG_ERROR << "Get Power Supply efficiency ratings error!";
+            BMCWEB_LOG_ERROR("Get Power Supply efficiency ratings error!");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -421,9 +417,7 @@ inline void
                         const std::variant<uint32_t>& deratingFactor) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Get PowerSupply DeratingFactor "
-                                    "respHandler DBus error "
-                                 << ec;
+                BMCWEB_LOG_ERROR("Get PowerSupply DeratingFactor " "respHandler DBus error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -457,8 +451,7 @@ inline void
     getPowerSupplies(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& chassisID)
 {
-    BMCWEB_LOG_DEBUG << "Get power supply list associated to chassis = "
-                     << chassisID;
+    BMCWEB_LOG_DEBUG("Get power supply list associated to chassis = {}", chassisID);
 
     asyncResp->res.jsonValue = {
         {"@odata.type", "#PowerSupplyCollection.PowerSupplyCollection"},
@@ -477,7 +470,7 @@ inline void
                 subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "D-Bus response error on GetSubTree " << ec;
+            BMCWEB_LOG_ERROR("D-Bus response error on GetSubTree {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -504,7 +497,7 @@ inline void
                         return;
                     }
 
-                    BMCWEB_LOG_ERROR << "DBUS response error";
+                    BMCWEB_LOG_ERROR("DBUS response error");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -516,7 +509,7 @@ inline void
                 {
                     if ((*powerSupplyChassis).size() != 1)
                     {
-                        BMCWEB_LOG_ERROR << "PowerSupply association error! ";
+                        BMCWEB_LOG_ERROR("PowerSupply association error! ");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -559,7 +552,7 @@ inline void
                           const std::string& chassisID,
                           const std::string& powerSupplyID, Callback&& callback)
 {
-    BMCWEB_LOG_DEBUG << "getValidPowerSupplyID enter";
+    BMCWEB_LOG_DEBUG("getValidPowerSupplyID enter");
 
     auto respHandler =
         [callback{std::forward<Callback>(callback)}, asyncResp, chassisID,
@@ -569,12 +562,11 @@ inline void
                 std::string,
                 std::vector<std::pair<std::string, std::vector<std::string>>>>>&
                 subtree) {
-        BMCWEB_LOG_DEBUG << "getValidPowerSupplyID respHandler enter";
+        BMCWEB_LOG_DEBUG("getValidPowerSupplyID respHandler enter");
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "getValidPowerSupplyID respHandler DBUS error: "
-                             << ec;
+            BMCWEB_LOG_ERROR("getValidPowerSupplyID respHandler DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -601,7 +593,7 @@ inline void
                         return;
                     }
 
-                    BMCWEB_LOG_ERROR << "DBUS response error";
+                    BMCWEB_LOG_ERROR("DBUS response error");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -613,7 +605,7 @@ inline void
                 {
                     if ((*powerSupplyChassis).size() != 1)
                     {
-                        BMCWEB_LOG_ERROR << "PowerSupply association error! ";
+                        BMCWEB_LOG_ERROR("PowerSupply association error! ");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -631,8 +623,7 @@ inline void
                     const std::string powerSupplyName = pathPS.filename();
                     if (powerSupplyName.empty())
                     {
-                        BMCWEB_LOG_ERROR << "Failed to find powerSupplyName in "
-                                         << object.first;
+                        BMCWEB_LOG_ERROR("Failed to find powerSupplyName in {}", object.first);
                         return;
                     }
 
@@ -645,8 +636,7 @@ inline void
 
                         if (object.second.size() != 1)
                         {
-                            BMCWEB_LOG_ERROR << "Error getting PowerSupply "
-                                                "D-Bus object!";
+                            BMCWEB_LOG_ERROR("Error getting PowerSupply " "D-Bus object!");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -673,7 +663,7 @@ inline void
         "/xyz/openbmc_project/inventory", 0,
         std::array<const char*, 1>{
             "xyz.openbmc_project.Inventory.Item.PowerSupply"});
-    BMCWEB_LOG_DEBUG << "getValidPowerSupplyID exit";
+    BMCWEB_LOG_DEBUG("getValidPowerSupplyID exit");
 }
 
 inline void requestRoutesPowerSupplyCollection(App& app)
@@ -689,7 +679,7 @@ inline void requestRoutesPowerSupplyCollection(App& app)
              chassisID](const std::optional<std::string>& validChassisID) {
             if (!validChassisID)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -713,8 +703,7 @@ inline void requestRoutesPowerSupplyCollection(App& app)
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Health {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Health {}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -740,8 +729,7 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Asset {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Asset {}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -805,8 +793,7 @@ inline void getPowerSupplyFirmwareVersion(
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for FirmwareVersion {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for FirmwareVersion {}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -828,8 +815,7 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Location {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Location {}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -847,8 +833,7 @@ inline void handleGetEfficiencyResponse(
     {
         if (ec.value() != EBADR)
         {
-            BMCWEB_LOG_ERROR("DBUS response error for DeratingFactor {}",
-                             ec.value());
+            BMCWEB_LOG_ERROR("DBUS response error for DeratingFactor {}", ec.value());
             messages::internalError(asyncResp->res);
         }
         return;
@@ -876,8 +861,7 @@ inline void handlePowerSupplyAttributesSubTreeResponse(
     {
         if (ec.value() != EBADR)
         {
-            BMCWEB_LOG_ERROR("DBUS response error for EfficiencyPercent {}",
-                             ec.value());
+            BMCWEB_LOG_ERROR("DBUS response error for EfficiencyPercent {}", ec.value());
             messages::internalError(asyncResp->res);
         }
         return;
@@ -891,9 +875,7 @@ inline void handlePowerSupplyAttributesSubTreeResponse(
 
     if (subtree.size() != 1)
     {
-        BMCWEB_LOG_ERROR(
-            "Unexpected number of paths returned by getSubTree: {}",
-            subtree.size());
+        BMCWEB_LOG_ERROR( "Unexpected number of paths returned by getSubTree: {}", subtree.size());
         messages::internalError(asyncResp->res);
         return;
     }
@@ -1042,7 +1024,7 @@ inline void requestRoutesPowerSupply(App& app)
              powerSupplyID](const std::optional<std::string>& validChassisID) {
             if (!validChassisID)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;

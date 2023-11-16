@@ -78,7 +78,7 @@ std::optional<ErrorMapping> getEMMCErrorMessageFromExitCode(ExitCode exitCode)
     }
     else
     {
-        BMCWEB_LOG_ERROR << "No mapping found for ExitCode: " << exitCode;
+        BMCWEB_LOG_ERROR("No mapping found for ExitCode: {}", exitCode);
         return std::nullopt;
     }
 }
@@ -115,9 +115,7 @@ struct PersistentStorageUtil
             std::string stdErr;
             if (ec || errorCode)
             {
-                BMCWEB_LOG_ERROR
-                    << "Error while executing persistent storage command: "
-                    << command << " Error Code: " << errorCode;
+                BMCWEB_LOG_ERROR("Error while executing persistent storage command: {} Error Code: {}", command, errorCode);
 
                 while (*dataErr)
                 {
@@ -126,12 +124,10 @@ struct PersistentStorageUtil
                     stdErr += line + "\n";
                 }
                 dataErr->close();
-                BMCWEB_LOG_ERROR << "Command Response: " << stdErr;
+                BMCWEB_LOG_ERROR("Command Response: {}", stdErr);
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "Error while executing command: " << command
-                        << " Message: " << ec.message();
+                    BMCWEB_LOG_ERROR("Error while executing command: {} Message: {}", command, ec.message());
                 }
                 return;
             }

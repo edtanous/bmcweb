@@ -51,7 +51,7 @@ std::vector<CommitImageValueEntry> getAllowableValues()
 
     if (!fs::exists(configPath))
     {
-        BMCWEB_LOG_ERROR << "The file doesn't exist: " << configPath;
+        BMCWEB_LOG_ERROR("The file doesn't exist: {}", configPath);
         return allowableValues;
     }
 
@@ -59,7 +59,7 @@ std::vector<CommitImageValueEntry> getAllowableValues()
     auto data = Json::parse(jsonFile, nullptr, false);
     if (data.is_discarded())
     {
-        BMCWEB_LOG_ERROR << "Unable to parse json data " << configPath;
+        BMCWEB_LOG_ERROR("Unable to parse json data {}", configPath);
         return allowableValues;
     }
 
@@ -80,7 +80,7 @@ std::vector<CommitImageValueEntry> getAllowableValues()
         }
         catch (const std::exception& e)
         {
-            BMCWEB_LOG_ERROR << "FW MCTP EID map format error.";
+            BMCWEB_LOG_ERROR("FW MCTP EID map format error.");
         }
     }
 

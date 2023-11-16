@@ -68,9 +68,7 @@ inline void getFanPaths(
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR(
-                    "DBUS response error for getAssociatedSubTreePaths {}",
-                    ec.value());
+                BMCWEB_LOG_ERROR( "DBUS response error for getAssociatedSubTreePaths {}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -185,8 +183,7 @@ static inline void handleFanPath(
                        const dbus::utility::MapperGetObject& object) {
             if (ec || object.empty())
             {
-                BMCWEB_LOG_ERROR("DBUS response error on getDbusObject {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error on getDbusObject {}", ec.value());
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -239,8 +236,7 @@ inline void getFanHealth(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Health {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Health {}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -264,8 +260,7 @@ inline void getFanState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for State {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for State {}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -291,8 +286,7 @@ inline void getFanAsset(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Properties{}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Properties{}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -348,8 +342,7 @@ inline void getFanLocation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Location{}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Location{}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;

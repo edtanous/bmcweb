@@ -83,8 +83,7 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
                                      stream_protocol::socket socket) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("UNIX socket: async_accept error = {}",
-                                 ec.message());
+                BMCWEB_LOG_ERROR("UNIX socket: async_accept error = {}", ec.message());
                 return;
             }
 
@@ -110,8 +109,7 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR("DBus error: cannot call mount method = {}",
-                                 ec.message());
+                BMCWEB_LOG_ERROR("DBus error: cannot call mount method = {}", ec.message());
 
                 self->connection.close("Failed to mount media");
                 return;
@@ -142,8 +140,7 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
                                      size_t bytesRead) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("UNIX socket: async_read_some error = {}",
-                                 ec.message());
+                BMCWEB_LOG_ERROR("UNIX socket: async_read_some error = {}", ec.message());
                 return;
             }
             std::shared_ptr<NbdProxyServer> self = weak.lock();

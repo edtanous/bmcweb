@@ -128,7 +128,7 @@ static nlohmann::json getMessage(const std::string_view state, size_t index)
     {
         return messages::taskAborted(std::to_string(index));
     }
-    BMCWEB_LOG_INFO << "get msg status not found";
+    BMCWEB_LOG_INFO("get msg status not found");
     return nlohmann::json{
         {"@odata.type", "Unknown"}, {"MessageId", "Unknown"},
         {"Message", "Unknown"},     {"MessageArgs", {}},
@@ -659,8 +659,7 @@ inline void requestRoutesTask(App& app)
             if (!json_util::readJsonPatch(req, asyncResp->res, "TaskState",
                                           taskState, "Messages", messages))
             {
-                BMCWEB_LOG_DEBUG
-                    << "/redfish/v1/TaskService/Tasks/<str>/Update/ readJsonPatch error";
+                BMCWEB_LOG_DEBUG("/redfish/v1/TaskService/Tasks/<str>/Update/ readJsonPatch error");
                 return;
             }
 

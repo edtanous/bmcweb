@@ -183,8 +183,7 @@ inline void asyncGetSPDMMeasurementData(const std::string& objectPath,
         SPDMMeasurementData config{};
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Get all function failed for object = "
-                             << objectPath;
+            BMCWEB_LOG_ERROR("Get all function failed for object = {}", objectPath);
             callback(std::move(config), ec);
             return;
         }
@@ -226,8 +225,7 @@ inline void handleSPDMGETSignedMeasurement(
     {
         if (nonce->size() != 64)
         {
-            BMCWEB_LOG_ERROR << "Invalid length for nonce hex string "
-                                "(should be 64)";
+            BMCWEB_LOG_ERROR("Invalid length for nonce hex string " "(should be 64)");
             messages::actionParameterValueError(asyncResp->res, "Nonce",
                                                 "SPDMGetSignedMeasurements");
             return;
@@ -239,8 +237,7 @@ inline void handleSPDMGETSignedMeasurement(
         }
         catch (const std::invalid_argument& e)
         {
-            BMCWEB_LOG_ERROR << "Invalid character for nonce hex string in '"
-                             << *nonce << "'";
+            BMCWEB_LOG_ERROR("Invalid character for nonce hex string in '{}'", *nonce);
             messages::actionParameterValueError(asyncResp->res, "Nonce",
                                                 "SPDMGetSignedMeasurements");
             return;
@@ -248,19 +245,18 @@ inline void handleSPDMGETSignedMeasurement(
     }
     if (!slotID)
     {
-        BMCWEB_LOG_DEBUG << "SlotID is not given, setting it to default value";
+        BMCWEB_LOG_DEBUG("SlotID is not given, setting it to default value");
         slotID = 0;
     }
     if (!indices)
     {
-        BMCWEB_LOG_DEBUG
-            << "MeasurementIndices is not given, setting it to default value";
+        BMCWEB_LOG_DEBUG("MeasurementIndices is not given, setting it to default value");
         indices = std::vector<uint8_t>{};
         indices.value().emplace_back(255);
     }
     else if (indices->empty())
     {
-        BMCWEB_LOG_ERROR << "Invalid measurement indices vector";
+        BMCWEB_LOG_ERROR("Invalid measurement indices vector");
         messages::actionParameterValueError(
             asyncResp->res, "MeasurementIndices", "SPDMGetSignedMeasurements");
         return;
@@ -273,9 +269,7 @@ inline void handleSPDMGETSignedMeasurement(
     {
         messages::serviceTemporarilyUnavailable(
             asyncResp->res, std::to_string(spdmMeasurementTimeout));
-        BMCWEB_LOG_DEBUG
-            << "Already measurement collection is going on this object"
-            << objPath;
+        BMCWEB_LOG_DEBUG("Already measurement collection is going on this object{}", objPath);
         return;
     }
     spdmMeasurementData[objPath] = SPDMMeasurementData{};
@@ -306,13 +300,13 @@ inline void handleSPDMGETSignedMeasurement(
         auto it = props.find("Status");
         if (it == props.end())
         {
-            BMCWEB_LOG_DEBUG << "Did not receive an SPDM Status value";
+            BMCWEB_LOG_DEBUG("Did not receive an SPDM Status value");
             return !task::completed;
         }
         auto value = std::get_if<std::string>(&(it->second));
         if (!value)
         {
-            BMCWEB_LOG_ERROR << "Received SPDM Status is not a string";
+            BMCWEB_LOG_ERROR("Received SPDM Status is not a string");
             return !task::completed;
         }
 
@@ -334,7 +328,7 @@ inline void handleSPDMGETSignedMeasurement(
         if (startsWithPrefix(
                 *value, "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Error_"))
         {
-            BMCWEB_LOG_ERROR << "Received SPDM Error: " << *value;
+            BMCWEB_LOG_ERROR("Received SPDM Error: {}", *value);
             taskData->state = "Aborted";
             taskData->messages.emplace_back(
                 messages::resourceErrorsDetectedFormatError("Status", *value));
@@ -343,7 +337,7 @@ inline void handleSPDMGETSignedMeasurement(
             return task::completed;
         }
         // other intermediate states are ignored
-        BMCWEB_LOG_DEBUG << "Ignoring SPDM Status update: " << *value;
+        BMCWEB_LOG_DEBUG("Ignoring SPDM Status update: {}", *value);
         return !task::completed;
     },
         "type='signal',member='PropertiesChanged',"
@@ -360,7 +354,7 @@ inline void handleSPDMGETSignedMeasurement(
         [objPath, task](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Failed to refresh the SPDM measurement " << ec;
+            BMCWEB_LOG_ERROR("Failed to refresh the SPDM measurement {}", ec);
             task->state = "Aborted";
             task->messages.emplace_back(
                 messages::resourceErrorsDetectedFormatError("SPDM refresh",
@@ -471,8 +465,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                 [asyncResp](const bool& status, const std::string& endpoint) {
                 if (!status)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Unable to get the association endpoint";
+                    BMCWEB_LOG_DEBUG("Unable to get the association endpoint");
                 }
                 sdbusplus::message::object_path erotInvObjectPath(endpoint);
                 const std::string& objName = erotInvObjectPath.filename();
@@ -491,9 +484,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                                                   const std::string& ep) {
                     if (!status)
                     {
-                        BMCWEB_LOG_DEBUG
-                            << "Unable to get the association endpoint for "
-                            << objPath;
+                        BMCWEB_LOG_DEBUG("Unable to get the association endpoint for {}", objPath);
 
                         nlohmann::json& componentsProtectedArray =
                             asyncResp->res
@@ -517,8 +508,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                         // status = true
                         if (!status)
                         {
-                            BMCWEB_LOG_DEBUG
-                                << "Unable to get the Redfish URL for " << ep;
+                            BMCWEB_LOG_DEBUG("Unable to get the Redfish URL for {}", ep);
                             return;
                         }
 

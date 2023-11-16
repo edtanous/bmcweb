@@ -95,7 +95,7 @@ class StatusQueryHandler : public OperationHandler
     StatusQueryHandler(ResultCallback&& resultCallback,
                        ErrorCallback&& errorCallback)
     {
-        BMCWEB_LOG_DEBUG << "StatusQueryHandler constructor";
+        BMCWEB_LOG_DEBUG("StatusQueryHandler constructor");
         resCallback = resultCallback;
         errCallback = errorCallback;
         mctp_utils::enumerateMctpEndpoints(
@@ -166,11 +166,11 @@ class StatusQueryHandler : public OperationHandler
     void subprocessExitCallback(int exitCode, const std::error_code& ec)
     {
         const std::string desc = "mctp-vdm-util execution exit callback";
-        BMCWEB_LOG_DEBUG << desc;
+        BMCWEB_LOG_DEBUG("{}", desc);
         subprocessTimer.reset();
         if (ec)
         {
-            BMCWEB_LOG_ERROR << desc << ": " << ec.message();
+            BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
             errCallback(true, desc, ec.message());
             return;
         }
@@ -207,8 +207,8 @@ class StatusQueryHandler : public OperationHandler
             }
             if (currentEid != -1 && !rxLine.empty() && !txLine.empty())
             {
-                BMCWEB_LOG_DEBUG << currentEid << " RX: " << rxLine;
-                BMCWEB_LOG_DEBUG << currentEid << " TX: " << txLine;
+                BMCWEB_LOG_DEBUG("{} RX: {}", currentEid, rxLine);
+                BMCWEB_LOG_DEBUG("{} TX: {}", currentEid, txLine);
                 if (rxLine.size() > txLine.size())
                 {
                     auto ep = std::find_if(endpoints->begin(), endpoints->end(),
@@ -239,7 +239,7 @@ class StatusQueryHandler : public OperationHandler
     void getStatus()
     {
         const std::string desc = "mctp-vdm-util execution";
-        BMCWEB_LOG_DEBUG << desc;
+        BMCWEB_LOG_DEBUG("{}", desc);
         subprocessTimer = std::make_unique<boost::asio::steady_timer>(
             crow::connections::systemBus->get_io_context());
         subprocessTimer->expires_after(
@@ -268,7 +268,7 @@ class StatusQueryHandler : public OperationHandler
             }
         }
 
-        BMCWEB_LOG_DEBUG << "/bin/sh -c '" << vdmCalls.str() << "'";
+        BMCWEB_LOG_DEBUG("/bin/sh -c '{}'", vdmCalls.str());
         std::vector<std::string> args = {"-c", vdmCalls.str()};
         try
         {
@@ -328,7 +328,7 @@ class RequestHandler : public OperationHandler
                    ErrorCallback&& errorCallback, int index) :
         spdmMeasurementIndex{static_cast<uint8_t>(index)}
     {
-        BMCWEB_LOG_DEBUG << "RequestHandler constructor";
+        BMCWEB_LOG_DEBUG("RequestHandler constructor");
         resCallback = resultCallback;
         errCallback = errorCallback;
         statusHandler = std::make_unique<StatusQueryHandler>(
@@ -350,7 +350,7 @@ class RequestHandler : public OperationHandler
                 const auto& state = std::get<3>(endpoint);
                 const auto& spdmObject = mctpEp.getSpdmObject();
                 const std::string desc = "SPDM refresh call for " + spdmObject;
-                BMCWEB_LOG_DEBUG << desc;
+                BMCWEB_LOG_DEBUG("{}", desc);
                 if (spdmObject.empty() ||
                     state != EndpointState::StatusAcquired || status.empty())
                 {
@@ -370,7 +370,7 @@ class RequestHandler : public OperationHandler
                          &endpoint](const boost::system::error_code ec) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR << desc << ": " << ec.message();
+                            BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
                             errCallback(false, desc, ec.message());
                             auto& state = std::get<3>(endpoint);
                             state = EndpointState::Error;
@@ -494,7 +494,7 @@ class RequestHandler : public OperationHandler
     {
         const std::string desc = "Update of " + object +
                                  " object with status " + status;
-        BMCWEB_LOG_DEBUG << desc;
+        BMCWEB_LOG_DEBUG("{}", desc);
         auto endpoint = std::find_if(endpoints->begin(), endpoints->end(),
                                      [object](const auto& ep) {
             const auto& mctpEp = std::get<0>(ep);
@@ -513,7 +513,7 @@ class RequestHandler : public OperationHandler
         }
         if (state == EndpointState::RequestAcquired)
         {
-            BMCWEB_LOG_INFO << desc << " data already present";
+            BMCWEB_LOG_INFO("{} data already present", desc);
         }
         else if (status ==
                  "xyz.openbmc_project.SPDM.Responder.SPDMStatus.Success")
@@ -529,10 +529,10 @@ class RequestHandler : public OperationHandler
                 auto& state = std::get<3>(*endpoint);
                 const std::string desc = "Reading properties of " + spdmObject +
                                          " object";
-                BMCWEB_LOG_DEBUG << desc;
+                BMCWEB_LOG_DEBUG("{}", desc);
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << desc << ": " << ec.message();
+                    BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
                     errCallback(false, desc, ec.message());
                     state = EndpointState::Error;
                     finalize();
@@ -600,7 +600,7 @@ class RequestHandler : public OperationHandler
     void finalize()
     {
         const std::string desc = "Debug token request data processing";
-        BMCWEB_LOG_DEBUG << desc;
+        BMCWEB_LOG_DEBUG("{}", desc);
         int completedRequestsCount = 0;
         for (const auto& ep : *endpoints)
         {

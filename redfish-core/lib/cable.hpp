@@ -111,9 +111,7 @@ inline void
                         const boost::system::error_code& ec, bool present) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG(
-                            "get presence failed for Cable {} with error {}",
-                            cableObjectPath, ec);
+                        BMCWEB_LOG_DEBUG( "get presence failed for Cable {} with error {}", cableObjectPath, ec);
                         if (ec.value() != EBADR)
                         {
                             messages::internalError(asyncResp->res);

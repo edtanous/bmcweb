@@ -99,8 +99,7 @@ class ConsoleHandler : public std::enable_shared_from_this<ConsoleHandler>
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR("Couldn't read from host serial port: {}",
-                                 ec.message());
+                BMCWEB_LOG_ERROR("Couldn't read from host serial port: {}", ec.message());
                 conn.close("Error connecting to host port");
                 return;
             }
@@ -119,9 +118,7 @@ class ConsoleHandler : public std::enable_shared_from_this<ConsoleHandler>
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR(
-                "Failed to assign the DBUS socket Socket assign error: {}",
-                ec.message());
+            BMCWEB_LOG_ERROR( "Failed to assign the DBUS socket Socket assign error: {}", ec.message());
             return false;
         }
 
@@ -175,9 +172,7 @@ inline void connectConsoleSocket(crow::websocket::Connection& conn,
 {
     if (ec)
     {
-        BMCWEB_LOG_ERROR(
-            "Failed to call console Connect() method DBUS error: {}",
-            ec.message());
+        BMCWEB_LOG_ERROR( "Failed to call console Connect() method DBUS error: {}", ec.message());
         conn.close("Failed to connect");
         return;
     }
@@ -193,8 +188,7 @@ inline void connectConsoleSocket(crow::websocket::Connection& conn,
     int fd = dup(unixfd);
     if (fd == -1)
     {
-        BMCWEB_LOG_ERROR("Failed to dup the DBUS unixfd error: {}",
-                         strerror(errno));
+        BMCWEB_LOG_ERROR("Failed to dup the DBUS unixfd error: {}", strerror(errno));
         conn.close("Internal error");
         return;
     }
@@ -224,8 +218,7 @@ inline void
 
     if (ec)
     {
-        BMCWEB_LOG_WARNING("getDbusObject() for consoles failed. DBUS error:{}",
-                           ec.message());
+        BMCWEB_LOG_WARNING("getDbusObject() for consoles failed. DBUS error:{}", ec.message());
         conn.close("getDbusObject() for consoles failed.");
         return;
     }
@@ -233,15 +226,13 @@ inline void
     const auto valueIface = objInfo.begin();
     if (valueIface == objInfo.end())
     {
-        BMCWEB_LOG_WARNING("getDbusObject() returned unexpected size: {}",
-                           objInfo.size());
+        BMCWEB_LOG_WARNING("getDbusObject() returned unexpected size: {}", objInfo.size());
         conn.close("getDbusObject() returned unexpected size");
         return;
     }
 
     const std::string& consoleService = valueIface->first;
-    BMCWEB_LOG_DEBUG("Looking up unixFD for Service {} Path {}", consoleService,
-                     consoleObjPath);
+    BMCWEB_LOG_DEBUG("Looking up unixFD for Service {} Path {}", consoleService, consoleObjPath);
     // Call Connect() method to get the unix FD
     crow::connections::systemBus->async_method_call(
         [&conn](const boost::system::error_code& ec1,
@@ -287,8 +278,7 @@ inline void onOpen(crow::websocket::Connection& conn)
         sdbusplus::message::object_path("/xyz/openbmc_project/console") /
         consoleLeaf;
 
-    BMCWEB_LOG_DEBUG("Console Object path = {} Request target = {}",
-                     consolePath, conn.url().path());
+    BMCWEB_LOG_DEBUG("Console Object path = {} Request target = {}", consolePath, conn.url().path());
 
     // mapper call lambda
     constexpr std::array<std::string_view, 1> interfaces = {

@@ -22,8 +22,7 @@ class ServiceWD
         handler = [this](const boost::system::error_code& error) {
             if (error)
             {
-                BMCWEB_LOG_ERROR << "ServiceWD async_wait failed: "
-                                 << error.message();
+                BMCWEB_LOG_ERROR("ServiceWD async_wait failed: {}", error.message());
             }
             sd_notify(0, "WATCHDOG=1");
             timer.expires_after(std::chrono::seconds(this->expiryTimeInS));

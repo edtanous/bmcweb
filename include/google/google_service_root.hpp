@@ -153,8 +153,7 @@ inline void
 {
     if (ec)
     {
-        BMCWEB_LOG_ERROR("RootOfTrust.Actions.SendCommand failed: {}",
-                         ec.message());
+        BMCWEB_LOG_ERROR("RootOfTrust.Actions.SendCommand failed: {}", ec.message());
         redfish::messages::internalError(asyncResp->res);
         return;
     }

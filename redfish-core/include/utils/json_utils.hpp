@@ -102,14 +102,12 @@ bool checkRange(const FromType& from, std::string_view key)
 {
     if (from > std::numeric_limits<ToType>::max())
     {
-        BMCWEB_LOG_DEBUG("Value for key {} was greater than max: {}", key,
-                         __PRETTY_FUNCTION__);
+        BMCWEB_LOG_DEBUG("Value for key {} was greater than max: {}", key, __PRETTY_FUNCTION__);
         return false;
     }
     if (from < std::numeric_limits<ToType>::lowest())
     {
-        BMCWEB_LOG_DEBUG("Value for key {} was less than min: {}", key,
-                         __PRETTY_FUNCTION__);
+        BMCWEB_LOG_DEBUG("Value for key {} was less than min: {}", key, __PRETTY_FUNCTION__);
         return false;
     }
     if constexpr (std::is_floating_point_v<ToType>)
@@ -194,8 +192,7 @@ UnpackErrorCode unpackValueWithErrorCode(nlohmann::json& jsonValue,
         JsonType jsonPtr = jsonValue.get_ptr<JsonType>();
         if (jsonPtr == nullptr)
         {
-            BMCWEB_LOG_DEBUG("Value for key {} was incorrect type: {}", key,
-                             jsonValue.type_name());
+            BMCWEB_LOG_DEBUG("Value for key {} was incorrect type: {}", key, jsonValue.type_name());
             return UnpackErrorCode::invalidType;
         }
         value = std::move(*jsonPtr);
@@ -512,7 +509,7 @@ bool readJson(const crow::Request& req, crow::Response& res, const char* key,
     nlohmann::json jsonRequest;
     if (!json_util::processJsonFromRequest(res, req, jsonRequest))
     {
-        BMCWEB_LOG_DEBUG << "Json value not readable";
+        BMCWEB_LOG_DEBUG("Json value not readable");
         return false;
     }
     return readJson(jsonRequest, res, key, in...);
@@ -594,7 +591,7 @@ bool getValueFromJsonObject(nlohmann::json& jsonData, const std::string& key,
     nlohmann::json::iterator it = jsonData.find(key);
     if (it == jsonData.end())
     {
-        BMCWEB_LOG_DEBUG << "Key " << key << " not exist";
+        BMCWEB_LOG_DEBUG("Key {} not exist", key);
         return false;
     }
 

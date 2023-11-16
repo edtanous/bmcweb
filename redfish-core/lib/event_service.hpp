@@ -234,8 +234,7 @@ inline void requestRoutesSubmitTestEvent(App& app)
         {
             if (event.setCustomMsg(*message, *messageArgs) != 0)
             {
-                BMCWEB_LOG_ERROR << "Invalid message or message "
-                                    "arguments.";
+                BMCWEB_LOG_ERROR("Invalid message or message " "arguments.");
                 messages::actionParameterValueError(
                     asyncResp->res, "MessageArgs", "SubmitTestEvent");
                 return;
@@ -245,7 +244,7 @@ inline void requestRoutesSubmitTestEvent(App& app)
         {
             if (event.setRegistryMsg(*messageArgs) != 0)
             {
-                BMCWEB_LOG_ERROR << "Invalid message arguments.";
+                BMCWEB_LOG_ERROR("Invalid message arguments.");
                 messages::actionParameterValueError(
                     asyncResp->res, "MessageArgs", "SubmitTestEvent");
                 return;
@@ -256,7 +255,7 @@ inline void requestRoutesSubmitTestEvent(App& app)
             std::vector<std::string> noArgs = {};
             if (event.setRegistryMsg(noArgs) != 0)
             {
-                BMCWEB_LOG_ERROR << "Invalid message arguments.";
+                BMCWEB_LOG_ERROR("Invalid message arguments.");
                 messages::actionParameterValueError(
                     asyncResp->res, "MessageArgs", "SubmitTestEvent");
                 return;

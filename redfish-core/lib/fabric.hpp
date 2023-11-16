@@ -135,8 +135,8 @@ inline void
                           const std::string& objPath,
                           const std::string& processorId)
 {
-    BMCWEB_LOG_DEBUG << "Get Connected Port Links";
-    BMCWEB_LOG_DEBUG << objPath;
+    BMCWEB_LOG_DEBUG("Get Connected Port Links");
+    BMCWEB_LOG_DEBUG("{}", objPath);
     crow::connections::systemBus->async_method_call(
         [aResp, processorId](const boost::system::error_code ec,
                              std::variant<std::vector<std::string>>& resp) {
@@ -152,13 +152,13 @@ inline void
         }
         nlohmann::json& linksArray =
             aResp->res.jsonValue["Links"]["ConnectedPorts"];
-        BMCWEB_LOG_DEBUG << "populating ConnectedPorts";
+        BMCWEB_LOG_DEBUG("populating ConnectedPorts");
         linksArray = nlohmann::json::array();
         for (const std::string& portPath : *data)
         {
             sdbusplus::message::object_path objPath(portPath);
             const std::string& endpointId = objPath.filename();
-            BMCWEB_LOG_DEBUG << endpointId;
+            BMCWEB_LOG_DEBUG("{}", endpointId);
             std::string endpointURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                       "/Processors/";
             endpointURI += processorId;
@@ -183,7 +183,7 @@ inline void updatePortLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             const std::string& objPath,
                             const std::string& fabricId)
 {
-    BMCWEB_LOG_DEBUG << "Get Port Links";
+    BMCWEB_LOG_DEBUG("Get Port Links");
     crow::connections::systemBus->async_method_call(
         [aResp, objPath,
          fabricId](const boost::system::error_code ec,
@@ -238,7 +238,7 @@ inline void
     objPath += std::string(inventorySwitchStr) + switchId;
     objPath += std::string(inventoryPortStr);
 
-    BMCWEB_LOG_DEBUG << "Access port Data";
+    BMCWEB_LOG_DEBUG("Access port Data");
     crow::connections::systemBus->async_method_call(
         [asyncResp{asyncResp}, fabricId, switchId,
          portId](const boost::system::error_code ec,
@@ -268,7 +268,7 @@ inline void
             }
             if (connectionNames.size() < 1)
             {
-                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                BMCWEB_LOG_ERROR("Got 0 Connection names");
                 continue;
             }
             std::string portURI = "/redfish/v1/Fabrics/";
@@ -315,7 +315,7 @@ inline void
     updateSwitchData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& service, const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Switch Data";
+    BMCWEB_LOG_DEBUG("Get Switch Data");
     using PropertyType =
         std::variant<std::string, bool, size_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
@@ -338,8 +338,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for switch type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for switch type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -353,8 +352,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for DeviceId";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for DeviceId");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -368,8 +366,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for VendorId";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for VendorId");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -380,8 +377,7 @@ inline void
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for PCIeReferenceClockEnabled";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for PCIeReferenceClockEnabled");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -399,8 +395,7 @@ inline void
                     std::get_if<std::vector<std::string>>(&property.second);
                 if (protocols == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for supported protocols";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for supported protocols");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -414,8 +409,7 @@ inline void
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for enabled";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for enabled");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -430,8 +424,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for asset properties";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for asset properties");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -443,8 +436,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for revision";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for revision");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -455,8 +447,7 @@ inline void
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for CurrentBandwidth";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for CurrentBandwidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -467,8 +458,7 @@ inline void
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for MaxBandwidth";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for MaxBandwidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -479,8 +469,7 @@ inline void
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for TotalSwitchWidth";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for TotalSwitchWidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -507,8 +496,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Null value returned "
-                                        "for UUID";
+                    BMCWEB_LOG_ERROR("Null value returned " "for UUID");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -538,7 +526,7 @@ inline void updateZoneData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& service,
                            const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Zone Data";
+    BMCWEB_LOG_DEBUG("Get Zone Data");
     using PropertyType =
         std::variant<std::string, bool, size_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
@@ -561,8 +549,7 @@ inline void updateZoneData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for zone type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for zone type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -574,8 +561,7 @@ inline void updateZoneData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for enabled";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for enabled");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -652,7 +638,7 @@ inline void requestRoutesFabric(App& app)
                 }
                 if (connectionNames.size() < 1)
                 {
-                    BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                    BMCWEB_LOG_ERROR("Got 0 Connection names");
                     continue;
                 }
 
@@ -696,8 +682,7 @@ inline void requestRoutesFabric(App& app)
                                 std::get_if<std::string>(&property.second);
                             if (value == nullptr)
                             {
-                                BMCWEB_LOG_DEBUG << "Null value returned "
-                                                    "for fabric type";
+                                BMCWEB_LOG_DEBUG("Null value returned " "for fabric type");
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -862,7 +847,7 @@ inline void
     getSwitchChassisLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get parent chassis link";
+    BMCWEB_LOG_DEBUG("Get parent chassis link");
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec,
                          std::variant<std::vector<std::string>>& resp) {
@@ -894,7 +879,7 @@ inline void
                                  std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
+                BMCWEB_LOG_ERROR("Chassis has no connected PCIe devices");
                 return; // no pciedevices = no failures
             }
             std::vector<std::string>* data =
@@ -902,7 +887,7 @@ inline void
             if (data == nullptr && data->size() > 1)
             {
                 // Chassis must have single pciedevice
-                BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
+                BMCWEB_LOG_ERROR("chassis must have single pciedevice");
                 return;
             }
 
@@ -912,7 +897,7 @@ inline void
                 std::string pcieDeviceName = objectPath.filename();
                 if (pcieDeviceName.empty())
                 {
-                    BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                    BMCWEB_LOG_ERROR("chassis pciedevice name empty");
                     return;
                 }
                 std::string pcieDeviceLink = "/redfish/v1/Chassis/";
@@ -945,7 +930,7 @@ inline void
                            const std::string& objPath,
                            const std::string& fabricId)
 {
-    BMCWEB_LOG_DEBUG << "Get endpoint links";
+    BMCWEB_LOG_DEBUG("Get endpoint links");
     crow::connections::systemBus->async_method_call(
         [aResp, fabricId](const boost::system::error_code ec,
                           std::variant<std::vector<std::string>>& resp) {
@@ -987,7 +972,7 @@ inline void
 inline void getManagerLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                            const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get managed_by links";
+    BMCWEB_LOG_DEBUG("Get managed_by links");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
                 std::variant<std::vector<std::string>>& resp) {
@@ -1030,7 +1015,7 @@ inline void
                          const std::string& objPath,
                          const std::string& fabricId)
 {
-    BMCWEB_LOG_DEBUG << "Get zone endpoint links";
+    BMCWEB_LOG_DEBUG("Get zone endpoint links");
     crow::connections::systemBus->async_method_call(
         [aResp, fabricId](const boost::system::error_code ec,
                           std::variant<std::vector<std::string>>& resp) {
@@ -1121,7 +1106,7 @@ inline void requestRoutesSwitch(App& app)
                         }
                         if (connectionNames.size() < 1)
                         {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                            BMCWEB_LOG_ERROR("Got 0 Connection names");
                             continue;
                         }
                         std::string switchURI = "/redfish/v1/Fabrics/";
@@ -1197,13 +1182,13 @@ inline void
                              const std::string& service,
                              const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get memory ecc data.";
+    BMCWEB_LOG_DEBUG("Get memory ecc data.");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
                 const DimmProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1295,7 +1280,7 @@ inline void requestRoutesSwitchMetrics(App& app)
                         }
                         if (connectionNames.size() < 1)
                         {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                            BMCWEB_LOG_ERROR("Got 0 Connection names");
                             continue;
                         }
                         std::string switchURI = "/redfish/v1/Fabrics/";
@@ -1419,8 +1404,8 @@ inline void nvswitchPostResetType(
             const boost::system::error_code ec, const std::string& property) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBus response, error for ResetType ";
-            BMCWEB_LOG_ERROR << ec.message();
+            BMCWEB_LOG_ERROR("DBus response, error for ResetType ");
+            BMCWEB_LOG_ERROR("{}", ec.message());
             messages::internalError(resp->res);
             return;
         }
@@ -1428,7 +1413,7 @@ inline void nvswitchPostResetType(
         const std::string processorResetType = getNVSwitchResetType(property);
         if (processorResetType != resetType)
         {
-            BMCWEB_LOG_DEBUG << "Property Value Incorrect";
+            BMCWEB_LOG_DEBUG("Property Value Incorrect");
             messages::actionParameterNotSupported(resp->res, "ResetType",
                                                   resetType);
             return;
@@ -1440,14 +1425,14 @@ inline void nvswitchPostResetType(
             {
                 if (retValue != 0)
                 {
-                    BMCWEB_LOG_ERROR << retValue;
+                    BMCWEB_LOG_ERROR("{}", retValue);
                     messages::internalError(resp->res);
                 }
-                BMCWEB_LOG_DEBUG << "Switch:" << switchId << " Reset Succeded";
+                BMCWEB_LOG_DEBUG("Switch:{} Reset Succeded", switchId);
                 messages::success(resp->res);
                 return;
             }
-            BMCWEB_LOG_DEBUG << ec;
+            BMCWEB_LOG_DEBUG("{}", ec);
             messages::internalError(resp->res);
             return;
         },
@@ -1522,7 +1507,7 @@ inline void requestRoutesNVSwitchReset(App& app)
                             }
                             if (connectionNames.size() < 1)
                             {
-                                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                                BMCWEB_LOG_ERROR("Got 0 Connection names");
                                 continue;
                             }
                             nvswitchPostResetType(asyncResp, switchId, objPath,
@@ -1780,7 +1765,7 @@ inline void requestRoutesZone(App& app)
                         }
                         if (connectionNames.size() < 1)
                         {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                            BMCWEB_LOG_ERROR("Got 0 Connection names");
                             continue;
                         }
                         std::string zoneURI = "/redfish/v1/Fabrics/";
@@ -1901,7 +1886,7 @@ inline void getProcessorPCIeDeviceData(
                 std::string, std::variant<std::string>>& pcieDevProperties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1980,7 +1965,7 @@ inline void
                                               bool>>& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2074,8 +2059,7 @@ inline void getProcessorParentEndpointData(
                 }
                 if (serviceMap.size() < 1)
                 {
-                    BMCWEB_LOG_ERROR << "Got 0 service "
-                                        "names";
+                    BMCWEB_LOG_ERROR("Got 0 service " "names");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2142,7 +2126,7 @@ inline void getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          std::variant<std::vector<std::string>>& resp) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
+                BMCWEB_LOG_ERROR("Chassis has no connected PCIe devices");
                 return; // no pciedevices = no failures
             }
             std::vector<std::string>* data =
@@ -2150,7 +2134,7 @@ inline void getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             if (data == nullptr && data->size() > 1)
             {
                 // Chassis must have single pciedevice
-                BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
+                BMCWEB_LOG_ERROR("chassis must have single pciedevice");
                 return;
             }
             const std::string& pcieDevicePath = data->front();
@@ -2158,7 +2142,7 @@ inline void getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             std::string pcieDeviceName = objectPath.filename();
             if (pcieDeviceName.empty())
             {
-                BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                BMCWEB_LOG_ERROR("chassis pciedevice name empty");
                 messages::internalError(aResp->res);
                 return;
             }
@@ -2196,7 +2180,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2209,8 +2193,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for protocol type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for protocol type");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2362,7 +2345,7 @@ inline void getEndpointPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             size_t separator = portPath.rfind('/');
             if (separator == std::string::npos)
             {
-                BMCWEB_LOG_ERROR << "Invalid port link path";
+                BMCWEB_LOG_ERROR("Invalid port link path");
                 continue;
             }
             std::string portInventoryPath = portPath.substr(0, separator);
@@ -2393,7 +2376,7 @@ inline void getEndpointPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         connectionNames = object.second;
                     if (connectionNames.size() < 1)
                     {
-                        BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                        BMCWEB_LOG_ERROR("Got 0 Connection names");
                         continue;
                     }
                     const std::string& connectionName =
@@ -2461,7 +2444,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                const std::string& objPath,
                                const std::string& fabricId)
 {
-    BMCWEB_LOG_DEBUG << "Get Endpoint Data";
+    BMCWEB_LOG_DEBUG("Get Endpoint Data");
     crow::connections::systemBus->async_method_call(
         [aResp, objPath,
          fabricId](const boost::system::error_code ec,
@@ -2482,7 +2465,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             size_t separator = entityPath.rfind('/');
             if (separator == std::string::npos)
             {
-                BMCWEB_LOG_ERROR << "Invalid entity link path";
+                BMCWEB_LOG_ERROR("Invalid entity link path");
                 continue;
             }
             std::string entityInventoryPath = entityPath.substr(0, separator);
@@ -2513,7 +2496,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         connectionNames = object.second;
                     if (connectionNames.size() < 1)
                     {
-                        BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                        BMCWEB_LOG_ERROR("Got 0 Connection names");
                         continue;
                     }
 
@@ -2549,7 +2532,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         if (std::find(interfaces.begin(), interfaces.end(),
                                       switchInterface) != interfaces.end())
                         {
-                            BMCWEB_LOG_DEBUG << "Item type switch ";
+                            BMCWEB_LOG_DEBUG("Item type switch ");
                             std::string servName = connectionName.first;
 
                             sdbusplus::message::object_path objectPath(
@@ -2564,8 +2547,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                         resp) {
                                 if (ec)
                                 {
-                                    BMCWEB_LOG_ERROR
-                                        << "fabric not found for switch entity";
+                                    BMCWEB_LOG_ERROR("fabric not found for switch entity");
                                     return; // no processors identified
                                             // for pcieslotpath
                                 }
@@ -2575,8 +2557,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                         &resp);
                                 if (data == nullptr)
                                 {
-                                    BMCWEB_LOG_ERROR
-                                        << "processor data null for pcieslot ";
+                                    BMCWEB_LOG_ERROR("processor data null for pcieslot ");
                                     return;
                                 }
 
@@ -2764,7 +2745,7 @@ inline void getFabricsPortMetricsData(
     const std::string& fabricId, const std::string& switchId,
     const std::string& portId)
 {
-    BMCWEB_LOG_DEBUG << "Access port metrics data";
+    BMCWEB_LOG_DEBUG("Access port metrics data");
 
     std::string portMetricsURI =
         (boost::format("/redfish/v1/Fabrics/%s/Switches/%s/Ports/"
@@ -2784,7 +2765,7 @@ inline void getFabricsPortMetricsData(
                                                   int64_t>>& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2799,8 +2780,7 @@ inline void getFabricsPortMetricsData(
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for TX/RX bytes";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for TX/RX bytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2812,8 +2792,7 @@ inline void getFabricsPortMetricsData(
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for RXNoProtocolBytes";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for RXNoProtocolBytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2825,8 +2804,7 @@ inline void getFabricsPortMetricsData(
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for TXNoProtocolBytes";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for TXNoProtocolBytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2838,8 +2816,7 @@ inline void getFabricsPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for DataCRCCount";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for DataCRCCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2851,8 +2828,7 @@ inline void getFabricsPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for FlitCRCCount";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for FlitCRCCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2864,8 +2840,7 @@ inline void getFabricsPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for RecoveryCount";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for RecoveryCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2877,8 +2852,7 @@ inline void getFabricsPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for ReplayCount";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for ReplayCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2890,8 +2864,7 @@ inline void getFabricsPortMetricsData(
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for RuntimeError";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for RuntimeError");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2912,8 +2885,7 @@ inline void getFabricsPortMetricsData(
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for TrainingError";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for TrainingError");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -3073,7 +3045,7 @@ inline void requestRoutesPortMetrics(App& app)
                 }
                 if (connectionNames.size() < 1)
                 {
-                    BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                    BMCWEB_LOG_ERROR("Got 0 Connection names");
                     continue;
                 }
                 const std::string& connectionName = connectionNames[0].first;

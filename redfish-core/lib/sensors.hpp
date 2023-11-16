@@ -434,8 +434,7 @@ void getObjectsWithConnection(
         if (ec)
         {
             messages::internalError(sensorsAsyncResp->asyncResp->res);
-            BMCWEB_LOG_ERROR(
-                "getObjectsWithConnection resp_handler: Dbus error {}", ec);
+            BMCWEB_LOG_ERROR( "getObjectsWithConnection resp_handler: Dbus error {}", ec);
             return;
         }
 
@@ -659,7 +658,7 @@ void getChassis(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
         "/xyz/openbmc_project/inventory", 0, interfaces);
-    BMCWEB_LOG_DEBUG << "getChassis exit";
+    BMCWEB_LOG_DEBUG("getChassis exit");
 }
 
 /**
@@ -683,7 +682,7 @@ void getObjectManagerPaths(
     const std::shared_ptr<SensorsAsyncResp>& sensorsAsyncResp,
     Callback&& callback)
 {
-    BMCWEB_LOG_DEBUG << "getObjectManagerPaths enter";
+    BMCWEB_LOG_DEBUG("getObjectManagerPaths enter");
     const std::array<std::string, 1> interfaces = {
         "org.freedesktop.DBus.ObjectManager"};
 
@@ -692,12 +691,11 @@ void getObjectManagerPaths(
         [callback{std::forward<Callback>(callback)}, sensorsAsyncResp](
             const boost::system::error_code ec,
             const dbus::utility::MapperGetSubTreeResponse& subtree) {
-        BMCWEB_LOG_DEBUG << "getObjectManagerPaths respHandler enter";
+        BMCWEB_LOG_DEBUG("getObjectManagerPaths respHandler enter");
         if (ec)
         {
             messages::internalError(sensorsAsyncResp->asyncResp->res);
-            BMCWEB_LOG_ERROR << "getObjectManagerPaths respHandler: DBus error "
-                             << ec;
+            BMCWEB_LOG_ERROR("getObjectManagerPaths respHandler: DBus error {}", ec);
             return;
         }
 
@@ -717,12 +715,11 @@ void getObjectManagerPaths(
                 // Add mapping from connection to object path
                 const std::string& connection = objData.first;
                 (*objectMgrPaths)[connection] = objectPath;
-                BMCWEB_LOG_DEBUG << "Added mapping " << connection << " -> "
-                                 << objectPath;
+                BMCWEB_LOG_DEBUG("Added mapping {} -> {}", connection, objectPath);
             }
         }
         callback(objectMgrPaths);
-        BMCWEB_LOG_DEBUG << "getObjectManagerPaths respHandler exit";
+        BMCWEB_LOG_DEBUG("getObjectManagerPaths respHandler exit");
     };
 
     // Query mapper for all DBus object paths that implement ObjectManager
@@ -730,7 +727,7 @@ void getObjectManagerPaths(
         std::move(respHandler), "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", 0, interfaces);
-    BMCWEB_LOG_DEBUG << "getObjectManagerPaths exit";
+    BMCWEB_LOG_DEBUG("getObjectManagerPaths exit");
 =======
             });
         });
@@ -920,8 +917,7 @@ inline void objectPropertiesToJson(
         sensor::ReadingType readingType = sensors::toReadingType(sensorType);
         if (readingType == sensor::ReadingType::Invalid)
         {
-            BMCWEB_LOG_ERROR("Redfish cannot map reading type for {}",
-                             sensorType);
+            BMCWEB_LOG_ERROR("Redfish cannot map reading type for {}", sensorType);
         }
         else
         {
@@ -931,8 +927,7 @@ inline void objectPropertiesToJson(
         std::string_view readingUnits = sensors::toReadingUnits(sensorType);
         if (readingUnits.empty())
         {
-            BMCWEB_LOG_ERROR("Redfish cannot map reading unit for {}",
-                             sensorType);
+            BMCWEB_LOG_ERROR("Redfish cannot map reading unit for {}", sensorType);
         }
         else
         {
@@ -1139,8 +1134,7 @@ inline void objectPropertiesToJson(
                     sensorJson[key] = nullptr;
                     continue;
                 }
-                BMCWEB_LOG_WARNING("Sensor value for {} was unexpectedly {}",
-                                   valueName, *doubleValue);
+                BMCWEB_LOG_WARNING("Sensor value for {} was unexpectedly {}", valueName, *doubleValue);
                 continue;
 >>>>>>> origin/master-october-10
             }
@@ -1165,8 +1159,7 @@ inline void objectPropertiesToJson(
             }
             else
             {
-                BMCWEB_LOG_ERROR
-                    << "Got value interface that wasn't string or double";
+                BMCWEB_LOG_ERROR("Got value interface that wasn't string or double");
                 continue;
             }
         }
@@ -1710,8 +1703,7 @@ static void getInventoryItemsData(
             BMCWEB_LOG_DEBUG("getInventoryItemsData respHandler enter");
             if (ec)
             {
-                BMCWEB_LOG_ERROR(
-                    "getInventoryItemsData respHandler DBus error {}", ec);
+                BMCWEB_LOG_ERROR( "getInventoryItemsData respHandler DBus error {}", ec);
                 messages::internalError(sensorsAsyncResp->asyncResp->res);
                 return;
             }
@@ -1789,8 +1781,7 @@ static void getInventoryItemsConnections(
         if (ec)
         {
             messages::internalError(sensorsAsyncResp->asyncResp->res);
-            BMCWEB_LOG_ERROR(
-                "getInventoryItemsConnections respHandler DBus error {}", ec);
+            BMCWEB_LOG_ERROR( "getInventoryItemsConnections respHandler DBus error {}", ec);
             return;
         }
 
@@ -1862,8 +1853,7 @@ static void getInventoryItemAssociations(
         BMCWEB_LOG_DEBUG("getInventoryItemAssociations respHandler enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR(
-                "getInventoryItemAssociations respHandler DBus error {}", ec);
+            BMCWEB_LOG_ERROR( "getInventoryItemAssociations respHandler DBus error {}", ec);
             messages::internalError(sensorsAsyncResp->asyncResp->res);
             return;
         }
@@ -2030,8 +2020,7 @@ void getInventoryLedData(
             BMCWEB_LOG_DEBUG("getInventoryLedData respHandler enter");
             if (ec)
             {
-                BMCWEB_LOG_ERROR(
-                    "getInventoryLedData respHandler DBus error {}", ec);
+                BMCWEB_LOG_ERROR( "getInventoryLedData respHandler DBus error {}", ec);
                 messages::internalError(sensorsAsyncResp->asyncResp->res);
                 return;
             }
@@ -2210,7 +2199,7 @@ void getPowerSupplyAttributesData(
                         callback{std::forward<Callback>(callback)}](
                            const boost::system::error_code ec,
                            const uint32_t value) {
-        BMCWEB_LOG_DEBUG << "getPowerSupplyAttributesData respHandler enter";
+        BMCWEB_LOG_DEBUG("getPowerSupplyAttributesData respHandler enter");
 =======
     auto respHandler =
         [sensorsAsyncResp, inventoryItems,
@@ -2220,8 +2209,7 @@ void getPowerSupplyAttributesData(
 >>>>>>> origin/master-october-10
         if (ec)
         {
-            BMCWEB_LOG_ERROR(
-                "getPowerSupplyAttributesData respHandler DBus error {}", ec);
+            BMCWEB_LOG_ERROR( "getPowerSupplyAttributesData respHandler DBus error {}", ec);
             messages::internalError(sensorsAsyncResp->asyncResp->res);
             return;
         }
@@ -2305,8 +2293,7 @@ void getPowerSupplyAttributes(
         if (ec)
         {
             messages::internalError(sensorsAsyncResp->asyncResp->res);
-            BMCWEB_LOG_ERROR(
-                "getPowerSupplyAttributes respHandler DBus error {}", ec);
+            BMCWEB_LOG_ERROR( "getPowerSupplyAttributes respHandler DBus error {}", ec);
             return;
         }
         if (subtree.empty())
@@ -2339,8 +2326,7 @@ void getPowerSupplyAttributes(
         }
 
         psAttributesConnections[psAttributesPath] = connection;
-        BMCWEB_LOG_DEBUG("Added mapping {} -> {}", psAttributesPath,
-                         connection);
+        BMCWEB_LOG_DEBUG("Added mapping {} -> {}", psAttributesPath, connection);
 
         getPowerSupplyAttributesData(sensorsAsyncResp, inventoryItems,
                                      psAttributesConnections,
@@ -2543,8 +2529,7 @@ inline void getSensorData(
             {
                 const std::string& objPath =
                     static_cast<const std::string&>(objDictEntry.first);
-                BMCWEB_LOG_DEBUG("getManagedObjectsCb parsing object {}",
-                                 objPath);
+                BMCWEB_LOG_DEBUG("getManagedObjectsCb parsing object {}", objPath);
 
                 std::vector<std::string> split;
                 // Reserve space for
@@ -2554,16 +2539,14 @@ inline void getSensorData(
                 bmcweb::split(split, objPath, '/');
                 if (split.size() < 6)
                 {
-                    BMCWEB_LOG_ERROR("Got path that isn't long enough {}",
-                                     objPath);
+                    BMCWEB_LOG_ERROR("Got path that isn't long enough {}", objPath);
                     continue;
                 }
                 // These indexes aren't intuitive, as split puts an empty
                 // string at the beginning
                 const std::string& sensorType = split[4];
                 const std::string& sensorName = split[5];
-                BMCWEB_LOG_DEBUG("sensorName {} sensorType {}", sensorName,
-                                 sensorType);
+                BMCWEB_LOG_DEBUG("sensorName {} sensorType {}", sensorName, sensorType);
                 if (sensorNames->find(objPath) == sensorNames->end())
                 {
                     BMCWEB_LOG_DEBUG("{} not in sensor list ", sensorName);
@@ -2647,8 +2630,7 @@ inline void getSensorData(
                     }
                     else
                     {
-                        BMCWEB_LOG_ERROR("Unsure how to handle sensorType {}",
-                                         sensorType);
+                        BMCWEB_LOG_ERROR("Unsure how to handle sensorType {}", sensorType);
                         continue;
                     }
 
@@ -2883,8 +2865,7 @@ inline void setSensorsOverride(
     std::unordered_map<std::string, std::vector<nlohmann::json>>&
         allCollections)
 {
-    BMCWEB_LOG_INFO("setSensorsOverride for subNode{}",
-                    sensorAsyncResp->chassisSubNode);
+    BMCWEB_LOG_INFO("setSensorsOverride for subNode{}", sensorAsyncResp->chassisSubNode);
 
     const char* propertyValueName = nullptr;
     std::unordered_map<std::string, std::pair<double, std::string>> overrideMap;
@@ -2946,9 +2927,7 @@ inline void setSensorsOverride(
                               objectsWithConnection) {
             if (objectsWithConnection.size() != overrideMap.size())
             {
-                BMCWEB_LOG_INFO(
-                    "Unable to find all objects with proper connection {} requested {}",
-                    objectsWithConnection.size(), overrideMap.size());
+                BMCWEB_LOG_INFO( "Unable to find all objects with proper connection {} requested {}", objectsWithConnection.size(), overrideMap.size());
                 messages::resourceNotFound(sensorAsyncResp->asyncResp->res,
                                            sensorAsyncResp->chassisSubNode ==
                                                    sensors::node::thermal
@@ -2975,8 +2954,7 @@ inline void setSensorsOverride(
                 const auto& iterator = overrideMap.find(id);
                 if (iterator == overrideMap.end())
                 {
-                    BMCWEB_LOG_INFO("Unable to find sensor object{}",
-                                    item.first);
+                    BMCWEB_LOG_INFO("Unable to find sensor object{}", item.first);
                     messages::internalError(sensorAsyncResp->asyncResp->res);
                     return;
                 }
@@ -2990,16 +2968,13 @@ inline void setSensorsOverride(
                         if (ec.value() ==
                             boost::system::errc::permission_denied)
                         {
-                            BMCWEB_LOG_WARNING(
-                                "Manufacturing mode is not Enabled...can't "
-                                "Override the sensor value. ");
+                            BMCWEB_LOG_WARNING( "Manufacturing mode is not Enabled...can't " "Override the sensor value. ");
 
                             messages::insufficientPrivilege(
                                 sensorAsyncResp->asyncResp->res);
                             return;
                         }
-                        BMCWEB_LOG_DEBUG(
-                            "setOverrideValueStatus DBUS error: {}", ec);
+                        BMCWEB_LOG_DEBUG( "setOverrideValueStatus DBUS error: {}", ec);
                         messages::internalError(
                             sensorAsyncResp->asyncResp->res);
                     }
@@ -3135,8 +3110,7 @@ inline void handleSensorCollectionGet(
             /*efficientExpand=*/true);
         getChassisData(sensorsAsyncResp);
 
-        BMCWEB_LOG_DEBUG(
-            "SensorCollection doGet exit via efficient expand handler");
+        BMCWEB_LOG_DEBUG( "SensorCollection doGet exit via efficient expand handler");
         return;
     }
 #else
@@ -3219,15 +3193,14 @@ inline void handleSensorGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     boost::algorithm::split(split, sensorPath, boost::is_any_of("/"));
     if (split.size() < 6)
     {
-        BMCWEB_LOG_ERROR << "Got path that isn't long enough " << sensorPath;
+        BMCWEB_LOG_ERROR("Got path that isn't long enough {}", sensorPath);
         return;
     }
     // These indexes aren't intuitive, as boost::split puts an empty
     // string at the beginning
     const std::string& sensorType = split[4];
     const std::string& sensorName = split[5];
-    BMCWEB_LOG_DEBUG << "sensorName " << sensorName << " sensorType "
-                     << sensorType;
+    BMCWEB_LOG_DEBUG("sensorName {} sensorType {}", sensorName, sensorType);
 
     // fan_pwm and fan_tach need special handling
     // if (sensorType == "fantach" || sensorType == "fanpwm")
@@ -3266,13 +3239,12 @@ inline void handleSensorGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (ec)
         {
             messages::internalError(asyncResp->res);
-            BMCWEB_LOG_ERROR(
-                "Sensor getSensorPaths resp_handler: Dbus error {}", ec);
+            BMCWEB_LOG_ERROR( "Sensor getSensorPaths resp_handler: Dbus error {}", ec);
             return;
         }
         getSensorFromDbus(asyncResp, sensorPath, subtree);
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "respHandler1 exit";
+        BMCWEB_LOG_DEBUG("respHandler1 exit");
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -3288,7 +3260,7 @@ inline void
     getRelatedItemData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Sensor get related item";
+    BMCWEB_LOG_DEBUG("Sensor get related item");
     nlohmann::json& itemsArray = asyncResp->res.jsonValue["RelatedItem"];
     itemsArray = nlohmann::json::array();
     // Check fabrics switch link
@@ -3392,7 +3364,7 @@ inline void
             const std::variant<std::vector<std::string>>& variantEndpoints) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "getAllChassisSensors DBUS error: " << ec;
+            BMCWEB_LOG_ERROR("getAllChassisSensors DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -3400,8 +3372,7 @@ inline void
             std::get_if<std::vector<std::string>>(&(variantEndpoints));
         if (sensorPaths == nullptr)
         {
-            BMCWEB_LOG_ERROR << "getAllChassisSensors empty sensors list"
-                             << "\n";
+            BMCWEB_LOG_ERROR("getAllChassisSensors empty sensors list");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -3411,8 +3382,7 @@ inline void
             const std::string& sensorId = path.filename();
             if (sensorId.empty())
             {
-                BMCWEB_LOG_ERROR << "Failed to find '/' in " << sensorPath
-                                 << "\n";
+                BMCWEB_LOG_ERROR("Failed to find '/' in {}", sensorPath);
                 continue;
             }
             if (sensorId != sensorName)
@@ -3465,8 +3435,7 @@ inline void handleSensorGetWithChassisValidation(
                               const std::vector<std::string>& chassisPaths) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "sensors get chassis handler DBUS error: "
-                             << ec;
+            BMCWEB_LOG_ERROR("sensors get chassis handler DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -3477,8 +3446,7 @@ inline void handleSensorGetWithChassisValidation(
             const std::string& chassisName = path.filename();
             if (chassisName.empty())
             {
-                BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassisPath
-                                 << "\n";
+                BMCWEB_LOG_ERROR("Failed to find '/' in {}", chassisPath);
                 continue;
             }
             if (chassisName != chassisId)

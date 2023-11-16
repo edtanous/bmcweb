@@ -213,7 +213,7 @@ static void handleLogMatchCallback(sdbusplus::message_t& m,
             if (vData == nullptr || messageNamespace != "FWUpdate")
             {
                 // something is invalid
-                BMCWEB_LOG_DEBUG << "Got invalid log message";
+                BMCWEB_LOG_DEBUG("Got invalid log message");
             }
             else
             {
@@ -229,7 +229,7 @@ static void handleLogMatchCallback(sdbusplus::message_t& m,
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "Unknown message ID: " << rfMessage;
+                    BMCWEB_LOG_ERROR("Unknown message ID: {}", rfMessage);
                 }
             }
         }
@@ -284,8 +284,8 @@ static void
                 if (ec)
                 {
 <<<<<<< HEAD
-                    BMCWEB_LOG_ERROR << "error_code = " << errorCode;
-                    BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+                    BMCWEB_LOG_ERROR("error_code = {}", errorCode);
+                    BMCWEB_LOG_ERROR("error msg = {}", errorCode.message());
 =======
                     BMCWEB_LOG_DEBUG("error_code = {}", ec);
                     BMCWEB_LOG_DEBUG("error msg = {}", ec.message());
@@ -316,7 +316,7 @@ static void
                 std::string swID = objectPath.filename();
                 if (swID.empty())
                 {
-                    BMCWEB_LOG_ERROR << "Software Id is empty";
+                    BMCWEB_LOG_ERROR("Software Id is empty");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -346,7 +346,7 @@ static void
                         }
                         else
                         {
-                            BMCWEB_LOG_INFO << "State not good";
+                            BMCWEB_LOG_INFO("State not good");
                         }
                         return message;
                     };
@@ -691,12 +691,11 @@ static void monitorForSoftwareAvailable(
             // expected, we were canceled before the timer completed.
             return;
         }
-        BMCWEB_LOG_ERROR
-            << "Timed out waiting for firmware object being created";
-        BMCWEB_LOG_ERROR << "FW image may has already been uploaded to server";
+        BMCWEB_LOG_ERROR("Timed out waiting for firmware object being created");
+        BMCWEB_LOG_ERROR("FW image may has already been uploaded to server");
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Async_wait failed" << ec;
+            BMCWEB_LOG_ERROR("Async_wait failed{}", ec);
             return;
         }
         if (asyncResp)
@@ -778,7 +777,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
 <<<<<<< HEAD
             messages::createFailedMissingReqProperties(asyncResp->res,
                                                        "ImageURI");
-            BMCWEB_LOG_DEBUG << "Missing ImageURI";
+            BMCWEB_LOG_DEBUG("Missing ImageURI");
 =======
             BMCWEB_LOG_DEBUG("Missing TransferProtocol or ImageURI parameter");
 >>>>>>> origin/master-october-10
@@ -796,8 +795,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                 messages::actionParameterValueTypeError(
                     asyncResp->res, imageURI, "ImageURI",
                     "UpdateService.SimpleUpdate");
-                BMCWEB_LOG_ERROR("ImageURI missing transfer protocol: {}",
-                                 imageURI);
+                BMCWEB_LOG_ERROR("ImageURI missing transfer protocol: {}", imageURI);
                 return;
             }
 
@@ -828,8 +826,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
             messages::actionParameterNotSupported(asyncResp->res,
                                                   "TransferProtocol",
                                                   "UpdateService.SimpleUpdate");
-            BMCWEB_LOG_ERROR("Request incorrect protocol parameter: {}",
-                             *transferProtocol);
+            BMCWEB_LOG_ERROR("Request incorrect protocol parameter: {}", *transferProtocol);
             return;
         }
 
@@ -837,7 +834,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
         {
             messages::createFailedMissingReqProperties(asyncResp->res,
                                                        "Targets");
-            BMCWEB_LOG_DEBUG << "Missing Target URI";
+            BMCWEB_LOG_DEBUG("Missing Target URI");
             return;
         }
 
@@ -845,7 +842,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
         {
             messages::createFailedMissingReqProperties(asyncResp->res,
                                                        "Username");
-            BMCWEB_LOG_DEBUG << "Missing Username";
+            BMCWEB_LOG_DEBUG("Missing Username");
             return;
         }
 
@@ -864,7 +861,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
         std::string server = imageURI.substr(0, separator);
         std::string fwFile = imageURI.substr(separator + 1);
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Server: " << server + " File: " << fwFile;
+        BMCWEB_LOG_DEBUG("Server: {}{}", server + " File: ", fwFile);
 
         // Allow only one operation at a time
         if (fwUpdateInProgress != false)
@@ -924,12 +921,12 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                 {
                     // messages::internalError(asyncResp->res);
                     cleanUp();
-                    BMCWEB_LOG_DEBUG << "error_code = " << ec;
-                    BMCWEB_LOG_DEBUG << "error msg = " << ec.message();
+                    BMCWEB_LOG_DEBUG("error_code = {}", ec);
+                    BMCWEB_LOG_DEBUG("error msg = {}", ec.message());
                 }
                 else
                 {
-                    BMCWEB_LOG_DEBUG << "Call to DownloaViaTFTP Success";
+                    BMCWEB_LOG_DEBUG("Call to DownloaViaTFTP Success");
                 }
             },
                 "xyz.openbmc_project.Software.Download",
@@ -947,7 +944,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                 // Find the last occurrence of the directory separator character
                 messages::actionParameterNotSupported(
                     asyncResp->res, "Targets", "UpdateService.SimpleUpdate");
-                BMCWEB_LOG_ERROR << "Invalid TargetURI: " << targetURI;
+                BMCWEB_LOG_ERROR("Invalid TargetURI: {}", targetURI);
                 return;
 =======
                 BMCWEB_LOG_DEBUG("Call to DownloaViaTFTP Success");
@@ -967,19 +964,15 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                     messages::actionParameterNotSupported(
                         asyncResp->res, "Targets",
                         "UpdateService.SimpleUpdate");
-                    BMCWEB_LOG_ERROR
-                        << "Request incorrect target URI parameter: "
-                        << objName;
-                    BMCWEB_LOG_ERROR << "error_code = " << ec << " "
-                                     << "error msg = " << ec.message();
+                    BMCWEB_LOG_ERROR("Request incorrect target URI parameter: {}", objName);
+                    BMCWEB_LOG_ERROR("error_code = {} error msg = {}", ec, ec.message());
                     return;
                 }
                 // Ensure we only got one service back
                 if (objInfo.size() != 1)
                 {
                     messages::internalError(asyncResp->res);
-                    BMCWEB_LOG_ERROR << "Invalid Object Size "
-                                     << objInfo.size();
+                    BMCWEB_LOG_ERROR("Invalid Object Size {}", objInfo.size());
                     return;
                 }
 
@@ -994,10 +987,8 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                         messages::actionParameterNotSupported(
                             asyncResp->res, "Targets",
                             "UpdateService.SimpleUpdate");
-                        BMCWEB_LOG_ERROR
-                            << "Failed to read the path property of Target";
-                        BMCWEB_LOG_ERROR << "error_code = " << ecPath << " "
-                                         << "error msg = " << ecPath.message();
+                        BMCWEB_LOG_ERROR("Failed to read the path property of Target");
+                        BMCWEB_LOG_ERROR("error_code = {} error msg = {}", ecPath, ecPath.message());
                         return;
                     }
 
@@ -1008,7 +999,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                         messages::actionParameterNotSupported(
                             asyncResp->res, "Targets",
                             "UpdateService.SimpleUpdate");
-                        BMCWEB_LOG_ERROR << "Null value returned for path";
+                        BMCWEB_LOG_ERROR("Null value returned for path");
                         return;
                     }
 
@@ -1017,7 +1008,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                     {
                         messages::resourceNotFound(asyncResp->res, "Targets",
                                                    *targetPath);
-                        BMCWEB_LOG_ERROR << "Path does not exist";
+                        BMCWEB_LOG_ERROR("Path does not exist");
                         return;
                     }
 
@@ -1032,14 +1023,11 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                         if (ecSCP)
                         {
                             messages::internalError(asyncResp->res);
-                            BMCWEB_LOG_ERROR
-                                << "error_code = " << ecSCP << " "
-                                << "error msg = " << ecSCP.message();
+                            BMCWEB_LOG_ERROR("error_code = {} error msg = {}", ecSCP, ecSCP.message());
                         }
                         else
                         {
-                            BMCWEB_LOG_DEBUG
-                                << "Call to DownloadViaSCP Success";
+                            BMCWEB_LOG_DEBUG("Call to DownloadViaSCP Success");
                         }
                     },
                         "xyz.openbmc_project.Software.Download",
@@ -1060,7 +1048,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
         }
 
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Exit UpdateService.SimpleUpdate doPost";
+        BMCWEB_LOG_DEBUG("Exit UpdateService.SimpleUpdate doPost");
     });
 }
 
@@ -1114,8 +1102,7 @@ inline void setApplyTime(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
     else
     {
-        BMCWEB_LOG_INFO(
-            "ApplyTime value is not in the list of acceptable values");
+        BMCWEB_LOG_INFO( "ApplyTime value is not in the list of acceptable values");
         messages::propertyValueNotInList(asyncResp->res, applyTime,
                                          "ApplyTime");
         return;
@@ -1231,7 +1218,7 @@ inline void
     monitorForSoftwareAvailable(asyncResp, req, fwObjectCreationDefaultTimeout,
                                 filepath);
 
-    BMCWEB_LOG_DEBUG << "Uploaded image is written to " << filepath;
+    BMCWEB_LOG_DEBUG("Uploaded image is written to {}", filepath);
     std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
                                     std::ofstream::trunc);
     // set the permission of the file to 640
@@ -1244,7 +1231,7 @@ inline void
     if (ec != ParserError::PARSER_SUCCESS)
     {
         // handle error
-        BMCWEB_LOG_ERROR << "MIME parse failed, ec : " << static_cast<int>(ec);
+        BMCWEB_LOG_ERROR("MIME parse failed, ec : {}", static_cast<int>(ec));
         messages::internalError(asyncResp->res);
         return;
     }
@@ -1283,8 +1270,7 @@ inline void
         if (ec != ParserError::PARSER_SUCCESS)
         {
             // handle error
-            BMCWEB_LOG_ERROR("MIME parse failed, ec : {}",
-                             static_cast<int>(ec));
+            BMCWEB_LOG_ERROR("MIME parse failed, ec : {}", static_cast<int>(ec));
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1320,8 +1306,7 @@ inline void
 
                 if (out.bad())
                 {
-                    BMCWEB_LOG_ERROR << "Error writing to file: " << filepath
-                                     << ", Error code: " << out.rdstate();
+                    BMCWEB_LOG_ERROR("Error writing to file: {}, Error code: {}", filepath, out.rdstate());
                     messages::internalError(asyncResp->res);
                     cleanUp();
                 }
@@ -1331,7 +1316,7 @@ inline void
 
     if (!hasUpdateFile)
     {
-        BMCWEB_LOG_ERROR << "File with firmware image is missing.";
+        BMCWEB_LOG_ERROR("File with firmware image is missing.");
         messages::propertyMissing(asyncResp->res, "UpdateFile");
     }
 }
@@ -1379,14 +1364,14 @@ inline bool areTargetsInvalidOrUnupdatable(
             else
             {
                 hasAnyInvalidOrUnupdateableTarget = true;
-                BMCWEB_LOG_ERROR << "Unupdatable Target: " << target << "\n";
+                BMCWEB_LOG_ERROR("Unupdatable Target: {}", target);
             }
         }
 
         if (!validTarget)
         {
             hasAnyInvalidOrUnupdateableTarget = true;
-            BMCWEB_LOG_ERROR << "Invalid Target: " << target << "\n";
+            BMCWEB_LOG_ERROR("Invalid Target: {}", target);
         }
     }
 
@@ -1412,10 +1397,8 @@ inline void validateUpdatePolicyCallback(
 {
     if (errorCode)
     {
-        BMCWEB_LOG_ERROR << "validateUpdatePolicyCallback:error_code = "
-                         << errorCode;
-        BMCWEB_LOG_ERROR << "validateUpdatePolicyCallback:error msg = "
-                         << errorCode.message();
+        BMCWEB_LOG_ERROR("validateUpdatePolicyCallback:error_code = {}", errorCode);
+        BMCWEB_LOG_ERROR("validateUpdatePolicyCallback:error msg = {}", errorCode.message());
         if (asyncResp)
         {
             messages::internalError(asyncResp->res);
@@ -1425,9 +1408,7 @@ inline void validateUpdatePolicyCallback(
     // Ensure we only got one service back
     if (objInfo.size() != 1)
     {
-        BMCWEB_LOG_ERROR
-            << "More than one service support xyz.openbmc_project.Software.UpdatePolicy. Object Size "
-            << objInfo.size();
+        BMCWEB_LOG_ERROR("More than one service support xyz.openbmc_project.Software.UpdatePolicy. Object Size {}", objInfo.size());
         if (asyncResp)
         {
             messages::internalError(asyncResp->res);
@@ -1439,7 +1420,7 @@ inline void validateUpdatePolicyCallback(
         [req, asyncResp](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "error_code = " << ec;
+            BMCWEB_LOG_ERROR("error_code = {}", ec);
             messages::internalError(asyncResp->res);
         }
 
@@ -1472,11 +1453,10 @@ inline void areTargetsUpdateableCallback(
 {
     if (ec)
     {
-        BMCWEB_LOG_DEBUG << "areTargetsUpdateableCallback:error_code = " << ec;
-        BMCWEB_LOG_DEBUG << "areTargetsUpdateableCallback:error msg =  "
-                         << ec.message();
+        BMCWEB_LOG_DEBUG("areTargetsUpdateableCallback:error_code = {}", ec);
+        BMCWEB_LOG_DEBUG("areTargetsUpdateableCallback:error msg =  {}", ec.message());
 
-        BMCWEB_LOG_ERROR << "Targeted devices not updateable";
+        BMCWEB_LOG_ERROR("Targeted devices not updateable");
 
         boost::urls::url_view targetURL("Target");
         messages::invalidObject(asyncResp->res, targetURL);
@@ -1544,7 +1524,7 @@ inline void
                      const std::vector<std::string>& swInvPaths) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
+            BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1595,11 +1575,11 @@ inline bool
             formpart.fields.find("Content-Disposition");
         if (it == formpart.fields.end())
         {
-            BMCWEB_LOG_ERROR << "Couldn't find Content-Disposition";
+            BMCWEB_LOG_ERROR("Couldn't find Content-Disposition");
             messages::propertyMissing(asyncResp->res, "Content-Disposition");
             return false;
         }
-        BMCWEB_LOG_INFO << "Parsing value " << it->value();
+        BMCWEB_LOG_INFO("Parsing value {}", it->value());
 
         // The construction parameters of param_list must start with `;`
         size_t index = it->value().find(';');
@@ -1652,7 +1632,7 @@ inline bool validateUpdateParametersFormData(
 {
     if (!hasUpdateParameters)
     {
-        BMCWEB_LOG_INFO << "UpdateParameters parameter is missing";
+        BMCWEB_LOG_INFO("UpdateParameters parameter is missing");
 
         messages::actionParameterMissing(asyncResp->res, "update-multipart",
                                          "UpdateParameters");
@@ -1665,8 +1645,7 @@ inline bool validateUpdateParametersFormData(
         std::string allowedApplyTime = "Immediate";
         if (allowedApplyTime != *applyTime)
         {
-            BMCWEB_LOG_INFO
-                << "ApplyTime value is not in the list of acceptable values";
+            BMCWEB_LOG_INFO("ApplyTime value is not in the list of acceptable values");
 
             messages::propertyValueNotInList(asyncResp->res, *applyTime,
                                              "@Redfish.OperationApplyTime");
@@ -1692,7 +1671,7 @@ inline bool validateUpdateFileFormData(
 {
     if (!hasFile)
     {
-        BMCWEB_LOG_ERROR << "Upload data is NULL";
+        BMCWEB_LOG_ERROR("Upload data is NULL");
         messages::propertyMissing(asyncResp->res, "UpdateFile");
         return false;
     }
@@ -1756,7 +1735,7 @@ inline bool preCheckMultipartUpdateServiceReq(
     {
         if (asyncResp)
         {
-            BMCWEB_LOG_ERROR << "Large image size: " << req.body.size();
+            BMCWEB_LOG_ERROR("Large image size: {}", req.body.size());
             std::string resolution =
                 "Firmware package size is greater than allowed "
                 "size. Make sure package size is less than "
@@ -1777,7 +1756,7 @@ inline bool preCheckMultipartUpdateServiceReq(
                 "Another update is in progress. Retry"
                 " the update operation once it is complete.";
             redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
-            BMCWEB_LOG_ERROR << "Update already in progress.";
+            BMCWEB_LOG_ERROR("Update already in progress.");
         }
         return false;
     }
@@ -1789,9 +1768,7 @@ inline bool preCheckMultipartUpdateServiceReq(
     {
         if (spaceInfo.free < req.body.size())
         {
-            BMCWEB_LOG_ERROR
-                << "Insufficient storage space. Required: " << req.body.size()
-                << " Available: " << spaceInfo.free;
+            BMCWEB_LOG_ERROR("Insufficient storage space. Required: {} Available: {}", req.body.size(), spaceInfo.free);
             std::string resolution =
                 "Reset the baseboard and retry the operation.";
             messages::insufficientStorage(asyncResp->res, resolution);
@@ -1819,8 +1796,7 @@ inline void handleMultipartUpdateServicePost(
     {
         return;
     }
-    BMCWEB_LOG_DEBUG
-        << "Execute HTTP POST method '/redfish/v1/UpdateService/update-multipart/'";
+    BMCWEB_LOG_DEBUG("Execute HTTP POST method '/redfish/v1/UpdateService/update-multipart/'");
 
     if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
     {
@@ -1831,7 +1807,7 @@ inline void handleMultipartUpdateServicePost(
     ParserError ec = parser.parse(req);
     if (ec == ParserError::ERROR_BOUNDARY_FORMAT)
     {
-        BMCWEB_LOG_ERROR << "The request has unsupported media type";
+        BMCWEB_LOG_ERROR("The request has unsupported media type");
         messages::unsupportedMediaType(asyncResp->res);
 
         return;
@@ -1839,7 +1815,7 @@ inline void handleMultipartUpdateServicePost(
     if (ec != ParserError::PARSER_SUCCESS)
     {
         // handle error
-        BMCWEB_LOG_ERROR << "MIME parse failed, ec : " << static_cast<int>(ec);
+        BMCWEB_LOG_ERROR("MIME parse failed, ec : {}", static_cast<int>(ec));
         messages::internalError(asyncResp->res);
         return;
     }
@@ -1854,8 +1830,7 @@ inline void
     {
         return;
     }
-    BMCWEB_LOG_DEBUG
-        << "Execute HTTP POST method '/redfish/v1/UpdateService/update/'";
+    BMCWEB_LOG_DEBUG("Execute HTTP POST method '/redfish/v1/UpdateService/update/'");
 
     if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
     {
@@ -1868,12 +1843,12 @@ inline void
     monitorForSoftwareAvailable(asyncResp, req, fwObjectCreationDefaultTimeout,
                                 filepath);
 
-    BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
+    BMCWEB_LOG_DEBUG("Writing file to {}", filepath);
     std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
                                     std::ofstream::trunc);
     out << req.body;
     out.close();
-    BMCWEB_LOG_DEBUG << "file upload complete!!";
+    BMCWEB_LOG_DEBUG("file upload complete!!");
 }
 
 class BMCStatusAsyncResp
@@ -2012,7 +1987,7 @@ inline void requestRoutesUpdateService(App& app)
                         const std::string& applyTime) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -2041,8 +2016,8 @@ inline void requestRoutesUpdateService(App& app)
                     std::string, std::vector<std::string>>>& objInfo) mutable {
             if (errorCode)
             {
-                BMCWEB_LOG_ERROR << "error_code = " << errorCode;
-                BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+                BMCWEB_LOG_ERROR("error_code = {}", errorCode);
+                BMCWEB_LOG_ERROR("error msg = {}", errorCode.message());
                 if (asyncResp)
                 {
                     messages::internalError(asyncResp->res);
@@ -2055,7 +2030,7 @@ inline void requestRoutesUpdateService(App& app)
             // Ensure we only got one service back
             if (objInfo.size() != 1)
             {
-                BMCWEB_LOG_ERROR << "Invalid Object Size " << objInfo.size();
+                BMCWEB_LOG_ERROR("Invalid Object Size {}", objInfo.size());
                 if (asyncResp)
                 {
                     messages::internalError(asyncResp->res);
@@ -2068,8 +2043,8 @@ inline void requestRoutesUpdateService(App& app)
                             GetManagedPropertyType& resp) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "error_code = " << ec;
-                    BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+                    BMCWEB_LOG_ERROR("error_code = {}", ec);
+                    BMCWEB_LOG_ERROR("error msg = {}", ec.message());
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2089,8 +2064,7 @@ inline void requestRoutesUpdateService(App& app)
                                 std::string firmwareId = target.filename();
                                 if (firmwareId.empty())
                                 {
-                                    BMCWEB_LOG_ERROR
-                                        << "Unable to parse firmware ID";
+                                    BMCWEB_LOG_ERROR("Unable to parse firmware ID");
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
@@ -2188,7 +2162,7 @@ inline void requestRoutesUpdateService(App& app)
         {
             return;
         }
-        BMCWEB_LOG_DEBUG << "doPatch...";
+        BMCWEB_LOG_DEBUG("doPatch...");
 
         std::optional<nlohmann::json> pushUriOptions;
         std::optional<std::vector<std::string>> imgTargets;
@@ -2196,7 +2170,7 @@ inline void requestRoutesUpdateService(App& app)
                                       pushUriOptions, "HttpPushUriTargets",
                                       imgTargets))
         {
-            BMCWEB_LOG_ERROR << "UpdateService doPatch: Invalid request body";
+            BMCWEB_LOG_ERROR("UpdateService doPatch: Invalid request body");
             return;
         }
 
@@ -2235,8 +2209,7 @@ inline void requestRoutesUpdateService(App& app)
                     }
                     else
                     {
-                        BMCWEB_LOG_INFO
-                            << "ApplyTime value is not in the list of acceptable values";
+                        BMCWEB_LOG_INFO("ApplyTime value is not in the list of acceptable values");
                         messages::propertyValueNotInList(
                             asyncResp->res, *applyTime, "ApplyTime");
                         return;
@@ -2247,7 +2220,7 @@ inline void requestRoutesUpdateService(App& app)
                         [asyncResp](const boost::system::error_code ec) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
+                            BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -2272,10 +2245,8 @@ inline void requestRoutesUpdateService(App& app)
                             objInfo) mutable {
                         if (errorCode)
                         {
-                            BMCWEB_LOG_ERROR << "error_code = "
-                                             << errorCode;
-                            BMCWEB_LOG_ERROR << "error msg = "
-                                             << errorCode.message();
+                            BMCWEB_LOG_ERROR("error_code = {}", errorCode);
+                            BMCWEB_LOG_ERROR("error msg = {}", errorCode.message());
                             if (asyncResp)
                             {
                                 messages::internalError(asyncResp->res);
@@ -2285,8 +2256,7 @@ inline void requestRoutesUpdateService(App& app)
                         // Ensure we only got one service back
                         if (objInfo.size() != 1)
                         {
-                            BMCWEB_LOG_ERROR << "Invalid Object Size "
-                                             << objInfo.size();
+                            BMCWEB_LOG_ERROR("Invalid Object Size {}", objInfo.size());
                             if (asyncResp)
                             {
                                 messages::internalError(asyncResp->res);
@@ -2298,8 +2268,7 @@ inline void requestRoutesUpdateService(App& app)
                                 const boost::system::error_code
             errCodePolicy) { if (errCodePolicy)
                                 {
-                                    BMCWEB_LOG_ERROR << "error_code = "
-                                                     << errCodePolicy;
+                                    BMCWEB_LOG_ERROR("error_code = {}", errCodePolicy);
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
@@ -2330,7 +2299,7 @@ inline void requestRoutesUpdateService(App& app)
                     const std::vector<std::string>& swInvPaths) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
+                    BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2372,7 +2341,7 @@ inline void requestRoutesUpdateService(App& app)
                     // when none of the target filters are valid
                     if (invalidTargets.size() == uriTargets.size())
                     {
-                        BMCWEB_LOG_ERROR << "Targetted Device not Found!!";
+                        BMCWEB_LOG_ERROR("Targetted Device not Found!!");
                         messages::invalidObject(
                             asyncResp->res,
                             crow::utility::urlFromPieces("HttpPushUriTargets"));
@@ -2384,8 +2353,7 @@ inline void requestRoutesUpdateService(App& app)
                     {
                         for (const std::string& invalidTarget : invalidTargets)
                         {
-                            BMCWEB_LOG_ERROR << "Invalid HttpPushUriTarget: "
-                                             << invalidTarget << "\n";
+                            BMCWEB_LOG_ERROR("Invalid HttpPushUriTarget: {}", invalidTarget);
                             messages::propertyValueFormatError(
                                 asyncResp->res, invalidTarget,
                                 "HttpPushUriTargets");
@@ -2402,9 +2370,8 @@ inline void requestRoutesUpdateService(App& app)
                             objInfo) mutable {
                     if (errorCode)
                     {
-                        BMCWEB_LOG_ERROR << "error_code = " << errorCode;
-                        BMCWEB_LOG_ERROR << "error msg = "
-                                         << errorCode.message();
+                        BMCWEB_LOG_ERROR("error_code = {}", errorCode);
+                        BMCWEB_LOG_ERROR("error msg = {}", errorCode.message());
                         if (asyncResp)
                         {
                             messages::internalError(asyncResp->res);
@@ -2414,8 +2381,7 @@ inline void requestRoutesUpdateService(App& app)
                     // Ensure we only got one service back
                     if (objInfo.size() != 1)
                     {
-                        BMCWEB_LOG_ERROR << "Invalid Object Size "
-                                         << objInfo.size();
+                        BMCWEB_LOG_ERROR("Invalid Object Size {}", objInfo.size());
                         if (asyncResp)
                         {
                             messages::internalError(asyncResp->res);
@@ -2428,8 +2394,7 @@ inline void requestRoutesUpdateService(App& app)
                             const boost::system::error_code errCodePolicy) {
                         if (errCodePolicy)
                         {
-                            BMCWEB_LOG_ERROR << "error_code = "
-                                             << errCodePolicy;
+                            BMCWEB_LOG_ERROR("error_code = {}", errCodePolicy);
                             messages::internalError(asyncResp->res);
                         }
                         messages::success(asyncResp->res);
@@ -2526,7 +2491,7 @@ inline void requestRoutesSoftwareInventoryCollection(App& app)
                 if (swId.empty())
                 {
                     messages::internalError(asyncResp->res);
-                    BMCWEB_LOG_DEBUG << "Can't parse firmware ID!!";
+                    BMCWEB_LOG_DEBUG("Can't parse firmware ID!!");
                     return;
                 }
 
@@ -2590,7 +2555,7 @@ inline void requestRoutesInventorySoftwareCollection(App& app)
                 if (swId.empty())
                 {
                     messages::internalError(asyncResp->res);
-                    BMCWEB_LOG_DEBUG << "Can't parse software ID!!";
+                    BMCWEB_LOG_DEBUG("Can't parse software ID!!");
                     return;
                 }
 
@@ -2630,7 +2595,7 @@ inline static void
                          const std::vector<std::string>& objects) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             return;
         }
 
@@ -2673,7 +2638,7 @@ inline static void getRelatedItemsStorageController(
                          const std::vector<std::string>& objects) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             return;
         }
 
@@ -2741,8 +2706,8 @@ inline static void getRelatedItemsPowerSupply(
                              std::variant<std::vector<std::string>>& resp) {
         if (errorCode)
         {
-            BMCWEB_LOG_DEBUG << "error_code = " << errorCode;
-            BMCWEB_LOG_DEBUG << "error msg = " << errorCode.message();
+            BMCWEB_LOG_DEBUG("error_code = {}", errorCode);
+            BMCWEB_LOG_DEBUG("error msg = {}", errorCode.message());
             return;
         }
         std::string chassisName = "chassis";
@@ -2750,7 +2715,7 @@ inline static void getRelatedItemsPowerSupply(
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_ERROR << "Invalid Object ";
+            BMCWEB_LOG_ERROR("Invalid Object ");
             return;
         }
         for (const std::string& path : *data)
@@ -2783,8 +2748,8 @@ inline static void getRelatedItemsPCIeDevice(
                              std::variant<std::vector<std::string>>& resp) {
         if (errorCode)
         {
-            BMCWEB_LOG_DEBUG << "error_code = " << errorCode;
-            BMCWEB_LOG_DEBUG << "error msg = " << errorCode.message();
+            BMCWEB_LOG_DEBUG("error_code = {}", errorCode);
+            BMCWEB_LOG_DEBUG("error msg = {}", errorCode.message());
             return;
         }
         std::string chassisName = "chassis";
@@ -2792,7 +2757,7 @@ inline static void getRelatedItemsPCIeDevice(
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_ERROR << "Invalid Object ";
+            BMCWEB_LOG_ERROR("Invalid Object ");
             return;
         }
         for (const std::string& path : *data)
@@ -2823,8 +2788,8 @@ inline static void
                              std::variant<std::vector<std::string>>& resp) {
         if (errorCode)
         {
-            BMCWEB_LOG_DEBUG << "error_code = " << errorCode;
-            BMCWEB_LOG_DEBUG << "error msg = " << errorCode.message();
+            BMCWEB_LOG_DEBUG("error_code = {}", errorCode);
+            BMCWEB_LOG_DEBUG("error msg = {}", errorCode.message());
             return;
         }
         std::string fabricName = "fabric";
@@ -2832,7 +2797,7 @@ inline static void
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_ERROR << "Invalid Object ";
+            BMCWEB_LOG_ERROR("Invalid Object ");
             return;
         }
         for (const std::string& path : *data)
@@ -2866,8 +2831,7 @@ inline static void
                 objects) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "error_code = " << ec
-                             << ", error msg = " << ec.message();
+            BMCWEB_LOG_ERROR("error_code = {}, error msg = {}", ec, ec.message());
             return;
         }
         if (objects.empty())
@@ -2962,7 +2926,7 @@ inline static void
                           const std::string& swId,
                           std::string inventoryPath = "")
 {
-    BMCWEB_LOG_DEBUG << "getRelatedItemsOthers enter";
+    BMCWEB_LOG_DEBUG("getRelatedItemsOthers enter");
 
     if (inventoryPath.empty())
     {
@@ -3005,9 +2969,7 @@ inline static void
                         std::variant<std::vector<std::string>>& resp) {
                 if (errCodeAssoc)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "error_code = " << errCodeAssoc
-                        << ", error msg = " << errCodeAssoc.message();
+                    BMCWEB_LOG_ERROR("error_code = {}, error msg = {}", errCodeAssoc, errCodeAssoc.message());
                     return;
                 }
 
@@ -3015,7 +2977,7 @@ inline static void
                     std::get_if<std::vector<std::string>>(&resp);
                 if ((associations == nullptr) || (associations->empty()))
                 {
-                    BMCWEB_LOG_ERROR << "Zero association for the software";
+                    BMCWEB_LOG_ERROR("Zero association for the software");
                     return;
                 }
 
@@ -3060,7 +3022,7 @@ inline static void
     }
     else
     {
-        BMCWEB_LOG_ERROR << "Unknown software purpose " << purpose;
+        BMCWEB_LOG_ERROR("Unknown software purpose {}", purpose);
     }
 }
 
@@ -3096,16 +3058,16 @@ inline void
 
         if (swInvPurpose == nullptr)
         {
-            BMCWEB_LOG_DEBUG << "Can't find property \"Purpose\"!";
+            BMCWEB_LOG_DEBUG("Can't find property \"Purpose\"!");
             messages::internalError(asyncResp->res);
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "swInvPurpose = " << *swInvPurpose;
+        BMCWEB_LOG_DEBUG("swInvPurpose = {}", *swInvPurpose);
 
         if (version == nullptr)
         {
-            BMCWEB_LOG_DEBUG << "Can't find property \"Version\"!";
+            BMCWEB_LOG_DEBUG("Can't find property \"Version\"!");
 
             messages::internalError(asyncResp->res);
 
@@ -3158,14 +3120,14 @@ inline void computeDigest(const crow::Request& req,
                 objInfo) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Failed to GetObject for ComputeDigest: " << ec;
+            BMCWEB_LOG_ERROR("Failed to GetObject for ComputeDigest: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
         // Ensure we only got one service back
         if (objInfo.size() != 1)
         {
-            BMCWEB_LOG_ERROR << "Invalid Object Size " << objInfo.size();
+            BMCWEB_LOG_ERROR("Invalid Object Size {}", objInfo.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -3177,7 +3139,7 @@ inline void computeDigest(const crow::Request& req,
         }
         catch (const std::exception& e)
         {
-            BMCWEB_LOG_ERROR << "Error while parsing retimer Id: " << e.what();
+            BMCWEB_LOG_ERROR("Error while parsing retimer Id: {}", e.what());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -3224,13 +3186,13 @@ inline void computeDigest(const crow::Request& req,
                 auto it = props.find("Digest");
                 if (it == props.end())
                 {
-                    BMCWEB_LOG_ERROR << "Signal doesn't have Digest value";
+                    BMCWEB_LOG_ERROR("Signal doesn't have Digest value");
                     return !task::completed;
                 }
                 auto value = std::get_if<std::string>(&(it->second));
                 if (!value)
                 {
-                    BMCWEB_LOG_ERROR << "Digest value is not a string";
+                    BMCWEB_LOG_ERROR("Digest value is not a string");
                     return !task::completed;
                 }
 
@@ -3243,8 +3205,7 @@ inline void computeDigest(const crow::Request& req,
                             const std::variant<std::string>& property) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "DBUS response error for Algorithm";
+                            BMCWEB_LOG_ERROR("DBUS response error for Algorithm");
                             taskData->state = "Exception";
                             taskData->messages.emplace_back(
                                 messages::taskAborted(
@@ -3255,8 +3216,7 @@ inline void computeDigest(const crow::Request& req,
                             std::get_if<std::string>(&property);
                         if (hashAlgoValue == nullptr)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "Null value returned for Algorithm";
+                            BMCWEB_LOG_ERROR("Null value returned for Algorithm");
                             taskData->state = "Exception";
                             taskData->messages.emplace_back(
                                 messages::taskAborted(
@@ -3289,7 +3249,7 @@ inline void computeDigest(const crow::Request& req,
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR << "GetHash failed. Digest is empty.";
+                    BMCWEB_LOG_ERROR("GetHash failed. Digest is empty.");
                     taskData->state = "Exception";
                     taskData->messages.emplace_back(
                         messages::resourceErrorsDetectedFormatError(
@@ -3315,7 +3275,7 @@ inline void computeDigest(const crow::Request& req,
             [task](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Failed to ComputeDigest: " << ec;
+                BMCWEB_LOG_ERROR("Failed to ComputeDigest: {}", ec);
                 task->state = "Aborted";
                 task->messages.emplace_back(
                     messages::resourceErrorsDetectedFormatError(
@@ -3357,7 +3317,7 @@ inline void
         {
             messages::resourceNotFound(
                 asyncResp->res, "NvidiaSoftwareInventory.ComputeDigest", swId);
-            BMCWEB_LOG_ERROR << "Invalid object path: " << ec;
+            BMCWEB_LOG_ERROR("Invalid object path: {}", ec);
             return;
         }
         for (auto& obj : subtree)
@@ -3400,8 +3360,7 @@ inline void requestRoutesComputeDigestPost(App& app)
         {
             return;
         }
-        BMCWEB_LOG_DEBUG
-            << "Enter NvidiaSoftwareInventory.ComputeDigest doPost";
+        BMCWEB_LOG_DEBUG("Enter NvidiaSoftwareInventory.ComputeDigest doPost");
         std::shared_ptr<std::string> swId =
             std::make_shared<std::string>(param);
         // skip input parameter validation
@@ -3412,8 +3371,7 @@ inline void requestRoutesComputeDigestPost(App& app)
             redfish::messages::updateInProgressMsg(
                 asyncResp->res,
                 "Retry the operation once firmware update operation is complete.");
-            BMCWEB_LOG_ERROR
-                << "Cannot execute ComputeDigest. Update firmware is in progress.";
+            BMCWEB_LOG_ERROR("Cannot execute ComputeDigest. Update firmware is in progress.");
 
             return;
         }
@@ -3423,12 +3381,11 @@ inline void requestRoutesComputeDigestPost(App& app)
             redfish::messages::resourceErrorsDetectedFormatError(
                 asyncResp->res, "NvidiaSoftwareInventory.ComputeDigest",
                 "Another ComputeDigest operation is in progress");
-            BMCWEB_LOG_ERROR << "Cannot execute ComputeDigest."
-                             << " Another ComputeDigest is in progress.";
+            BMCWEB_LOG_ERROR("Cannot execute ComputeDigest. Another ComputeDigest is in progress.");
             return;
         }
         handlePostComputeDigest(req, asyncResp, *swId);
-        BMCWEB_LOG_DEBUG << "Exit NvidiaUpdateService.ComputeDigest doPost";
+        BMCWEB_LOG_DEBUG("Exit NvidiaUpdateService.ComputeDigest doPost");
     });
 }
 
@@ -3507,7 +3464,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                     std::string, std::vector<std::pair<
                                      std::string, std::vector<std::string>>>>>&
                     subtree) {
-            BMCWEB_LOG_DEBUG << "doGet callback...";
+            BMCWEB_LOG_DEBUG("doGet callback...");
             if (ec)
             {
                 messages::internalError(asyncResp->res);
@@ -3554,7 +3511,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                         propertiesList.find("Purpose");
                     if (it == propertiesList.end())
                     {
-                        BMCWEB_LOG_DEBUG << "Can't find property \"Version\"!";
+                        BMCWEB_LOG_DEBUG("Can't find property \"Version\"!");
                         messages::propertyMissing(asyncResp->res, "Purpose");
                         return;
                     }
@@ -3562,30 +3519,29 @@ inline void requestRoutesSoftwareInventory(App& app)
                         std::get_if<std::string>(&it->second);
                     if (swInvPurpose == nullptr)
                     {
-                        BMCWEB_LOG_DEBUG
-                            << "wrong types for property\"Purpose\"!";
+                        BMCWEB_LOG_DEBUG("wrong types for property\"Purpose\"!");
                         messages::propertyValueTypeError(asyncResp->res, "",
                                                          "Purpose");
                         return;
                     }
 
-                    BMCWEB_LOG_DEBUG << "swInvPurpose = " << *swInvPurpose;
+                    BMCWEB_LOG_DEBUG("swInvPurpose = {}", *swInvPurpose);
                     it = propertiesList.find("Version");
                     if (it == propertiesList.end())
                     {
-                        BMCWEB_LOG_DEBUG << "Can't find property \"Version\"!";
+                        BMCWEB_LOG_DEBUG("Can't find property \"Version\"!");
                         messages::propertyMissing(asyncResp->res, "Version");
                         return;
                     }
 
-                    BMCWEB_LOG_DEBUG << "Version found!";
+                    BMCWEB_LOG_DEBUG("Version found!");
 
                     const std::string* version =
                         std::get_if<std::string>(&it->second);
 
                     if (version == nullptr)
                     {
-                        BMCWEB_LOG_DEBUG << "Can't find property \"Version\"!";
+                        BMCWEB_LOG_DEBUG("Can't find property \"Version\"!");
 
                         messages::propertyValueTypeError(asyncResp->res, "",
                                                          "Version");
@@ -3600,8 +3556,7 @@ inline void requestRoutesSoftwareInventory(App& app)
 
                         if (manufacturer == nullptr)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "Can't find property \"Manufacturer\"!";
+                            BMCWEB_LOG_ERROR("Can't find property \"Manufacturer\"!");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -3617,8 +3572,7 @@ inline void requestRoutesSoftwareInventory(App& app)
 
                         if (softwareId == nullptr)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "Can't find property \"softwareId\"!";
+                            BMCWEB_LOG_ERROR("Can't find property \"softwareId\"!");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -3659,7 +3613,7 @@ inline void requestRoutesSoftwareInventory(App& app)
             }
             if (!found)
             {
-                BMCWEB_LOG_ERROR << "Input swID " + *swId + " not found!";
+                BMCWEB_LOG_ERROR("Input swID " + *swId + " not found!");
                 messages::resourceMissingAtURI(
                     asyncResp->res, crow::utility::urlFromPieces(
                                         "redfish", "v1", "UpdateService",
@@ -3703,7 +3657,7 @@ inline void requestRoutesInventorySoftware(App& app)
                     std::string, std::vector<std::pair<
                                      std::string, std::vector<std::string>>>>>&
                     subtree) {
-            BMCWEB_LOG_DEBUG << "doGet callback...";
+            BMCWEB_LOG_DEBUG("doGet callback...");
             if (ec)
             {
                 messages::internalError(asyncResp->res);
@@ -3743,7 +3697,7 @@ inline void requestRoutesInventorySoftware(App& app)
                             propertiesList) {
                     if (errorCode)
                     {
-                        BMCWEB_LOG_DEBUG << "properties not found ";
+                        BMCWEB_LOG_DEBUG("properties not found ");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -3775,8 +3729,7 @@ inline void requestRoutesInventorySoftware(App& app)
                                 std::get_if<bool>(&property.second);
                             if (swInvFunctional != nullptr)
                             {
-                                BMCWEB_LOG_DEBUG << " Functinal "
-                                                 << *swInvFunctional;
+                                BMCWEB_LOG_DEBUG(" Functinal {}", *swInvFunctional);
                                 if (*swInvFunctional)
                                 {
                                     asyncResp->res
@@ -3805,7 +3758,7 @@ inline void requestRoutesInventorySoftware(App& app)
                 return;
             }
             // Couldn't find an object with that name.  return an error
-            BMCWEB_LOG_DEBUG << "Input swID " + *swId + " not found!";
+            BMCWEB_LOG_DEBUG("Input swID " + *swId + " not found!");
             messages::resourceNotFound(
                 asyncResp->res, "SoftwareInventory.v1_4_0.SoftwareInventory",
                 *swId);
@@ -3823,7 +3776,7 @@ inline void requestRoutesInventorySoftware(App& app)
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& param) {
-        BMCWEB_LOG_DEBUG << "doPatch...";
+        BMCWEB_LOG_DEBUG("doPatch...");
         std::shared_ptr<std::string> swId =
             std::make_shared<std::string>(param);
 
@@ -3873,7 +3826,7 @@ inline void requestRoutesInventorySoftware(App& app)
                 }
                 // Couldn't find an object with that name.  return an
                 // error
-                BMCWEB_LOG_DEBUG << "Input swID " + *swId + " not found!";
+                BMCWEB_LOG_DEBUG("Input swID " + *swId + " not found!");
                 messages::resourceNotFound(
                     asyncResp->res,
                     "SoftwareInventory.v1_4_0.SoftwareInventory", *swId);
@@ -3987,7 +3940,7 @@ inline void updateParametersForCommitImageInfo(
         if (fwId.empty())
         {
             messages::internalError(asyncResp->res);
-            BMCWEB_LOG_DEBUG << "Cannot parse firmware ID";
+            BMCWEB_LOG_DEBUG("Cannot parse firmware ID");
             return;
         }
 
@@ -4056,8 +4009,7 @@ inline void handleCommitImagePost(
             }
             else
             {
-                BMCWEB_LOG_DEBUG
-                    << "Cannot find firmware inventory in allowable values";
+                BMCWEB_LOG_DEBUG("Cannot find firmware inventory in allowable values");
                 boost::urls::url_view targetURL(target);
                 messages::resourceMissingAtURI(asyncResp->res, targetURL);
             }
@@ -4135,7 +4087,7 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-        BMCWEB_LOG_DEBUG << "doPost...";
+        BMCWEB_LOG_DEBUG("doPost...");
 
         if (fwUpdateInProgress == true)
         {
@@ -4144,8 +4096,7 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
                 "Retry the operation once firmware update operation is complete.");
 
             // don't copy the image, update already in progress.
-            BMCWEB_LOG_ERROR
-                << "Cannot execute commit image. Update firmware is in progress.";
+            BMCWEB_LOG_ERROR("Cannot execute commit image. Update firmware is in progress.");
 
             return;
         }
@@ -4211,7 +4162,7 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
         std::string remoteServerIP;
         std::string remoteServerKeyString; // "<type> <key>"
 
-        BMCWEB_LOG_DEBUG << "Enter UpdateService.PublicKeyExchange doPost";
+        BMCWEB_LOG_DEBUG("Enter UpdateService.PublicKeyExchange doPost");
 
         if (!json_util::readJsonAction(req, asyncResp->res, "RemoteServerIP",
                                        remoteServerIP, "RemoteServerKeyString",
@@ -4229,13 +4180,11 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
             }
             messages::createFailedMissingReqProperties(asyncResp->res,
                                                        emptyprops);
-            BMCWEB_LOG_DEBUG << "Missing " << emptyprops;
+            BMCWEB_LOG_DEBUG("Missing {}", emptyprops);
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "RemoteServerIP: "
-                         << remoteServerIP + " RemoteServerKeyString: "
-                         << remoteServerKeyString;
+        BMCWEB_LOG_DEBUG("RemoteServerIP: {}{}", remoteServerIP + " RemoteServerKeyString: ", remoteServerKeyString);
 
         // Call SCP service
         crow::connections::systemBus->async_method_call(
@@ -4243,8 +4192,7 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
             if (ec)
             {
                 messages::internalError(asyncResp->res);
-                BMCWEB_LOG_ERROR << "error_code = " << ec << " "
-                                 << "error msg = " << ec.message();
+                BMCWEB_LOG_ERROR("error_code = {} error msg = {}", ec, ec.message());
                 return;
             }
 
@@ -4254,8 +4202,7 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
                 if (ec || selfPublicKeyStr.empty())
                 {
                     messages::internalError(asyncResp->res);
-                    BMCWEB_LOG_ERROR << "error_code = " << ec << " "
-                                     << "error msg = " << ec.message();
+                    BMCWEB_LOG_ERROR("error_code = {} error msg = {}", ec, ec.message());
                     return;
                 }
 
@@ -4270,8 +4217,7 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
                 asyncResp->res.jsonValue[messages::messageAnnotation].push_back(
                     extendedInfoSuccessMsg(keyMsg, keyInfo));
                 messages::success(asyncResp->res);
-                BMCWEB_LOG_DEBUG << "Call to PublicKeyExchange succeeded " +
-                                        selfPublicKeyStr;
+                BMCWEB_LOG_DEBUG("{}", "Call to PublicKeyExchange succeeded " + selfPublicKeyStr);
             },
                 "xyz.openbmc_project.Software.Download",
                 "/xyz/openbmc_project/software",
@@ -4306,8 +4252,7 @@ inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
 
         std::string remoteServerIP;
 
-        BMCWEB_LOG_DEBUG
-            << "Enter UpdateService.RevokeAllRemoteServerPublicKeys doPost";
+        BMCWEB_LOG_DEBUG("Enter UpdateService.RevokeAllRemoteServerPublicKeys doPost");
 
         if (!json_util::readJsonAction(req, asyncResp->res, "RemoteServerIP",
                                        remoteServerIP) &&
@@ -4315,11 +4260,11 @@ inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
         {
             messages::createFailedMissingReqProperties(asyncResp->res,
                                                        "RemoteServerIP");
-            BMCWEB_LOG_DEBUG << "Missing RemoteServerIP";
+            BMCWEB_LOG_DEBUG("Missing RemoteServerIP");
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "RemoteServerIP: " << remoteServerIP;
+        BMCWEB_LOG_DEBUG("RemoteServerIP: {}", remoteServerIP);
 
         // Call SCP service
         crow::connections::systemBus->async_method_call(
@@ -4327,14 +4272,12 @@ inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
             if (ec)
             {
                 messages::internalError(asyncResp->res);
-                BMCWEB_LOG_ERROR << "error_code = " << ec << " "
-                                 << "error msg = " << ec.message();
+                BMCWEB_LOG_ERROR("error_code = {} error msg = {}", ec, ec.message());
             }
             else
             {
                 messages::success(asyncResp->res);
-                BMCWEB_LOG_DEBUG
-                    << "Call to RevokeAllRemoteServerPublicKeys succeeded";
+                BMCWEB_LOG_DEBUG("Call to RevokeAllRemoteServerPublicKeys succeeded");
             }
         },
             "xyz.openbmc_project.Software.Download",
@@ -4375,11 +4318,10 @@ static void addDBusWatchForSoftwareObject(
             // expected, we were canceled before the timer completed.
             return;
         }
-        BMCWEB_LOG_ERROR
-            << "Timed out waiting for staged firmware object being created";
+        BMCWEB_LOG_ERROR("Timed out waiting for staged firmware object being created");
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Async_wait failed" << ec;
+            BMCWEB_LOG_ERROR("Async_wait failed{}", ec);
             return;
         }
 
@@ -4395,7 +4337,7 @@ static void addDBusWatchForSoftwareObject(
     });
 
     auto callback = [asyncResp](sdbusplus::message_t& m) {
-        BMCWEB_LOG_DEBUG << "Match fired";
+        BMCWEB_LOG_DEBUG("Match fired");
 
         sdbusplus::message::object_path path;
         dbus::utility::DBusInteracesMap interfaces;
@@ -4449,7 +4391,7 @@ inline void addDBusWatchAndUploadPackage(
                                       fwObjectCreationDefaultTimeout, filepath);
 
         fwImageIsStaging = true;
-        BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
+        BMCWEB_LOG_DEBUG("Writing file to {}", filepath);
         std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
                                         std::ofstream::trunc);
         out << req.body;
@@ -4457,7 +4399,7 @@ inline void addDBusWatchAndUploadPackage(
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "Error while uploading firmware: " << e.what();
+        BMCWEB_LOG_ERROR("Error while uploading firmware: {}", e.what());
         messages::internalError(asyncResp->res);
         cleanUpStageObjects();
         fwStageAvailableTimer = nullptr;
@@ -4508,11 +4450,10 @@ inline void
         {
             auto respHandler = [req,
                                 asyncResp](const boost::system::error_code ec) {
-                BMCWEB_LOG_DEBUG << "doDelete callback: Done";
+                BMCWEB_LOG_DEBUG("doDelete callback: Done");
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "doDelete respHandler got error "
-                                     << ec.message();
+                    BMCWEB_LOG_ERROR("doDelete respHandler got error {}", ec.message());
                     asyncResp->res.result(
                         boost::beast::http::status::internal_server_error);
                     return;
@@ -4563,16 +4504,14 @@ inline void handleStageLocationErrors(
                             const std::variant<int32_t>& property) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "DBUS response error getting service status: "
-                        << ec.message();
+                    BMCWEB_LOG_ERROR("DBUS response error getting service status: {}", ec.message());
                     redfish::messages::internalError(asyncResp->res);
                     return;
                 }
                 const int32_t* serviceStatus = std::get_if<int32_t>(&property);
                 if (serviceStatus == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Invalid service exit status code";
+                    BMCWEB_LOG_ERROR("Invalid service exit status code");
                     redfish::messages::internalError(asyncResp->res);
                     return;
                 }
@@ -4580,8 +4519,7 @@ inline void handleStageLocationErrors(
                     getEMMCErrorMessageFromExitCode(*serviceStatus);
                 if (errorMapping)
                 {
-                    BMCWEB_LOG_ERROR << "stage-firmware-package Error Message: "
-                                     << (*errorMapping).first;
+                    BMCWEB_LOG_ERROR("stage-firmware-package Error Message: {}", (*errorMapping).first);
                     redfish::messages::resourceErrorsDetectedFormatError(
                         asyncResp->res,
                         "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/stage-firmware-package",
@@ -4599,7 +4537,7 @@ inline void handleStageLocationErrors(
         }
         else
         {
-            BMCWEB_LOG_INFO << "PersistentStorage is not enabled.";
+            BMCWEB_LOG_INFO("PersistentStorage is not enabled.");
             messages::serviceDisabled(
                 asyncResp->res,
                 "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage");
@@ -4628,13 +4566,13 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
     {
         return;
     }
-    BMCWEB_LOG_DEBUG << "doPost...";
+    BMCWEB_LOG_DEBUG("doPost...");
 
     if (req.body.size() == 0)
     {
         if (asyncResp)
         {
-            BMCWEB_LOG_ERROR << "Image size equals 0.";
+            BMCWEB_LOG_ERROR("Image size equals 0.");
             messages::unrecognizedRequestBody(asyncResp->res);
         }
         return;
@@ -4644,7 +4582,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
     {
         if (asyncResp)
         {
-            BMCWEB_LOG_ERROR << "Large image size: " << req.body.size();
+            BMCWEB_LOG_ERROR("Large image size: {}", req.body.size());
             std::string resolution =
                 "Firmware package size is greater than allowed "
                 "size. Make sure package size is less than "
@@ -4664,7 +4602,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
             std::string resolution = "Another update is in progress. Retry"
                                      " the operation once it is complete.";
             redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
-            BMCWEB_LOG_ERROR << "Update already in progress.";
+            BMCWEB_LOG_ERROR("Update already in progress.");
         }
         return;
     }
@@ -4678,7 +4616,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
                 asyncResp->res,
                 "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/stage-firmware-package",
                 "Another staging is in progress.");
-            BMCWEB_LOG_ERROR << "Another staging is in progress.";
+            BMCWEB_LOG_ERROR("Another staging is in progress.");
         }
         return;
     }
@@ -4697,16 +4635,14 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
         if (elapsedTime <=
             std::chrono::seconds(stageRateLimitDurationInSeconds))
         {
-            BMCWEB_LOG_ERROR << "Staging update ratelimit error. Duration: "
-                             << elapsedTime.count();
+            BMCWEB_LOG_ERROR("Staging update ratelimit error. Duration: {}", elapsedTime.count());
             redfish::messages::resourceErrorsDetectedFormatError(
                 asyncResp->res, "StageFirmwarePackage",
                 "Staging Update Ratelimit Error");
             return;
         }
 
-        BMCWEB_LOG_INFO << "Resetting the staging update counter. Duration: "
-                        << elapsedTime.count();
+        BMCWEB_LOG_INFO("Resetting the staging update counter. Duration: {}", elapsedTime.count());
         stagedUpdateTimeStamp = currentTime;
         stagedUpdateCount = 1; // reset the counter
     }
@@ -4722,8 +4658,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
     {
         if (asyncResp)
         {
-            BMCWEB_LOG_ERROR << "Stage location does not exist. "
-                             << updateServiceStageLocation;
+            BMCWEB_LOG_ERROR("Stage location does not exist. {}", updateServiceStageLocation);
             handleStageLocationErrors(req, asyncResp);
         }
         return;
@@ -4741,9 +4676,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
     {
         if (spaceInfo.free < req.body.size())
         {
-            BMCWEB_LOG_ERROR
-                << "Insufficient storage space. Required: " << req.body.size()
-                << " Available: " << spaceInfo.free;
+            BMCWEB_LOG_ERROR("Insufficient storage space. Required: {} Available: {}", req.body.size(), spaceInfo.free);
             std::string resolution =
                 "Reset the baseboard and retry the operation.";
             messages::insufficientStorage(asyncResp->res, resolution);
@@ -4752,7 +4685,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
     }
 
     stageFirmwarePackage(asyncResp, req);
-    BMCWEB_LOG_DEBUG << "stage firmware package complete";
+    BMCWEB_LOG_DEBUG("stage firmware package complete");
 }
 
 /**
@@ -4777,7 +4710,7 @@ inline std::string getPackageVerificationStatus(const std::string& status)
         return "Success";
     }
 
-    BMCWEB_LOG_DEBUG << "Unknown status: " << status;
+    BMCWEB_LOG_DEBUG("Unknown status: {}", status);
     return "Unknown";
 }
 =======
@@ -4979,7 +4912,7 @@ inline void handleUpdateServicePersistentStorageFwPackagesListGet(
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
                     const crow::openbmc_mapper::GetSubTreeType& subtree) {
-        BMCWEB_LOG_DEBUG << "doGet callback...";
+        BMCWEB_LOG_DEBUG("doGet callback...");
         if (ec)
         {
             asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
@@ -5078,7 +5011,7 @@ inline void handleUpdateServicePersistentStorageFwPackageGet(
             std::string resolution = "Staging is in progress. Retry"
                                      " the action once it is complete.";
             redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
-            BMCWEB_LOG_ERROR << "Staging is in progress.";
+            BMCWEB_LOG_ERROR("Staging is in progress.");
         }
         return;
     }
@@ -5103,7 +5036,7 @@ inline void handleUpdateServicePersistentStorageFwPackageGet(
         [asyncResp,
          &strParam](const boost::system::error_code ec,
                     const crow::openbmc_mapper::GetSubTreeType& subtree) {
-        BMCWEB_LOG_DEBUG << "doGet callback...";
+        BMCWEB_LOG_DEBUG("doGet callback...");
         if (ec)
         {
             messages::resourceNotFound(asyncResp->res, "FirmwarePackages", "0");
@@ -5131,7 +5064,7 @@ inline void handleUpdateServicePersistentStorageFwPackageGet(
         }
         if (!found)
         {
-            BMCWEB_LOG_ERROR << "PackageInformation not found!";
+            BMCWEB_LOG_ERROR("PackageInformation not found!");
             messages::resourceNotFound(asyncResp->res, "FirmwarePackages", "0");
             return;
         }
@@ -5179,7 +5112,7 @@ inline void initiateStagedFirmwareUpdate(
         }
         else
         {
-            BMCWEB_LOG_INFO << "State not good";
+            BMCWEB_LOG_INFO("State not good");
         }
         return message;
     };
@@ -5332,11 +5265,11 @@ inline void initiateFirmwarePackage(
         [req, asyncResp,
          targets](const boost::system::error_code ec,
                   const crow::openbmc_mapper::GetSubTreeType& subtree) {
-        BMCWEB_LOG_DEBUG << "doGet callback...";
+        BMCWEB_LOG_DEBUG("doGet callback...");
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error code = " << ec;
-            BMCWEB_LOG_DEBUG << "DBUS response error msg = " << ec.message();
+            BMCWEB_LOG_DEBUG("DBUS response error code = {}", ec);
+            BMCWEB_LOG_DEBUG("DBUS response error msg = {}", ec.message());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -5376,13 +5309,12 @@ inline void initiateFirmwarePackage(
                     // completed.
                     return;
                 }
-                BMCWEB_LOG_ERROR
-                    << "Timed out waiting for firmware object being created";
+                BMCWEB_LOG_ERROR("Timed out waiting for firmware object being created");
 
                 if (ec)
                 {
 <<<<<<< HEAD
-                    BMCWEB_LOG_ERROR << "Async_wait failed" << ec;
+                    BMCWEB_LOG_ERROR("Async_wait failed{}", ec);
                     return;
                 }
                 if (asyncResp)
@@ -5400,7 +5332,7 @@ inline void initiateFirmwarePackage(
                         const std::vector<std::string>& swInvPaths) {
                     if (ec)
                     {
-                        BMCWEB_LOG_ERROR << "D-Bus responses error: " << ec;
+                        BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -5446,7 +5378,7 @@ inline void initiateFirmwarePackage(
                         // when none of the target filters are valid
                         if (invalidTargets.size() == uriTargets.size())
                         {
-                            BMCWEB_LOG_ERROR << "Targetted Device not Found!!";
+                            BMCWEB_LOG_ERROR("Targetted Device not Found!!");
                             messages::invalidObject(
                                 asyncResp->res,
                                 crow::utility::urlFromPieces("Targets"));
@@ -5459,9 +5391,7 @@ inline void initiateFirmwarePackage(
                             for (const std::string& invalidTarget :
                                  invalidTargets)
                             {
-                                BMCWEB_LOG_ERROR
-                                    << "Invalid UriTarget: " << invalidTarget
-                                    << "\n";
+                                BMCWEB_LOG_ERROR("Invalid UriTarget: {}", invalidTarget);
                                 messages::propertyValueFormatError(
                                     asyncResp->res, invalidTarget, "Targets");
                             }
@@ -5479,9 +5409,8 @@ inline void initiateFirmwarePackage(
                                 objInfo) mutable {
                         if (errorCode)
                         {
-                            BMCWEB_LOG_ERROR << "error_code = " << errorCode;
-                            BMCWEB_LOG_ERROR << "error msg = "
-                                             << errorCode.message();
+                            BMCWEB_LOG_ERROR("error_code = {}", errorCode);
+                            BMCWEB_LOG_ERROR("error msg = {}", errorCode.message());
                             if (asyncResp)
                             {
                                 messages::internalError(asyncResp->res);
@@ -5491,8 +5420,7 @@ inline void initiateFirmwarePackage(
                         // Ensure we only got one service back
                         if (objInfo.size() != 1)
                         {
-                            BMCWEB_LOG_ERROR << "Invalid Object Size "
-                                             << objInfo.size();
+                            BMCWEB_LOG_ERROR("Invalid Object Size {}", objInfo.size());
                             if (asyncResp)
                             {
                                 messages::internalError(asyncResp->res);
@@ -5505,8 +5433,7 @@ inline void initiateFirmwarePackage(
                                 const boost::system::error_code errCodePolicy) {
                             if (errCodePolicy)
                             {
-                                BMCWEB_LOG_ERROR << "error_code = "
-                                                 << errCodePolicy;
+                                BMCWEB_LOG_ERROR("error_code = {}", errCodePolicy);
                                 messages::internalError(asyncResp->res);
                             }
 
@@ -5553,7 +5480,7 @@ inline void initiateFirmwarePackage(
         }
         else
         {
-            BMCWEB_LOG_ERROR << "PackageInformation not found!";
+            BMCWEB_LOG_ERROR("PackageInformation not found!");
             messages::resourceNotFound(asyncResp->res, "FirmwarePackages", "0");
             return;
         }
@@ -5584,7 +5511,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
     {
         return;
     }
-    BMCWEB_LOG_DEBUG << "doPost...";
+    BMCWEB_LOG_DEBUG("doPost...");
 
     std::optional<std::string> firmwarePackageURI;
     std::optional<std::vector<std::string>> targets;
@@ -5592,7 +5519,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
                                   "StagedFirmwarePackageURI",
                                   firmwarePackageURI, "Targets", targets))
     {
-        BMCWEB_LOG_ERROR << "UpdateService doPatch: Invalid request body";
+        BMCWEB_LOG_ERROR("UpdateService doPatch: Invalid request body");
         return;
     }
 
@@ -5601,8 +5528,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
         if (firmwarePackageURI !=
             "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/0")
         {
-            BMCWEB_LOG_ERROR << "Invalid StagedFirmwarePackageURI:  "
-                             << firmwarePackageURI.value();
+            BMCWEB_LOG_ERROR("Invalid StagedFirmwarePackageURI:  {}", firmwarePackageURI.value());
             messages::propertyValueIncorrect(asyncResp->res,
                                              "StagedFirmwarePackageURI",
                                              firmwarePackageURI.value());
@@ -5611,7 +5537,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
     }
     else
     {
-        BMCWEB_LOG_ERROR << "StagedFirmwarePackageURI is empty.";
+        BMCWEB_LOG_ERROR("StagedFirmwarePackageURI is empty.");
         messages::propertyValueIncorrect(asyncResp->res,
                                          "StagedFirmwarePackageURI", "empty");
         return;
@@ -5624,7 +5550,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
             std::string resolution = "Update is in progress. Retry"
                                      " the action once it is complete.";
             redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
-            BMCWEB_LOG_ERROR << "Update is in progress.";
+            BMCWEB_LOG_ERROR("Update is in progress.");
         }
         return;
     }
@@ -5636,7 +5562,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
             std::string resolution = "Staging is in progress. Retry"
                                      " the action once it is complete.";
             redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
-            BMCWEB_LOG_ERROR << "Staging is in progress.";
+            BMCWEB_LOG_ERROR("Staging is in progress.");
         }
         return;
     }
@@ -5645,7 +5571,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
         [req, asyncResp, uriTargets{*targets}](
             const boost::system::error_code ec,
             const crow::openbmc_mapper::GetSubTreeType& subtree) {
-        BMCWEB_LOG_DEBUG << "doGet callback...";
+        BMCWEB_LOG_DEBUG("doGet callback...");
         if (ec)
         {
             messages::resourceNotFound(asyncResp->res, "FirmwarePackages", "0");
@@ -5667,7 +5593,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
         }
         if (!found)
         {
-            BMCWEB_LOG_ERROR << "PackageInformation not found!";
+            BMCWEB_LOG_ERROR("PackageInformation not found!");
             messages::resourceNotFound(asyncResp->res, "FirmwarePackages", "0");
             return;
         }
@@ -5707,8 +5633,7 @@ inline void updateParametersForInitiateActionInfo(
                              const std::vector<std::string>& objPaths) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << " error_code = " << ec
-                             << " error msg =  " << ec.message();
+            BMCWEB_LOG_DEBUG(" error_code = {} error msg =  {}", ec, ec.message());
             // System can exist with no updateable firmware,
             // so don't throw error here.
             return;
@@ -5738,13 +5663,13 @@ inline void updateParametersForInitiateActionInfo(
             if (fwId.empty())
             {
                 messages::internalError(asyncResp->res);
-                BMCWEB_LOG_DEBUG << "Cannot parse firmware ID";
+                BMCWEB_LOG_DEBUG("Cannot parse firmware ID");
                 return;
             }
             if (std::find(objPaths.begin(), objPaths.end(), reqFwObjPath) !=
                 objPaths.end())
             {
-                BMCWEB_LOG_ERROR << "Alowable Value" << fwId;
+                BMCWEB_LOG_ERROR("Alowable Value{}", fwId);
                 allowableValues.push_back(
                     "/redfish/v1/UpdateService/FirmwareInventory/" + fwId);
             }
@@ -5789,7 +5714,7 @@ inline void handleUpdateServiceDeleteFirmwarePackage(
             std::string resolution = "Update is in progress. Retry"
                                      " the action once it is complete.";
             redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
-            BMCWEB_LOG_ERROR << "Update is in progress.";
+            BMCWEB_LOG_ERROR("Update is in progress.");
         }
         return;
     }
@@ -5801,7 +5726,7 @@ inline void handleUpdateServiceDeleteFirmwarePackage(
             std::string resolution = "Staging is in progress. Retry"
                                      " the action once it is complete.";
             redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
-            BMCWEB_LOG_ERROR << "Staging is in progress.";
+            BMCWEB_LOG_ERROR("Staging is in progress.");
         }
         return;
     }
@@ -5809,7 +5734,7 @@ inline void handleUpdateServiceDeleteFirmwarePackage(
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
                     const crow::openbmc_mapper::GetSubTreeType& subtree) {
-        BMCWEB_LOG_DEBUG << "doDelete callback...";
+        BMCWEB_LOG_DEBUG("doDelete callback...");
         if (ec)
         {
             messages::resourceNotFound(asyncResp->res, "FirmwarePackages", "0");
@@ -5840,11 +5765,10 @@ inline void handleUpdateServiceDeleteFirmwarePackage(
         if (found)
         {
             auto respHandler = [asyncResp](const boost::system::error_code ec) {
-                BMCWEB_LOG_DEBUG << "doDelete callback: Done";
+                BMCWEB_LOG_DEBUG("doDelete callback: Done");
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "doDelete respHandler got error "
-                                     << ec.message();
+                    BMCWEB_LOG_ERROR("doDelete respHandler got error {}", ec.message());
                     asyncResp->res.result(
                         boost::beast::http::status::internal_server_error);
                     return;
@@ -5859,7 +5783,7 @@ inline void handleUpdateServiceDeleteFirmwarePackage(
         }
         else
         {
-            BMCWEB_LOG_ERROR << "PackageInformation not found!";
+            BMCWEB_LOG_ERROR("PackageInformation not found!");
             messages::resourceNotFound(asyncResp->res, "FirmwarePackages", "0");
         }
     },
@@ -5890,7 +5814,7 @@ inline void resetEMMCEnvironmentVariable(
            [[maybe_unused]] const std::string& stdErr,
            [[maybe_unused]] const boost::system::error_code& ec,
            [[maybe_unused]] int errorCode) -> void {
-        BMCWEB_LOG_INFO << "Resetting PersistentStorage env";
+        BMCWEB_LOG_INFO("Resetting PersistentStorage env");
         return;
     };
     persistentStorageUtil.executeEnvCommand(req, asyncResp, setCommand,
@@ -5910,8 +5834,7 @@ inline void startEMMCPartitionService(
     std::string serviceUnit = "nvidia-emmc-partition.service";
     auto emmcServiceSignalCallback =
         [req, asyncResp, serviceUnit](sdbusplus::message_t& msg) mutable {
-        BMCWEB_LOG_DEBUG
-            << "Received signal for emmc partition service state change";
+        BMCWEB_LOG_DEBUG("Received signal for emmc partition service state change");
         uint32_t newStateID{};
         sdbusplus::message::object_path newStateObjPath;
         std::string newStateUnit{};
@@ -5929,9 +5852,7 @@ inline void startEMMCPartitionService(
                                      const std::variant<int32_t>& property) {
                     if (ec)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "DBUS response error getting service status: "
-                            << ec.message();
+                        BMCWEB_LOG_ERROR("DBUS response error getting service status: {}", ec.message());
                         redfish::messages::internalError(asyncResp->res);
                         emmcServiceSignalMatch = nullptr;
                         return;
@@ -5940,7 +5861,7 @@ inline void startEMMCPartitionService(
                         std::get_if<int32_t>(&property);
                     if (serviceStatus == nullptr)
                     {
-                        BMCWEB_LOG_ERROR << "Invalid service exit status code";
+                        BMCWEB_LOG_ERROR("Invalid service exit status code");
                         redfish::messages::internalError(asyncResp->res);
                         return;
                     }
@@ -5950,21 +5871,18 @@ inline void startEMMCPartitionService(
                         std::string resolution =
                             "PersistentStorage Enable operation is successful. "
                             "Reset the baseboard to activate the PersistentStorage";
-                        BMCWEB_LOG_INFO << "PersistentStorage enable success.";
+                        BMCWEB_LOG_INFO("PersistentStorage enable success.");
                         redfish::messages::success(asyncResp->res, resolution);
                         emmcServiceSignalMatch = nullptr;
                     }
                     else
                     {
-                        BMCWEB_LOG_ERROR << "EMMC Service failed with error: "
-                                         << *serviceStatus;
+                        BMCWEB_LOG_ERROR("EMMC Service failed with error: {}", *serviceStatus);
                         std::optional<ErrorMapping> errorMapping =
                             getEMMCErrorMessageFromExitCode(*serviceStatus);
                         if (errorMapping)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "PersistentStorage.Enable Error Message: "
-                                << (*errorMapping).first;
+                            BMCWEB_LOG_ERROR("PersistentStorage.Enable Error Message: {}", (*errorMapping).first);
                             redfish::messages::
                                 resourceErrorsDetectedFormatError(
                                     asyncResp->res, "PersistentStorage.Enable",
@@ -5995,9 +5913,9 @@ inline void startEMMCPartitionService(
         [asyncResp{asyncResp}](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Error while starting EMMC partition service";
-            BMCWEB_LOG_ERROR << "DBUS response error code = " << ec;
-            BMCWEB_LOG_ERROR << "DBUS response error msg = " << ec.message();
+            BMCWEB_LOG_ERROR("Error while starting EMMC partition service");
+            BMCWEB_LOG_ERROR("DBUS response error code = {}", ec);
+            BMCWEB_LOG_ERROR("DBUS response error msg = {}", ec.message());
             emmcServiceSignalMatch = nullptr;
             messages::internalError(asyncResp->res);
             return;
@@ -6026,7 +5944,7 @@ inline void enableEMMC(const crow::Request& req,
            [[maybe_unused]] const std::string& stdErr,
            [[maybe_unused]] const boost::system::error_code& ec,
            [[maybe_unused]] int errorCode) -> void {
-        BMCWEB_LOG_INFO << "PersistentStorage setting env is success";
+        BMCWEB_LOG_INFO("PersistentStorage setting env is success");
         startEMMCPartitionService(req, asyncResp);
         return;
     };
@@ -6083,7 +6001,7 @@ inline static void
     if (!json_util::readJsonPatch(req, asyncResp->res, "Enabled", enabled))
     {
 <<<<<<< HEAD
-        BMCWEB_LOG_ERROR << "PersistentStorage doPatch: Invalid request body";
+        BMCWEB_LOG_ERROR("PersistentStorage doPatch: Invalid request body");
         return;
 =======
         nlohmann::json& relatedItem = asyncResp->res.jsonValue["RelatedItem"];
@@ -6099,7 +6017,7 @@ inline static void
 <<<<<<< HEAD
         if (*enabled == false)
         {
-            BMCWEB_LOG_ERROR << "Disabling PersistentStorage is not allowed.";
+            BMCWEB_LOG_ERROR("Disabling PersistentStorage is not allowed.");
             messages::propertyValueIncorrect(
                 asyncResp->res, "PersistentStorage.Enable", "false");
         }
@@ -6116,13 +6034,12 @@ inline static void
                    [[maybe_unused]] int errorCode) -> void {
                 if (stdOut.find("emmc=enable") != std::string::npos)
                 {
-                    BMCWEB_LOG_ERROR << "PersistentStorage already enabled";
+                    BMCWEB_LOG_ERROR("PersistentStorage already enabled");
                     redfish::messages::noOperation(asyncResp->res);
                 }
                 else
                 {
-                    BMCWEB_LOG_INFO << "PersistentStorage is not enabled."
-                                    << " Enabling PersistentStorage";
+                    BMCWEB_LOG_INFO("PersistentStorage is not enabled. Enabling PersistentStorage");
                     enableEMMC(req, asyncResp);
                 }
                 return;
@@ -6173,8 +6090,7 @@ inline void
         if (!success)
 >>>>>>> origin/master-october-10
         {
-            BMCWEB_LOG_ERROR << "DBUS response error getting service status: "
-                             << ec.message();
+            BMCWEB_LOG_ERROR("DBUS response error getting service status: {}", ec.message());
             redfish::messages::internalError(asyncResp->res);
             return;
         }
@@ -6182,7 +6098,7 @@ inline void
         if (serviceStatus == nullptr)
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_ERROR << "Invalid service exit status code";
+            BMCWEB_LOG_ERROR("Invalid service exit status code");
             redfish::messages::internalError(asyncResp->res);
             return;
         }
@@ -6356,9 +6272,8 @@ inline void requestRoutesSplitUpdateService(App& app)
             if (ec)
             {
 <<<<<<< HEAD
-                BMCWEB_LOG_DEBUG << "DBUS response error code = " << ec;
-                BMCWEB_LOG_DEBUG << "DBUS response error msg = "
-                                 << ec.message();
+                BMCWEB_LOG_DEBUG("DBUS response error code = {}", ec);
+                BMCWEB_LOG_DEBUG("DBUS response error msg = {}", ec.message());
                 messages::internalError(asyncResp->res);
 =======
                 BMCWEB_LOG_WARNING("Input swID {} not found!", *swId);

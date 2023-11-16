@@ -125,8 +125,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                                 std::get_if<std::vector<std::string>>(&value);
                             if (endpoints == nullptr)
                             {
-                                BMCWEB_LOG_ERROR("Illegal association at {}",
-                                                 path.str);
+                                BMCWEB_LOG_ERROR("Illegal association at {}", path.str);
                                 continue;
                             }
                             bool containsChild = false;
@@ -937,24 +936,17 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
         ServiceQueryingResult nextMove = SERVICE_ERROR_STOP;
         if (ec)
         {
-            BMCWEB_LOG_WARNING
-                << "Failed to get manager service for object path '" << objPath
-                << "' implementing the interface '" << interface << "'";
+            BMCWEB_LOG_WARNING("Failed to get manager service for object path '{}' implementing the interface '{}'", objPath, interface);
             nextMove = SERVICE_ERROR_SKIP;
         }
         else if (result.size() == 0)
         {
-            BMCWEB_LOG_WARNING << "No managers found for object path '"
-                               << objPath << "' implementing the interface '"
-                               << interface << "'";
+            BMCWEB_LOG_WARNING("No managers found for object path '{}' implementing the interface '{}'", objPath, interface);
             nextMove = SERVICE_ERROR_SKIP;
         }
         else if (result.size() > 1)
         {
-            BMCWEB_LOG_ERROR << "Multiple managers found (" << result.size()
-                             << ") for object path '" << objPath
-                             << "' implementing the interface '"
-                             << interface << "'";
+            BMCWEB_LOG_ERROR("Multiple managers found ({}) for object path '{}' implementing the interface '{}'", result.size(), objPath, interface);
             nextMove = SERVICE_ERROR_STOP;
         }
         else
@@ -1102,9 +1094,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
             if (nextMove == SERVICE_OK_CONTINUE)
             {
                 auto manager = result.cbegin()->first;
-                BMCWEB_LOG_INFO << "Found manager service for object path '"
-                                << objPath << "' implementing the interface '"
-                                << interface << "': '" << manager << "'";
+                BMCWEB_LOG_INFO("Found manager service for object path '{}' implementing the interface '{}': '{}'", objPath, interface, manager);
                 if (self->state == ROOT_Q_HEALTH_SERVICE)
                 {
                     self->state = ROOT_Q_HEALTH;
@@ -1182,8 +1172,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                 if (!health_state::dbusNameMapHealthState.contains(
                         *dbusHealthState))
                 {
-                    BMCWEB_LOG_ERROR << "Unrecognized health value: '"
-                                     << *dbusHealthState << "'";
+                    BMCWEB_LOG_ERROR("Unrecognized health value: '{}'", *dbusHealthState);
                     nodeHealth = nullptr;
                 }
                 else
@@ -1191,8 +1180,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                     nodeHealth = health_state::dbusNameMapHealthState.at(
                         *dbusHealthState);
                     // TODO: debug
-                    BMCWEB_LOG_INFO << "Health of '" << objPath << "': '"
-                                    << nodeHealth->jsonHealthName << "'";
+                    BMCWEB_LOG_INFO("Health of '{}': '{}'", objPath, nodeHealth->jsonHealthName);
                 }
             }
         }
@@ -1376,7 +1364,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
 
     static void printErrno(const boost::system::error_code ec)
     {
-        BMCWEB_LOG_ERROR << "errno = " << ec << ", \"" << ec.message() << "\"";
+        BMCWEB_LOG_ERROR("errno = {}, \"{}\"", ec, ec.message());
     }
 
     static void printProperty(const std::string& service,
@@ -1384,9 +1372,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                               const std::string& interface,
                               const std::string& property)
     {
-        BMCWEB_LOG_ERROR << "'" << property << "' (service: '" << service
-                         << "', object: '" << object << "', interface: '"
-                         << interface << "')";
+        BMCWEB_LOG_ERROR("'{}' (service: '{}', object: '{}', interface: '{}')", property, service, object, interface);
     }
 
     static void getPropertyFailFeedback(const std::string& service,
@@ -1396,9 +1382,9 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                                         const boost::system::error_code ec)
 
     {
-        BMCWEB_LOG_ERROR << "Failed to get ";
+        BMCWEB_LOG_ERROR("Failed to get ");
         printProperty(service, object, interface, property);
-        BMCWEB_LOG_ERROR << ", ";
+        BMCWEB_LOG_ERROR(", ");
         printErrno(ec);
     }
 
@@ -1408,8 +1394,7 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                                             const std::string& property,
                                             const char* desiredType)
     {
-        BMCWEB_LOG_ERROR << "Invalid non-'" << desiredType
-                         << "' value of property ";
+        BMCWEB_LOG_ERROR("Invalid non-'{}' value of property ", desiredType);
         printProperty(service, object, interface, property);
     }
 };

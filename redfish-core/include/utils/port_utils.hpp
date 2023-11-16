@@ -14,7 +14,7 @@ namespace port_utils
     // validate width
     if ((width == INT_MAX) || (width == 0))
     {
-        BMCWEB_LOG_DEBUG << "Invalid width data";
+        BMCWEB_LOG_DEBUG("Invalid width data");
         return speedGen;
     }
 
@@ -204,7 +204,7 @@ inline std::string getPortType(const std::string& portType)
 inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& service, const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Port Data";
+    BMCWEB_LOG_DEBUG("Get Port Data");
     using PropertyType = std::variant<std::string, bool, uint8_t, uint16_t,
                                       double, size_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
@@ -230,8 +230,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for port type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for port type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -244,8 +243,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for TXWidth";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for TXWidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -257,8 +255,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for RXWidth";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for RXWidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -271,8 +268,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for protocol type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for protocol type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -285,8 +281,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for link status";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for link status");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -299,8 +294,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for link state";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for link state");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -311,8 +305,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for CurrentSpeed";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for CurrentSpeed");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -323,8 +316,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for MaxSpeed";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for MaxSpeed");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -336,8 +328,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for Width or ActiveWidth";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for Width or ActiveWidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -385,7 +376,7 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& service,
                            const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get CPU Port Data";
+    BMCWEB_LOG_DEBUG("Get CPU Port Data");
     using PropertyType = std::variant<std::string>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
 
@@ -408,8 +399,7 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for port type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for port type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -421,8 +411,7 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for protocol type";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for protocol type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -435,8 +424,7 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for link status";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for link status");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -460,8 +448,7 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for link state";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for link state");
                     messages::internalError(asyncResp->res);
                     return;
                 }

@@ -45,8 +45,7 @@ inline void
         // proceed to get enclosure_identify state.
         if (ec == boost::system::errc::invalid_argument)
         {
-            BMCWEB_LOG_DEBUG(
-                "Get identity blinking LED failed, missmatch in property type");
+            BMCWEB_LOG_DEBUG( "Get identity blinking LED failed, missmatch in property type");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -67,8 +66,7 @@ inline void
                         const bool ledOn) {
             if (ec2 == boost::system::errc::invalid_argument)
             {
-                BMCWEB_LOG_DEBUG(
-                    "Get enclosure identity led failed, missmatch in property type");
+                BMCWEB_LOG_DEBUG( "Get enclosure identity led failed, missmatch in property type");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -191,8 +189,7 @@ inline void getLocationIndicatorActive(
         // proceed to get enclosure_identify state.
         if (ec == boost::system::errc::invalid_argument)
         {
-            BMCWEB_LOG_DEBUG(
-                "Get identity blinking LED failed, missmatch in property type");
+            BMCWEB_LOG_DEBUG( "Get identity blinking LED failed, missmatch in property type");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -213,8 +210,7 @@ inline void getLocationIndicatorActive(
                         const bool ledOn) {
             if (ec2 == boost::system::errc::invalid_argument)
             {
-                BMCWEB_LOG_DEBUG(
-                    "Get enclosure identity led failed, missmatch in property type");
+                BMCWEB_LOG_DEBUG( "Get enclosure identity led failed, missmatch in property type");
                 messages::internalError(asyncResp->res);
                 return;
             }

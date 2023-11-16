@@ -1186,7 +1186,7 @@ void updateInProgressMsg(crow::Response& res, const std::string& resolution);
 nlohmann::json unsupportedMediaType();
 
 void unsupportedMediaType(crow::Response& res);
- * @brief Formats ArraySizeTooLong message into JSON
+/* * @brief Formats ArraySizeTooLong message into JSON
  * Message body: "Indicates that a string value passed to the given resource
  * exceeded its length limit."
  * @returns Message ArraySizeTooLong formatted to JSON */

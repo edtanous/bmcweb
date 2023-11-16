@@ -118,8 +118,7 @@ class App
 #ifdef BMCWEB_ENABLE_SSL
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
-<<<<<<< HEAD
-            BMCWEB_LOG_DEBUG << "TLS RUN";
+            BMCWEB_LOG_DEBUG("TLS RUN");
             if (-1 == socketFd)
             {
                 sslServer = std::make_unique<ssl_server_t>(
@@ -131,41 +130,22 @@ class App
                                                            sslContext, io);
             }
             sslServer->run();
-=======
-            sslServer = std::make_unique<ssl_server_t>(
-                this, bindaddrStr, portUint, sslContext, io);
         }
-        else
-        {
-            sslServer = std::make_unique<ssl_server_t>(this, socketFd,
-                                                       sslContext, io);
-        }
-        sslServer->run();
-
-#else
-
-        if (-1 == socketFd)
-        {
-            server = std::make_unique<server_t>(this, bindaddrStr, portUint,
-                                                nullptr, io);
->>>>>>> origin/master-october-10
-        }
-        else
 #endif
-        {
-            BMCWEB_LOG_DEBUG << "HTTP RUN";
-            if (-1 == socketFd)
-            {
-                server = std::move(std::make_unique<server_t>(
-                    this, bindaddrStr, portUint, nullptr, io));
-            }
-            else
-            {
-                server = std::move(
-                    std::make_unique<server_t>(this, socketFd, nullptr, io));
-            }
-            server->run();
-        }
+        // {
+        //     BMCWEB_LOG_DEBUG("HTTP RUN");
+        //     if (-1 == socketFd)
+        //     {
+        //         server = std::move(std::make_unique<server_t>(
+        //             this, bindaddrStr, portUint, nullptr, io));
+        //     }
+        //     else
+        //     {
+        //         server = std::move(
+        //             std::make_unique<server_t>(this, socketFd, nullptr, io));
+        //     }
+        //     server->run();
+        // }
     }
 
     void stop()
@@ -193,8 +173,7 @@ class App
     App& ssl(std::shared_ptr<boost::asio::ssl::context>&& ctx)
     {
         sslContext = std::move(ctx);
-        BMCWEB_LOG_INFO("app::ssl context use_count={}",
-                        sslContext.use_count());
+        BMCWEB_LOG_INFO("app::ssl context use_count={}", sslContext.use_count());
         return *this;
     }
 

@@ -6,7 +6,7 @@
 #include "dbus_singleton.hpp"
 #include "google/google_service_root.hpp"
 #include "hostname_monitor.hpp"
-#include "ibm/management_console_rest.hpp"
+//#include "ibm/management_console_rest.hpp"
 #include "image_upload.hpp"
 #include "kvm_websocket.hpp"
 #include "login_routes.hpp"
@@ -24,14 +24,13 @@
 #include <systemd/sd-daemon.h>
 
 #include <boost/asio/io_context.hpp>
-<<<<<<< HEAD
 #include <cors_preflight.hpp>
 #include <dbus_monitor.hpp>
 #include <dbus_singleton.hpp>
-#include <dump_offload.hpp>
+//#include <dump_offload.hpp>
 #include <google/google_service_root.hpp>
 #include <hostname_monitor.hpp>
-#include <ibm/management_console_rest.hpp>
+//#include <ibm/management_console_rest.hpp>
 #include <image_upload.hpp>
 #include <kvm_websocket.hpp>
 #include <login_routes.hpp>
@@ -48,11 +47,9 @@
 #include <vm_websocket.hpp>
 #include <webassets.hpp>
 #include <watchdog.hpp>
-=======
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
->>>>>>> origin/master-october-10
 
 #include <exception>
 #include <memory>
@@ -69,15 +66,12 @@ inline void setupSocket(crow::App& app)
         if (sd_is_socket_inet(SD_LISTEN_FDS_START, AF_UNSPEC, SOCK_STREAM, 1,
                               0) != 0)
         {
-            BMCWEB_LOG_INFO("Starting webserver on socket handle {}",
-                            SD_LISTEN_FDS_START);
+            BMCWEB_LOG_INFO("Starting webserver on socket handle {}", SD_LISTEN_FDS_START);
             app.socket(SD_LISTEN_FDS_START);
         }
         else
         {
-            BMCWEB_LOG_INFO(
-                "bad incoming socket, starting webserver on port {}",
-                defaultPort);
+            BMCWEB_LOG_INFO( "bad incoming socket, starting webserver on port {}", defaultPort);
             app.port(defaultPort);
         }
     }
@@ -90,12 +84,9 @@ inline void setupSocket(crow::App& app)
 
 static int run()
 {
-<<<<<<< HEAD
-    crow::Logger::setLogLevel(
-        static_cast<crow::LogLevel>(bmcwebLogLevel));
+    // crow::Logger::setLogLevel(
+    //     static_cast<crow::LogLevel>(bmcwebLogLevel));
 
-=======
->>>>>>> origin/master-october-10
     auto io = std::make_shared<boost::asio::io_context>();
     App app(io);
 
@@ -119,7 +110,7 @@ static int run()
     redfish::RedfishService redfish(app);
 
     // Create EventServiceManager instance and initialize Config
-    redfish::EventServiceManager::getInstance(&*io);
+    // redfish::EventServiceManager::getInstance(&*io);
 
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     // Create RedfishAggregator instance and initialize Config
@@ -173,21 +164,16 @@ static int run()
 #endif
 
 #ifdef BMCWEB_ENABLE_SSL
-<<<<<<< HEAD
     if (persistent_data::getConfig().isTLSAuthEnabled())
     {
-        BMCWEB_LOG_INFO << "Start Hostname Monitor Service...";
+        BMCWEB_LOG_INFO("Start Hostname Monitor Service...");
         crow::hostname_monitor::registerHostnameSignal();
     }
 #endif
 
-#ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
-    crow::obmc_dump::requestRoutes(app);
-=======
-    BMCWEB_LOG_INFO("Start Hostname Monitor Service...");
-    crow::hostname_monitor::registerHostnameSignal();
->>>>>>> origin/master-october-10
-#endif
+// #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
+//     crow::obmc_dump::requestRoutes(app);
+// #endif
 
     bmcweb::registerUserRemovedSignal();
 

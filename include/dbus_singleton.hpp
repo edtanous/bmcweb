@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/asio/io_context.hpp>
 #include <sdbusplus/asio/connection.hpp>
 
 namespace crow

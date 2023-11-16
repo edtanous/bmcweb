@@ -23,16 +23,14 @@ static void
                     const std::variant<bool>& nicStatus) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Get NICEnabled Status for the host interface.";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Get NICEnabled Status for the host interface.");
             messages::internalError(asyncResp->res);
             return;
         }
         const bool* nicEnabled = std::get_if<bool>(&nicStatus);
         if (nicEnabled == nullptr)
         {
-            BMCWEB_LOG_DEBUG
-                << "Error reading NICEnabled Status for the host interface.";
+            BMCWEB_LOG_DEBUG("Error reading NICEnabled Status for the host interface.");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -48,7 +46,7 @@ static void
                      const std::vector<std::string>& resp) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                 return;
             }
             health->inventory = resp;
@@ -83,8 +81,7 @@ static void
                     const GetObjectType& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_ERROR << "GetObject for path "
-                             << redfish::bios::biosConfigObj;
+            BMCWEB_LOG_ERROR("GetObject for path {}", redfish::bios::biosConfigObj);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -99,7 +96,7 @@ static void
                                  bool>>>& propertiesList) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Can't get BIOSConfig Manager!";
+                BMCWEB_LOG_ERROR("Can't get BIOSConfig Manager!");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -120,7 +117,7 @@ static void
                     const bool* value = std::get_if<bool>(&property.second);
                     if (value == nullptr)
                     {
-                        BMCWEB_LOG_ERROR << "Can't get 'CredentialBootstrap'!";
+                        BMCWEB_LOG_ERROR("Can't get 'CredentialBootstrap'!");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -132,7 +129,7 @@ static void
                     const bool* value = std::get_if<bool>(&property.second);
                     if (value == nullptr)
                     {
-                        BMCWEB_LOG_ERROR << "Can't get 'EnableAfterReset'!";
+                        BMCWEB_LOG_ERROR("Can't get 'EnableAfterReset'!");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -160,8 +157,7 @@ static void
                                     const GetObjectType& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_ERROR << "GetObject for path "
-                             << redfish::bios::biosConfigObj;
+            BMCWEB_LOG_ERROR("GetObject for path {}", redfish::bios::biosConfigObj);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -172,7 +168,7 @@ static void
             [asyncResp](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -197,7 +193,7 @@ static void
         [asyncResp](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -334,7 +330,7 @@ inline void requestHostInterfacesRoutes(App& app)
                 req, asyncResp->res, "InterfaceEnabled", interfaceEnabled,
                 "CredentialBootstrapping", credentialBootstrap))
         {
-            BMCWEB_LOG_ERROR << "Bad request for PATCH HostInterface";
+            BMCWEB_LOG_ERROR("Bad request for PATCH HostInterface");
             asyncResp->res.result(boost::beast::http::status::bad_request);
             return;
         }
@@ -353,7 +349,7 @@ inline void requestHostInterfacesRoutes(App& app)
                                      "EnableAfterReset", enableAfterReset,
                                      "Enabled", enabled))
             {
-                BMCWEB_LOG_ERROR << "Invalid CredentialBootstrapping object";
+                BMCWEB_LOG_ERROR("Invalid CredentialBootstrapping object");
                 asyncResp->res.result(boost::beast::http::status::bad_request);
                 return;
             }

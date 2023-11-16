@@ -19,7 +19,7 @@
 #include "query.hpp"
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
-#include "registries/openbmc_message_registry.hpp"
+//#include "registries/openbmc_message_registry.hpp"
 #include "registries/privilege_registry.hpp"
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
@@ -47,7 +47,6 @@ inline void handleMessageRegistryFileCollectionGet(
     asyncResp->res.jsonValue["Name"] = "MessageRegistryFile Collection";
     asyncResp->res.jsonValue["Description"] =
         "Collection of MessageRegistryFiles";
-<<<<<<< HEAD
     asyncResp->res.jsonValue["Members"] = {
         {{"@odata.id", "/redfish/v1/Registries/Base"}},
         {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
@@ -59,19 +58,6 @@ inline void handleMessageRegistryFileCollectionGet(
     };
     asyncResp->res.jsonValue["Members@odata.count"] =
         asyncResp->res.jsonValue["Members"].size();
-=======
-    asyncResp->res.jsonValue["Members@odata.count"] = 4;
-
-    nlohmann::json& members = asyncResp->res.jsonValue["Members"];
-    for (const char* memberName :
-         std::to_array({"Base", "TaskEvent", "ResourceEvent", "OpenBMC"}))
-    {
-        nlohmann::json::object_t member;
-        member["@odata.id"] = boost::urls::format("/redfish/v1/Registries/{}",
-                                                  memberName);
-        members.emplace_back(std::move(member));
-    }
->>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesMessageRegistryFileCollection(App& app)
@@ -135,13 +121,8 @@ inline void handleMessageRoutesMessageRegistryFileGet(
         return;
     }
 
-<<<<<<< HEAD
-    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Registries/" +
-                                            registry;
-=======
     asyncResp->res.jsonValue["@odata.id"] =
         boost::urls::format("/redfish/v1/Registries/{}", registry);
->>>>>>> origin/master-october-10
     asyncResp->res.jsonValue["@odata.type"] =
         "#MessageRegistryFile.v1_1_0.MessageRegistryFile";
     asyncResp->res.jsonValue["Name"] = registry + " Message Registry File";
@@ -149,15 +130,6 @@ inline void handleMessageRoutesMessageRegistryFileGet(
                                               " Message Registry File Location";
     asyncResp->res.jsonValue["Id"] = header->registryPrefix;
     asyncResp->res.jsonValue["Registry"] = header->id;
-<<<<<<< HEAD
-    asyncResp->res.jsonValue["Languages"] = {"en"};
-    asyncResp->res.jsonValue["Languages@odata.count"] = 1;
-    asyncResp->res.jsonValue["Location"] = {
-        {{"Language", "en"},
-         {"Uri", "/redfish/v1/Registries/" + registry + "/" + registry}}};
-
-    asyncResp->res.jsonValue["Location@odata.count"] = 1;
-=======
     nlohmann::json::array_t languages;
     languages.emplace_back("en");
     asyncResp->res.jsonValue["Languages@odata.count"] = languages.size();
@@ -166,7 +138,6 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     nlohmann::json::object_t location;
     location["Language"] = "en";
     location["Uri"] = "/redfish/v1/Registries/" + registry + "/" + registry;
->>>>>>> origin/master-october-10
 
     if (url != nullptr)
     {

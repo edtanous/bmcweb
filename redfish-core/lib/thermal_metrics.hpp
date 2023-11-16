@@ -33,8 +33,7 @@ inline void processSensorsValue(
         if (sensorElem == std::end(managedObjectsResp))
         {
             // Sensor not found continue
-            BMCWEB_LOG_DEBUG << "Sensor not found sensorPath" << sensorPath
-                             << "\n";
+            BMCWEB_LOG_DEBUG("Sensor not found sensorPath{}", sensorPath);
             continue;
         }
         std::vector<std::string> split;
@@ -44,20 +43,18 @@ inline void processSensorsValue(
         boost::algorithm::split(split, sensorPath, boost::is_any_of("/"));
         if (split.size() < 6)
         {
-            BMCWEB_LOG_ERROR << "Got path that isn't long enough "
-                             << sensorPath;
+            BMCWEB_LOG_ERROR("Got path that isn't long enough {}", sensorPath);
             continue;
         }
         // These indexes aren't intuitive, as boost::split puts an empty
         // string at the beginning
         const std::string& sensorType = split[4];
         const std::string& sensorName = split[5];
-        BMCWEB_LOG_DEBUG << "sensorName " << sensorName << " sensorType "
-                         << sensorType;
+        BMCWEB_LOG_DEBUG("sensorName {} sensorType {}", sensorName, sensorType);
 
         if ((metricsType == "thermal") && (sensorType != "temperature"))
         {
-            BMCWEB_LOG_DEBUG << "Skip non thermal sensor type:" << sensorType;
+            BMCWEB_LOG_DEBUG("Skip non thermal sensor type:{}", sensorType);
             continue;
         }
 
@@ -149,7 +146,7 @@ inline void processSensorsValue(
                     nlohmann::json thisMetric = nlohmann::json::object();
                     thisMetric["MetricProperty"] = sensorUri;
                     thisMetric["MetricValue"] = std::to_string(reading);
-                    BMCWEB_LOG_DEBUG << "Reading:" << reading;
+                    BMCWEB_LOG_DEBUG("Reading:{}", reading);
                     auto interfaceProperties = interfacesDict.find(
                         "xyz.openbmc_project.Time.EpochTime");
                     if (interfaceProperties != interfacesDict.end())
@@ -171,7 +168,7 @@ inline void processSensorsValue(
                             }
                             else
                             {
-                                BMCWEB_LOG_DEBUG << "Unable to read Elapsed";
+                                BMCWEB_LOG_DEBUG("Unable to read Elapsed");
                                 thisMetric["Timestamp"] = "nan";
                             }
                             if (sensingInterval != 0)
@@ -192,9 +189,7 @@ inline void processSensorsValue(
                                 // difference between requestTimestamp and
                                 // lastUpdateTime stamp should be within
                                 // staleSensorUpperLimitms for fresh metric
-                                BMCWEB_LOG_DEBUG
-                                    << "Stalesensor upper limit is:"
-                                    << staleSensorUpperLimitms;
+                                BMCWEB_LOG_DEBUG("Stalesensor upper limit is:{}", staleSensorUpperLimitms);
                                 if (requestTimestamp - *metricUpdatetimestamp <=
                                     staleSensorUpperLimitms)
                                 {
@@ -257,18 +252,14 @@ inline void processChassisSensors(
                                   variantEndpoints) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "getAllChassisSensors DBUS error on chassis path"
-                        << objectPath << ": " << ec;
+                    BMCWEB_LOG_DEBUG("getAllChassisSensors DBUS error on chassis path{}: {}", objectPath, ec);
                     return;
                 }
                 const std::vector<std::string>* sensorPaths =
                     std::get_if<std::vector<std::string>>(&(variantEndpoints));
                 if (sensorPaths == nullptr)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "getAllChassisSensors empty sensors list"
-                        << "\n";
+                    BMCWEB_LOG_ERROR("getAllChassisSensors empty sensors list");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -302,9 +293,7 @@ inline void getServiceRootManagedObjects(
                       ManagedObjectsVectorType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "getServiceRootManagedObjects for connection:" << connection
-                << " error: " << ec;
+            BMCWEB_LOG_ERROR("getServiceRootManagedObjects for connection:{} error: {}", connection, ec);
             return;
         }
         std::sort(resp.begin(), resp.end());
@@ -327,9 +316,7 @@ inline void getServiceManagedObjects(
                       ManagedObjectsVectorType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG
-                << "GetManagedObjects is not at sensor path for connection:"
-                << connection << "\n";
+            BMCWEB_LOG_DEBUG("GetManagedObjects is not at sensor path for connection:{}", connection);
             // Check managed objects on service root
             getServiceRootManagedObjects(asyncResp, connection, chassisPath,
                                          metricsType, sensingInterval,
@@ -360,15 +347,13 @@ inline void processSensorServices(
                                        const GetSubTreeType& subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "processSensorServices: Error in getting DBUS sensors: "
-                << ec;
+            BMCWEB_LOG_ERROR("processSensorServices: Error in getting DBUS sensors: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
         if (subtree.empty())
         {
-            BMCWEB_LOG_ERROR << "processSensorServices: Empty sensors subtree";
+            BMCWEB_LOG_ERROR("processSensorServices: Empty sensors subtree");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -379,8 +364,7 @@ inline void processSensorServices(
         {
             if (serviceMap.size() < 1)
             {
-                BMCWEB_LOG_DEBUG << "Got 0 service names for sensorpath:"
-                                 << objectPath;
+                BMCWEB_LOG_DEBUG("Got 0 service names for sensorpath:{}", objectPath);
                 continue;
             }
             sensorServices.insert(serviceMap[0].first);
@@ -419,8 +403,7 @@ inline void requestRoutesThermalMetrics(App& app)
                                const std::vector<std::string>& chassisPaths) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "thermal metrics respHandler DBUS error: "
-                                 << ec;
+                BMCWEB_LOG_ERROR("thermal metrics respHandler DBUS error: {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -431,8 +414,7 @@ inline void requestRoutesThermalMetrics(App& app)
                 const std::string& chassisName = path.filename();
                 if (chassisName.empty())
                 {
-                    BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassisPath
-                                     << "\n";
+                    BMCWEB_LOG_ERROR("Failed to find '/' in {}", chassisPath);
                     continue;
                 }
                 if (chassisName != chassisId)

@@ -88,7 +88,7 @@ class DotCommandHandler
     void subprocessExitCallback(int exitCode, const std::error_code& ec)
     {
         const std::string desc = "mctp-vdm-util execution exit callback";
-        BMCWEB_LOG_DEBUG << desc;
+        BMCWEB_LOG_DEBUG("{}", desc);
         if (ec)
         {
             errCallback(desc, ec.message());
@@ -104,12 +104,12 @@ class DotCommandHandler
                 if (line.rfind("RX: ", 0) == 0)
                 {
                     rxLine = line.substr(4);
-                    BMCWEB_LOG_DEBUG << " RX: " << rxLine;
+                    BMCWEB_LOG_DEBUG(" RX: {}", rxLine);
                 }
                 if (line.rfind("TX: ", 0) == 0)
                 {
                     txLine = line.substr(4);
-                    BMCWEB_LOG_DEBUG << " TX: " << txLine;
+                    BMCWEB_LOG_DEBUG(" TX: {}", txLine);
                 }
                 if (!rxLine.empty() && !txLine.empty())
                 {
@@ -135,7 +135,7 @@ class DotCommandHandler
                     const std::vector<uint8_t>& data, const int timeout)
     {
         const std::string desc = "mctp-vdm-util execution";
-        BMCWEB_LOG_DEBUG << desc;
+        BMCWEB_LOG_DEBUG("{}", desc);
         subprocessTimer = std::make_unique<boost::asio::steady_timer>(
             crow::connections::systemBus->get_io_context());
         subprocessTimer->expires_after(std::chrono::seconds(timeout));
@@ -160,8 +160,7 @@ class DotCommandHandler
                << std::setfill('0') << static_cast<int>(byte);
             args.emplace_back(ss.str());
         }
-        BMCWEB_LOG_DEBUG << "mctp-vdm-util "
-                         << boost::algorithm::join(args, " ");
+        BMCWEB_LOG_DEBUG("mctp-vdm-util {}", boost::algorithm::join(args, " "));
         try
         {
             size_t hexDataSize = data.size() * 3; // hex representation + space

@@ -23,6 +23,15 @@ struct RuleParameterTraits
         return *p;
     }
 
+    // StreamingResponseRule& streamingResponse()
+    // {
+    //     BMCWEB_LOG_DEBUG("Invoking stream response rule");
+    //     self_t* self = static_cast<self_t*>(this);
+    //     StreamingResponseRule* p = new StreamingResponseRule(self->rule);
+    //     self->ruleToUpgrade.reset(p);
+    //     return *p;
+    // }
+
     SseSocketRule& serverSentEvent()
     {
         self_t* self = static_cast<self_t*>(this);

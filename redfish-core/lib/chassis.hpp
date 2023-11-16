@@ -71,7 +71,7 @@ inline void
     getChassisLinksContains(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get underneath chassis links";
+    BMCWEB_LOG_DEBUG("Get underneath chassis links");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
@@ -116,7 +116,7 @@ inline void
     getChassisProcessorLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get underneath processor links";
+    BMCWEB_LOG_DEBUG("Get underneath processor links");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
@@ -163,7 +163,7 @@ inline void
 inline void getChassisFabricSwitchesLinks(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get fabric switches links";
+    BMCWEB_LOG_DEBUG("Get fabric switches links");
     crow::connections::systemBus->async_method_call(
         [aResp, objPath](const boost::system::error_code ec2,
                          std::variant<std::vector<std::string>>& resp) {
@@ -244,7 +244,7 @@ inline void
                                  const std::string& objPath)
 
 {
-    BMCWEB_LOG_DEBUG << "Get chassis OEM info";
+    BMCWEB_LOG_DEBUG("Get chassis OEM info");
     dbus::utility::findAssociations(
         objPath + "/associated_fru",
         [aResp{std::move(aResp)}](
@@ -252,7 +252,7 @@ inline void
             std::variant<std::vector<std::string>>& assoc) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Cannot get association";
+            BMCWEB_LOG_DEBUG("Cannot get association");
             return;
         }
         std::vector<std::string>* data =
@@ -269,8 +269,7 @@ inline void
                           std::string, std::vector<std::string>>>& objects) {
             if (ec || objects.size() <= 0)
             {
-                BMCWEB_LOG_DEBUG << "Null value returned "
-                                    "for serial number";
+                BMCWEB_LOG_DEBUG("Null value returned " "for serial number");
                 messages::internalError(aResp->res);
                 return;
             }
@@ -295,8 +294,7 @@ inline void
                             std::get_if<std::string>(&property.second);
                         if (value == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG << "Null value returned "
-                                                "Part number";
+                            BMCWEB_LOG_DEBUG("Null value returned " "Part number");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -309,8 +307,7 @@ inline void
                             std::get_if<std::string>(&property.second);
                         if (value == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG << "Null value returned "
-                                                "for serial number";
+                            BMCWEB_LOG_DEBUG("Null value returned " "for serial number");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -341,7 +338,7 @@ inline void setOemBaseboardChassisAssert(
     std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& objPath,
     const std::string& prop, const std::string& value)
 {
-    BMCWEB_LOG_DEBUG << "Set chassis OEM info: \n";
+    BMCWEB_LOG_DEBUG("Set chassis OEM info: ");
     dbus::utility::findAssociations(
         objPath + "/associated_fru",
         [aResp{std::move(aResp)}, prop,
@@ -376,14 +373,12 @@ inline void setOemBaseboardChassisAssert(
                     [aResp](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG
-                            << "DBUS response error: Set CHASSIS_PART_NUMBER"
-                            << ec;
+                        BMCWEB_LOG_DEBUG("DBUS response error: Set CHASSIS_PART_NUMBER{}", ec);
                         messages::internalError(aResp->res);
                         return;
                     }
                     messages::success(aResp->res);
-                    BMCWEB_LOG_DEBUG << "Set CHASSIS_PART_NUMBER done.";
+                    BMCWEB_LOG_DEBUG("Set CHASSIS_PART_NUMBER done.");
                 },
                     fruObject, fruPath, "org.freedesktop.DBus.Properties",
                     "Set", "xyz.openbmc_project.FruDevice",
@@ -396,14 +391,12 @@ inline void setOemBaseboardChassisAssert(
                     [aResp](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG
-                            << "DBUS response error: Set CHASSIS_SERIAL_NUMBER"
-                            << ec;
+                        BMCWEB_LOG_DEBUG("DBUS response error: Set CHASSIS_SERIAL_NUMBER{}", ec);
                         messages::internalError(aResp->res);
                         return;
                     }
                     messages::success(aResp->res);
-                    BMCWEB_LOG_DEBUG << "Set CHASSIS_SERIAL_NUMBER done.";
+                    BMCWEB_LOG_DEBUG("Set CHASSIS_SERIAL_NUMBER done.");
                 },
                     fruObject, fruPath, "org.freedesktop.DBus.Properties",
                     "Set", "xyz.openbmc_project.FruDevice",
@@ -430,7 +423,7 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                       const std::string& service,
                                       const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Baseboard Hardware write protect info";
+    BMCWEB_LOG_DEBUG("Get Baseboard Hardware write protect info");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -439,8 +432,7 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Baseboard Hardware write protect info";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Baseboard Hardware write protect info");
             messages::internalError(aResp->res);
             return;
         }
@@ -452,8 +444,7 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for hardware write protected";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for hardware write protected");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -466,8 +457,7 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for hardware write protected control";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for hardware write protected control");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -493,7 +483,7 @@ inline void
                                        const std::string& service,
                                        const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Baseboard PCIeReference clock count";
+    BMCWEB_LOG_DEBUG("Get Baseboard PCIeReference clock count");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -502,8 +492,7 @@ inline void
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Baseboard PCIeReference clock count";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Baseboard PCIeReference clock count");
             messages::internalError(aResp->res);
             return;
         }
@@ -515,8 +504,7 @@ inline void
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for pcie refernce clock count";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for pcie refernce clock count");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -541,7 +529,7 @@ inline void getChassisPowerLimits(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                   const std::string& service,
                                   const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get chassis power limits";
+    BMCWEB_LOG_DEBUG("Get chassis power limits");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -549,8 +537,7 @@ inline void getChassisPowerLimits(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Chassis power limits";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Chassis power limits");
             messages::internalError(aResp->res);
             return;
         }
@@ -564,8 +551,7 @@ inline void getChassisPowerLimits(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for power limits";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for power limits");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -682,7 +668,7 @@ inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                  const std::string& service,
                                  const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get chassis dimensions";
+    BMCWEB_LOG_DEBUG("Get chassis dimensions");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -690,8 +676,7 @@ inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 std::string, dbus::utility::DbusVariantType>>& propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Chassis dimensions";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Chassis dimensions");
             messages::internalError(aResp->res);
             return;
         }
@@ -704,8 +689,7 @@ inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for Height";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for Height");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -716,8 +700,7 @@ inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for Width";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for Width");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -728,8 +711,7 @@ inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for Depth";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for Depth");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -854,7 +836,7 @@ inline void
                     const std::string& property) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for Location";
+            BMCWEB_LOG_DEBUG("DBUS response error for Location");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -890,8 +872,7 @@ inline void setStaticPowerHintByObjPath(
                         propertiesList) {
                 if (errorno)
                 {
-                    BMCWEB_LOG_ERROR << "Properties::GetAll failed:" << errorno
-                                     << "objPath:" << objPath;
+                    BMCWEB_LOG_ERROR("Properties::GetAll failed:{}objPath:{}", errorno, objPath);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -969,8 +950,7 @@ inline void setStaticPowerHintByObjPath(
                      objPath](const boost::system::error_code errorno) {
                     if (errorno)
                     {
-                        BMCWEB_LOG_ERROR << "StaticPowerHint::Estimate failed:"
-                                         << errorno;
+                        BMCWEB_LOG_ERROR("StaticPowerHint::Estimate failed:{}", errorno);
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -1040,8 +1020,7 @@ inline void getStaticPowerHintByObjPath(
                         propertiesList) {
                 if (errorno)
                 {
-                    BMCWEB_LOG_ERROR << "Properties::GetAll failed:" << errorno
-                                     << "objPath:" << objPath;
+                    BMCWEB_LOG_ERROR("Properties::GetAll failed:{}objPath:{}", errorno, objPath);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1385,8 +1364,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for Height";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for Height");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1397,8 +1375,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for Width";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for Width");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1409,8 +1386,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for Depth";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for Depth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1421,8 +1397,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for MinPowerWatts";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for MinPowerWatts");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1433,8 +1408,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for MaxPowerWatts";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for MaxPowerWatts");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1460,8 +1434,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for hardware write protected";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for hardware write protected");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1473,8 +1446,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for hardware write protected control";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for hardware write protected control");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1487,8 +1459,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for pcie refernce clock count";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for pcie refernce clock count");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1502,8 +1473,7 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for powerstate";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for powerstate");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1596,8 +1566,7 @@ inline void getChassisContainedBy(
     std::string upstreamChassis = upstreamChassisPath.filename();
     if (upstreamChassis.empty())
     {
-        BMCWEB_LOG_WARNING("Malformed upstream Chassis path {} on {}",
-                           upstreamChassisPath.str, chassisId);
+        BMCWEB_LOG_WARNING("Malformed upstream Chassis path {} on {}", upstreamChassisPath.str, chassisId);
         return;
     }
 
@@ -1635,8 +1604,7 @@ inline void getChassisContains(
         std::string downstreamChassis = downstreamChassisPath.filename();
         if (downstreamChassis.empty())
         {
-            BMCWEB_LOG_WARNING("Malformed downstream Chassis path {} on {}",
-                               downstreamChassisPath.str, chassisId);
+            BMCWEB_LOG_WARNING("Malformed downstream Chassis path {} on {}", downstreamChassisPath.str, chassisId);
             continue;
         }
         nlohmann::json link;
@@ -1750,7 +1718,7 @@ inline void
 
     const std::array<const char*, 1> networkInterfaces = {
         "xyz.openbmc_project.Inventory.Item.NetworkInterface"};
-    BMCWEB_LOG_ERROR << "test networkInterface:" + objPath;
+    BMCWEB_LOG_ERROR("{}", "test networkInterface:" + objPath);
 =======
     constexpr std::array<std::string_view, 2> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Board",
@@ -1796,7 +1764,7 @@ inline void
         chassisId, [req, asyncResp, chassisId](bool isEROT) {
         if (isEROT)
         {
-            BMCWEB_LOG_DEBUG << " EROT chassis";
+            BMCWEB_LOG_DEBUG(" EROT chassis");
             getEROTChassis(req, asyncResp, chassisId);
         }
         else
@@ -1917,8 +1885,7 @@ inline void
                                     const std::string& property) {
                         if (ec2)
                         {
-                            BMCWEB_LOG_ERROR(
-                                "DBus response error for AssetTag: {}", ec2);
+                            BMCWEB_LOG_ERROR( "DBus response error for AssetTag: {}", ec2);
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -1935,9 +1902,7 @@ inline void
                                     const bool property) {
                         if (ec2)
                         {
-                            BMCWEB_LOG_ERROR(
-                                "DBus response error for HotPluggable: {}",
-                                ec2);
+                            BMCWEB_LOG_ERROR( "DBus response error for HotPluggable: {}", ec2);
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -2379,7 +2344,7 @@ inline void
                                           [req, asyncResp, param](bool isEROT) {
         if (isEROT)
         {
-            BMCWEB_LOG_DEBUG << " EROT chassis";
+            BMCWEB_LOG_DEBUG(" EROT chassis");
             handleEROTChassisPatch(req, asyncResp, param);
         }
         else
@@ -2431,8 +2396,7 @@ inline void handleChassisPowerCycleError(const boost::system::error_code& ec,
         return;
     }
 
-    BMCWEB_LOG_ERROR("Chassis Power Cycle fail {} sdbusplus:{}", ec,
-                     errorMessage);
+    BMCWEB_LOG_ERROR("Chassis Power Cycle fail {} sdbusplus:{}", ec, errorMessage);
     messages::internalError(res);
 }
 
@@ -2479,7 +2443,7 @@ inline void
             // value.
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "[Set] Bad D-Bus request error: " << ec;
+                BMCWEB_LOG_DEBUG("[Set] Bad D-Bus request error: {}", ec);
                 messages::internalError(asyncResp->res);
 =======
 
@@ -2531,7 +2495,7 @@ inline void powerCycle(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
                                     const std::variant<std::string>& state) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "[mapper] Bad D-Bus request error: " << ec;
+                BMCWEB_LOG_DEBUG("[mapper] Bad D-Bus request error: {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -2545,8 +2509,7 @@ inline void powerCycle(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
                     // Use "Set" method to set the property value.
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "[Set] Bad D-Bus request error: "
-                                         << ec;
+                        BMCWEB_LOG_DEBUG("[Set] Bad D-Bus request error: {}", ec);
                         messages::internalError(asyncResp->res);
                         return;
                     }

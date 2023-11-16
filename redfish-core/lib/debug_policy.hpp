@@ -128,10 +128,10 @@ inline void
             {
                 // Service not available, no error, just don't return
                 // chassis state info
-                BMCWEB_LOG_ERROR << "Service not available " << ec;
+                BMCWEB_LOG_ERROR("Service not available {}", ec);
                 return;
             }
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -165,7 +165,7 @@ inline void
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -224,13 +224,12 @@ inline void debugPropertySet(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
          value](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: Set " << prop << " "
-                             << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", prop, ec);
             messages::internalError(aResp->res);
             return;
         }
         messages::success(aResp->res, prop);
-        BMCWEB_LOG_ERROR << "Set " << prop << " done.";
+        BMCWEB_LOG_ERROR("Set {} done.", prop);
     },
         svc, path, "xyz.openbmc_project.Control.Processor.RemoteDebug",
         value ? "Enable" : "Disable",
@@ -247,13 +246,12 @@ inline void debugPropertySet(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
          value](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: Set " << prop << " "
-                             << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", prop, ec);
             messages::internalError(aResp->res);
             return;
         }
         messages::success(aResp->res, prop);
-        BMCWEB_LOG_ERROR << "Set " << prop << " done.";
+        BMCWEB_LOG_ERROR("Set {} done.", prop);
     },
         svc, path, "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Processor.RemoteDebug", prop,
@@ -295,7 +293,7 @@ inline bool fetchDebugTimeoutPropertyFromJson(nlohmann::json& json,
     }
     if (!json[key].is_number_unsigned())
     {
-        BMCWEB_LOG_ERROR << "Key Timeout is not a number";
+        BMCWEB_LOG_ERROR("Key Timeout is not a number");
         return false;
     }
     val = json[key].get<unsigned>();
@@ -312,20 +310,20 @@ inline void handleDebugPolicyPatchReq(
 
     if (!fetchDebugPropertyFromJson(procCap, "JtagDebug", jtagDebug))
     {
-        BMCWEB_LOG_ERROR << "JtagDebug property error";
+        BMCWEB_LOG_ERROR("JtagDebug property error");
         messages::propertyUnknown(asyncResp->res, "JtagDebug");
         return;
     }
     if (!fetchDebugPropertyFromJson(procCap, "DeviceDebug", deviceDebug))
     {
-        BMCWEB_LOG_ERROR << "DeviceDebug property error";
+        BMCWEB_LOG_ERROR("DeviceDebug property error");
         messages::propertyUnknown(asyncResp->res, "DeviceDebug");
         return;
     }
     if (!fetchDebugPropertyFromJson(procCap, "SecurePrivilegeNonInvasiveDebug",
                                     securePrivilegeNonInvasiveDebug))
     {
-        BMCWEB_LOG_ERROR << "SecurePrivilegeNonInvasiveDebug property error";
+        BMCWEB_LOG_ERROR("SecurePrivilegeNonInvasiveDebug property error");
         messages::propertyUnknown(asyncResp->res,
                                   "SecurePrivilegeNonInvasiveDebug");
         return;
@@ -333,7 +331,7 @@ inline void handleDebugPolicyPatchReq(
     if (!fetchDebugPropertyFromJson(procCap, "SecurePrivilegeInvasiveDebug",
                                     securePrivilegeInvasiveDebug))
     {
-        BMCWEB_LOG_ERROR << "SecurePrivilegeInvasiveDebug property error";
+        BMCWEB_LOG_ERROR("SecurePrivilegeInvasiveDebug property error");
         messages::propertyUnknown(asyncResp->res,
                                   "SecurePrivilegeInvasiveDebug");
         return;
@@ -341,19 +339,19 @@ inline void handleDebugPolicyPatchReq(
     if (!fetchDebugPropertyFromJson(procCap, "NonInvasiveDebug",
                                     nonInvasiveDebug))
     {
-        BMCWEB_LOG_ERROR << "NonInvasiveDebug property error";
+        BMCWEB_LOG_ERROR("NonInvasiveDebug property error");
         messages::propertyUnknown(asyncResp->res, "NonInvasiveDebug");
         return;
     }
     if (!fetchDebugPropertyFromJson(procCap, "InvasiveDebug", invasiveDebug))
     {
-        BMCWEB_LOG_ERROR << "InvasiveDebug property error";
+        BMCWEB_LOG_ERROR("InvasiveDebug property error");
         messages::propertyUnknown(asyncResp->res, "InvasiveDebug");
         return;
     }
     if (!fetchDebugTimeoutPropertyFromJson(procCap, timeout))
     {
-        BMCWEB_LOG_ERROR << "Timeout property error";
+        BMCWEB_LOG_ERROR("Timeout property error");
         messages::propertyUnknown(asyncResp->res, "Timeout");
         return;
     }

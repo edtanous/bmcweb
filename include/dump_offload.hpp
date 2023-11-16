@@ -63,13 +63,11 @@ class Handler : public std::enable_shared_from_this<Handler>
                 if (ec == boost::system::errc::no_such_file_or_directory ||
                     ec == boost::system::errc::connection_refused)
                 {
-                    BMCWEB_LOG_DEBUG << "UNIX Socket: async_connect "
-                                     << ec.message() << ec;
+                    BMCWEB_LOG_DEBUG("UNIX Socket: async_connect {}{}", ec.message(), ec);
                     retrySocketConnect();
                     return;
                 }
-                BMCWEB_LOG_ERROR << "UNIX Socket: async_connect error "
-                                 << ec.message() << ec;
+                BMCWEB_LOG_ERROR("UNIX Socket: async_connect error {}{}", ec.message(), ec);
                 waitTimer.cancel();
                 this->connection->sendStreamErrorStatus(
                     boost::beast::http::status::internal_server_error);
@@ -96,7 +94,7 @@ class Handler : public std::enable_shared_from_this<Handler>
              self(shared_from_this())](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
                 this->connection->sendStreamErrorStatus(
                     boost::beast::http::status::internal_server_error);
                 this->connection->close();
@@ -122,23 +120,19 @@ class Handler : public std::enable_shared_from_this<Handler>
                                  const boost::system::error_code& ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Async_wait failed " << ec;
+                BMCWEB_LOG_ERROR("Async_wait failed {}", ec);
                 return;
             }
 
             if (connectRetryCount < maxConnectRetryCount)
             {
-                BMCWEB_LOG_DEBUG
-                    << "Calling doConnect() by checking retry count: "
-                    << connectRetryCount;
+                BMCWEB_LOG_DEBUG("Calling doConnect() by checking retry count: {}", connectRetryCount);
                 connectRetryCount++;
                 doConnect();
             }
             else
             {
-                BMCWEB_LOG_ERROR
-                    << "Failed to connect, reached max retry count: "
-                    << connectRetryCount;
+                BMCWEB_LOG_ERROR("Failed to connect, reached max retry count: {}", connectRetryCount);
                 waitTimer.cancel();
                 this->connection->sendStreamErrorStatus(
                     boost::beast::http::status::internal_server_error);
@@ -156,9 +150,7 @@ class Handler : public std::enable_shared_from_this<Handler>
                                        const std::variant<uint64_t>& size) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR
-                    << "DBUS response error: Unable to get the dump size "
-                    << ec;
+                BMCWEB_LOG_ERROR("DBUS response error: Unable to get the dump size {}", ec);
                 this->connection->sendStreamErrorStatus(
                     boost::beast::http::status::internal_server_error);
                 this->connection->close();
@@ -192,11 +184,11 @@ class Handler : public std::enable_shared_from_this<Handler>
                 const boost::system::error_code& ec, std::size_t bytesRead) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Couldn't read from local peer: " << ec;
+                BMCWEB_LOG_ERROR("Couldn't read from local peer: {}", ec);
 
                 if (ec != boost::asio::error::eof)
                 {
-                    BMCWEB_LOG_ERROR << "Couldn't read from local peer: " << ec;
+                    BMCWEB_LOG_ERROR("Couldn't read from local peer: {}", ec);
                     this->connection->sendStreamErrorStatus(
                         boost::beast::http::status::internal_server_error);
                 }
@@ -253,7 +245,7 @@ inline void requestRoutes(App& app)
         auto handler = handlers.find(&conn);
         if (handler == handlers.end())
         {
-            BMCWEB_LOG_DEBUG << "No handler to cleanup";
+            BMCWEB_LOG_DEBUG("No handler to cleanup");
             return;
         }
         handler->second->outputBuffer.clear();
@@ -283,7 +275,7 @@ inline void requestRoutes(App& app)
         auto handler = handlers.find(&conn);
         if (handler == handlers.end())
         {
-            BMCWEB_LOG_DEBUG << "No handler to cleanup";
+            BMCWEB_LOG_DEBUG("No handler to cleanup");
             return;
         }
         handlers.erase(handler);
@@ -313,7 +305,7 @@ inline void requestRoutes(App& app)
         auto handler = handlers.find(&conn);
         if (handler == handlers.end())
         {
-            BMCWEB_LOG_DEBUG << "No handler to cleanup";
+            BMCWEB_LOG_DEBUG("No handler to cleanup");
             return;
         }
         handlers.erase(handler);

@@ -24,7 +24,7 @@ extern "C"
 #include <boost/asio/ssl/context.hpp>
 #include <logging.hpp>
 #include <lsp.hpp>
-#include <random.hpp>
+//#include <random.hpp>
 
 #include <optional>
 #include <random>
@@ -90,17 +90,14 @@ inline bool validateCertificate(X509* const cert)
         X509_STORE_free(x509Store);
         if (isTrustChainError(errCode))
         {
-            BMCWEB_LOG_DEBUG("Ignoring Trust Chain error. Reason: {}",
-                             X509_verify_cert_error_string(errCode));
+            BMCWEB_LOG_DEBUG("Ignoring Trust Chain error. Reason: {}", X509_verify_cert_error_string(errCode));
             return true;
         }
-        BMCWEB_LOG_ERROR("Certificate verification failed. Reason: {}",
-                         X509_verify_cert_error_string(errCode));
+        BMCWEB_LOG_ERROR("Certificate verification failed. Reason: {}", X509_verify_cert_error_string(errCode));
         return false;
     }
 
-    BMCWEB_LOG_ERROR(
-        "Error occurred during X509_verify_cert call. ErrorCode: {}", errCode);
+    BMCWEB_LOG_ERROR( "Error occurred during X509_verify_cert call. ErrorCode: {}", errCode);
     X509_STORE_CTX_free(storeCtx);
     X509_STORE_free(x509Store);
     return false;
@@ -210,24 +207,21 @@ inline X509* loadCert(const std::string& filePath)
     BIO* certFileBio = BIO_new_file(filePath.c_str(), "rb");
     if (certFileBio == nullptr)
     {
-        BMCWEB_LOG_ERROR("Error occured during BIO_new_file call, FILE= {}",
-                         filePath);
+        BMCWEB_LOG_ERROR("Error occured during BIO_new_file call, FILE= {}", filePath);
         return nullptr;
     }
 
     X509* cert = X509_new();
     if (cert == nullptr)
     {
-        BMCWEB_LOG_ERROR("Error occured during X509_new call, {}",
-                         ERR_get_error());
+        BMCWEB_LOG_ERROR("Error occured during X509_new call, {}", ERR_get_error());
         BIO_free(certFileBio);
         return nullptr;
     }
 
     if (PEM_read_bio_X509(certFileBio, &cert, nullptr, nullptr) == nullptr)
     {
-        BMCWEB_LOG_ERROR(
-            "Error occured during PEM_read_bio_X509 call, FILE= {}", filePath);
+        BMCWEB_LOG_ERROR( "Error occured during PEM_read_bio_X509 call, FILE= {}", filePath);
 
         BIO_free(certFileBio);
         X509_free(cert);
@@ -434,16 +428,14 @@ inline void encryptCredentials(const std::string& filename,
     auto fp = fopen(filename.c_str(), "r");
     if (fp == nullptr)
     {
-        BMCWEB_LOG_ERROR << "Cannot open filename for reading: " << filename
-                         << "\n";
+        BMCWEB_LOG_ERROR("Cannot open filename for reading: {}", filename);
         return;
     }
     auto pkey = PEM_read_PrivateKey(fp, nullptr, lsp::emptyPasswordCallback,
                                     nullptr);
     if (pkey == nullptr)
     {
-        BMCWEB_LOG_ERROR << "Could not read private key from file: " << filename
-                         << "\n";
+        BMCWEB_LOG_ERROR("Could not read private key from file: {}", filename);
         return;
     }
     fseek(fp, 0, SEEK_SET);
@@ -453,8 +445,7 @@ inline void encryptCredentials(const std::string& filename,
     fp = fopen(filename.c_str(), "w");
     if (fp == nullptr)
     {
-        BMCWEB_LOG_ERROR << "Cannot open filename for writing: " << filename
-                         << "\n";
+        BMCWEB_LOG_ERROR("Cannot open filename for writing: {}", filename);
         return;
     }
     PEM_write_PrivateKey(
@@ -466,12 +457,12 @@ inline void encryptCredentials(const std::string& filename,
         nullptr);
     if (x509 != nullptr)
     {
-        BMCWEB_LOG_INFO << "Writing x509 cert.\n";
+        BMCWEB_LOG_INFO("Writing x509 cert.");
         PEM_write_X509(fp, x509);
     }
     fclose(fp);
 
-    BMCWEB_LOG_INFO << "Encrypted " << filename << "\n";
+    BMCWEB_LOG_INFO("Encrypted {}", filename);
 
     EVP_PKEY_free(pkey);
     X509_free(x509);
@@ -485,27 +476,25 @@ inline void ensureOpensslKeyPresentEncryptedAndValid(
     auto ret = asn1::pemPkeyIsEncrypted(filepath.c_str(), &pkeyIsEncrypted);
     if (ret == -1)
     {
-        BMCWEB_LOG_INFO << "No private key file available.\n";
+        BMCWEB_LOG_INFO("No private key file available.");
     }
     else if (ret < -1)
     {
-        BMCWEB_LOG_ERROR
-            << "Error while determining if private key is encrypted.\n";
+        BMCWEB_LOG_ERROR("Error while determining if private key is encrypted.");
     }
     else if (!pkeyIsEncrypted)
     {
-        BMCWEB_LOG_INFO << "Encrypting private key in file: " << filepath
-                        << "\n";
+        BMCWEB_LOG_INFO("Encrypting private key in file: {}", filepath);
         encryptCredentials(filepath, pwd);
     }
     else if (pkeyIsEncrypted)
     {
-        BMCWEB_LOG_INFO << "TLS key is encrypted.\n";
+        BMCWEB_LOG_INFO("TLS key is encrypted.");
     }
 
     if (!verifyOpensslKeyCert(filepath, pwdCb))
     {
-        BMCWEB_LOG_ERROR << "Error in verifying signature, regenerating\n";
+        BMCWEB_LOG_ERROR("Error in verifying signature, regenerating");
         generateSslCertificate(filepath, "testhost", pwd);
     }
 }

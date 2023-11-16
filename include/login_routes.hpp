@@ -117,8 +117,7 @@ inline void handleLogin(const crow::Request& req,
         if (ec != ParserError::PARSER_SUCCESS)
         {
             // handle error
-            BMCWEB_LOG_ERROR("MIME parse failed, ec : {}",
-                             static_cast<int>(ec));
+            BMCWEB_LOG_ERROR("MIME parse failed, ec : {}", static_cast<int>(ec));
             asyncResp->res.result(boost::beast::http::status::bad_request);
             return;
         }
@@ -142,7 +141,7 @@ inline void handleLogin(const crow::Request& req,
             }
             else if (it->value() == "form-data; name=\"password\"")
             {
-                redfish::handleAccountLocked(username, asyncResp, req);
+                //redfish::handleAccountLocked(username, asyncResp, req);
             }
             else
             {

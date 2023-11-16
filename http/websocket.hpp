@@ -151,8 +151,7 @@ class ConnectionImpl : public Connection
     {
         if (doingWrite)
         {
-            BMCWEB_LOG_CRITICAL(
-                "Cannot mix sendEx usage with sendBinary or sendText");
+            BMCWEB_LOG_CRITICAL( "Cannot mix sendEx usage with sendBinary or sendText");
             onDone();
             return;
         }

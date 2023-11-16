@@ -60,8 +60,7 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 objInfo) {
         if (errorno)
         {
-            BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                             << errorno;
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", errorno);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -84,9 +83,7 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                 propertiesList) {
                         if (errorno)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "ObjectMapper::GetObject call failed:"
-                                << errorno;
+                            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed:{}", errorno);
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -188,7 +185,7 @@ inline void getTotalPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             // do not add err msg in redfish response, because this is not
             //     mandatory property
-            BMCWEB_LOG_DEBUG << "DBUS error: no matched iface " << ec << "\n";
+            BMCWEB_LOG_DEBUG("DBUS error: no matched iface {}", ec);
             return;
         }
         // Iterate over all retrieved ObjectPaths.
@@ -209,7 +206,7 @@ inline void getTotalPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
             if (connectionNames.size() < 1)
             {
-                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                BMCWEB_LOG_ERROR("Got 0 Connection names");
                 continue;
             }
             const std::string& serviceName = connectionNames[0].first;
@@ -221,7 +218,7 @@ inline void getTotalPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::variant<double>& totalPower) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "Get Sensor value failed: " << ec;
+                    BMCWEB_LOG_ERROR("Get Sensor value failed: {}", ec);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -242,15 +239,14 @@ inline void getTotalPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             std::variant<std::vector<std::string>>& resp) {
                 if (errCode)
                 {
-                    BMCWEB_LOG_DEBUG << "Get Related Items failed: " << errCode;
+                    BMCWEB_LOG_DEBUG("Get Related Items failed: {}", errCode);
                     return; // no gpus = no failures
                 }
                 std::vector<std::string>* data =
                     std::get_if<std::vector<std::string>>(&resp);
                 if (data == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Null value returned for Related Items ";
+                    BMCWEB_LOG_DEBUG("Null value returned for Related Items ");
                     return;
                 }
                 nlohmann::json& relatedItemsArray =
@@ -293,8 +289,7 @@ inline void
                 objInfo) {
         if (errorno)
         {
-            BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                             << errorno;
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", errorno);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -309,8 +304,7 @@ inline void
                         propertiesList) {
                 if (errorno)
                 {
-                    BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed:"
-                                     << errorno;
+                    BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed:{}", errorno);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -387,15 +381,14 @@ inline void
                             std::variant<std::vector<std::string>>& resp) {
                 if (errCode)
                 {
-                    BMCWEB_LOG_DEBUG << "Get Related Items failed: " << errCode;
+                    BMCWEB_LOG_DEBUG("Get Related Items failed: {}", errCode);
                     return;
                 }
                 std::vector<std::string>* data =
                     std::get_if<std::vector<std::string>>(&resp);
                 if (data == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Null value returned for Related Items ";
+                    BMCWEB_LOG_DEBUG("Null value returned for Related Items ");
                     return;
                 }
                 nlohmann::json& relatedItemsArray =
@@ -455,8 +448,7 @@ inline void getPowerReading(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         std::string, std::vector<std::string>>>& objInfo) {
                 if (ec2)
                 {
-                    BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                                     << ec2.what();
+                    BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", ec2.what());
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -471,9 +463,7 @@ inline void getPowerReading(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                 propertiesList) {
                         if (ec3)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "ObjectMapper::GetObject call failed:"
-                                << ec3.what();
+                            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed:{}", ec3.what());
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -520,8 +510,7 @@ inline void changepowercap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 objInfo) {
         if (errorno)
         {
-            BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                             << errorno;
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", errorno);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -533,7 +522,7 @@ inline void changepowercap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           sdbusplus::message::message& msg) {
                 if (!ec2)
                 {
-                    BMCWEB_LOG_DEBUG << "Set power limit property succeeded";
+                    BMCWEB_LOG_DEBUG("Set power limit property succeeded");
                     messages::success(asyncResp->res);
                     return;
                 }
@@ -611,8 +600,7 @@ inline void
                 objInfo) {
         if (errorno)
         {
-            BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                             << errorno;
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", errorno);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -624,8 +612,7 @@ inline void
                           sdbusplus::message::message& msg) {
                 if (!ec2)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Set power cap enable property succeeded";
+                    BMCWEB_LOG_DEBUG("Set power cap enable property succeeded");
                     messages::success(asyncResp->res);
                     return;
                 }
@@ -678,7 +665,7 @@ inline void requestRoutesChassisControlsCollection(App& app)
              chassisID](const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -709,7 +696,7 @@ inline void requestRoutesChassisControls(App& app)
              controlID](const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -726,8 +713,7 @@ inline void requestRoutesChassisControls(App& app)
                     std::variant<std::vector<std::string>>& resp) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                                     << ec;
+                    BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", ec);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -735,7 +721,7 @@ inline void requestRoutesChassisControls(App& app)
                     std::get_if<std::vector<std::string>>(&resp);
                 if (data == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "control id resource not found";
+                    BMCWEB_LOG_ERROR("control id resource not found");
                     messages::resourceNotFound(asyncResp->res, "ControlID",
                                                controlID);
                     return;
@@ -758,7 +744,7 @@ inline void requestRoutesChassisControls(App& app)
                 }
                 if (!validendpoint)
                 {
-                    BMCWEB_LOG_ERROR << "control id resource not found";
+                    BMCWEB_LOG_ERROR("control id resource not found");
                     messages::resourceNotFound(asyncResp->res, "ControlID",
                                                controlID);
                 }
@@ -774,7 +760,7 @@ inline void requestRoutesChassisControls(App& app)
              controlID](const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -791,8 +777,7 @@ inline void requestRoutesChassisControls(App& app)
                     std::variant<std::vector<std::string>>& resp) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                                     << ec;
+                    BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", ec);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -800,7 +785,7 @@ inline void requestRoutesChassisControls(App& app)
                     std::get_if<std::vector<std::string>>(&resp);
                 if (data == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "control id resource not found";
+                    BMCWEB_LOG_ERROR("control id resource not found");
                     messages::resourceNotFound(asyncResp->res, "ControlID",
                                                controlID);
                     return;
@@ -836,7 +821,7 @@ inline void requestRoutesChassisControls(App& app)
                 }
                 if (!validendpoint)
                 {
-                    BMCWEB_LOG_ERROR << "control id resource not found";
+                    BMCWEB_LOG_ERROR("control id resource not found");
                     messages::resourceNotFound(asyncResp->res, "ControlID",
                                                controlID);
                 }
@@ -852,7 +837,7 @@ inline void requestRoutesChassisControls(App& app)
                 const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -863,8 +848,7 @@ inline void requestRoutesChassisControls(App& app)
                     const dbus::utility::MapperGetObject& objType) {
                 if (ec || objType.empty())
                 {
-                    BMCWEB_LOG_ERROR << "GetObject for path "
-                                     << (*validChassisPath).c_str();
+                    BMCWEB_LOG_ERROR("GetObject for path {}", (*validChassisPath).c_str());
                     return;
                 }
                 for (auto [service, interfaces] : objType)
@@ -904,7 +888,7 @@ inline void requestRoutesChassisControls(App& app)
              req](const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -915,8 +899,7 @@ inline void requestRoutesChassisControls(App& app)
                       std::variant<std::vector<std::string>>& resp) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                                     << ec;
+                    BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", ec);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -924,7 +907,7 @@ inline void requestRoutesChassisControls(App& app)
                     std::get_if<std::vector<std::string>>(&resp);
                 if (data == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "control id resource not found";
+                    BMCWEB_LOG_ERROR("control id resource not found");
                     messages::resourceNotFound(asyncResp->res, "ControlID",
                                                controlID);
                     return;
@@ -954,7 +937,7 @@ inline void requestRoutesChassisControls(App& app)
                 }
                 if (!validendpoint)
                 {
-                    BMCWEB_LOG_ERROR << "control id resource not found";
+                    BMCWEB_LOG_ERROR("control id resource not found");
                     messages::resourceNotFound(asyncResp->res, "ControlID",
                                                controlID);
                 }
@@ -970,7 +953,7 @@ inline void requestRoutesChassisControls(App& app)
              req](const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -981,8 +964,7 @@ inline void requestRoutesChassisControls(App& app)
                       std::variant<std::vector<std::string>>& resp) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "ObjectMapper::GetObject call failed: "
-                                     << ec;
+                    BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", ec);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -990,7 +972,7 @@ inline void requestRoutesChassisControls(App& app)
                     std::get_if<std::vector<std::string>>(&resp);
                 if (data == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "control id resource not found";
+                    BMCWEB_LOG_ERROR("control id resource not found");
                     messages::resourceNotFound(asyncResp->res, "ControlID",
                                                controlID);
                     return;
@@ -1030,7 +1012,7 @@ inline void requestRoutesChassisControls(App& app)
                                 }
                                 else
                                 {
-                                    BMCWEB_LOG_ERROR << "invalid input";
+                                    BMCWEB_LOG_ERROR("invalid input");
                                     messages::actionParameterUnknown(
                                         asyncResp->res, "ControlMode", *mode);
                                 }
@@ -1051,7 +1033,7 @@ inline void requestRoutesChassisControls(App& app)
                 }
                 if (!validendpoint)
                 {
-                    BMCWEB_LOG_ERROR << "control id resource not found";
+                    BMCWEB_LOG_ERROR("control id resource not found");
                     messages::resourceNotFound(asyncResp->res, "ControlID",
                                                controlID);
                 }
@@ -1067,7 +1049,7 @@ inline void requestRoutesChassisControls(App& app)
                 const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
-                BMCWEB_LOG_ERROR << "Not a valid chassis ID:" << chassisID;
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
                 messages::resourceNotFound(asyncResp->res, "Chassis",
                                            chassisID);
                 return;
@@ -1079,8 +1061,7 @@ inline void requestRoutesChassisControls(App& app)
                     const dbus::utility::MapperGetObject& objType) {
                 if (ec || objType.empty())
                 {
-                    BMCWEB_LOG_ERROR << "GetObject for path "
-                                     << (*validChassisPath).c_str();
+                    BMCWEB_LOG_ERROR("GetObject for path {}", (*validChassisPath).c_str());
                     return;
                 }
                 for (auto [service, interfaces] : objType)

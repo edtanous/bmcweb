@@ -66,7 +66,7 @@ class ConnectionImpl : public Connection
     void start()
     {
         streamres.completeRequestHandler = [this] {
-            BMCWEB_LOG_DEBUG << "running completeRequestHandler";
+            BMCWEB_LOG_DEBUG("running completeRequestHandler");
             this->close();
         };
         openHandler(*this);
@@ -81,7 +81,7 @@ class ConnectionImpl : public Connection
                 const boost::system::error_code& ec2, std::size_t) {
             if (ec2)
             {
-                BMCWEB_LOG_DEBUG << "Error while writing on socket" << ec2;
+                BMCWEB_LOG_DEBUG("Error while writing on socket{}", ec2);
                 close();
                 return;
             }
@@ -99,7 +99,7 @@ class ConnectionImpl : public Connection
                 const boost::system::error_code& ec2, std::size_t) {
             if (ec2)
             {
-                BMCWEB_LOG_DEBUG << "Error while writing on socket" << ec2;
+                BMCWEB_LOG_DEBUG("Error while writing on socket{}", ec2);
                 close();
                 return;
             }
@@ -136,7 +136,7 @@ class ConnectionImpl : public Connection
 
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "Error in async_write " << ec;
+                BMCWEB_LOG_DEBUG("Error in async_write {}", ec);
                 close();
                 return;
             }

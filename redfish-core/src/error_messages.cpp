@@ -19,11 +19,7 @@
 #include "logging.hpp"
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
-<<<<<<< HEAD
-#include "source_location.hpp"
 #include "update_messages.hpp"
-=======
->>>>>>> origin/master-october-10
 
 #include <boost/beast/http/field.hpp>
 #include <boost/beast/http/status.hpp>
@@ -56,8 +52,7 @@ static void addMessageToErrorJson(nlohmann::json& target,
         auto messageIdIterator = message.find("MessageId");
         if (messageIdIterator == message.end())
         {
-            BMCWEB_LOG_CRITICAL(
-                "Attempt to add error message without MessageId");
+            BMCWEB_LOG_CRITICAL( "Attempt to add error message without MessageId");
             return;
         }
 
@@ -286,9 +281,7 @@ nlohmann::json internalError()
 
 void internalError(crow::Response& res, const std::source_location location)
 {
-    BMCWEB_LOG_CRITICAL("Internal Error {}({}:{}) `{}`: ", location.file_name(),
-                        location.line(), location.column(),
-                        location.function_name());
+    BMCWEB_LOG_CRITICAL("Internal Error {}({}:{}) `{}`: ", location.file_name(), location.line(), location.column(), location.function_name());
     res.result(boost::beast::http::status::internal_server_error);
     addMessageToErrorJson(res.jsonValue, internalError());
 }
@@ -2026,7 +2019,6 @@ nlohmann::json mutualExclusiveProperties(const std::string& arg1,
          "properties and resubmit the request."}};
 }
 
-<<<<<<< HEAD
 void mutualExclusiveProperties(crow::Response& res, const std::string& arg1,
                                const std::string& arg2)
 {
@@ -2071,19 +2063,6 @@ void unsupportedMediaType(crow::Response& res)
 {
     res.result(boost::beast::http::status::unsupported_media_type);
     addMessageToErrorJson(res.jsonValue, unsupportedMediaType());
-=======
-    nlohmann::json::object_t ret;
-    ret["@odata.type"] = "/redfish/v1/$metadata#Message.v1_1_1.Message";
-    ret["MessageId"] = "OpenBMC.0.2.InvalidUpload";
-    ret["Message"] = std::move(msg);
-    nlohmann::json::array_t args;
-    args.emplace_back(arg1);
-    args.emplace_back(arg2);
-    ret["MessageArgs"] = std::move(args);
-    ret["MessageSeverity"] = "Warning";
-    ret["Resolution"] = "None.";
-    return ret;
->>>>>>> origin/master-october-10
 }
 
 } // namespace messages

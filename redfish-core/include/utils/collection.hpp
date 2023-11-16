@@ -106,8 +106,7 @@ inline void getCollectionMembersByAssociation(
     const std::string& collectionPath, const std::string& objPath,
     const std::vector<const char*>& interfaces)
 {
-    BMCWEB_LOG_DEBUG << "Get collection members by association for: "
-                     << collectionPath;
+    BMCWEB_LOG_DEBUG("Get collection members by association for: {}", collectionPath);
     crow::connections::systemBus->async_method_call(
         [aResp, collectionPath,
          interfaces](const boost::system::error_code& e,

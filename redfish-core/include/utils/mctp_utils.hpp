@@ -29,17 +29,17 @@ class MctpEndpoint
                  AssociationCallback&& callback) :
         spdmObj(spdmObject)
     {
-        BMCWEB_LOG_DEBUG << "Finding associations for " << spdmObject;
+        BMCWEB_LOG_DEBUG("Finding associations for {}", spdmObject);
         dbus::utility::findAssociations(
             spdmObject + "/transport_object",
             [this, spdmObject,
              callback{std::forward<AssociationCallback>(callback)}](
                 const boost::system::error_code ec,
                 std::variant<std::vector<std::string>>& association) {
-            BMCWEB_LOG_DEBUG << "findAssociations callback for " << spdmObject;
+            BMCWEB_LOG_DEBUG("findAssociations callback for {}", spdmObject);
             if (ec)
             {
-                BMCWEB_LOG_ERROR << spdmObject << ": " << ec.message();
+                BMCWEB_LOG_ERROR("{}: {}", spdmObject, ec.message());
                 callback(false, ec.message());
                 return;
             }
@@ -114,10 +114,10 @@ void enumerateMctpEndpoints(EndpointCallback&& endpointCallback,
             const boost::system::error_code ec,
             const crow::openbmc_mapper::GetSubTreeType& subtree) {
         const std::string desc = "SPDM / MCTP endpoint enumeration";
-        BMCWEB_LOG_DEBUG << desc;
+        BMCWEB_LOG_DEBUG("{}", desc);
         if (ec)
         {
-            BMCWEB_LOG_ERROR << desc << ": " << ec.message();
+            BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
             errorCallback(true, desc, ec.message());
             return;
         }

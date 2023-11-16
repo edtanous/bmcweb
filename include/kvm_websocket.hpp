@@ -26,9 +26,7 @@ class KvmSession : public std::enable_shared_from_this<KvmSession>
             endpoint, [this, &connIn](const boost::system::error_code& ec) {
             if (ec)
             {
-                    BMCWEB_LOG_ERROR(
-                        "conn:{}, Couldn't connect to KVM socket port: {}",
-                        logPtr(&conn), ec);
+                    BMCWEB_LOG_ERROR( "conn:{}, Couldn't connect to KVM socket port: {}", logPtr(&conn), ec);
                     if (ec != boost::asio::error::operation_aborted)
                     {
                         connIn.close("Error in connecting to KVM port");
@@ -44,22 +42,18 @@ class KvmSession : public std::enable_shared_from_this<KvmSession>
     {
         if (data.length() > inputBuffer.capacity())
         {
-            BMCWEB_LOG_ERROR("conn:{}, Buffer overrun when writing {} bytes",
-                             logPtr(&conn), data.length());
+            BMCWEB_LOG_ERROR("conn:{}, Buffer overrun when writing {} bytes", logPtr(&conn), data.length());
             conn.close("Buffer overrun");
             return;
         }
 
-        BMCWEB_LOG_DEBUG("conn:{}, Read {} bytes from websocket", logPtr(&conn),
-                         data.size());
+        BMCWEB_LOG_DEBUG("conn:{}, Read {} bytes from websocket", logPtr(&conn), data.size());
         boost::asio::buffer_copy(inputBuffer.prepare(data.size()),
                                  boost::asio::buffer(data));
-        BMCWEB_LOG_DEBUG("conn:{}, Committing {} bytes from websocket",
-                         logPtr(&conn), data.size());
+        BMCWEB_LOG_DEBUG("conn:{}, Committing {} bytes from websocket", logPtr(&conn), data.size());
         inputBuffer.commit(data.size());
 
-        BMCWEB_LOG_DEBUG("conn:{}, inputbuffer size {}", logPtr(&conn),
-                         inputBuffer.size());
+        BMCWEB_LOG_DEBUG("conn:{}, inputbuffer size {}", logPtr(&conn), inputBuffer.size());
         doWrite();
     }
 
@@ -67,8 +61,7 @@ class KvmSession : public std::enable_shared_from_this<KvmSession>
     void doRead()
     {
         std::size_t bytes = outputBuffer.capacity() - outputBuffer.size();
-        BMCWEB_LOG_DEBUG("conn:{}, Reading {} from kvm socket", logPtr(&conn),
-                         bytes);
+        BMCWEB_LOG_DEBUG("conn:{}, Reading {} from kvm socket", logPtr(&conn), bytes);
         hostSocket.async_read_some(
             outputBuffer.prepare(outputBuffer.capacity() - outputBuffer.size()),
             [this, weak(weak_from_this())](const boost::system::error_code& ec,
@@ -78,13 +71,10 @@ class KvmSession : public std::enable_shared_from_this<KvmSession>
             {
                 return;
             }
-            BMCWEB_LOG_DEBUG("conn:{}, read done.  Read {} bytes",
-                             logPtr(&conn), bytesRead);
+            BMCWEB_LOG_DEBUG("conn:{}, read done.  Read {} bytes", logPtr(&conn), bytesRead);
             if (ec)
             {
-                BMCWEB_LOG_ERROR(
-                    "conn:{}, Couldn't read from KVM socket port: {}",
-                    logPtr(&conn), ec);
+                BMCWEB_LOG_ERROR( "conn:{}, Couldn't read from KVM socket port: {}", logPtr(&conn), ec);
                 if (ec != boost::asio::error::operation_aborted)
                 {
                     conn.close("Error in connecting to KVM port");
@@ -96,8 +86,7 @@ class KvmSession : public std::enable_shared_from_this<KvmSession>
             std::string_view payload(
                 static_cast<const char*>(outputBuffer.data().data()),
                 bytesRead);
-            BMCWEB_LOG_DEBUG("conn:{}, Sending payload size {}", logPtr(&conn),
-                             payload.size());
+            BMCWEB_LOG_DEBUG("conn:{}, Sending payload size {}", logPtr(&conn), payload.size());
             conn.sendBinary(payload);
             outputBuffer.consume(bytesRead);
 
@@ -109,14 +98,12 @@ class KvmSession : public std::enable_shared_from_this<KvmSession>
     {
         if (doingWrite)
         {
-            BMCWEB_LOG_DEBUG("conn:{}, Already writing.  Bailing out",
-                             logPtr(&conn));
+            BMCWEB_LOG_DEBUG("conn:{}, Already writing.  Bailing out", logPtr(&conn));
             return;
         }
         if (inputBuffer.size() == 0)
         {
-            BMCWEB_LOG_DEBUG("conn:{}, inputBuffer empty.  Bailing out",
-                             logPtr(&conn));
+            BMCWEB_LOG_DEBUG("conn:{}, inputBuffer empty.  Bailing out", logPtr(&conn));
             return;
         }
 
@@ -130,8 +117,7 @@ class KvmSession : public std::enable_shared_from_this<KvmSession>
             {
                 return;
             }
-            BMCWEB_LOG_DEBUG("conn:{}, Wrote {}bytes", logPtr(&conn),
-                             bytesWritten);
+            BMCWEB_LOG_DEBUG("conn:{}, Wrote {}bytes", logPtr(&conn), bytesWritten);
             doingWrite = false;
             inputBuffer.consume(bytesWritten);
 
@@ -142,8 +128,7 @@ class KvmSession : public std::enable_shared_from_this<KvmSession>
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR("conn:{}, Error in KVM socket write {}",
-                                 logPtr(&conn), ec);
+                BMCWEB_LOG_ERROR("conn:{}, Error in KVM socket write {}", logPtr(&conn), ec);
                 if (ec != boost::asio::error::operation_aborted)
                 {
                     conn.close("Error in reading to host port");

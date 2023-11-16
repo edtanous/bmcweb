@@ -139,7 +139,7 @@ inline void handleSecureBootDatabaseCollectionGet(
 
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error " << ec.value();
+            BMCWEB_LOG_DEBUG("DBUS response error {}", ec.value());
             messages::internalError(aResp->res);
             return;
         }
@@ -232,7 +232,7 @@ inline void
                 const dbus::utility::MapperGetSubTreePathsResponse& objects) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec.value();
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec.value());
                 // No error if default database does not exist
                 return;
             }
@@ -267,7 +267,7 @@ inline void handleSecureBootDatabaseResetKeys(
     if (!json_util::readJsonAction(req, aResp->res, "ResetKeysType",
                                    resetKeysType))
     {
-        BMCWEB_LOG_DEBUG << "SecureBootDatabase Action readJsonAction error";
+        BMCWEB_LOG_DEBUG("SecureBootDatabase Action readJsonAction error");
         return;
     }
 
@@ -350,7 +350,7 @@ inline void handleCertificateCollectionPost(
                                   certString, "CertificateType", certType,
                                   "UefiSignatureOwner", owner))
     {
-        BMCWEB_LOG_DEBUG << "Certificate POST readJsonPatch error";
+        BMCWEB_LOG_DEBUG("Certificate POST readJsonPatch error");
         return;
     }
 
@@ -396,7 +396,7 @@ inline void handleCertificateCollectionPost(
                        const std::string& objectPath) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
                 messages::internalError(aResp->res);
                 return;
             }
@@ -415,7 +415,7 @@ inline void handleCertificateCollectionPost(
                     [aResp](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                        BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
                         messages::internalError(aResp->res);
                         return;
                     }
@@ -457,7 +457,7 @@ inline void
                  const dbus::utility::DBusPropertiesMap& propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::resourceNotFound(aResp->res, "Certificate", certId);
             return;
         }
@@ -628,7 +628,7 @@ inline void handleSignatureCollectionPost(
                                   "SignatureTypeRegistry", sigTypeRegistry,
                                   "UefiSignatureOwner", owner))
     {
-        BMCWEB_LOG_DEBUG << "Certificate POST readJsonPatch error";
+        BMCWEB_LOG_DEBUG("Certificate POST readJsonPatch error");
         return;
     }
 
@@ -677,7 +677,7 @@ inline void handleSignatureCollectionPost(
                                        const std::string& objectPath) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
                 messages::internalError(aResp->res);
                 return;
             }
@@ -696,7 +696,7 @@ inline void handleSignatureCollectionPost(
                     [aResp](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                        BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
                         messages::internalError(aResp->res);
                         return;
                     }
@@ -742,7 +742,7 @@ inline void handleSignatureGet(crow::App& app, const crow::Request& req,
                        const dbus::utility::DBusPropertiesMap& propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::resourceNotFound(aResp->res, "Signature", sigId);
             return;
         }

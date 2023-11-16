@@ -834,7 +834,7 @@ inline void
     getMemoryProcessorLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                            const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get parent processor link";
+    BMCWEB_LOG_DEBUG("Get parent processor link");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
@@ -882,7 +882,7 @@ inline void
     getMemoryChassisLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get parent chassis link";
+    BMCWEB_LOG_DEBUG("Get parent chassis link");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
@@ -1105,13 +1105,13 @@ inline void getMemoryDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                    const std::string& service,
                                    const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get memory metrics data.";
+    BMCWEB_LOG_DEBUG("Get memory metrics data.");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const DimmProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1149,13 +1149,13 @@ inline void getMemoryMetrics(std::shared_ptr<bmcweb::AsyncResp> aResp,
                              const std::string& objPath,
                              const std::string& iface)
 {
-    BMCWEB_LOG_DEBUG << "Get memory metrics data.";
+    BMCWEB_LOG_DEBUG("Get memory metrics data.");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const DimmProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for memory metrics";
+            BMCWEB_LOG_DEBUG("DBUS response error for memory metrics");
             messages::internalError(aResp->res);
             return;
         }
@@ -1181,13 +1181,13 @@ inline void getMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                              const std::string& service,
                              const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get memory ecc data.";
+    BMCWEB_LOG_DEBUG("Get memory ecc data.");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const DimmProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1227,13 +1227,13 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                    const std::string& service,
                                    const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get memory row remapping counts.";
+    BMCWEB_LOG_DEBUG("Get memory row remapping counts.");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const DimmProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error";
+            BMCWEB_LOG_ERROR("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1272,7 +1272,7 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
 inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                  const std::string& dimmId)
 {
-    BMCWEB_LOG_DEBUG << "Get available system memory resources.";
+    BMCWEB_LOG_DEBUG("Get available system memory resources.");
     crow::connections::systemBus->async_method_call(
         [dimmId, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -1282,7 +1282,7 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << " DBUS response error";
+            BMCWEB_LOG_ERROR(" DBUS response error");
             messages::internalError(aResp->res);
 
             return;

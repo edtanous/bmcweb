@@ -154,7 +154,7 @@ inline void getSystemPCIeInterfaceProperties(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get processor system pcie interface properties";
+    BMCWEB_LOG_DEBUG("Get processor system pcie interface properties");
     crow::connections::systemBus->async_method_call(
         [asyncResp, objPath](
             const boost::system::error_code errorCode,
@@ -162,8 +162,8 @@ inline void getSystemPCIeInterfaceProperties(
                 objInfo) mutable {
         if (errorCode)
         {
-            BMCWEB_LOG_ERROR << "error_code = " << errorCode;
-            BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+            BMCWEB_LOG_ERROR("error_code = {}", errorCode);
+            BMCWEB_LOG_ERROR("error msg = {}", errorCode.message());
             if (asyncResp)
             {
                 messages::internalError(asyncResp->res);
@@ -211,7 +211,7 @@ inline void getCpuDataByInterface(
         for (const auto& property : interface.second)
 >>>>>>> origin/master-october-10
         {
-            BMCWEB_LOG_ERROR << "Empty Object Size";
+            BMCWEB_LOG_ERROR("Empty Object Size");
             if (asyncResp)
             {
 <<<<<<< HEAD
@@ -242,8 +242,8 @@ inline void getCpuDataByInterface(
             if (ec)
             {
 <<<<<<< HEAD
-                BMCWEB_LOG_ERROR << "error_code = " << ec;
-                BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+                BMCWEB_LOG_ERROR("error_code = {}", ec);
+                BMCWEB_LOG_ERROR("error msg = {}", ec.message());
                 messages::internalError(asyncResp->res);
                 return;
 =======
@@ -341,7 +341,7 @@ inline void getFPGAPCIeInterfaceProperties(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get processor fpga pcie interface properties";
+    BMCWEB_LOG_DEBUG("Get processor fpga pcie interface properties");
     crow::connections::systemBus->async_method_call(
         [asyncResp, objPath](
             const boost::system::error_code errorCode,
@@ -349,8 +349,8 @@ inline void getFPGAPCIeInterfaceProperties(
                 objInfo) mutable {
         if (errorCode)
         {
-            BMCWEB_LOG_ERROR << "error_code = " << errorCode;
-            BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+            BMCWEB_LOG_ERROR("error_code = {}", errorCode);
+            BMCWEB_LOG_ERROR("error msg = {}", errorCode.message());
             if (asyncResp)
             {
 <<<<<<< HEAD
@@ -368,7 +368,7 @@ inline void getFPGAPCIeInterfaceProperties(
         }
         if (objInfo.empty())
         {
-            BMCWEB_LOG_ERROR << "Empty Object Size";
+            BMCWEB_LOG_ERROR("Empty Object Size");
             if (asyncResp)
             {
 <<<<<<< HEAD
@@ -398,8 +398,8 @@ inline void getFPGAPCIeInterfaceProperties(
             if (ec)
             {
 <<<<<<< HEAD
-                BMCWEB_LOG_ERROR << "error_code = " << ec;
-                BMCWEB_LOG_ERROR << "error msg = " << ec.message();
+                BMCWEB_LOG_ERROR("error_code = {}", ec);
+                BMCWEB_LOG_ERROR("error msg = {}", ec.message());
                 messages::internalError(asyncResp->res);
                 return;
 =======
@@ -491,7 +491,7 @@ inline void getFPGAPCIeInterfaceProperties(
 inline void getProcessorSystemPCIeInterface(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get underneath system interface pcie link";
+    BMCWEB_LOG_DEBUG("Get underneath system interface pcie link");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
@@ -549,7 +549,7 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
 inline void getProcessorFPGAPCIeInterface(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get underneath fpga interface pcie link";
+    BMCWEB_LOG_DEBUG("Get underneath fpga interface pcie link");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
@@ -584,7 +584,7 @@ inline void
     getProcessorMemoryLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get underneath memory links";
+    BMCWEB_LOG_DEBUG("Get underneath memory links");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec2,
                 std::variant<std::vector<std::string>>& resp) {
@@ -637,7 +637,7 @@ inline void getProcessorPCIeFunctionsLinks(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath, const std::string& pcieDeviceLink)
 {
-    BMCWEB_LOG_DEBUG << "Get processor pcie functions links";
+    BMCWEB_LOG_DEBUG("Get processor pcie functions links");
     crow::connections::systemBus->async_method_call(
         [aResp, pcieDeviceLink](
             const boost::system::error_code ec,
@@ -882,8 +882,7 @@ inline void getCpuAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                     {"@odata.id", pcieDeviceLink}};
                 if (serviceMap.size() < 1)
                 {
-                    BMCWEB_LOG_ERROR << "Got 0 service "
-                                        "names";
+                    BMCWEB_LOG_ERROR("Got 0 service " "names");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -917,7 +916,7 @@ inline void
                             const std::string& objPath,
                             const std::string& service)
 {
-    BMCWEB_LOG_DEBUG << "Get parent chassis link";
+    BMCWEB_LOG_DEBUG("Get parent chassis link");
     crow::connections::systemBus->async_method_call(
         [aResp, objPath,
          service](const boost::system::error_code ec,
@@ -964,7 +963,7 @@ inline void
             if (ec)
             {
 <<<<<<< HEAD
-                BMCWEB_LOG_ERROR << "Chassis has no connected PCIe devices";
+                BMCWEB_LOG_ERROR("Chassis has no connected PCIe devices");
                 return; // no pciedevices = no failures
 =======
                 asyncResp->res.jsonValue["ProcessorArchitecture"] = "x86";
@@ -977,7 +976,7 @@ inline void
             {
 <<<<<<< HEAD
                 // Chassis must have single pciedevice
-                BMCWEB_LOG_ERROR << "chassis must have single pciedevice";
+                BMCWEB_LOG_ERROR("chassis must have single pciedevice");
                 return;
 =======
                 asyncResp->res.jsonValue["ProcessorArchitecture"] = "Power";
@@ -989,7 +988,7 @@ inline void
             std::string pcieDeviceName = objectPath.filename();
             if (pcieDeviceName.empty())
             {
-                BMCWEB_LOG_ERROR << "chassis pciedevice name empty";
+                BMCWEB_LOG_ERROR("chassis pciedevice name empty");
                 messages::internalError(aResp->res);
                 return;
             }
@@ -1032,7 +1031,7 @@ inline void getProcessorUUID(std::shared_ptr<bmcweb::AsyncResp> aResp,
                              const std::string& service,
                              const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Processor UUID";
+    BMCWEB_LOG_DEBUG("Get Processor UUID");
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, service, objPath,
         "xyz.openbmc_project.Common.UUID", "UUID",
@@ -1041,7 +1040,7 @@ inline void getProcessorUUID(std::shared_ptr<bmcweb::AsyncResp> aResp,
         if (ec)
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
 =======
@@ -1065,7 +1064,7 @@ inline void getFpgaTypeData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                             const std::string& service,
                             const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Processor fpgatype";
+    BMCWEB_LOG_DEBUG("Get Processor fpgatype");
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, service, objPath,
         "xyz.openbmc_project.Inventory.Decorator.FpgaType", "FpgaType",
@@ -1108,15 +1107,14 @@ inline void
                                 const std::string& service,
                                 const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Processor firmware version";
+    BMCWEB_LOG_DEBUG("Get Processor firmware version");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const std::variant<std::string>& property) {
         if (ec)
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_DEBUG << "DBUS response error for "
-                                "Processor firmware version";
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Processor firmware version");
             messages::internalError(aResp->res);
 =======
             messages::internalError(asyncResp->res);
@@ -1127,7 +1125,7 @@ inline void
         if (value == nullptr)
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_DEBUG << "Null value returned for Version";
+            BMCWEB_LOG_DEBUG("Null value returned for Version");
             messages::internalError(aResp->res);
             return;
 =======
@@ -1145,7 +1143,7 @@ inline void getCpuDataByInterface(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     const dbus::utility::DBusInteracesMap& cpuInterfacesProperties)
 {
-    BMCWEB_LOG_DEBUG << "Get CPU resources by interface.";
+    BMCWEB_LOG_DEBUG("Get CPU resources by interface.");
 
     // Set the default value of state
     aResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -1289,7 +1287,7 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                 const std::string& service,
                                 const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get available system cpu resources by service.";
+    BMCWEB_LOG_DEBUG("Get available system cpu resources by service.");
 
     crow::connections::systemBus->async_method_call(
         [cpuId, service, objPath, aResp{std::move(aResp)}](
@@ -1297,7 +1295,7 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
             const dbus::utility::ManagedObjectType& dbusData) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1363,7 +1361,7 @@ inline void getCpuAssetData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                             const std::string& service,
                             const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Cpu Asset Data";
+    BMCWEB_LOG_DEBUG("Get Cpu Asset Data");
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objPath,
         "xyz.openbmc_project.Inventory.Decorator.Asset",
@@ -1372,7 +1370,7 @@ inline void getCpuAssetData(std::shared_ptr<bmcweb::AsyncResp> aResp,
             const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1437,7 +1435,7 @@ inline void getCpuRevisionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                const std::string& service,
                                const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Cpu Revision Data";
+    BMCWEB_LOG_DEBUG("Get Cpu Revision Data");
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objPath,
         "xyz.openbmc_project.Inventory.Decorator.Revision",
@@ -1446,7 +1444,7 @@ inline void getCpuRevisionData(std::shared_ptr<bmcweb::AsyncResp> aResp,
             const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1473,8 +1471,7 @@ inline void getAcceleratorDataByService(
     std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& acclrtrId,
     const std::string& service, const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG
-        << "Get available system Accelerator resources by service.";
+    BMCWEB_LOG_DEBUG("Get available system Accelerator resources by service.");
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
@@ -1493,7 +1490,7 @@ inline void getAcceleratorDataByService(
             const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1619,7 +1616,7 @@ inline void getCpuConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& service,
                              const std::string& objPath)
 {
-    BMCWEB_LOG_INFO << "Getting CPU operating configs for " << cpuId;
+    BMCWEB_LOG_INFO("Getting CPU operating configs for {}", cpuId);
 
     // First, GetAll CurrentOperatingConfig properties on the object
     sdbusplus::asio::getAllProperties(
@@ -1630,7 +1627,7 @@ inline void getCpuConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                   const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", " << ec.message();
+            BMCWEB_LOG_WARNING("D-Bus error: {}, {}", ec, ec.message());
             messages::internalError(aResp->res);
             return;
         }
@@ -1692,7 +1689,7 @@ inline void getCpuConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     const BaseSpeedPrioritySettingsProperty& baseSpeedList) {
                 if (ec2)
                 {
-                    BMCWEB_LOG_WARNING << "D-Bus Property Get error: " << ec2;
+                    BMCWEB_LOG_WARNING("D-Bus Property Get error: {}", ec2);
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -1721,7 +1718,7 @@ inline void getCpuLocationCode(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                const std::string& service,
                                const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Cpu Location Data";
+    BMCWEB_LOG_DEBUG("Get Cpu Location Data");
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, service, objPath,
         "xyz.openbmc_project.Inventory.Decorator.LocationCode", "LocationCode",
@@ -1729,7 +1726,7 @@ inline void getCpuLocationCode(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                            const std::string& property) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1751,7 +1748,7 @@ inline void getCpuLocationType(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                const std::string& service,
                                const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get Cpu LocationType Data";
+    BMCWEB_LOG_DEBUG("Get Cpu LocationType Data");
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, service, objPath,
         "xyz.openbmc_project.Inventory.Decorator.Location", "LocationType",
@@ -1759,7 +1756,7 @@ inline void getCpuLocationType(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                            const std::string& property) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -1781,7 +1778,7 @@ inline void getCpuUniqueId(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                            const std::string& service,
                            const std::string& objectPath)
 {
-    BMCWEB_LOG_DEBUG << "Get CPU UniqueIdentifier";
+    BMCWEB_LOG_DEBUG("Get CPU UniqueIdentifier");
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, service, objectPath,
         "xyz.openbmc_project.Inventory.Decorator.UniqueIdentifier",
@@ -1789,7 +1786,7 @@ inline void getCpuUniqueId(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         [aResp](boost::system::error_code ec, const std::string& id) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "Failed to read cpu unique id: " << ec;
+            BMCWEB_LOG_ERROR("Failed to read cpu unique id: {}", ec);
             messages::internalError(aResp->res);
             return;
         }
@@ -1818,7 +1815,7 @@ inline void
                 const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", " << ec.message();
+            BMCWEB_LOG_WARNING("D-Bus error: {}, {}", ec, ec.message());
             messages::internalError(aResp->res);
             return;
         }
@@ -1944,7 +1941,7 @@ inline void
                        const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", " << ec.message();
+            BMCWEB_LOG_WARNING("D-Bus error: {}, {}", ec, ec.message());
             messages::internalError(aResp->res);
             return;
         }
@@ -1988,7 +1985,7 @@ inline void getEccModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                        const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2022,7 +2019,7 @@ inline void getEccPendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                        const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2068,7 +2065,7 @@ inline void getProcessorResetTypeData(
                        const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error on reset interface";
+            BMCWEB_LOG_DEBUG("DBUS response error on reset interface");
             messages::internalError(aResp->res);
             return;
         }
@@ -2081,7 +2078,7 @@ inline void getProcessorResetTypeData(
                     std::get_if<std::string>(&property.second);
                 if (processorResetType == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Property processorResetType is null";
+                    BMCWEB_LOG_DEBUG("Property processorResetType is null");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2112,7 +2109,7 @@ inline void
                          const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2127,7 +2124,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (state == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Get Power Break Value property failed";
+                    BMCWEB_LOG_DEBUG("Get Power Break Value property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2150,7 +2147,7 @@ inline void
                          const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2165,7 +2162,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (state == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Get Performance Value property failed";
+                    BMCWEB_LOG_DEBUG("Get Performance Value property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2182,7 +2179,7 @@ inline void
 
                 if (throttleReasons == nullptr)
                 {
-                    BMCWEB_LOG_ERROR << "Get Throttle reasons property failed";
+                    BMCWEB_LOG_ERROR("Get Throttle reasons property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2208,8 +2205,7 @@ inline void
                 const uint64_t* val = std::get_if<uint64_t>(&property.second);
                 if (val == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Get  power/thermal duration property failed";
+                    BMCWEB_LOG_DEBUG("Get  power/thermal duration property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2229,7 +2225,7 @@ inline void
                 const uint64_t* val = std::get_if<uint64_t>(&property.second);
                 if (val == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Get  duraiton property failed";
+                    BMCWEB_LOG_DEBUG("Get  duraiton property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2249,7 +2245,7 @@ inline void
                 const uint32_t* val = std::get_if<uint32_t>(&property.second);
                 if (val == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Get  acc duraiton property failed";
+                    BMCWEB_LOG_DEBUG("Get  acc duraiton property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2269,7 +2265,7 @@ inline void
                 const uint32_t* val = std::get_if<uint32_t>(&property.second);
                 if (val == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Get  pcie bytes property failed";
+                    BMCWEB_LOG_DEBUG("Get  pcie bytes property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2291,8 +2287,7 @@ inline void getGPUNvlinkMetricsData(
                 const dbus::utility::DBusPropertiesMap& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "Can't get GPU Nvlink Metrics Iface properties ";
+            BMCWEB_LOG_ERROR("Can't get GPU Nvlink Metrics Iface properties ");
             return;
         }
 
@@ -2323,8 +2318,7 @@ inline void getGPUNvlinkMetricsData(
         }
         else
         {
-            BMCWEB_LOG_ERROR << "Null value returned "
-                                "for NVLinkRawTxBandwidthGbps";
+            BMCWEB_LOG_ERROR("Null value returned " "for NVLinkRawTxBandwidthGbps");
         }
 
         if (nvlinkRawRxBandwidthGbps != nullptr)
@@ -2334,8 +2328,7 @@ inline void getGPUNvlinkMetricsData(
         }
         else
         {
-            BMCWEB_LOG_ERROR << "Null value returned "
-                                "for NVLinkRawRxBandwidthGbps";
+            BMCWEB_LOG_ERROR("Null value returned " "for NVLinkRawRxBandwidthGbps");
         }
 
         if (nvlinkDataTxBandwidthGbps != nullptr)
@@ -2345,8 +2338,7 @@ inline void getGPUNvlinkMetricsData(
         }
         else
         {
-            BMCWEB_LOG_ERROR << "Null value returned "
-                                "for NVLinkDataTxBandwidthGbps";
+            BMCWEB_LOG_ERROR("Null value returned " "for NVLinkDataTxBandwidthGbps");
         }
 
         if (nvlinkDataRxBandwidthGbps != nullptr)
@@ -2356,8 +2348,7 @@ inline void getGPUNvlinkMetricsData(
         }
         else
         {
-            BMCWEB_LOG_ERROR << "Null value returned "
-                                "for NVLinkDataRxBandwidthGbps";
+            BMCWEB_LOG_ERROR("Null value returned " "for NVLinkDataRxBandwidthGbps");
         }
     });
 }
@@ -2372,7 +2363,7 @@ inline void
                          const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2387,8 +2378,7 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (state == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Get PowerSystemInputs Status property failed";
+                    BMCWEB_LOG_DEBUG("Get PowerSystemInputs Status property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2410,7 +2400,7 @@ inline void getMemorySpareChannelPresenceData(
                          const std::variant<bool>& property) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error";
+            BMCWEB_LOG_ERROR("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2419,8 +2409,7 @@ inline void getMemorySpareChannelPresenceData(
         const bool* memorySpareChannelPresence = std::get_if<bool>(&property);
         if (memorySpareChannelPresence == nullptr)
         {
-            BMCWEB_LOG_ERROR
-                << "Null value returned for memorySpareChannelPresence";
+            BMCWEB_LOG_ERROR("Null value returned for memorySpareChannelPresence");
             messages::internalError(aResp->res);
             return;
         }
@@ -2442,7 +2431,7 @@ inline void getMemoryPageRetirementCountData(
                          const std::variant<uint32_t>& property) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error";
+            BMCWEB_LOG_ERROR("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2452,8 +2441,7 @@ inline void getMemoryPageRetirementCountData(
             std::get_if<uint32_t>(&property);
         if (memoryPageRetirementCount == nullptr)
         {
-            BMCWEB_LOG_ERROR
-                << "Null value returned for MemoryPageRetirementCount";
+            BMCWEB_LOG_ERROR("Null value returned for MemoryPageRetirementCount");
             messages::internalError(aResp->res);
             return;
         }
@@ -2475,7 +2463,7 @@ inline void getMigModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                        const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2505,7 +2493,7 @@ inline void getProcessorMigModeData(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
     const std::string& service, const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << " get GpuMIGMode data";
+    BMCWEB_LOG_DEBUG(" get GpuMIGMode data");
     getMigModeData(aResp, cpuId, service, objPath);
 }
 
@@ -2518,7 +2506,7 @@ inline void getProcessorRemoteDebugState(
                          const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2532,7 +2520,7 @@ inline void getProcessorRemoteDebugState(
                 const bool* state = std::get_if<bool>(&property.second);
                 if (state == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Get Performance Value property failed";
+                    BMCWEB_LOG_DEBUG("Get Performance Value property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2566,7 +2554,7 @@ inline void getRemoteDebugState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         for (const std::string& effecterPath : *data)
         {
-            BMCWEB_LOG_DEBUG << "State Effecter Object Path " << effecterPath;
+            BMCWEB_LOG_DEBUG("State Effecter Object Path {}", effecterPath);
 
             const std::array<const char*, 1> effecterInterfaces = {
                 "xyz.openbmc_project.Control.Processor.RemoteDebug"};
@@ -2616,8 +2604,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 const dbus::utility::DBusPropertiesMap& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "GetPIDValues: Can't get GPM Metrics Iface properties ";
+            BMCWEB_LOG_ERROR("GetPIDValues: Can't get GPM Metrics Iface properties ");
             return;
         }
 
@@ -2673,8 +2660,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for GraphicsEngineActivityPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for GraphicsEngineActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2685,8 +2671,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for SMActivityPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for SMActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2697,8 +2682,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for SMOccupancyPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for SMOccupancyPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2710,8 +2694,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for TensorCoreActivityPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for TensorCoreActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2722,8 +2705,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for FP64ActivityPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for FP64ActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2734,8 +2716,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for FP32ActivityPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for FP32ActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2746,8 +2727,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for FP16ActivityPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for FP16ActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2759,8 +2739,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for PCIeRawTxBandwidthGbps";
+            BMCWEB_LOG_DEBUG("Null value returned " "for PCIeRawTxBandwidthGbps");
             messages::internalError(aResp->res);
             return;
         }
@@ -2772,8 +2751,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for PCIeRawRxBandwidthGbps";
+            BMCWEB_LOG_DEBUG("Null value returned " "for PCIeRawRxBandwidthGbps");
             messages::internalError(aResp->res);
             return;
         }
@@ -2785,8 +2763,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for NVDecUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for NVDecUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2798,8 +2775,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for NVJpgUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for NVJpgUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2811,8 +2787,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for NVOfaUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for NVOfaUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2823,8 +2798,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for IntergerActivityUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for IntergerActivityUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2834,8 +2808,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for DMMAUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for DMMAUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2845,8 +2818,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for HMMAUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for HMMAUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2856,8 +2828,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for IMMAUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for IMMAUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2873,8 +2844,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for NVDecInstanceUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for NVDecInstanceUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2891,8 +2861,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Null value returned "
-                                "for NVJpgUtilizationPercent";
+            BMCWEB_LOG_DEBUG("Null value returned " "for NVJpgUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -3052,7 +3021,7 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
     }
     if (inventoryService == nullptr)
     {
-        BMCWEB_LOG_DEBUG << " GpuMIGMode interface not found ";
+        BMCWEB_LOG_DEBUG(" GpuMIGMode interface not found ");
         messages::internalError(resp->res);
         return;
     }
@@ -3063,12 +3032,11 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                                      sdbusplus::message::message& msg) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG << "Set MIG Mode property succeeded";
+            BMCWEB_LOG_DEBUG("Set MIG Mode property succeeded");
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                         << " set MIG Mode  property failed: " << ec;
+        BMCWEB_LOG_DEBUG("CPU:{} set MIG Mode  property failed: {}", processorId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -3131,12 +3099,12 @@ inline void setProcessorRemoteDebugState(
                                              sdbusplus::message::message& msg) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG << "Set Processor Remote Debug successed";
+            BMCWEB_LOG_DEBUG("Set Processor Remote Debug successed");
             messages::success(aResp->res);
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "Set Processor Remote Debug failed: " << ec;
+        BMCWEB_LOG_DEBUG("Set Processor Remote Debug failed: {}", ec);
 
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
@@ -3175,9 +3143,7 @@ inline void patchRemoteDebug(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const bool remoteDebugEnabled,
                              const std::string& cpuObjectPath)
 {
-    BMCWEB_LOG_DEBUG << "Set Remote Debug "
-                     << std::to_string(remoteDebugEnabled)
-                     << " on CPU: " << processorId;
+    BMCWEB_LOG_DEBUG("Set Remote Debug {} on CPU: {}", std::to_string(remoteDebugEnabled), processorId);
 
     // Find remote debug effecters from all effecters attached to "all_controls"
     crow::connections::systemBus->async_method_call(
@@ -3187,7 +3153,7 @@ inline void patchRemoteDebug(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         if (e)
         {
             // No state effecter attached.
-            BMCWEB_LOG_DEBUG << " No state effecter attached. ";
+            BMCWEB_LOG_DEBUG(" No state effecter attached. ");
             messages::internalError(aResp->res);
             return;
         }
@@ -3200,7 +3166,7 @@ inline void patchRemoteDebug(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         for (const std::string& effecterPath : *data)
         {
-            BMCWEB_LOG_DEBUG << "State Effecter Object Path " << effecterPath;
+            BMCWEB_LOG_DEBUG("State Effecter Object Path {}", effecterPath);
 
             const std::array<const char*, 1> effecterInterfaces = {
                 "xyz.openbmc_project.Control.Processor.RemoteDebug"};
@@ -3213,7 +3179,7 @@ inline void patchRemoteDebug(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 if (ec)
                 {
                     // The path does not implement any state interfaces.
-                    BMCWEB_LOG_DEBUG << " No any state effecter interface. ";
+                    BMCWEB_LOG_DEBUG(" No any state effecter interface. ");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -3258,7 +3224,7 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                              const std::string& cpuObjectPath,
                              const MapperServiceMap& serviceMap)
 {
-    BMCWEB_LOG_DEBUG << "Setting SpeedConfig";
+    BMCWEB_LOG_DEBUG("Setting SpeedConfig");
     // Check that the property even exists by checking for the interface
     const std::string* inventoryService = nullptr;
     for (const auto& [serviceName, interfaceList] : serviceMap)
@@ -3277,18 +3243,17 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         messages::internalError(resp->res);
         return;
     }
-    BMCWEB_LOG_DEBUG << "patchSpeedConfig";
+    BMCWEB_LOG_DEBUG("patchSpeedConfig");
     crow::connections::systemBus->async_method_call(
         [resp, processorId, reqSpeedConfig](boost::system::error_code ec,
                                             sdbusplus::message::message& msg) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG << "Set speed config property succeeded";
+            BMCWEB_LOG_DEBUG("Set speed config property succeeded");
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                         << " set speed config property failed: " << ec;
+        BMCWEB_LOG_DEBUG("CPU:{} set speed config property failed: {}", processorId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -3384,7 +3349,7 @@ inline void patchSpeedLocked(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                       const std::tuple<bool, uint32_t>& speedConfig) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for SpeedConfig";
+            BMCWEB_LOG_DEBUG("DBUS response error for SpeedConfig");
             messages::internalError(resp->res);
             return;
         }
@@ -3431,7 +3396,7 @@ inline void patchSpeedLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         return;
     }
     const std::string conName = *inventoryService;
-    BMCWEB_LOG_DEBUG << "patchSpeedLimit";
+    BMCWEB_LOG_DEBUG("patchSpeedLimit");
     // Set the property, with handler to check error responses
     sdbusplus::asio::getProperty<std::tuple<bool, uint32_t>>(
         *crow::connections::systemBus, conName, cpuObjectPath,
@@ -3441,7 +3406,7 @@ inline void patchSpeedLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                      const std::tuple<bool, uint32_t>& speedConfig) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error for SpeedConfig";
+            BMCWEB_LOG_DEBUG("DBUS response error for SpeedConfig");
             messages::internalError(resp->res);
             return;
         }
@@ -3471,11 +3436,11 @@ inline void
 {
     if (!ec)
     {
-        BMCWEB_LOG_DEBUG << "Set Property succeeded";
+        BMCWEB_LOG_DEBUG("Set Property succeeded");
         return;
     }
 
-    BMCWEB_LOG_DEBUG << "Set Property failed: " << ec;
+    BMCWEB_LOG_DEBUG("Set Property failed: {}", ec);
 
     const sd_bus_error* dbusError = msg.get_error();
     if (dbusError == nullptr)
@@ -3569,7 +3534,7 @@ inline void patchAppliedOperatingConfig(
     sdbusplus::message::object_path configPath(cpuObjectPath);
     configPath /= configBaseName;
 
-    BMCWEB_LOG_INFO << "Setting config to " << configPath.str;
+    BMCWEB_LOG_INFO("Setting config to {}", configPath.str);
 
     // Set the property, with handler to check error responses
     crow::connections::systemBus->async_method_call(
@@ -3608,8 +3573,7 @@ inline void requestRoutesOperatingConfigCollection(App& app)
                 const dbus::utility::MapperGetSubTreePathsResponse& objects) {
             if (ec)
             {
-                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                   << ec.message();
+                BMCWEB_LOG_WARNING("D-Bus error: {}, {}", ec, ec.message());
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3666,8 +3630,7 @@ inline void requestRoutesOperatingConfig(App& app)
                 const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
-                BMCWEB_LOG_WARNING << "D-Bus error: " << ec << ", "
-                                   << ec.message();
+                BMCWEB_LOG_WARNING("D-Bus error: {}, {}", ec, ec.message());
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3814,14 +3777,14 @@ inline void requestRoutesProcessor(App& app)
         // speedlimit is required property for patching speedlocked
         if (!speedLimit && speedLocked)
         {
-            BMCWEB_LOG_ERROR << "SpeedLimit value required ";
+            BMCWEB_LOG_ERROR("SpeedLimit value required ");
             messages::propertyMissing(asyncResp->res, "SpeedLimit");
         }
 
         // speedlocked is required property for patching speedlimit
         else if (!speedLocked && speedLimit)
         {
-            BMCWEB_LOG_ERROR << "SpeedLocked value required ";
+            BMCWEB_LOG_ERROR("SpeedLocked value required ");
             messages::propertyMissing(asyncResp->res, "SpeedLocked");
         }
         // Update speed limit
@@ -3919,13 +3882,13 @@ inline void getProcessorDataByService(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                       const std::string& service,
                                       const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get processor metrics data.";
+    BMCWEB_LOG_DEBUG("Get processor metrics data.");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -3962,13 +3925,13 @@ inline void getProcessorMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                       const std::string& service,
                                       const std::string& objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get processor memory ecc data.";
+    BMCWEB_LOG_DEBUG("Get processor memory ecc data.");
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](const boost::system::error_code ec,
                                   const OperatingConfigProperties& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -4016,7 +3979,7 @@ inline void getVoltageData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Can't get sensor reading";
+            BMCWEB_LOG_DEBUG("Can't get sensor reading");
             return;
         }
         sdbusplus::message::object_path objectPath(sensorPath);
@@ -4099,8 +4062,7 @@ inline void getSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                         boost::is_any_of("/"));
                 if (split.size() < 6)
                 {
-                    BMCWEB_LOG_ERROR << "Got path that isn't long enough "
-                                     << objPath;
+                    BMCWEB_LOG_ERROR("Got path that isn't long enough {}", objPath);
                     continue;
                 }
                 const std::string& sensorType = split[4];
@@ -4125,7 +4087,7 @@ inline void
     getPowerBreakThrottle(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                           const std::string& service, const std::string objPath)
 {
-    BMCWEB_LOG_DEBUG << "Get processor module link";
+    BMCWEB_LOG_DEBUG("Get processor module link");
     crow::connections::systemBus->async_method_call(
         [aResp, objPath,
          service](const boost::system::error_code ec,
@@ -4144,7 +4106,7 @@ inline void
 
         const std::string& chassisPath = data->front();
 
-        BMCWEB_LOG_DEBUG << "Get processor module state sensors";
+        BMCWEB_LOG_DEBUG("Get processor module state sensors");
         crow::connections::systemBus->async_method_call(
             [aResp, service,
              chassisPath](const boost::system::error_code& e,
@@ -4163,8 +4125,7 @@ inline void
             }
             for (const std::string& sensorpath : *data)
             {
-                BMCWEB_LOG_DEBUG << "proc module state sensor object path "
-                                 << sensorpath;
+                BMCWEB_LOG_DEBUG("proc module state sensor object path {}", sensorpath);
 
                 const std::array<const char*, 1> sensorinterfaces = {
                     "xyz.openbmc_project.State.ProcessorPerformance"};
@@ -4230,7 +4191,7 @@ inline void
         }
         for (const std::string& sensorPath : *data)
         {
-            BMCWEB_LOG_DEBUG << "State Sensor Object Path " << sensorPath;
+            BMCWEB_LOG_DEBUG("State Sensor Object Path {}", sensorPath);
 
             const std::array<const char*, 3> sensorInterfaces = {
                 "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
@@ -4309,7 +4270,7 @@ inline void
         }
         for (const std::string& sensorPath : *data)
         {
-            BMCWEB_LOG_DEBUG << "Numeric Sensor Object Path " << sensorPath;
+            BMCWEB_LOG_DEBUG("Numeric Sensor Object Path {}", sensorPath);
 
             const std::array<const char*, 1> sensorInterfaces = {
                 "com.nvidia.MemoryPageRetirementCount"};
@@ -4353,7 +4314,7 @@ inline void
 inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                     const std::string& processorId)
 {
-    BMCWEB_LOG_DEBUG << "Get available system processor resource";
+    BMCWEB_LOG_DEBUG("Get available system processor resource");
     crow::connections::systemBus->async_method_call(
         [processorId, aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -4363,7 +4324,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 subtree) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
 
             return;
@@ -4476,7 +4437,7 @@ inline void getProcessorMemoryDataByService(
     const std::string& memoryPath, const int64_t& processorCECount,
     const int64_t& processorUECount)
 {
-    BMCWEB_LOG_DEBUG << "Get processor memory data";
+    BMCWEB_LOG_DEBUG("Get processor memory data");
     crow::connections::systemBus->async_method_call(
         [aResp, memoryPath, processorCECount, processorUECount](
             const boost::system::error_code ec, GetSubTreeType& subtree) {
@@ -4500,7 +4461,7 @@ inline void getProcessorMemoryDataByService(
                 connectionNames = object.second;
             if (connectionNames.size() < 1)
             {
-                BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                BMCWEB_LOG_ERROR("Got 0 Connection names");
                 continue;
             }
             const std::string& connectionName = connectionNames[0].first;
@@ -4510,7 +4471,7 @@ inline void getProcessorMemoryDataByService(
                     const OperatingConfigProperties& properties) {
                 if (ec1)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error";
+                    BMCWEB_LOG_DEBUG("DBUS response error");
                     messages::internalError(aResp->res);
 
                     return;
@@ -4581,7 +4542,7 @@ inline void getProcessorMemorySummary(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath,
     const int64_t& processorCECount, const int64_t& processorUECount)
 {
-    BMCWEB_LOG_DEBUG << "Get available system processor resource";
+    BMCWEB_LOG_DEBUG("Get available system processor resource");
     // Get processor memory
     crow::connections::systemBus->async_method_call(
         [aResp, processorCECount,
@@ -4603,7 +4564,7 @@ inline void getProcessorMemorySummary(
             size_t separator = memoryPath.rfind('/');
             if (separator == std::string::npos)
             {
-                BMCWEB_LOG_ERROR << "Invalid memory path";
+                BMCWEB_LOG_ERROR("Invalid memory path");
                 continue;
             }
             std::string parentPath = memoryPath.substr(0, separator);
@@ -4621,7 +4582,7 @@ inline void getProcessorMemoryMetricsData(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     const std::string& processorId)
 {
-    BMCWEB_LOG_DEBUG << "Get available system processor resource";
+    BMCWEB_LOG_DEBUG("Get available system processor resource");
     crow::connections::systemBus->async_method_call(
         [processorId, aResp{aResp}](
             const boost::system::error_code ec,
@@ -4631,7 +4592,7 @@ inline void getProcessorMemoryMetricsData(
                 subtree) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(aResp->res);
 
             return;
@@ -4669,7 +4630,7 @@ inline void getProcessorMemoryMetricsData(
                             const OperatingConfigProperties& properties) {
                         if (ec1)
                         {
-                            BMCWEB_LOG_DEBUG << "DBUS response error";
+                            BMCWEB_LOG_DEBUG("DBUS response error");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -4718,8 +4679,7 @@ inline void getProcessorMemoryMetricsData(
                             const OperatingConfigProperties& properties) {
                         if (ec)
                         {
-                            BMCWEB_LOG_DEBUG
-                                << "DBUS response error for processor memory metrics";
+                            BMCWEB_LOG_DEBUG("DBUS response error for processor memory metrics");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -4816,14 +4776,14 @@ inline void
     getProcessorSettingsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& processorId)
 {
-    BMCWEB_LOG_DEBUG << "Get available system processor resource";
+    BMCWEB_LOG_DEBUG("Get available system processor resource");
     crow::connections::systemBus->async_method_call(
         [aResp, processorId](boost::system::error_code ec,
                              const MapperGetSubTreeResponse& subtree) mutable {
         if (ec)
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error: {}", ec);
             messages::internalError(aResp->res);
 =======
             messages::internalError(asyncResp->res);
@@ -4862,7 +4822,7 @@ inline void
                                 const OperatingConfigProperties& properties) {
                         if (ec1)
                         {
-                            BMCWEB_LOG_DEBUG << "DBUS response error";
+                            BMCWEB_LOG_DEBUG("DBUS response error");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -4971,13 +4931,12 @@ inline void highSpeedCoreIdsHandler(
                                             sdbusplus::message::message& msg) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG << "Set eccModeEnabled succeeded";
+            BMCWEB_LOG_DEBUG("Set eccModeEnabled succeeded");
             messages::success(resp->res);
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "CPU:" << processorId
-                         << " set eccModeEnabled property failed: " << ec;
+        BMCWEB_LOG_DEBUG("CPU:{} set eccModeEnabled property failed: {}", processorId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -5265,8 +5224,8 @@ inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             const boost::system::error_code ec, const std::string& property) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBus response, error for ResetType ";
-            BMCWEB_LOG_ERROR << ec.message();
+            BMCWEB_LOG_ERROR("DBus response, error for ResetType ");
+            BMCWEB_LOG_ERROR("{}", ec.message());
 =======
     BMCWEB_LOG_DEBUG("Get available system processor resources.");
 
@@ -5297,7 +5256,7 @@ inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         const std::string processorResetType = getProcessorResetType(property);
         if (processorResetType != resetType)
         {
-            BMCWEB_LOG_DEBUG << "Property Value Incorrect";
+            BMCWEB_LOG_DEBUG("Property Value Incorrect");
             messages::actionParameterNotSupported(resp->res, "ResetType",
                                                   resetType);
             return;
@@ -5316,14 +5275,14 @@ inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                     std::end(interfaceList))
 >>>>>>> origin/master-october-10
                 {
-                    BMCWEB_LOG_ERROR << retValue;
+                    BMCWEB_LOG_ERROR("{}", retValue);
                     messages::internalError(resp->res);
                 }
-                BMCWEB_LOG_DEBUG << "CPU:" << processorId << " Reset Succeded";
+                BMCWEB_LOG_DEBUG("CPU:{} Reset Succeded", processorId);
                 messages::success(resp->res);
                 return;
             }
-            BMCWEB_LOG_DEBUG << ec1;
+            BMCWEB_LOG_DEBUG("{}", ec1);
             messages::internalError(resp->res);
             return;
         },
@@ -5397,7 +5356,7 @@ inline void
 <<<<<<< HEAD
             return;
         }
-        BMCWEB_LOG_DEBUG << "Get available system processor resource";
+        BMCWEB_LOG_DEBUG("Get available system processor resource");
         crow::connections::systemBus->async_method_call(
             [processorId, asyncResp](
                 const boost::system::error_code ec,
@@ -5407,7 +5366,7 @@ inline void
                     subtree) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
+                BMCWEB_LOG_DEBUG("DBUS response error");
                 messages::internalError(asyncResp->res);
 
                 return;
@@ -5522,14 +5481,14 @@ inline void
                             const std::string& fabricId,
                             const std::string& switchName)
 {
-    BMCWEB_LOG_DEBUG << "Get connected switch ports on " << switchName;
+    BMCWEB_LOG_DEBUG("Get connected switch ports on {}", switchName);
     crow::connections::systemBus->async_method_call(
         [asyncResp, portPath, fabricId,
          switchName](const boost::system::error_code ec,
                      std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Get connected switch failed on" << switchName;
+            BMCWEB_LOG_DEBUG("Get connected switch failed on{}", switchName);
 =======
 /**
  * Request all the properties for the given D-Bus object and fill out the
@@ -5580,7 +5539,7 @@ inline void
             std::string portId = objectPath.filename();
             if (portId.empty())
             {
-                BMCWEB_LOG_DEBUG << "Unable to fetch port";
+                BMCWEB_LOG_DEBUG("Unable to fetch port");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -5603,7 +5562,7 @@ inline void
                          const std::string& portPath,
                          const std::string& switchName)
 {
-    BMCWEB_LOG_DEBUG << "Get connected switch on" << switchName;
+    BMCWEB_LOG_DEBUG("Get connected switch on{}", switchName);
     crow::connections::systemBus->async_method_call(
         [asyncResp, switchPath, portPath,
          switchName](const boost::system::error_code ec,
@@ -5616,8 +5575,7 @@ inline void
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_DEBUG << "Get connected switch failed on: "
-                             << switchName;
+            BMCWEB_LOG_DEBUG("Get connected switch failed on: {}", switchName);
             return;
         }
         for (const std::string& fabricPath : *data)
@@ -5657,8 +5615,7 @@ inline void getConnectedProcessorPorts(
                     std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Get connected processor ports failed on: "
-                             << portPath;
+            BMCWEB_LOG_DEBUG("Get connected processor ports failed on: {}", portPath);
             return;
         }
         std::vector<std::string>* data =
@@ -5695,9 +5652,7 @@ inline void getConnectedProcessorPorts(
                 std::string processorName = connectedProcessorPath.filename();
                 if (processorName.empty())
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "Get connected processor path failed on: "
-                        << portPath;
+                    BMCWEB_LOG_DEBUG("Get connected processor path failed on: {}", portPath);
                     return;
                 }
 
@@ -5735,7 +5690,7 @@ inline void
                           const std::string& processorId,
                           const std::string& port)
 {
-    BMCWEB_LOG_DEBUG << "Get associated ports on" << port;
+    BMCWEB_LOG_DEBUG("Get associated ports on{}", port);
 
     // This is for when the ports are connected to a switch
     crow::connections::systemBus->async_method_call(
@@ -5744,7 +5699,7 @@ inline void
                std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Get associated switch failed on: " << port;
+            BMCWEB_LOG_DEBUG("Get associated switch failed on: {}", port);
             return;
         }
         std::vector<std::string>* data =
@@ -5806,8 +5761,7 @@ inline void
                std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Get associated processor ports failed on: "
-                             << port;
+            BMCWEB_LOG_DEBUG("Get associated processor ports failed on: {}", port);
             return;
         }
         std::vector<std::string>* data =
@@ -5845,7 +5799,7 @@ inline void getProcessorPortData(
     const std::string& processorId, const std::string& portId)
 {
 <<<<<<< HEAD
-    BMCWEB_LOG_DEBUG << "Get processor port data";
+    BMCWEB_LOG_DEBUG("Get processor port data");
     crow::connections::systemBus->async_method_call(
         [aResp, processorId,
          portId](const boost::system::error_code& e,
@@ -5877,8 +5831,7 @@ inline void getProcessorPortData(
         for (const std::string& sensorpath : *data)
         {
             // Check Interface in Object or not
-            BMCWEB_LOG_DEBUG << "processor state sensor object path "
-                             << sensorpath;
+            BMCWEB_LOG_DEBUG("processor state sensor object path {}", sensorpath);
             crow::connections::systemBus->async_method_call(
                 [aResp, sensorpath, processorId,
                  portId](const boost::system::error_code ec,
@@ -5996,7 +5949,7 @@ inline void requestRoutesOperatingConfigCollection(App& app)
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Get available system processor resource";
+        BMCWEB_LOG_DEBUG("Get available system processor resource");
         crow::connections::systemBus->async_method_call(
             [processorId, port, asyncResp](
                 const boost::system::error_code ec,
@@ -6006,7 +5959,7 @@ inline void requestRoutesOperatingConfigCollection(App& app)
                     subtree) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
+                BMCWEB_LOG_DEBUG("DBUS response error");
                 messages::internalError(asyncResp->res);
 
                 return;
@@ -6043,7 +5996,7 @@ inline void requestRoutesOperatingConfigCollection(App& app)
                                     subtree1) {
                             if (ec1)
                             {
-                                BMCWEB_LOG_DEBUG << "DBUS response error";
+                                BMCWEB_LOG_DEBUG("DBUS response error");
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -6128,7 +6081,7 @@ inline void getProcessorPortMetricsData(
                    std::string, dbus::utility::DbusVariantType>& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -6139,8 +6092,7 @@ inline void getProcessorPortMetricsData(
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for TX/RX bytes";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for TX/RX bytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6153,8 +6105,7 @@ inline void getProcessorPortMetricsData(
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for RXNoProtocolBytes";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for RXNoProtocolBytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6168,8 +6119,7 @@ inline void getProcessorPortMetricsData(
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for TXNoProtocolBytes";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for TXNoProtocolBytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6181,8 +6131,7 @@ inline void getProcessorPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for DataCRCCount";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for DataCRCCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6194,8 +6143,7 @@ inline void getProcessorPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for FlitCRCCount";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for FlitCRCCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6207,8 +6155,7 @@ inline void getProcessorPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for RecoveryCount";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for RecoveryCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6220,8 +6167,7 @@ inline void getProcessorPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for ReplayCount";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for ReplayCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6233,7 +6179,7 @@ inline void getProcessorPortMetricsData(
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned for RuntimeError";
+                    BMCWEB_LOG_DEBUG("Null value returned for RuntimeError");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6253,7 +6199,7 @@ inline void getProcessorPortMetricsData(
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned for TrainingError";
+                    BMCWEB_LOG_DEBUG("Null value returned for TrainingError");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -6311,8 +6257,7 @@ inline void getProcessorPortMetricsData(
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for NVLinkDataRxBandwidthGbps";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for NVLinkDataRxBandwidthGbps");
                 }
                 else
                 {
@@ -6326,8 +6271,7 @@ inline void getProcessorPortMetricsData(
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for NVLinkDataTxBandwidthGbps";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for NVLinkDataTxBandwidthGbps");
                 }
                 else
                 {
@@ -6341,8 +6285,7 @@ inline void getProcessorPortMetricsData(
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for NVLinkRawRxBandwidthGbps";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for NVLinkRawRxBandwidthGbps");
                 }
                 else
                 {
@@ -6356,8 +6299,7 @@ inline void getProcessorPortMetricsData(
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for NVLinkRawTxBandwidthGbps";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for NVLinkRawTxBandwidthGbps");
                 }
                 else
                 {
@@ -6511,7 +6453,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Get available system processor resource";
+        BMCWEB_LOG_DEBUG("Get available system processor resource");
         crow::connections::systemBus->async_method_call(
             [processorId, port, asyncResp](
                 const boost::system::error_code ec,
@@ -6521,7 +6463,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                     subtree) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
+                BMCWEB_LOG_DEBUG("DBUS response error");
 =======
         if constexpr (bmcwebEnableMultiHost)
         {
@@ -6570,7 +6512,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                     subtree1) {
                     if (ec1)
                     {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
+                        BMCWEB_LOG_DEBUG("DBUS response error");
                         messages::internalError(asyncResp->res);
                         return;
                     }

@@ -273,9 +273,7 @@ inline bool extractHypervisorInterfaceData(
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR(
-                                "Got extra property: {} on the {} object",
-                                property.first, objpath.first.str);
+                            BMCWEB_LOG_ERROR( "Got extra property: {} on the {} object", property.first, objpath.first.str);
                         }
                     }
                 }
@@ -369,8 +367,7 @@ inline void setHypervisorIPv4Address(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& ethIfaceId, const std::string& ipv4Address)
 {
-    BMCWEB_LOG_DEBUG("Setting the Hypervisor IPaddress : {} on Iface: {}",
-                     ipv4Address, ethIfaceId);
+    BMCWEB_LOG_DEBUG("Setting the Hypervisor IPaddress : {} on Iface: {}", ipv4Address, ethIfaceId);
     sdbusplus::asio::setProperty(
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor/" + ethIfaceId + "/ipv4/addr0",
@@ -382,7 +379,7 @@ inline void setHypervisorIPv4Address(
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Hypervisor IPaddress is Set";
+        BMCWEB_LOG_DEBUG("Hypervisor IPaddress is Set");
     },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor/" + ethIfaceId + "/ipv4/addr0",
@@ -408,8 +405,7 @@ inline void
     setHypervisorIPv4Subnet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& ethIfaceId, const uint8_t subnet)
 {
-    BMCWEB_LOG_DEBUG("Setting the Hypervisor subnet : {} on Iface: {}", subnet,
-                     ethIfaceId);
+    BMCWEB_LOG_DEBUG("Setting the Hypervisor subnet : {} on Iface: {}", subnet, ethIfaceId);
 
     sdbusplus::asio::setProperty(
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
@@ -422,7 +418,7 @@ inline void
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "SubnetMask is Set";
+        BMCWEB_LOG_DEBUG("SubnetMask is Set");
     },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor/" + ethIfaceId + "/ipv4/addr0",
@@ -448,18 +444,17 @@ inline void setHypervisorIPv4Gateway(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& gateway)
 {
-    BMCWEB_LOG_DEBUG(
-        "Setting the DefaultGateway to the last configured gateway");
+    BMCWEB_LOG_DEBUG( "Setting the DefaultGateway to the last configured gateway");
 
 <<<<<<< HEAD
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
             return;
         }
-        BMCWEB_LOG_DEBUG << "Default Gateway is Set";
+        BMCWEB_LOG_DEBUG("Default Gateway is Set");
     },
         "xyz.openbmc_project.Settings",
 =======
@@ -609,7 +604,7 @@ inline void setDHCPEnabled(const std::string& ifaceId, bool ipv4DHCPEnabled,
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Hypervisor IPaddress Origin is Set";
+        BMCWEB_LOG_DEBUG("Hypervisor IPaddress Origin is Set");
     },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor/" + ifaceId + "/ipv4/addr0",
@@ -709,8 +704,7 @@ inline void handleHypervisorIPv4StaticPatch(
             return;
         }
 
-        BMCWEB_LOG_DEBUG("Calling createHypervisorIPv4 on : {},{}", ifaceId,
-                         *address);
+        BMCWEB_LOG_DEBUG("Calling createHypervisorIPv4 on : {},{}", ifaceId, *address);
         createHypervisorIPv4(ifaceId, prefixLength, *gateway, *address,
                              asyncResp);
         // Set the DHCPEnabled to false since the Static IPv4 is set
@@ -817,7 +811,7 @@ inline void handleHypervisorEthernetInterfaceCollectionGet(
                                            "hypervisor");
                 return;
             }
-            BMCWEB_LOG_DEBUG << "Hypervisor is available";
+            BMCWEB_LOG_DEBUG("Hypervisor is available");
 
             asyncResp->res.jsonValue["@odata.type"] =
                 "#ComputerSystem.v1_6_0.ComputerSystem";
@@ -1042,8 +1036,7 @@ inline void handleHypervisorEthernetInterfacePatch(
             if ((ipv4Json.is_null()) &&
                 (translateDhcpEnabledToBool(ethData.dhcpEnabled, true)))
             {
-                BMCWEB_LOG_INFO("Ignoring the delete on ipv4StaticAddresses "
-                                "as the interface is DHCP enabled");
+                BMCWEB_LOG_INFO("Ignoring the delete on ipv4StaticAddresses " "as the interface is DHCP enabled");
             }
             else
             {

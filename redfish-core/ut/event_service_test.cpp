@@ -34,7 +34,7 @@ class EventServiceInternalImplTest : public ::testing::Test
 #ifdef BMCWEB_ENABLE_DEBUG
         crow::Logger::setLogLevel(crow::LogLevel::Debug);
 #endif // BMCWEB_ENABLE_DEBUG
-        BMCWEB_LOG_DEBUG << "Debug log enabled";
+        BMCWEB_LOG_DEBUG("Debug log enabled");
     }
 };
 

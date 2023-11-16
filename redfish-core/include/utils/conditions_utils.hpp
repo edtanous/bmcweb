@@ -25,8 +25,7 @@ inline void handleDeviceServiceConditions(
         if (ec)
         {
             messages::internalError(asyncResp->res);
-            BMCWEB_LOG_ERROR << "getLogEntriesIfaceData resp_handler got error "
-                             << ec;
+            BMCWEB_LOG_ERROR("getLogEntriesIfaceData resp_handler got error {}", ec);
             return;
         }
 
@@ -82,8 +81,7 @@ inline void handleDeviceServiceConditions(
                     if (id == nullptr || message == nullptr ||
                         severity == nullptr)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "id, message, severity of log entry is null\n";
+                        BMCWEB_LOG_ERROR("id, message, severity of log entry is null");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -142,8 +140,7 @@ inline void handleServiceConditionsURI(
         if (ec)
         {
             messages::internalError(asyncResp->res);
-            BMCWEB_LOG_ERROR << "getLogEntriesIfaceData resp_handler got error "
-                             << ec;
+            BMCWEB_LOG_ERROR("getLogEntriesIfaceData resp_handler got error {}", ec);
             return;
         }
         const std::map<std::string, int> severityMap = {
@@ -199,8 +196,7 @@ inline void handleServiceConditionsURI(
                     if (id == nullptr || message == nullptr ||
                         severity == nullptr)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "id, message, severity of log entry is null\n";
+                        BMCWEB_LOG_ERROR("id, message, severity of log entry is null");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -273,12 +269,9 @@ inline void populateServiceConditions(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisId)
 {
-    BMCWEB_LOG_DEBUG << "Populating service conditions for device " << chassisId
-                     << "\n";
-    BMCWEB_LOG_DEBUG << "ON REDFISH URI "
-                     << asyncResp->res.jsonValue["@odata.id"] << "\n";
-    BMCWEB_LOG_DEBUG << "PLATFORM DEVICE PREFIX IS " << PLATFORMDEVICEPREFIX
-                     << "\n";
+    BMCWEB_LOG_DEBUG("Populating service conditions for device {}", chassisId);
+    BMCWEB_LOG_DEBUG("ON REDFISH URI {}", asyncResp->res.jsonValue["@odata.id"]);
+    BMCWEB_LOG_DEBUG("PLATFORM DEVICE PREFIX IS {}", PLATFORMDEVICEPREFIX);
 
     std::string chasId = chassisId;
     if (strlen(PLATFORMDEVICEPREFIX) > 0)

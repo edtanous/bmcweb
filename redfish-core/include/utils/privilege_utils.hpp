@@ -20,19 +20,18 @@ template <typename Callback>
 inline void isRedfishHostInterfaceUser(const std::string& username,
                                        Callback&& callback)
 {
-    BMCWEB_LOG_DEBUG << "isRedfishHostInterfaceUser enter " << username;
+    BMCWEB_LOG_DEBUG("isRedfishHostInterfaceUser enter {}", username);
 
     auto respHandler =
         [callback{std::forward<Callback>(callback)}](
             const boost::system::error_code ec,
             const std::map<std::string, dbus::utility::DbusVariantType>&
                 userInfo) {
-        BMCWEB_LOG_DEBUG << "isRedfishHostInterfaceUser respHandler enter";
+        BMCWEB_LOG_DEBUG("isRedfishHostInterfaceUser respHandler enter");
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "isRedfishHostInterfaceUser respHandler DBUS error: " << ec;
+            BMCWEB_LOG_ERROR("isRedfishHostInterfaceUser respHandler DBUS error: {}", ec);
             callback(ec, false);
             return;
         }
@@ -48,7 +47,7 @@ inline void isRedfishHostInterfaceUser(const std::string& username,
 
         if (userGroupPtr == nullptr)
         {
-            BMCWEB_LOG_ERROR << "User Group not found";
+            BMCWEB_LOG_ERROR("User Group not found");
             callback(boost::system::errc::make_error_code(
                          boost::system::errc::function_not_supported),
                      false);
@@ -74,7 +73,7 @@ inline void isRedfishHostInterfaceUser(const std::string& username,
         "/xyz/openbmc_project/user", "xyz.openbmc_project.User.Manager",
         "GetUserInfo", username);
 
-    BMCWEB_LOG_DEBUG << "isRedfishHostInterfaceUser exit";
+    BMCWEB_LOG_DEBUG("isRedfishHostInterfaceUser exit");
 }
 
 /**

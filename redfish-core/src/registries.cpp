@@ -1,7 +1,7 @@
 #include "registries.hpp"
 
 #include "registries/base_message_registry.hpp"
-#include "registries/openbmc_message_registry.hpp"
+//#include "registries/openbmc_message_registry.hpp"
 #include "str_utility.hpp"
 
 #include <ranges>
@@ -43,11 +43,11 @@ const Message* getMessage(std::string_view messageID)
         return getMessageFromRegistry(
             messageKey, std::span<const MessageEntry>(base::registry));
     }
-    if (std::string(openbmc::header.registryPrefix) == registryName)
-    {
-        return getMessageFromRegistry(
-            messageKey, std::span<const MessageEntry>(openbmc::registry));
-    }
+    // if (std::string(openbmc::header.registryPrefix) == registryName)
+    // {
+    //     return getMessageFromRegistry(
+    //         messageKey, std::span<const MessageEntry>(openbmc::registry));
+    // }
     return nullptr;
 }
 

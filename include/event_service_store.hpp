@@ -160,8 +160,7 @@ struct UserSubscription
                         val.value().get_ptr<const std::string*>();
                     if (value == nullptr)
                     {
-                        BMCWEB_LOG_ERROR("Failed to parse value for key{}",
-                                         val.key());
+                        BMCWEB_LOG_ERROR("Failed to parse value for key{}", val.key());
                         continue;
                     }
                     subvalue->httpHeaders.set(val.key(), *value);
@@ -206,9 +205,7 @@ struct UserSubscription
             }
             else
             {
-                BMCWEB_LOG_ERROR(
-                    "Got unexpected property reading persistent file: {}",
-                    element.key());
+                BMCWEB_LOG_ERROR( "Got unexpected property reading persistent file: {}", element.key());
                 continue;
             }
         }
@@ -219,8 +216,7 @@ struct UserSubscription
             subvalue->eventFormatType.empty() ||
             subvalue->subscriptionType.empty())
         {
-            BMCWEB_LOG_ERROR("Subscription missing required field "
-                             "information, refusing to restore");
+            BMCWEB_LOG_ERROR("Subscription missing required field " "information, refusing to restore");
             return nullptr;
         }
 

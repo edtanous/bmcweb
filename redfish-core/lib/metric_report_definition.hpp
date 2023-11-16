@@ -234,16 +234,14 @@ inline std::optional<nlohmann::json::array_t> getLinkedTriggers(
         if (path.parent_path() !=
             "/xyz/openbmc_project/Telemetry/Triggers/TelemetryService")
         {
-            BMCWEB_LOG_ERROR("Property Triggers contains invalid value: {}",
-                             path.str);
+            BMCWEB_LOG_ERROR("Property Triggers contains invalid value: {}", path.str);
             return std::nullopt;
         }
 
         std::string id = path.filename();
         if (id.empty())
         {
-            BMCWEB_LOG_ERROR("Property Triggers contains invalid value: {}",
-                             path.str);
+            BMCWEB_LOG_ERROR("Property Triggers contains invalid value: {}", path.str);
             return std::nullopt;
         }
         nlohmann::json::object_t trigger;
@@ -745,9 +743,7 @@ class AddReport
                 auto el = uriToDbus.find(uri);
                 if (el == uriToDbus.end())
                 {
-                    BMCWEB_LOG_ERROR(
-                        "Failed to find DBus sensor corresponding to URI {}",
-                        uri);
+                    BMCWEB_LOG_ERROR( "Failed to find DBus sensor corresponding to URI {}", uri);
                     messages::propertyValueNotInList(asyncResp->res, uri,
                                                      "MetricProperties/" +
                                                          std::to_string(i));
@@ -898,7 +894,7 @@ class UpdateMetrics
                         const std::vector<std::string>& metricPaths) mutable {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+                BMCWEB_LOG_DEBUG("DBUS response error: {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1200,9 +1196,7 @@ inline void
                     const std::map<std::string, std::string>& uriToDbus) {
                 if (status != boost::beast::http::status::ok)
                 {
-                    BMCWEB_LOG_ERROR(
-                        "Failed to retrieve URI to dbus sensors map with err {}",
-                        static_cast<unsigned>(status));
+                    BMCWEB_LOG_ERROR( "Failed to retrieve URI to dbus sensors map with err {}", static_cast<unsigned>(status));
                     return;
                 }
 <<<<<<< HEAD
@@ -1549,7 +1543,7 @@ inline void
 >>>>>>> origin/master-october-10
         {
             // no chassis links = no failures
-            BMCWEB_LOG_ERROR << "getAllChassisSensors DBUS error: " << ec;
+            BMCWEB_LOG_ERROR("getAllChassisSensors DBUS error: {}", ec);
         }
 <<<<<<< HEAD
         // Add parent chassis to the list
@@ -1585,17 +1579,14 @@ inline void
                                 variantEndpoints) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR << "getAllChassisSensors DBUS error: "
-                                     << ec;
+                    BMCWEB_LOG_ERROR("getAllChassisSensors DBUS error: {}", ec);
                     return;
                 }
                 const std::vector<std::string>* sensorPaths =
                     std::get_if<std::vector<std::string>>(&(variantEndpoints));
                 if (sensorPaths == nullptr)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "getAllChassisSensors empty sensors list"
-                        << "\n";
+                    BMCWEB_LOG_ERROR("getAllChassisSensors empty sensors list");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1659,9 +1650,7 @@ inline void getPlatformMetricsProperties(
                                const std::vector<std::string>& chassisPaths) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR
-                << "getPlatformMetricsProperties respHandler DBUS error: "
-                << ec;
+            BMCWEB_LOG_ERROR("getPlatformMetricsProperties respHandler DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1672,7 +1661,7 @@ inline void getPlatformMetricsProperties(
             const std::string& chassisName = path.filename();
             if (chassisName.empty())
             {
-                BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassisPath;
+                BMCWEB_LOG_ERROR("Failed to find '/' in {}", chassisPath);
                 continue;
             }
             if (chassisName != chassisId)
@@ -2666,7 +2655,7 @@ inline void populateMetricPropertiesAndWildcards(
                      const std::vector<std::string>& objPaths) mutable {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2868,7 +2857,7 @@ inline void validateAndGetMetricReportDefinition(
                         const MapperGetSubTreeResponse& subtree) mutable {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -3017,7 +3006,7 @@ inline void requestRoutesMetricReportDefinition(App& app)
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
+                BMCWEB_LOG_ERROR("respHandler DBus error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3057,7 +3046,7 @@ inline void requestRoutesMetricReportDefinition(App& app)
 
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "respHandler DBus error " << ec;
+                BMCWEB_LOG_ERROR("respHandler DBus error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3108,9 +3097,7 @@ inline void handleMetricReportDefinitionsPost(
                 const std::map<std::string, std::string>& uriToDbus) {
             if (status != boost::beast::http::status::ok)
             {
-                BMCWEB_LOG_ERROR(
-                    "Failed to retrieve URI to dbus sensors map with err {}",
-                    static_cast<unsigned>(status));
+                BMCWEB_LOG_ERROR( "Failed to retrieve URI to dbus sensors map with err {}", static_cast<unsigned>(status));
                 return;
             }
             addReportReq->insert(uriToDbus);

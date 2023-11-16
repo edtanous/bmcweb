@@ -106,8 +106,7 @@ class HTTP2Connection :
         BMCWEB_LOG_DEBUG("File read callback length: {}", length);
         crow::Response& res = stream.res;
 
-        BMCWEB_LOG_DEBUG("total: {} send_sofar: {}", res.body().size(),
-                         stream.sentSofar);
+        BMCWEB_LOG_DEBUG("total: {} send_sofar: {}", res.body().size(), stream.sentSofar);
 
         size_t toSend = std::min(res.body().size() - stream.sentSofar, length);
         BMCWEB_LOG_DEBUG("Copying {} bytes to buf", toSend);
@@ -209,8 +208,7 @@ class HTTP2Connection :
         }
 
         crow::Request& thisReq = it->second.req;
-        BMCWEB_LOG_DEBUG("Handling {} \"{}\"", logPtr(&thisReq),
-                         thisReq.url().encoded_path());
+        BMCWEB_LOG_DEBUG("Handling {} \"{}\"", logPtr(&thisReq), thisReq.url().encoded_path());
 
         crow::Response& thisRes = it->second.res;
 
@@ -303,8 +301,7 @@ class HTTP2Connection :
         std::string_view valueSv(reinterpret_cast<const char*>(value.data()),
                                  value.size());
 
-        BMCWEB_LOG_DEBUG("on_header_callback name: {} value {}", nameSv,
-                         valueSv);
+        BMCWEB_LOG_DEBUG("on_header_callback name: {} value {}", nameSv, valueSv);
 
         switch (frame.hd.type)
         {
@@ -485,13 +482,11 @@ class HTTP2Connection :
             inBuffer.prepare(8192),
             [this, self(shared_from_this())](
                 const boost::system::error_code& ec, size_t bytesTransferred) {
-            BMCWEB_LOG_DEBUG("{} async_read_some {} Bytes", logPtr(this),
-                             bytesTransferred);
+            BMCWEB_LOG_DEBUG("{} async_read_some {} Bytes", logPtr(this), bytesTransferred);
 
             if (ec)
             {
-                BMCWEB_LOG_ERROR("{} Error while reading: {}", logPtr(this),
-                                 ec.message());
+                BMCWEB_LOG_ERROR("{} Error while reading: {}", logPtr(this), ec.message());
                 close();
                 BMCWEB_LOG_DEBUG("{} from read(1)", logPtr(this));
                 return;
@@ -504,13 +499,11 @@ class HTTP2Connection :
                 std::span<const uint8_t> bufferSpan{
                     std::bit_cast<const uint8_t*>(bufferIt.data()),
                     bufferIt.size()};
-                BMCWEB_LOG_DEBUG("http2 is getting {} bytes",
-                                 bufferSpan.size());
+                BMCWEB_LOG_DEBUG("http2 is getting {} bytes", bufferSpan.size());
                 ssize_t readLen = ngSession.memRecv(bufferSpan);
                 if (readLen <= 0)
                 {
-                    BMCWEB_LOG_ERROR("nghttp2_session_mem_recv returned {}",
-                                     readLen);
+                    BMCWEB_LOG_ERROR("nghttp2_session_mem_recv returned {}", readLen);
                     close();
                     return;
                 }

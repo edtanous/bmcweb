@@ -104,7 +104,7 @@ inline void
                     const std::vector<std::string>& metricPaths) mutable {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -233,7 +233,7 @@ inline void getSensorMap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const sensorMap& sensorMetrics) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -323,7 +323,7 @@ inline void getPlatforMetricsFromSensorMap(
                            const uint32_t& staleSensorUpperLimit) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -344,8 +344,7 @@ inline void
                            const std::vector<std::string>& chassisPaths) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "getPlatformMetrics respHandler DBUS error: "
-                             << ec;
+            BMCWEB_LOG_ERROR("getPlatformMetrics respHandler DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -356,7 +355,7 @@ inline void
             const std::string& chassisName = path.filename();
             if (chassisName.empty())
             {
-                BMCWEB_LOG_ERROR << "Failed to find '/' in " << chassisPath;
+                BMCWEB_LOG_ERROR("Failed to find '/' in {}", chassisPath);
                 continue;
             }
             if (chassisName != chassisId)
@@ -517,7 +516,7 @@ inline void getManagedObjectForMetrics(
     const std::string& metricId, const std::string& metricfname,
     std::vector<std::string>& supportedMetricIds)
 {
-    BMCWEB_LOG_DEBUG << metricId;
+    BMCWEB_LOG_DEBUG("{}", metricId);
     std::string deviceType;
 
     std::string memoryMetrics = PLATFORMDEVICEPREFIX "MemoryMetrics";
@@ -597,7 +596,7 @@ inline void getManagedObjectForMetrics(
                      const dbus::utility::ManagedObjectType& objects) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -682,7 +681,7 @@ inline void
                            const MapperGetSubTreeResponse& subtree) mutable {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error: " << ec;
+            BMCWEB_LOG_DEBUG("DBUS response error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -748,7 +747,7 @@ inline void requestRoutesMetricReport(App& app)
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now().time_since_epoch())
                 .count());
-        BMCWEB_LOG_DEBUG << "Request submitted at" << requestTimestamp;
+        BMCWEB_LOG_DEBUG("Request submitted at{}", requestTimestamp);
         getPlatforMetrics(asyncResp, id, requestTimestamp);
         return;
 #else

@@ -251,7 +251,7 @@ static inline void
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -290,7 +290,7 @@ static inline void
                                const std::variant<std::string>& uuid) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -321,8 +321,7 @@ static inline void
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error on getting PCIeDevice"
-                             << "clock reference OEM properties";
+            BMCWEB_LOG_DEBUG("DBUS response error on getting PCIeDeviceclock reference OEM properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -362,8 +361,7 @@ static inline void getPCIeDeviceNvLinkClkRefOem(
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error on getting PCIeDevice"
-                             << "NVLink Clock Reference OEM properties";
+            BMCWEB_LOG_DEBUG("DBUS response error on getting PCIeDeviceNVLink Clock Reference OEM properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -405,14 +403,14 @@ static inline void
                                const std::variant<std::string>& deviceState) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "DBUS response error";
+            BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
         const std::string* s = std::get_if<std::string>(&deviceState);
         if (s == nullptr)
         {
-            BMCWEB_LOG_DEBUG << "Device state of illegal, non-strig type";
+            BMCWEB_LOG_DEBUG("Device state of illegal, non-strig type");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -443,9 +441,7 @@ static inline void
         }
         else
         {
-            BMCWEB_LOG_DEBUG << "Unrecognized 'CurrentPowerState' value: "
-                             << "'" << *s
-                             << "'. Omitting 'Status' entry in the response";
+            BMCWEB_LOG_DEBUG("Unrecognized 'CurrentPowerState' value: '{}'. Omitting 'Status' entry in the response", *s);
         }
     };
     crow::connections::systemBus->async_method_call(
@@ -469,8 +465,7 @@ inline void addPCIeSlotProperties(
 {
     if (ec)
     {
-        BMCWEB_LOG_ERROR("DBUS response error for getAllProperties{}",
-                         ec.value());
+        BMCWEB_LOG_ERROR("DBUS response error for getAllProperties{}", ec.value());
         messages::internalError(res);
         return;
     }
@@ -547,17 +542,13 @@ inline void getPCIeDeviceSlotPath(
                 // Missing association is not an error
                 return;
             }
-            BMCWEB_LOG_ERROR(
-                "DBUS response error for getAssociatedSubTreePaths {}",
-                ec.value());
+            BMCWEB_LOG_ERROR( "DBUS response error for getAssociatedSubTreePaths {}", ec.value());
             messages::internalError(asyncResp->res);
             return;
         }
         if (endpoints.size() > 1)
         {
-            BMCWEB_LOG_ERROR(
-                "PCIeDevice is associated with more than one PCIeSlot: {}",
-                endpoints.size());
+            BMCWEB_LOG_ERROR( "PCIeDevice is associated with more than one PCIeSlot: {}", endpoints.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -587,9 +578,7 @@ static inline void
                      propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG
-                << "failed to get PCIe Device properties ec: " << ec.value()
-                << ": " << ec.message();
+            BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {}: {}", ec.value(), ec.message());
             if (ec.value() ==
                 boost::system::linux_error::bad_request_descriptor)
             {
@@ -607,8 +596,7 @@ inline void
 {
     if (ec || object.empty())
     {
-        BMCWEB_LOG_ERROR("DBUS response error for getDbusObject {}",
-                         ec.value());
+        BMCWEB_LOG_ERROR("DBUS response error for getDbusObject {}", ec.value());
         messages::internalError(asyncResp->res);
         return;
     }
@@ -648,8 +636,7 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Health {}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Health {}", ec.value());
 >>>>>>> origin/master-october-10
                 messages::internalError(asyncResp->res);
             }
@@ -750,9 +737,7 @@ static inline void getPCIeDeviceFunctionsList(
                 pcieDevProperties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG
-                << "failed to get PCIe Device properties ec: " << ec.value()
-                << ": " << ec.message();
+            BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {}: {}", ec.value(), ec.message());
             if (ec.value() ==
                 boost::system::linux_error::bad_request_descriptor)
             {
@@ -851,9 +836,7 @@ static inline void
                 pcieDevProperties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG
-                << "failed to get PCIe Device properties ec: " << ec.value()
-                << ": " << ec.message();
+            BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {}: {}", ec.value(), ec.message());
             if (ec.value() ==
                 boost::system::linux_error::bad_request_descriptor)
             {
@@ -884,8 +867,7 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Properties{}",
-                                 ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Properties{}", ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -962,16 +944,14 @@ inline void addPCIeDeviceProperties(
 
         if (!redfishGenerationInUse)
         {
-            BMCWEB_LOG_WARNING("Unknown PCIe Device Generation: {}",
-                               *generationInUse);
+            BMCWEB_LOG_WARNING("Unknown PCIe Device Generation: {}", *generationInUse);
         }
         else
         {
             if (*redfishGenerationInUse == pcie_device::PCIeTypes::Invalid)
 >>>>>>> origin/master-october-10
             {
-                BMCWEB_LOG_ERROR("Invalid PCIe Device Generation: {}",
-                                 *generationInUse);
+                BMCWEB_LOG_ERROR("Invalid PCIe Device Generation: {}", *generationInUse);
                 messages::internalError(asyncResp->res);
             }
 <<<<<<< HEAD
@@ -1176,15 +1156,13 @@ inline void requestRoutesSystemPCIeDevice(App& app)
 
         if (!redfishGenerationSupported)
         {
-            BMCWEB_LOG_WARNING("Unknown PCIe Device Generation: {}",
-                               *generationSupported);
+            BMCWEB_LOG_WARNING("Unknown PCIe Device Generation: {}", *generationSupported);
         }
         else
         {
             if (*redfishGenerationSupported == pcie_device::PCIeTypes::Invalid)
             {
-                BMCWEB_LOG_ERROR("Invalid PCIe Device Generation: {}",
-                                 *generationSupported);
+                BMCWEB_LOG_ERROR("Invalid PCIe Device Generation: {}", *generationSupported);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1681,7 +1659,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                                             const GetSubTreeType& subtree) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
+                        BMCWEB_LOG_DEBUG("DBUS response error");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -1701,7 +1679,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             connectionNames = object.second;
                         if (connectionNames.size() < 1)
                         {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                            BMCWEB_LOG_ERROR("Got 0 Connection names");
                             continue;
                         }
                         std::string pcieDeviceURI = "/redfish/v1/Chassis/";
@@ -1859,7 +1837,7 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
                                             const GetSubTreeType& subtree) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
+                        BMCWEB_LOG_DEBUG("DBUS response error");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -1879,7 +1857,7 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
                             connectionNames = object.second;
                         if (connectionNames.size() < 1)
                         {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                            BMCWEB_LOG_ERROR("Got 0 Connection names");
                             continue;
                         }
                         const std::string& connectionName =
@@ -1959,7 +1937,7 @@ inline void requestRoutesChassisPCIeFunction(App& app)
                                             const GetSubTreeType& subtree) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "DBUS response error";
+                        BMCWEB_LOG_DEBUG("DBUS response error");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -1979,7 +1957,7 @@ inline void requestRoutesChassisPCIeFunction(App& app)
                             connectionNames = object.second;
                         if (connectionNames.size() < 1)
                         {
-                            BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                            BMCWEB_LOG_ERROR("Got 0 Connection names");
                             continue;
                         }
                         const std::string& connectionName =

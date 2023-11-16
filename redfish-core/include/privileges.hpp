@@ -102,8 +102,7 @@ class Privileges
         {
             if (!setSinglePrivilege(privilege))
             {
-                BMCWEB_LOG_CRITICAL("Unable to set privilege {}in constructor",
-                                    privilege);
+                BMCWEB_LOG_CRITICAL("Unable to set privilege {}in constructor", privilege);
             }
         }
     }

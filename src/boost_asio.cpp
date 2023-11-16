@@ -15,8 +15,7 @@ void throw_exception(const std::exception& e)
 
 void throw_exception(const std::exception& e, const source_location& loc)
 {
-    BMCWEB_LOG_CRITICAL("Boost exception thrown {} from {}:{}", e.what(),
-                        loc.file_name(), loc.line());
+    BMCWEB_LOG_CRITICAL("Boost exception thrown {} from {}:{}", e.what(), loc.file_name(), loc.line());
     std::terminate();
 }
 } // namespace boost

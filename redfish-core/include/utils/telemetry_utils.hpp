@@ -69,9 +69,7 @@ inline std::optional<IncorrectMetricUri> getChassisSensorNode(
 
         if (!parsed)
         {
-            BMCWEB_LOG_ERROR("Failed to get chassis and sensor Node "
-                             "from {}",
-                             uri);
+            BMCWEB_LOG_ERROR("Failed to get chassis and sensor Node " "from {}", uri);
             return std::make_optional<IncorrectMetricUri>({uri, uriIdx});
         }
 
@@ -99,9 +97,7 @@ inline std::optional<IncorrectMetricUri> getChassisSensorNode(
             continue;
         }
 
-        BMCWEB_LOG_ERROR("Failed to get chassis and sensor Node "
-                         "from {}",
-                         uri);
+        BMCWEB_LOG_ERROR("Failed to get chassis and sensor Node " "from {}", uri);
         return std::make_optional<IncorrectMetricUri>({uri, uriIdx});
     }
     return std::nullopt;

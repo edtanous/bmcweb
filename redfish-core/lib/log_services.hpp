@@ -187,13 +187,12 @@ static void generateMessageRegistry(
     const std::string& resolution, const bool& resolved,
     const std::string& severity = "")
 {
-    BMCWEB_LOG_DEBUG << "Generating MessageRegitry for [" << messageId << "]";
+    BMCWEB_LOG_DEBUG("Generating MessageRegitry for [{}]", messageId);
     const registries::Message* msg = registries::getMessage(messageId);
 
     if (msg == nullptr)
     {
-        BMCWEB_LOG_ERROR << "Failed to lookup the message for MessageId["
-                         << messageId << "]";
+        BMCWEB_LOG_ERROR("Failed to lookup the message for MessageId[{}]", messageId);
         return;
     }
 
@@ -602,9 +601,7 @@ void deleteDbusSELEntry(std::string& entryID,
         }
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "SELLogEntry (DBus) "
-                                "resp_handler got error "
-                             << ec;
+            BMCWEB_LOG_ERROR("SELLogEntry (DBus) " "resp_handler got error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -992,8 +989,7 @@ static std::string getDumpEntriesPath(const std::string& dumpType)
     }
     else
     {
-        BMCWEB_LOG_ERROR("getDumpEntriesPath() invalid dump type: {}",
-                         dumpType);
+        BMCWEB_LOG_ERROR("getDumpEntriesPath() invalid dump type: {}", dumpType);
     }
 
     // Returns empty string on error
@@ -1469,7 +1465,7 @@ inline void
         if (!foundDumpEntry)
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_ERROR << "Can't find Dump Entry";
+            BMCWEB_LOG_ERROR("Can't find Dump Entry");
 =======
             BMCWEB_LOG_WARNING("Can't find Dump Entry {}", entryID);
 >>>>>>> origin/master-october-10
@@ -1493,7 +1489,7 @@ inline void deleteDumpEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 <<<<<<< HEAD
     auto respHandler = [asyncResp,
                         entryID](const boost::system::error_code ec) {
-        BMCWEB_LOG_DEBUG << "Dump Entry doDelete callback: Done";
+        BMCWEB_LOG_DEBUG("Dump Entry doDelete callback: Done");
 =======
     auto respHandler =
         [asyncResp, entryID](const boost::system::error_code& ec) {
@@ -1506,9 +1502,7 @@ inline void deleteDumpEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 messages::resourceNotFound(asyncResp->res, "LogEntry", entryID);
                 return;
             }
-            BMCWEB_LOG_ERROR(
-                "Dump (DBus) doDelete respHandler got error {} entryID={}", ec,
-                entryID);
+            BMCWEB_LOG_ERROR( "Dump (DBus) doDelete respHandler got error {} entryID={}", ec, entryID);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1596,8 +1590,7 @@ inline void createDumpTaskCallback(
                  const std::string& introspectXml) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("Introspect call failed with error: {}",
-                             ec.message());
+            BMCWEB_LOG_ERROR("Introspect call failed with error: {}", ec.message());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1644,8 +1637,7 @@ inline void createDumpTaskCallback(
                 const std::shared_ptr<task::TaskData>& taskData) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR("{}: Error in creating dump",
-                                 createdObjPath.str);
+                BMCWEB_LOG_ERROR("{}: Error in creating dump", createdObjPath.str);
                 taskData->messages.emplace_back(messages::internalError());
                 taskData->state = "Cancelled";
                 return task::completed;
@@ -1661,8 +1653,7 @@ inline void createDumpTaskCallback(
                     getDumpCompletionStatus(values);
                 if (dumpStatus == DumpCreationProgress::DUMP_CREATE_FAILED)
                 {
-                    BMCWEB_LOG_ERROR("{}: Error in creating dump",
-                                     createdObjPath.str);
+                    BMCWEB_LOG_ERROR("{}: Error in creating dump", createdObjPath.str);
                     taskData->state = "Cancelled";
                     nlohmann::json retMessage = messages::operationFailed();
                     taskData->messages.emplace_back(retMessage);
@@ -1672,8 +1663,7 @@ inline void createDumpTaskCallback(
                 if (dumpStatus == DumpCreationProgress::DUMP_CREATE_INPROGRESS)
                 {
 <<<<<<< HEAD
-                    BMCWEB_LOG_DEBUG << createdObjPath.str
-                                     << ": Dump creation task is in progress";
+                    BMCWEB_LOG_DEBUG("{}: Dump creation task is in progress", createdObjPath.str);
 
                     auto valuesIter = std::find_if(
                         values.begin(), values.end(),
@@ -1699,8 +1689,7 @@ inline void createDumpTaskCallback(
                     }
 
 =======
-                    BMCWEB_LOG_DEBUG("{}: Dump creation task is in progress",
-                                     createdObjPath.str);
+                    BMCWEB_LOG_DEBUG("{}: Dump creation task is in progress", createdObjPath.str);
 >>>>>>> origin/master-october-10
                     return !task::completed;
                 }
@@ -1722,8 +1711,7 @@ inline void createDumpTaskCallback(
 >>>>>>> origin/master-october-10
             taskData->payload->httpHeaders.emplace_back(std::move(headerLoc));
 
-            BMCWEB_LOG_DEBUG("{}: Dump creation task completed",
-                             createdObjPath.str);
+            BMCWEB_LOG_DEBUG("{}: Dump creation task completed", createdObjPath.str);
             taskData->state = "Completed";
             taskData->percentComplete = 100;
             return task::completed;
@@ -1770,8 +1758,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
         if (!oemDiagnosticDataType || !diagnosticDataType)
         {
-            BMCWEB_LOG_ERROR(
-                "CreateDump action parameter 'DiagnosticDataType'/'OEMDiagnosticDataType' value not found!");
+            BMCWEB_LOG_ERROR( "CreateDump action parameter 'DiagnosticDataType'/'OEMDiagnosticDataType' value not found!");
             messages::actionParameterMissing(
                 asyncResp->res, "CollectDiagnosticData",
                 "DiagnosticDataType & OEMDiagnosticDataType");
@@ -1781,7 +1768,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (*diagnosticDataType != "OEM")
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_ERROR << "Wrong parameter values passed";
+            BMCWEB_LOG_ERROR("Wrong parameter values passed");
             messages::actionParameterValueError(
                 asyncResp->res, "DiagnosticDataType",
                 "LogService.CollectDiagnosticData");
@@ -1797,8 +1784,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     {
         if (!diagnosticDataType)
         {
-            BMCWEB_LOG_ERROR(
-                "CreateDump action parameter 'DiagnosticDataType' not found!");
+            BMCWEB_LOG_ERROR( "CreateDump action parameter 'DiagnosticDataType' not found!");
             messages::actionParameterMissing(
                 asyncResp->res, "CollectDiagnosticData", "DiagnosticDataType");
             return;
@@ -1806,14 +1792,12 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         if (*diagnosticDataType != "Manager")
         {
 <<<<<<< HEAD
-            BMCWEB_LOG_ERROR
-                << "Wrong parameter value passed for 'DiagnosticDataType'";
+            BMCWEB_LOG_ERROR("Wrong parameter value passed for 'DiagnosticDataType'");
             messages::actionParameterValueError(
                 asyncResp->res, "DiagnosticDataType",
                 "LogService.CollectDiagnosticData");
 =======
-            BMCWEB_LOG_ERROR(
-                "Wrong parameter value passed for 'DiagnosticDataType'");
+            BMCWEB_LOG_ERROR( "Wrong parameter value passed for 'DiagnosticDataType'");
             messages::internalError(asyncResp->res);
 >>>>>>> origin/master-october-10
             return;
@@ -1864,12 +1848,10 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
 
 <<<<<<< HEAD
-            BMCWEB_LOG_ERROR << "CreateDump DBus error: " << dbusError->name
-                             << " and error msg: " << dbusError->message;
+            BMCWEB_LOG_ERROR("CreateDump DBus error: {} and error msg: {}", dbusError->name, dbusError->message);
 
 =======
-            BMCWEB_LOG_ERROR("CreateDump DBus error: {} and error msg: {}",
-                             dbusError->name, dbusError->message);
+            BMCWEB_LOG_ERROR("CreateDump DBus error: {} and error msg: {}", dbusError->name, dbusError->message);
 >>>>>>> origin/master-october-10
             if (std::string_view(
                     "xyz.openbmc_project.Common.Error.NotAllowed") ==
@@ -2209,9 +2191,7 @@ inline void requestRoutesEventLogService(App& app)
                         const std::tuple<uint32_t, uint64_t>& reqData) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR
-                    << "Failed to get Data from xyz.openbmc_project.Logging GetStats: "
-                    << ec;
+                BMCWEB_LOG_ERROR("Failed to get Data from xyz.openbmc_project.Logging GetStats: {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -2233,9 +2213,7 @@ inline void requestRoutesEventLogService(App& app)
                         std::variant<bool>& resp) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR
-                    << "Failed to get Data from xyz.openbmc_project.Logging: "
-                    << ec;
+                BMCWEB_LOG_ERROR("Failed to get Data from xyz.openbmc_project.Logging: {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -2292,7 +2270,7 @@ inline void requestRoutesEventLogService(App& app)
         {
             return;
         }
-        BMCWEB_LOG_DEBUG << "Set Log Purge Policy";
+        BMCWEB_LOG_DEBUG("Set Log Purge Policy");
 
         if (autoClearResolvedLogEnabled)
         {
@@ -2300,7 +2278,7 @@ inline void requestRoutesEventLogService(App& app)
                 [asyncResp](const boost::system::error_code ec) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                    BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -2724,8 +2702,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
             if (ec)
             {
                 // TODO Handle for specific error code
-                BMCWEB_LOG_ERROR(
-                    "getLogEntriesIfaceData resp_handler got error {}", ec);
+                BMCWEB_LOG_ERROR( "getLogEntriesIfaceData resp_handler got error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -2887,7 +2864,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     {
                         isMessageRegistry = true;
                         messageId = additional["REDFISH_MESSAGE_ID"];
-                        BMCWEB_LOG_DEBUG << "MessageId: [" << messageId << "]";
+                        BMCWEB_LOG_DEBUG("MessageId: [{}]", messageId);
 
                         if (additional.count("REDFISH_MESSAGE_ARGS") > 0)
                         {
@@ -3044,8 +3021,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR(
-                    "EventLogEntry (DBus) resp_handler got error {}", ec);
+                BMCWEB_LOG_ERROR( "EventLogEntry (DBus) resp_handler got error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3152,7 +3128,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 {
                     isMessageRegistry = true;
                     messageId = additional["REDFISH_MESSAGE_ID"];
-                    BMCWEB_LOG_DEBUG << "MessageId: [" << messageId << "]";
+                    BMCWEB_LOG_DEBUG("MessageId: [{}]", messageId);
 
                     if (additional.count("REDFISH_MESSAGE_ARGS") > 0)
                     {
@@ -3332,7 +3308,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Do delete single event entries.";
+        BMCWEB_LOG_DEBUG("Do delete single event entries.");
 =======
         if constexpr (bmcwebEnableMultiHost)
         {
@@ -3358,7 +3334,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
 <<<<<<< HEAD
         auto respHandler = [asyncResp,
                             entryID](const boost::system::error_code ec) {
-            BMCWEB_LOG_DEBUG << "EventLogEntry (DBus) doDelete callback: Done";
+            BMCWEB_LOG_DEBUG("EventLogEntry (DBus) doDelete callback: Done");
 =======
         auto respHandler =
             [asyncResp, entryID](const boost::system::error_code& ec) {
@@ -3373,9 +3349,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     return;
                 }
                 // TODO Handle for specific error code
-                BMCWEB_LOG_ERROR(
-                    "EventLogEntry (DBus) doDelete respHandler got error {}",
-                    ec);
+                BMCWEB_LOG_ERROR( "EventLogEntry (DBus) doDelete respHandler got error {}", ec);
                 asyncResp->res.result(
                     boost::beast::http::status::internal_server_error);
                 return;
@@ -3467,8 +3441,7 @@ inline void requestRoutesDBusEventLogEntryDownload(App& app)
             constexpr int maxFileSize = 65536;
             if (size > maxFileSize)
             {
-                BMCWEB_LOG_ERROR("File size exceeds maximum allowed size of {}",
-                                 maxFileSize);
+                BMCWEB_LOG_ERROR("File size exceeds maximum allowed size of {}", maxFileSize);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3771,8 +3744,7 @@ inline void requestRoutesDBusSELLogEntryCollection(App& app)
             if (ec)
             {
                 // TODO Handle for specific error code
-                BMCWEB_LOG_ERROR
-                    << "getLogEntriesIfaceData resp_handler got error " << ec;
+                BMCWEB_LOG_ERROR("getLogEntriesIfaceData resp_handler got error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3843,9 +3815,7 @@ inline void requestRoutesDBusSELLogEntry(App& app)
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "SELLogEntry (DBus) "
-                                    "resp_handler got error "
-                                 << ec;
+                BMCWEB_LOG_ERROR("SELLogEntry (DBus) " "resp_handler got error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3901,8 +3871,7 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
             if (ec)
             {
                 // TODO Handle for specific error code
-                BMCWEB_LOG_ERROR
-                    << "getLogEntriesIfaceData resp_handler got error " << ec;
+                BMCWEB_LOG_ERROR("getLogEntriesIfaceData resp_handler got error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3958,7 +3927,7 @@ inline bool
     std::filesystem::directory_iterator logPath(hostLoggerFilePath, ec);
     if (ec)
     {
-        BMCWEB_LOG_ERROR << ec.message();
+        BMCWEB_LOG_ERROR("{}", ec.message());
         return false;
     }
     for (const std::filesystem::directory_entry& it : logPath)
@@ -3991,7 +3960,7 @@ inline bool getHostLoggerEntries(
     {
         if (!logFile.gzGetLines(it.string(), skip, top, logEntries, logCount))
         {
-            BMCWEB_LOG_ERROR << "fail to expose host logs";
+            BMCWEB_LOG_ERROR("fail to expose host logs");
             return false;
         }
     }
@@ -4083,7 +4052,7 @@ inline void requestRoutesSystemHostLoggerCollection(App& app)
         std::vector<std::filesystem::path> hostLoggerFiles;
         if (!getHostLoggerFiles(hostLoggerFolderPath, hostLoggerFiles))
         {
-            BMCWEB_LOG_ERROR << "fail to get host log file path";
+            BMCWEB_LOG_ERROR("fail to get host log file path");
             return;
         }
 
@@ -4277,9 +4246,7 @@ inline void handleBMCLogServicesCollectionGet(
             const dbus::utility::MapperGetSubTreePathsResponse& subTreePaths) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR(
-                "handleBMCLogServicesCollectionGet respHandler got error {}",
-                ec);
+            BMCWEB_LOG_ERROR( "handleBMCLogServicesCollectionGet respHandler got error {}", ec);
             // Assume that getting an error simply means there are no dump
             // LogServices. Return without adding any error response.
             return;
@@ -4374,8 +4341,7 @@ static int
     ret = getJournalMetadata(journal, "SYSLOG_IDENTIFIER", syslogID);
     if (ret < 0)
     {
-        BMCWEB_LOG_DEBUG("Failed to read SYSLOG_IDENTIFIER field: {}",
-                         strerror(-ret));
+        BMCWEB_LOG_DEBUG("Failed to read SYSLOG_IDENTIFIER field: {}", strerror(-ret));
     }
     if (!syslogID.empty())
     {
@@ -4561,8 +4527,7 @@ inline void requestRoutesBMCJournalLogEntry(App& app)
         ret = sd_journal_seek_realtime_usec(journal.get(), ts);
         if (ret < 0)
         {
-            BMCWEB_LOG_ERROR("failed to seek to an entry in journal{}",
-                             strerror(-ret));
+            BMCWEB_LOG_ERROR("failed to seek to an entry in journal{}", strerror(-ret));
             messages::internalError(asyncResp->res);
             return;
         }
@@ -4627,8 +4592,7 @@ inline void
     }
     else
     {
-        BMCWEB_LOG_ERROR("getDumpServiceInfo() invalid dump type: {}",
-                         dumpType);
+        BMCWEB_LOG_ERROR("getDumpServiceInfo() invalid dump type: {}", dumpType);
         messages::internalError(asyncResp->res);
         return;
     }
@@ -5126,12 +5090,12 @@ inline void getFDRServiceState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
                 const std::string& serviceState) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "DBUS response error " << ec;
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
             messages::internalError(aResp->res);
             return;
         }
 
-        BMCWEB_LOG_DEBUG << "serviceState : " << serviceState;
+        BMCWEB_LOG_DEBUG("serviceState : {}", serviceState);
 
         if (serviceState == "running")
         {
@@ -5187,17 +5151,17 @@ inline void
     if (!json_util::readJsonPatch(req, asyncResp->res, "ServiceEnabled",
                                   enabled))
     {
-        BMCWEB_LOG_ERROR << "Failed to get ServiceEnabled property";
+        BMCWEB_LOG_ERROR("Failed to get ServiceEnabled property");
         return;
     }
 
     if (!enabled.has_value())
     {
-        BMCWEB_LOG_ERROR << "No value for ServiceEnabled property";
+        BMCWEB_LOG_ERROR("No value for ServiceEnabled property");
         return;
     }
 
-    BMCWEB_LOG_DEBUG << "enabled = " << *enabled;
+    BMCWEB_LOG_DEBUG("enabled = {}", *enabled);
 
     constexpr const char* serviceName = "org.freedesktop.systemd1";
     constexpr const char* objectPath = "/org/freedesktop/systemd1";
@@ -5219,7 +5183,7 @@ inline void
             [asyncResp](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -5234,7 +5198,7 @@ inline void
             [asyncResp](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -5251,7 +5215,7 @@ inline void
             [asyncResp](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -5266,7 +5230,7 @@ inline void
             [asyncResp](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -5572,8 +5536,7 @@ inline void requestRoutesCrashdumpEntryCollection(App& app)
                 if (ec.value() !=
                     boost::system::errc::no_such_file_or_directory)
                 {
-                    BMCWEB_LOG_DEBUG("failed to get entries ec: {}",
-                                     ec.message());
+                    BMCWEB_LOG_DEBUG("failed to get entries ec: {}", ec.message());
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -5829,8 +5792,7 @@ inline void requestRoutesCrashdumpCollect(App& app)
 
         if (diagnosticDataType != "OEM")
         {
-            BMCWEB_LOG_ERROR(
-                "Only OEM DiagnosticDataType supported for Crashdump");
+            BMCWEB_LOG_ERROR( "Only OEM DiagnosticDataType supported for Crashdump");
             messages::actionParameterValueFormatError(
                 asyncResp->res, diagnosticDataType, "DiagnosticDataType",
                 "CollectDiagnosticData");
@@ -5863,8 +5825,7 @@ inline void requestRoutesCrashdumpCollect(App& app)
         }
         else
         {
-            BMCWEB_LOG_ERROR("Unsupported OEMDiagnosticDataType: {}",
-                             oemDiagnosticDataType);
+            BMCWEB_LOG_ERROR("Unsupported OEMDiagnosticDataType: {}", oemDiagnosticDataType);
             messages::actionParameterValueFormatError(
                 asyncResp->res, oemDiagnosticDataType, "OEMDiagnosticDataType",
                 "CollectDiagnosticData");
@@ -5939,7 +5900,7 @@ inline void requestRoutesDBusLogServiceActionsClear(App& app)
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Do delete all entries.";
+        BMCWEB_LOG_DEBUG("Do delete all entries.");
 =======
         if constexpr (bmcwebEnableMultiHost)
         {
@@ -6005,22 +5966,22 @@ static int copyMfgTestOutputFile(std::string& path)
     bool fileExists = std::filesystem::exists(path, ec);
     if (ec)
     {
-        BMCWEB_LOG_ERROR << "File access error: " << ec;
+        BMCWEB_LOG_ERROR("File access error: {}", ec);
     }
     else if (!fileExists)
     {
-        BMCWEB_LOG_ERROR << path << " does not exist";
+        BMCWEB_LOG_ERROR("{} does not exist", path);
     }
     else
     {
         std::string filename = mfgTestPrefix +
                                std::to_string(scriptExecOutputFiles.size());
         std::string targetPath = redfishLogDir + filename;
-        BMCWEB_LOG_DEBUG << "Copying output to " << targetPath;
+        BMCWEB_LOG_DEBUG("Copying output to {}", targetPath);
         std::filesystem::copy(path, targetPath, ec);
         if (ec)
         {
-            BMCWEB_LOG_ERROR << "File copy error: " << ec;
+            BMCWEB_LOG_ERROR("File copy error: {}", ec);
         }
         else
         {
@@ -6044,13 +6005,13 @@ static void mfgTestProcExitHandler(int exitCode, const std::error_code& ec)
     auto& t = mfgTestTask;
     if (ec)
     {
-        BMCWEB_LOG_ERROR << "Error executing script: " << ec;
+        BMCWEB_LOG_ERROR("Error executing script: {}", ec);
         t->state = "Aborted";
         t->messages.emplace_back(messages::internalError());
     }
     else
     {
-        BMCWEB_LOG_DEBUG << "Script exit code: " << exitCode;
+        BMCWEB_LOG_DEBUG("Script exit code: {}", exitCode);
         if (exitCode == 0)
         {
             std::string output(mfgTestProcOutput.data());
@@ -6070,8 +6031,7 @@ static void mfgTestProcExitHandler(int exitCode, const std::error_code& ec)
             else
             {
                 t->state = "Exception";
-                BMCWEB_LOG_ERROR
-                    << "CopyMfgTestOutputFile failed with Output file error";
+                BMCWEB_LOG_ERROR("CopyMfgTestOutputFile failed with Output file error");
                 t->messages.emplace_back(
                     messages::taskAborted(std::to_string(t->index)));
             }
@@ -6079,8 +6039,7 @@ static void mfgTestProcExitHandler(int exitCode, const std::error_code& ec)
         else
         {
             t->state = "Exception";
-            BMCWEB_LOG_ERROR << "Mfg Script failed with exit code: "
-                             << exitCode;
+            BMCWEB_LOG_ERROR("Mfg Script failed with exit code: {}", exitCode);
             t->messages.emplace_back(
                 messages::taskAborted(std::to_string(t->index)));
         }
@@ -6110,8 +6069,7 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
 
         if (diagnosticDataType != "OEM")
         {
-            BMCWEB_LOG_ERROR
-                << "Only OEM DiagnosticDataType supported for EventLog";
+            BMCWEB_LOG_ERROR("Only OEM DiagnosticDataType supported for EventLog");
             messages::actionParameterValueFormatError(
                 asyncResp->res, diagnosticDataType, "DiagnosticDataType",
                 "CollectDiagnosticData");
@@ -6151,9 +6109,7 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
                 catch (const std::runtime_error& e)
                 {
                     mfgTestTask->state = "Exception";
-                    BMCWEB_LOG_ERROR
-                        << "Manufacturing script failed with error: "
-                        << e.what();
+                    BMCWEB_LOG_ERROR("Manufacturing script failed with error: {}", e.what());
                     mfgTestTask->messages.emplace_back(messages::taskAborted(
                         std::to_string(mfgTestTask->index)));
                     mfgTestProc = nullptr;
@@ -6171,8 +6127,7 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
         }
         else
         {
-            BMCWEB_LOG_ERROR << "Unsupported OEMDiagnosticDataType: "
-                             << oemDiagnosticDataType;
+            BMCWEB_LOG_ERROR("Unsupported OEMDiagnosticDataType: {}", oemDiagnosticDataType);
             messages::actionParameterValueFormatError(
                 asyncResp->res, oemDiagnosticDataType, "OEMDiagnosticDataType",
                 "CollectDiagnosticData");
@@ -6307,7 +6262,7 @@ inline void requestRoutesPostCodesClear(App& app)
             return;
         }
 <<<<<<< HEAD
-        BMCWEB_LOG_DEBUG << "Do delete all postcodes entries.";
+        BMCWEB_LOG_DEBUG("Do delete all postcodes entries.");
 =======
         if constexpr (bmcwebEnableMultiHost)
         {
@@ -6331,8 +6286,7 @@ inline void requestRoutesPostCodesClear(App& app)
             if (ec)
             {
                 // TODO Handle for specific error code
-                BMCWEB_LOG_ERROR("doClearPostCodes resp_handler got error {}",
-                                 ec);
+                BMCWEB_LOG_ERROR("doClearPostCodes resp_handler got error {}", ec);
                 asyncResp->res.result(
                     boost::beast::http::status::internal_server_error);
                 messages::internalError(asyncResp->res);
@@ -6920,8 +6874,7 @@ inline void requestRoutesPostCodesEntry(App& app)
         }
         if (bootIndex == 0 || codeIndex == 0)
         {
-            BMCWEB_LOG_DEBUG << "Get Post Code invalid entry string "
-                             << targetID;
+            BMCWEB_LOG_DEBUG("Get Post Code invalid entry string {}", targetID);
         }
 
         asyncResp->res.jsonValue["@odata.type"] = "#LogEntry.v1_4_0.LogEntry";
@@ -7083,8 +7036,7 @@ inline void requestRoutesChassisXIDLogService(App& app)
                         const std::string& chassisName) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG
-                            << "DBus response error for PrettyName";
+                        BMCWEB_LOG_DEBUG("DBus response error for PrettyName");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -7096,9 +7048,7 @@ inline void requestRoutesChassisXIDLogService(App& app)
                             const std::tuple<uint32_t, uint64_t>& reqData) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR
-                                << "Failed to get Data from xyz.openbmc_project.Logging GetStats: "
-                                << ec;
+                            BMCWEB_LOG_ERROR("Failed to get Data from xyz.openbmc_project.Logging GetStats: {}", ec);
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -7193,13 +7143,12 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                             const std::string& chassisName) {
                         if (ec)
                         {
-                            BMCWEB_LOG_DEBUG
-                                << "DBus response error for PrettyName";
+                            BMCWEB_LOG_DEBUG("DBus response error for PrettyName");
                             messages::internalError(asyncResp->res);
                             return;
                         }
 
-                        BMCWEB_LOG_DEBUG << "PrettyName: " << chassisName;
+                        BMCWEB_LOG_DEBUG("PrettyName: {}", chassisName);
                         // Collections don't include the static data
                         // added by SubRoute because it has a
                         // duplicate entry for members
@@ -7213,8 +7162,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                             "Collection of XID Log Entries";
                         asyncResp->res.jsonValue["Members@odata.count"] = 0;
 
-                        BMCWEB_LOG_DEBUG << "Namespace: " << chassisName
-                                         << "_XID";
+                        BMCWEB_LOG_DEBUG("Namespace: {}_XID", chassisName);
 
                         // DBus implementation of EventLog/Entries
                         // Make call to Logging Service to find all
@@ -7227,9 +7175,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                             {
                                 // TODO Handle for
                                 // specific error code
-                                BMCWEB_LOG_ERROR
-                                    << "getLogEntriesIfaceData resp_handler got error "
-                                    << ec.message();
+                                BMCWEB_LOG_ERROR("getLogEntriesIfaceData resp_handler got error {}", ec.message());
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -7380,9 +7326,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                 isMessageRegistry = true;
                                                 messageId = additional
                                                     ["REDFISH_MESSAGE_ID"];
-                                                BMCWEB_LOG_DEBUG
-                                                    << "MessageId: ["
-                                                    << messageId << "]";
+                                                BMCWEB_LOG_DEBUG("MessageId: [{}]", messageId);
 
                                                 if (additional.count(
                                                         "REDFISH_MESSAGE_ARGS") >
@@ -7569,8 +7513,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
         }
         if (diagnosticDataType != "OEM")
         {
-            BMCWEB_LOG_ERROR << "Only OEM DiagnosticDataType supported "
-                                "for DebugTokenService";
+            BMCWEB_LOG_ERROR("Only OEM DiagnosticDataType supported " "for DebugTokenService");
             messages::actionParameterValueFormatError(
                 asyncResp->res, diagnosticDataType, "DiagnosticDataType",
                 "CollectDiagnosticData");
@@ -7589,8 +7532,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                 oemDiagnosticDataType);
             if (index < 0)
             {
-                BMCWEB_LOG_ERROR << "Unsupported OEMDiagnosticDataType: "
-                                 << oemDiagnosticDataType;
+                BMCWEB_LOG_ERROR("Unsupported OEMDiagnosticDataType: {}", oemDiagnosticDataType);
                 messages::actionParameterValueFormatError(
                     asyncResp->res, oemDiagnosticDataType,
                     "OEMDiagnosticDataType", "CollectDiagnosticData");
@@ -7615,8 +7557,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             bool completed = true;
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Debug token operation task error: "
-                                 << ec.message();
+                BMCWEB_LOG_ERROR("Debug token operation task error: {}", ec.message());
                 if (ec != boost::asio::error::operation_aborted)
                 {
                     taskData->messages.emplace_back(

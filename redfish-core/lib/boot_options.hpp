@@ -88,7 +88,7 @@ void setBootOption(const std::string& id,
             if (ec)
             {
                 holdTask->ec = ec;
-                BMCWEB_LOG_DEBUG << " setBootOption D-BUS error";
+                BMCWEB_LOG_DEBUG(" setBootOption D-BUS error");
             }
         },
             "xyz.openbmc_project.BIOSConfigManager", path,

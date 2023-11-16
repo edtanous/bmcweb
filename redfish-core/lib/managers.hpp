@@ -86,7 +86,7 @@ const int invalidDataOutSizeErr = 0x116;
  */
 inline void enableTLSAuth()
 {
-    BMCWEB_LOG_DEBUG << "Processing AuthenticationTLSRequired Enable.";
+    BMCWEB_LOG_DEBUG("Processing AuthenticationTLSRequired Enable.");
     std::filesystem::path dropinConf = "bmcweb-socket-tls.conf";
     std::filesystem::path dropinDir = "/etc/systemd/system/bmcweb.socket.d";
     std::filesystem::path confPath = dropinDir / dropinConf;
@@ -104,8 +104,7 @@ inline void enableTLSAuth()
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "TLSAuthEnable drop-in socket configuration file: "
-                         << e.what();
+        BMCWEB_LOG_ERROR("TLSAuthEnable drop-in socket configuration file: {}", e.what());
     }
     persistent_data::getConfig().enableTLSAuth();
 
@@ -117,8 +116,7 @@ inline void enableTLSAuth()
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "TLSAuthEnable systemd Reload failed with: "
-                         << e.what();
+        BMCWEB_LOG_ERROR("TLSAuthEnable systemd Reload failed with: {}", e.what());
     }
 
     try
@@ -127,8 +125,7 @@ inline void enableTLSAuth()
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.socket Restart failed with: "
-                         << e.what();
+        BMCWEB_LOG_ERROR("TLSAuthEnable bmcweb.socket Restart failed with: {}", e.what());
     }
 
     try
@@ -137,8 +134,7 @@ inline void enableTLSAuth()
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "TLSAuthEnable bmcweb.service Restart failed with: "
-                         << e.what();
+        BMCWEB_LOG_ERROR("TLSAuthEnable bmcweb.service Restart failed with: {}", e.what());
     }
 }
 
@@ -235,7 +231,7 @@ inline void
         // Use "Set" method to set the property value.
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "[Set] Bad D-Bus request error: " << ec;
+            BMCWEB_LOG_DEBUG("[Set] Bad D-Bus request error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -296,12 +292,11 @@ inline void requestRoutesManagerResetAction(App& app)
 <<<<<<< HEAD
         if (resetType == "GracefulShutdown")
         {
-            BMCWEB_LOG_DEBUG << "Proceeding with " << resetType;
+            BMCWEB_LOG_DEBUG("Proceeding with {}", resetType);
             doBMCGracefulShutdown(asyncResp);
             return;
         }
-        BMCWEB_LOG_DEBUG << "Invalid property value for ResetType: "
-                         << resetType;
+        BMCWEB_LOG_DEBUG("Invalid property value for ResetType: {}", resetType);
 =======
         BMCWEB_LOG_DEBUG("Invalid property value for ResetType: {}", resetType);
 >>>>>>> origin/master-october-10
@@ -358,9 +353,7 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
 
         if (resetType != "ResetAll")
         {
-            BMCWEB_LOG_DEBUG(
-                "Invalid property value for ResetToDefaultsType: {}",
-                resetType);
+            BMCWEB_LOG_DEBUG( "Invalid property value for ResetToDefaultsType: {}", resetType);
             messages::actionParameterNotSupported(asyncResp->res, resetType,
                                                   "ResetToDefaultsType");
             return;
@@ -374,7 +367,7 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                     std::string, std::vector<std::string>>>& interfaceNames) {
             if (ec || interfaceNames.size() <= 0)
             {
-                BMCWEB_LOG_ERROR << "Can't find object";
+                BMCWEB_LOG_ERROR("Can't find object");
 =======
             [asyncResp](const boost::system::error_code& ec) {
             if (ec)
@@ -392,7 +385,7 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                     [asyncResp, object](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "Failed to ResetToDefaults: " << ec;
+                        BMCWEB_LOG_DEBUG("Failed to ResetToDefaults: {}", ec);
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -434,7 +427,7 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
         {
             return;
         }
-        BMCWEB_LOG_DEBUG << "Post ResetToDefaults.";
+        BMCWEB_LOG_DEBUG("Post ResetToDefaults.");
         (void)req;
         std::string ifnameCompleteReset = "com.nvidia.Common.CompleteReset";
 
@@ -445,7 +438,7 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
                     std::string, std::vector<std::string>>>& interfaceNames) {
             if (ec || interfaceNames.size() <= 0)
             {
-                BMCWEB_LOG_ERROR << "Can't find object";
+                BMCWEB_LOG_ERROR("Can't find object");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -457,7 +450,7 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
                     [asyncResp, object](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG << "Failed to ResetToDefaults: " << ec;
+                        BMCWEB_LOG_DEBUG("Failed to ResetToDefaults: {}", ec);
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -656,19 +649,17 @@ inline uint32_t formatSyncDataIn(std::vector<std::string>& data)
     }
     catch (const std::invalid_argument& ia)
     {
-        BMCWEB_LOG_ERROR << "stoul conversion exception Invalid argument "
-                         << ia.what();
+        BMCWEB_LOG_ERROR("stoul conversion exception Invalid argument {}", ia.what());
         throw std::runtime_error("Invalid Argument");
     }
     catch (const std::out_of_range& oor)
     {
-        BMCWEB_LOG_ERROR << "stoul conversion exception out fo range "
-                         << oor.what();
+        BMCWEB_LOG_ERROR("stoul conversion exception out fo range {}", oor.what());
         throw std::runtime_error("Invalid Argument");
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR << "stoul conversion undefined exception" << e.what();
+        BMCWEB_LOG_ERROR("stoul conversion undefined exception{}", e.what());
         throw std::runtime_error("Invalid Argument");
     }
     return dataIn;
@@ -680,7 +671,7 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                           uint8_t id, uint8_t opCode, uint8_t arg1,
                           uint8_t arg2, uint32_t dataIn, uint32_t extDataIn)
 {
-    BMCWEB_LOG_DEBUG << "executeRawSynCommand fn";
+    BMCWEB_LOG_DEBUG("executeRawSynCommand fn");
     crow::connections::systemBus->async_method_call(
         [resp, Type,
          id](boost::system::error_code ec, sdbusplus::message::message& msg,
@@ -690,7 +681,7 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             int rc = get<0>(res);
             if (rc != 0)
             {
-                BMCWEB_LOG_ERROR << "synccommand failed with rc:" << rc;
+                BMCWEB_LOG_ERROR("synccommand failed with rc:{}", rc);
                 messages::operationFailed(resp->res);
                 return;
             }
@@ -707,23 +698,21 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
         {
-            BMCWEB_LOG_DEBUG << "dbuserror nullptr error";
+            BMCWEB_LOG_DEBUG("dbuserror nullptr error");
             messages::internalError(resp->res);
             return;
         }
         if (strcmp(dbusError->name,
                    "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
         {
-            BMCWEB_LOG_ERROR
-                << "xyz.openbmc_project.Common.Error.InvalidArgument error";
+            BMCWEB_LOG_ERROR("xyz.openbmc_project.Common.Error.InvalidArgument error");
             messages::propertyValueIncorrect(resp->res, "TargetInstanceId",
                                              std::to_string(id));
         }
         else
         {
-            BMCWEB_LOG_ERROR
-                << "form executeRawSynCommand failed with error \n";
-            BMCWEB_LOG_ERROR << ec;
+            BMCWEB_LOG_ERROR("form executeRawSynCommand failed with error ");
+            BMCWEB_LOG_ERROR("{}", ec);
             messages::internalError(resp->res);
         }
         return;
@@ -763,7 +752,7 @@ inline void requestRouteSyncRawOobCommand(App& app)
                 "TargetInstanceId", targetId, "Opcode", opCode, "Arg1", arg1,
                 "Arg2", arg2, "DataIn", dataIn, "ExtDataIn", extDataIn))
         {
-            BMCWEB_LOG_ERROR << "Missing property";
+            BMCWEB_LOG_ERROR("Missing property");
             return;
         }
 
@@ -775,8 +764,7 @@ inline void requestRouteSyncRawOobCommand(App& app)
             }
             catch (const std::runtime_error& e)
             {
-                BMCWEB_LOG_ERROR
-                    << "formatSyncDataIn failed with runtime error ";
+                BMCWEB_LOG_ERROR("formatSyncDataIn failed with runtime error ");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -790,8 +778,7 @@ inline void requestRouteSyncRawOobCommand(App& app)
             }
             catch (const std::runtime_error& e)
             {
-                BMCWEB_LOG_ERROR
-                    << "formatSyncDataIn failed with runtime error ";
+                BMCWEB_LOG_ERROR("formatSyncDataIn failed with runtime error ");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -805,7 +792,7 @@ inline void requestRouteSyncRawOobCommand(App& app)
         }
         catch (...)
         {
-            BMCWEB_LOG_ERROR << "raw Sync command failed : stoul exception \n";
+            BMCWEB_LOG_ERROR("raw Sync command failed : stoul exception ");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -816,7 +803,7 @@ inline void requestRouteSyncRawOobCommand(App& app)
                                       const MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "unable to find SMBPBI raw interface";
+                BMCWEB_LOG_ERROR("unable to find SMBPBI raw interface");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -824,7 +811,7 @@ inline void requestRouteSyncRawOobCommand(App& app)
             {
                 if (serviceMap.size() < 1)
                 {
-                    BMCWEB_LOG_ERROR << "No service Present";
+                    BMCWEB_LOG_ERROR("No service Present");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -878,23 +865,17 @@ std::vector<std::uint32_t>
     }
     catch (const std::invalid_argument& ia)
     {
-        BMCWEB_LOG_ERROR
-            << "formatAsyncDataIn: stoul conversion exception Invalid argument "
-            << ia.what();
+        BMCWEB_LOG_ERROR("formatAsyncDataIn: stoul conversion exception Invalid argument {}", ia.what());
         throw std::runtime_error("Invalid Argument");
     }
     catch (const std::out_of_range& oor)
     {
-        BMCWEB_LOG_ERROR
-            << "formatAsyncDataIn: stoul conversion exception out fo range "
-            << oor.what();
+        BMCWEB_LOG_ERROR("formatAsyncDataIn: stoul conversion exception out fo range {}", oor.what());
         throw std::runtime_error("Argument out of range");
     }
     catch (const std::exception& e)
     {
-        BMCWEB_LOG_ERROR
-            << "formatAsyncDataIn: stoul conversion undefined exception"
-            << e.what();
+        BMCWEB_LOG_ERROR("formatAsyncDataIn: stoul conversion undefined exception{}", e.what());
         throw std::runtime_error("undefined exception");
     }
 
@@ -908,7 +889,7 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                            const std::vector<uint32_t>& asyncDataInRaw,
                            uint32_t requestedDataOutBytes)
 {
-    BMCWEB_LOG_DEBUG << "executeRawAsynCommand fn";
+    BMCWEB_LOG_DEBUG("executeRawAsynCommand fn");
     crow::connections::systemBus->async_method_call(
         [resp, Type, requestedDataOutBytes,
          id](boost::system::error_code ec, sdbusplus::message::message& msg,
@@ -920,7 +901,7 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
             if (rc == invalidDataOutSizeErr)
             {
-                BMCWEB_LOG_ERROR << "asynccommand failed with rc:" << rc;
+                BMCWEB_LOG_ERROR("asynccommand failed with rc:{}", rc);
                 messages::propertyValueIncorrect(
                     resp->res, "RequestedDataOutBytes",
                     std::to_string(requestedDataOutBytes));
@@ -929,7 +910,7 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
             if (rc != 0)
             {
-                BMCWEB_LOG_ERROR << "asynccommand failed with rc:" << rc;
+                BMCWEB_LOG_ERROR("asynccommand failed with rc:{}", rc);
                 messages::operationFailed(resp->res);
                 return;
             }
@@ -955,23 +936,21 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
         {
-            BMCWEB_LOG_ERROR << "dbus error nullptr error";
+            BMCWEB_LOG_ERROR("dbus error nullptr error");
             messages::internalError(resp->res);
             return;
         }
         if (strcmp(dbusError->name,
                    "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
         {
-            BMCWEB_LOG_ERROR
-                << "xyz.openbmc_project.Common.Error.InvalidArgument error";
+            BMCWEB_LOG_ERROR("xyz.openbmc_project.Common.Error.InvalidArgument error");
             messages::propertyValueIncorrect(resp->res, "TargetInstanceId",
                                              std::to_string(id));
         }
         else
         {
-            BMCWEB_LOG_ERROR
-                << "form executeRawAsynCommand failed with error \n";
-            BMCWEB_LOG_ERROR << ec;
+            BMCWEB_LOG_ERROR("form executeRawAsynCommand failed with error ");
+            BMCWEB_LOG_ERROR("{}", ec);
             messages::internalError(resp->res);
         }
         return;
@@ -1007,7 +986,7 @@ inline void requestRouteAsyncRawOobCommand(App& app)
                 "RequestedDataOutBytes", requestedDataOutBytes, "AsyncDataIn",
                 asynDataIn))
         {
-            BMCWEB_LOG_ERROR << "Missing property";
+            BMCWEB_LOG_ERROR("Missing property");
             return;
         }
 
@@ -1019,8 +998,7 @@ inline void requestRouteAsyncRawOobCommand(App& app)
             }
             catch (const std::runtime_error& e)
             {
-                BMCWEB_LOG_ERROR
-                    << "formatAsyncDataIn failed with runtime error ";
+                BMCWEB_LOG_ERROR("formatAsyncDataIn failed with runtime error ");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1031,7 +1009,7 @@ inline void requestRouteAsyncRawOobCommand(App& app)
         }
         catch (...)
         {
-            BMCWEB_LOG_ERROR << "raw Async command failed : stoul exception \n";
+            BMCWEB_LOG_ERROR("raw Async command failed : stoul exception ");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1042,7 +1020,7 @@ inline void requestRouteAsyncRawOobCommand(App& app)
                                     const MapperGetSubTreeResponse& subtree) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "unable to find SMBPBI raw interface";
+                BMCWEB_LOG_ERROR("unable to find SMBPBI raw interface");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1050,7 +1028,7 @@ inline void requestRouteAsyncRawOobCommand(App& app)
             {
                 if (serviceMap.size() < 1)
                 {
-                    BMCWEB_LOG_ERROR << "No service Present";
+                    BMCWEB_LOG_ERROR("No service Present");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1178,8 +1156,7 @@ inline void
                         if (std::find(profiles->begin(), profiles->end(),
                                       currentProfile) == profiles->end())
                         {
-                            BMCWEB_LOG_INFO(
-                                "{} not supported in current profile", name);
+                            BMCWEB_LOG_INFO( "{} not supported in current profile", name);
                             continue;
                         }
                     }
@@ -1327,8 +1304,7 @@ inline void
                             std::get_if<double>(&propertyPair.second);
                         if (ptr == nullptr)
                         {
-                            BMCWEB_LOG_ERROR("Field Illegal {}",
-                                             propertyPair.first);
+                            BMCWEB_LOG_ERROR("Field Illegal {}", propertyPair.first);
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -1346,8 +1322,7 @@ inline void
 
                             if (ptr == nullptr)
                             {
-                                BMCWEB_LOG_ERROR("Field Illegal {}",
-                                                 propertyPair.first);
+                                BMCWEB_LOG_ERROR("Field Illegal {}", propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1364,8 +1339,7 @@ inline void
                             {
                                 if (keys->size() != values->size())
                                 {
-                                    BMCWEB_LOG_ERROR(
-                                        "Reading and Output size don't match ");
+                                    BMCWEB_LOG_ERROR( "Reading and Output size don't match ");
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
@@ -1387,8 +1361,7 @@ inline void
                                 std::get_if<double>(&propertyPair.second);
                             if (ptr == nullptr)
                             {
-                                BMCWEB_LOG_ERROR("Field Illegal {}",
-                                                 propertyPair.first);
+                                BMCWEB_LOG_ERROR("Field Illegal {}", propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1452,8 +1425,7 @@ inline void
 
                             if (inputs == nullptr)
                             {
-                                BMCWEB_LOG_ERROR("Field Illegal {}",
-                                                 propertyPair.first);
+                                BMCWEB_LOG_ERROR("Field Illegal {}", propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1466,8 +1438,7 @@ inline void
 
                             if (ptr == nullptr)
                             {
-                                BMCWEB_LOG_ERROR("Field Illegal {}",
-                                                 propertyPair.first);
+                                BMCWEB_LOG_ERROR("Field Illegal {}", propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1518,8 +1489,7 @@ inline void
                                 std::get_if<double>(&propertyPair.second);
                             if (ptr == nullptr)
                             {
-                                BMCWEB_LOG_ERROR("Field Illegal {}",
-                                                 propertyPair.first);
+                                BMCWEB_LOG_ERROR("Field Illegal {}", propertyPair.first);
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -1709,8 +1679,7 @@ inline CreatePIDRet createPidInterface(
                                     &(prop.second));
                             if (curProfiles == nullptr)
                             {
-                                BMCWEB_LOG_ERROR(
-                                    "Illegal profiles in managed object");
+                                BMCWEB_LOG_ERROR( "Illegal profiles in managed object");
                                 messages::internalError(response->res);
                                 return CreatePIDRet::fail;
                             }
@@ -2061,8 +2030,7 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
                        const dbus::utility::DBusPropertiesMap& resp) {
                 if (ec2)
                 {
-                    BMCWEB_LOG_ERROR(
-                        "GetPIDValues: Can't get thermalModeIface {}", path);
+                    BMCWEB_LOG_ERROR( "GetPIDValues: Can't get thermalModeIface {}", path);
                     messages::internalError(self->asyncResp->res);
                     return;
                 }
@@ -2082,8 +2050,7 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
 
                 if (current == nullptr || supported == nullptr)
                 {
-                    BMCWEB_LOG_ERROR(
-                        "GetPIDValues: thermal mode iface invalid {}", path);
+                    BMCWEB_LOG_ERROR( "GetPIDValues: thermal mode iface invalid {}", path);
                     messages::internalError(self->asyncResp->res);
                     return;
                 }
@@ -2144,8 +2111,7 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
                             objectMgrPaths.find(connectionGroup.first);
                         if (findObjMgr == objectMgrPaths.end())
                         {
-                            BMCWEB_LOG_DEBUG("{}Has no Object Manager",
-                                             connectionGroup.first);
+                            BMCWEB_LOG_DEBUG("{}Has no Object Manager", connectionGroup.first);
                             continue;
                         }
 
@@ -2284,8 +2250,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                                     const dbus::utility::DBusPropertiesMap& r) {
                 if (ec2)
                 {
-                    BMCWEB_LOG_ERROR(
-                        "SetPIDValues: Can't get thermalModeIface {}", path);
+                    BMCWEB_LOG_ERROR( "SetPIDValues: Can't get thermalModeIface {}", path);
                     messages::internalError(self->asyncResp->res);
                     return;
                 }
@@ -2304,8 +2269,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
 
                 if (current == nullptr || supported == nullptr)
                 {
-                    BMCWEB_LOG_ERROR(
-                        "SetPIDValues: thermal mode iface invalid {}", path);
+                    BMCWEB_LOG_ERROR( "SetPIDValues: thermal mode iface invalid {}", path);
                     messages::internalError(self->asyncResp->res);
                     return;
                 }
@@ -2377,7 +2341,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
             {
                 const auto& name = it.key();
 <<<<<<< HEAD
-                BMCWEB_LOG_DEBUG << "looking for " << name;
+                BMCWEB_LOG_DEBUG("looking for {}", name);
 
                 auto pathItr = std::find_if(managedObj.begin(),
                                             managedObj.end(),
@@ -2501,8 +2465,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                                 const boost::system::error_code& ec) {
                             if (ec)
                             {
-                                BMCWEB_LOG_ERROR("Error patching {}: {}",
-                                                 propertyName, ec);
+                                BMCWEB_LOG_ERROR("Error patching {}: {}", propertyName, ec);
                                 messages::internalError(response->res);
                                 return;
                             }
@@ -2599,7 +2562,7 @@ inline void getManagerState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             const std::string& connectionName,
                             const std::string& path)
 {
-    BMCWEB_LOG_DEBUG << "Get manager service state.";
+    BMCWEB_LOG_DEBUG("Get manager service state.");
 
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
@@ -2607,7 +2570,7 @@ inline void getManagerState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     std::string, std::variant<std::string>>>& propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Error in getting manager service state";
+            BMCWEB_LOG_DEBUG("Error in getting manager service state");
             messages::internalError(aResp->res);
             return;
         }
@@ -2620,8 +2583,7 @@ inline void getManagerState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG << "Null value returned "
-                                        "for manager service state";
+                    BMCWEB_LOG_DEBUG("Null value returned " "for manager service state");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2655,14 +2617,14 @@ inline void getBMCAssetData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             const std::string& connectionName,
                             const std::string& path)
 {
-    BMCWEB_LOG_DEBUG << "Get BMC manager asset data.";
+    BMCWEB_LOG_DEBUG("Get BMC manager asset data.");
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
                 const std::vector<std::pair<
                     std::string, std::variant<std::string>>>& propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG << "Can't get bmc asset!";
+            BMCWEB_LOG_DEBUG("Can't get bmc asset!");
             messages::internalError(aResp->res);
             return;
         }
@@ -2714,8 +2676,7 @@ inline void getLocation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     const std::string& property) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error for "
-                             "Location");
+            BMCWEB_LOG_DEBUG("DBUS response error for " "Location");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2837,8 +2798,7 @@ inline void
             return;
         }
 
-        BMCWEB_LOG_DEBUG("Setting firmware version {} to priority 0.",
-                         firmwareId);
+        BMCWEB_LOG_DEBUG("Setting firmware version {} to priority 0.", firmwareId);
 
         // Only support Immediate
         // An addition could be a Redfish Setting like
@@ -2897,9 +2857,7 @@ inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
          datetime{std::move(datetime)}](const boost::system::error_code& ec) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("Failed to set elapsed time. "
-                             "DBUS response error {}",
-                             ec);
+            BMCWEB_LOG_DEBUG("Failed to set elapsed time. " "DBUS response error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2921,9 +2879,7 @@ inline void
             if (val == "active")
             {
 <<<<<<< HEAD
-                BMCWEB_LOG_DEBUG << "Failed to set elapsed time. "
-                                    "DBUS response error "
-                                 << ec;
+                BMCWEB_LOG_DEBUG("Failed to set elapsed time. " "DBUS response error {}", ec);
                 messages::propertyValueExternalConflict(aResp->res, "DateTime",
                                                         datetime);
                 return;
@@ -3019,8 +2975,7 @@ inline void
         {
             if (serviceMap.size() < 1)
             {
-                BMCWEB_LOG_ERROR << "Got 0 service "
-                                    "names";
+                BMCWEB_LOG_ERROR("Got 0 service " "names");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3034,9 +2989,7 @@ inline void
                         propertiesList) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR
-                        << "DBUS response error: Unable to get the smbpbi fencing privilege "
-                        << ec;
+                    BMCWEB_LOG_ERROR("DBUS response error: Unable to get the smbpbi fencing privilege {}", ec);
                     messages::internalError(asyncResp->res);
                 }
 
@@ -3050,8 +3003,7 @@ inline void
                             std::get_if<uint8_t>(&property.second);
                         if (fencingPrivilege == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG << "Null value returned "
-                                                "for SMBPBI privilege";
+                            BMCWEB_LOG_DEBUG("Null value returned " "for SMBPBI privilege");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -3099,10 +3051,10 @@ inline void
                                          sdbusplus::message::message& msg) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG << "Set SMBPBI privilege  property succeeded";
+            BMCWEB_LOG_DEBUG("Set SMBPBI privilege  property succeeded");
             return;
         }
-        BMCWEB_LOG_DEBUG << " set SMBPBI privilege  property failed: " << ec;
+        BMCWEB_LOG_DEBUG(" set SMBPBI privilege  property failed: {}", ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -3145,8 +3097,7 @@ inline void
         [asyncResp](const boost::system::error_code ec, const bool& isEnable) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG
-                << "DBUS response error for getIsCommandShellEnable";
+            BMCWEB_LOG_DEBUG("DBUS response error for getIsCommandShellEnable");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -3191,8 +3142,7 @@ inline void requestRoutesManager(App& app)
                         subtree) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG << "D-Bus response error on GetSubTree "
-                                     << ec;
+                    BMCWEB_LOG_DEBUG("D-Bus response error on GetSubTree {}", ec);
                     return;
                 }
                 // Iterate over all retrieved ObjectPaths.
@@ -3213,7 +3163,7 @@ inline void requestRoutesManager(App& app)
                     }
                     if (connectionNames.size() < 1)
                     {
-                        BMCWEB_LOG_ERROR << "Got 0 Connection names";
+                        BMCWEB_LOG_ERROR("Got 0 Connection names");
                         continue;
                     }
 
@@ -3408,20 +3358,19 @@ inline void requestRoutesManager(App& app)
             {
                 if (statusLine != "0" && statusLine != "1")
                 {
-                    BMCWEB_LOG_ERROR << "Invalid OTP provisioning status - "
-                                     << statusLine << "\n";
+                    BMCWEB_LOG_ERROR("Invalid OTP provisioning status - {}", statusLine);
                 }
                 otpProvisioned = (statusLine == "1");
             }
             else
             {
-                BMCWEB_LOG_ERROR << "Failed to read OTP provisioning status\n";
+                BMCWEB_LOG_ERROR("Failed to read OTP provisioning status");
                 otpProvisioned = false;
             }
         }
         else
         {
-            BMCWEB_LOG_ERROR << "Failed to open OTP provisioning status file\n";
+            BMCWEB_LOG_ERROR("Failed to open OTP provisioning status file");
             otpProvisioned = false;
         }
         getFencingPrivilege(asyncResp);
@@ -3580,7 +3529,7 @@ inline void requestRoutesManager(App& app)
                     subtree) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "Error while getting manager service state";
+                BMCWEB_LOG_ERROR("Error while getting manager service state");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -3616,7 +3565,7 @@ inline void requestRoutesManager(App& app)
                                     const std::vector<std::string>& property) {
                         if (ec)
                         {
-                            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
                             return; // no chassis = no failures
                         }
 
@@ -3856,10 +3805,7 @@ inline void requestRoutesManager(App& app)
                         *nvidia, asyncResp->res, "AuthenticationTLSRequired",
                         tlsAuth, "SMBPBIFencingPrivilege", privilege))
                 {
-                    BMCWEB_LOG_ERROR
-                        << "Illegal Property "
-                        << oem->dump(2, ' ', true,
-                                     nlohmann::json::error_handler_t::replace);
+                    BMCWEB_LOG_ERROR("Illegal Property {}", oem->dump(2, ' ', true, nlohmann::json::error_handler_t::replace));
                     return;
                 }
                 if (privilege)
@@ -3878,8 +3824,7 @@ inline void requestRoutesManager(App& app)
                         {
                             if (serviceMap.size() < 1)
                             {
-                                BMCWEB_LOG_ERROR << "Got 0 service "
-                                                    "names";
+                                BMCWEB_LOG_ERROR("Got 0 service " "names");
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
@@ -3909,13 +3854,11 @@ inline void requestRoutesManager(App& app)
                     if (*tlsAuth ==
                         persistent_data::getConfig().isTLSAuthEnabled())
                     {
-                        BMCWEB_LOG_DEBUG
-                            << "Ignoring redundant patch of AuthenticationTLSRequired.";
+                        BMCWEB_LOG_DEBUG("Ignoring redundant patch of AuthenticationTLSRequired.");
                     }
                     else if (!*tlsAuth)
                     {
-                        BMCWEB_LOG_ERROR
-                            << "Disabling AuthenticationTLSRequired is not allowed.";
+                        BMCWEB_LOG_ERROR("Disabling AuthenticationTLSRequired is not allowed.");
                         messages::propertyValueIncorrect(
                             asyncResp->res, "AuthenticationTLSRequired",
                             "false");
@@ -3995,7 +3938,7 @@ inline void requestRoutesManagerCollection(App& app)
                                    const std::vector<std::string>& objects) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error";
+                BMCWEB_LOG_DEBUG("DBUS response error");
                 messages::internalError(asyncResp->res);
                 return;
             }
