@@ -2110,6 +2110,13 @@ inline void requestRoutesSoftwareInventoryCollection(App& app)
                                   std::vector<std::pair<
                                       std::string, std::vector<std::string>>>>>&
                         subtree) {
+                    if (ec == boost::system::errc::io_error)
+                    {
+                        asyncResp->res.jsonValue["Members"] =
+                            nlohmann::json::array();
+                        asyncResp->res.jsonValue["Members@odata.count"] = 0;
+                        return;
+                    }
                     if (ec)
                     {
                         messages::internalError(asyncResp->res);
@@ -2180,6 +2187,13 @@ inline void requestRoutesInventorySoftwareCollection(App& app)
                                   std::vector<std::pair<
                                       std::string, std::vector<std::string>>>>>&
                         subtree) {
+                    if (ec == boost::system::errc::io_error)
+                    {
+                        asyncResp->res.jsonValue["Members"] =
+                            nlohmann::json::array();
+                        asyncResp->res.jsonValue["Members@odata.count"] = 0;
+                        return;
+                    }
                     if (ec)
                     {
                         messages::internalError(asyncResp->res);
