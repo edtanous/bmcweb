@@ -27,16 +27,8 @@
 
 #include <boost/asio/post.hpp>
 #include <boost/asio/steady_timer.hpp>
-<<<<<<< HEAD
-#include <boost/container/flat_map.hpp>
-#include <dbus_utility.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
-#include <task_messages.hpp>
-=======
 #include <boost/url/format.hpp>
 #include <sdbusplus/bus/match.hpp>
->>>>>>> origin/master-october-10
 
 #include <chrono>
 #include <memory>
@@ -50,13 +42,8 @@ namespace task
 {
 constexpr size_t maxTaskCount = 100; // arbitrary limit
 
-<<<<<<< HEAD
-using TaskQueue = std::deque<std::shared_ptr<struct TaskData>>;
-static TaskQueue tasks;
-=======
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::deque<std::shared_ptr<struct TaskData>> tasks;
->>>>>>> origin/master-october-10
 
 constexpr bool completed = true;
 
@@ -710,17 +697,11 @@ inline void requestRoutesTaskCollection(App& app)
             {
                 continue; // shouldn't be possible
             }
-<<<<<<< HEAD
-            members.emplace_back(
-                nlohmann::json{{"@odata.id", "/redfish/v1/TaskService/Tasks/" +
-                                                 std::to_string(task->index)}});
-=======
             nlohmann::json::object_t member;
             member["@odata.id"] =
                 boost::urls::format("/redfish/v1/TaskService/Tasks/{}",
                                     std::to_string(task->index));
             members.emplace_back(std::move(member));
->>>>>>> origin/master-october-10
         }
     });
 }
