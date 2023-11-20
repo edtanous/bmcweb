@@ -38,7 +38,7 @@
 // #include "log_services.hpp"
 // #include "manager_diagnostic_data.hpp"
 // #include "managers.hpp"
-// #include "memory.hpp"
+#include "memory.hpp"
 // #include "message_registries.hpp"
 // #include "metric_report.hpp"
 // #include "metric_report_definition.hpp"
@@ -277,9 +277,9 @@ class RedfishService
 //         requestRoutesProcessorPortCollection(app);
 //         requestRoutesProcessorPort(app);
 //         requestRoutesProcessorPortMetrics(app);
-//         requestRoutesMemoryCollection(app);
-//         requestRoutesMemory(app);
-//         requestRoutesMemoryMetrics(app);
+        requestRoutesMemoryCollection(app);
+        requestRoutesMemory(app);
+        requestRoutesMemoryMetrics(app);
 
 //         requestRoutesSystems(app);
 // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
