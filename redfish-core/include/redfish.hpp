@@ -54,7 +54,7 @@
 // #include "network_protocol.hpp"
 // #include "nvidia_oem_dpu.hpp"
 // #include "pcie.hpp"
-// #include "pcieslots.hpp"
+#include "pcieslots.hpp"
 // #include "pcie_slots.hpp"
 // #include "power.hpp"
 // #include "power_subsystem.hpp"
@@ -97,7 +97,7 @@ class RedfishService
     explicit RedfishService(App& app)
     {
 //         requestAssemblyRoutes(app);
-//         requestPcieSlotsRoutes(app);
+        requestPcieSlotsRoutes(app);
 //         if (persistent_data::getConfig().isTLSAuthEnabled())
 //         {
 //         requestAccountServiceRoutes(app);
