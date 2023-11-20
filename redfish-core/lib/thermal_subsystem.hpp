@@ -35,19 +35,12 @@ inline void doThermalSubsystemCollection(
     asyncResp->res.jsonValue["Name"] = "Thermal Subsystem";
     asyncResp->res.jsonValue["Id"] = "ThermalSubsystem";
 
-<<<<<<< HEAD
-    asyncResp->res.jsonValue["@odata.id"] = crow::utility::urlFromPieces(
-        "redfish", "v1", "Chassis", chassisId, "ThermalSubsystem");
-    asyncResp->res.jsonValue["ThermalMetrics"]["@odata.id"] =
-        crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
-                                     "ThermalSubsystem", "ThermalMetrics");
-=======
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/ThermalSubsystem", chassisId);
-
+    asyncResp->res.jsonValue["ThermalMetrics"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/ThermalSubsystem/ThermalMetrics", chassisId);
     asyncResp->res.jsonValue["Fans"]["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans", chassisId);
->>>>>>> origin/master-october-10
 
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";

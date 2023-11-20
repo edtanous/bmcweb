@@ -73,7 +73,7 @@
 // #include "task.hpp"
 // #include "telemetry_service.hpp"
 // #include "thermal.hpp"
-// #include "thermal_subsystem.hpp"
+#include "thermal_subsystem.hpp"
 // #include "trigger.hpp"
 // #include "trusted_components.hpp"
 // #include "update_service.hpp"
@@ -125,7 +125,7 @@ class RedfishService
 //         requestRoutesPower(app);
 // #endif
 // #endif
-//         requestRoutesThermalSubsystem(app);
+        requestRoutesThermalSubsystem(app);
 //         requestRoutesThermalMetrics(app);
 
 // #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
