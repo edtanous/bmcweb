@@ -100,46 +100,6 @@ using EventLogObjectsType =
     std::tuple<std::string, std::string, std::string, std::string, std::string,
                std::vector<std::string>>;
 
-namespace registries
-{
-// static const Message*
-//     getMsgFromRegistry(const std::string& messageKey,
-//                        const std::span<const MessageEntry>& registry)
-// {
-//     std::span<const MessageEntry>::iterator messageIt = std::ranges::find_if(
-//         registry, [&messageKey](const MessageEntry& messageEntry) {
-//             return messageKey == messageEntry.first;
-//         });
-//     if (messageIt != registry.end())
-//     {
-//         return &messageIt->second;
-//     }
-
-//     return nullptr;
-// }
-
-static const Message* formatMessage(std::string_view messageID)
-{
-    // Redfish MessageIds are in the form
-    // RegistryName.MajorVersion.MinorVersion.MessageKey, so parse it to find
-    // the right Message
-    std::vector<std::string> fields;
-    fields.reserve(4);
-
-    bmcweb::split(fields, messageID, '.');
-    if (fields.size() != 4)
-    {
-        return nullptr;
-    }
-    const std::string& registryName = fields[0];
-    const std::string& messageKey = fields[3];
-
-    // Find the right registry and check it for the MessageKey
-    return redfish::message_registries::getMessageFromRegistry(
-        messageKey, getRegistryFromPrefix(registryName));
-}
-} // namespace registries
-
 namespace event_log
 {
 inline bool getUniqueEntryID(const std::string& logEntry, std::string& entryID)
@@ -243,7 +203,7 @@ inline int formatEventLogEntry(const std::string& logEntryID,
                                nlohmann::json& logEntryJson)
 {
     // Get the Message from the MessageRegistry
-    const registries::Message* message = registries::formatMessage(messageID);
+    const registries::Message* message = registries::getMessage(messageID);
 
     if (message == nullptr)
     {
@@ -328,7 +288,7 @@ class Event
     Event(const std::string& messageId) : messageId(messageId)
     {
         registryPrefix = message_registries::getPrefix(messageId);
-        registryMsg = message_registries::getMessage(messageId);
+        registryMsg = redfish::registries::getMessage(messageId);
         if (registryMsg == nullptr)
         {
             BMCWEB_LOG_ERROR("{}", "Message not found in registry with ID: " + messageId);

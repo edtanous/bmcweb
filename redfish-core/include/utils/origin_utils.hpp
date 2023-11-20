@@ -7,8 +7,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <dbus_utility.hpp>
-#include <utils/registry_utils.hpp>
-
+#include "registries.hpp"
 #include <algorithm>
 #include <chrono>
 
@@ -100,8 +99,8 @@ static void oocUtilServiceConditions(
 {
     nlohmann::json j;
     BMCWEB_LOG_DEBUG("Generating MessageRegistry for [{}]", messageId);
-    const redfish::registries::Message* msg =
-        redfish::message_registries::getMessage(messageId);
+    const registries::Message* msg =
+       registries::getMessage(messageId);
 
     if (msg == nullptr)
     {

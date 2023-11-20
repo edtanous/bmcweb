@@ -14,6 +14,15 @@
             "Resolution": "None.",
             "Severity": "Warning"
         },
+        "AsyncError": {
+            "Description": "Indicates that the SMBPBI Async Command Failed.",
+            "Message": "%1 Respresents Error Code",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": ["string", "string"],
+            "Resolution": "%2",
+            "Severity": "Warning"
+        },
         "AtScaleDebugConnected": {
             "Description": "Indicates At-Scale Debug connection has been established",
             "Message": "At-Scale Debug service is now connected %1",
@@ -148,6 +157,15 @@
             "Resolution": "None.",
             "Severity": "Warning"
         },
+        "BMCRebootReason": {
+            "Description": "Indicates BMC firmware rebooted.",
+            "Message": "BMC firmware rebooted due to reason %1.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
         "BIOSRecoveryComplete": {
             "Description": "Indicates BIOS Recovery has completed.",
             "Message": "BIOS Recovery Complete.",
@@ -170,6 +188,14 @@
             "MessageSeverity": "OK",
             "NumberOfArgs": 2,
             "ParamTypes": ["string", "string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "BMCFactoryReset": {
+            "Description": "Indicates that BMC factory reset was performed.",
+            "Message": "BMC factory reset was performed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
             "Resolution": "None.",
             "Severity": "OK"
         },
@@ -207,6 +233,24 @@
             "NumberOfArgs": 0,
             "Resolution": "None.",
             "Severity": "OK"
+        },
+        "BMCSystemResourceInfo": {
+            "Description": "Indicates BMC resource consumption by process in terms of storage, CPU and memory or any other resource",
+            "Message": "HIGH %1 resource consuming processes %2",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": ["string", "string"],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "BMCServiceResourceInfo": {
+            "Description": "Indicates BMC resource consumption by process in terms of storage, CPU and memory or any other resource",
+            "Message": "HIGH %1 resource consuming process %2",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": ["string", "string"],
+            "Resolution": "None.",
+            "Severity": "Warning"
         },
         "CPLDFirmwarePanicReason": {
             "Description": "Indicates the reason for CPLD firmware panic.",
