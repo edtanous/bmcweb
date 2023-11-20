@@ -393,6 +393,8 @@ class RedfishService
 #endif
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
         requestRoutesNvidiaOemBf(app);
+        requestRoutesNvidiaManagerSetSelCapacityAction(app);
+        requestRoutesNvidiaManagerGetSelCapacity(app);
 #endif
         requestRoutesTrustedComponents(app);
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
