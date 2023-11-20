@@ -28,7 +28,7 @@
 // #include "erot_chassis.hpp"
 // #include "fabric.hpp"
 // #include "host_interface.hpp"
-// #include "environment_metrics.hpp"
+#include "environment_metrics.hpp"
 // #include "ethernet.hpp"
 // #include "event_service.hpp"
 // #include "eventservice_sse.hpp"
@@ -139,7 +139,7 @@ class RedfishService
 // #endif
 
 // #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
-//         requestRoutesEnvironmentMetrics(app);
+        requestRoutesEnvironmentMetrics(app);
 //         requestRoutesPowerSubsystem(app);
 //         requestRoutesPowerSupply(app);
 //         requestRoutesPowerSupplyCollection(app);
@@ -161,8 +161,8 @@ class RedfishService
 //         requestRoutesChassisResetActionInfo(app);
 // #endif
 //         requestRoutesEnvironmentMetrics(app);
-//         requestRoutesProcessorEnvironmentMetrics(app);
-//         requestRoutesMemoryEnvironmentMetrics(app);
+        requestRoutesProcessorEnvironmentMetrics(app);
+        requestRoutesMemoryEnvironmentMetrics(app);
 //         requestRoutesUpdateService(app);
 // #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 //         requestRoutesSplitUpdateService(app);
@@ -265,15 +265,15 @@ class RedfishService
 //         requestRoutesProcessorMemoryMetrics(app);
 //         requestRoutesProcessorSettings(app);
 //         requestRoutesProcessorReset(app);
-// #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-//         requestRoutesEdppReset(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesEdppReset(app);
 //         requestRoutesNvidiaManagerResetToDefaultsAction(app);
 
 //         requestRouteSyncRawOobCommand(app);
 //         requestRouteAsyncRawOobCommand(app);
 //         requestRoutesNvidiaAsyncOOBRawCommandActionInfo(app);
 //         requestRoutesNvidiaSyncOOBRawCommandActionInfo(app);
-// #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 //         requestRoutesProcessorPortCollection(app);
 //         requestRoutesProcessorPort(app);
 //         requestRoutesProcessorPortMetrics(app);
