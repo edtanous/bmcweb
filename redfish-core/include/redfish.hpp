@@ -71,7 +71,7 @@
 // #include "storage.hpp"
 // #include "systems.hpp"
 // #include "task.hpp"
-// #include "telemetry_service.hpp"
+#include "telemetry_service.hpp"
 // #include "thermal.hpp"
 #include "thermal_subsystem.hpp"
 // #include "trigger.hpp"
@@ -359,7 +359,7 @@ class RedfishService
 
 //         requestRoutesHypervisorSystems(app);
 
-//         requestRoutesTelemetryService(app);
+        requestRoutesTelemetryService(app);
 //         requestRoutesMetricReportDefinitionCollection(app);
 //         requestRoutesMetricReportCollection(app);
 //         requestRoutesMetricReportDefinition(app);

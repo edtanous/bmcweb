@@ -81,9 +81,6 @@ inline void handleTelemetryServiceGet(
                 time_utils::toDurationString(std::chrono::milliseconds(
                     static_cast<time_t>(*minInterval)));
         }
-<<<<<<< HEAD
-    });
-=======
         nlohmann::json::array_t supportedCollectionFunctions;
         supportedCollectionFunctions.emplace_back("Maximum");
         supportedCollectionFunctions.emplace_back("Minimum");
@@ -93,7 +90,6 @@ inline void handleTelemetryServiceGet(
         asyncResp->res.jsonValue["SupportedCollectionFunctions"] =
             std::move(supportedCollectionFunctions);
         });
->>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesTelemetryService(App& app)
