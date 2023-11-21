@@ -20,7 +20,7 @@
 // #include "aggregation_service.hpp"
 // #include "bios.hpp"
 // #include "boot_options.hpp"
-// #include "cable.hpp"
+#include "cable.hpp"
 // #include "certificate_service.hpp"
 // #include "chassis.hpp"
 // #include "component_integrity.hpp"
@@ -176,8 +176,8 @@ class RedfishService
 //         requestRoutesStorageController(app);
 //         requestRoutesDrive(app);
 // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-//         requestRoutesCable(app);
-//         requestRoutesCableCollection(app);
+        requestRoutesCable(app);
+        requestRoutesCableCollection(app);
 // #endif
 // #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||  defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
 //         requestRoutesUpdateServiceActionsSimpleUpdate(app);
