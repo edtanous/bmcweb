@@ -136,6 +136,11 @@ inline std::string getPortProtocol(const std::string& portProtocol)
     {
         return "PCIe";
     }
+    if (portProtocol ==
+        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.C2C")
+    {
+        return "C2C";
+    }
 
     // Unknown or others
     return "";
