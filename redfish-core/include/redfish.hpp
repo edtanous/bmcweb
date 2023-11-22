@@ -65,7 +65,7 @@
 // #include "roles.hpp"
 // #include "secure_boot.hpp"
 // #include "secure_boot_database.hpp"
-// #include "sensors.hpp"
+#include "sensors.hpp"
 // #include "service_conditions.hpp"
 #include "service_root.hpp"
 // #include "storage.hpp"
@@ -342,8 +342,8 @@ class RedfishService
 //         requestRoutesChassisPCIeDeviceCollection(app);
 //         requestRoutesChassisPCIeDevice(app);
 
-//         requestRoutesSensorCollection(app);
-//         requestRoutesSensor(app);
+        requestRoutesSensorCollection(app);
+        requestRoutesSensor(app);
 
 //         requestRoutesTaskMonitor(app);
 //         requestRoutesTaskService(app);
