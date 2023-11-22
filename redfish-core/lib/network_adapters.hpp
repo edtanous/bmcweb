@@ -340,6 +340,19 @@ inline void doPort(
                     uint32_t valueInGbps = (*value) / 1000;
                     asyncResp->res.jsonValue["CurrentSpeedGbps"] = valueInGbps;
                 }
+                if (propertyName == "LinkType")
+                   {
+                        const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                        if (value == nullptr)
+                        {
+                            BMCWEB_LOG_ERROR << "Cannot read LinkType property";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        if (value->find("InfiniBand") != std::string::npos)
+                            asyncResp->res.jsonValue["LinkNetworkTechnology"] = "InfiniBand";
+                   }
             }
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
@@ -403,6 +416,26 @@ inline void doNDF(
                     }
                     asyncResp->res.jsonValue["Ethernet"]["MACAddress"] = *value;
                 }
+                if (propertyName == "LinkType")
+                   {
+                        const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                        if (value == nullptr)
+                        {
+                            BMCWEB_LOG_ERROR << "Cannot read LinkType property";
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        auto& capabilitiesArray = asyncResp->res.jsonValue["NetDevFuncCapabilities"];
+                        if (std::find(capabilitiesArray.begin(), capabilitiesArray.end(), "InfiniBand") == capabilitiesArray.end()) 
+                        {
+                            capabilitiesArray.push_back("InfiniBand");
+                        }
+                        if (value->find("InfiniBand") != std::string::npos)
+                            asyncResp->res.jsonValue["NetDevFuncType"] = "InfiniBand";
+                        else
+                            asyncResp->res.jsonValue["NetDevFuncType"] = "Ethernet";
+                   }
             }
         },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");

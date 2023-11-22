@@ -700,13 +700,12 @@ class ConnectionPool : public std::enable_shared_from_this<ConnectionPool>
     // Otherwise closes the connection if it is not a keep-alive
     void sendNext(bool keepAlive, uint32_t connId)
     {
-        if (connId >= connections.size())
-        {
-            BMCWEB_LOG_ERROR << "sendNext() bad connection id (out of range) :"
-                             << std::to_string(connId);
+        if (connId >= connections.size()) {
+            BMCWEB_LOG_ERROR  << "sendNext() bad connection id (out of range) :"
+                            << std::to_string(connId);
             return;
         }
-
+        
         auto conn = connections[connId];
         // Allow the connection's handler to be deleted
         // This is needed because of Redfish Aggregation passing an

@@ -273,6 +273,7 @@ option('health-rollup-alternative', type : 'feature', value : 'disabled', descri
 option('nvidia-oem-properties', type : 'feature', value : 'disabled', description : 'Enable OEM properties.')
 option('nvidia-oem-logservices', type : 'feature', value : 'disabled', description : 'Enable OEM log services.')
 option('nvidia-oem-bf-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Bluefield properties')
+option('nvidia-oem-bf3-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Bluefield 3 properties')
 option('nvidia-oem-common-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Nvidia common properties.')
 option ('stalesensor-upper-limit-milisecond', type : 'integer', min : 1, max : 65535, value : 750, description : 'Upper limit in miliseconds to determine the staleness of sensor reading')
 option ('platform-metrics-sensing-interval', type : 'integer', min : 1, max : 65535, value : 250, description : 'Platform metrics telemetry sensor refresh interval in milliseconds')
@@ -290,6 +291,7 @@ option ('platform-chassis-name', type : 'string', value : 'HGX_Chassis_0', descr
 
 option ('tls-auth-opt-in', type : 'feature', value : 'disabled', description : 'Enables feature to opt-in to TLS-Authentication at runtime.')
 option ('host-os-features', type : 'feature', value : 'enabled', description : 'Enables feature specific to host os.')
+option ('host-auxpower-features', type : 'feature', value : 'disabled', description : 'disabled feature specific to host aux power.')
 option ('redfish-system-faultlog-dump-log', type : 'feature', value : 'disabled', description : 'Enable Redfish System faultlog dump log services.')
 option ('reset-bios-by-clear-nonvolatile', type : 'feature', value : 'disabled', description : 'Enable using DBUS xyz.openbmc_project.Control.Boot.ClearNonVolatileVariables for Bios.ResetBios action.')
 option ('fencing-privilege', type : 'feature', value : 'disabled', description : 'Enables feature to set/unset the fencing privilege to satelite BMC.')

@@ -20,7 +20,7 @@ struct Connection : std::enable_shared_from_this<Connection>
     explicit Connection(const crow::Request& reqIn) : req(reqIn.req)
     {}
     virtual void sendMessage(const boost::asio::mutable_buffer& buffer,
-                             std::function<void()> handler) = 0;
+                             std::function<void(bool)> handler) = 0;
     virtual void close() = 0;
     virtual boost::asio::io_context* getIoContext() = 0;
     virtual void sendStreamHeaders(const std::string& streamDataSize,
@@ -108,7 +108,7 @@ class ConnectionImpl : public Connection
             });
     }
     void sendMessage(const boost::asio::mutable_buffer& buffer,
-                     std::function<void()> handler) override
+                     std::function<void(bool)> handler) override
     {
         if (buffer.size())
         {
@@ -140,9 +140,10 @@ class ConnectionImpl : public Connection
                 {
                     BMCWEB_LOG_DEBUG << "Error in async_write " << ec;
                     close();
+                    (handlerFunc)(true);
                     return;
                 }
-                (handlerFunc)();
+                (handlerFunc)(false);
             });
     }
 
@@ -154,7 +155,7 @@ class ConnectionImpl : public Connection
     std::function<void(Connection&, const std::string&, bool)> messageHandler;
     std::function<void(Connection&)> closeHandler;
     std::function<void(Connection&)> errorHandler;
-    std::function<void()> handlerFunc;
+    std::function<void(bool)> handlerFunc;
     crow::Request req;
 };
 } // namespace streaming_response

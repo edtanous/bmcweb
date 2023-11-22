@@ -35,6 +35,8 @@ constexpr const char* spdmInventoryIntf =
     "xyz.openbmc_project.inventory.Item.SPDMResponder";
 constexpr const char* spdmBusName = "xyz.openbmc_project.SPDM";
 
+constexpr uint32_t spdmCertCapability = (1u << 1);
+
 using GetObjectType =
     std::vector<std::pair<std::string, std::vector<std::string>>>;
 using SPDMCertificates = std::vector<std::tuple<uint8_t, std::string>>;

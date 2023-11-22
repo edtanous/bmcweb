@@ -265,6 +265,8 @@ inline void
             nlohmann::json& powerSupplyList =
                 asyncResp->res.jsonValue["Members"];
             powerSupplyList = nlohmann::json::array();
+            asyncResp->res.jsonValue["Members@odata.count"] =
+                powerSupplyList.size();
 
             std::string powerSuppliesPath = "/redfish/v1/Chassis/" + chassisID +
                                             "/PowerSubsystem/PowerSupplies/";

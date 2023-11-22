@@ -3725,6 +3725,12 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
         // Fill in SerialConsole info
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
+		asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";
+#endif
+
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
                 15;

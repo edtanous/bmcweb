@@ -438,7 +438,7 @@ inline void requestRoutesEROTChassisCertificate(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) {
                 std::string url =
-                    "/redfish/v1/Chassis/" + chassisID + "/Certificates/";
+                    "/redfish/v1/Chassis/" + chassisID + "/Certificates";
                 asyncResp->res.jsonValue = {
                     {"@odata.id", url},
                     {"@odata.type",
@@ -447,7 +447,7 @@ inline void requestRoutesEROTChassisCertificate(App& app)
 
                 nlohmann::json& members = asyncResp->res.jsonValue["Members"];
                 members = nlohmann::json::array();
-                members.push_back({{"@odata.id", url + "CertChain"}});
+                members.push_back({{"@odata.id", url + "/CertChain"}});
 
                 asyncResp->res.jsonValue["Members@odata.count"] =
                     members.size();

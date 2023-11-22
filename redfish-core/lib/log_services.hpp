@@ -1679,6 +1679,8 @@ inline void clearDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "/xyz/openbmc_project/dump/" + dumpTypeLowerCopy, 0,
         std::array<std::string, 1>{"xyz.openbmc_project.Dump.Entry." +
                                    dumpType});
+
+        asyncResp->res.result(boost::beast::http::status::no_content);
 }
 
 inline static void
@@ -1875,8 +1877,13 @@ inline void requestRoutesEventLogService(App& app)
                     }
                     auto lastTimeStamp =
                         redfish::time_utils::getTimestamp(std::get<1>(reqData));
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                        "#NvidiaLogService.v1_1_0.NvidiaLogService";
+#else
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
                         "#NvidiaLogService.v1_0_0.NvidiaLogService";
+#endif /* BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES */
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] =
                         std::to_string(std::get<0>(reqData));
                     asyncResp->res
@@ -4417,11 +4424,11 @@ inline void getFDRServiceState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
             if (serviceState == "running")
             {
-                aResp->res.jsonValue["ServiceEnabled"] = "True";
+                aResp->res.jsonValue["ServiceEnabled"] = true;
             }
             else
             {
-                aResp->res.jsonValue["ServiceEnabled"] = "False";
+                aResp->res.jsonValue["ServiceEnabled"] = false;
             }
         });
 }
@@ -6658,6 +6665,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
 // vector containing debug token-related functionalities'
 // (GetDebugTokenRequest, GetDebugTokenStatus) output data
 static std::vector<std::string> debugTokenData;
+static constexpr const uint32_t debugTokenTaskTimeoutSec{60};
 
 inline void requestRoutesDebugToken(App& app)
 {
@@ -6910,7 +6918,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             }
             task->payload.emplace(req);
             task->populateResp(asyncResp->res);
-            task->startTimer(std::chrono::seconds(20));
+            task->startTimer(std::chrono::seconds(debugTokenTaskTimeoutSec));
         });
 }
 

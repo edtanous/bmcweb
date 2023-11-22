@@ -15,27 +15,31 @@ namespace redfish
 namespace mctp_utils
 {
 
-constexpr const char* spdmResponderIntf = "xyz.openbmc_project.SPDM.Responder";
+constexpr const std::string_view mctpBusPrefix = "xyz.openbmc_project.MCTP";
 constexpr const std::string_view mctpObjectPrefix =
     "/xyz/openbmc_project/mctp/";
+constexpr const uint8_t mctpMessageTypeVdm = 127;
+
+constexpr const char* spdmResponderIntf = "xyz.openbmc_project.SPDM.Responder";
 
 using AssociationCallback = std::function<void(
     bool /* success */,
     const std::string& /* MCTP object name OR error message */)>;
+using GetObjectType =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
 class MctpEndpoint
 {
   public:
     MctpEndpoint(const std::string& spdmObject,
-                 AssociationCallback&& callback) :
+                 const AssociationCallback& callback) :
         spdmObj(spdmObject)
     {
         BMCWEB_LOG_DEBUG << "Finding associations for " << spdmObject;
         dbus::utility::findAssociations(
             spdmObject + "/transport_object",
             [this, spdmObject,
-             callback{std::forward<AssociationCallback>(callback)}](
-                const boost::system::error_code ec,
-                std::variant<std::vector<std::string>>& association) {
+             callback](const boost::system::error_code ec,
+                       std::variant<std::vector<std::string>>& association) {
                 BMCWEB_LOG_DEBUG << "findAssociations callback for "
                                  << spdmObject;
                 if (ec)
@@ -65,7 +69,7 @@ class MctpEndpoint
                     try
                     {
                         mctpEid = std::stoi(v.back());
-                        callback(true, mctpObj);
+                        getDbusMctpMessageTypes(callback);
                     }
                     catch (std::invalid_argument const&)
                     {
@@ -87,15 +91,65 @@ class MctpEndpoint
         return mctpObj;
     }
 
+    const std::vector<uint8_t>& getMctpMessageTypes() const
+    {
+        return mctpMessageTypes;
+    }
+
     const std::string& getSpdmObject() const
     {
         return spdmObj;
     }
 
   protected:
+    void getDbusMctpMessageTypes(const AssociationCallback& callback)
+    {
+        crow::connections::systemBus->async_method_call(
+            [this, callback](const boost::system::error_code ec,
+                             const GetObjectType& response) {
+                if (ec || response.empty())
+                {
+                    callback(false, "GetObject failure for: " + mctpObj);
+                    return;
+                }
+                for (const auto& elem : response)
+                {
+                    const std::string& service = elem.first;
+                    if (service.rfind(mctpBusPrefix, 0) == 0)
+                    {
+                        sdbusplus::asio::getProperty<std::vector<uint8_t>>(
+                            *crow::connections::systemBus, service, mctpObj,
+                            "xyz.openbmc_project.MCTP.Endpoint",
+                            "SupportedMessageTypes",
+                            [this, callback](const boost::system::error_code ec,
+                                             const std::vector<uint8_t>& resp) {
+                                if (ec)
+                                {
+                                    callback(
+                                        false,
+                                        "Failed to get supported message types for: " +
+                                            mctpObj);
+                                    return;
+                                }
+                                mctpMessageTypes = resp;
+                                callback(true, mctpObj);
+                                return;
+                            });
+                        return;
+                    }
+                }
+                callback(false, "GetObject failure for: " + mctpObj);
+                return;
+            },
+            dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,
+            dbus_utils::mapperIntf, "GetObject", mctpObj,
+            std::array<const char*, 0>());
+    }
+
     std::string mctpObj;
     std::string spdmObj;
     int mctpEid{-1};
+    std::vector<uint8_t> mctpMessageTypes;
 };
 
 using Endpoints = std::vector<MctpEndpoint>;

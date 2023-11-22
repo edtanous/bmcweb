@@ -110,6 +110,10 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                     {
                                         propertyName = "SetPoint";
                                     }
+                                    else if (propertyName == "DefaultPowerCap")
+                                    {
+                                        propertyName = "DefaultSetPoint";
+                                    }
                                     else if (propertyName == "PhysicalContext")
                                     {
                                         const auto* physicalcontext =
@@ -139,7 +143,6 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                                 break;
                                             }
                                         }
-
                                         continue;
                                     }
                                     const auto* value =
@@ -753,7 +756,7 @@ inline void requestRoutesChassisControls(App& app)
                         return;
                     }
                     asyncResp->res.jsonValue["@odata.type"] =
-                        "#Control.v1_0_0.Control";
+                        "#Control.v1_3_0.Control";
                     asyncResp->res.jsonValue["SetPointUnits"] = "W";
                     asyncResp->res.jsonValue["Id"] = controlID;
                     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";

@@ -3922,9 +3922,23 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
                 return;
             }
 
-            BMCWEB_LOG_DEBUG
-                << "RemoteServerIP: " << remoteServerIP +
-                " RemoteServerKeyString: " << remoteServerKeyString;
+            BMCWEB_LOG_DEBUG << "RemoteServerIP: " << remoteServerIP +
+            " RemoteServerKeyString: " << remoteServerKeyString;
+
+            // Verify remoteServerKeyString matches the pattern "<type> <key>"
+            std::string remoteServerKeyStringPattern = R"(\S+\s+\S+)";
+            std::regex pattern(remoteServerKeyStringPattern);
+            if (!std::regex_match(remoteServerKeyString, pattern))
+            {
+                // Invalid format, return an error message
+                messages::actionParameterValueTypeError(
+                                        asyncResp->res,
+                                        remoteServerKeyString,
+                                        "RemoteServerKeyString",
+                                        "UpdateService.PublicKeyExchange");
+                BMCWEB_LOG_DEBUG << "Invalid RemoteServerKeyString format";
+                return;
+            }
 
             // Call SCP service
             crow::connections::systemBus->async_method_call(

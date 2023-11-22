@@ -112,10 +112,17 @@ class StatusQueryHandler : public OperationHandler
                     endpoints->reserve(mctpEndpoints->size());
                     for (auto& ep : *mctpEndpoints)
                     {
-                        endpoints->emplace_back(std::make_tuple(
-                            std::move(ep), std::string(),
-                            std::vector<uint8_t>(), EndpointState::None));
+                        const auto& msgTypes = ep.getMctpMessageTypes();
+                        if (std::find(msgTypes.begin(), msgTypes.end(),
+                                      mctp_utils::mctpMessageTypeVdm) !=
+                            msgTypes.end())
+                        {
+                            endpoints->emplace_back(std::make_tuple(
+                                std::move(ep), std::string(),
+                                std::vector<uint8_t>(), EndpointState::None));
+                        }
                     }
+                    endpoints->shrink_to_fit();
                     getStatus();
                     return;
                 }
@@ -545,38 +552,79 @@ class RequestHandler : public OperationHandler
                         return;
                     }
                     auto itSign = props.find("SignedMeasurements");
-                    auto itCert = props.find("Certificate");
-                    if (itSign == props.end() || itCert == props.end())
+                    if (itSign == props.end())
                     {
-                        errCallback(false, desc, "cannot find property");
+                        errCallback(false, desc,
+                                    "cannot find SignedMeasurements property");
                         state = EndpointState::Error;
                         finalize();
                         return;
                     }
                     auto sign =
                         std::get_if<std::vector<uint8_t>>(&itSign->second);
-                    auto cert = std::get_if<
-                        std::vector<std::tuple<uint8_t, std::string>>>(
-                        &itCert->second);
-                    if (!sign || !cert)
+                    if (!sign)
                     {
-                        errCallback(false, desc, "cannot decode property");
+                        errCallback(
+                            false, desc,
+                            "cannot decode SignedMeasurements property");
                         state = EndpointState::Error;
                         finalize();
                         return;
                     }
-                    auto certSlot = std::find_if(
-                        cert->begin(), cert->end(),
-                        [](const auto& e) { return std::get<0>(e) == 0; });
-                    if (certSlot == cert->end())
+                    auto itCaps = props.find("Capabilities");
+                    if (itCaps == props.end())
                     {
                         errCallback(false, desc,
-                                    "cannot find certificate for slot 0");
+                                    "cannot find Capabilities property");
                         state = EndpointState::Error;
                         finalize();
                         return;
                     }
-                    const std::string& pem = std::get<1>(*certSlot);
+                    auto caps = std::get_if<uint32_t>(&itCaps->second);
+                    if (!caps)
+                    {
+                        errCallback(false, desc,
+                                    "cannot decode Capabilities property");
+                        state = EndpointState::Error;
+                        finalize();
+                        return;
+                    }
+                    std::string pem;
+                    if (*caps & spdmCertCapability)
+                    {
+                        auto itCert = props.find("Certificate");
+                        if (itCert == props.end())
+                        {
+                            errCallback(false, desc,
+                                        "cannot find Certificate property");
+                            state = EndpointState::Error;
+                            finalize();
+                            return;
+                        }
+                        auto cert = std::get_if<
+                            std::vector<std::tuple<uint8_t, std::string>>>(
+                            &itCert->second);
+                        if (!cert)
+                        {
+                            errCallback(false, desc,
+                                        "cannot decode Certificate property");
+                            state = EndpointState::Error;
+                            finalize();
+                            return;
+                        }
+                        auto certSlot = std::find_if(
+                            cert->begin(), cert->end(),
+                            [](const auto& e) { return std::get<0>(e) == 0; });
+                        if (certSlot == cert->end())
+                        {
+                            errCallback(false, desc,
+                                        "cannot find certificate for slot 0");
+                            state = EndpointState::Error;
+                            finalize();
+                            return;
+                        }
+                        pem = std::get<1>(*certSlot);
+                    }
                     size_t size =
                         sizeof(ServerRequestHeader) + sign->size() + pem.size();
                     auto header = std::make_unique<ServerRequestHeader>();
