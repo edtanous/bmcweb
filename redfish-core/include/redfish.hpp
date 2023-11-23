@@ -22,7 +22,7 @@
 // #include "boot_options.hpp"
 #include "cable.hpp"
 // #include "certificate_service.hpp"
-// #include "chassis.hpp"
+#include "chassis.hpp"
 // #include "component_integrity.hpp"
 // #include "control.hpp"
 // #include "erot_chassis.hpp"
@@ -62,7 +62,7 @@
 // #include "processor.hpp"
 // #include "redfish_sessions.hpp"
 #include "redfish_v1.hpp"
-// #include "roles.hpp"
+#include "roles.hpp"
 // #include "secure_boot.hpp"
 // #include "secure_boot_database.hpp"
 #include "sensors.hpp"
@@ -109,8 +109,8 @@ class RedfishService
 // #endif
 //         if (persistent_data::getConfig().isTLSAuthEnabled())
 //         {
-//         requestRoutesRoles(app);
-//         requestRoutesRoleCollection(app);
+        requestRoutesRoles(app);
+        requestRoutesRoleCollection(app);
 //         }
         requestRoutesServiceRoot(app);
 //         requestRoutesNetworkProtocol(app);

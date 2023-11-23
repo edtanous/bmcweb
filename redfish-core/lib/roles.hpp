@@ -138,15 +138,9 @@ inline void requestRoutesRoleCollection(App& app)
                 if (!role.empty())
                 {
                     nlohmann::json::object_t member;
-<<<<<<< HEAD
-                    member["@odata.id"] = "/redfish/v1/AccountService/Roles/" +
-                                          role;
-                    memberArray.push_back(std::move(member));
-=======
                     member["@odata.id"] = boost::urls::format(
                         "/redfish/v1/AccountService/Roles/{}", role);
                     memberArray.emplace_back(std::move(member));
->>>>>>> origin/master-october-10
                 }
             }
             asyncResp->res.jsonValue["Members@odata.count"] =
