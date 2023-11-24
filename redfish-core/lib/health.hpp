@@ -20,14 +20,11 @@
 #include "dbus_singleton.hpp"
 #include "dbus_utility.hpp"
 
-<<<<<<< HEAD
 #include <app.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/container/flat_set.hpp>
 #include <dbus_singleton.hpp>
 #include <dbus_utility.hpp>
-=======
->>>>>>> origin/master-october-10
 #include <nlohmann/json.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/bus.hpp>
@@ -215,16 +212,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                 return;
             }
             self->globalInventoryPath = resp[0];
-<<<<<<< HEAD
-        },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", "/", 0,
-            std::array<const char*, 1>{
-                "xyz.openbmc_project.Inventory.Item.Global"});
-=======
             });
->>>>>>> origin/master-october-10
     }
 
     void getAllStatusAssociations()
@@ -250,13 +238,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                 }
                 it = self->statuses.erase(it);
             }
-<<<<<<< HEAD
-        },
-            "xyz.openbmc_project.ObjectMapper", "/",
-            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-=======
             });
->>>>>>> origin/master-october-10
     }
 
     std::shared_ptr<bmcweb::AsyncResp> asyncResp;

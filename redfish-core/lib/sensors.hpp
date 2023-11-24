@@ -33,7 +33,7 @@
 #include <boost/format.hpp>
 #include <dbus_singleton.hpp>
 #include <dbus_utility.hpp>
-// #include <health.hpp>
+#include <health.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 // #include <utils/conditions_utils.hpp>

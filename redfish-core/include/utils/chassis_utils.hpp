@@ -445,8 +445,7 @@ inline void setBackgroundCopyEnabled(
             {
                 BMCWEB_LOG_DEBUG("Can not find relevant MCTP endpoint for chassis {}", chassisId);
                 messages::resourceMissingAtURI(
-                    asyncResp->res, crow::utility::urlFromPieces(
-                                        "redfish", "v1", "Chassis", chassisId));
+                    asyncResp->res, boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
 
                 return;
             }
@@ -551,8 +550,7 @@ inline void
             {
                 BMCWEB_LOG_DEBUG("Can not find relevant MCTP endpoint for chassis {}", chassisId);
                 messages::resourceMissingAtURI(
-                    asyncResp->res, crow::utility::urlFromPieces(
-                                        "redfish", "v1", "Chassis", chassisId));
+                    asyncResp->res, boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
                 return;
             }
         }
@@ -881,7 +879,7 @@ template <typename CallbackFunc>
 inline void getRedfishURL(const std::filesystem::path& invObjPath,
                           CallbackFunc&& callback)
 {
-    BMCWEB_LOG_DEBUG("getRedfishURL({})", invObjPath);
+    BMCWEB_LOG_DEBUG("getRedfishURL({})", invObjPath.string());
     crow::connections::systemBus->async_method_call(
         [invObjPath, callback](const boost::system::error_code ec,
                                const GetObjectType& resp) {

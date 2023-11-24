@@ -84,7 +84,7 @@ inline void
             {
                 asyncResp->res.jsonValue["IndicatorLED"] = "Off";
             }
-        });
+            });
     });
 }
 
@@ -148,25 +148,9 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-<<<<<<< HEAD
-            messages::success(aResp->res);
-        },
-            "xyz.openbmc_project.LED.GroupManager",
-            "/xyz/openbmc_project/led/groups/enclosure_identify",
-            "org.freedesktop.DBus.Properties", "Set",
-            "xyz.openbmc_project.Led.Group", "Asserted",
-            dbus::utility::DbusVariantType(ledOn));
-    },
-        "xyz.openbmc_project.LED.GroupManager",
-        "/xyz/openbmc_project/led/groups/enclosure_identify_blink",
-        "org.freedesktop.DBus.Properties", "Set",
-        "xyz.openbmc_project.Led.Group", "Asserted",
-        dbus::utility::DbusVariantType(ledBlinkng));
-=======
             messages::success(asyncResp->res);
             });
         });
->>>>>>> origin/master-october-10
 }
 
 /**
@@ -220,14 +204,9 @@ inline void getLocationIndicatorActive(
                 return;
             }
 
-<<<<<<< HEAD
-            aResp->res.jsonValue["LocationIndicatorActive"] = ledOn;
-=======
             asyncResp->res.jsonValue["LocationIndicatorActive"] = ledOn;
             });
->>>>>>> origin/master-october-10
         });
-    });
 }
 
 /**
@@ -265,24 +244,8 @@ inline void setLocationIndicatorActive(
                     messages::internalError(asyncResp->res);
                     return;
                 }
-<<<<<<< HEAD
-            },
-                "xyz.openbmc_project.LED.GroupManager",
-                "/xyz/openbmc_project/led/groups/enclosure_identify",
-                "org.freedesktop.DBus.Properties", "Set",
-                "xyz.openbmc_project.Led.Group", "Asserted",
-                dbus::utility::DbusVariantType(ledState));
-        }
-    },
-        "xyz.openbmc_project.LED.GroupManager",
-        "/xyz/openbmc_project/led/groups/enclosure_identify_blink",
-        "org.freedesktop.DBus.Properties", "Set",
-        "xyz.openbmc_project.Led.Group", "Asserted",
-        dbus::utility::DbusVariantType(ledState));
-=======
                 });
         }
         });
->>>>>>> origin/master-october-10
 }
 } // namespace redfish

@@ -33,13 +33,8 @@ inline void fillSessionObject(crow::Response& res,
 {
     res.jsonValue["Id"] = session.uniqueId;
     res.jsonValue["UserName"] = session.username;
-<<<<<<< HEAD
-    res.jsonValue["@odata.id"] = "/redfish/v1/SessionService/Sessions/" +
-                                 session.uniqueId;
-=======
     res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/SessionService/Sessions/{}", session.uniqueId);
->>>>>>> origin/master-october-10
     res.jsonValue["@odata.type"] = "#Session.v1_5_0.Session";
     res.jsonValue["Name"] = "User Session";
     res.jsonValue["Description"] = "Manager User Session";

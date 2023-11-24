@@ -32,7 +32,7 @@
 #include <sdbusplus/asio/property.hpp>
 #include <utils/chassis_utils.hpp>
 #include <utils/collection.hpp>
-#include <utils/conditions_utils.hpp>
+//#include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
 
@@ -132,7 +132,7 @@ static void
                     auto chassisID =
                         std::filesystem::path(objectPath).filename().string();
                     asyncResp->res.jsonValue = {
-                        {"@odata.id", req.url},
+                        {"@odata.id", req.url()},
                         {"@odata.type", "#Certificate.v1_5_0.Certificate"},
                         {"Id", certificateID},
                         {"Name", chassisID + " Certificate Chain"},
@@ -288,35 +288,35 @@ inline void getEROTChassis(const crow::Request& req,
                                                            "DOTTokenInstall";
 #endif
 
-#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-            auto health = std::make_shared<HealthRollup>(
-                path,
-                [asyncResp](const std::string& rootHealth,
-                            const std::string& healthRollup) {
-                asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
-                asyncResp->res.jsonValue["Status"]["HealthRollup"] =
-                    healthRollup;
-            },
-                &health_state::ok);
-            health->start();
-#else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-            auto health = std::make_shared<HealthPopulate>(asyncResp);
+// #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+//             auto health = std::make_shared<HealthRollup>(
+//                 path,
+//                 [asyncResp](const std::string& rootHealth,
+//                             const std::string& healthRollup) {
+//                 asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+//                 asyncResp->res.jsonValue["Status"]["HealthRollup"] =
+//                     healthRollup;
+//             },
+//                 &health_state::ok);
+//             health->start();
+// #else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+//             auto health = std::make_shared<HealthPopulate>(asyncResp);
 
-            sdbusplus::asio::getProperty<std::vector<std::string>>(
-                *crow::connections::systemBus,
-                "xyz.openbmc_project.ObjectMapper", path + "/all_sensors",
-                "xyz.openbmc_project.Association", "endpoints",
-                [health](const boost::system::error_code ec2,
-                         const std::vector<std::string>& resp) {
-                if (ec2)
-                {
-                    return; // no sensors = no failures
-                }
-                health->inventory = resp;
-            });
+//             sdbusplus::asio::getProperty<std::vector<std::string>>(
+//                 *crow::connections::systemBus,
+//                 "xyz.openbmc_project.ObjectMapper", path + "/all_sensors",
+//                 "xyz.openbmc_project.Association", "endpoints",
+//                 [health](const boost::system::error_code ec2,
+//                          const std::vector<std::string>& resp) {
+//                 if (ec2)
+//                 {
+//                     return; // no sensors = no failures
+//                 }
+//                 health->inventory = resp;
+//             });
 
-            health->populate();
-#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+//             health->populate();
+// #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
@@ -355,8 +355,8 @@ inline void getEROTChassis(const crow::Request& req,
             redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
                                                                objPath);
 
-            redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                                 chassisId);
+            // redfish::conditions_utils::populateServiceConditions(asyncResp,
+            //                                                      chassisId);
             return;
         }
 
@@ -397,7 +397,7 @@ inline void requestRoutesEROTChassisCertificate(App& app)
                 messages::internalError(asyncResp->res);
                 return;
             }
-            BMCWEB_LOG_DEBUG("URL={}", req.url);
+            BMCWEB_LOG_DEBUG("URL={}", req.url());
 
             std::string objectPath =
                 "/xyz/openbmc_project/inventory/system/chassis/" + chassisID;
