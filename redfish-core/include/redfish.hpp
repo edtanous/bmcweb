@@ -40,7 +40,7 @@
 // #include "managers.hpp"
 #include "memory.hpp"
 // #include "message_registries.hpp"
-// #include "metric_report.hpp"
+#include "metric_report.hpp"
 // #include "metric_report_definition.hpp"
 
 // #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
@@ -361,9 +361,9 @@ class RedfishService
 
         requestRoutesTelemetryService(app);
 //         requestRoutesMetricReportDefinitionCollection(app);
-//         requestRoutesMetricReportCollection(app);
+        requestRoutesMetricReportCollection(app);
 //         requestRoutesMetricReportDefinition(app);
-//         requestRoutesMetricReport(app);
+        requestRoutesMetricReport(app);
 //         requestRoutesFabricCollection(app);
 //         requestRoutesFabric(app);
 //         requestRoutesSwitchCollection(app);
