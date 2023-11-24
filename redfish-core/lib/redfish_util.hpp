@@ -97,14 +97,7 @@ void getMainChassisId(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         std::string chassisId = subtree[0].first.substr(idPos + 1);
         BMCWEB_LOG_DEBUG("chassisId = {}", chassisId);
         callback(chassisId, asyncResp);
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-        "/xyz/openbmc_project/inventory", 0,
-        std::array<const char*, 2>{
-            "xyz.openbmc_project.Inventory.Item.Board",
-            "xyz.openbmc_project.Inventory.Item.Chassis"});
+    });
 }
 
 template <typename CallbackFunc>

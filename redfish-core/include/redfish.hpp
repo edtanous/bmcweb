@@ -69,7 +69,7 @@
 // #include "service_conditions.hpp"
 #include "service_root.hpp"
 // #include "storage.hpp"
-// #include "systems.hpp"
+#include "systems.hpp"
 // #include "task.hpp"
 #include "telemetry_service.hpp"
 // #include "thermal.hpp"
@@ -281,7 +281,7 @@ class RedfishService
         requestRoutesMemory(app);
         requestRoutesMemoryMetrics(app);
 
-//         requestRoutesSystems(app);
+        requestRoutesSystems(app);
 // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
 //         requestRoutesSystemActionsReset(app);
 //         requestRoutesSystemResetActionInfo(app);
