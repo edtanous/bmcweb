@@ -225,7 +225,7 @@ inline void handleSessionCollectionPost(
     bool isConfigureSelfOnly = pamrc == PAM_NEW_AUTHTOK_REQD;
     if ((pamrc != PAM_SUCCESS) && !isConfigureSelfOnly)
     {
-        //handleAccountLocked(username, asyncResp, req);
+        handleAccountLocked(username, asyncResp, req);
         return;
     }
 
