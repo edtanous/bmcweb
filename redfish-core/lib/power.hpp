@@ -109,18 +109,8 @@ inline void setPowerCapOverride(
                 }
                 sensorsAsyncResp->asyncResp->res.result(
                     boost::beast::http::status::no_content);
-<<<<<<< HEAD
-            },
-                "xyz.openbmc_project.Settings",
-                "/xyz/openbmc_project/control/host0/power_cap",
-                "org.freedesktop.DBus.Properties", "Set",
-                "xyz.openbmc_project.Control.Power.Cap", "PowerCap",
-                std::variant<uint32_t>(*value));
-        });
-=======
                 });
             });
->>>>>>> origin/master-october-10
     };
     redfish::chassis_utils::getValidChassisPath(sensorsAsyncResp->asyncResp,
                                                 sensorsAsyncResp->chassisId,
@@ -225,7 +215,6 @@ inline void requestRoutesPower(App& app)
                                                 "/Power#/PowerControl/0";
                     powerControl["Name"] = "Chassis Power Control";
                     powerControl["MemberId"] = "0";
-<<<<<<< HEAD
                     // Add missing properties to make
                     // OCPServerHardwareManagement.v1_0_0.json passed.
                     // Power schema is deprecated and we won't maintain
@@ -233,9 +222,6 @@ inline void requestRoutesPower(App& app)
                     powerControl["PowerCapacityWatts"] = nullptr;
                     powerControl["PowerConsumedWatts"] = nullptr;
                     tempArray.push_back(std::move(powerControl));
-=======
-                    tempArray.emplace_back(std::move(powerControl));
->>>>>>> origin/master-october-10
                 }
 
                 nlohmann::json& sensorJson = tempArray.back();
@@ -310,17 +296,6 @@ inline void requestRoutesPower(App& app)
                 std::move(valueHandler));
         };
 
-<<<<<<< HEAD
-        crow::connections::systemBus->async_method_call(
-            std::move(chassisHandler), "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-            "/xyz/openbmc_project/inventory", 0,
-            std::array<const char*, 2>{
-                "xyz.openbmc_project.Inventory.Item.Board",
-                "xyz.openbmc_project.Inventory.Item.Chassis"});
-    });
-=======
         constexpr std::array<std::string_view, 2> interfaces = {
             "xyz.openbmc_project.Inventory.Item.Board",
             "xyz.openbmc_project.Inventory.Item.Chassis"};
@@ -328,7 +303,6 @@ inline void requestRoutesPower(App& app)
         dbus::utility::getSubTreePaths("/xyz/openbmc_project/inventory", 0,
                                        interfaces, std::move(chassisHandler));
         });
->>>>>>> origin/master-october-10
 
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Power/")
         .privileges(redfish::privileges::patchPower)
