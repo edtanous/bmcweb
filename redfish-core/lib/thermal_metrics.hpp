@@ -128,7 +128,15 @@ inline void processSensorsValue(
                         }
                     }
 
-                    objectJson["Reading"] = std::to_string(reading);
+                    if (std::isnan(reading))
+                    {
+                        objectJson["Reading"] = nullptr;
+                    }
+                    else
+                    {
+                        objectJson["Reading"] = reading;
+                    }
+
                     if (physicalContext != nullptr)
                     {
                         objectJson["PhysicalContext"] =
