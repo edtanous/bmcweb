@@ -24,6 +24,7 @@
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
 #include "registries/update_event_message_registry.hpp"
+#include "registries/bios_attribute_registry.hpp"
 
 #include <boost/url/format.hpp>
 

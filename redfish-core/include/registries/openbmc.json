@@ -14,15 +14,6 @@
             "Resolution": "None.",
             "Severity": "Warning"
         },
-        "AsyncError": {
-            "Description": "Indicates that the SMBPBI Async Command Failed.",
-            "Message": "%1 Respresents Error Code",
-            "MessageSeverity": "Warning",
-            "NumberOfArgs": 2,
-            "ParamTypes": ["string", "string"],
-            "Resolution": "%2",
-            "Severity": "Warning"
-        },
         "AtScaleDebugConnected": {
             "Description": "Indicates At-Scale Debug connection has been established",
             "Message": "At-Scale Debug service is now connected %1",
@@ -157,15 +148,6 @@
             "Resolution": "None.",
             "Severity": "Warning"
         },
-        "BMCRebootReason": {
-            "Description": "Indicates BMC firmware rebooted.",
-            "Message": "BMC firmware rebooted due to reason %1.",
-            "MessageSeverity": "OK",
-            "NumberOfArgs": 1,
-            "ParamTypes": ["string"],
-            "Resolution": "None.",
-            "Severity": "OK"
-        },
         "BIOSRecoveryComplete": {
             "Description": "Indicates BIOS Recovery has completed.",
             "Message": "BIOS Recovery Complete.",
@@ -234,24 +216,6 @@
             "Resolution": "None.",
             "Severity": "OK"
         },
-        "BMCSystemResourceInfo": {
-            "Description": "Indicates BMC resource consumption by process in terms of storage, CPU and memory or any other resource",
-            "Message": "HIGH %1 resource consuming processes %2",
-            "MessageSeverity": "Warning",
-            "NumberOfArgs": 2,
-            "ParamTypes": ["string", "string"],
-            "Resolution": "None.",
-            "Severity": "Warning"
-        },
-        "BMCServiceResourceInfo": {
-            "Description": "Indicates BMC resource consumption by process in terms of storage, CPU and memory or any other resource",
-            "Message": "HIGH %1 resource consuming process %2",
-            "MessageSeverity": "Warning",
-            "NumberOfArgs": 2,
-            "ParamTypes": ["string", "string"],
-            "Resolution": "None.",
-            "Severity": "Warning"
-        },
         "CPLDFirmwarePanicReason": {
             "Description": "Indicates the reason for CPLD firmware panic.",
             "Message": "CPLD firmware panic occurred due to %1.",
@@ -306,11 +270,45 @@
             "Resolution": "None.",
             "Severity": "Critical"
         },
+        "BMCLogsErased": {
+            "Description": "Indicates that BMC log erase was performed.",
+            "Message": "BMC log erase was performed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "BMCRebootReason": {
+            "Description": "Indicates BMC firmware rebooted.",
+            "Message": "BMC firmware rebooted due to reason %1.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
         "ChassisIntrusionDetected": {
             "Description": "Indicates that a physical security event of the chassis intrusion has occurred.",
             "Message": "Chassis Intrusion Detected.",
             "MessageSeverity": "Warning",
             "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "AsyncError": {
+            "Description": "Indicates that the SMBPBI Async Command Failed.",
+            "Message": "%1 Respresents Error Code",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": ["string", "string"],
+            "Resolution": "%2",
+            "Severity": "Warning"
+        },
+        "BMCSystemResourceInfo": {
+            "Description": "Indicates BMC resource consumtion by process interms of storage, CPU and memory or any other resource.",
+            "Message": "Processes consuming HIGH Resource %1 are %2",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": ["string", "string"],
             "Resolution": "None.",
             "Severity": "Warning"
         },
@@ -1525,6 +1523,24 @@
             "Resolution": "None.",
             "Severity": "Critical"
         },
+        "SensorCableStatusEnable": {
+            "Description": "Indicates that a cable sensor moved from error status to enable status.",
+            "Message": "%1 sensor is now enabled.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "Check the sensor or subsystem for errors.",
+            "Severity": "OK"
+        },
+        "SensorCableStatusError": {
+            "Description": "Indicates that a cable sensor moved from enable status to error status.",
+            "Message": "%1 sensor is now in error.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "Check the sensor or subsystem for errors.",
+            "Severity": "Critical"
+        },
         "SensorThresholdCriticalHighGoingHigh": {
             "Description": "Indicates that a threshold sensor has crossed a critical high threshold going high.",
             "Message": "%1 sensor crossed a critical high threshold going high. Reading=%2 Threshold=%3.",
@@ -1698,6 +1714,51 @@
             "Resolution": "None.",
             "Severity": "Critical"
         },
+        "TriggerDiscreteCritical": {
+            "Description": "Indicates that discrete trigger condition is met and requires immediate attention.",
+            "Message": "Discrete condition '%1' of trigger '%2' is met on sensor %3, recorded value: %4, timestamp: %5",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 5,
+            "ParamTypes": ["string", "string", "string", "string", "string"],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "TriggerDiscreteOK": {
+            "Description": "Indicates that discrete trigger condition is met.",
+            "Message": "Discrete condition '%1' of trigger '%2' is met on sensor %3, recorded value: %4, timestamp: %5",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 5,
+            "ParamTypes": ["string", "string", "string", "string", "string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "TriggerDiscreteWarning": {
+            "Description": "Indicates that discrete trigger condition is met and may require attention.",
+            "Message": "Discrete condition '%1' of trigger '%2' is met on sensor %3, recorded value: %4, timestamp: %5",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 5,
+            "ParamTypes": ["string", "string", "string", "string", "string"],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "TriggerNumericCritical": {
+            "Description": "Indicates that numeric trigger threshold is crossed and may require attention.",
+            "Message": "Numeric threshold '%1' of trigger '%2' is crossed on sensor %3, recorded value: %4, crossing direction: %5, timestamp: %6",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 6,
+            "ParamTypes": ["string", "string", "string", "number", "string", "string"],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "TriggerNumericWarning": {
+            "Description": "Indicates that numeric trigger threshold is crossed.",
+            "Message": "Numeric threshold: '%1' of trigger: '%2' is crossed on sensor %3, recorded value: %4, crossing direction: %5, timestamp: %6",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 6,
+            "ParamTypes": ["string", "string", "string", "number", "string", "string"],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
         "VoltageRegulatorOverheated": {
             "Description": "Indicates that the specified voltage regulator overheated.",
             "Message": "%1 Voltage Regulator Overheated.",
@@ -1706,6 +1767,24 @@
             "ParamTypes": ["string"],
             "Resolution": "None.",
             "Severity": "Critical"
+        },
+        "BMCServiceResourceInfo": {
+            "Description": "Indicates BMC resource consumtion by process interms of storage, CPU and memory or any other resource",
+            "Message": "The process consuming HIGH %1 Resource is %2",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": ["string", "string"],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "BMCServicePeakResourceInfo": {
+            "Description": "Indicates that sensor value has crossed peak threshold limit.",
+            "Message": "%1 sensor value (Reading = %2) has crossed peak Threshold = %3",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 3,
+            "ParamTypes": ["string", "number", "number"],
+            "Resolution": "None.",
+            "Severity": "OK"
         }
     },
     "Name": "OpenBMC Message Registry",

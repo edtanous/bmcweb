@@ -39,7 +39,7 @@
 #include "manager_diagnostic_data.hpp"
 #include "managers.hpp"
 #include "memory.hpp"
-// #include "message_registries.hpp"
+#include "message_registries.hpp"
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
 
@@ -70,7 +70,7 @@
 #include "service_root.hpp"
 // #include "storage.hpp"
 #include "systems.hpp"
-// #include "task.hpp"
+#include "task.hpp"
 #include "telemetry_service.hpp"
 #include "thermal.hpp"
 #include "thermal_subsystem.hpp"
@@ -345,10 +345,10 @@ class RedfishService
         requestRoutesSensorCollection(app);
         requestRoutesSensor(app);
 
-//         requestRoutesTaskMonitor(app);
-//         requestRoutesTaskService(app);
-//         requestRoutesTaskCollection(app);
-//         requestRoutesTask(app);
+        requestRoutesTaskMonitor(app);
+        requestRoutesTaskService(app);
+        requestRoutesTaskCollection(app);
+        requestRoutesTask(app);
 //         requestRoutesEventService(app);
 //         requestRoutesEventServiceSse(app);
 //         requestRoutesEventDestinationCollection(app);
