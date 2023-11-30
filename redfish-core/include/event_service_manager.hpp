@@ -18,7 +18,7 @@
 #include "error_messages.hpp"
 #include "event_service_store.hpp"
 #include "http_client.hpp"
-//#include "metric_report.hpp"
+#include "metric_report.hpp"
 #include "ossl_random.hpp"
 #include "persistent_data.hpp"
 #include "registries.hpp"
@@ -38,15 +38,7 @@
 #include <boost/beast/http/write.hpp>
 #include <boost/container/flat_map.hpp>
 #include <dbus_singleton.hpp>
-#include <dbus_utility.hpp>
-#include <error_messages.hpp>
-#include <event_service_store.hpp>
-#include <http_client.hpp>
-//#include <metric_report.hpp>
-#include <persistent_data.hpp>
-//#include <random.hpp>
 #include <sdbusplus/bus/match.hpp>
-#include <server_sent_events.hpp>
 #include <utils/dbus_log_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/origin_utils.hpp>
@@ -606,14 +598,6 @@ class Subscription : public persistent_data::UserSubscription
             return false;
         }
 
-#if !defined(BMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION)
-        bool useSSL = (uriProto == "https"); // depends on subscription
-#else
-        bool useSSL = false; // forcing insecure http protocol
-#endif
-
-        BMCWEB_LOG_DEBUG("uriProto= {}, host= {},  port={},  useSSL={}", uriProto, host, port, useSSL);
-
         // A connection pool will be created if one does not already exist
         if (client)
         {
@@ -740,7 +724,7 @@ class Subscription : public persistent_data::UserSubscription
 
             std::string strMsg = msg.dump(
                 2, ' ', true, nlohmann::json::error_handler_t::replace);
-            this->sendEvent(strMsg);
+            this->sendEvent(std::move(strMsg));
         }
     }
 
@@ -1210,11 +1194,6 @@ class EventServiceManager
 
         std::string id;
 
-        if (isDestinationExist(subValue->destinationUrl))
-        {
-            return "";
-        }
-
         int retry = 3;
         while (retry != 0)
         {
@@ -1343,20 +1322,6 @@ class EventServiceManager
         return idList;
     }
 
-    bool isDestinationExist(const std::string& destUrl)
-    {
-        for (const auto& it : subscriptionsMap)
-        {
-            std::shared_ptr<Subscription> entry = it.second;
-            if (entry->destinationUrl == destUrl)
-            {
-                BMCWEB_LOG_ERROR("Destination exists already {}", destUrl);
-                return true;
-            }
-        }
-        return false;
-    }
-
     bool sendTestEventLog()
     {
         for (const auto& it : subscriptionsMap)
@@ -1452,7 +1417,7 @@ class EventServiceManager
 
             std::string strMsg = msgJson.dump(
                 2, ' ', true, nlohmann::json::error_handler_t::replace);
-            entry->sendEvent(strMsg);
+            entry->sendEvent(std::move(strMsg));
         }
     }
 
@@ -1919,7 +1884,7 @@ class EventServiceManager
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR("There should be exactly one " "MessageId in the Dbus signal message. Found " + std::to_string(additional.count( "REDFISH_MESSAGE_ID")) + ".");
+                            BMCWEB_LOG_ERROR ("There should be exactly one MessageId in the Dbus signal message. Found ", std::to_string(additional.count( "REDFISH_MESSAGE_ID"))); 
                             return;
                         }
                     }

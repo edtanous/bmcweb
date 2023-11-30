@@ -14,16 +14,6 @@
 // limitations under the License.
 */
 #pragma once
-<<<<<<< HEAD
-#include <app.hpp>
-#include <boost/beast/http/fields.hpp>
-#include <event_service_manager.hpp>
-#include <http/utility.hpp>
-#include <logging.hpp>
-#include <query.hpp>
-#include <registries/privilege_registry.hpp>
-
-=======
 #include "app.hpp"
 #include "event_service_manager.hpp"
 #include "http/utility.hpp"
@@ -41,7 +31,6 @@
 #include <charconv>
 #include <memory>
 #include <ranges>
->>>>>>> origin/master-october-10
 #include <span>
 #include <string>
 
@@ -345,13 +334,6 @@ inline void requestRoutesEventDestinationCollection(App& app)
         for (const std::string& id : subscripIds)
         {
             nlohmann::json::object_t member;
-<<<<<<< HEAD
-            member["@odata.id"] = "/redfish/v1/EventService/Subscriptions/" +
-                                  id;
-            memberArray.push_back(std::move(member));
-        }
-    });
-=======
             member["@odata.id"] = boost::urls::format(
                 "/redfish/v1/EventService/Subscriptions/{}" + id);
             memberArray.emplace_back(std::move(member));
@@ -366,7 +348,6 @@ inline void requestRoutesEventDestinationCollection(App& app)
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
         });
 
->>>>>>> origin/master-october-10
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/")
         .privileges(redfish::privileges::postEventDestinationCollection)
         .methods(boost::beast::http::verb::post)(
@@ -455,30 +436,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
             return;
         }
 
-<<<<<<< HEAD
-        if (urlProto == "http")
-        {
-#ifndef BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING
-            messages::propertyValueFormatError(asyncResp->res, destUrl,
-                                               "Destination");
-            return;
-#endif
-        }
-        if (port == 0)
-        {
-            if (urlProto == "http")
-            {
-                port = 80;
-            }
-            else
-            {
-                port = 443;
-            }
-        }
-        if (path.empty())
-=======
         if (protocol == "SNMPv2c")
->>>>>>> origin/master-october-10
         {
             if (context)
             {
@@ -623,11 +581,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
                     if (value == nullptr)
                     {
                         messages::propertyValueFormatError(
-<<<<<<< HEAD
-                            asyncResp->res, item.value().dump(2, true),
-=======
                             asyncResp->res, item.value(),
->>>>>>> origin/master-october-10
                             "HttpHeaders/" + item.key());
                         return;
                     }
@@ -783,9 +737,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
             EventServiceManager::getInstance().addSubscription(subValue);
         if (id.empty())
         {
-            messages::resourceAlreadyExists(asyncResp->res, "Subscription",
-                                            "Destination",
-                                            subValue->destinationUrl);
+            messages::internalError(asyncResp->res);
             return;
         }
 
@@ -823,19 +775,11 @@ inline void requestRoutesEventDestination(App& app)
         }
         const std::string& id = param;
 
-<<<<<<< HEAD
-        asyncResp->res.jsonValue = {
-            {"@odata.type", "#EventDestination.v1_11_0.EventDestination"},
-            {"Protocol", "Redfish"}};
-        asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/EventService/Subscriptions/" + id;
-=======
         asyncResp->res.jsonValue["@odata.type"] =
             "#EventDestination.v1_8_0.EventDestination";
         asyncResp->res.jsonValue["Protocol"] = "Redfish";
         asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
             "/redfish/v1/EventService/Subscriptions/{}", id);
->>>>>>> origin/master-october-10
         asyncResp->res.jsonValue["Id"] = id;
         asyncResp->res.jsonValue["Name"] = "Event Destination " + id;
         asyncResp->res.jsonValue["Destination"] = subValue->destinationUrl;

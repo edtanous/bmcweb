@@ -29,8 +29,7 @@ constexpr const char* metricReportDefinitionUriStr =
 constexpr const char* metricReportUri =
     "/redfish/v1/TelemetryService/MetricReports";
 
-using Readings =
-    std::vector<std::tuple<std::string, std::string, double, uint64_t>>;
+using Readings = std::vector<std::tuple<std::string, double, uint64_t>>;
 using TimestampReadings = std::tuple<uint64_t, Readings>;
 
 inline nlohmann::json toMetricValues(const Readings& readings)
