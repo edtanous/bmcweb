@@ -1015,7 +1015,6 @@ inline void
                     thisEntry["AdditionalDataURI"] =
                         entriesPath + entryID + "/attachment";
                     thisEntry["AdditionalDataSizeBytes"] = size;
-                    thisEntry["Severity"] = severity;
                     // CPER Properties
                     thisEntry["CPER"]["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaLogEntry.v1_0_0.CPER";
                     if (sectionType != "NA") {
