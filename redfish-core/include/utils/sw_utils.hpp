@@ -389,5 +389,32 @@ inline void
         });
 }
 
+/**
+ * @brief Retrieves SMBIOS UUID
+ *
+ * @param[in] aResp  Shared pointer for generating response message.
+ *
+ * @return None.
+ */
+inline void getSwBIOSUUID(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+{
+    BMCWEB_LOG_DEBUG << "Get SMBIOS UUID.";
+
+    //now read the current value
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, "xyz.openbmc_project.Smbios.MDR_V2",
+        "/xyz/openbmc_project/software/bios", "xyz.openbmc_project.Common.UUID", "UUID",
+        [aResp](const boost::system::error_code ec, const std::string& uuid) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error on SMBIOS UUID Get: " << ec;
+                messages::internalError(aResp->res);
+                return;
+            }
+            aResp->res.jsonValue["UUID"] = uuid;
+            BMCWEB_LOG_DEBUG << "SMBIOS UUID: " << uuid;
+        });
+}
+
 } // namespace sw_util
 } // namespace redfish

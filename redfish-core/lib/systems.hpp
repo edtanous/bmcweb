@@ -446,6 +446,10 @@ inline void
                                                          << valueStr;
                                         aResp->res.jsonValue["UUID"] = valueStr;
                                     }
+#ifdef BMCWEB_ENABLE_BIOS
+                                    // UUID from smbios if exist
+                                    sw_util::getSwBIOSUUID(aResp);
+#endif
                                 });
                         }
                         else if (interfaceName ==
