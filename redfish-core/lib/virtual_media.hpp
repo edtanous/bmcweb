@@ -214,19 +214,6 @@ inline void
                             *writeProtectedValue;
                     }
                 }
-                if (property == "User")
-                {
-                    const std::string* userName =
-                        std::get_if<std::string>(&value);
-                    if (!userName->empty())
-                    {
-                        aResp->res.jsonValue["UserName"] = *userName;
-                    }
-                    else
-                    {
-                        aResp->res.jsonValue["UserName"] = "";
-                    }
-                }
             }
         }
         if (interface == "xyz.openbmc_project.VirtualMedia.Process")
@@ -267,17 +254,10 @@ inline nlohmann::json vmItemTemplate(const std::string& name,
     item["@odata.type"] = "#VirtualMedia.v1_3_0.VirtualMedia";
     item["Name"] = "Virtual Removable Media";
     item["Id"] = resName;
-<<<<<<< HEAD
-    item["MediaTypes"] = {"CD", "USBStick"};
-=======
     item["WriteProtected"] = true;
     item["ConnectedVia"] = virtual_media::ConnectedVia::NotConnected;
     item["MediaTypes"] = nlohmann::json::array_t({"CD", "USBStick"});
->>>>>>> origin/master-october-10
     item["TransferMethod"] = "Stream";
-    item["Oem"]["OpenBMC"]["@odata.id"] = "/redfish/v1/Managers/" + name +
-                                          "/VirtualMedia/" + resName +
-                                          "#/Oem/OpenBMC";
     item["Oem"]["OpenBMC"]["@odata.type"] =
         "#OemVirtualMedia.v1_0_0.VirtualMedia";
     item["Oem"]["OpenBMC"]["@odata.id"] = boost::urls::format(
@@ -322,15 +302,8 @@ inline void getVmResourceList(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                 "/redfish/v1/Managers/{}/VirtualMedia/{}", name, path);
             members.emplace_back(std::move(item));
         }
-<<<<<<< HEAD
-        aResp->res.jsonValue["Members@odata.count"] = members.size();
-    },
-        service, "/xyz/openbmc_project/VirtualMedia",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-=======
         asyncResp->res.jsonValue["Members@odata.count"] = members.size();
         });
->>>>>>> origin/master-october-10
 }
 
 inline void
@@ -374,15 +347,8 @@ inline void getVmData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 {
     BMCWEB_LOG_DEBUG("Get Virtual Media resource data.");
 
-<<<<<<< HEAD
-        messages::resourceNotFound(aResp->res, "VirtualMedia", resName);
-    },
-        service, "/xyz/openbmc_project/VirtualMedia",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-=======
     findAndParseObject(service, resName, asyncResp,
                        std::bind_front(afterGetVmData, name));
->>>>>>> origin/master-october-10
 }
 
 /**
@@ -566,7 +532,8 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // optional param inserted must be true
     if (actionParams.inserted && !*actionParams.inserted)
     {
-        BMCWEB_LOG_ERROR( "Request action optional parameter Inserted must be true.");
+        BMCWEB_LOG_ERROR(
+            "Request action optional parameter Inserted must be true.");
 
         messages::actionParameterNotSupported(asyncResp->res, "Inserted",
                                               "InsertMedia");
@@ -578,7 +545,8 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (actionParams.transferMethod &&
         (*actionParams.transferMethod != "Stream"))
     {
-        BMCWEB_LOG_ERROR("Request action optional parameter " "TransferMethod must be Stream.");
+        BMCWEB_LOG_ERROR("Request action optional parameter "
+                         "TransferMethod must be Stream.");
 
         messages::actionParameterNotSupported(asyncResp->res, "TransferMethod",
                                               "InsertMedia");
@@ -603,7 +571,9 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (uriTransferProtocolType &&
         *uriTransferProtocolType == TransferProtocol::invalid)
     {
-        BMCWEB_LOG_ERROR("Request action parameter ImageUrl must " "contain specified protocol type from list: " "(smb, https).");
+        BMCWEB_LOG_ERROR("Request action parameter ImageUrl must "
+                         "contain specified protocol type from list: "
+                         "(smb, https).");
 
         messages::resourceAtUriInUnknownFormat(asyncResp->res, *url);
 
@@ -614,7 +584,9 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (paramTransferProtocolType &&
         *paramTransferProtocolType == TransferProtocol::invalid)
     {
-        BMCWEB_LOG_ERROR("Request action parameter TransferProtocolType " "must be provided with value from list: " "(CIFS, HTTPS).");
+        BMCWEB_LOG_ERROR("Request action parameter TransferProtocolType "
+                         "must be provided with value from list: "
+                         "(CIFS, HTTPS).");
 
         messages::propertyValueNotInList(
             asyncResp->res, actionParams.transferProtocolType.value_or(""),
@@ -625,7 +597,9 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // valid transfer protocol not provided either with URI nor param
     if (!uriTransferProtocolType && !paramTransferProtocolType)
     {
-        BMCWEB_LOG_ERROR("Request action parameter ImageUrl must " "contain specified protocol type or param " "TransferProtocolType must be provided.");
+        BMCWEB_LOG_ERROR("Request action parameter ImageUrl must "
+                         "contain specified protocol type or param "
+                         "TransferProtocolType must be provided.");
 
         messages::resourceAtUriInUnknownFormat(asyncResp->res, *url);
 
@@ -638,104 +612,10 @@ inline void validateParams(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         // check if protocol is the same for URI and param
         if (*paramTransferProtocolType != *uriTransferProtocolType)
         {
-<<<<<<< HEAD
-            BMCWEB_LOG_ERROR("Request action parameter " "TransferProtocolType must  contain the " "same protocol type as protocol type " "provided with param imageUrl.");
-
-            messages::actionParameterValueTypeError(res, *transferProtocolType,
-                                                    "TransferProtocolType",
-                                                    "InsertMedia");
-
-            return false;
-        }
-    }
-
-    // validation passed
-    // add protocol to URI if needed
-    if (uriTransferProtocolType == std::nullopt)
-    {
-        imageUrl = getUriWithTransferProtocol(imageUrl,
-                                              *paramTransferProtocolType);
-    }
-
-    return true;
-}
-
-template <typename T>
-static void secureCleanup(T& value)
-{
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-    auto raw = const_cast<typename T::value_type*>(value.data());
-    explicit_bzero(raw, value.size() * sizeof(*raw));
-}
-
-class Credentials
-{
-  public:
-    Credentials(std::string&& user, std::string&& password) :
-        userBuf(std::move(user)), passBuf(std::move(password))
-    {}
-
-    ~Credentials()
-    {
-        secureCleanup(userBuf);
-        secureCleanup(passBuf);
-    }
-
-    const std::string& user()
-    {
-        return userBuf;
-    }
-
-    const std::string& password()
-    {
-        return passBuf;
-    }
-
-    Credentials() = delete;
-    Credentials(const Credentials&) = delete;
-    Credentials& operator=(const Credentials&) = delete;
-    Credentials(Credentials&&) = delete;
-    Credentials& operator=(Credentials&&) = delete;
-
-  private:
-    std::string userBuf;
-    std::string passBuf;
-};
-
-class CredentialsProvider
-{
-  public:
-    template <typename T>
-    struct Deleter
-    {
-        void operator()(T* buff) const
-        {
-            if (buff)
-            {
-                secureCleanup(*buff);
-                delete buff;
-            }
-        }
-    };
-
-    using Buffer = std::vector<char>;
-    using SecureBuffer = std::unique_ptr<Buffer, Deleter<Buffer>>;
-    // Using explicit definition instead of std::function to avoid implicit
-    // conversions eg. stack copy instead of reference
-    using FormatterFunc = void(const std::string& username,
-                               const std::string& password, Buffer& dest);
-
-    CredentialsProvider(std::string&& user, std::string&& password) :
-        credentials(std::move(user), std::move(password))
-    {}
-
-    const std::string& user()
-    {
-        return credentials.user();
-    }
-=======
-            BMCWEB_LOG_ERROR("Request action parameter " "TransferProtocolType must  contain the " "same protocol type as protocol type " "provided with param imageUrl.");
->>>>>>> origin/master-october-10
+            BMCWEB_LOG_ERROR("Request action parameter "
+                             "TransferProtocolType must  contain the "
+                             "same protocol type as protocol type "
+                             "provided with param imageUrl.");
 
             messages::actionParameterValueTypeError(
                 asyncResp->res, actionParams.transferProtocolType.value_or(""),
@@ -762,30 +642,10 @@ class CredentialsProvider
         actionParams.password = "";
     }
 
-<<<<<<< HEAD
-    crow::connections::systemBus->async_method_call(
-        [asyncResp, secretPipe](const boost::system::error_code ec,
-                                bool success) {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR("Bad D-Bus request error: {}", ec);
-            messages::internalError(asyncResp->res);
-        }
-        else if (!success)
-        {
-            BMCWEB_LOG_ERROR("Service responded with error");
-            messages::generalError(asyncResp->res);
-        }
-    },
-        service, "/xyz/openbmc_project/VirtualMedia/Legacy/" + name,
-        "xyz.openbmc_project.VirtualMedia.Legacy", "Mount", imageUrl, rw,
-        unixFd);
-=======
     doMountVmLegacy(asyncResp, service, resName, *actionParams.imageUrl,
                     !(actionParams.writeProtected.value_or(false)),
                     std::move(*actionParams.userName),
                     std::move(*actionParams.password));
->>>>>>> origin/master-october-10
 }
 
 /**
@@ -839,13 +699,9 @@ inline void handleManagersVirtualMediaActionInsertPost(
     {
         return;
     }
-<<<<<<< HEAD
-    if (name != PLATFORMBMCID)
-=======
 
     constexpr std::string_view action = "VirtualMedia.InsertMedia";
     if (name != "bmc")
->>>>>>> origin/master-october-10
     {
         messages::resourceNotFound(asyncResp->res, action, resName);
 
@@ -908,19 +764,8 @@ inline void handleManagersVirtualMediaActionInsertPost(
             }
             BMCWEB_LOG_DEBUG("Parent item not found");
             messages::resourceNotFound(asyncResp->res, "VirtualMedia", resName);
-<<<<<<< HEAD
-        },
-            service, "/xyz/openbmc_project/VirtualMedia",
-            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetObject",
-        "/xyz/openbmc_project/VirtualMedia", std::array<const char*, 0>());
-=======
             });
         });
->>>>>>> origin/master-october-10
 }
 
 inline void handleManagersVirtualMediaActionEject(
@@ -932,13 +777,9 @@ inline void handleManagersVirtualMediaActionEject(
     {
         return;
     }
-<<<<<<< HEAD
-    if (managerName != PLATFORMBMCID)
-=======
 
     constexpr std::string_view action = "VirtualMedia.EjectMedia";
     if (managerName != "bmc")
->>>>>>> origin/master-october-10
     {
         messages::resourceNotFound(asyncResp->res, action, resName);
 
@@ -986,19 +827,8 @@ inline void handleManagersVirtualMediaActionEject(
             }
             BMCWEB_LOG_DEBUG("Parent item not found");
             messages::resourceNotFound(asyncResp->res, "VirtualMedia", resName);
-<<<<<<< HEAD
-        },
-            service, "/xyz/openbmc_project/VirtualMedia",
-            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetObject",
-        "/xyz/openbmc_project/VirtualMedia", std::array<const char*, 0>());
-=======
             });
         });
->>>>>>> origin/master-october-10
 }
 
 inline void handleManagersVirtualMediaCollectionGet(
@@ -1038,15 +868,7 @@ inline void handleManagersVirtualMediaCollectionGet(
         BMCWEB_LOG_DEBUG("GetObjectType: {}", service);
 
         getVmResourceList(asyncResp, service, name);
-<<<<<<< HEAD
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetObject",
-        "/xyz/openbmc_project/VirtualMedia", std::array<const char*, 0>());
-=======
         });
->>>>>>> origin/master-october-10
 }
 
 inline void
@@ -1081,15 +903,7 @@ inline void
         BMCWEB_LOG_DEBUG("GetObjectType: {}", service);
 
         getVmData(asyncResp, service, name, resName);
-<<<<<<< HEAD
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetObject",
-        "/xyz/openbmc_project/VirtualMedia", std::array<const char*, 0>());
-=======
         });
->>>>>>> origin/master-october-10
 }
 
 inline void requestNBDVirtualMediaRoutes(App& app)
