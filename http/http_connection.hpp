@@ -274,7 +274,7 @@ class Connection :
                     [self(shared_from_this())](crow::Response& thisRes) {
                     self->completeRequest(thisRes);
                 });
-                //redfish::handleAccountLocked(user, asyncResp, *req);
+                redfish::handleAccountLocked(user, asyncResp, *req);
                 return;
             }
         }
