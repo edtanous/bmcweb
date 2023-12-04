@@ -38,13 +38,9 @@ inline void doPowerSubsystemCollection(
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
     asyncResp->res.jsonValue["PowerSupplies"]["@odata.id"] =
-<<<<<<< HEAD
-        "/redfish/v1/Chassis/" + chassisId + "/PowerSubsystem/PowerSupplies";
-=======
         boost::urls::format(
             "/redfish/v1/Chassis/{}/PowerSubsystem/PowerSupplies", chassisId);
 }
->>>>>>> origin/master-october-10
 
 inline void handlePowerSubsystemCollectionHead(
     App& app, const crow::Request& req,

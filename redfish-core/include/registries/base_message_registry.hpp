@@ -39,7 +39,6 @@ constexpr std::array registry =
             "Indicates that while attempting to access, connect to, or transfer to or from another resource, the service denied access.",
             "While attempting to establish a connection to '%1', the service denied access.",
             "Critical",
-            "Critical",
             1,
             {
                 "string",
@@ -52,7 +51,6 @@ constexpr std::array registry =
             "Indicates that the account for the session has been removed, thus the session has been removed as well.",
             "The account for the current session has been removed, thus the current session has been removed as well.",
             "OK",
-            "OK",
             0,
             {},
             "Attempt to connect with a valid account.",
@@ -62,7 +60,6 @@ constexpr std::array registry =
         {
             "Indicates that the account was successfully modified.",
             "The account was successfully modified.",
-            "OK",
             "OK",
             0,
             {},
@@ -74,7 +71,6 @@ constexpr std::array registry =
             "Indicates that the modification requested for the account was not successful.",
             "The account modification request failed.",
             "Warning",
-            "Warning",
             0,
             {},
             "The modification may have failed due to permission issues or issues with the request body.",
@@ -85,7 +81,6 @@ constexpr std::array registry =
             "Indicates that the account was successfully removed.",
             "The account was successfully removed.",
             "OK",
-            "OK",
             0,
             {},
             "No resolution is required.",
@@ -95,7 +90,6 @@ constexpr std::array registry =
         {
             "Indicates the action is deprecated.",
             "The action %1 is deprecated.",
-            "Warning",
             "Warning",
             1,
             {
@@ -109,7 +103,6 @@ constexpr std::array registry =
             "Indicates that the action supplied with the POST operation is not supported by the resource.",
             "The action %1 is not supported by the resource.",
             "Critical",
-            "Critical",
             1,
             {
                 "string",
@@ -121,7 +114,6 @@ constexpr std::array registry =
         {
             "Indicates that the action was supplied with a duplicated action parameter in the request body.",
             "The action %1 was submitted with more than one value for the parameter %2.",
-            "Warning",
             "Warning",
             2,
             {
@@ -136,7 +128,6 @@ constexpr std::array registry =
             "Indicates that the action requested was missing an action parameter that is required to process the action.",
             "The action %1 requires the parameter %2 to be present in the request body.",
             "Critical",
-            "Critical",
             2,
             {
                 "string",
@@ -149,7 +140,6 @@ constexpr std::array registry =
         {
             "Indicates that the parameter supplied for the action is not supported on the resource.",
             "The parameter %1 for the action %2 is not supported on the target resource.",
-            "Warning",
             "Warning",
             2,
             {
@@ -164,7 +154,6 @@ constexpr std::array registry =
             "Indicates that an action was submitted but an action parameter supplied did not match any of the known parameters.",
             "The action %1 was submitted with the invalid parameter %2.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -177,7 +166,6 @@ constexpr std::array registry =
         {
             "Indicates that the requested parameter value could not be completed, because of a mismatch with other parameters or properties in the resource.",
             "The parameter '%1' with the requested value of '%2' does not meet the constraints of the implementation.",
-            "Warning",
             "Warning",
             2,
             {
@@ -192,7 +180,6 @@ constexpr std::array registry =
             "Indicates that a parameter was given an invalid value.",
             "The value for the parameter %1 in the action %2 is invalid.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -205,7 +192,6 @@ constexpr std::array registry =
         {
             "Indicates that a parameter was given the correct value type but the value of that parameter was not supported.  This includes the value size or length has been exceeded.",
             "The value '%1' for the parameter %2 in the action %3 is of a different format than the parameter can accept.",
-            "Warning",
             "Warning",
             3,
             {
@@ -221,7 +207,6 @@ constexpr std::array registry =
             "Indicates that a parameter was given the correct value type but the value of that parameter was not supported.  The value is not in an enumeration.",
             "The value '%1' for the parameter %2 in the action %3 is not in the list of acceptable values.",
             "Warning",
-            "Warning",
             3,
             {
                 "string",
@@ -235,7 +220,6 @@ constexpr std::array registry =
         {
             "Indicates that a parameter was given the wrong value type, such as when a number is supplied for a parameter that requires a string.",
             "The value '%1' for the parameter %2 in the action %3 is of a different type than the parameter can accept.",
-            "Warning",
             "Warning",
             3,
             {
@@ -251,7 +235,6 @@ constexpr std::array registry =
             "Indicates that the size of the array exceeded the maximum number of elements.",
             "The array provided for property %1 exceeds the size limit %2.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -264,7 +247,6 @@ constexpr std::array registry =
         {
             "Indicates that the size of the array is under the minimum number of elements.",
             "The array provided for property %1 is under the minimum size limit %2.",
-            "Warning",
             "Warning",
             2,
             {
@@ -279,7 +261,6 @@ constexpr std::array registry =
             "Indicates that the request could not be performed because an authentication token was not provided.",
             "The request could not be performed because an authentication token was not provided.",
             "Critical",
-            "Critical",
             0,
             {},
             "Obtain an authentication token and resubmit the request.",
@@ -289,7 +270,6 @@ constexpr std::array registry =
         {
             "Indicates that the request requires a specified chassis to be powered off.",
             "The Chassis with Id '%1' requires to be powered off to perform this request.",
-            "Warning",
             "Warning",
             1,
             {
@@ -303,7 +283,6 @@ constexpr std::array registry =
             "Indicates that the request requires a specified chassis to be powered on.",
             "The chassis with Id '%1' requires to be powered on to perform this request.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -316,7 +295,6 @@ constexpr std::array registry =
             "Indicates that one or more fault or error conditions exist in a related resource.",
             "One or more conditions exist in a related resource.  See the OriginOfCondition property.",
             "Warning",
-            "Warning",
             0,
             {},
             "Check the Conditions array in the resource shown in the OriginOfCondition property to determine the conditions that need attention.",
@@ -326,7 +304,6 @@ constexpr std::array registry =
         {
             "Indicates that the attempt to access the resource, file, or image at the URI was unsuccessful because a session could not be established.",
             "The service failed to establish a connection with the URI '%1'.",
-            "Critical",
             "Critical",
             1,
             {
@@ -340,7 +317,6 @@ constexpr std::array registry =
             "Indicates that a create was attempted on a resource but that properties that are required for the create operation were missing from the request.",
             "The create operation failed because the required property %1 was missing from the request.",
             "Critical",
-            "Critical",
             1,
             {
                 "string",
@@ -353,7 +329,6 @@ constexpr std::array registry =
             "Indicates that no more resources can be created on the resource as it has reached its create limit.",
             "The create operation failed because the resource has reached the limit of possible resources.",
             "Critical",
-            "Critical",
             0,
             {},
             "Either delete resources and resubmit the request if the operation failed or do not resubmit the request.",
@@ -363,7 +338,6 @@ constexpr std::array registry =
         {
             "Indicates that all conditions of a successful create operation have been met.",
             "The resource has been created successfully.",
-            "OK",
             "OK",
             0,
             {},
@@ -375,7 +349,6 @@ constexpr std::array registry =
             "Indicates that the request body contained an empty JSON object when one or more properties are expected in the body.",
             "The request body submitted contained an empty JSON object and the service is unable to process it.",
             "Warning",
-            "Warning",
             0,
             {},
             "Add properties in the JSON object and resubmit the request.",
@@ -385,7 +358,6 @@ constexpr std::array registry =
         {
             "Indicates undelivered events may have been lost due to a lack of buffer space in the service.",
             "Undelivered events may have been lost due to exceeding the event buffer.",
-            "Warning",
             "Warning",
             0,
             {},
@@ -397,7 +369,6 @@ constexpr std::array registry =
             "Indicates that a event subscription establishment has been requested but the operation failed due to the number of simultaneous connection exceeding the limit of the implementation.",
             "The event subscription failed due to the number of simultaneous subscriptions exceeding the limit of the implementation.",
             "Critical",
-            "Critical",
             0,
             {},
             "Reduce the number of other subscriptions before trying to establish the event subscription or increase the limit of simultaneous subscriptions, if supported.",
@@ -408,7 +379,6 @@ constexpr std::array registry =
             "Indicates that a general error has occurred.  Use in `@Message.ExtendedInfo` is discouraged.  When used in `@Message.ExtendedInfo`, implementations are expected to include a `Resolution` property with this message and provide a service-defined resolution to indicate how to resolve the error.",
             "A general error has occurred.  See Resolution for information on how to resolve the error, or @Message.ExtendedInfo if Resolution is not provided.",
             "Critical",
-            "Critical",
             0,
             {},
             "None.",
@@ -418,7 +388,6 @@ constexpr std::array registry =
         {
             "Indicates that a request header is invalid.",
             "Header '%1' is invalid.",
-            "Critical",
             "Critical",
             1,
             {
@@ -432,7 +401,6 @@ constexpr std::array registry =
             "Indicates that a required request header is missing.",
             "Required header '%1' is missing in the request.",
             "Critical",
-            "Critical",
             1,
             {
                 "string",
@@ -445,7 +413,6 @@ constexpr std::array registry =
             "Indicates that the credentials associated with the established session do not have sufficient privileges for the requested operation.",
             "There are insufficient privileges for the account or credentials associated with the current session to perform the requested operation.",
             "Critical",
-            "Critical",
             0,
             {},
             "Either abandon the operation or change the associated access rights and resubmit the request if the operation failed.",
@@ -455,7 +422,6 @@ constexpr std::array registry =
         {
             "Indicates that the operation could not be completed due to a lack of storage or memory avaiable to the service.",
             "Insufficent storage or memory available to complete the request.",
-            "Critical",
             "Critical",
             0,
             {},
@@ -467,7 +433,6 @@ constexpr std::array registry =
             "Indicates that the request failed for an unknown internal error but that the service is still operational.",
             "The request failed due to an internal service error.  The service is still operational.",
             "Critical",
-            "Critical",
             0,
             {},
             "Resubmit the request.  If the problem persists, consider resetting the service.",
@@ -477,7 +442,6 @@ constexpr std::array registry =
         {
             "The index is not valid.",
             "The index %1 is not a valid offset into the array.",
-            "Warning",
             "Warning",
             1,
             {
@@ -491,7 +455,6 @@ constexpr std::array registry =
             "Indicates that the request body contains invalid JSON.",
             "The request body submitted is invalid JSON starting at line %1 and could not be parsed by the receiving service.",
             "Critical",
-            "Critical",
             1,
             {
                 "number",
@@ -503,7 +466,6 @@ constexpr std::array registry =
         {
             "Indicates that the object in question is invalid according to the implementation.  Examples include a firmware update malformed URI.",
             "The object at '%1' is invalid.",
-            "Critical",
             "Critical",
             1,
             {
@@ -517,7 +479,6 @@ constexpr std::array registry =
             "Indicates that the operation encountered a URI that does not correspond to a valid resource.",
             "The URI %1 was not found.",
             "Critical",
-            "Critical",
             1,
             {
                 "string",
@@ -529,7 +490,6 @@ constexpr std::array registry =
         {
             "Indicates that a license is required to perform the requested operation.",
             "A license is required for this operation: %1.",
-            "Critical",
             "Critical",
             1,
             {
@@ -543,7 +503,6 @@ constexpr std::array registry =
             "Indicates that the request body was malformed JSON.",
             "The request body submitted was malformed JSON and could not be parsed by the receiving service.",
             "Critical",
-            "Critical",
             0,
             {},
             "Ensure that the request body is valid JSON and resubmit the request.",
@@ -553,7 +512,6 @@ constexpr std::array registry =
         {
             "Indicates that sufficient errors have occurred that the reporting service cannot return them all.",
             "Too many errors have occurred to report them all.",
-            "Critical",
             "Critical",
             0,
             {},
@@ -565,7 +523,6 @@ constexpr std::array registry =
             "Indicates that a multipart request is missing a required part or contains malformed parts.",
             "The multipart request contains malformed parts or is missing required parts.",
             "Critical",
-            "Critical",
             0,
             {},
             "Add any missing required parts or correct the malformed parts and resubmit the request.",
@@ -575,7 +532,6 @@ constexpr std::array registry =
         {
             "Indicates that network-based name resolution has not been configured on the service.",
             "Network name resolution has not been configured on this service.",
-            "Warning",
             "Warning",
             0,
             {},
@@ -587,7 +543,6 @@ constexpr std::array registry =
             "Indicates the service does not support network-based name resolution.",
             "Resolution of network-based names is not supported by this service.",
             "Warning",
-            "Warning",
             0,
             {},
             "Update any URI values to include an IP address instead of a network name and resubmit the request.",
@@ -597,7 +552,6 @@ constexpr std::array registry =
         {
             "Indicates that the requested operation will not perform any changes on the service.",
             "The request body submitted contain no data to act upon and no changes to the resource took place.",
-            "Warning",
             "Warning",
             0,
             {},
@@ -609,7 +563,6 @@ constexpr std::array registry =
             "Indicates that the operation failed because a valid session is required in order to access any resources.",
             "There is no valid session established with the implementation.",
             "Critical",
-            "Critical",
             0,
             {},
             "Establish a session before attempting any operations.",
@@ -619,7 +572,6 @@ constexpr std::array registry =
         {
             "Indicates that one of the internal operations necessary to complete the request failed.  Examples of this are when an internal service provider is unable to complete the request, such as in aggregation or RDE.",
             "An error occurred internal to the service as part of the overall request.  Partial results may have been returned.",
-            "Warning",
             "Warning",
             0,
             {},
@@ -631,7 +583,6 @@ constexpr std::array registry =
             "Indicates that the HTTP method in the request is not allowed on this resource.",
             "The HTTP method is not allowed on this resource.",
             "Critical",
-            "Critical",
             0,
             {},
             "None.",
@@ -642,7 +593,6 @@ constexpr std::array registry =
             "Indicates that one of the internal operations necessary to complete the request timed out.  Examples of this are when an internal service provider is unable to complete the request, such as in aggregation or RDE.",
             "A timeout internal to the service occured as part of the request.  Partial results may have been returned.",
             "Warning",
-            "Warning",
             0,
             {},
             "Resubmit the request.  If the problem persists, consider resetting the service or provider.",
@@ -652,7 +602,6 @@ constexpr std::array registry =
         {
             "Indicates that the password for the account provided must be changed before accessing the service.  The password can be changed with a PATCH to the `Password` property in the manager account resource instance.  Implementations that provide a default password for an account may require a password change prior to first access to the service.",
             "The password provided for this account must be changed before access is granted.  PATCH the Password property for this account located at the target URI '%1' to complete this process.",
-            "Critical",
             "Critical",
             1,
             {
@@ -666,7 +615,6 @@ constexpr std::array registry =
             "Indicates that the supplied payload is too large to be accepted by the service.",
             "The supplied payload exceeds the maximum size supported by the service.",
             "Critical",
-            "Critical",
             0,
             {},
             "Check that the supplied payload is correct and supported by this service.",
@@ -676,7 +624,6 @@ constexpr std::array registry =
         {
             "Indicates that the ETag supplied did not match the current ETag of the resource.",
             "The ETag supplied did not match the ETag required to change this resource.",
-            "Critical",
             "Critical",
             0,
             {},
@@ -688,7 +635,6 @@ constexpr std::array registry =
             "Indicates that the request did not provide the required precondition such as an `If-Match` or `If-None-Match` header, or `@odata.etag` annotations.",
             "A precondition header or annotation is required to change this resource.",
             "Critical",
-            "Critical",
             0,
             {},
             "Try the operation again using an If-Match or If-None-Match header and appropriate ETag.",
@@ -698,7 +644,6 @@ constexpr std::array registry =
         {
             "Indicates the property is deprecated.",
             "The deprecated property %1 was included in the request body.",
-            "Warning",
             "Warning",
             1,
             {
@@ -712,7 +657,6 @@ constexpr std::array registry =
             "Indicates that a duplicate property was included in the request body.",
             "The property %1 was duplicated in the request.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -724,7 +668,6 @@ constexpr std::array registry =
         {
             "Indicates that a required property was not supplied as part of the request.",
             "The property %1 is a required property and must be included in the request.",
-            "Warning",
             "Warning",
             1,
             {
@@ -738,7 +681,6 @@ constexpr std::array registry =
             "Indicates that a property was not updated due to an internal service error, but the service is still functional.",
             "The property %1 was not updated due to an internal service error.  The service is still operational.",
             "Critical",
-            "Critical",
             1,
             {
                 "string",
@@ -750,7 +692,6 @@ constexpr std::array registry =
         {
             "Indicates that a property was given a value in the request body, but the property is a readonly property.",
             "The property %1 is a read only property and cannot be assigned a value.",
-            "Warning",
             "Warning",
             1,
             {
@@ -764,7 +705,6 @@ constexpr std::array registry =
             "Indicates that an unknown property was included in the request body.",
             "The property %1 is not in the list of valid properties for the resource.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -776,7 +716,6 @@ constexpr std::array registry =
         {
             "Indicates that the requested write of a property value could not be completed, because of a conflict with another property value.",
             "The property '%1' could not be written because its value would conflict with the value of the '%2' property.",
-            "Warning",
             "Warning",
             2,
             {
@@ -791,7 +730,6 @@ constexpr std::array registry =
             "Indicates that a property was given a deprecated value.",
             "The value '%1' for the property %2 is deprecated.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -805,7 +743,6 @@ constexpr std::array registry =
             "Indicates that a property was given an invalid value.",
             "The value provided for the property %1 is not valid.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -817,7 +754,6 @@ constexpr std::array registry =
         {
             "Indicates that the requested write of a property value could not be completed, due to the current state or configuration of the resource.  This can include configuration conflicts with other resources or parameters that are not exposed by this interface.",
             "The property '%1' with the requested value of '%2' could not be written because the value is not available due to a configuration conflict.",
-            "Warning",
             "Warning",
             2,
             {
@@ -832,7 +768,6 @@ constexpr std::array registry =
             "Indicates that a property was given the correct value type but the value of that property was not supported.",
             "The value '%1' for the property %2 is of a different format than the property can accept.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -845,7 +780,6 @@ constexpr std::array registry =
         {
             "Indicates that the requested write of a property value could not be completed, because of an incorrect value of the property.  Examples include values that do not match a regular expression requirement or passwords that do not match the implementation constraints.",
             "The property '%1' with the requested value of '%2' could not be written because the value does not meet the constraints of the implementation.",
-            "Warning",
             "Warning",
             2,
             {
@@ -860,7 +794,6 @@ constexpr std::array registry =
             "Indicates that a property was given the correct value type but the value of that property was modified.  Examples are truncated or rounded values.",
             "The property %1 was assigned the value '%2' due to modification by the service.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -873,7 +806,6 @@ constexpr std::array registry =
         {
             "Indicates that a property was given the correct value type but the value of that property was not supported.  The value is not in an enumeration.",
             "The value '%1' for the property %2 is not in the list of acceptable values.",
-            "Warning",
             "Warning",
             2,
             {
@@ -888,7 +820,6 @@ constexpr std::array registry =
             "Indicates that a property was given the correct value type but the value of that property is outside the supported range.",
             "The value '%1' for the property %2 is not in the supported range of acceptable values.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -901,7 +832,6 @@ constexpr std::array registry =
         {
             "Indicates that the requested write of a property value could not be completed, due to the current state or configuration of another resource.",
             "The property '%1' with the requested value of '%2' could not be written because the value conflicts with the state or configuration of the resource at '%3'.",
-            "Warning",
             "Warning",
             3,
             {
@@ -917,7 +847,6 @@ constexpr std::array registry =
             "Indicates that a property was given the wrong value type, such as when a number is supplied for a property that requires a string.",
             "The value '%1' for the property %2 is of a different type than the property can accept.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -931,7 +860,6 @@ constexpr std::array registry =
             "Indicates the request contains multiple query parameters, and that two or more of them cannot be used together.",
             "Two or more query parameters in the request cannot be used together.",
             "Warning",
-            "Warning",
             0,
             {},
             "Remove one or more of the query parameters and resubmit the request if the operation failed.",
@@ -941,7 +869,6 @@ constexpr std::array registry =
         {
             "Indicates that query is not supported on the implementation.",
             "Querying is not supported by the implementation.",
-            "Warning",
             "Warning",
             0,
             {},
@@ -953,7 +880,6 @@ constexpr std::array registry =
             "Indicates that query is not supported with the given operation, such as when the `$expand` query is attempted with a PATCH operation.",
             "Querying is not supported with the requested operation.",
             "Warning",
-            "Warning",
             0,
             {},
             "Remove the query parameters and resubmit the request if the operation failed.",
@@ -964,7 +890,6 @@ constexpr std::array registry =
             "Indicates that query is not supported on the given resource, such as when the `$skip` query is attempted on a resource that is not a collection.",
             "Querying is not supported on the requested resource.",
             "Warning",
-            "Warning",
             0,
             {},
             "Remove the query parameters and resubmit the request if the operation failed.",
@@ -974,7 +899,6 @@ constexpr std::array registry =
         {
             "Indicates that a query parameter was provided that is out of range for the given resource.  This can happen with values that are too low or beyond that possible for the supplied resource, such as when a page is requested that is beyond the last page.",
             "The value '%1' for the query parameter %2 is out of range %3.",
-            "Warning",
             "Warning",
             3,
             {
@@ -990,7 +914,6 @@ constexpr std::array registry =
             "Indicates that a query parameter is not supported.",
             "Query parameter '%1' is not supported.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -1003,7 +926,6 @@ constexpr std::array registry =
             "Indicates that a query parameter was given an invalid value.",
             "The value for the parameter %1 is invalid.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -1015,7 +937,6 @@ constexpr std::array registry =
         {
             "Indicates that a query parameter was given the correct value type but the value of that parameter was not supported.  This includes the value size or length has been exceeded.",
             "The value '%1' for the parameter %2 is of a different format than the parameter can accept.",
-            "Warning",
             "Warning",
             2,
             {
@@ -1030,7 +951,6 @@ constexpr std::array registry =
             "Indicates that a query parameter was given the wrong value type, such as when a number is supplied for a query parameter that requires a string.",
             "The value '%1' for the query parameter %2 is of a different type than the parameter can accept.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -1043,7 +963,6 @@ constexpr std::array registry =
         {
             "Indicates that a component reset is recommended for error recovery while unaffected applications can continue running without any effects on accuracy and performance.",
             "In order to recover from errors, a component reset is recommended with the Reset action URI '%1' and ResetType '%2'.",
-            "Warning",
             "Warning",
             2,
             {
@@ -1058,7 +977,6 @@ constexpr std::array registry =
             "Indicates that a component reset is required for changes, error recovery, or operations to complete.",
             "In order to apply changes, recover from errors, or complete the operation, a component reset is required with the Reset action URI '%1' and ResetType '%2'.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -1071,7 +989,6 @@ constexpr std::array registry =
         {
             "Indicates that a resource change or creation was attempted but that the operation cannot proceed because the resource already exists.",
             "The requested resource of type %1 with the property %2 with the value '%3' already exists.",
-            "Critical",
             "Critical",
             3,
             {
@@ -1087,7 +1004,6 @@ constexpr std::array registry =
             "Indicates that the URI was valid but the resource or image at that URI was in a format not supported by the service.",
             "The resource at '%1' is in a format not recognized by the service.",
             "Critical",
-            "Critical",
             1,
             {
                 "string",
@@ -1099,7 +1015,6 @@ constexpr std::array registry =
         {
             "Indicates that the attempt to access the resource, file, or image at the URI was unauthorized.",
             "While accessing the resource at '%1', the service received an authorization error '%2'.",
-            "Critical",
             "Critical",
             2,
             {
@@ -1114,7 +1029,6 @@ constexpr std::array registry =
             "Indicates that a delete operation was attempted on a resource that cannot be deleted.",
             "The delete request failed because the resource requested cannot be deleted.",
             "Critical",
-            "Critical",
             0,
             {},
             "Do not attempt to delete a non-deletable resource.",
@@ -1124,7 +1038,6 @@ constexpr std::array registry =
         {
             "Indicates that the requested resource creation could not be completed because the service has a resource that conflicts with the request.",
             "The resource could not be created.  The service has a resource at URI '%1' that conflicts with the creation request.",
-            "Warning",
             "Warning",
             1,
             {
@@ -1138,7 +1051,6 @@ constexpr std::array registry =
             "Indicates the resource is deprecated.",
             "The operation was performed on a deprecated resource '%1'.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -1150,7 +1062,6 @@ constexpr std::array registry =
         {
             "Indicates that a resource could not satisfy the request due to some unavailability of resources.  An example is that available capacity has been allocated.",
             "The resource '%1' was unable to satisfy the request due to unavailability of resources.",
-            "Critical",
             "Critical",
             1,
             {
@@ -1164,7 +1075,6 @@ constexpr std::array registry =
             "Indicates that the request could not be performed because the resource is in standby.",
             "The request could not be performed because the resource is in standby.",
             "Critical",
-            "Critical",
             0,
             {},
             "Ensure that the resource is in the correct power state and resubmit the request.",
@@ -1175,7 +1085,6 @@ constexpr std::array registry =
             "Indicates that a change was requested to a resource but the change was rejected due to the resource being in use or transition.",
             "The change to the requested resource failed because the resource is in use or in transition.",
             "Warning",
-            "Warning",
             0,
             {},
             "Remove the condition and resubmit the request if the operation failed.",
@@ -1185,7 +1094,6 @@ constexpr std::array registry =
         {
             "Indicates that the operation expected an image or other resource at the provided URI but none was found.  Examples of this are in requests that require URIs like firmware update.",
             "The resource at the URI '%1' was not found.",
-            "Critical",
             "Critical",
             1,
             {
@@ -1198,7 +1106,6 @@ constexpr std::array registry =
         {
             "Indicates that the operation expected a resource identifier that corresponds to an existing resource but one was not found.",
             "The requested resource of type %1 named '%2' was not found.",
-            "Critical",
             "Critical",
             2,
             {
@@ -1213,7 +1120,6 @@ constexpr std::array registry =
             "Indicates that the resource type of the operation does not match that for the operation destination.  Examples of when this can happen include during a POST to a resource collection using the wrong resource type, an update where the `@odata.type` properties do not match, or on a major version incompatibility.",
             "The @odata.type of the request body %1 is incompatible with the @odata.type of the resource, which is %2.",
             "Critical",
-            "Critical",
             2,
             {
                 "string",
@@ -1227,7 +1133,6 @@ constexpr std::array registry =
             "Indicates that the operation was not successful because a privilege is restricted.",
             "The operation was not successful because the privilege '%1' is restricted.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -1239,7 +1144,6 @@ constexpr std::array registry =
         {
             "Indicates that the operation was not successful because the role is restricted.",
             "The operation was not successful because the role '%1' is restricted.",
-            "Warning",
             "Warning",
             1,
             {
@@ -1253,7 +1157,6 @@ constexpr std::array registry =
             "Indicates that the operation failed because the service, such as the account service, is disabled and cannot accept requests.",
             "The operation failed because the service at %1 is disabled and cannot accept requests.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -1266,7 +1169,6 @@ constexpr std::array registry =
             "Indicates that the operation failed because the service is in an unknown state and cannot accept additional requests.",
             "The operation failed because the service is in an unknown state and can no longer take incoming requests.",
             "Critical",
-            "Critical",
             0,
             {},
             "Restart the service and resubmit the request if the operation failed.",
@@ -1277,7 +1179,6 @@ constexpr std::array registry =
             "Indicates that the operation failed as the service is shutting down, such as when the service reboots.",
             "The operation failed because the service is shutting down and can no longer take incoming requests.",
             "Critical",
-            "Critical",
             0,
             {},
             "When the service becomes available, resubmit the request if the operation failed.",
@@ -1287,7 +1188,6 @@ constexpr std::array registry =
         {
             "Indicates the service is temporarily unavailable.",
             "The service is temporarily unavailable.  Retry in %1 seconds.",
-            "Critical",
             "Critical",
             1,
             {
@@ -1301,7 +1201,6 @@ constexpr std::array registry =
             "Indicates that a session establishment has been requested but the operation failed due to the number of simultaneous sessions exceeding the limit of the implementation.",
             "The session establishment failed due to the number of simultaneous sessions exceeding the limit of the implementation.",
             "Critical",
-            "Critical",
             0,
             {},
             "Reduce the number of other sessions before trying to establish the session or increase the limit of simultaneous sessions, if supported.",
@@ -1312,7 +1211,6 @@ constexpr std::array registry =
             "Indicates that the DELETE operation on the session resource resulted in the successful termination of the session.",
             "The session was successfully terminated.",
             "OK",
-            "OK",
             0,
             {},
             "No resolution is required.",
@@ -1322,7 +1220,6 @@ constexpr std::array registry =
         {
             "Indicates that while attempting to access, connect to or transfer a resource, file, or image from another location that the other end of the connection did not support the protocol.",
             "The other end of the connection at '%1' does not support the specified protocol %2.",
-            "Critical",
             "Critical",
             2,
             {
@@ -1337,7 +1234,6 @@ constexpr std::array registry =
             "Indicates the request failed because a set of `AccountTypes` or `OEMAccountTypes` was not accepted while `StrictAccountTypes` is set to `true`.",
             "The request was not possible to fulfill with the account types included in property '%1' and property StrictAccountTypes set to true.",
             "Warning",
-            "Warning",
             1,
             {
                 "string",
@@ -1349,7 +1245,6 @@ constexpr std::array registry =
         {
             "Indicates that a string value passed to the given resource exceeded its length limit.  An example is when a shorter limit is imposed by an implementation than that allowed by the specification.",
             "The string '%1' exceeds the length limit %2.",
-            "Warning",
             "Warning",
             2,
             {
@@ -1364,7 +1259,6 @@ constexpr std::array registry =
             "Indicates that a string value passed to the given resource was under its minimum required length.  An example is when a higher minimum length is imposed by an implementation than that allowed by the specification.",
             "The string '%1' was under the minimum required length %2.",
             "Warning",
-            "Warning",
             2,
             {
                 "string",
@@ -1378,7 +1272,6 @@ constexpr std::array registry =
             "An event subscription has been terminated by the service.  No further events will be delivered.",
             "The event subscription has been terminated.",
             "OK",
-            "OK",
             0,
             {},
             "No resolution is required.",
@@ -1389,7 +1282,6 @@ constexpr std::array registry =
             "Indicates that all conditions of a successful operation have been met.",
             "The request completed successfully.",
             "OK",
-            "OK",
             0,
             {},
             "None",
@@ -1399,7 +1291,6 @@ constexpr std::array registry =
         {
             "Indicates that a fault or error condition exists but the source of the fault cannot be determined or is unknown to the service.",
             "A undetermined fault condition has been reported by '%1'.",
-            "Critical",
             "Critical",
             1,
             {
@@ -1412,7 +1303,6 @@ constexpr std::array registry =
         {
             "Indicates that the service encountered an unrecognizable request body that could not even be interpreted as malformed JSON.",
             "The service detected a malformed request body that it was unable to interpret.",
-            "Warning",
             "Warning",
             0,
             {},
