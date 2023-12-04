@@ -18,7 +18,7 @@
 // #include "account_service.hpp"
 // #include "assembly.hpp"
 // #include "aggregation_service.hpp"
-// #include "bios.hpp"
+#include "bios.hpp"
 // #include "boot_options.hpp"
 #include "cable.hpp"
 // #include "certificate_service.hpp"
@@ -37,7 +37,7 @@
 // #include "hypervisor_system.hpp"
 // #include "log_services.hpp"
 // #include "manager_diagnostic_data.hpp"
-// #include "managers.hpp"
+#include "managers.hpp"
 #include "memory.hpp"
 // #include "message_registries.hpp"
 #include "metric_report.hpp"
@@ -112,7 +112,7 @@ class RedfishService
         requestRoutesRoles(app);
         requestRoutesRoleCollection(app);
 //         }
-        requestRoutesServiceRoot(app);
+        // requestRoutesServiceRoot(app);
 //         requestRoutesNetworkProtocol(app);
 //         if (persistent_data::getConfig().isTLSAuthEnabled())
 //         {
@@ -186,7 +186,7 @@ class RedfishService
 //         requestRoutesSoftwareInventory(app);
 //         requestRoutesInventorySoftwareCollection(app);
 //         requestRoutesInventorySoftware(app);
-//         requestRoutesSystemLogServiceCollection(app);
+        //  requestRoutesSystemLogServiceCollection(app);
 // #ifdef BMCWEB_ENABLE_MFG_TEST_API
 //         requestRoutesEventLogDiagnosticDataCollect(app);
 //         requestRoutesEventLogDiagnosticDataEntry(app);

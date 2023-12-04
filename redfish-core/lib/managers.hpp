@@ -15,41 +15,30 @@
 */
 #pragma once
 
-<<<<<<< HEAD
 // #include "error_messages.hpp"
-=======
 #include "bmcweb_config.h"
 
 #include "app.hpp"
 #include "dbus_utility.hpp"
->>>>>>> origin/master-october-10
 #include "health.hpp"
 #include "redfish_util.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"
 #include "utils/sw_utils.hpp"
 #include "utils/time_utils.hpp"
-
-<<<<<<< HEAD
-#include <app.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time.hpp>
-#include <dbus_utility.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/chassis_utils.hpp>
 #include <utils/conditions_utils.hpp>
-#include <utils/dbus_utils.hpp>
 #include <utils/fw_utils.hpp>
 #include <utils/hex_utils.hpp>
-#include <utils/json_utils.hpp>
 #include <utils/systemd_utils.hpp>
-=======
 #include <boost/system/error_code.hpp>
 #include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
->>>>>>> origin/master-october-10
 
 #include <algorithm>
 #include <array>
@@ -169,13 +158,7 @@ inline void
         }
 
         messages::success(asyncResp->res);
-<<<<<<< HEAD
-    },
-        processName, objectPath, "org.freedesktop.DBus.Properties", "Set",
-        interfaceName, destProperty, dbusPropertyValue);
-=======
         });
->>>>>>> origin/master-october-10
 }
 
 inline void
@@ -202,10 +185,7 @@ inline void
         }
 
         messages::success(asyncResp->res);
-<<<<<<< HEAD
-    },
-        processName, objectPath, "org.freedesktop.DBus.Properties", "Set",
-        interfaceName, destProperty, dbusPropertyValue);
+        });
 }
 
 /**
@@ -224,10 +204,10 @@ inline void
     const char* destProperty = "RequestedBMCTransition";
 
     // Create the D-Bus variant for D-Bus call.
-    dbus::utility::DbusVariantType dbusPropertyValue(propertyValue);
-
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec) {
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus, processName, objectPath, interfaceName,
+        destProperty, propertyValue,
+        [asyncResp](const boost::system::error_code& ec) {
         // Use "Set" method to set the property value.
         if (ec)
         {
@@ -237,12 +217,7 @@ inline void
         }
 
         messages::success(asyncResp->res);
-    },
-        processName, objectPath, "org.freedesktop.DBus.Properties", "Set",
-        interfaceName, destProperty, dbusPropertyValue);
-=======
         });
->>>>>>> origin/master-october-10
 }
 
 /**
@@ -289,7 +264,6 @@ inline void requestRoutesManagerResetAction(App& app)
             doBMCForceRestart(asyncResp);
             return;
         }
-<<<<<<< HEAD
         if (resetType == "GracefulShutdown")
         {
             BMCWEB_LOG_DEBUG("Proceeding with {}", resetType);
@@ -297,9 +271,6 @@ inline void requestRoutesManagerResetAction(App& app)
             return;
         }
         BMCWEB_LOG_DEBUG("Invalid property value for ResetType: {}", resetType);
-=======
-        BMCWEB_LOG_DEBUG("Invalid property value for ResetType: {}", resetType);
->>>>>>> origin/master-october-10
         messages::actionParameterNotSupported(asyncResp->res, resetType,
                                               "ResetType");
 
@@ -360,7 +331,6 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
         }
 
         crow::connections::systemBus->async_method_call(
-<<<<<<< HEAD
             [asyncResp, ifnameFactoryReset](
                 const boost::system::error_code ec,
                 const std::vector<std::pair<
@@ -368,12 +338,6 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
             if (ec || interfaceNames.size() <= 0)
             {
                 BMCWEB_LOG_ERROR("Can't find object");
-=======
-            [asyncResp](const boost::system::error_code& ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG("Failed to ResetToDefaults: {}", ec);
->>>>>>> origin/master-october-10
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -503,14 +467,9 @@ inline void requestRoutesManagerResetActionInfo(App& app)
         parameter["DataType"] = "String";
 
         nlohmann::json::array_t allowableValues;
-<<<<<<< HEAD
         allowableValues.push_back("GracefulRestart");
         allowableValues.push_back("ForceRestart");
         allowableValues.push_back("GracefulShutdown");
-=======
-        allowableValues.emplace_back("GracefulRestart");
-        allowableValues.emplace_back("ForceRestart");
->>>>>>> origin/master-october-10
         parameter["AllowableValues"] = std::move(allowableValues);
 
         nlohmann::json::array_t parameters;
@@ -1064,13 +1023,9 @@ inline void
                      const std::vector<std::string>& supportedProfiles,
                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-<<<<<<< HEAD
-    crow::connections::systemBus->async_method_call(
-=======
     sdbusplus::message::object_path objPath(path);
     dbus::utility::getManagedObjects(
         connection, objPath,
->>>>>>> origin/master-october-10
         [asyncResp, currentProfile, supportedProfiles](
             const boost::system::error_code& ec,
             const dbus::utility::ManagedObjectType& managedObj) {
@@ -1184,20 +1139,11 @@ inline void
                         chassis = "#IllegalValue";
                     }
                     nlohmann::json& zone = zones[name];
-<<<<<<< HEAD
                     zone["Chassis"] = {
                         {"@odata.id", "/redfish/v1/Chassis/" + chassis}};
                     zone["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
                                         "#/Oem/OpenBmc/Fan/FanZones/" +
                                         name;
-=======
-                    zone["Chassis"]["@odata.id"] =
-                        boost::urls::format("/redfish/v1/Chassis/{}", chassis);
-                    url.set_fragment(
-                        ("/Oem/OpenBmc/Fan/FanZones"_json_pointer / name)
-                            .to_string());
-                    zone["@odata.id"] = std::move(url);
->>>>>>> origin/master-october-10
                     zone["@odata.type"] = "#OemManager.FanZone";
                     config = &zone;
                 }
@@ -1213,19 +1159,11 @@ inline void
 
                     nlohmann::json& controller = stepwise[name];
                     config = &controller;
-<<<<<<< HEAD
 
                     controller["@odata.id"] =
                         "/redfish/v1/Managers/" PLATFORMBMCID
                         "#/Oem/OpenBmc/Fan/StepwiseControllers/" +
                         name;
-=======
-                    url.set_fragment(
-                        ("/Oem/OpenBmc/Fan/StepwiseControllers"_json_pointer /
-                         name)
-                            .to_string());
-                    controller["@odata.id"] = std::move(url);
->>>>>>> origin/master-october-10
                     controller["@odata.type"] =
                         "#OemManager.StepwiseController";
 
@@ -1246,34 +1184,18 @@ inline void
                     config = &element;
                     if (isFan)
                     {
-<<<<<<< HEAD
                         element["@odata.id"] =
                             "/redfish/v1/Managers/" PLATFORMBMCID
                             "#/Oem/OpenBmc/Fan/FanControllers/" +
                             name;
-=======
-                        url.set_fragment(
-                            ("/Oem/OpenBmc/Fan/FanControllers"_json_pointer /
-                             name)
-                                .to_string());
-                        element["@odata.id"] = std::move(url);
->>>>>>> origin/master-october-10
                         element["@odata.type"] = "#OemManager.FanController";
                     }
                     else
                     {
-<<<<<<< HEAD
                         element["@odata.id"] =
                             "/redfish/v1/Managers/" PLATFORMBMCID
                             "#/Oem/OpenBmc/Fan/PidControllers/" +
                             name;
-=======
-                        url.set_fragment(
-                            ("/Oem/OpenBmc/Fan/PidControllers"_json_pointer /
-                             name)
-                                .to_string());
-                        element["@odata.id"] = std::move(url);
->>>>>>> origin/master-october-10
                         element["@odata.type"] = "#OemManager.PidController";
                     }
                 }
@@ -1391,21 +1313,11 @@ inline void
                             {
                                 dbus::utility::escapePathForDbus(itemCopy);
                                 nlohmann::json::object_t input;
-<<<<<<< HEAD
                                 input["@odata.id"] =
                                     "/redfish/v1/Managers/" PLATFORMBMCID
                                     "#/Oem/OpenBmc/Fan/FanZones/" +
                                     itemCopy;
                                 data.push_back(std::move(input));
-=======
-                                boost::urls::url managerUrl = boost::urls::format(
-                                    "/redfish/v1/Managers/bmc#{}",
-                                    ("/Oem/OpenBmc/Fan/FanZones"_json_pointer /
-                                     itemCopy)
-                                        .to_string());
-                                input["@odata.id"] = std::move(managerUrl);
-                                data.emplace_back(std::move(input));
->>>>>>> origin/master-october-10
                             }
                         }
                         // todo(james): may never happen, but this
@@ -1499,12 +1411,7 @@ inline void
                 }
             }
         }
-<<<<<<< HEAD
-    },
-        connection, path, objectManagerIface, "GetManagedObjects");
-=======
         });
->>>>>>> origin/master-october-10
 }
 
 enum class CreatePIDRet
@@ -1988,17 +1895,7 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
                 return;
             }
             self->complete.subtree = subtreeLocal;
-<<<<<<< HEAD
-        },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", 0,
-            std::array<const char*, 4>{
-                pidConfigurationIface, pidZoneConfigurationIface,
-                objectManagerIface, stepwiseConfigurationIface});
-=======
             });
->>>>>>> origin/master-october-10
 
         // at the same time get the selected profile
         constexpr std::array<std::string_view, 1> thermalModeIfaces = {
@@ -2056,17 +1953,8 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
                 }
                 self->complete.currentProfile = *current;
                 self->complete.supportedProfiles = *supported;
-<<<<<<< HEAD
-            });
-        },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", 0,
-            std::array<const char*, 1>{thermalModeIface});
-=======
                 });
             });
->>>>>>> origin/master-october-10
     }
 
     static void
@@ -2214,14 +2102,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                 }
             }
             self->managedObj = mObj;
-<<<<<<< HEAD
-        },
-            "xyz.openbmc_project.EntityManager",
-            "/xyz/openbmc_project/inventory", objectManagerIface,
-            "GetManagedObjects");
-=======
             });
->>>>>>> origin/master-october-10
 
         // at the same time get the profile information
         constexpr std::array<std::string_view, 1> thermalModeIfaces = {
@@ -2277,17 +2158,8 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                 self->supportedProfiles = *supported;
                 self->profileConnection = owner;
                 self->profilePath = path;
-<<<<<<< HEAD
-            });
-        },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", 0,
-            std::array<const char*, 1>{thermalModeIface});
-=======
                 });
             });
->>>>>>> origin/master-october-10
     }
     void pidSetDone()
     {
@@ -2315,14 +2187,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                     BMCWEB_LOG_ERROR("Error patching profile{}", ec);
                     messages::internalError(response->res);
                 }
-<<<<<<< HEAD
-            },
-                profileConnection, profilePath,
-                "org.freedesktop.DBus.Properties", "Set", thermalModeIface,
-                "Current", dbus::utility::DbusVariantType(*profile));
-=======
                 });
->>>>>>> origin/master-october-10
         }
 
         for (auto& containerPair : configuration)
@@ -2340,16 +2205,6 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                  it != container->end(); ++it)
             {
                 const auto& name = it.key();
-<<<<<<< HEAD
-                BMCWEB_LOG_DEBUG("looking for {}", name);
-
-                auto pathItr = std::find_if(managedObj.begin(),
-                                            managedObj.end(),
-                                            [&name](const auto& obj) {
-                    return boost::algorithm::ends_with(obj.first.str,
-                                                       "/" + name);
-                });
-=======
                 std::string dbusObjName = name;
                 std::replace(dbusObjName.begin(), dbusObjName.end(), ' ', '_');
                 BMCWEB_LOG_DEBUG("looking for {}", name);
@@ -2359,7 +2214,6 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                         return boost::algorithm::ends_with(obj.first.str,
                                                            "/" + dbusObjName);
                     });
->>>>>>> origin/master-october-10
                 dbus::utility::DBusPropertiesMap output;
 
                 output.reserve(16); // The pid interface length
@@ -2470,14 +2324,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                                 return;
                             }
                             messages::success(response->res);
-<<<<<<< HEAD
-                        },
-                            "xyz.openbmc_project.EntityManager", path,
-                            "org.freedesktop.DBus.Properties", "Set", iface,
-                            property.first, property.second);
-=======
                             });
->>>>>>> origin/master-october-10
                     }
                 }
                 else
@@ -2816,24 +2663,9 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-<<<<<<< HEAD
-            doBMCGracefulRestart(aResp);
-        },
-
-            "xyz.openbmc_project.Software.BMC.Updater",
-            "/xyz/openbmc_project/software/" + firmwareId,
-            "org.freedesktop.DBus.Properties", "Set",
-            "xyz.openbmc_project.Software.RedundancyPriority", "Priority",
-            dbus::utility::DbusVariantType(static_cast<uint8_t>(0)));
-    },
-        "xyz.openbmc_project.Software.BMC.Updater",
-        "/xyz/openbmc_project/software", "org.freedesktop.DBus.ObjectManager",
-        "GetManagedObjects");
-=======
             doBMCGracefulRestart(asyncResp);
             });
         });
->>>>>>> origin/master-october-10
 }
 
 inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
@@ -2878,24 +2710,14 @@ inline void
         {
             if (val == "active")
             {
-<<<<<<< HEAD
-                BMCWEB_LOG_DEBUG("Failed to set elapsed time. " "DBUS response error {}", ec);
-                messages::propertyValueExternalConflict(aResp->res, "DateTime",
-                                                        datetime);
+                asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
+                asyncResp->res.jsonValue["Status"]["State"] = "Quiesced";
                 return;
             }
-            aResp->res.jsonValue["DateTime"] = datetime;
-        },
-            "xyz.openbmc_project.Time.Manager", "/xyz/openbmc_project/time/bmc",
-            "org.freedesktop.DBus.Properties", "Set",
-            "xyz.openbmc_project.Time.EpochTime", "Elapsed",
-            dbus::utility::DbusVariantType(durMicroSecs));
-    }
-    else
-    {
-        messages::propertyValueFormatError(aResp->res, datetime, "DateTime");
-        return;
-    }
+        }
+        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+    });
 }
 
 inline void getLinkManagerForSwitches(
@@ -3041,7 +2863,7 @@ inline void
     if (privilege == 0)
     {
         messages::invalidObject(resp->res,
-                                crow::utility::urlFromPieces(privilegeType));
+                                boost::urls::format("{}", privilegeType));
         return;
     }
 
@@ -3103,16 +2925,6 @@ inline void
         }
         asyncResp->res.jsonValue["CommandShell"]["ServiceEnabled"] = isEnable;
     });
-=======
-                asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
-                asyncResp->res.jsonValue["Status"]["State"] = "Quiesced";
-                return;
-            }
-        }
-        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-        });
->>>>>>> origin/master-october-10
 }
 
 inline void requestRoutesManager(App& app)
@@ -3236,11 +3048,8 @@ inline void requestRoutesManager(App& app)
         asyncResp->res.jsonValue["Description"] =
             "Baseboard Management Controller";
         asyncResp->res.jsonValue["PowerState"] = "On";
-<<<<<<< HEAD
         asyncResp->res.jsonValue["Status"]["State"] = "Starting";
         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-=======
->>>>>>> origin/master-october-10
 
         asyncResp->res.jsonValue["ManagerType"] = "BMC";
         asyncResp->res.jsonValue["UUID"] = systemd_utils::getUuid();
@@ -3449,8 +3258,21 @@ inline void requestRoutesManager(App& app)
         {
             asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] =
                 1;
+            nlohmann::json::array_t managerForServers;
+            nlohmann::json::object_t manager;
+            manager["@odata.id"] = "/redfish/v1/Systems/system";
+            managerForServers.emplace_back(std::move(manager));
 
-<<<<<<< HEAD
+            asyncResp->res.jsonValue["Links"]["ManagerForServers"] =
+                std::move(managerForServers);
+        }
+        if constexpr (bmcwebEnableHealthPopulate)
+        {
+            auto health = std::make_shared<HealthPopulate>(asyncResp);
+            health->isManagersHealth = true;
+            health->populate();
+        }
+
         asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] = 1;
 
         nlohmann::json::array_t managerForServers;
@@ -3468,23 +3290,6 @@ inline void requestRoutesManager(App& app)
         asyncResp->res.jsonValue["CommandShell"]["MaxConcurrentSessions"] = 1;
         asyncResp->res.jsonValue["CommandShell"]["ConnectTypesSupported"] = {
             "SSH"};
-=======
-            nlohmann::json::array_t managerForServers;
-            nlohmann::json::object_t manager;
-            manager["@odata.id"] = "/redfish/v1/Systems/system";
-            managerForServers.emplace_back(std::move(manager));
-
-            asyncResp->res.jsonValue["Links"]["ManagerForServers"] =
-                std::move(managerForServers);
-        }
-        if constexpr (bmcwebEnableHealthPopulate)
-        {
-            auto health = std::make_shared<HealthPopulate>(asyncResp);
-            health->isManagersHealth = true;
-            health->populate();
-        }
->>>>>>> origin/master-october-10
-
         getIsCommandShellEnable(asyncResp);
 #endif
         sw_util::populateSoftwareInformation(asyncResp, sw_util::bmcPurpose,
@@ -3519,7 +3324,6 @@ inline void requestRoutesManager(App& app)
                 chassiUrl;
         });
 
-<<<<<<< HEAD
         crow::connections::systemBus->async_method_call(
             [asyncResp, bmcId](
                 const boost::system::error_code ec,
@@ -3608,7 +3412,7 @@ inline void requestRoutesManager(App& app)
             "/xyz/openbmc_project/inventory", int32_t(0),
             std::array<const char*, 1>{"xyz.openbmc_project.Inventory."
                                        "Item.ManagementService"});
-=======
+                                       
         sdbusplus::asio::getProperty<double>(
             *crow::connections::systemBus, "org.freedesktop.systemd1",
             "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
@@ -3628,7 +3432,6 @@ inline void requestRoutesManager(App& app)
             }
             checkForQuiesced(asyncResp);
             });
->>>>>>> origin/master-october-10
 
         constexpr std::array<std::string_view, 1> interfaces = {
             "xyz.openbmc_project.Inventory.Item.Bmc"};
@@ -3737,19 +3540,8 @@ inline void requestRoutesManager(App& app)
                     getLocation(asyncResp, connectionName, path);
                 }
             }
-<<<<<<< HEAD
-        },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-            "/xyz/openbmc_project/inventory", int32_t(0),
-            std::array<const char*, 1>{
-                "xyz.openbmc_project.Inventory.Item.Bmc"});
-    });
-=======
             });
         });
->>>>>>> origin/master-october-10
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/")
         .privileges(redfish::privileges::patchManager)

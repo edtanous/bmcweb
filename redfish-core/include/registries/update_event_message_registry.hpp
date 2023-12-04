@@ -39,7 +39,6 @@ constexpr std::array registry =
             "Indicates that the component failed to activate the image.",
             "Activation of image '%1' on '%2' failed.",
             "Critical",
-            "Critical",
             2,
             {
                 "string",
@@ -53,7 +52,6 @@ constexpr std::array registry =
             "Indicates that all target resources or devices for an update operation have been determined by the service.",
             "All the target device to be updated have been determined.",
             "OK",
-            "OK",
             0,
             {},
             "None.",
@@ -63,7 +61,6 @@ constexpr std::array registry =
         {
             "Indicates that the component failed to apply an image.",
             "Installation of image '%1' to '%2' failed.",
-            "Critical",
             "Critical",
             2,
             {
@@ -78,7 +75,6 @@ constexpr std::array registry =
             "Indicates that a component is applying an image.",
             "Image '%1' is being applied on '%2'.",
             "OK",
-            "OK",
             2,
             {
                 "string",
@@ -91,7 +87,6 @@ constexpr std::array registry =
         {
             "Indicates that the resource or device is awaiting for an action to proceed with activating an image.",
             "Awaiting for an action to proceed with activating image '%1' on '%2'.",
-            "OK",
             "OK",
             2,
             {
@@ -106,7 +101,6 @@ constexpr std::array registry =
             "Indicates that the resource or device is awaiting for an action to proceed with installing an image.",
             "Awaiting for an action to proceed with installing image '%1' on '%2'.",
             "OK",
-            "OK",
             2,
             {
                 "string",
@@ -119,7 +113,6 @@ constexpr std::array registry =
         {
             "Indicates that a component is installing an image.",
             "Image '%1' is being installed on '%2'.",
-            "OK",
             "OK",
             2,
             {
@@ -134,7 +127,6 @@ constexpr std::array registry =
             "Indicates that the update operation transitioned to a job for managing the progress of the operation.",
             "The update operation has transitioned to the job at URI '%1'.",
             "OK",
-            "OK",
             1,
             {
                 "string",
@@ -146,7 +138,6 @@ constexpr std::array registry =
         {
             "Indicates that a target resource or device for a image has been determined for update.",
             "The target device '%1' will be updated with image '%2'.",
-            "OK",
             "OK",
             2,
             {
@@ -161,7 +152,6 @@ constexpr std::array registry =
             "Indicates that the service failed to transfer an image to a component.",
             "Transfer of image '%1' to '%2' failed.",
             "Critical",
-            "Critical",
             2,
             {
                 "string",
@@ -174,7 +164,6 @@ constexpr std::array registry =
         {
             "Indicates that the service is transferring an image to a component.",
             "Image '%1' is being transferred to '%2'.",
-            "OK",
             "OK",
             2,
             {
@@ -189,7 +178,6 @@ constexpr std::array registry =
             "Indicates that an update is in progress.",
             "An update is in progress.",
             "OK",
-            "OK",
             0,
             {},
             "None.",
@@ -199,7 +187,6 @@ constexpr std::array registry =
         {
             "Indicates that a resource or device was updated.",
             "Device '%1' successfully updated with image '%2'.",
-            "OK",
             "OK",
             2,
             {
@@ -214,7 +201,6 @@ constexpr std::array registry =
             "Indicates that the component failed to verify an image.",
             "Verification of image '%1' at '%2' failed.",
             "Critical",
-            "Critical",
             2,
             {
                 "string",
@@ -227,7 +213,6 @@ constexpr std::array registry =
         {
             "Indicates that a component is verifying an image.",
             "Image '%1' is being verified at '%2'.",
-            "OK",
             "OK",
             2,
             {
