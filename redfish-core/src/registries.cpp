@@ -1,9 +1,9 @@
 #include "registries.hpp"
 
 #include "registries/base_message_registry.hpp"
-//#include "registries/openbmc_message_registry.hpp"
+#include "registries/openbmc_message_registry.hpp"
 #include "str_utility.hpp"
-
+#include "registries_selector.hpp"
 #include <ranges>
 #include <string>
 #include <vector>
@@ -38,17 +38,8 @@ const Message* getMessage(std::string_view messageID)
     const std::string& messageKey = fields[3];
 
     // Find the right registry and check it for the MessageKey
-    if (std::string(base::header.registryPrefix) == registryName)
-    {
-        return getMessageFromRegistry(
-            messageKey, std::span<const MessageEntry>(base::registry));
-    }
-    // if (std::string(openbmc::header.registryPrefix) == registryName)
-    // {
-    //     return getMessageFromRegistry(
-    //         messageKey, std::span<const MessageEntry>(openbmc::registry));
-    // }
-    return nullptr;
+    return getMessageFromRegistry(messageKey,
+                                  getRegistryFromPrefix(registryName));
 }
 
 } // namespace redfish::registries

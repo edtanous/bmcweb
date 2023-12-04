@@ -1,7 +1,9 @@
 #pragma once
 #include "registries/base_message_registry.hpp"
-//#include "registries/openbmc_message_registry.hpp"
+#include "registries/openbmc_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
+#include "registries/resource_event_message_registry.hpp"
+#include "registries/update_event_message_registry.hpp"
 
 #include <span>
 #include <string_view>
@@ -23,6 +25,15 @@ inline std::span<const MessageEntry>
     {
         return {base::registry};
     }
+    if (resource_event::header.registryPrefix == registryName)
+    {
+        return {resource_event::registry};
+    }
+    if (update_event::header.registryPrefix == registryName)
+    {
+        return {update_event::registry};
+    }
+
     return {openbmc::registry};
 }
 } // namespace redfish::registries
