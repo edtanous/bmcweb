@@ -30,8 +30,8 @@
 // #include "host_interface.hpp"
 #include "environment_metrics.hpp"
 // #include "ethernet.hpp"
-   #include "event_service.hpp"
-// #include "eventservice_sse.hpp"
+ #include "event_service.hpp"
+ #include "eventservice_sse.hpp"
 // #include "fabric_adapters.hpp"
 // #include "fan.hpp"
 // #include "hypervisor_system.hpp"
@@ -51,7 +51,7 @@
 // #include "network_adapters_generic.hpp"
 // #endif
 
-// #include "network_protocol.hpp"
+   #include "network_protocol.hpp"
 // #include "nvidia_oem_dpu.hpp"
 // #include "pcie.hpp"
 #include "pcieslots.hpp"
