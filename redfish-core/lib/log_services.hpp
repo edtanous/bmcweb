@@ -73,6 +73,8 @@ constexpr char const* crashdumpOnDemandInterface =
     "com.intel.crashdump.OnDemand";
 constexpr char const* crashdumpTelemetryInterface =
     "com.intel.crashdump.Telemetry";
+constexpr char const* logEntryVersion =
+    "#LogEntry.v1_13_0.LogEntry";
 
 enum class DumpCreationProgress
 {
@@ -156,7 +158,7 @@ static void generateMessageRegistry(
     nlohmann::json& logEntry,
     const std::string& odataId, /* e.g. /redfish/v1/Systems/system/LogServices/"
                                   "EventLog/Entries/ */
-    const std::string& odataTypeVer /* e.g. v1_8_0 */, const std::string& id,
+    const std::string& odataTypeVer /* e.g. v1_13_0 */, const std::string& id,
     const std::string& name, const std::string& timestamp,
     const std::string& messageId, const std::string& messageArgs,
     const std::string& resolution, const bool& resolved,
@@ -2154,7 +2156,7 @@ static LogParseError
     }
 
     // Fill in the log entry with the gathered data
-    logEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    logEntryJson["@odata.type"] = logEntryVersion;
     logEntryJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/LogServices/EventLog/Entries/" +
                                 logEntryID;
@@ -2537,7 +2539,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/LogServices/"
                                 "EventLog/Entries/",
-                                "v1_9_0", std::to_string(*id),
+                                "v1_13_0", std::to_string(*id),
                                 "System Event Log Entry",
                                 redfish::time_utils::getDateTimeStdtime(
                                     timestamp),
@@ -2555,7 +2557,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         if (thisEntry["Id"].size() == 0)
                         {
                             thisEntry["@odata.type"] =
-                                "#LogEntry.v1_9_0.LogEntry";
+                                logEntryVersion;
                             thisEntry["@odata.id"] =
                                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
                                 "LogServices/EventLog/Entries/" +
@@ -2759,7 +2761,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             "/redfish/v1/Systems/" PLATFORMSYSTEMID
                             "/LogServices/"
                             "EventLog/Entries/",
-                            "v1_9_0", std::to_string(*id),
+                            "v1_13_0", std::to_string(*id),
                             "System Event Log Entry",
                             redfish::time_utils::getDateTimeStdtime(timestamp),
                             messageId, messageArgs, *resolution, resolved,
@@ -2776,7 +2778,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     if (asyncResp->res.jsonValue["Id"].size() == 0)
                     {
                         asyncResp->res.jsonValue["@odata.type"] =
-                            "#LogEntry.v1_9_0.LogEntry";
+                            logEntryVersion;
                         asyncResp->res.jsonValue["@odata.id"] =
                             "/redfish/v1/Systems/" PLATFORMSYSTEMID
                             "/LogServices/"
@@ -3413,7 +3415,7 @@ inline void fillHostLoggerEntryJson(const std::string& logEntryID,
                                     nlohmann::json::object_t& logEntryJson)
 {
     // Fill in the log entry with the gathered data.
-    logEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    logEntryJson["@odata.type"] = logEntryVersion;
     logEntryJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/LogServices/HostLogger/Entries/" +
                                 logEntryID;
@@ -3766,7 +3768,7 @@ static int
     }
 
     // Fill in the log entry with the gathered data
-    bmcJournalLogEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    bmcJournalLogEntryJson["@odata.type"] = logEntryVersion;
     bmcJournalLogEntryJson["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
                                           "/LogServices/Journal/Entries/" +
                                           bmcJournalLogEntryID;
@@ -4750,7 +4752,7 @@ static void
                                        "/LogServices/Crashdump/Entries/" +
                                        logID + "/" + filename;
             nlohmann::json::object_t logEntry;
-            logEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+            logEntry["@odata.type"] = logEntryVersion;
             logEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                     "/LogServices/Crashdump/Entries/" +
                                     logID;
@@ -5600,7 +5602,7 @@ static void fillPostCodeEntry(
         // add to AsyncResp
         logEntryArray.push_back({});
         nlohmann::json& bmcLogEntry = logEntryArray.back();
-        bmcLogEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+        bmcLogEntry["@odata.type"] = logEntryVersion;
         bmcLogEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                    "/LogServices/PostCodes/Entries/" +
                                    postcodeEntryID;
@@ -6530,7 +6532,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                         "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                                                         "/LogServices/"
                                                                         "EventLog/Entries/",
-                                                                        "v1_9_0",
+                                                                        "v1_13_0",
                                                                         std::to_string(
                                                                             *id),
                                                                         "System Event Log Entry",
@@ -6572,7 +6574,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                 {
                                                                     thisEntry
                                                                         ["@odata.type"] =
-                                                                            "#LogEntry.v1_9_0.LogEntry";
+                                                                            logEntryVersion;
                                                                     thisEntry["@odata.id"] =
                                                                         "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                                                         "/LogServices/"
