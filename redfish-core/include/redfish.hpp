@@ -41,7 +41,7 @@
 #include "memory.hpp"
 // #include "message_registries.hpp"
 #include "metric_report.hpp"
-// #include "metric_report_definition.hpp"
+#include "metric_report_definition.hpp"
 
 // #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
 // #include "network_adapters.hpp"
@@ -55,11 +55,11 @@
 // #include "nvidia_oem_dpu.hpp"
 // #include "pcie.hpp"
 #include "pcieslots.hpp"
-// #include "pcie_slots.hpp"
+#include "pcie_slots.hpp"
 // #include "power.hpp"
 // #include "power_subsystem.hpp"
 // #include "power_supply.hpp"
-// #include "processor.hpp"
+#include "processor.hpp"
 // #include "redfish_sessions.hpp"
 #include "redfish_v1.hpp"
 #include "roles.hpp"
@@ -360,9 +360,9 @@ class RedfishService
 //         requestRoutesHypervisorSystems(app);
 
         requestRoutesTelemetryService(app);
-//         requestRoutesMetricReportDefinitionCollection(app);
+        requestRoutesMetricReportDefinitionCollection(app);
         requestRoutesMetricReportCollection(app);
-//         requestRoutesMetricReportDefinition(app);
+        requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReport(app);
 //         requestRoutesFabricCollection(app);
 //         requestRoutesFabric(app);
