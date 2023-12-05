@@ -15,13 +15,13 @@
 */
 #pragma once
 
-// #include "account_service.hpp"
+#include "account_service.hpp"
 // #include "assembly.hpp"
 // #include "aggregation_service.hpp"
 #include "bios.hpp"
 // #include "boot_options.hpp"
 #include "cable.hpp"
-// #include "certificate_service.hpp"
+#include "certificate_service.hpp"
 #include "chassis.hpp"
 // #include "component_integrity.hpp"
 // #include "control.hpp"
@@ -29,9 +29,9 @@
 // #include "fabric.hpp"
 // #include "host_interface.hpp"
 #include "environment_metrics.hpp"
-// #include "ethernet.hpp"
- #include "event_service.hpp"
- #include "eventservice_sse.hpp"
+#include "ethernet.hpp"
+#include "event_service.hpp"
+#include "eventservice_sse.hpp"
 // #include "fabric_adapters.hpp"
 // #include "fan.hpp"
 // #include "hypervisor_system.hpp"
@@ -41,7 +41,7 @@
 #include "memory.hpp"
 // #include "message_registries.hpp"
 #include "metric_report.hpp"
-// #include "metric_report_definition.hpp"
+#include "metric_report_definition.hpp"
 
 // #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
 // #include "network_adapters.hpp"
@@ -55,11 +55,11 @@
 // #include "nvidia_oem_dpu.hpp"
 // #include "pcie.hpp"
 #include "pcieslots.hpp"
-// #include "pcie_slots.hpp"
+#include "pcie_slots.hpp"
 // #include "power.hpp"
 // #include "power_subsystem.hpp"
 // #include "power_supply.hpp"
-// #include "processor.hpp"
+#include "processor.hpp"
 // #include "redfish_sessions.hpp"
 #include "redfish_v1.hpp"
 #include "roles.hpp"
@@ -98,27 +98,27 @@ class RedfishService
     {
 //         requestAssemblyRoutes(app);
         requestPcieSlotsRoutes(app);
-//         if (persistent_data::getConfig().isTLSAuthEnabled())
-//         {
-//         requestAccountServiceRoutes(app);
-//         }
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+         requestAccountServiceRoutes(app);
+	}
 // #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
 //         requestRoutesAggregationService(app);
 //         requestRoutesAggregationSourceCollection(app);
 //         requestRoutesAggregationSource(app);
 // #endif
-//         if (persistent_data::getConfig().isTLSAuthEnabled())
-//         {
-        requestRoutesRoles(app);
-        requestRoutesRoleCollection(app);
-//         }
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+	{
+            requestRoutesRoles(app);
+            requestRoutesRoleCollection(app);
+	}
         // requestRoutesServiceRoot(app);
 //         requestRoutesNetworkProtocol(app);
 //         if (persistent_data::getConfig().isTLSAuthEnabled())
 //         {
 //             requestRoutesSession(app);
 //         }
-//         requestEthernetInterfacesRoutes(app);
+         requestEthernetInterfacesRoutes(app);
 // #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
 // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
 //         requestRoutesThermal(app);
@@ -326,13 +326,13 @@ class RedfishService
 //         requestRoutesMessageRegistryFileCollection(app);
 //         requestRoutesMessageRegistryFile(app);
 //         requestRoutesMessageRegistry(app);
-//         if (persistent_data::getConfig().isTLSAuthEnabled())
-//         {
-//             requestRoutesCertificateService(app);
-//             requestRoutesHTTPSCertificate(app);
-//             requestRoutesLDAPCertificate(app);
-//             requestRoutesTrustStoreCertificate(app);
-//         }
+         if (persistent_data::getConfig().isTLSAuthEnabled())
+         {
+             requestRoutesCertificateService(app);
+             requestRoutesHTTPSCertificate(app);
+             requestRoutesLDAPCertificate(app);
+             requestRoutesTrustStoreCertificate(app);
+         }
 //         requestRoutesSystemPCIeFunctionCollection(app);
 //         requestRoutesSystemPCIeFunction(app);
 //         requestRoutesSystemPCIeDeviceCollection(app);
@@ -360,9 +360,9 @@ class RedfishService
 //         requestRoutesHypervisorSystems(app);
 
         requestRoutesTelemetryService(app);
-//         requestRoutesMetricReportDefinitionCollection(app);
+        requestRoutesMetricReportDefinitionCollection(app);
         requestRoutesMetricReportCollection(app);
-//         requestRoutesMetricReportDefinition(app);
+        requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReport(app);
 //         requestRoutesFabricCollection(app);
 //         requestRoutesFabric(app);
