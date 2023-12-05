@@ -15,13 +15,13 @@
 */
 #pragma once
 
-// #include "account_service.hpp"
+#include "account_service.hpp"
 // #include "assembly.hpp"
 // #include "aggregation_service.hpp"
 #include "bios.hpp"
 // #include "boot_options.hpp"
 #include "cable.hpp"
-// #include "certificate_service.hpp"
+#include "certificate_service.hpp"
 #include "chassis.hpp"
 // #include "component_integrity.hpp"
 // #include "control.hpp"
@@ -29,7 +29,7 @@
 // #include "fabric.hpp"
 // #include "host_interface.hpp"
 #include "environment_metrics.hpp"
-// #include "ethernet.hpp"
+#include "ethernet.hpp"
 // #include "event_service.hpp"
 // #include "eventservice_sse.hpp"
 // #include "fabric_adapters.hpp"
@@ -98,27 +98,27 @@ class RedfishService
     {
 //         requestAssemblyRoutes(app);
         requestPcieSlotsRoutes(app);
-//         if (persistent_data::getConfig().isTLSAuthEnabled())
-//         {
-//         requestAccountServiceRoutes(app);
-//         }
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+         requestAccountServiceRoutes(app);
+	}
 // #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
 //         requestRoutesAggregationService(app);
 //         requestRoutesAggregationSourceCollection(app);
 //         requestRoutesAggregationSource(app);
 // #endif
-//         if (persistent_data::getConfig().isTLSAuthEnabled())
-//         {
-        requestRoutesRoles(app);
-        requestRoutesRoleCollection(app);
-//         }
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+	{
+            requestRoutesRoles(app);
+            requestRoutesRoleCollection(app);
+	}
         // requestRoutesServiceRoot(app);
 //         requestRoutesNetworkProtocol(app);
 //         if (persistent_data::getConfig().isTLSAuthEnabled())
 //         {
 //             requestRoutesSession(app);
 //         }
-//         requestEthernetInterfacesRoutes(app);
+         requestEthernetInterfacesRoutes(app);
 // #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
 // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
 //         requestRoutesThermal(app);
@@ -326,13 +326,13 @@ class RedfishService
 //         requestRoutesMessageRegistryFileCollection(app);
 //         requestRoutesMessageRegistryFile(app);
 //         requestRoutesMessageRegistry(app);
-//         if (persistent_data::getConfig().isTLSAuthEnabled())
-//         {
-//             requestRoutesCertificateService(app);
-//             requestRoutesHTTPSCertificate(app);
-//             requestRoutesLDAPCertificate(app);
-//             requestRoutesTrustStoreCertificate(app);
-//         }
+         if (persistent_data::getConfig().isTLSAuthEnabled())
+         {
+             requestRoutesCertificateService(app);
+             requestRoutesHTTPSCertificate(app);
+             requestRoutesLDAPCertificate(app);
+             requestRoutesTrustStoreCertificate(app);
+         }
 //         requestRoutesSystemPCIeFunctionCollection(app);
 //         requestRoutesSystemPCIeFunction(app);
 //         requestRoutesSystemPCIeDeviceCollection(app);
