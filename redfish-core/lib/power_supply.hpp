@@ -479,9 +479,13 @@ inline void requestRoutesPowerSupplyCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/PowerSubsystem/PowerSupplies/")
         .privileges(redfish::privileges::getPower)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 auto getChassisID =
                     [asyncResp, chassisID](
                         const std::optional<std::string>& validChassisID) {
@@ -507,9 +511,13 @@ inline void requestRoutesPowerSupply(App& app)
         app, "/redfish/v1/Chassis/<str>/PowerSubsystem/PowerSupplies/<str>/")
         .privileges(redfish::privileges::getPower)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID, const std::string& powerSupplyID) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 auto getChassisID =
                     [asyncResp, chassisID, powerSupplyID](
                         const std::optional<std::string>& validChassisID) {

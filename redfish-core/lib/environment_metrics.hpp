@@ -1147,9 +1147,13 @@ inline void requestRoutesEnvironmentMetrics(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/EnvironmentMetrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 auto getChassisPath =
                     [asyncResp, chassisID](
                         const std::optional<std::string>& validChassisPath) {
@@ -1940,10 +1944,14 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                       "/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
-                                              const std::shared_ptr<
-                                                  bmcweb::AsyncResp>& asyncResp,
-                                              const std::string& processorId) {
+            boost::beast::http::verb::
+                get)([&app](const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& processorId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string envMetricsURI =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
             envMetricsURI += processorId;
@@ -1981,9 +1989,13 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
         .privileges(redfish::privileges::patchProcessor)
         .methods(
             boost::beast::http::verb::
-                patch)([](const crow::Request& req,
+                patch)([&app](const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& processorId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::optional<nlohmann::json> powerLimit;
             std::optional<nlohmann::json> oemObject;
 
@@ -2186,9 +2198,13 @@ inline void requestRoutesMemoryEnvironmentMetrics(App& app)
                       "/Memory/<str>/EnvironmentMetrics")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& dimmId) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& dimmId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 std::string envMetricsURI =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/";
                 envMetricsURI += dimmId;
@@ -2262,9 +2278,13 @@ inline void requestRoutesEdppReset(App& app)
         "EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& processorId) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 redfish::processor_utils::getProcessorObject(
                     asyncResp, processorId,
                     [](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
