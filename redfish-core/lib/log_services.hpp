@@ -61,6 +61,11 @@
 #include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
+#include <sdbusplus/asio/connection.hpp>
+#include <sdbusplus/asio/property.hpp>
+#include <sdbusplus/exception.hpp>
+#include <sdbusplus/message.hpp>
+#include <sdbusplus/message/native_types.hpp>
 
 #include <array>
 #include <charconv>
@@ -2688,8 +2693,8 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             }
 
             const uint32_t* id = nullptr;
-            std::time_t timestamp{};
-            std::time_t updateTimestamp{};
+            const uint64_t* timestamp = nullptr;
+            const uint64_t* updateTimestamp = nullptr;
             const std::string* severity = nullptr;
             const std::string* message = nullptr;
             const std::string* filePath = nullptr;
@@ -2749,7 +2754,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/"
                     "EventLog/Entries/",
                     "v1_9_0", std::to_string(*id), "System Event Log Entry",
-                    redfish::time_utils::getDateTimeStdtime(timestamp),
+                    redfish::time_utils::getDateTimeStdtime(*timestamp),
                     messageId, messageArgs, *resolution, resolved, *severity);
 
                 origin_utils::convertDbusObjectToOriginOfCondition(
@@ -4975,7 +4980,7 @@ inline void requestRoutesCrashdumpFile(App& app)
                     asyncResp->res,
                 boost::urls::format(
                     "/redfish/v1/Systems/{}/LogServices/Crashdump/Entries/{}/{}",
-                    PLATFORMSYSTEMID, logID, filename)); 
+                    PLATFORMSYSTEMID, logID, fileName)); 
                 return;
             }
 
@@ -4986,7 +4991,7 @@ inline void requestRoutesCrashdumpFile(App& app)
                     asyncResp->res,
                 boost::urls::format(
                     "/redfish/v1/Systems/{}/LogServices/Crashdump/Entries/{}/{}",
-                    PLATFORMSYSTEMID, logID, filename));
+                    PLATFORMSYSTEMID, logID, fileName));
 
                 return;
             }
@@ -4997,7 +5002,7 @@ inline void requestRoutesCrashdumpFile(App& app)
                     asyncResp->res,
                     boost::urls::format(
                         "/redfish/v1/Systems/{}/LogServices/Crashdump/Entries/{}/{}",
-                        PLATFORMSYSTEMID, logID, filename));
+                        PLATFORMSYSTEMID, logID, fileName));
 
                 return;
             }
@@ -5769,7 +5774,7 @@ static void
         bootIndex);
 }
 
-static void getPostCodeForBoot(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+static void getPostCodeForBoot(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                const uint16_t bootIndex,
                                const uint16_t bootCount,
                                const uint64_t entryCount, const uint64_t skip,
@@ -5892,50 +5897,6 @@ inline void requestRoutesPostCodesEntryCollection(App& app)
     });
 }
 
-/**
- * @brief Parse post code ID and get the current value and index value
- *        eg: postCodeID=B1-2, currentValue=1, index=2
- *
- * @param[in]  postCodeID     Post Code ID
- * @param[out] currentValue   Current value
- * @param[out] index          Index value
- *
- * @return bool true if the parsing is successful, false the parsing fails
- */
-inline static bool parsePostCode(const std::string& postCodeID,
-                                 uint64_t& currentValue, uint16_t& index)
-{
-    std::vector<std::string> split;
-    boost::algorithm::split(split, postCodeID, boost::is_any_of("-"));
-    if (split.size() != 2 || split[0].length() < 2 || split[0].front() != 'B')
-    {
-        return false;
-    }
-
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    const char* start = split[0].data() + 1;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    const char* end = split[0].data() + split[0].size();
-    auto [ptrIndex, ecIndex] = std::from_chars(start, end, index);
-
-    if (ptrIndex != end || ecIndex != std::errc())
-    {
-        return false;
-    }
-
-    start = split[1].data();
-
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    end = split[1].data() + split[1].size();
-    auto [ptrValue, ecValue] = std::from_chars(start, end, currentValue);
-    if (ptrValue != end || ecValue != std::errc())
-    {
-        return false;
-    }
-
-    return true;
-}
-
 inline void requestRoutesPostCodesEntryAdditionalData(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -6042,34 +6003,7 @@ inline void requestRoutesPostCodesEntry(App& app)
                                        PLATFORMSYSTEMID);
             return;
         }                    
-        uint16_t bootIndex = 0;
-        uint64_t codeIndex = 0;
-        if (!parsePostCode(targetID, codeIndex, bootIndex))
-        {
-            // Requested ID was not found
-            messages::resourceMissingAtURI(
-                asyncResp->res,
-                boost::urls::format(
-                    "/redfish/v1/Systems/{}/LogServices/PostCodes/Entries/{}",
-                    PLATFORMSYSTEMID, targetID));
-            return;
-        }
-        if (bootIndex == 0 || codeIndex == 0)
-        {
-            BMCWEB_LOG_DEBUG("Get Post Code invalid entry string {}", targetID);
-        }
-
-        asyncResp->res.jsonValue["@odata.type"] = "#LogEntry.v1_4_0.LogEntry";
-        asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-            "/LogServices/PostCodes/Entries";
-        asyncResp->res.jsonValue["Name"] = "BIOS POST Code Log Entries";
-        asyncResp->res.jsonValue["Description"] =
-            "Collection of POST Code Log Entries";
-        asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
-        asyncResp->res.jsonValue["Members@odata.count"] = 0;
-
-        getPostCodeForEntry(asyncResp, bootIndex, codeIndex);
+        getPostCodeForEntry(asyncResp, targetID);
     });
 }
         
