@@ -638,6 +638,13 @@ inline void getHostState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
                 aResp->res.jsonValue["PowerState"] = "PoweringOff";
                 aResp->res.jsonValue["Status"]["State"] = "Disabled";
             }
+            else if (
+                hostState ==
+                "xyz.openbmc_project.State.Host.HostState.Standby")
+            {
+                aResp->res.jsonValue["PowerState"] = "Paused";
+                aResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
+            }
             else
             {
                 aResp->res.jsonValue["PowerState"] = "Off";
