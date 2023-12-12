@@ -98,8 +98,10 @@ inline void handleTrustedComponentsCollectionGet(
             "#TrustedComponentCollection.TrustedComponentCollection";
         asyncResp->res.jsonValue["Name"] = "Trusted Component Collection";
         asyncResp->res.jsonValue["@odata.id"] = collectionPath;
+        constexpr std::array<std::string_view, 1> interfaces{
+        "xyz.openbmc_project.Inventory.Item.Tpm"};
         redfish::collection_util::getCollectionMembers(
-            asyncResp, collectionPath, trustedComponentInterfaces,
+            asyncResp, boost::urls::url(collectionPath), interfaces,
             validChassisPath->c_str());
     });
 }

@@ -112,10 +112,11 @@ inline void handleBootOptionCollectionGet(
     aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                         "/BootOptions";
     aResp->res.jsonValue["Name"] = "Boot Option Collection";
-
+    constexpr std::array<std::string_view, 1> interfaces{
+            "xyz.openbmc_project.BIOSConfig.BootOption"};
     collection_util::getCollectionMembers(
-        aResp, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/BootOptions",
-        {"xyz.openbmc_project.BIOSConfig.BootOption"}, "/xyz/openbmc_project/");
+        aResp, boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/BootOptions"),
+        interfaces, "/xyz/openbmc_project/");
 }
 
 inline void handleBootOptionCollectionPost(

@@ -590,10 +590,11 @@ inline void requestRoutesFabricCollection(App& app)
             "#FabricCollection.FabricCollection";
         asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Fabrics";
         asyncResp->res.jsonValue["Name"] = "Fabric Collection";
+        constexpr std::array<std::string_view, 1> interface {"xyz.openbmc_project.Inventory.Item.Fabric"};
 
         collection_util::getCollectionMembers(
-            asyncResp, "/redfish/v1/Fabrics",
-            {"xyz.openbmc_project.Inventory.Item.Fabric"});
+            asyncResp, boost::urls::format("/redfish/v1/Fabrics"),
+            interface, "/xyz/openbmc_project/inventory");
     });
 }
 
@@ -746,9 +747,12 @@ inline void requestRoutesSwitchCollection(App& app)
                 {
                     continue;
                 }
+                constexpr std::array<std::string_view, 1> interface {
+                    "xyz.openbmc_project.Inventory.Item.Switch"
+                    };
                 collection_util::getCollectionMembers(
-                    asyncResp, "/redfish/v1/Fabrics/" + fabricId + "/Switches",
-                    {"xyz.openbmc_project.Inventory.Item.Switch"},
+                    asyncResp, boost::urls::format("/redfish/v1/Fabrics/" + fabricId + "/Switches"),
+                    interface,
                     object.c_str());
                 return;
             }
@@ -1601,10 +1605,10 @@ inline void requestRoutesPortCollection(App& app)
                         {
                             continue;
                         }
+                         constexpr std::array<std::string_view, 1> interface {"xyz.openbmc_project.Inventory.Item.Port"};
                         collection_util::getCollectionMembers(
-                            asyncResp, portsURI,
-                            {"xyz.openbmc_project.Inventory.Item."
-                             "Port"},
+                            asyncResp, boost::urls::format(portsURI),
+                            interface,
                             object.c_str());
                         return;
                     }
@@ -1688,9 +1692,10 @@ inline void requestRoutesZoneCollection(App& app)
                 {
                     continue;
                 }
+                constexpr std::array<std::string_view, 1> interface {"xyz.openbmc_project.Inventory.Item.Zone"};
                 collection_util::getCollectionMembers(
-                    asyncResp, "/redfish/v1/Fabrics/" + fabricId + "/Zones",
-                    {"xyz.openbmc_project.Inventory.Item.Zone"},
+                    asyncResp, boost::urls::format("/redfish/v1/Fabrics/" + fabricId + "/Zones"),
+                    interface,
                     object.c_str());
                 return;
             }
@@ -1846,9 +1851,10 @@ inline void requestRoutesEndpointCollection(App& app)
                 {
                     continue;
                 }
+                constexpr std::array<std::string_view, 1> interface {"xyz.openbmc_project.Inventory.Item.Endpoint"};
                 collection_util::getCollectionMembers(
-                    asyncResp, "/redfish/v1/Fabrics/" + fabricId + "/Endpoints",
-                    {"xyz.openbmc_project.Inventory.Item.Endpoint"},
+                    asyncResp, boost::urls::format("/redfish/v1/Fabrics/" + fabricId + "/Endpoints"),
+                    interface,
                     object.c_str());
                 return;
             }
