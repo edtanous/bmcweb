@@ -74,7 +74,7 @@
 #include "telemetry_service.hpp"
 #include "thermal.hpp"
 #include "thermal_subsystem.hpp"
-// #include "trigger.hpp"
+#include "trigger.hpp"
 #include "trusted_components.hpp"
 // #include "update_service.hpp"
  #include "virtual_media.hpp"
@@ -378,10 +378,10 @@ class RedfishService
 //         requestRoutesZoneCollection(app);
 //         requestRoutesZone(app);
 
-// #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-//         requestRoutesTriggerCollection(app);
-//         requestRoutesTrigger(app);
-// #endif
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+        requestRoutesTriggerCollection(app);
+        requestRoutesTrigger(app);
+#endif
 //         requestRoutesEROTChassisCertificate(app);
 // #ifdef BMCWEB_ENABLE_DOT
 //         requestRoutesEROTChassisDOT(app);
