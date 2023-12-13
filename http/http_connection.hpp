@@ -390,7 +390,7 @@ class Connection :
         {
             return;
         }
-        req->ipAddress = ip;
+        req->ipAddress = std::move(ip);
     }
 
     boost::system::error_code getClientIp(boost::asio::ip::address& ip)
@@ -616,7 +616,8 @@ class Connection :
 
         std::weak_ptr<Connection<Adaptor, Handler>> weakSelf = weak_from_this();
         timer.expires_after(timeout);
-        timer.async_wait([weakSelf](const boost::system::error_code& ec) {
+        timer.async_wait([weakSelf{std::move(weakSelf)}](
+                             const boost::system::error_code& ec) {
             // Note, we are ignoring other types of errors here;  If the timer
             // failed for any reason, we should still close the connection
             std::shared_ptr<Connection<Adaptor, Handler>> self =

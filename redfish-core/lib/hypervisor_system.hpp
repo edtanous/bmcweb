@@ -1008,7 +1008,7 @@ inline void handleHypervisorSystemResetPost(
         *crow::connections::systemBus, "xyz.openbmc_project.State.Hypervisor",
         "/xyz/openbmc_project/state/hypervisor0",
         "xyz.openbmc_project.State.Host", "RequestedHostTransition", command,
-        [asyncResp, resetType](const boost::system::error_code& ec) {
+        [asyncResp, resetType{std::move(resetType)}](const boost::system::error_code& ec) {
         if (ec)
         {
             BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);

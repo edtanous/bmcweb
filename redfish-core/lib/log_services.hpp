@@ -2350,7 +2350,7 @@ inline void requestRoutesSystemHostLoggerLogEntry(App& app)
 
         uint64_t idInt = 0;
 
-        auto [ptr, ec] = std::from_chars(&*targetID.begin(), &*targetID.end(),
+        auto [ptr, ec] = std::from_chars(&targetID.front(), &targetID.back(),
                                          idInt);
         if (ec == std::errc::invalid_argument ||
             ec == std::errc::result_out_of_range)
@@ -3903,21 +3903,21 @@ inline static bool parsePostCode(const std::string& postCodeID,
         return false;
     }
 
-    auto start = std::next(split[0].begin());
-    auto end = split[0].end();
-    auto [ptrIndex, ecIndex] = std::from_chars(&*start, &*end, index);
+    char* start = std::next(&split[0].front());
+    char* end = &split[0].back();
+    auto [ptrIndex, ecIndex] = std::from_chars(start, end, index);
 
-    if (ptrIndex != &*end || ecIndex != std::errc())
+    if (ptrIndex != end || ecIndex != std::errc())
     {
         return false;
     }
 
-    start = split[1].begin();
-    end = split[1].end();
+    start = &split[1].front();
+    end = &split[1].back();
 
     auto [ptrValue, ecValue] = std::from_chars(&*start, &*end, currentValue);
 
-    return ptrValue == &*end && ecValue == std::errc();
+    return ptrValue == end && ecValue == std::errc();
 }
 
 static bool fillPostCodeEntry(
@@ -3930,7 +3930,10 @@ static bool fillPostCodeEntry(
     // Get the Message from the MessageRegistry
     const registries::Message* message =
         registries::getMessage("OpenBMC.0.2.BIOSPOSTCode");
-
+    if (message == nullptr)
+    {
+        return false;
+    }
     uint64_t currentCodeIndex = 0;
     uint64_t firstCodeTimeUs = 0;
     for (const std::pair<uint64_t, std::tuple<uint64_t, std::vector<uint8_t>>>&
@@ -4007,10 +4010,7 @@ static bool fillPostCodeEntry(
 
         // Get Severity template from message registry
         std::string severity;
-        if (message != nullptr)
-        {
-            severity = message->messageSeverity;
-        }
+        severity = message->messageSeverity;
 
         // Format entry
         nlohmann::json::object_t bmcLogEntry;

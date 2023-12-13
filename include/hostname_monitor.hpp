@@ -28,7 +28,10 @@ inline void installCertificate(const std::filesystem::path& certPath)
 
         BMCWEB_LOG_INFO("Replace HTTPs Certificate Success, "
                         "remove temporary certificate file..");
-        remove(certPath.c_str());
+        if (remove(certPath.c_str()) != 0)
+        {
+            BMCWEB_LOG_ERROR("Failed to remove file {}", certPath.string());
+        }
     },
         "xyz.openbmc_project.Certs.Manager.Server.Https",
         "/xyz/openbmc_project/certs/server/https/1",

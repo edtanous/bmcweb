@@ -714,6 +714,10 @@ inline void addPCIeFunctionProperties(
         const std::string* strProperty =
             std::get_if<std::string>(&property.second);
 
+        if (strProperty == nullptr)
+        {
+            continue;
+        }
         if (property.first == functionName + "DeviceId")
         {
             resp.jsonValue["DeviceId"] = *strProperty;
@@ -803,8 +807,8 @@ inline void
 
     uint64_t pcieFunctionId = 0;
     std::from_chars_result result = std::from_chars(
-        &*pcieFunctionIdStr.begin(), &*pcieFunctionIdStr.end(), pcieFunctionId);
-    if (result.ec != std::errc{} || result.ptr != &*pcieFunctionIdStr.end())
+        &pcieFunctionIdStr.front(), &pcieFunctionIdStr.back(), pcieFunctionId);
+    if (result.ec != std::errc{} || result.ptr != &pcieFunctionIdStr.back())
     {
         messages::resourceNotFound(asyncResp->res, "PCIeFunction",
                                    pcieFunctionIdStr);

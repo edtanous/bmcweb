@@ -450,7 +450,7 @@ inline void
                     {
                         url.set_fragment(
                             ("/Oem/OpenBmc/Fan/FanControllers"_json_pointer /
-                             name)
+                             std::move(name))
                                 .to_string());
                         element["@odata.id"] = std::move(url);
                         element["@odata.type"] = "#OemManager.FanController";
@@ -1388,7 +1388,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
             thermalModeIface};
         dbus::utility::getSubTree(
             "/", 0, thermalModeIfaces,
-            [self](const boost::system::error_code& ec,
+            [self{std::move(self)}](const boost::system::error_code& ec,
                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
             if (ec || subtree.empty())
             {
@@ -1773,7 +1773,7 @@ inline void
     sdbusplus::message::object_path objPath("/xyz/openbmc_project/software");
     dbus::utility::getManagedObjects(
         "xyz.openbmc_project.Software.BMC.Updater", objPath,
-        [asyncResp, firmwareId, runningFirmwareTarget](
+        [asyncResp, firmwareId{std::move(firmwareId)}, runningFirmwareTarget](
             const boost::system::error_code& ec,
             const dbus::utility::ManagedObjectType& subtree) {
         if (ec)
@@ -1908,8 +1908,9 @@ inline void requestRoutesManager(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/bmc/")
         .privileges(redfish::privileges::getManager)
         .methods(boost::beast::http::verb::get)(
-            [&app, uuid](const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            [&app, uuid{std::move(uuid)}](
+                const crow::Request& req,
+                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;

@@ -194,9 +194,18 @@ inline void vlog(const FormatString& format, std::format_args&& args)
     constexpr std::string_view levelString = mapLogLevelFromName[stringIndex];
     std::string_view filename = format.loc.file_name();
     filename = filename.substr(filename.rfind('/') + 1);
-    std::cout << std::format("[{} {}:{}] ", levelString, filename,
-                             format.loc.line())
-              << std::vformat(format.str, args) << std::endl;
+
+    try
+    {
+        std::cout << std::format("[{} {}:{}] {}\n", levelString, filename,
+                                 format.loc.line(),
+                                 std::vformat(format.str, args))
+                  << std::flush;
+    }
+    catch (const std::format_error&)
+    {
+        // Do nothing
+    }
 }
 } // namespace crow
 

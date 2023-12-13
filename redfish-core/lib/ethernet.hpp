@@ -793,7 +793,7 @@ inline void createIPv6(const std::string& ifaceId, uint8_t prefixLength,
  */
 template <typename CallbackFunc>
 void getEthernetIfaceData(const std::string& ethifaceId,
-                          CallbackFunc&& callback)
+                          CallbackFunc callback)
 {
     sdbusplus::message::object_path path("/xyz/openbmc_project/network");
     dbus::utility::getManagedObjects(

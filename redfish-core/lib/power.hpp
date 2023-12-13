@@ -143,9 +143,9 @@ inline void requestRoutesPower(App& app)
         // chassis power limit
 
         using Mapper = dbus::utility::MapperGetSubTreePathsResponse;
-        auto chassisHandler =
-            [sensorAsyncResp](const boost::system::error_code& ec2,
-                              const Mapper& chassisPaths) {
+        auto chassisHandler = [sensorAsyncResp{std::move(sensorAsyncResp)}](
+                                  const boost::system::error_code& ec2,
+                                  const Mapper& chassisPaths) {
             if (ec2)
             {
                 BMCWEB_LOG_ERROR(

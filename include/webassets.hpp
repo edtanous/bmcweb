@@ -89,7 +89,7 @@ inline void requestRoutes(App& app)
         else if (std::filesystem::is_regular_file(dir))
         {
             std::string extension = relativePath.extension();
-            std::filesystem::path webpath = relativePath;
+            std::filesystem::path webpath = std::move(relativePath);
             const char* contentEncoding = nullptr;
 
             if (extension == ".gz")

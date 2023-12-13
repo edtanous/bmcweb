@@ -225,7 +225,7 @@ inline void getValidFabricAdapterPath(
     dbus::utility::getSubTree(
         "/xyz/openbmc_project/inventory", 0, interfaces,
         [adapterId, asyncResp,
-         callback](const boost::system::error_code& ec,
+         callback{std::move(callback)}](const boost::system::error_code& ec,
                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
         {

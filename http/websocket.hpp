@@ -94,8 +94,8 @@ class ConnectionImpl : public Connection
         std::string protocolHeader = req.req[bf::sec_websocket_protocol];
 
         ws.set_option(boost::beast::websocket::stream_base::decorator(
-            [session{session},
-             protocolHeader](boost::beast::websocket::response_type& m) {
+            [session{session}, protocolHeader{std::move(protocolHeader)}](
+                boost::beast::websocket::response_type& m) {
 
 #ifndef BMCWEB_INSECURE_DISABLE_CSRF_PREVENTION
             if (session != nullptr)

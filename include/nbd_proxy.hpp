@@ -64,7 +64,10 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
         peerSocket.close(ec);
 
         BMCWEB_LOG_DEBUG("std::remove({})", socketId);
-        std::remove(socketId.c_str());
+        if (std::remove(socketId.c_str()) < 0)
+        {
+            BMCWEB_LOG_ERROR("Failed to remove socket");
+        }
 
         crow::connections::systemBus->async_method_call(
             dbus::utility::logError, "xyz.openbmc_project.VirtualMedia", path,
@@ -315,7 +318,10 @@ inline void
 
     // If the socket file exists (i.e. after bmcweb crash),
     // we cannot reuse it.
-    std::remove((*socketValue).c_str());
+    if (std::remove((*socketValue).c_str()) != 0)
+    {
+        BMCWEB_LOG_DEBUG("Ignoring failed socket removal");
+    }
 
     sessions[&conn] = std::make_shared<NbdProxyServer>(
         conn, *socketValue, *endpointValue, *endpointObjectPath);

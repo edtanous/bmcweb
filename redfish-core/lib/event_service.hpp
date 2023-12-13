@@ -738,7 +738,7 @@ inline void requestRoutesEventDestination(App& app)
                     fields.set(it.key(), *value);
                 }
             }
-            subValue->httpHeaders = fields;
+            subValue->httpHeaders = std::move(fields);
         }
 
         if (retryPolicy)

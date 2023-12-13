@@ -78,10 +78,6 @@ inline std::optional<std::chrono::milliseconds>
         {
             if (v.front() == 'T')
             {
-                if (stage == ProcessingStage::T)
-                {
-                    return std::nullopt;
-                }
                 v.remove_prefix(1);
                 stage = ProcessingStage::Hours;
                 continue;

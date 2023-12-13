@@ -426,7 +426,7 @@ void getConnections(std::shared_ptr<SensorsAsyncResp> sensorsAsyncResp,
                     Callback&& callback)
 {
     auto objectsWithConnectionCb =
-        [callback](const std::set<std::string>& connections,
+        [callback{std::move(callback)}](const std::set<std::string>& connections,
                    const std::set<std::pair<std::string, std::string>>&
                    /*objectsWithConnection*/) { callback(connections); };
     getObjectsWithConnection(sensorsAsyncResp, sensorNames,
@@ -1451,7 +1451,7 @@ static void getInventoryItemsData(
         sdbusplus::message::object_path path("/xyz/openbmc_project/inventory");
         dbus::utility::getManagedObjects(
             invConnection, path,
-            [sensorsAsyncResp, inventoryItems, invConnections,
+            [sensorsAsyncResp, inventoryItems{std::move(inventoryItems)}, invConnections{std::move(invConnections)},
              callback{std::forward<Callback>(callback)}, invConnectionsIndex](
                 const boost::system::error_code& ec,
                 const dbus::utility::ManagedObjectType& resp) {
@@ -1566,7 +1566,7 @@ static void getInventoryItemsConnections(
             }
         }
 
-        callback(invConnections);
+        callback(std::move(invConnections));
         BMCWEB_LOG_DEBUG("getInventoryItemsConnections respHandler exit");
     });
     BMCWEB_LOG_DEBUG("getInventoryItemsConnections exit");
@@ -1710,7 +1710,7 @@ static void getInventoryItemAssociations(
                 }
             }
         }
-        callback(inventoryItems);
+        callback(std::move(inventoryItems));
         BMCWEB_LOG_DEBUG("getInventoryItemAssociations respHandler exit");
     });
 
@@ -1772,7 +1772,7 @@ void getInventoryLedData(
         const std::string& ledConnection = (*it).second;
         // Response handler for Get State property
         auto respHandler =
-            [sensorsAsyncResp, inventoryItems, ledConnections, ledPath,
+            [sensorsAsyncResp{std::move(sensorsAsyncResp)}, inventoryItems, ledConnections{std::move(ledConnections)}, ledPath,
              callback{std::forward<Callback>(callback)}, ledConnectionsIndex](
                 const boost::system::error_code& ec, const std::string& state) {
             BMCWEB_LOG_DEBUG("getInventoryLedData respHandler enter");
@@ -1865,7 +1865,7 @@ void getInventoryLeds(
     dbus::utility::getSubTree(
         path, 0, interfaces,
         [callback{std::forward<Callback>(callback)}, sensorsAsyncResp,
-         inventoryItems](
+         inventoryItems{std::move(inventoryItems)}](
             const boost::system::error_code& ec,
             const dbus::utility::MapperGetSubTreeResponse& subtree) {
         // Response handler for parsing output from GetSubTree
@@ -2036,8 +2036,8 @@ void getPowerSupplyAttributes(
     // Make call to ObjectMapper to find the PowerSupplyAttributes service
     dbus::utility::getSubTree(
         "/xyz/openbmc_project", 0, interfaces,
-        [callback{std::forward<Callback>(callback)}, sensorsAsyncResp,
-         inventoryItems](
+        [callback{std::forward<Callback>(callback)}, sensorsAsyncResp{std::move(sensorsAsyncResp)},
+         inventoryItems{std::move(inventoryItems)}](
             const boost::system::error_code& ec,
             const dbus::utility::MapperGetSubTreeResponse& subtree) {
         // Response handler for parsing output from GetSubTree
@@ -2390,7 +2390,7 @@ inline void getSensorData(
                                 "/redfish/v1/Chassis/{}/{}",
                                 sensorsAsyncResp->chassisId,
                                 sensorsAsyncResp->chassisSubNode);
-                            url.set_fragment((""_json_pointer / fieldName / "0")
+                            url.set_fragment((""_json_pointer / std::move(fieldName) / "0")
                                                  .to_string());
                             power["@odata.id"] = std::move(url);
                             tempArray.emplace_back(std::move(power));
@@ -2408,12 +2408,11 @@ inline void getSensorData(
                     }
                     else if (fieldName == "Members")
                     {
-                        std::string sensorTypeEscaped(sensorType);
-                        auto remove = std::ranges::remove(sensorTypeEscaped,
+                        std::string sensorId(sensorType);
+                        auto remove = std::ranges::remove(sensorId,
                                                           '_');
-                        sensorTypeEscaped.erase(std::ranges::begin(remove),
-                                                sensorTypeEscaped.end());
-                        std::string sensorId(sensorTypeEscaped);
+                        sensorId.erase(std::ranges::begin(remove),
+                                                sensorId.end());
                         sensorId += "_";
                         sensorId += sensorName;
 
@@ -2632,7 +2631,7 @@ inline void setSensorsOverride(
     }
 
     auto getChassisSensorListCb =
-        [sensorAsyncResp, overrideMap](
+        [sensorAsyncResp, overrideMap{std::move(overrideMap)}](
             const std::shared_ptr<std::set<std::string>>& sensorsList) {
         // Match sensor names in the PATCH request to those managed by the
         // chassis node

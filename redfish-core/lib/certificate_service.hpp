@@ -298,7 +298,7 @@ static void getCertificateProperties(
                      objectPath, certId, certURL);
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objectPath, certs::certPropIntf,
-        [asyncResp, certURL, certId,
+        [asyncResp, certURL{std::move(certURL)}, certId,
          name](const boost::system::error_code& ec,
                const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
@@ -555,7 +555,7 @@ inline void handleReplaceCertificateAction(
     std::shared_ptr<CertificateFile> certFile =
         std::make_shared<CertificateFile>(certificate);
     crow::connections::systemBus->async_method_call(
-        [asyncResp, certFile, objectPath, service, url{*parsedUrl}, id,
+        [asyncResp, certFile, objectPath, service, url{std::move(*parsedUrl)}, id,
          name](const boost::system::error_code& ec) {
         if (ec)
         {

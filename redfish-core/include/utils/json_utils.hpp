@@ -100,17 +100,20 @@ enum class UnpackErrorCode
 template <typename ToType, typename FromType>
 bool checkRange(const FromType& from, std::string_view key)
 {
-    if (from > std::numeric_limits<ToType>::max())
+    if constexpr (!std::is_same_v<ToType, FromType>)
     {
-        BMCWEB_LOG_DEBUG("Value for key {} was greater than max: {}", key,
-                         __PRETTY_FUNCTION__);
-        return false;
-    }
-    if (from < std::numeric_limits<ToType>::lowest())
-    {
-        BMCWEB_LOG_DEBUG("Value for key {} was less than min: {}", key,
-                         __PRETTY_FUNCTION__);
-        return false;
+        if (from > std::numeric_limits<ToType>::max())
+        {
+            BMCWEB_LOG_DEBUG("Value for key {} was greater than max: {}", key,
+                             __PRETTY_FUNCTION__);
+            return false;
+        }
+        if (from < std::numeric_limits<ToType>::lowest())
+        {
+            BMCWEB_LOG_DEBUG("Value for key {} was less than min: {}", key,
+                             __PRETTY_FUNCTION__);
+            return false;
+        }
     }
     if constexpr (std::is_floating_point_v<ToType>)
     {

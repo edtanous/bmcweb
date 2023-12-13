@@ -561,9 +561,10 @@ inline void getLDAPConfigData(const std::string& ldapType,
         ldapEnableInterface, ldapConfigInterface};
 
     dbus::utility::getDbusObject(
-        ldapConfigObjectName, interfaces,
-        [callback, ldapType](const boost::system::error_code& ec,
-                             const dbus::utility::MapperGetObject& resp) {
+        std::move(ldapConfigObjectName), interfaces,
+        [callback{std::forward<CallbackFunc>(callback)},
+         ldapType](const boost::system::error_code& ec,
+                   const dbus::utility::MapperGetObject& resp) {
         if (ec || resp.empty())
         {
             BMCWEB_LOG_WARNING(
@@ -1921,8 +1922,9 @@ inline void handleAccountCollectionPost(
         "/xyz/openbmc_project/user", "xyz.openbmc_project.User.Manager",
         "AllGroups",
         [asyncResp, username, password{std::move(password)}, roleId, enabled,
-         accountTypes](const boost::system::error_code& ec,
-                       const std::vector<std::string>& allGroupsList) {
+         accountTypes{std::move(accountTypes)}](
+            const boost::system::error_code& ec,
+            const std::vector<std::string>& allGroupsList) {
         if (ec)
         {
             BMCWEB_LOG_DEBUG("ERROR with async_method_call");
@@ -2192,13 +2194,13 @@ inline void
     std::optional<bool> locked;
     std::optional<std::vector<std::string>> accountTypes;
 
-    bool userSelf = (username == req.session->username);
-
     if (req.session == nullptr)
     {
         messages::internalError(asyncResp->res);
         return;
     }
+
+    bool userSelf = (username == req.session->username);
 
     Privileges effectiveUserPrivileges =
         redfish::getUserPrivileges(*req.session);
