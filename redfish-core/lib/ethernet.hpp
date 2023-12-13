@@ -1103,7 +1103,7 @@ inline void handleIPv6DefaultGateway(
  */
 template <typename CallbackFunc>
 void getEthernetIfaceData(const std::string& ethifaceId,
-                          CallbackFunc&& callback)
+                          CallbackFunc callback)
 {
     sdbusplus::message::object_path path("/xyz/openbmc_project/network");
     dbus::utility::getManagedObjects(

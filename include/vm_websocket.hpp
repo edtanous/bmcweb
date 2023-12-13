@@ -215,9 +215,16 @@ inline void requestRoutes(App& app)
             return;
         }
 
-        boost::asio::buffer_copy(handler->inputBuffer->prepare(data.size()),
-                                 boost::asio::buffer(data));
-        handler->inputBuffer->commit(data.size());
+        size_t ret =
+            boost::asio::buffer_copy(handler->inputBuffer->prepare(data.size()),
+                                     boost::asio::buffer(data));
+        if (ret != data.size())
+        {
+            conn.close("Buffer overrun");
+            return;
+        }
+
+        handler->inputBuffer->commit(ret);
         handler->doWrite();
     });
 }

@@ -11,7 +11,7 @@ project('bmcweb', 'cpp',
             'cpp_std=c++20',
             'warning_level=3',
             'werror=true',
-           ])
+            ])
 
 # Project related links
 

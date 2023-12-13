@@ -257,18 +257,11 @@ class SessionStore
         }
 
         auto session = std::make_shared<UserSession>(
-            UserSession{uniqueId,
-                        sessionToken,
-                        std::string(username),
-                        csrfToken,
-                        clientId,
+            UserSession{std::move(uniqueId), std::move(sessionToken),
+                        std::string(username), std::move(csrfToken), clientId,
                         redfish::ip_util::toString(clientIp),
-                        std::chrono::steady_clock::now(),
-                        persistence,
-                        false,
-                        isConfigureSelfOnly,
-                        "",
-                        {}});
+                        std::chrono::steady_clock::now(), persistence, false,
+                        isConfigureSelfOnly}, "", {});
         auto it = authTokens.emplace(sessionToken, session);
         // Only need to write to disk if session isn't about to be destroyed.
         needWrite = persistence == PersistenceType::TIMEOUT;

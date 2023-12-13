@@ -438,7 +438,7 @@ class UrlSegmentMatcherVisitor
     std::string_view segment;
 };
 
-inline bool readUrlSegments(boost::urls::url_view url,
+inline bool readUrlSegments(const boost::urls::url_view& url,
                             std::initializer_list<UrlSegment> segments)
 {
     boost::urls::segments_view urlSegments = url.segments();
@@ -482,7 +482,7 @@ inline bool readUrlSegments(boost::urls::url_view url,
 } // namespace details
 
 template <typename... Args>
-inline bool readUrlSegments(boost::urls::url_view url, Args&&... args)
+inline bool readUrlSegments(const boost::urls::url_view& url, Args&&... args)
 {
     return details::readUrlSegments(url, {std::forward<Args>(args)...});
 }
@@ -588,7 +588,7 @@ template <>
 struct adl_serializer<boost::urls::url_view>
 {
     // NOLINTNEXTLINE(readability-identifier-naming)
-    static void to_json(json& j, boost::urls::url_view url)
+    static void to_json(json& j, const boost::urls::url_view& url)
     {
         j = url.buffer();
     }

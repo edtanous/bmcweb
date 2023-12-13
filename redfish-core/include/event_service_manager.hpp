@@ -355,7 +355,8 @@ class Subscription : public persistent_data::UserSubscription
     Subscription(Subscription&&) = delete;
     Subscription& operator=(Subscription&&) = delete;
 
-    Subscription(boost::urls::url_view url, boost::asio::io_context& ioc) :
+    Subscription(const boost::urls::url_view& url,
+                 boost::asio::io_context& ioc) :
         policy(std::make_shared<crow::ConnectionPolicy>())
     {
         destinationUrl = url;
@@ -398,7 +399,7 @@ class Subscription : public persistent_data::UserSubscription
 
     bool sendTestEventLog()
     {
-        nlohmann::json logEntryArray;
+        nlohmann::json::array_t logEntryArray;
         logEntryArray.push_back({});
         nlohmann::json& logEntryJson = logEntryArray.back();
 
@@ -416,7 +417,7 @@ class Subscription : public persistent_data::UserSubscription
         msg["@odata.type"] = "#Event.v1_4_0.Event";
         msg["Id"] = std::to_string(eventSeqNum);
         msg["Name"] = "Event Log";
-        msg["Events"] = logEntryArray;
+        msg["Events"] = std::move(logEntryArray);
 
         std::string strMsg = msg.dump(2, ' ', true,
                                       nlohmann::json::error_handler_t::replace);
@@ -483,7 +484,7 @@ class Subscription : public persistent_data::UserSubscription
         msg["@odata.type"] = "#Event.v1_4_0.Event";
         msg["Id"] = std::to_string(eventSeqNum);
         msg["Name"] = "Event Log";
-        msg["Events"] = logEntryArray;
+        msg["Events"] = std::move(logEntryArray);
         std::string strMsg = msg.dump(2, ' ', true,
                                       nlohmann::json::error_handler_t::replace);
         sendEvent(std::move(strMsg));
@@ -764,8 +765,14 @@ class EventServiceManager
             }
 
             persistent_data::getConfig().writeData();
-            std::remove(eventServiceFile);
-            BMCWEB_LOG_DEBUG("Remove old eventservice config");
+            if (std::remove(eventServiceFile) != 0)
+            {
+                BMCWEB_LOG_ERROR("Failed to remove old eventservice config");
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG("Remove old eventservice config");
+            }
         }
     }
 
