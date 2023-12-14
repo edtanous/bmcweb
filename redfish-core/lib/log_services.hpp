@@ -1554,7 +1554,7 @@ inline void createDumpTaskCallback(
             taskData->messages.emplace_back(retMessage);
 
             boost::urls::url url = boost::urls::format(
-                "/redfish/v1/Managers/" + PLATFORMBMCID + "/LogServices/Dump/Entries/{}", dumpId);
+                "/redfish/v1/Managers/{}/LogServices/Dump/Entries/{}", PLATFORMBMCID,dumpId);
 
             std::string headerLoc = "Location: ";
             headerLoc += url.buffer();
@@ -2637,7 +2637,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                 }
                 entriesArray.push_back(thisEntry);
             }
-            std::ranges::sort(entriesArray, [](const nlohmann::json& left,
+            std::sort(entriesArray.begin(),entriesArray.end(), [](const nlohmann::json& left,
                                                const nlohmann::json& right) {
                 return (left["Id"] <= right["Id"]);
             });
@@ -2754,7 +2754,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/"
                     "EventLog/Entries/",
                     "v1_9_0", std::to_string(*id), "System Event Log Entry",
-                    redfish::time_utils::getDateTimeStdtime(*timestamp),
+                    redfish::time_utils::getDateTimeStdtime(redfish::time_utils::getTimestamp(*timestamp)),
                     messageId, messageArgs, *resolution, resolved, *severity);
 
                 origin_utils::convertDbusObjectToOriginOfCondition(
@@ -2812,12 +2812,10 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                         "Entries/" +
                         std::to_string(*id) + "/attachment";
                 }
-            }
-        },
-            "xyz.openbmc_project.Logging",
-            "/xyz/openbmc_project/logging/entry/" + entryID,
-            "org.freedesktop.DBus.Properties", "GetAll", "");
+	    }
     });
+	    });
+
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/EventLog/Entries/<str>/")
@@ -5760,8 +5758,8 @@ static void
             return;
         }
 
-        aResp->res.jsonValue["Members@odata.count"] =
-            aResp->res.jsonValue["Members"].size();
+        asyncResp->res.jsonValue["Members@odata.count"] =
+            asyncResp->res.jsonValue["Members"].size();
         if (!fillPostCodeEntry(asyncResp, postcode, bootIndex, codeIndex))
         {
             messages::resourceNotFound(asyncResp->res, "LogEntry", entryId);
@@ -5821,7 +5819,7 @@ static void getPostCodeForBoot(const std::shared_ptr<bmcweb::AsyncResp>& asyncRe
         }
         else
         {
-            aResp->res.jsonValue["Members@odata.nextLink"] =
+            asyncResp->res.jsonValue["Members@odata.nextLink"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
                 "/LogServices/PostCodes/Entries?$skip=" +
                 std::to_string(skip + top);
@@ -5851,7 +5849,7 @@ static void
             messages::internalError(asyncResp->res);
             return;
         }
-        getPostCodeForBoot(aResp, 1, bootCount, entryCount, skip, top);
+        getPostCodeForBoot(asyncResp, 1, bootCount, entryCount, skip, top);
     });
 }
 
@@ -5989,7 +5987,7 @@ inline void requestRoutesPostCodesEntry(App& app)
                       "/LogServices/PostCodes/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request&,
+            [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& targetID) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -6829,12 +6827,13 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/DebugTokenService"
-                      "/DiagnosticData/<uint>/attachment")
+                      "/DiagnosticData/<str>/attachment")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const uint32_t& id) {
+               const std::string& idstr) {
+
         std::string_view accept = req.getHeaderValue("Accept");
         if (!accept.empty() &&
             !http_helpers::isContentTypeAllowed(
@@ -6844,6 +6843,9 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
             asyncResp->res.result(boost::beast::http::status::bad_request);
             return;
         }
+
+	uint32_t id = static_cast<uint32_t>(stoi(idstr));
+
         auto dataCount = debugTokenData.size();
         if (dataCount == 0 || id > dataCount - 1)
         {

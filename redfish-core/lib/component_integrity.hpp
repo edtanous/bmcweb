@@ -203,19 +203,12 @@ inline void handleSPDMGETSignedMeasurement(
     std::optional<uint8_t> slotID;
     std::optional<std::vector<uint8_t>> indices;
 
-    // the request body should either be empty (or pure whitespace),
-    // contain an empty json, or be fully valid
-    std::string body = req.body;
-    body.erase(std::remove_if(body.begin(), body.end(), isspace), body.end());
-    if (!body.empty() && body != "{}" &&
-        !json_util::readJsonAction(req, asyncResp->res, "Nonce", nonce,
-                                   "SlotId", slotID, "MeasurementIndices",
-                                   indices))
+  if (!json_util::readJsonPatch(
+            req, asyncResp->res, "Nonce", nonce, "SlotId", slotID, "MeasurementIndices", indices))
     {
-        messages::unrecognizedRequestBody(asyncResp->res);
+	messages::unrecognizedRequestBody(asyncResp->res);
         return;
     }
-
     // If nonce not provided by the client, the SPDM Requester shall
     // generate the nonce. if slotid not provided by the client, the value
     // shall be assumed to be `0` if "MeasurementIndices" not provided by
