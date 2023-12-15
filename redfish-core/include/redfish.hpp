@@ -68,7 +68,7 @@
 #include "sensors.hpp"
 #include "service_conditions.hpp"
 #include "service_root.hpp"
-// #include "storage.hpp"
+#include "storage.hpp"
 #include "systems.hpp"
 #include "task.hpp"
 #include "telemetry_service.hpp"
@@ -167,14 +167,14 @@ class RedfishService
 // #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 //         requestRoutesSplitUpdateService(app);
 // #endif
-//         requestRoutesChassisDrive(app);
-//         requestRoutesChassisDriveName(app);
+        requestRoutesChassisDrive(app);
+        requestRoutesChassisDriveName(app);
 
-//         requestRoutesStorageCollection(app);
-//         requestRoutesStorage(app);
-//         requestRoutesStorageControllerCollection(app);
-//         requestRoutesStorageController(app);
-//         requestRoutesDrive(app);
+        requestRoutesStorageCollection(app);
+        requestRoutesStorage(app);
+        requestRoutesStorageControllerCollection(app);
+        requestRoutesStorageController(app);
+        requestRoutesDrive(app);
 // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesCable(app);
         requestRoutesCableCollection(app);
@@ -256,26 +256,26 @@ class RedfishService
          requestRoutesCrashdumpCollect(app);
 #endif // BMCWEB_ENABLE_REDFISH_CPU_LOG
 
-//         requestRoutesProcessorCollection(app);
-//         requestRoutesProcessor(app);
-//         requestRoutesOperatingConfigCollection(app);
-//         requestRoutesOperatingConfig(app);
-//         requestRoutesProcessorMetrics(app);
-//         requestRoutesProcessorMemoryMetrics(app);
-//         requestRoutesProcessorSettings(app);
-//         requestRoutesProcessorReset(app);
+        requestRoutesProcessorCollection(app);
+        requestRoutesProcessor(app);
+        requestRoutesOperatingConfigCollection(app);
+        requestRoutesOperatingConfig(app);
+        requestRoutesProcessorMetrics(app);
+        requestRoutesProcessorMemoryMetrics(app);
+        requestRoutesProcessorSettings(app);
+        requestRoutesProcessorReset(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesEdppReset(app);
-//         requestRoutesNvidiaManagerResetToDefaultsAction(app);
+        requestRoutesNvidiaManagerResetToDefaultsAction(app);
 
-//         requestRouteSyncRawOobCommand(app);
-//         requestRouteAsyncRawOobCommand(app);
-//         requestRoutesNvidiaAsyncOOBRawCommandActionInfo(app);
-//         requestRoutesNvidiaSyncOOBRawCommandActionInfo(app);
+        requestRouteSyncRawOobCommand(app);
+        requestRouteAsyncRawOobCommand(app);
+        requestRoutesNvidiaAsyncOOBRawCommandActionInfo(app);
+        requestRoutesNvidiaSyncOOBRawCommandActionInfo(app);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-//         requestRoutesProcessorPortCollection(app);
-//         requestRoutesProcessorPort(app);
-//         requestRoutesProcessorPortMetrics(app);
+        requestRoutesProcessorPortCollection(app);
+        requestRoutesProcessorPort(app);
+        requestRoutesProcessorPortMetrics(app);
         requestRoutesMemoryCollection(app);
         requestRoutesMemory(app);
         requestRoutesMemoryMetrics(app);
