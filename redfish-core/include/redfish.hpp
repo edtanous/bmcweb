@@ -23,7 +23,7 @@
 #include "cable.hpp"
 #include "certificate_service.hpp"
 #include "chassis.hpp"
-// #include "component_integrity.hpp"
+#include "component_integrity.hpp"
 #include "control.hpp"
 #include "erot_chassis.hpp"
 #include "fabric.hpp"
@@ -96,28 +96,28 @@ class RedfishService
      */
     explicit RedfishService(App& app)
     {
-//         requestAssemblyRoutes(app);
+        requestAssemblyRoutes(app);
         requestPcieSlotsRoutes(app);
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
          requestAccountServiceRoutes(app);
 	}
-// #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
-//         requestRoutesAggregationService(app);
-//         requestRoutesAggregationSourceCollection(app);
-//         requestRoutesAggregationSource(app);
-// #endif
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+         requestRoutesAggregationService(app);
+         requestRoutesAggregationSourceCollection(app);
+         requestRoutesAggregationSource(app);
+#endif
         if (persistent_data::getConfig().isTLSAuthEnabled())
 	{
             requestRoutesRoles(app);
             requestRoutesRoleCollection(app);
 	}
-        // requestRoutesServiceRoot(app);
-//         requestRoutesNetworkProtocol(app);
-//         if (persistent_data::getConfig().isTLSAuthEnabled())
-//         {
-//             requestRoutesSession(app);
-//         }
+        requestRoutesServiceRoot(app);
+        requestRoutesNetworkProtocol(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            requestRoutesSession(app);
+        }
         requestEthernetInterfacesRoutes(app);
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
@@ -128,15 +128,15 @@ class RedfishService
         requestRoutesThermalSubsystem(app);
         requestRoutesThermalMetrics(app);
 
-// #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
-//         requestRoutesNetworkAdapters(app);
-//         requestRoutesNetworkDeviceFunctions(app);
-//         requestRoutesACDPort(app);
-// #endif
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
+         requestRoutesNetworkAdapters(app);
+         requestRoutesNetworkDeviceFunctions(app);
+         requestRoutesACDPort(app);
+#endif
 
-// #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
-//         requestRoutesNetworkAdapters(app);
-// #endif
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
+         requestRoutesNetworkAdapters(app);
+#endif
 
 #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
         requestRoutesEnvironmentMetrics(app);
@@ -281,21 +281,21 @@ class RedfishService
         requestRoutesMemoryMetrics(app);
 
         requestRoutesSystems(app);
-// #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-//         requestRoutesSystemActionsReset(app);
-//         requestRoutesSystemResetActionInfo(app);
-// #endif
-// #ifdef BMCWEB_ENABLE_BIOS
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+         requestRoutesSystemActionsReset(app);
+         requestRoutesSystemResetActionInfo(app);
+#endif
+#ifdef BMCWEB_ENABLE_BIOS
 
-//         requestRoutesBiosService(app);
-//         requestRoutesBiosSettings(app);
-//         requestRoutesBiosReset(app);
-//         requestRoutesBiosChangePassword(app);
-//         requestRoutesBiosAttrRegistryService(app);
-//         requestRoutesBootOptions(app);
-//         requestRoutesSecureBoot(app);
-//         requestRoutesSecureBootDatabase(app);
-// #endif
+         requestRoutesBiosService(app);
+         requestRoutesBiosSettings(app);
+         requestRoutesBiosReset(app);
+         requestRoutesBiosChangePassword(app);
+         requestRoutesBiosAttrRegistryService(app);
+         requestRoutesBootOptions(app);
+         requestRoutesSecureBoot(app);
+         requestRoutesSecureBootDatabase(app);
+#endif
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE
         requestHostInterfacesRoutes(app);
