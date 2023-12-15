@@ -363,19 +363,19 @@ class RedfishService
         requestRoutesMetricReportCollection(app);
         requestRoutesMetricReportDefinition(app);
         requestRoutesMetricReport(app);
-//         requestRoutesFabricCollection(app);
-//         requestRoutesFabric(app);
-//         requestRoutesSwitchCollection(app);
-//         requestRoutesSwitch(app);
-//         requestRoutesNVSwitchReset(app);
-//         requestRoutesSwitchMetrics(app);
-//         requestRoutesPortCollection(app);
-//         requestRoutesPort(app);
-//         requestRoutesPortMetrics(app);
-//         requestRoutesEndpointCollection(app);
-//         requestRoutesEndpoint(app);
-//         requestRoutesZoneCollection(app);
-//         requestRoutesZone(app);
+        requestRoutesFabricCollection(app);
+        requestRoutesFabric(app);
+        requestRoutesSwitchCollection(app);
+        requestRoutesSwitch(app);
+        requestRoutesNVSwitchReset(app);
+        requestRoutesSwitchMetrics(app);
+        requestRoutesPortCollection(app);
+        requestRoutesPort(app);
+        requestRoutesPortMetrics(app);
+        requestRoutesEndpointCollection(app);
+        requestRoutesEndpoint(app);
+        requestRoutesZoneCollection(app);
+        requestRoutesZone(app);
 
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesTriggerCollection(app);
