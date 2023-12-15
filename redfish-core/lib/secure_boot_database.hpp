@@ -321,16 +321,12 @@ inline void handleCertificateCollectionGet(
         "#CertificateCollection.CertificateCollection";
     aResp->res.jsonValue["Name"] = "Certificate Collection";
     aResp->res.jsonValue["@Redfish.SupportedCertificates"] = {"PEM"};
-
-    collection_util::getCollectionMembers(
-        aResp,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-        "/SecureBoot/SecureBootDatabases/" +
-            databaseId + "/Certificates",
-        {"xyz.openbmc_project.Certs.Certificate"},
+    std::string certURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/SecureBoot/SecureBootDatabases/" + databaseId + "/Certificates";
+    constexpr std::array<std::string_view, 1> interfaces{"xyz.openbmc_project.Certs.Certificate"};
+    collection_util::getCollectionMembers(aResp, boost::urls::url(certURI),
+        interfaces,
         std::string("/xyz/openbmc_project/secureBootDatabase/" + databaseId +
-                    "/certs")
-            .c_str());
+                    "/certs").c_str());
 }
 
 inline void handleCertificateCollectionPost(
@@ -592,12 +588,12 @@ inline void handleSignatureCollectionGet(
         "#SignatureCollection.SignatureCollection";
     aResp->res.jsonValue["Name"] = "Signature Collection";
 
+    std::string signatureURL =  "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/SecureBoot/SecureBootDatabases/" + databaseId + "/Signatures";
+    constexpr std::array<std::string_view, 1> interfaces{"xyz.openbmc_project.BIOSConfig.SecureBootDatabase.Signature"};
     collection_util::getCollectionMembers(
         aResp,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-        "/SecureBoot/SecureBootDatabases/" +
-            databaseId + "/Signatures",
-        {"xyz.openbmc_project.BIOSConfig.SecureBootDatabase.Signature"},
+	boost::urls::url(signatureURL),
+        interfaces,
         std::string("/xyz/openbmc_project/secureBootDatabase/" + databaseId +
                     "/signature")
             .c_str());

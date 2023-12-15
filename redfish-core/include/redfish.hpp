@@ -64,7 +64,7 @@
 #include "redfish_v1.hpp"
 #include "roles.hpp"
 #include "secure_boot.hpp"
-// #include "secure_boot_database.hpp"  
+#include "secure_boot_database.hpp"  
 #include "sensors.hpp"
 #include "service_conditions.hpp"
 #include "service_root.hpp"
@@ -322,9 +322,9 @@ class RedfishService
          requestRoutesSystemHostLoggerLogEntry(app);
 #endif
 
-//         requestRoutesMessageRegistryFileCollection(app);
-//         requestRoutesMessageRegistryFile(app);
-//         requestRoutesMessageRegistry(app);
+         requestRoutesMessageRegistryFileCollection(app);
+	 requestRoutesMessageRegistryFile(app);
+         requestRoutesMessageRegistry(app);
          if (persistent_data::getConfig().isTLSAuthEnabled())
          {
              requestRoutesCertificateService(app);
@@ -332,14 +332,14 @@ class RedfishService
              requestRoutesLDAPCertificate(app);
              requestRoutesTrustStoreCertificate(app);
          }
-//         requestRoutesSystemPCIeFunctionCollection(app);
-//         requestRoutesSystemPCIeFunction(app);
-//         requestRoutesSystemPCIeDeviceCollection(app);
-//         requestRoutesSystemPCIeDevice(app);
-//         requestRoutesChassisPCIeFunctionCollection(app);
-//         requestRoutesChassisPCIeFunction(app);
-//         requestRoutesChassisPCIeDeviceCollection(app);
-//         requestRoutesChassisPCIeDevice(app);
+         requestRoutesSystemPCIeFunctionCollection(app);
+         requestRoutesSystemPCIeFunction(app);
+         requestRoutesSystemPCIeDeviceCollection(app);
+         requestRoutesSystemPCIeDevice(app);
+         requestRoutesChassisPCIeFunctionCollection(app);
+         requestRoutesChassisPCIeFunction(app);
+         requestRoutesChassisPCIeDeviceCollection(app);
+         requestRoutesChassisPCIeDevice(app);
 
         requestRoutesSensorCollection(app);
         requestRoutesSensor(app);
@@ -348,15 +348,15 @@ class RedfishService
         requestRoutesTaskService(app);
         requestRoutesTaskCollection(app);
         requestRoutesTask(app);
-//         requestRoutesEventService(app);
-//         requestRoutesEventServiceSse(app);
-//         requestRoutesEventDestinationCollection(app);
-//         requestRoutesEventDestination(app);
-//         requestRoutesFabricAdapters(app);
-//         requestRoutesFabricAdapterCollection(app);
-//         requestRoutesSubmitTestEvent(app);
+        requestRoutesEventService(app);
+        requestRoutesEventServiceSse(app);
+        requestRoutesEventDestinationCollection(app);
+	requestRoutesEventDestination(app);
+	requestRoutesFabricAdapters(app);
+        requestRoutesFabricAdapterCollection(app);
+        requestRoutesSubmitTestEvent(app);
 
-//         requestRoutesHypervisorSystems(app);
+        requestRoutesHypervisorSystems(app);
 
         requestRoutesTelemetryService(app);
         requestRoutesMetricReportDefinitionCollection(app);
