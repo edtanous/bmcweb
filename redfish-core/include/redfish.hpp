@@ -76,7 +76,7 @@
 #include "thermal_subsystem.hpp"
 #include "trigger.hpp"
 #include "trusted_components.hpp"
-// #include "update_service.hpp"
+#include "update_service.hpp"
 #include "virtual_media.hpp"
 
 namespace redfish
@@ -163,10 +163,10 @@ class RedfishService
         requestRoutesEnvironmentMetrics(app);
         requestRoutesProcessorEnvironmentMetrics(app);
         requestRoutesMemoryEnvironmentMetrics(app);
-//         requestRoutesUpdateService(app);
-// #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-//         requestRoutesSplitUpdateService(app);
-// #endif
+        requestRoutesUpdateService(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesSplitUpdateService(app);
+#endif
         requestRoutesChassisDrive(app);
         requestRoutesChassisDriveName(app);
 
@@ -179,13 +179,13 @@ class RedfishService
         requestRoutesCable(app);
         requestRoutesCableCollection(app);
 // #endif
-// #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||  defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
-//         requestRoutesUpdateServiceActionsSimpleUpdate(app);
-// #endif
-//         requestRoutesSoftwareInventoryCollection(app);
-//         requestRoutesSoftwareInventory(app);
-//         requestRoutesInventorySoftwareCollection(app);
-//         requestRoutesInventorySoftware(app);
+#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||  defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+        requestRoutesUpdateServiceActionsSimpleUpdate(app);
+#endif
+        requestRoutesSoftwareInventoryCollection(app);
+        requestRoutesSoftwareInventory(app);
+        requestRoutesInventorySoftwareCollection(app);
+        requestRoutesInventorySoftware(app);
            requestRoutesSystemLogServiceCollection(app);
 #ifdef BMCWEB_ENABLE_MFG_TEST_API
            requestRoutesEventLogDiagnosticDataCollect(app);
@@ -389,10 +389,10 @@ class RedfishService
         requestRoutesServiceConditions(app);
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
-//        requestRoutesUpdateServiceCommitImage(app);
-//#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-//        requestRoutesComputeDigestPost(app);
-//#endif
+       requestRoutesUpdateServiceCommitImage(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+       requestRoutesComputeDigestPost(app);
+#endif
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
         requestRoutesNvidiaOemBf(app);
 #endif
