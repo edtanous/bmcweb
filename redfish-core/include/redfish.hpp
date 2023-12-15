@@ -381,26 +381,26 @@ class RedfishService
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);
 #endif
-//         requestRoutesEROTChassisCertificate(app);
-// #ifdef BMCWEB_ENABLE_DOT
-//         requestRoutesEROTChassisDOT(app);
-// #endif
-//         requestRoutesComponentIntegrity(app);
-//         requestRoutesServiceConditions(app);
-//         requestRoutesChassisControls(app);
-//         requestRoutesChassisControlsCollection(app);
-//         requestRoutesUpdateServiceCommitImage(app);
-// #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-//         requestRoutesComputeDigestPost(app);
-// #endif
-// #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
-//         requestRoutesNvidiaOemBf(app);
-// #endif
-//         requestRoutesTrustedComponents(app);
-// #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
-//         requestRoutesUpdateServicePublicKeyExchange(app);
-//         requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
-// #endif
+	requestRoutesEROTChassisCertificate(app);
+#ifdef BMCWEB_ENABLE_DOT
+        requestRoutesEROTChassisDOT(app);
+#endif
+        requestRoutesComponentIntegrity(app);
+        requestRoutesServiceConditions(app);
+        requestRoutesChassisControls(app);
+        requestRoutesChassisControlsCollection(app);
+//        requestRoutesUpdateServiceCommitImage(app);
+//#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+//        requestRoutesComputeDigestPost(app);
+//#endif
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
+        requestRoutesNvidiaOemBf(app);
+#endif
+        requestRoutesTrustedComponents(app);
+#ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
+        requestRoutesUpdateServicePublicKeyExchange(app);
+        requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
+#endif
         // Note, this must be the last route registered
         requestRoutesRedfish(app);
     }
