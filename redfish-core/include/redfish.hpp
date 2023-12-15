@@ -77,7 +77,7 @@
 #include "trigger.hpp"
 #include "trusted_components.hpp"
 // #include "update_service.hpp"
- #include "virtual_media.hpp"
+#include "virtual_media.hpp"
 
 namespace redfish
 {
@@ -118,15 +118,15 @@ class RedfishService
 //         {
 //             requestRoutesSession(app);
 //         }
-         requestEthernetInterfacesRoutes(app);
-// #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
-// #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-//         requestRoutesThermal(app);
-//         requestRoutesPower(app);
-// #endif
-// #endif
+        requestEthernetInterfacesRoutes(app);
+#ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+        requestRoutesThermal(app);
+        requestRoutesPower(app);
+#endif
+#endif
         requestRoutesThermalSubsystem(app);
-//         requestRoutesThermalMetrics(app);
+        requestRoutesThermalMetrics(app);
 
 // #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
 //         requestRoutesNetworkAdapters(app);
@@ -138,29 +138,29 @@ class RedfishService
 //         requestRoutesNetworkAdapters(app);
 // #endif
 
-// #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
+#ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
         requestRoutesEnvironmentMetrics(app);
-//         requestRoutesPowerSubsystem(app);
-//         requestRoutesPowerSupply(app);
-//         requestRoutesPowerSupplyCollection(app);
-//         requestRoutesThermalSubsystem(app);
-//         requestRoutesFan(app);
-//         requestRoutesFanCollection(app);
-// #endif
-//         requestRoutesManagerCollection(app);
-//         requestRoutesManager(app);
-//         requestRoutesManagerResetAction(app);
-//         requestRoutesManagerResetActionInfo(app);
-//         requestRoutesManagerResetToDefaultsAction(app);
+        requestRoutesPowerSubsystem(app);
+        requestRoutesPowerSupply(app);
+        requestRoutesPowerSupplyCollection(app);
+        requestRoutesThermalSubsystem(app);
+        requestRoutesFan(app);
+        requestRoutesFanCollection(app);
+#endif
+        requestRoutesManagerCollection(app);
+        requestRoutesManager(app);
+        requestRoutesManagerResetAction(app);
+        requestRoutesManagerResetActionInfo(app);
+        requestRoutesManagerResetToDefaultsAction(app);
 
-//         // requestRoutesManagerDiagnosticData(app);
-//         requestRoutesChassisCollection(app);
-//         requestRoutesChassis(app);
-// #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-//         requestRoutesChassisResetAction(app);
-//         requestRoutesChassisResetActionInfo(app);
-// #endif
-//         requestRoutesEnvironmentMetrics(app);
+        // requestRoutesManagerDiagnosticData(app);
+        requestRoutesChassisCollection(app);
+        requestRoutesChassis(app);
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+        requestRoutesChassisResetAction(app);
+        requestRoutesChassisResetActionInfo(app);
+#endif
+        requestRoutesEnvironmentMetrics(app);
         requestRoutesProcessorEnvironmentMetrics(app);
         requestRoutesMemoryEnvironmentMetrics(app);
 //         requestRoutesUpdateService(app);
@@ -297,13 +297,13 @@ class RedfishService
 //         requestRoutesSecureBootDatabase(app);
 // #endif
 
-// #ifdef BMCWEB_ENABLE_HOST_IFACE
-//         requestHostInterfacesRoutes(app);
-// #endif
+#ifdef BMCWEB_ENABLE_HOST_IFACE
+        requestHostInterfacesRoutes(app);
+#endif
 
-// #ifdef BMCWEB_ENABLE_RMEDIA
-//         requestNBDVirtualMediaRoutes(app);
-// #endif
+#ifdef BMCWEB_ENABLE_RMEDIA
+        requestNBDVirtualMediaRoutes(app);
+#endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
          requestRoutesDBusLogServiceActionsClear(app);
