@@ -153,7 +153,7 @@ class RedfishService
         requestRoutesManagerResetActionInfo(app);
         requestRoutesManagerResetToDefaultsAction(app);
 
-        // requestRoutesManagerDiagnosticData(app);
+        requestRoutesManagerDiagnosticData(app);
         requestRoutesChassisCollection(app);
         requestRoutesChassis(app);
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
