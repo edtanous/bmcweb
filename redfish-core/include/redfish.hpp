@@ -281,12 +281,10 @@ class RedfishService
         requestRoutesMemoryMetrics(app);
 
         requestRoutesSystems(app);
-#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-         requestRoutesSystemActionsReset(app);
-         requestRoutesSystemResetActionInfo(app);
-#endif
+       // The routes requestRoutesSystemActionsReset(app); and requestRoutesSystemResetActionInfo(app)
+       // are enabled in requestRoutesSystems(app) function as per upstream sync
+       // threfore removed from here
 #ifdef BMCWEB_ENABLE_BIOS
-
          requestRoutesBiosService(app);
          requestRoutesBiosSettings(app);
          requestRoutesBiosReset(app);
