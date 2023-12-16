@@ -408,7 +408,7 @@ inline void getSwBIOSUUID(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error on SMBIOS UUID Get: " << ec;
-                messages::internalError(aResp->res);
+		aResp->res.jsonValue["UUID"] = nullptr;
                 return;
             }
             aResp->res.jsonValue["UUID"] = uuid;
