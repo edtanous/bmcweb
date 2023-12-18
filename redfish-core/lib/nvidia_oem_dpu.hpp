@@ -12,6 +12,16 @@ namespace redfish
 {
 namespace bluefield
 {
+    const char* dbusPropertyInterface = "org.freedesktop.DBus.Properties";
+    const char* systemdServiceBf = "org.freedesktop.systemd1";
+    const char* systemdUnitIntfBf = "org.freedesktop.systemd1.Unit";
+
+    const char* switchModeSystemdObj = "/org/freedesktop/systemd1/unit/torswitch_2dmode_2eservice";
+    const char* ctlBMCSwitchModeService = "xyz.openbmc_project.Settings";
+    const char* ctlBMCSwitchModeBMCObj = "/xyz/openbmc_project/control/torswitchportsmode";
+    const char* ctlBMCSwitchModeIntf = "xyz.openbmc_project.Control.TorSwitchPortsMode";
+    const char* ctlBMCSwitchMode = "TorSwitchPortsMode";
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 struct PropertyInfo
 {
@@ -548,6 +558,176 @@ inline void
     messages::success(asyncResp->res);
 }
 
+/**
+ * @brief Retrieve the current switch status and append to the response message
+ *
+ * @param[in] asyncResp Shared pointer to the response message
+ * @return None
+ */
+inline void getOemNvidiaSwitchStatus(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec,
+                    std::variant<std::string>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "DBUS response error for getting OOB status";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            const std::string* strValue = std::get_if<std::string>(&resp);
+            if (strValue == nullptr)
+            {
+                return;
+            }
+            if (*strValue ==
+                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.All")
+            {
+                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = true;
+                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = true;
+                return;
+            }
+            if (*strValue ==
+                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.BMC")
+            {
+                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = true;
+                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
+                return;
+            }
+            if (*strValue ==
+                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.DPU")
+            {
+                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
+                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = true;
+                return;
+            }
+            if (*strValue ==
+                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.None")
+            {
+                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
+                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
+                return;
+            }
+            if (*strValue ==
+                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.Disable")
+            {
+                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
+                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
+                return;
+            }
+        },
+        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface, "Get",
+        ctlBMCSwitchModeIntf, ctlBMCSwitchMode);
+}
+
+/**
+ * @brief Modify switch port status from user requests
+ *
+ * @param[in] asyncResp Shared pointer to the response message
+ * @param[in] bmcOobEnabled true when BMC OOB Port is enabled to access outside network
+ * @param[in] dpuOobEnabled true when DPU OOB Port is enabled to access outside network
+ * @return None
+ */
+inline void
+    requestOemNvidiaSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const bool& bmcOobEnabled, const bool& dpuOobEnabled)
+{
+    std::string method = dpuOobEnabled ? "Enable" : "Disable";
+    std::string strValue;
+    BMCWEB_LOG_DEBUG << "requestOemNvidiaSwitch: " << method.c_str()
+                     << " DPU OOB Port";
+
+    // Only "dpuOobEnabled" take effect.
+    // User can't use redfish to disable the BMC OOB Port.
+    // If user set BMC Port as disabled, it will return actionParameterValueError error.
+    if (bmcOobEnabled == true && dpuOobEnabled == true)
+    {
+        strValue = "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.All";
+    }
+    else if (bmcOobEnabled == true && dpuOobEnabled == false)
+    {
+        strValue = "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.BMC";
+    }
+    else
+    {
+        messages::actionParameterValueError(asyncResp->res, "bmcOobEnabled", "false");
+        return;
+    }
+
+    std::variant<std::string> variantValue(strValue);
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "DBUS response error for setting DPU OOB enable/disable";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            // Reload switch service to make the new configuration take effect
+            crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "DBUS response error for resetting switch mode service";
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            },
+            systemdServiceBf, switchModeSystemdObj, systemdUnitIntfBf, "Restart",
+            "replace");
+        },
+        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface, "Set",
+        ctlBMCSwitchModeIntf, ctlBMCSwitchMode, variantValue);
+
+    messages::success(asyncResp->res);
+}
+
+/**
+ * @brief Reset the switch setting
+ *
+ * @param[in] asyncResp Shared pointer to the response message
+ * @return None
+ */
+inline void resetTorSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    try
+    {
+        boost::process::child execProg("/usr/sbin/mlnx_bf_reset_control", "do_tor_eswitch_reset");
+        execProg.wait();
+        if (!execProg.exit_code())
+        {
+            BMCWEB_LOG_DEBUG << "Reset switch to default";
+        }
+    }
+    catch (const std::runtime_error& e)
+    {
+        BMCWEB_LOG_ERROR << "mlnx_bf_reset_control script failed with error: "
+                         << e.what();
+    }
+
+    // Restore the Dbus property after the switch reset successful
+    std::variant<std::string> variantValue("xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.All");
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "DBUS response error for setting DPU OOB enable/disable";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+        },
+        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface, "Set",
+        ctlBMCSwitchModeIntf, ctlBMCSwitchMode, variantValue);
+
+    messages::success(asyncResp->res);
+}
+
 } // namespace bluefield
 
 inline void requestRoutesNvidiaOemBf(App& app)
@@ -603,6 +783,65 @@ inline void requestRoutesNvidiaOemBf(App& app)
                                                      *bmcRshimEnabled);
                 }
             });
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch")
+        .privileges(redfish::privileges::getSwitch)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                bluefield::getOemNvidiaSwitchStatus(asyncResp);
+            });
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch")
+        .privileges(redfish::privileges::patchSwitch)
+        .methods(boost::beast::http::verb::patch)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                std::optional<nlohmann::json> torSwitchMode;
+                if (!redfish::json_util::readJsonPatch(req, asyncResp->res,
+                                                  "TorSwitchMode", torSwitchMode))
+                {
+                    BMCWEB_LOG_ERROR
+                        << "Illegal Property "
+                        << asyncResp->res.jsonValue.dump(2, ' ', true,
+                                     nlohmann::json::error_handler_t::replace);
+                    return;
+                }
+                if (torSwitchMode)
+                {
+                    std::optional<bool> bmcOobEnabled;
+                    std::optional<bool> dpuOobEnabled;
+                    if (!redfish::json_util::readJson(*torSwitchMode, asyncResp->res,
+                                                      "BmcOobEnabled", bmcOobEnabled,
+                                                      "DpuOobEnabled", dpuOobEnabled))
+                    {
+                        BMCWEB_LOG_ERROR
+                            << "Illegal Property "
+                            << asyncResp->res.jsonValue.dump(
+                                   2, ' ', true,
+                                   nlohmann::json::error_handler_t::replace);
+                        return;
+                    }
+                    bluefield::requestOemNvidiaSwitch(asyncResp, *bmcOobEnabled, *dpuOobEnabled);
+                }
+            });
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch.Reset")
+        .privileges(redfish::privileges::postSwitch)
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
+            bluefield::resetTorSwitch(asyncResp);
+        });
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 
 	    BMCWEB_ROUTE(app, bluefield::hostRhimTarget)
