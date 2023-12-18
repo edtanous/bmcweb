@@ -44,7 +44,6 @@ class StreamingResponseRule : public BaseRule
         myConnection = nullptr;
     }
 
-#ifdef BMCWEB_ENABLE_SSL
     void handleUpgrade(const Request& req, Response&,
                        boost::beast::ssl_stream<boost::asio::ip::tcp::socket>&&
                            adaptor) override
@@ -60,7 +59,6 @@ class StreamingResponseRule : public BaseRule
         myConnection.reset();
         myConnection = nullptr;
     }
-#endif
 
     template <typename Func>
     self_t& onopen(Func f)

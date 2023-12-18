@@ -27,7 +27,6 @@ class WebSocketRule : public BaseRule
         asyncResp->res.result(boost::beast::http::status::not_found);
     }
 
-#ifndef BMCWEB_ENABLE_SSL
     void handleUpgrade(const Request& req,
                        const std::shared_ptr<bmcweb::AsyncResp>& /*asyncResp*/,
                        boost::asio::ip::tcp::socket&& adaptor) override
@@ -41,7 +40,6 @@ class WebSocketRule : public BaseRule
                 messageExHandler, closeHandler, errorHandler);
         myConnection->start();
     }
-#else
     void handleUpgrade(const Request& req,
                        const std::shared_ptr<bmcweb::AsyncResp>& /*asyncResp*/,
                        boost::beast::ssl_stream<boost::asio::ip::tcp::socket>&&
@@ -56,7 +54,6 @@ class WebSocketRule : public BaseRule
                 messageExHandler, closeHandler, errorHandler);
         myConnection->start();
     }
-#endif
 
     template <typename Func>
     self_t& onopen(Func f)
