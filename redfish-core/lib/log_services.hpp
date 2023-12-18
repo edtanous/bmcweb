@@ -1036,31 +1036,31 @@ inline void
                     thisEntry["CPER"]["Oem"]["Nvidia"]["NvSocketNumber"] = nvSocketNumber;
                     }
                     if (pcieVendorID != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieVendorId"] = pcieVendorID;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeVendorId"] = pcieVendorID;
                     }
                     if (pcieDeviceID != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieDeviceId"] = pcieDeviceID;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceId"] = pcieDeviceID;
                     }
                     if (pcieClassCode != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieClassCode"] = pcieClassCode;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeClassCode"] = pcieClassCode;
                     }
                     if (pcieFunctionNumber != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieFunctionNumber"] = pcieFunctionNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeFunctionNumber"] = pcieFunctionNumber;
                     }
                     if (pcieDeviceNumber != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieDeviceNumber"] = pcieDeviceNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceNumber"] = pcieDeviceNumber;
                     }
                     if (pcieSegmentNumber != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieSegmentNumber"] = pcieSegmentNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeSegmentNumber"] = pcieSegmentNumber;
                     }
                     if (pcieDeviceBusNumber != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieDeviceBusNumber"] = pcieDeviceBusNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceBusNumber"] = pcieDeviceBusNumber;
                     }
                     if (pcieSecondaryBusNumber != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieSecondaryBusNumber"] = pcieSecondaryBusNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeSecondaryBusNumber"] = pcieSecondaryBusNumber;
                     }
                     if (pcieSlotNumber != "NA") {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["PcieSlotNumber"] = pcieSlotNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeSlotNumber"] = pcieSlotNumber;
                     }
 
                 }
@@ -1209,31 +1209,31 @@ inline void
                         asyncResp->res.jsonValue["CPER"]["Oem"]["NvSocketNumber"] = nvSocketNumber;
                     }
                     if (pcieVendorID != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieVendorId"] = pcieVendorID;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeVendorId"] = pcieVendorID;
                     }
                     if (pcieDeviceID != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieDeviceId"] = pcieDeviceID;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeDeviceId"] = pcieDeviceID;
                     }
                     if (pcieClassCode != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieClassCode"] = pcieClassCode;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeClassCode"] = pcieClassCode;
                     }
                     if (pcieFunctionNumber != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieFunctionNumber"] = pcieFunctionNumber;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeFunctionNumber"] = pcieFunctionNumber;
                     }
                     if (pcieDeviceNumber != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieDeviceNumber"] = pcieDeviceNumber;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeDeviceNumber"] = pcieDeviceNumber;
                     }
                     if (pcieSegmentNumber != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieSegmentNumber"] = pcieSegmentNumber;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeSegmentNumber"] = pcieSegmentNumber;
                     }
                     if (pcieDeviceBusNumber != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieDeviceBusNumber"] = pcieDeviceBusNumber;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeDeviceBusNumber"] = pcieDeviceBusNumber;
                     }
                     if (pcieSecondaryBusNumber != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieSecondaryBusNumber"] = pcieSecondaryBusNumber;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeSecondaryBusNumber"] = pcieSecondaryBusNumber;
                     }
                     if (pcieSlotNumber != "NA") {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["PcieSlotNumber"] = pcieSlotNumber;
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeSlotNumber"] = pcieSlotNumber;
                     }
 
                 }
