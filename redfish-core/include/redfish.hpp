@@ -125,8 +125,6 @@ class RedfishService
         requestRoutesPower(app);
 #endif
 #endif
-        requestRoutesThermalSubsystem(app);
-        requestRoutesThermalMetrics(app);
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
          requestRoutesNetworkAdapters(app);
@@ -140,10 +138,13 @@ class RedfishService
 
 #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
         requestRoutesEnvironmentMetrics(app);
+        requestRoutesProcessorEnvironmentMetrics(app);
+        requestRoutesMemoryEnvironmentMetrics(app);
         requestRoutesPowerSubsystem(app);
         requestRoutesPowerSupply(app);
         requestRoutesPowerSupplyCollection(app);
         requestRoutesThermalSubsystem(app);
+        requestRoutesThermalMetrics(app);
         requestRoutesFan(app);
         requestRoutesFanCollection(app);
 #endif
@@ -160,9 +161,6 @@ class RedfishService
         requestRoutesChassisResetAction(app);
         requestRoutesChassisResetActionInfo(app);
 #endif
-        requestRoutesEnvironmentMetrics(app);
-        requestRoutesProcessorEnvironmentMetrics(app);
-        requestRoutesMemoryEnvironmentMetrics(app);
         requestRoutesUpdateService(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesSplitUpdateService(app);
