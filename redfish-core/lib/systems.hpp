@@ -3983,7 +3983,7 @@ inline void
     //     return;
     // }
 
-    if (systemName != "system")
+    if (systemName != PLATFORMSYSTEMID)
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
