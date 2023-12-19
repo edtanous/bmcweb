@@ -17,13 +17,13 @@
 
 #include "bmcweb_config.h"
 
-// #include "debug_policy.hpp"
+#include "debug_policy.hpp"
 #include "app.hpp"
 #include "dbus_singleton.hpp"
 #include "dbus_utility.hpp"
 #include "generated/enums/computer_system.hpp"
 #include "health.hpp"
-// #include "hypervisor_system.hpp"
+#include "hypervisor_system.hpp"
 #include "led.hpp"
 #include "query.hpp"
 #include "redfish_util.hpp"
@@ -3716,7 +3716,7 @@ inline void handleComputerSystemResetActionPost(
     {
         return;
     }
-    if (systemName != "system")
+    if (systemName != PLATFORMSYSTEMID)
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -3976,12 +3976,12 @@ inline void
                                    systemName);
         return;
     }
-// TODO: Uncomment this code
-    // if (systemName == "hypervisor")
-    // {
-    //     handleHypervisorSystemGet(asyncResp);
-    //     return;
-    // }
+
+    if (systemName == "hypervisor")
+    {
+        handleHypervisorSystemGet(asyncResp);
+        return;
+    }
 
     if (systemName != PLATFORMSYSTEMID)
     {
@@ -3994,8 +3994,8 @@ inline void
         "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
     asyncResp->res.jsonValue["@odata.type"] =
         "#ComputerSystem.v1_17_0.ComputerSystem";
-    asyncResp->res.jsonValue["Name"] = "system";
-    asyncResp->res.jsonValue["Id"] = "system";
+    asyncResp->res.jsonValue["Name"] = PLATFORMSYSTEMID;
+    asyncResp->res.jsonValue["Id"] = PLATFORMSYSTEMID;
     asyncResp->res.jsonValue["SystemType"] = "Physical";
     asyncResp->res.jsonValue["Description"] = "Computer System";
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
@@ -4150,7 +4150,7 @@ inline void handleComputerSystemPatch(
                                    systemName);
         return;
     }
-    if (systemName != "system")
+    if (systemName != PLATFORMSYSTEMID)
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);

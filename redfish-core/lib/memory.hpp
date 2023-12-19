@@ -20,7 +20,7 @@
 #include <boost/container/flat_map.hpp>
 #include "app.hpp"
 #include "dbus_utility.hpp"
-// #include "health.hpp"
+#include "health.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
@@ -33,7 +33,7 @@
 #include <nlohmann/json.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
-//#include <utils/conditions_utils.hpp>
+#include <utils/conditions_utils.hpp>
 
 #include <array>
 #include <string_view>
@@ -642,20 +642,20 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                                  const std::string& service,
                                  const std::string& objPath)
 {
-// #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-//     std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
-//         objPath, [asyncResp](const std::string& rootHealth,
-//                          const std::string& healthRollup) {
-//         asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
-//         asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
-//     });
-//     health->start();
-// #else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        objPath, [asyncResp](const std::string& rootHealth,
+                         const std::string& healthRollup) {
+        asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+        asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+    });
+    health->start();
+#else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
-//     auto health = std::make_shared<HealthPopulate>(asyncResp);
-//     health->selfPath = objPath;
-//     health->populate();
-// #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE*/
+    auto health = std::make_shared<HealthPopulate>(asyncResp);
+    health->selfPath = objPath;
+    health->populate();
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE*/
 
     BMCWEB_LOG_DEBUG("Get available system components.");
     sdbusplus::asio::getAllProperties(

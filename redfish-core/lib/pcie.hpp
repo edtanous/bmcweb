@@ -224,7 +224,7 @@ static inline void handlePCIeDeviceCollectionGet(
                                    systemName);
         return;
     }
-    if (systemName != "system")
+    if (systemName != PLATFORMSYSTEMID)
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -1327,7 +1327,7 @@ inline void
                                    systemName);
         return;
     }
-    if (systemName != "system")
+    if (systemName != PLATFORMSYSTEMID)
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -1643,7 +1643,7 @@ inline void
                                    systemName);
         return;
     }
-    if (systemName != "system")
+    if (systemName != PLATFORMSYSTEMID)
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
