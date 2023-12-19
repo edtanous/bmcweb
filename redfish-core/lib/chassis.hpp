@@ -19,7 +19,7 @@
 
 #include "app.hpp"
 #include "dbus_utility.hpp"
-// #include "health.hpp"
+#include "health.hpp"
 #include "led.hpp"
 #include <boost/container/flat_map.hpp>
 #include <dbus_utility.hpp>
@@ -37,7 +37,7 @@
 #include <sdbusplus/message.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 #include <utils/chassis_utils.hpp>
-// #include <utils/conditions_utils.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/nvidia_chassis_util.hpp>
 #include <array>
 #include <ranges>
@@ -475,6 +475,14 @@ inline void
 
             getChassisConnectivity(asyncResp, chassisId, path);
 
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(objPath, [asyncResp](const std::string& rootHealth, const std::string& healthRollup) {
+                    asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+                    asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+                });
+                health->start();
+#else
             auto health = std::make_shared<HealthPopulate>(asyncResp);
 
             if constexpr (bmcwebEnableHealthPopulate)
@@ -492,7 +500,7 @@ inline void
 
                 health->populate();
             }
-
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
             if (connectionNames.empty())
             {
                 BMCWEB_LOG_ERROR("Got 0 Connection names");
@@ -630,10 +638,9 @@ inline void
                 redfish::nvidia_chassis_utils::getStaticPowerHintByChassis(asyncResp, path);
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
             sdbusplus::asio::getAllProperties(
                 *crow::connections::systemBus, connectionName, path,
-                "xyz.openbmc_project.Inventory.Decorator.Asset",
+                "",
                 [asyncResp, chassisId(std::string(chassisId)), operationalStatusPresent,
                  path](const boost::system::error_code& /*ec2*/,
                        const dbus::utility::DBusPropertiesMap& propertiesList) {
@@ -721,7 +728,7 @@ inline void
                 }
                 if (locationType != nullptr)
                 {
-                    asyncResp->res.jsonValue["LocationType"] = *locationType;
+                    asyncResp->res.jsonValue["Location"]["PartLocation"]["LocationType"] = redfish::dbus_utils::toLocationType(*locationType);
                 }
                 if (prettyName != nullptr)
                 {
@@ -729,19 +736,21 @@ inline void
                 }
                 if (type != nullptr)
                 {
-                    asyncResp->res.jsonValue["Type"] = *type;
+                    //asyncResp->res.jsonValue["Type"] = *type;
+                    asyncResp->res.jsonValue["ChassisType"] =
+                        redfish::chassis_utils::getChassisType(*type);
                 }
                 if (height != nullptr)
                 {
-                    asyncResp->res.jsonValue["Height"] = *height;
+                    asyncResp->res.jsonValue["HeightMm"] = *height;
                 }
                 if (width != nullptr)
                 {
-                    asyncResp->res.jsonValue["Width"] = *width;
+                    asyncResp->res.jsonValue["WidthMm"] = *width;
                 }
                 if (depth != nullptr)
                 {
-                    asyncResp->res.jsonValue["Depth"] = *depth;
+                    asyncResp->res.jsonValue["DepthMm"] = *depth;
                 }
                 if (minPowerWatts != nullptr)
                 {
@@ -862,14 +871,32 @@ inline void
                 }
             }
 
+            if (!operationalStatusPresent)
+            {
+                getChassisState(asyncResp);
+            }
+            
+            redfish::conditions_utils::populateServiceConditions(asyncResp, chassisId);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            // Baseboard Chassis OEM properties if exist, search by association
+            redfish::nvidia_chassis_utils::getOemBaseboardChassisAssert(asyncResp, objPath);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+            // Links association to underneath chassis
+            redfish::nvidia_chassis_utils::getChassisLinksContains(asyncResp, objPath);
+            // Links association to underneath processors
+            redfish::nvidia_chassis_utils::getChassisProcessorLinks(asyncResp, objPath);
+            // Links association to connected fabric switches
+            redfish::nvidia_chassis_utils::getChassisFabricSwitchesLinks(asyncResp, objPath);
+            // Link association to parent chassis
+            redfish::chassis_utils::getChassisLinksContainedBy(asyncResp, objPath);
+            getPhysicalSecurityData(asyncResp);
             return;
         }
 
         // Couldn't find an object with that name.  return an error
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
         });
-
-    getPhysicalSecurityData(asyncResp);
 }
 
 inline void

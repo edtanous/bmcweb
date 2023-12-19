@@ -293,9 +293,9 @@ inline void
         aResp->res.jsonValue["Links"]["ContainedBy"] = {
             {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
     },
-        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
+    "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+    "org.freedesktop.DBus.Properties", "Get",
+    "xyz.openbmc_project.Association", "endpoints");
 }
 
 inline void
