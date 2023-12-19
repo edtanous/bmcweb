@@ -36,7 +36,7 @@
 #include <health.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
-// #include <utils/conditions_utils.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/query_param.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/range/algorithm/replace_copy_if.hpp>
@@ -1015,6 +1015,18 @@ inline void objectPropertiesToJson(
                 {
                     forceToInt = true;
                 }
+                if (!std::isfinite(*doubleValue))
+                {
+                    if (valueName == "Value")
+                    {
+                        // Readings are allowed to be NAN for unavailable;  coerce
+                        // them to null in the json response.
+                        sensorJson[key] = nullptr;
+                        continue;
+                    }
+                    BMCWEB_LOG_WARNING("Sensor value for {} was unexpectedly {}", valueName, *doubleValue);
+                    continue;
+                }
                 if (forceToInt)
                 {
                     sensorJson[key] = static_cast<int64_t>(*doubleValue);
@@ -1023,19 +1035,6 @@ inline void objectPropertiesToJson(
                 {
                     sensorJson[key] = *doubleValue;
                 }
-                BMCWEB_LOG_ERROR("Got value interface that wasn't double");
-                continue;
-            }
-            if (!std::isfinite(*doubleValue))
-            {
-                if (valueName == "Value")
-                {
-                    // Readings are allowed to be NAN for unavailable;  coerce
-                    // them to null in the json response.
-                    sensorJson[key] = nullptr;
-                    continue;
-                }
-                BMCWEB_LOG_WARNING("Sensor value for {} was unexpectedly {}", valueName, *doubleValue);
                 continue;
             }
             else if (stringValue != nullptr)
@@ -2894,9 +2893,15 @@ inline void getChassisCallback(
         type.erase(std::ranges::begin(remove), type.end());
 
         nlohmann::json::object_t member;
-        std::string id = type;
-        id += "_";
-        id += sensorName;
+        // Below lines are from upstream
+        // std::string id = type;
+        // id += "_";
+        // id += sensorName;
+
+        // downstream patch to fix sensor names
+        std::string id = sensorName;
+
+        
         member["@odata.id"] = boost::urls::format(
             "/redfish/v1/Chassis/{}/{}/{}", chassisId, chassisSubNode, id);
 
