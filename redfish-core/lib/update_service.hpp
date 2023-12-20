@@ -23,6 +23,11 @@
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 #include "persistentstorage_util.hpp"
 #endif
+#include <http_client.hpp>
+#include <http_connection.hpp>
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+#include "redfish_aggregator.hpp"
+#endif
 
 #include <app.hpp>
 #include <boost/algorithm/string.hpp>
@@ -1274,6 +1279,250 @@ inline bool validateUpdateFileFormData(
     return true;
 }
 
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+/**
+ * @brief retry handler of the aggregation post request.
+ *
+ * @param[in] respCode HTTP response status code
+ *
+ * @return None
+ */
+inline boost::system::error_code aggregationPostRetryHandler(unsigned int respCode)
+{
+    // Allow all response codes because we want to surface any satellite
+    // issue to the client
+    BMCWEB_LOG_DEBUG << "Received " << respCode
+                     << " response of the firmware update from satellite";
+    return boost::system::errc::make_error_code(boost::system::errc::success);
+}
+
+inline crow::ConnectionPolicy getPostAggregationPolicy()
+{
+    return {.maxRetryAttempts = 1,
+            .requestByteLimit = firmwareImageLimitBytes,
+            .maxConnections = 20,
+            .retryPolicyAction = "TerminateAfterRetries",
+            .retryIntervalSecs = std::chrono::seconds(0),
+            .invalidResp = aggregationPostRetryHandler};
+}
+
+/**
+ * @brief process the response from satellite BMC.
+ *
+ * @param[in] prefix the prefix of the url 
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] resp Pointer to object holding response data from satellite BMC 
+ *
+ * @return None
+ */
+void handleSatBMCResponse(
+    const std::string& prefix,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, crow::Response& resp)
+{
+
+    // 429 and 502 mean we didn't actually send the request so don't
+    // overwrite the response headers in that case
+    if ((resp.result() == boost::beast::http::status::too_many_requests) ||
+        (resp.result() == boost::beast::http::status::bad_gateway))
+    {
+        asyncResp->res.result(resp.result());
+        return;
+    }
+
+    if (resp.resultInt() !=
+        static_cast<unsigned>(boost::beast::http::status::accepted))
+    {
+        BMCWEB_LOG_DEBUG
+            << "Collection resource does not exist in satellite BMC \""
+            << prefix << "\"";
+        // Return the error if we haven't had any successes
+        if (asyncResp->res.resultInt()  !=  static_cast<unsigned>(boost::beast::http::status::ok))
+        {
+            asyncResp->res.result(resp.result());
+            asyncResp->res.body() = resp.body();
+        }
+        return;
+    }
+
+    // The resp will not have a json component
+    // We need to create a json from resp's stringResponse
+    std::string_view contentType = resp.getHeaderValue("Content-Type");
+    if (boost::iequals(contentType, "application/json") ||
+        boost::iequals(contentType, "application/json; charset=utf-8"))
+    {
+        nlohmann::json jsonVal =
+            nlohmann::json::parse(resp.body(), nullptr, false);
+        if (jsonVal.is_discarded())
+        {
+            BMCWEB_LOG_ERROR << "Error parsing satellite response as JSON";
+
+            // Notify the user if doing so won't overwrite a valid response
+            if (asyncResp->res.resultInt() != static_cast<unsigned>(boost::beast::http::status::ok))
+            {
+                messages::operationFailed(asyncResp->res);
+            }
+            return;
+        }
+        BMCWEB_LOG_DEBUG << "Successfully parsed satellite response";
+        nlohmann::json::object_t* object =
+            jsonVal.get_ptr<nlohmann::json::object_t*>();
+        if (object == nullptr)
+        {
+            BMCWEB_LOG_ERROR << "Parsed JSON was not an object?";
+            return;
+        }
+
+        for (std::pair<const std::string, nlohmann::json>& prop : *object)
+        {
+            // only prefix fix-up on Task response.
+            std::string* strValue = prop.second.get_ptr<std::string*>();
+            if (strValue == nullptr)
+            {
+                BMCWEB_LOG_CRITICAL << "Field wasn't a string????";
+                continue;
+            }
+            if (prop.first == "@odata.id")
+            {
+                std::string file = std::filesystem::path(*strValue).filename();
+                std::string path =
+                    std::filesystem::path(*strValue).parent_path();
+
+                file = "5B247A_" + file;
+                path += "/";
+                // add prefix on odata.id property.
+                prop.second = path + file;
+            }
+            if (prop.first == "Id")
+            {
+                std::string file = std::filesystem::path(*strValue).filename();
+                // add prefix on Id property.
+                prop.second = "5B247A_" + file;
+            }
+            else
+            {
+                continue;
+            }
+        }
+        asyncResp->res.result(resp.result());
+        asyncResp->res.jsonValue = std::move(jsonVal);
+    }
+}
+
+/**
+ * @brief Forward firmware image to the satellite BMC
+ *
+ * @param[in] req  HTTP request.
+ * @param[in] asyncResp Pointer to object holding response data
+ * @param[in] ec the error code returned by Dbus call.
+ * @param[in] satelliteInfo the map containing the satellite controllers
+ *
+ * @return None
+ */
+inline void forwardImage(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const boost::system::error_code &ec,
+    const std::unordered_map<std::string, boost::urls::url>& satelliteInfo)
+{
+    // Something went wrong while querying dbus
+    if (ec)
+    {
+        BMCWEB_LOG_ERROR << "Dbus query error for satellite BMC.";
+        messages::internalError(asyncResp->res);
+        return;
+    }
+
+    const auto& sat = satelliteInfo.find("5B247A");
+    if (sat == satelliteInfo.end())
+    {
+        BMCWEB_LOG_ERROR << "satellite BMC is not there.";
+        return;
+    }
+
+    crow::HttpClient client( 
+        std::make_shared<crow::ConnectionPolicy>(getPostAggregationPolicy()));
+
+    MultipartParser parser;
+    ParserError err = parser.parse(req);
+    if (err != ParserError::PARSER_SUCCESS)
+    {
+        // handle error
+        BMCWEB_LOG_ERROR << "MIME parse failed, ec : " << static_cast<int>(err);
+        messages::internalError(asyncResp->res);
+        return;
+    }
+
+    std::function<void(crow::Response&)> cb =
+        std::bind_front(handleSatBMCResponse, sat->first, asyncResp);
+
+    bool hasUpdateFile = false;
+    std::string data;
+    std::string_view boundary(parser.boundary);
+    for (FormPart& formpart : parser.mime_fields)
+    {
+        boost::beast::http::fields::const_iterator it =
+            formpart.fields.find("Content-Disposition");
+
+        size_t index = it->value().find(';');
+        if (index == std::string::npos)
+        {
+            continue;
+        }
+        // skip \r\n and get the boundary
+        data += boundary.substr(2);
+        data += "\r\n";
+        data += "Content-Disposition:";
+        data += formpart.fields.at("Content-Disposition");
+        data += "\r\n";
+
+        for (auto const& param :
+             boost::beast::http::param_list{it->value().substr(index)})
+        {
+            if (param.first != "name" || param.second.empty())
+            {
+                continue;
+            }
+
+            if (param.second == "UpdateFile")
+            {
+                data += "Content-Type: application/octet-stream\r\n\r\n";
+                data += formpart.content;
+                data += "\r\n";
+                hasUpdateFile = true;
+            }
+            else if (param.second == "UpdateParameters")
+            {
+                data += "Content-Type: application/json\r\n\r\n";
+                // Todo: add URL back when satellite BMC can support
+                // the URL validation from another resource except for
+                // firmware or software inventory.
+                // e.g. URL are ComputerSystem resource.
+                // at this moment,just forward the image to HMC.
+                data += "{}\r\n";
+            }
+        }
+    }
+
+    if (!hasUpdateFile)
+    {
+        BMCWEB_LOG_ERROR << "File with firmware image is missing.";
+        messages::propertyMissing(asyncResp->res, "UpdateFile");
+    }
+    else
+    {
+        data += boundary.substr(2);
+        data += "--\r\n";
+
+        std::string targetURI(req.target());
+
+        client.sendDataWithCallback(
+            data, std::string(sat->second.host()),
+            sat->second.port_number(), targetURI, false /*useSSL*/, req.fields,
+            boost::beast::http::verb::post, cb);
+    }
+}
+#endif
+
 /**
  * @brief Process multipart form data
  *
@@ -1311,6 +1560,40 @@ inline void processMultipartFormData(
     }
 
     std::vector<std::string> uriTargets{*targets};
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    uint8_t count = 0;
+    if (uriTargets.size() > 0)
+    {
+        for (const auto& uri : uriTargets)
+        {
+            std::string file = std::filesystem::path(uri).filename();
+            if (file.starts_with("5B247A_"))
+            {
+                count++;
+            }
+        }
+        // There is one URI at least for satellite BMC.
+        if (count > 0)
+        {
+            // further check if there is mixed targets and some are not 
+            // for satellite BMC.
+            if (count != uriTargets.size())
+            {
+                boost::urls::url_view targetURL("Target");
+                messages::invalidObject(asyncResp->res, targetURL);
+            }
+            else
+            {
+                // All URIs in Target has the prepended prefix
+                BMCWEB_LOG_DEBUG << "forward image" << uriTargets[0];
+
+                RedfishAggregator::getSatelliteConfigs(
+                    std::bind_front(forwardImage, req, asyncResp));
+            }
+            return;
+        }
+    }
+#endif
     areTargetsUpdateable(req, asyncResp, uriTargets);
 }
 
