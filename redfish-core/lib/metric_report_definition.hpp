@@ -11,6 +11,7 @@
 #include "utils/dbus_utils.hpp"
 #include "utils/telemetry_utils.hpp"
 #include "utils/time_utils.hpp"
+#include "utils/metric_report_definition_utils.hpp"
 
 #include <boost/container/flat_map.hpp>
 #include <boost/regex.hpp>
@@ -1083,6 +1084,10 @@ inline void handleMetricReportDefinitionCollectionGet(
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/TelemetryService/MetricReportDefinitions";
     asyncResp->res.jsonValue["Name"] = "Metric Definition Collection";
+#ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+    redfish::nvidia_metric_report_def_utils::getMetricReportCollection(asyncResp);
+    return;
+#endif
     constexpr std::array<std::string_view, 1> interfaces{
         telemetry::reportInterface};
     collection_util::getCollectionMembers(
@@ -1288,6 +1293,9 @@ inline void
     asyncResp->res.addHeader(
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/MetricReport/MetricReport.json>; rel=describedby");
+#ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+    redfish::nvidia_metric_report_def_utils::validateAndGetMetricReportDefinition(asyncResp, id);
+#else
 
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, telemetry::service,
@@ -1301,6 +1309,7 @@ inline void
 
         telemetry::fillReportDefinition(asyncResp, id, properties);
         });
+#endif
 }
 
 inline void handleMetricReportDelete(
