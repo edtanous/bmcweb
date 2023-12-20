@@ -74,7 +74,7 @@ def main():
 service_root_string = """
 void handleServiceRootGetImpl(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp);
-    
+
 """
 
 sensors_string = """

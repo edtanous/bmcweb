@@ -390,6 +390,7 @@ bmcweb_dependencies += conf_h_dep
 fs = import('fs')
 
 srcfiles_bmcweb = files(
+  'redfish-core/include/redfish.cpp',
   'redfish-core/lib/account_service.cpp',
   'redfish-core/lib/aggregation_service.cpp',
   'redfish-core/lib/bios.cpp',
@@ -432,6 +433,7 @@ srcfiles_bmcweb = files(
   'redfish-core/lib/trigger.cpp',
   'redfish-core/lib/update_service.cpp',
   'redfish-core/lib/virtual_media.cpp',
+  'redfish-core/lib/task_payload.cpp',
   'redfish-core/src/error_messages.cpp',
   'redfish-core/src/registries.cpp',
   'redfish-core/src/utils/json_utils.cpp',
