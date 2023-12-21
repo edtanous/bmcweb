@@ -1,11 +1,11 @@
 #include "http/http_response.hpp"
 
-#include <stdlib.h>
 #include <unistd.h>
 
 #include <boost/beast/http/status.hpp>
 #include <boost/variant2/variant.hpp>
 
+#include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -31,6 +31,7 @@ std::string makeFile(std::string_view sampleData)
     std::filesystem::path path = std::filesystem::temp_directory_path();
     path /= "bmcweb_http_response_test_XXXXXXXXXXX";
     std::string stringPath = path.string();
+    // NOLINTNEXTLINE(misc-include-cleaner)
     int fd = mkstemp(stringPath.data());
     EXPECT_GT(fd, 0);
     EXPECT_EQ(write(fd, sampleData.data(), sampleData.size()),
