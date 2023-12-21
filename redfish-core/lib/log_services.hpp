@@ -672,6 +672,24 @@ inline void parseDumpEntryFromDbusObject(
                 }
             }
         }
+        else if (interfaceMap.first == "xyz.openbmc_project.FDR.Entry")
+        {
+            for (const auto& propertyMap : interfaceMap.second)
+            {
+                if (propertyMap.first == "Size")
+                {
+                    const auto* sizePtr =
+                        std::get_if<uint64_t>(&propertyMap.second);
+                    if (sizePtr == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        break;
+                    }
+                    size = *sizePtr;
+                    break;
+                }
+            }
+        }
         else if (interfaceMap.first == "xyz.openbmc_project.Time.EpochTime")
         {
             for (const auto& propertyMap : interfaceMap.second)
@@ -891,6 +909,11 @@ static std::string getDumpEntriesPath(const std::string& dumpType)
         entriesPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/Dump/Entries/";
     }
+    else if (dumpType == "FDR")
+    {
+        entriesPath =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR/Entries/";
+    }
     else if (dumpType == "FaultLog")
     {
         entriesPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -1026,6 +1049,16 @@ inline void
                         redfish::time_utils::getDateTimeUint(timestampS);
                     thisEntry["DiagnosticDataType"] = "OEM";
                     thisEntry["OEMDiagnosticDataType"] = "System";
+                    thisEntry["AdditionalDataURI"] =
+                        entriesPath + entryID + "/attachment";
+                    thisEntry["AdditionalDataSizeBytes"] = size;
+                }
+                else if (dumpType == "FDR")
+                {
+                    thisEntry["Created"] =
+                        redfish::time_utils::getDateTimeUint(timestampS);
+                    thisEntry["DiagnosticDataType"] = "OEM";
+                    thisEntry["OEMDiagnosticDataType"] = "FDR";
                     thisEntry["AdditionalDataURI"] =
                         entriesPath + entryID + "/attachment";
                     thisEntry["AdditionalDataSizeBytes"] = size;
@@ -1206,6 +1239,15 @@ inline void
                         "/LogServices/Dump/Entries/" +
                         entryID + "/attachment";
                 }
+                else if (dumpType == "FDR")
+                {
+                    asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
+                    asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
+                    asyncResp->res.jsonValue["AdditionalDataURI"] =
+                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                        "/LogServices/FDR/Entries/" +
+                        entryID + "/attachment";
+                }
                 else if (dumpType == "FaultLog")
                 {
                     asyncResp->res.jsonValue["DiagnosticDataType"] =
@@ -1350,6 +1392,11 @@ inline std::string getDumpEntryPath(const std::string& dumpPath)
     {
         return "/redfish/v1/Systems/" PLATFORMSYSTEMID
                "/LogServices/Dump/Entries/";
+    }
+    if (dumpPath == "/xyz/openbmc_project/dump/fdr/entry")
+    {
+        return "/redfish/v1/Systems/" PLATFORMSYSTEMID
+               "/LogServices/FDR/Entries/";
     }
     return "";
 }
@@ -1563,6 +1610,31 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             return;
         }
         dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/";
+    }
+    else if (dumpType == "FDR")
+    {
+        // Decode oemDiagnosticDataType string format
+        createDumpParamVec = parseOEMAdditionalData(*oemDiagnosticDataType);
+
+        if (!oemDiagnosticDataType || !diagnosticDataType)
+        {
+            BMCWEB_LOG_ERROR
+                << "CreateDump action parameter 'DiagnosticDataType'/'OEMDiagnosticDataType' value not found!";
+            messages::actionParameterMissing(
+                asyncResp->res, "CollectDiagnosticData",
+                "DiagnosticDataType & OEMDiagnosticDataType");
+            return;
+        }
+
+        if (*diagnosticDataType != "OEM")
+        {
+            BMCWEB_LOG_ERROR << "Wrong parameter values passed";
+            messages::actionParameterValueError(
+                asyncResp->res, "DiagnosticDataType",
+                "LogService.CollectDiagnosticData");
+            return;
+        }
+        dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR/";
     }
     else if (dumpType == "BMC")
     {
@@ -4540,9 +4612,16 @@ inline void
     asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
     asyncResp->res.jsonValue["DateTimeLocalOffset"] =
         redfishDateTimeOffset.second;
+    asyncResp->res.jsonValue["Entries"] = {
+        {"@odata.id",
+         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR/Entries"}};
     asyncResp->res.jsonValue["Actions"]["#LogService.ClearLog"] = {
         {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
                    "/LogServices/FDR/Actions/LogService.ClearLog"}};
+    asyncResp->res.jsonValue["Actions"]["#LogService.CollectDiagnosticData"] = {
+        {"target",
+         "/redfish/v1/Systems/" PLATFORMSYSTEMID
+         "/LogServices/FDR/Actions/LogService.CollectDiagnosticData"}};
 
     getFDRServiceState(asyncResp);
 }
@@ -4665,7 +4744,75 @@ inline void requestRoutesSystemFDRService(App& app)
             std::bind_front(handleFDRServicePatch, std::ref(app)));
 }
 
-void inline requestRoutesSystemFDRServiceClear(App& app)
+inline void requestRoutesSystemFDREntryCollection(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/FDR/Entries/")
+        .privileges(redfish::privileges::getLogEntryCollection)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#LogEntryCollection.LogEntryCollection";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                    "/LogServices/FDR/Entries";
+                asyncResp->res.jsonValue["Name"] = "System FDR Entries";
+                asyncResp->res.jsonValue["Description"] =
+                    "Collection of System FDR Entries";
+
+                getDumpEntryCollection(asyncResp, "FDR");
+            });
+}
+
+inline void requestRoutesSystemFDREntry(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/FDR/Entries/<str>/")
+        .privileges(redfish::privileges::getLogEntry)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                getDumpEntryById(asyncResp, param, "FDR");
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/FDR/Entries/<str>/")
+        .privileges(redfish::privileges::deleteLogEntry)
+        .methods(boost::beast::http::verb::delete_)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& param) {
+                deleteDumpEntry(asyncResp, param, "FDR");
+            });
+}
+
+inline void requestRoutesSystemFDRCreate(App& app)
+{
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                 "/LogServices/FDR/Actions/LogService.CollectDiagnosticData/")
+        .privileges(redfish::privileges::postLogService)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleLogServicesDumpCollectDiagnosticDataPost,
+                            std::ref(app), "FDR"));
+}
+
+void inline requestRoutesSystemFDRClear(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/FDR/Actions/LogService.ClearLog/")
@@ -4702,7 +4849,7 @@ void inline requestRoutesSystemFDRServiceClear(App& app)
                         messages::success(asyncResp->res);
                     },
                     "xyz.openbmc_project.Dump.Manager",
-                    "/xyz/openbmc_project/dump/system",
+                    "/xyz/openbmc_project/dump/fdr",
                     "xyz.openbmc_project.Dump.Create", "CreateDump",
                     createDumpParamVec);
             });

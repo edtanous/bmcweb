@@ -419,6 +419,13 @@ class Connection :
         }
 #endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
 
+#ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
+        if (dumpPos == std::string::npos)
+        {
+            dumpPos = url.rfind("FDR");
+        }
+#endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
+
         std::size_t attachmentPos = url.rfind("attachment");
         if ((dumpPos != std::string::npos) &&
             (attachmentPos != std::string::npos))
