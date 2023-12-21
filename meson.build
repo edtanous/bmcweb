@@ -427,7 +427,6 @@ srcfiles_bmcweb = files(
   'redfish-core/lib/systems.cpp',
   'redfish-core/lib/task.cpp',
   'redfish-core/lib/task_payload.cpp',
-  'redfish-core/lib/task_payload.cpp',
   'redfish-core/lib/telemetry_service.cpp',
   'redfish-core/lib/thermal.cpp',
   'redfish-core/lib/thermal_subsystem.cpp',

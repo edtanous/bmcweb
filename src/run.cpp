@@ -5,7 +5,6 @@
 #include "cors_preflight.hpp"
 #include "dbus_monitor.hpp"
 #include "dbus_singleton.hpp"
-#include "event_service_manager.hpp"
 #include "google/google_service_root.hpp"
 #include "hostname_monitor.hpp"
 #include "ibm/management_console_rest.hpp"
@@ -15,9 +14,7 @@
 #include "login_routes.hpp"
 #include "nbd_proxy.hpp"
 #include "obmc_console.hpp"
-#include "openbmc_dbus_rest.hpp"
 #include "redfish.hpp"
-#include "redfish_aggregator.hpp"
 #include "security_headers.hpp"
 #include "ssl_key_handler.hpp"
 #include "systemd_utils.hpp"
@@ -50,14 +47,7 @@ int run()
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH
-    // Create EventServiceManager instance and initialize Config
-    redfish::EventServiceManager::getInstance(&*io);
-
-#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
-    // Create RedfishAggregator instance and initialize Config
-    redfish::RedfishAggregator::getInstance(&*io);
-#endif
-    redfish::RedfishService redfish(app);
+    redfish::RedfishService redfish(app, *io);
 #endif
 
 #ifdef BMCWEB_ENABLE_DBUS_REST
@@ -94,15 +84,6 @@ int run()
 
 #ifdef BMCWEB_ENABLE_VM_NBDPROXY
     crow::nbd_proxy::requestRoutes(app);
-#endif
-
-#ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
-    int rc = redfish::EventServiceManager::startEventLogMonitor(*io);
-    if (rc != 0)
-    {
-        BMCWEB_LOG_ERROR("Redfish event handler setup failed...");
-        return rc;
-    }
 #endif
 
 #ifdef BMCWEB_ENABLE_SSL

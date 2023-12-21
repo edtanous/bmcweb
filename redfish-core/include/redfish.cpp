@@ -8,10 +8,12 @@
 #include "chassis.hpp"
 #include "ethernet.hpp"
 #include "event_service.hpp"
+#include "event_service_manager.hpp"
 #include "eventservice_sse.hpp"
 #include "fabric_adapters.hpp"
 #include "hypervisor_system.hpp"
 #include "log_services.hpp"
+#include "logging.hpp"
 #include "manager_diagnostic_data.hpp"
 #include "managers.hpp"
 #include "memory.hpp"
@@ -45,12 +47,29 @@
 #include "power_subsystem.hpp"
 #include "power_supply.hpp"
 #include "virtual_media.hpp"
+
+#include <boost/asio/io_context.hpp>
 // NOLINTEND(misc-include-cleaner)
 
 namespace redfish
 {
-RedfishService::RedfishService(App& app)
+RedfishService::RedfishService(App& app, boost::asio::io_context& io)
 {
+    // Create EventServiceManager instance and initialize Config
+    redfish::EventServiceManager::getInstance(&io);
+
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    // Create RedfishAggregator instance and initialize Config
+    redfish::RedfishAggregator::getInstance(io);
+#endif
+
+#ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
+    int rc = redfish::EventServiceManager::startEventLogMonitor(io);
+    if (rc != 0)
+    {
+        BMCWEB_LOG_ERROR("Redfish event handler setup failed...");
+    }
+#endif
     requestAccountServiceRoutes(app);
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     requestRoutesAggregationService(app);

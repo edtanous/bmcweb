@@ -17,6 +17,8 @@
 
 #include "app.hpp"
 
+#include <boost/asio/io_context.hpp>
+
 namespace redfish
 {
 /*
@@ -32,7 +34,7 @@ class RedfishService
      *
      * @param[in] app   Crow app on which Redfish will initialize
      */
-    explicit RedfishService(App& app);
+    explicit RedfishService(App& app, boost::asio::io_context& io);
 };
 
 } // namespace redfish
