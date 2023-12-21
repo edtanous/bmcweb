@@ -39,7 +39,12 @@ enum class MctpVdmUtilCommand
     /*in_band*/
     INBAND_DISABLE,
     INBAND_ENABLE,
-    INBAND_STATUS
+    INBAND_STATUS,
+    /*manual boot mode*/
+    BOOTMODE_ENABLE,
+    BOOTMODE_DISABLE,
+    BOOTMODE_QUERY,
+    BOOT_AP
 };
 
 struct MctpVdmUtilStatusResponse
@@ -129,6 +134,19 @@ void MctpVdmUtil::translateOperationToCommand(
             break;
         case MctpVdmUtilCommand::INBAND_STATUS:
             cmd = "in_band_query_status";
+            break;
+
+        case MctpVdmUtilCommand::BOOTMODE_ENABLE:
+            cmd = "enable_boot_mode";
+            break;
+        case MctpVdmUtilCommand::BOOTMODE_DISABLE:
+            cmd = "disable_boot_mode";
+            break;
+        case MctpVdmUtilCommand::BOOTMODE_QUERY:
+            cmd = "query_boot_mode";
+            break;
+        case MctpVdmUtilCommand::BOOT_AP:
+            cmd = "boot_ap";
             break;
     }
 

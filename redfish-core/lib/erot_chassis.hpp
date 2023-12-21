@@ -377,6 +377,83 @@ inline void getEROTChassis(const crow::Request& req,
 
                 redfish::conditions_utils::populateServiceConditions(asyncResp,
                                                                      chassisId);
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+                mctp_utils::enumerateMctpEndpoints(
+                    [req, asyncResp, chassisId](
+                        const std::shared_ptr<
+                            std::vector<mctp_utils::MctpEndpoint>>& endpoints) {
+                        if (!endpoints || endpoints->size() == 0)
+                        {
+                            BMCWEB_LOG_ERROR << "Endpoint ID for " << chassisId
+                                             << " not found";
+                            messages::resourceNotFound(
+                                asyncResp->res, "#Chassis.v1_17_0.Chassis",
+                                chassisId);
+                            return;
+                        }
+                        uint32_t eid = static_cast<uint32_t>(
+                            endpoints->begin()->getMctpEid());
+                        MctpVdmUtil mctpVdmUtilWrapper(eid);
+                        MctpVdmUtilCommand cmd =
+                            MctpVdmUtilCommand::BOOTMODE_QUERY;
+                        mctpVdmUtilWrapper.run(
+                            cmd, req, asyncResp,
+                            [chassisId](
+                                const crow::Request&,
+                                const std::shared_ptr<bmcweb::AsyncResp>&
+                                    asyncResp,
+                                uint32_t, const std::string& stdOut,
+                                const std::string&,
+                                const boost::system::error_code& ec,
+                                int errorCode) {
+                                if (ec || errorCode)
+                                {
+                                    messages::resourceErrorsDetectedFormatError(
+                                        asyncResp->res,
+                                        "/redfish/v1/Chassis/" + chassisId,
+                                        "MCTP VDM command failure");
+                                    return;
+                                }
+                                nlohmann::json& oem =
+                                    asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                                std::string reEnabled =
+                                    "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
+                                std::string reDisabled =
+                                    "(.|\n)*RX:( \\d\\d){9} 00(.|\n)*";
+                                if (std::regex_match(stdOut,
+                                                     std::regex(reEnabled)))
+                                {
+                                    oem["ManualBootModeEnabled"] = true;
+                                    return;
+                                }
+                                if (std::regex_match(stdOut,
+                                                     std::regex(reDisabled)))
+                                {
+                                    oem["ManualBootModeEnabled"] = false;
+                                    return;
+                                }
+                                BMCWEB_LOG_ERROR
+                                    << "Invalid query_boot_mode response: "
+                                    << stdOut;
+                                messages::resourceErrorsDetectedFormatError(
+                                    asyncResp->res,
+                                    "/redfish/v1/Chassis/" + chassisId,
+                                    "MCTP VDM command invalid response");
+                            });
+                    },
+                    [asyncResp, chassisId](bool critical,
+                                           const std::string& desc,
+                                           const std::string& msg) {
+                        if (critical)
+                        {
+                            BMCWEB_LOG_ERROR << desc << ": " << msg;
+                            messages::resourceNotFound(
+                                asyncResp->res, "#Chassis.v1_17_0.Chassis",
+                                chassisId);
+                        }
+                    },
+                    chassisId);
+#endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
                 return;
             }
 
@@ -400,9 +477,9 @@ inline void requestRoutesEROTChassisCertificate(App& app)
         .privileges(redfish::privileges::getCertificate)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID,
-               const std::string& certificateID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID,
+                   const std::string& certificateID) -> void {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -439,8 +516,8 @@ inline void requestRoutesEROTChassisCertificate(App& app)
         .privileges(redfish::privileges::getCertificateCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -501,17 +578,96 @@ inline void
 
     std::optional<bool> backgroundCopyEnabled;
     std::optional<bool> inBandEnabled;
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+    std::optional<bool> manualBootModeEnabled;
+#endif
 
-    if (!json_util::readJson(
-            *oemNvidiaObject, asyncResp->res, "AutomaticBackgroundCopyEnabled",
-            backgroundCopyEnabled, "InbandUpdatePolicyEnabled", inBandEnabled))
+    if (!json_util::readJson(*oemNvidiaObject, asyncResp->res,
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+                             "ManualBootModeEnabled", manualBootModeEnabled,
+#endif
+                             "AutomaticBackgroundCopyEnabled",
+                             backgroundCopyEnabled, "InbandUpdatePolicyEnabled",
+                             inBandEnabled))
     {
         return;
     }
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+    if (manualBootModeEnabled.has_value())
+    {
+        mctp_utils::enumerateMctpEndpoints(
+            [req, asyncResp, chassisId, enabled{*manualBootModeEnabled}](
+                const std::shared_ptr<std::vector<mctp_utils::MctpEndpoint>>&
+                    endpoints) {
+                if (!endpoints || endpoints->size() == 0)
+                {
+                    BMCWEB_LOG_ERROR << "Endpoint ID for " << chassisId
+                                     << " not found";
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                    return;
+                }
+                uint32_t eid =
+                    static_cast<uint32_t>(endpoints->begin()->getMctpEid());
+                MctpVdmUtil mctpVdmUtilWrapper(eid);
+                MctpVdmUtilCommand cmd =
+                    enabled ? MctpVdmUtilCommand::BOOTMODE_ENABLE
+                            : MctpVdmUtilCommand::BOOTMODE_DISABLE;
+                mctpVdmUtilWrapper.run(
+                    cmd, req, asyncResp,
+                    [enabled, chassisId](
+                        const crow::Request&,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        uint32_t, const std::string& stdOut, const std::string&,
+                        const boost::system::error_code& ec, int errorCode) {
+                        if (ec || errorCode)
+                        {
+                            messages::resourceErrorsDetectedFormatError(
+                                asyncResp->res,
+                                "/redfish/v1/Chassis/" + chassisId,
+                                "MCTP VDM command failure");
+                            return;
+                        }
+                        std::string reSuccess =
+                            "(.|\n)*RX:( \\d\\d){8} 00(.|\n)*";
+                        std::string reFailure =
+                            "(.|\n)*RX:( \\d\\d){8} 81(.|\n)*";
+                        if (std::regex_match(stdOut, std::regex(reSuccess)))
+                        {
+                            messages::success(asyncResp->res);
+                            return;
+                        }
+                        if (std::regex_match(stdOut, std::regex(reFailure)))
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        BMCWEB_LOG_ERROR << "Invalid boot_ap response: "
+                                         << stdOut;
+                        messages::resourceErrorsDetectedFormatError(
+                            asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
+                            "MCTP VDM command invalid response");
+                    });
+            },
+            [asyncResp, chassisId](bool critical, const std::string& desc,
+                                   const std::string& msg) {
+                if (critical)
+                {
+                    BMCWEB_LOG_ERROR << desc << ": " << msg;
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                }
+            },
+            chassisId);
+    }
+#endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
 
+    if (!backgroundCopyEnabled.has_value() && !inBandEnabled.has_value())
+    {
+        return;
+    }
     const std::array<const char*, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
-
     crow::connections::systemBus->async_method_call(
         [req, asyncResp, chassisId(std::string(chassisId)),
          backgroundCopyEnabled,
@@ -743,8 +899,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -812,8 +968,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -847,8 +1003,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -862,8 +1018,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -897,8 +1053,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
                 if (!redfish::setUpRedfishRoute(app, req, asyncResp))
                 {
                     return;
@@ -919,5 +1075,92 @@ inline void requestRoutesEROTChassisDOT(App& app)
             });
 }
 #endif // BMCWEB_ENABLE_DOT
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+inline void requestRoutesEROTChassisManualBootMode(App& app)
+{
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Chassis/<str>/Actions/Oem/Nvidia/BootProtectedDevice")
+        .privileges(redfish::privileges::postChassis)
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                mctp_utils::enumerateMctpEndpoints(
+                    [req, asyncResp, chassisID](
+                        const std::shared_ptr<
+                            std::vector<mctp_utils::MctpEndpoint>>& endpoints) {
+                        if (!endpoints || endpoints->size() == 0)
+                        {
+                            BMCWEB_LOG_ERROR << "Endpoint ID for " << chassisID
+                                             << " not found";
+                            messages::resourceNotFound(
+                                asyncResp->res, "#Chassis.v1_17_0.Chassis",
+                                chassisID);
+                            return;
+                        }
+                        uint32_t eid = static_cast<uint32_t>(
+                            endpoints->begin()->getMctpEid());
+                        MctpVdmUtil mctpVdmUtilWrapper(eid);
+                        mctpVdmUtilWrapper.run(
+                            MctpVdmUtilCommand::BOOT_AP, req, asyncResp,
+                            [chassisID](
+                                const crow::Request&,
+                                const std::shared_ptr<bmcweb::AsyncResp>&
+                                    asyncResp,
+                                uint32_t, const std::string& stdOut,
+                                const std::string&,
+                                const boost::system::error_code& ec,
+                                int errorCode) {
+                                if (ec || errorCode)
+                                {
+                                    messages::resourceErrorsDetectedFormatError(
+                                        asyncResp->res,
+                                        "/redfish/v1/Chassis/" + chassisID,
+                                        "MCTP VDM command failure");
+                                    return;
+                                }
+                                std::string reSuccess =
+                                    "(.|\n)*RX:( \\d\\d){8} 00(.|\n)*";
+                                std::string reFailure =
+                                    "(.|\n)*RX:( \\d\\d){8} 01(.|\n)*";
+                                if (std::regex_match(stdOut,
+                                                     std::regex(reSuccess)))
+                                {
+                                    messages::success(asyncResp->res);
+                                    return;
+                                }
+                                if (std::regex_match(stdOut,
+                                                     std::regex(reFailure)))
+                                {
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                BMCWEB_LOG_ERROR << "Invalid boot_ap response: "
+                                                 << stdOut;
+                                messages::resourceErrorsDetectedFormatError(
+                                    asyncResp->res,
+                                    "/redfish/v1/Chassis/" + chassisID,
+                                    "MCTP VDM command invalid response");
+                            });
+                    },
+                    [asyncResp, chassisID](bool critical,
+                                           const std::string& desc,
+                                           const std::string& msg) {
+                        if (critical)
+                        {
+                            BMCWEB_LOG_ERROR << desc << ": " << msg;
+                            messages::resourceNotFound(
+                                asyncResp->res, "#Chassis.v1_17_0.Chassis",
+                                chassisID);
+                        }
+                    },
+                    chassisID);
+            });
+}
+#endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
 
 } // namespace redfish

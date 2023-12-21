@@ -381,6 +381,9 @@ class RedfishService
 #ifdef BMCWEB_ENABLE_DOT
         requestRoutesEROTChassisDOT(app);
 #endif
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+        requestRoutesEROTChassisManualBootMode(app);
+#endif
         requestRoutesComponentIntegrity(app);
         requestRoutesServiceConditions(app);
         requestRoutesChassisControls(app);
