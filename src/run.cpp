@@ -50,8 +50,6 @@ int run()
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH
-    redfish::RedfishService redfish(app);
-
     // Create EventServiceManager instance and initialize Config
     redfish::EventServiceManager::getInstance(&*io);
 
@@ -59,6 +57,7 @@ int run()
     // Create RedfishAggregator instance and initialize Config
     redfish::RedfishAggregator::getInstance(&*io);
 #endif
+    redfish::RedfishService redfish(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_DBUS_REST

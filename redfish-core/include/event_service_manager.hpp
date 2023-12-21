@@ -620,6 +620,7 @@ class EventServiceManager
     static EventServiceManager&
         getInstance(boost::asio::io_context* ioc = nullptr)
     {
+        // NOLINTNEXTLINE (clang-analyzer-core.NonNullParamChecker)
         static EventServiceManager handler(*ioc);
         return handler;
     }
