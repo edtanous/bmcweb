@@ -14,6 +14,7 @@
 // limitations under the License.
 */
 #pragma once
+
 #include "registries/task_event_message_registry.hpp"
 
 #include <nlohmann/json.hpp>

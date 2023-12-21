@@ -389,6 +389,7 @@ bmcweb_dependencies += conf_h_dep
 fs = import('fs')
 
 srcfiles_bmcweb = files(
+  'redfish-core/lib/task_payload.cpp',
   'redfish-core/src/error_messages.cpp',
   'redfish-core/src/registries.cpp',
   'redfish-core/src/utils/time_utils.cpp',
