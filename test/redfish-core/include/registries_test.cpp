@@ -1,6 +1,8 @@
 #include "registries.hpp"
 #include "registries/openbmc_message_registry.hpp"
 
+#include <string>
+
 #include <gtest/gtest.h> // IWYU pragma: keep
 
 // IWYU pragma: no_include <gtest/gtest-message.h>

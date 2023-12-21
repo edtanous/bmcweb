@@ -2,13 +2,16 @@
 
 #include "utils/extern/date.h"
 
+#include <bits/chrono.h>
+
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <optional>
+#include <ratio>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <version>
 
 namespace redfish::time_utils
 {

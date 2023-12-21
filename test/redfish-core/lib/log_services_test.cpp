@@ -1,4 +1,3 @@
-#include "app.hpp"
 #include "async_resp.hpp"
 #include "log_services.hpp"
 
@@ -6,10 +5,11 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cstdint>
 #include <format>
+#include <memory>
 #include <string>
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace redfish

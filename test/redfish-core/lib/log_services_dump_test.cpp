@@ -1,12 +1,11 @@
-#include "app.hpp"
 #include "async_resp.hpp"
-#include "event_service_manager.hpp"
-#include "health.hpp"
 #include "log_services.hpp"
 
+#include <boost/beast/http/status.hpp>
 #include <nlohmann/json.hpp>
 
-#include <gmock/gmock.h>
+#include <memory>
+
 #include <gtest/gtest.h>
 
 namespace redfish

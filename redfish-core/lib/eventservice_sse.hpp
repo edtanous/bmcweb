@@ -1,5 +1,7 @@
 #pragma once
 
+#include "registries/privilege_registry.hpp"
+
 #include <app.hpp>
 #include <event_service_manager.hpp>
 
