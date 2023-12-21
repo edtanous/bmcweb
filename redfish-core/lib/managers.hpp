@@ -1912,7 +1912,7 @@ inline void
     });
 }
 
-inline void requestRoutesManager(App& app)
+void requestRoutesManager(App& app)
 {
     std::string uuid = persistent_data::getConfig().systemUuid;
 
