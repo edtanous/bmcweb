@@ -1568,10 +1568,10 @@ inline void requestRoutesUpdateService(App& app)
                 "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate";
             updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] = {};
 #ifdef BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE
-            updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] += {"TFTP"};
+            updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] += "TFTP";
 #endif
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
-            updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] += {"SCP"};
+            updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] += "SCP";
 #endif
 #endif
             // Get the current ApplyTime value
