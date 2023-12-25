@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nlohmann/json.hpp"
+#include "task.hpp"
 
 #include <app.hpp>
 #include <dbus_utility.hpp>
@@ -21,6 +22,9 @@ namespace bluefield
     const char* ctlBMCSwitchModeBMCObj = "/xyz/openbmc_project/control/torswitchportsmode";
     const char* ctlBMCSwitchModeIntf = "xyz.openbmc_project.Control.TorSwitchPortsMode";
     const char* ctlBMCSwitchMode = "TorSwitchPortsMode";
+
+    const std::string& truststoreBiosService = "xyz.openbmc_project.Certs.Manager.AuthorityBios.TruststoreBios";
+    const std::string& truststoreBiosPath = "/xyz/openbmc_project/certs/authorityBios/truststoreBios";
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 struct PropertyInfo
@@ -728,6 +732,311 @@ inline void resetTorSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     messages::success(asyncResp->res);
 }
 
+inline void handleTruststoreCertificatesCollectionGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                        "/Oem/Nvidia/Truststore/Certificates";
+    asyncResp->res.jsonValue["@odata.type"] =
+        "#CertificateCollection.CertificateCollection";
+    asyncResp->res.jsonValue["Name"] = "TruststoreBios Certificate Collection";
+    asyncResp->res.jsonValue["@Redfish.SupportedCertificates"] = {"PEM"};
+
+    collection_util::getCollectionMembers(
+        asyncResp,
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Truststore/Certificates",
+        {"xyz.openbmc_project.Certs.Certificate"},
+        std::string(truststoreBiosPath)
+            .c_str());
+}
+
+inline void
+    createPendingRequest(const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+{
+    auto task = task::TaskData::createTask(
+        [](boost::system::error_code, sdbusplus::message_t&,
+           const std::shared_ptr<task::TaskData>&) { return false; },
+        "0");
+    task->payload.emplace(req);
+    task->state = "Pending";
+    task->populateResp(aResp->res);
+    return;
+}
+
+inline void handleTruststoreCertificatesCollectionPost(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    std::string certString;
+    std::string certType;
+    std::optional<std::string> owner;
+    if (!json_util::readJsonAction(req, asyncResp->res, "CertificateString",
+                                  certString, "CertificateType", certType,
+                                  "UUID", owner))
+    {
+        return;
+    }
+
+    if (certString.size() == 0)
+    {
+        messages::propertyValueIncorrect(asyncResp->res, "CertificateString",
+                                         certString);
+        return;
+    }
+
+    if ((certType != "PEM") && (certType != "PEMchain"))
+    {
+        messages::propertyValueNotInList(asyncResp->res, certType,
+                                         "CertificateType");
+        return;
+    }
+
+    privilege_utils::isBiosPrivilege(
+        req, [req, asyncResp, certString, certType, owner]
+            (const boost::system::error_code ec, const bool isBios) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if (isBios == false)
+            {
+                createPendingRequest(req, asyncResp);
+                return;
+            }
+
+            std::shared_ptr<CertificateFile> certFile =
+                std::make_shared<CertificateFile>(certString);
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, owner, certFile]
+                (const boost::system::error_code ec,
+                const std::string& objectPath) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    sdbusplus::message::object_path path(objectPath);
+                    std::string certId = path.filename();
+                    messages::created(asyncResp->res);
+                    asyncResp->res.addHeader(boost::beast::http::field::location,
+                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                        "/Oem/Nvidia/Truststore/Certificates/" + certId);
+
+                    if (owner)
+                    {
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp](const boost::system::error_code ec) {
+                                if (ec)
+                                {
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                            },
+                            truststoreBiosService, objectPath,
+                            "org.freedesktop.DBus.Properties", "Set",
+                            "xyz.openbmc_project.Common.UUID", "UUID",
+                            dbus::utility::DbusVariantType(*owner));
+                    }
+                },
+                truststoreBiosService, truststoreBiosPath,
+                "xyz.openbmc_project.Certs.Install", "Install",
+                certFile->getCertFilePath());
+        });
+}
+
+inline void
+    handleTruststoreCertificatesGet(crow::App& app, const crow::Request& req,
+                                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                                    const std::string& certId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                        "/Boot/Certificates/" + certId;
+    asyncResp->res.jsonValue["@odata.type"] = "#Certificate.v1_7_0.Certificate";
+    asyncResp->res.jsonValue["Id"] = certId;
+    asyncResp->res.jsonValue["Name"] = "TruststoreBios Certificate";
+
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, truststoreBiosService,
+        truststoreBiosPath + "/" + certId, "",
+        [asyncResp,
+         certId](const boost::system::error_code ec,
+                 const dbus::utility::DBusPropertiesMap& propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                messages::resourceNotFound(asyncResp->res, "Certificate", certId);
+                return;
+            }
+
+            const std::string* certificateString = nullptr;
+            const std::vector<std::string>* keyUsage = nullptr;
+            const std::string* issuer = nullptr;
+            const std::string* subject = nullptr;
+            const uint64_t* validNotAfter = nullptr;
+            const uint64_t* validNotBefore = nullptr;
+            const std::string* owner = nullptr;
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), propertiesList,
+                "CertificateString", certificateString, "KeyUsage", keyUsage,
+                "Issuer", issuer, "Subject", subject, "ValidNotAfter",
+                validNotAfter, "ValidNotBefore", validNotBefore, "UUID", owner);
+
+            if (!success)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            asyncResp->res.jsonValue["CertificateString"] = "";
+            asyncResp->res.jsonValue["KeyUsage"] = nlohmann::json::array();
+
+            if (certificateString != nullptr)
+            {
+                asyncResp->res.jsonValue["CertificateString"] = *certificateString;
+                asyncResp->res.jsonValue["CertificateType"] = "PEM";
+            }
+
+            if (keyUsage != nullptr)
+            {
+                asyncResp->res.jsonValue["KeyUsage"] = *keyUsage;
+            }
+
+            if (issuer != nullptr)
+            {
+                updateCertIssuerOrSubject(asyncResp->res.jsonValue["Issuer"],
+                                          *issuer);
+            }
+
+            if (subject != nullptr)
+            {
+                updateCertIssuerOrSubject(asyncResp->res.jsonValue["Subject"],
+                                          *subject);
+            }
+
+            if (validNotAfter != nullptr)
+            {
+                asyncResp->res.jsonValue["ValidNotAfter"] =
+                    redfish::time_utils::getDateTimeUint(*validNotAfter);
+            }
+
+            if (validNotBefore != nullptr)
+            {
+                asyncResp->res.jsonValue["ValidNotBefore"] =
+                    redfish::time_utils::getDateTimeUint(*validNotBefore);
+            }
+
+            if (owner != nullptr)
+            {
+                asyncResp->res.jsonValue["UUID"] = *owner;
+            }
+        });
+}
+
+inline void
+    handleTruststoreCertificatesDelete(crow::App& app, const crow::Request& req,
+                                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                                       const std::string& certId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    privilege_utils::isBiosPrivilege(
+        req, [req, asyncResp, certId]
+        (const boost::system::error_code ec, const bool isBios) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (isBios == false)
+            {
+                createPendingRequest(req, asyncResp);
+                return;
+            }
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, certId](const boost::system::error_code ec) {
+                    if (ec.value() == EBADR)
+                    {
+                        messages::resourceNotFound(asyncResp->res, "certId", certId);
+                        return;
+                    }
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    asyncResp->res.result(boost::beast::http::status::no_content);
+                },
+                truststoreBiosService, truststoreBiosPath + "/" + certId,
+                "xyz.openbmc_project.Object.Delete", "Delete");
+        });
+}
+
+inline void
+    handleTruststoreCertificatesResetKeys(crow::App& app, const crow::Request& req,
+                                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    std::string resetKeysType;
+    if (!json_util::readJsonAction(req, asyncResp->res, "ResetKeysType", resetKeysType))
+    {
+        return;
+    }
+
+    if (resetKeysType != "DeleteAllKeys")
+    {
+        messages::propertyValueNotInList(asyncResp->res, resetKeysType,
+                                        "ResetKeysType");
+        return;
+    }
+
+    privilege_utils::isBiosPrivilege(
+        req, [req, asyncResp](const boost::system::error_code ec,
+                                    const bool isBios) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (isBios == false)
+            {
+                createPendingRequest(req, asyncResp);
+                return;
+            }
+
+            // BIOS does use action. It DELETE and POST certificates and
+            // signatures
+            messages::actionNotSupported(asyncResp->res, "ResetKeys");
+            return;
+        });
+}
+
 } // namespace bluefield
 
 inline void requestRoutesNvidiaOemBf(App& app)
@@ -842,9 +1151,35 @@ inline void requestRoutesNvidiaOemBf(App& app)
             }
             bluefield::resetTorSwitch(asyncResp);
         });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Truststore/Certificates")
+        .privileges(redfish::privileges::getComputerSystem)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(bluefield::handleTruststoreCertificatesCollectionGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Truststore/Certificates")
+        .privileges(redfish::privileges::patchComputerSystem)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(bluefield::handleTruststoreCertificatesCollectionPost, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/Oem/Nvidia/Truststore/Certificates/<str>")
+        .privileges(redfish::privileges::getComputerSystem)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(bluefield::handleTruststoreCertificatesGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/Oem/Nvidia/Truststore/Certificates/<str>")
+        .privileges(redfish::privileges::patchComputerSystem)
+        .methods(boost::beast::http::verb::delete_)(
+            std::bind_front(bluefield::handleTruststoreCertificatesDelete, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Actions/TruststoreCertificates.ResetKeys")
+        .privileges(redfish::privileges::patchComputerSystem)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(bluefield::handleTruststoreCertificatesResetKeys, std::ref(app)));
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 
-	    BMCWEB_ROUTE(app, bluefield::hostRhimTarget)
+	BMCWEB_ROUTE(app, bluefield::hostRhimTarget)
         .privileges(redfish::privileges::postComputerSystem)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
@@ -884,6 +1219,17 @@ inline void requestRoutesNvidiaOemBf(App& app)
                 connectx["ExternalHostPrivilege"]["@odata.id"] = bluefield::dpuHostPrivGet;
                 bluefield::mode.getActionInfo(&modeAction);
 				bluefield::hostRshim.getActionInfo(&hostRshimAction);
+
+                nvidia["Truststore"]["Certificates"]["@odata.id"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/Oem/Nvidia/Truststore/Certificates";
+
+                actions["#TruststoreCertificates.ResetKeys"]["target"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/Oem/Nvidia/Actions/TruststoreCertificates.ResetKeys";
+
+                actions["#TruststoreCertificates.ResetKeys"]
+                ["ResetKeysType@Redfish.AllowableValues"] = {"DeleteAllKeys"};
             });
 
     BMCWEB_ROUTE(app, bluefield::dpuStrpOptionGet)
