@@ -546,6 +546,23 @@ void deleteDbusLogEntry(const std::string& entryId,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 
+bool isSelEntry(const std::string* message, const std::vector<std::string>* additionalData)
+{
+    if ((message != nullptr) && (*message == "xyz.openbmc_project.Logging.SEL.Error.Created"))
+    {
+        return true;
+    }
+    if (additionalData != nullptr)
+    {
+        AdditionalData additional(*additionalData);
+        if (additional.count("namespace") > 0 && additional["namespace"] == "SEL")
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void deleteDbusSELEntry(std::string& entryID,
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
@@ -569,6 +586,7 @@ void deleteDbusSELEntry(std::string& entryID,
             }
             uint32_t* id = nullptr;
             std::string* message = nullptr;
+            const std::vector<std::string>* additionalData = nullptr;
 
             for (auto& propertyMap : resp)
             {
@@ -581,13 +599,17 @@ void deleteDbusSELEntry(std::string& entryID,
                 {
                     message = std::get_if<std::string>(&propertyMap.second);
                 }
+                else if (propertyMap.first == "AdditionalData")
+                {
+                    additionalData = std::get_if<std::vector<std::string>>(&propertyMap.second);
+                }
             }
             if (id == nullptr || message == nullptr)
             {
                 messages::internalError(asyncResp->res);
                 return;
             }
-            if (*message == "xyz.openbmc_project.Logging.SEL.Error.Created")
+            if (isSelEntry(message, additionalData))
             {
                 deleteDbusLogEntry(entryID, asyncResp);
                 return;
@@ -3013,6 +3035,13 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
     std::string generatorId;
     std::string messageId;
     bool resolved = false;
+    bool isMessageRegistry = false;
+    std::string sensorData;
+    std::string deviceName;
+    std::ostringstream hexCodeEventDir;
+    std::string messageArgs;
+    std::string originOfCondition;
+    const std::string* resolution = nullptr;
 
     for (auto& propertyMap : resp)
     {
@@ -3057,54 +3086,82 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
             }
             resolved = *resolveptr;
         }
+        else if (propertyMap.first == "Resolution")
+        {
+            resolution = std::get_if<std::string>(
+                &propertyMap.second);
+        }
         else if (propertyMap.first == "AdditionalData")
         {
             std::string eventDir;
             std::string recordType;
-            std::string sensorData;
-            std::ostringstream hexCodeEventDir;
             additionalDataVectorString =
                 std::get_if<std::vector<std::string>>(&propertyMap.second);
-            for (std::string& i : *additionalDataVectorString)
+           if (additionalDataVectorString != nullptr)
             {
-                std::vector<std::string> additionalDataKVpair;
-                boost::split(additionalDataKVpair, i, boost::is_any_of("="));
-                if (additionalDataKVpair.size() == 2)
+                AdditionalData additional(*additionalDataVectorString);
+                if (additional.count("REDFISH_MESSAGE_ID") > 0)
                 {
-                    if (additionalDataKVpair[0] == "EVENT_DIR")
+                    isMessageRegistry = true;
+                    messageId = additional["REDFISH_MESSAGE_ID"];
+                    BMCWEB_LOG_DEBUG << "RedFish MessageId: [" << messageId
+                                        << "]";
+
+                    if (additional.count("REDFISH_MESSAGE_ARGS") > 0)
+                    {
+                        messageArgs =
+                            additional["REDFISH_MESSAGE_ARGS"];
+                    }
+                }
+                else
+                {
+                    if (additional.count("EVENT_DIR") > 0)
                     {
                         hexCodeEventDir << "0x" << std::setfill('0')
                                         << std::setw(2) << std::hex
-                                        << std::stoi(additionalDataKVpair[1]);
+                                        << std::stoi(additional["EVENT_DIR"]);
                     }
-                    else if (additionalDataKVpair[0] == "GENERATOR_ID")
+                    if (additional.count("GENERATOR_ID") > 0)
                     {
                         std::ostringstream hexCodeGeneratorId;
-                        if (!additionalDataKVpair[1].empty())
+                        if (!additional["GENERATOR_ID"].empty())
                         {
                             hexCodeGeneratorId
                                 << "0x" << std::setfill('0') << std::setw(4)
                                 << std::hex
-                                << std::stoi(additionalDataKVpair[1]);
+                                << std::stoi(additional["GENERATOR_ID"]);
                             generatorId = hexCodeGeneratorId.str();
                         }
                     }
-                    else if (additionalDataKVpair[0] == "RECORD_TYPE")
+                    if (additional.count("RECORD_TYPE") > 0)
                     {
-                        recordType = additionalDataKVpair[1];
+                        recordType = additional["RECORD_TYPE"];
                     }
-                    else if (additionalDataKVpair[0] == "SENSOR_DATA")
+                    if (additional.count("SENSOR_DATA") > 0)
                     {
-                        sensorData = additionalDataKVpair[1];
+                        sensorData = additional["SENSOR_DATA"];
                         boost::algorithm::to_lower(sensorData);
                     }
+                    // MessageId for SEL is of the form 0xNNaabbcc
+                    // where 'NN' is the EventDir/EventType byte, aa is first byte
+                    // sensor data, bb is second byte sensor data, cc is third byte
+                    // sensor data
+                    messageId = hexCodeEventDir.str() + sensorData;
+                    BMCWEB_LOG_DEBUG << "MessageId: [" << messageId
+                                        << "]";
+
+                }
+                if (additional.count("REDFISH_ORIGIN_OF_CONDITION") > 0)
+                {
+                    originOfCondition =
+                        additional["REDFISH_ORIGIN_OF_CONDITION"];
+                }
+                if (additional.count("DEVICE_NAME") > 0)
+                {
+                    deviceName = additional["DEVICE_NAME"];
                 }
             }
-            // MessageId for SEL is of the form 0xNNaabbcc
-            // where 'NN' is the EventDir/EventType byte, aa is first byte
-            // sensor data, bb is second byte sensor data, cc is third byte
-            // sensor data
-            messageId = hexCodeEventDir.str() + sensorData;
+
         }
     }
     if (id == nullptr || message == nullptr || severity == nullptr)
@@ -3112,32 +3169,53 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
         throw std::runtime_error("Invalid SEL Entry");
         return;
     }
-    if (*message != "xyz.openbmc_project.Logging.SEL.Error.Created")
+    if (!isSelEntry(message, additionalDataVectorString))
     {
         return;
     }
-    thisEntry["@odata.type"] = "#LogEntry.v1_8_0.LogEntry";
-    thisEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                             "/LogServices/SEL/"
-                             "Entries/" +
-                             std::to_string(*id);
-    thisEntry["Name"] = "System Event Log Entry";
-    thisEntry["Id"] = std::to_string(*id);
-    if (!generatorId.empty())
+    if (isMessageRegistry)
     {
-        thisEntry["GeneratorId"] = generatorId;
+        message_registries::generateMessageRegistry(
+            thisEntry,
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+            "/LogServices/"
+            "SEL/Entries/",
+            "v1_13_0", std::to_string(*id),
+            "System Event Log Entry",
+            redfish::time_utils::getDateTimeStdtime(timestamp),
+            messageId, messageArgs, *resolution, resolved,
+            *severity);
+        thisEntry["EntryType"] = "SEL";
     }
-    if (!messageId.empty())
+
+    // generateMessageRegistry will not create the entry if
+    // the messageId can't be found in message registries.
+    // So check the entry 'Id' anyway to cover that case.
+    if (thisEntry["Id"].size() == 0)
     {
-        thisEntry["MessageId"] = messageId;
+        thisEntry["@odata.type"] = logEntryVersion;
+        thisEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/LogServices/SEL/"
+                                "Entries/" +
+                                std::to_string(*id);
+        thisEntry["Name"] = "System Event Log Entry";
+        thisEntry["Id"] = std::to_string(*id);
+        if (!generatorId.empty())
+        {
+            thisEntry["GeneratorId"] = generatorId;
+        }
+        if (!messageId.empty())
+        {
+            thisEntry["MessageId"] = messageId;
+        }
+        thisEntry["Message"] = *message;
+        thisEntry["Resolved"] = resolved;
+        thisEntry["EntryType"] = "SEL";
+        thisEntry["Severity"] = translateSeverityDbusToRedfish(*severity);
+        thisEntry["Created"] = redfish::time_utils::getDateTimeStdtime(timestamp);
+        thisEntry["Modified"] =
+            redfish::time_utils::getDateTimeStdtime(updateTimestamp);
     }
-    thisEntry["Message"] = *message;
-    thisEntry["Resolved"] = resolved;
-    thisEntry["EntryType"] = "SEL";
-    thisEntry["Severity"] = translateSeverityDbusToRedfish(*severity);
-    thisEntry["Created"] = redfish::time_utils::getDateTimeStdtime(timestamp);
-    thisEntry["Modified"] =
-        redfish::time_utils::getDateTimeStdtime(updateTimestamp);
 }
 
 inline void requestRoutesDBusSELLogEntryCollection(App& app)
@@ -3312,6 +3390,8 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
                     {
                         uint32_t* id = nullptr;
                         std::string* message = nullptr;
+                        const std::vector<std::string>* additionalData = nullptr;
+
                         for (auto& interfaceMap : objectPath.second)
                         {
                             if (interfaceMap.first ==
@@ -3329,14 +3409,17 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
                                         message = std::get_if<std::string>(
                                             &propertyMap.second);
                                     }
+                                    else if (propertyMap.first == "AdditionalData")
+                                    {
+                                        additionalData = std::get_if<std::vector<std::string>>(&propertyMap.second);
+                                    }
                                 }
                                 if (id == nullptr || message == nullptr)
                                 {
                                     messages::internalError(asyncResp->res);
                                     continue;
                                 }
-                                if (*message ==
-                                    "xyz.openbmc_project.Logging.SEL.Error.Created")
+                                if (isSelEntry(message, additionalData))
                                 {
                                     std::string entryId = std::to_string(*id);
                                     deleteDbusLogEntry(entryId, asyncResp);
