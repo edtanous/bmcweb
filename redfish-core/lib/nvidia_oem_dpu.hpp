@@ -783,7 +783,7 @@ inline void handleTruststoreCertificatesCollectionPost(
     std::optional<std::string> owner;
     if (!json_util::readJsonAction(req, asyncResp->res, "CertificateString",
                                   certString, "CertificateType", certType,
-                                  "UUID", owner))
+                                  "UefiSignatureOwner", owner))
     {
         return;
     }
@@ -869,7 +869,7 @@ inline void
         return;
     }
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                        "/Boot/Certificates/" + certId;
+                                        "/Oem/Nvidia/Truststore/Certificates/" + certId;
     asyncResp->res.jsonValue["@odata.type"] = "#Certificate.v1_7_0.Certificate";
     asyncResp->res.jsonValue["Id"] = certId;
     asyncResp->res.jsonValue["Name"] = "TruststoreBios Certificate";
@@ -947,7 +947,7 @@ inline void
 
             if (owner != nullptr)
             {
-                asyncResp->res.jsonValue["UUID"] = *owner;
+                asyncResp->res.jsonValue["UefiSignatureOwner"] = *owner;
             }
         });
 }
@@ -1026,7 +1026,14 @@ inline void
             }
             if (isBios == false)
             {
-                createPendingRequest(req, asyncResp);
+                // UEFI requires the "Action" target to be under "Truststore/Certificates"
+                // in order to identify the source of this action.
+                // Since the action is placed under the general "Action" section,
+                // The request is being edited with the required TargetUri
+                crow::Request reqFixedTar(req);
+                reqFixedTar.url = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/Oem/Nvidia/Truststore/Certificates/Actions/TruststoreCertificates.ResetKeys";
+                createPendingRequest(reqFixedTar, asyncResp);
                 return;
             }
 
