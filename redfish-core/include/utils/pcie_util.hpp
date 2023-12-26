@@ -67,7 +67,7 @@ inline void
             }
             nlohmann::json::object_t pcieDevice;
             pcieDevice["@odata.id"] = boost::urls::format(
-                "/redfish/v1/" PLATFORMSYSTEMID "/system/PCIeDevices/{}", devName);
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/{}", devName);
             pcieDeviceList.emplace_back(std::move(pcieDevice));
         }
         asyncResp->res.jsonValue[name + "@odata.count"] = pcieDeviceList.size();

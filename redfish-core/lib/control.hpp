@@ -702,7 +702,7 @@ inline void requestRoutesChassisControls(App& app)
                                            chassisID);
                 return;
             }
-            asyncResp->res.jsonValue["@odata.type"] = "#Control.v1_0_0.Control";
+            asyncResp->res.jsonValue["@odata.type"] = "#Control.v1_3_0.Control";
             asyncResp->res.jsonValue["SetPointUnits"] = "W";
             asyncResp->res.jsonValue["Id"] = controlID;
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -766,7 +766,7 @@ inline void requestRoutesChassisControls(App& app)
                                            chassisID);
                 return;
             }
-            asyncResp->res.jsonValue["@odata.type"] = "#Control.v1_0_0.Control";
+            asyncResp->res.jsonValue["@odata.type"] = "#Control.v1_3_0.Control";
             asyncResp->res.jsonValue["SetPointUnits"] = "W";
             asyncResp->res.jsonValue["Id"] = controlID;
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";

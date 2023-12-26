@@ -724,7 +724,7 @@ inline void
                 }
                 if (locationCode != nullptr)
                 {
-                    asyncResp->res.jsonValue["LocationCode"] = *locationCode;
+                    asyncResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] = *locationCode;
                 }
                 if (locationType != nullptr)
                 {
@@ -732,7 +732,7 @@ inline void
                 }
                 if (prettyName != nullptr)
                 {
-                    asyncResp->res.jsonValue["PrettyName"] = *prettyName;
+                    asyncResp->res.jsonValue["Name"] = *prettyName;
                 }
                 if (type != nullptr)
                 {
@@ -792,8 +792,8 @@ inline void
                         redfish::chassis_utils::getPowerStateType(*state);
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            //    asyncResp->res.jsonValue["Name"] = chassisId;
-            //    asyncResp->res.jsonValue["Id"] = chassisId;
+               asyncResp->res.jsonValue["Name"] = chassisId;
+               asyncResp->res.jsonValue["Id"] = chassisId;
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
                 asyncResp->res.jsonValue["Thermal"]["@odata.id"] =

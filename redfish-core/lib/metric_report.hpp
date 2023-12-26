@@ -281,7 +281,6 @@ inline void getPlatforMetricsFromSensorMap(
     asyncResp->res.jsonValue["Oem"]["Nvidia"]["SensingIntervalMilliseconds"] =
         pmSensingInterval;
     asyncResp->res.jsonValue["MetricValues"] = nlohmann::json::array();
-
     sdbusplus::asio::getProperty<uint32_t>(
         *crow::connections::systemBus, serviceName, objectPath,
         "xyz.openbmc_project.Sensor.Aggregation", "StaleSensorUpperLimitms",

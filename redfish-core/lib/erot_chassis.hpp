@@ -356,8 +356,8 @@ inline void getEROTChassis(const crow::Request& req,
             redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
                                                                objPath);
 
-            // redfish::conditions_utils::populateServiceConditions(asyncResp,
-            //                                                      chassisId);
+            redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                                 chassisId);
             return;
         }
 

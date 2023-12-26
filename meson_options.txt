@@ -138,7 +138,7 @@ option('redfish-dbus-event', type : 'feature', value : 'disabled', description :
 option(
     'redfish-enable-proccessor-memory-status',
     type: 'feature',
-    value: 'disabled',
+    value: 'enabled',
     description: '''Enable/disable the deprecated processor and memory summary
                     status. The default condition is disabling the processor
                     and memory summary status. This option will be removed in
@@ -270,7 +270,7 @@ option(
 option(
     'redfish-health-populate',
     type: 'feature',
-    value: 'disabled',
+    value: 'enabled',
     description: '''Enables HealthPopulate and generate the Status property for
                     the resource. This option will be removed Q1 2024'''
 )

@@ -2803,7 +2803,7 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     constexpr std::array<std::string_view, 1> interfaces = {
         "xyz.openbmc_project.Control.Power.Mode"};
     dbus::utility::getSubTree(
-        "/", 0, interfaces,
+        "/xyz/openbmc_project/control/power", 0, interfaces,
         [asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
@@ -4032,9 +4032,10 @@ inline void
 
     asyncResp->res.jsonValue["LogServices"]["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices";
+#ifdef BMCWEB_ENABLE_BIOS
     asyncResp->res.jsonValue["Bios"]["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios";
-
+#endif
     nlohmann::json::array_t managedBy;
     nlohmann::json& manager = managedBy.emplace_back();
     manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
@@ -4109,7 +4110,7 @@ inline void
     getBootOrder(asyncResp);
     getSecureBoot(asyncResp);
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
-    pcie_util::getPCIeDeviceList(asyncResp, "PCIeDevices");
+    getPCIeDeviceList(asyncResp, "PCIeDevices");
     getHostWatchdogTimer(asyncResp);
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     getPowerRestorePolicy(asyncResp);
@@ -4405,12 +4406,12 @@ inline void handleSystemCollectionResetActionGet(
                                    systemName);
         return;
     }
-// TODO: Uncomment this code
-    // if (systemName == "hypervisor")
-    // {
-    //     handleHypervisorResetActionGet(asyncResp);
-    //     return;
-    // }
+
+    if (systemName == "hypervisor")
+    {
+        handleHypervisorResetActionGet(asyncResp);
+        return;
+    }
 
     if (systemName != PLATFORMSYSTEMID )
     {
