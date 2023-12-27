@@ -3506,6 +3506,23 @@ inline void requestRoutesManager(App& app)
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
+            oem["UptimeSeconds"] = [asyncResp]()->double {
+                double uptime = 0;
+                auto ifs = std::ifstream("/proc/uptime", std::ifstream::in);
+                if(ifs.good())
+                {
+                    ifs >> uptime;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR << "Failed to get uptime from /proc/uptime.";
+                    messages::internalError(asyncResp->res);
+                }
+                return uptime;
+            }();
+#endif //BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
+
             // NvidiaManager
             nlohmann::json& oemNvidia = oem["Nvidia"];
             oemNvidia["@odata.type"] = "#OemManager.Nvidia";

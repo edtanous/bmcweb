@@ -85,6 +85,7 @@ feature_map = {
   'nvidia-oem-common-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES',
   'nvidia-oem-bf-properties'                    : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES',
   'nvidia-oem-bf3-properties'                   : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES',
+  'nvidia-oem-oberon-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES',
   'network-adapters'                            : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS',
   'network-adapters-generic'                    : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC',
   'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
