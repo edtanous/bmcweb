@@ -1136,6 +1136,11 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                 ["#NvidiaChassis.AuxPowerReset"]["target"] =
             "/redfish/v1/Chassis/" + chassisId +
             "/Actions/Oem/NvidiaChassis.AuxPowerReset";
+        asyncResp->res
+            .jsonValue["Actions"]["Oem"]["#NvidiaChassis.AuxPowerReset"]
+                      ["@Redfish.ActionInfo"] =
+            "/redfish/v1/Chassis/" + chassisId +
+            "/Oem/Nvidia/AuxPowerResetActionInfo";
     }
 #endif
     asyncResp->res.jsonValue["PCIeDevices"] = {
@@ -2262,6 +2267,40 @@ inline void handleChassisResetActionInfoGet(
     asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
 }
 
+#ifdef BMCWEB_ENABLE_HOST_AUX_POWER
+inline void handleOemChassisResetActionInfoGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId)
+{
+    if (chassisId != PLATFORMCHASSISNAME)
+    {
+        messages::internalError(asyncResp->res);
+        return;
+    }
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_2_0.ActionInfo";
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Chassis/"+ chassisId +"/Oem/Nvidia/AuxPowerResetActionInfo";
+    asyncResp->res.jsonValue["Name"] = "Auxillary Power Reset Action Info";
+    asyncResp->res.jsonValue["Id"] = "AuxPowerResetActionInfo";
+    nlohmann::json::array_t parameters;
+    nlohmann::json::object_t parameter;
+
+    parameter["Name"] = "ResetType";
+    parameter["Required"] = true;
+    parameter["DataType"] = "String";
+    nlohmann::json::array_t allowableValues;
+    allowableValues.emplace_back("AuxPowerCycle");
+    parameter["AllowableValues"] = std::move(allowableValues);
+    parameters.emplace_back(std::move(parameter));
+
+    asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+}
+#endif
 /**
  * ChassisResetActionInfo derived class for delivering Chassis
  * ResetType AllowableValues using ResetInfo schema.
@@ -2272,6 +2311,13 @@ inline void requestRoutesChassisResetActionInfo(App& app)
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleChassisResetActionInfoGet, std::ref(app)));
+#ifdef BMCWEB_ENABLE_HOST_AUX_POWER
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Chassis/<str>/Oem/Nvidia/AuxPowerResetActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleOemChassisResetActionInfoGet, std::ref(app)));
+#endif
 }
 
 } // namespace redfish
