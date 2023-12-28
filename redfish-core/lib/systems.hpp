@@ -256,7 +256,6 @@ inline void
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "getComputerSystem DBUS response error";
-                // messages::internalError(aResp->res);
                 return;
             }
             // Iterate over all retrieved ObjectPaths.
@@ -3868,7 +3867,7 @@ inline void requestRoutesSystems(App& app)
                 boost::beast::http::field::link,
                 "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
 
-            std::optional<nlohmann::json> oemObject;
+            std::optional<bool> istModeEnabled;
             std::optional<bool> locationIndicatorActive;
             std::optional<std::string> indicatorLed;
             std::optional<std::string> assetTag;
@@ -3932,7 +3931,7 @@ inline void requestRoutesSystems(App& app)
                         "Boot/BootOrderPropertySelection", bootOrderPropertySelection,
                         "Boot/HttpBootUri", httpBootUri,
                         "Oem/Nvidia/ProcessorDebugCapabilities", processorDebugCapabilities,
-                        "Oem",oemObject
+                        "Oem/Nvidia/ISTModeEnabled", istModeEnabled
                         ))
                 {
                     return;
@@ -3943,21 +3942,9 @@ inline void requestRoutesSystems(App& app)
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             // Update istMode
-            if (std::optional<nlohmann::json> oemNvidiaObject;
-                oemObject &&
-                redfish::json_util::readJson(*oemObject, asyncResp->res,
-                                             "Nvidia", oemNvidiaObject))
+            if (istModeEnabled)
             {
-                std::optional<bool> istMode;
-                if (oemNvidiaObject && redfish::json_util::readJson(
-                                           *oemNvidiaObject, asyncResp->res,
-                                           "ISTModeEnabled", istMode))
-                {
-                    if (istMode)
-                    {
-                        ist_mode_utils::setIstMode(asyncResp, req, *istMode);
-                    }
-                }
+                ist_mode_utils::setIstMode(asyncResp, req, *istModeEnabled);
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 

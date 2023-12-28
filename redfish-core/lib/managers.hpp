@@ -3821,7 +3821,6 @@ inline void requestRoutesManager(App& app)
                     {
                         BMCWEB_LOG_ERROR
                             << "Error while getting manager service state";
-                        // messages::internalError(asyncResp->res);
                         return;
                     }
                     if (!subtree.empty())
@@ -4297,7 +4296,6 @@ inline void requestRoutesManagerCollection(App& app)
                     if (ec)
                     {
                         BMCWEB_LOG_ERROR << "DBUS response error";
-                        //messages::internalError(asyncResp->res);
                         return;
                     }
                     nlohmann::json& members =
