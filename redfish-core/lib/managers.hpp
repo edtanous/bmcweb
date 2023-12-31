@@ -3790,9 +3790,8 @@ inline void requestRoutesManager(App& app)
                             });
                             return;
                         }
-                        messages::resourceNotFound(asyncResp->res,
-                                                   "#Manager.v1_11_0.Manager",
-                                                   PLATFORMBMCID);
+                        BMCWEB_LOG_ERROR << "Could not find interface"
+                                        "xyz.openbmc_project.Inventory.Item.ManagementService";
                     }
                 },
                 "xyz.openbmc_project.ObjectMapper",
@@ -3849,9 +3848,8 @@ inline void requestRoutesManager(App& app)
                         }
                         return;
                     }
-                    messages::resourceNotFound(asyncResp->res,
-                                                   "#Manager.v1_11_0.Manager",
-                                                   PLATFORMBMCID);
+                    BMCWEB_LOG_ERROR << "Could not find interface"
+                                        "xyz.openbmc_project.State.FeatureReady";
                 },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
