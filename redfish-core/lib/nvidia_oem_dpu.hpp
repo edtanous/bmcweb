@@ -282,36 +282,36 @@ class DpuActionSetAndGetProp :
 };
 
 const PropertyInfo modeInfo = {
-    .intf = "xyz.openbmc_project.Control.NicAttribute",
+    .intf = "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute",
     .prop = "NicAttribute",
     .dbusToRedfish =
-        {{"xyz.openbmc_project.Control.NicAttribute.Modes.Enabled", "DpuMode"},
-         {"xyz.openbmc_project.Control.NicAttribute.Modes.Disabled", "NicMode"},
-         {"xyz.openbmc_project.Control.NicAttribute.Modes.Invaild", "Invaild"}},
+        {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled", "DpuMode"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled", "NicMode"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Invaild", "Invaild"}},
     .redfishToDbus = {
-        {"DpuMode", "xyz.openbmc_project.Control.NicAttribute.Modes.Enabled"},
+        {"DpuMode", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled"},
         {"NicMode",
-         "xyz.openbmc_project.Control.NicAttribute.Modes.Disabled"}}};
+         "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled"}}};
 
 const PropertyInfo nicAttributeInfo = {
-    .intf = "xyz.openbmc_project.Control.NicAttribute",
+    .intf = "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute",
     .prop = "NicAttribute",
-    .dbusToRedfish = {{"xyz.openbmc_project.Control.NicAttribute.Modes.Enabled", "Enabled"},
-                {"xyz.openbmc_project.Control.NicAttribute.Modes.Disabled", "Disabled"},
-                {"xyz.openbmc_project.Control.NicAttribute.Modes.Invaild", "Invaild"}},
-    .redfishToDbus = {{"Enabled", "xyz.openbmc_project.Control.NicAttribute.Modes.Enabled"},
-                {"Disabled", "xyz.openbmc_project.Control.NicAttribute.Modes.Disabled"}}};
+    .dbusToRedfish = {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled", "Enabled"},
+                {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled", "Disabled"},
+                {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Invaild", "Invaild"}},
+    .redfishToDbus = {{"Enabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled"},
+                {"Disabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled"}}};
 
 const PropertyInfo nicTristateAttributeInfo = {
-    .intf = "xyz.openbmc_project.Control.NicTristateAttribute",
+    .intf = "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute",
     .prop = "NicTristateAttribute",
-    .dbusToRedfish = {{"xyz.openbmc_project.Control.NicTristateAttribute.Modes.Default", "Default"},
-                 {"xyz.openbmc_project.Control.NicTristateAttribute.Modes.Enabled", "Enabled"},
-                 {"xyz.openbmc_project.Control.NicTristateAttribute.Modes.Disabled", "Disabled"},
-                 {"xyz.openbmc_project.Control.NicTristateAttribute.Modes.Invaild", "Invaild"}},
-    .redfishToDbus = {{"Default", "xyz.openbmc_project.Control.NicTristateAttribute.Modes.Default"},
-                 {"Enabled", "xyz.openbmc_project.Control.NicTristateAttribute.Modes.Enabled"},
-                 {"Disabled", "xyz.openbmc_project.Control.NicTristateAttribute.Modes.Disabled"}}};
+    .dbusToRedfish = {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Default", "Default"},
+                 {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Enabled", "Enabled"},
+                 {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Disabled", "Disabled"},
+                 {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Invaild", "Invaild"}},
+    .redfishToDbus = {{"Default", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Default"},
+                 {"Enabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Enabled"},
+                 {"Disabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Disabled"}}};
 
 constexpr char oemNvidiaGet[] =
     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";
