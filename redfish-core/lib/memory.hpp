@@ -406,7 +406,7 @@ inline void
     asyncResp->res.jsonValue[jsonPtr]["Name"] = "DIMM Slot";
     asyncResp->res.jsonValue[jsonPtr]["Status"]["State"] = "Enabled";
 #ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    asyncResp->res.jsonValue[jsonPtr]["Status"]["Health"] = "OK";.
+    asyncResp->res.jsonValue[jsonPtr]["Status"]["Health"] = "OK";
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     std::string dimmIdStr{dimmId};
     redfish::conditions_utils::populateServiceConditions(asyncResp, dimmIdStr);

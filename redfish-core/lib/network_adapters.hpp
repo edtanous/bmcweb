@@ -7,6 +7,8 @@
 #include "utils/collection.hpp"
 #include "utils/json_utils.hpp"
 
+#include <boost/url/format.hpp>
+
 namespace redfish
 {
 
@@ -93,8 +95,8 @@ inline void doNetworkAdaptersCollection(
     asyncResp->res.jsonValue["@odata.type"] =
         "#NetworkAdapterCollection.NetworkAdapterCollection";
     asyncResp->res.jsonValue["Name"] = "Network Adapter Collection";
-    asyncResp->res.jsonValue["@odata.id"] = crow::utility::urlFromPieces(
-        "redfish", "v1", "Chassis", chassisId, "NetworkAdapters");
+    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/NetworkAdapters", chassisId);
 
     crow::connections::systemBus->async_method_call(
         [chassisId, asyncResp](
@@ -133,9 +135,9 @@ inline void doNetworkAdaptersCollection(
         if (networkAdaptersCount)
         {
             nlohmann::json::object_t member;
-            member["@odata.id"] = crow::utility::urlFromPieces(
-                "redfish", "v1", "Chassis", chassisId, "NetworkAdapters",
-                PLATFORMNETWORKADAPTER);
+            member["@odata.id"] = boost::urls::format(
+                "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER,
+                chassisId);
             members.push_back(std::move(member));
         }
     },
@@ -166,17 +168,18 @@ inline void
     asyncResp->res.jsonValue["Manufacturer"] = "Nvidia";
     asyncResp->res.jsonValue["Id"] = "NetworkAdapter";
 
-    asyncResp->res.jsonValue["@odata.id"] =
-        crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
-                                     "NetworkAdapters", PLATFORMNETWORKADAPTER);
-    asyncResp->res.jsonValue["Ports"]["@odata.id"] =
-        crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
-                                     "NetworkAdapters", PLATFORMNETWORKADAPTER,
-                                     "Ports");
+    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER,
+        chassisId);
+    asyncResp->res.jsonValue["Ports"]["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
+        "Ports",
+        chassisId);
     asyncResp->res.jsonValue["NetworkDeviceFunctions"]["@odata.id"] =
-        crow::utility::urlFromPieces("redfish", "v1", "Chassis", chassisId,
-                                     "NetworkAdapters", PLATFORMNETWORKADAPTER,
-                                     "NetworkDeviceFunctions");
+        boost::urls::format(
+            "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
+            "NetworkDeviceFunctions",
+            chassisId);
 }
 
 inline void
@@ -198,9 +201,10 @@ inline void
         asyncResp->res.jsonValue["@odata.type"] =
             "#PortCollection.PortCollection";
         asyncResp->res.jsonValue["Name"] = "Port Collection";
-        asyncResp->res.jsonValue["@odata.id"] = crow::utility::urlFromPieces(
-            "redfish", "v1", "Chassis", chassisId, "NetworkAdapters",
-            PLATFORMNETWORKADAPTER, "Ports");
+        asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+            "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
+            "Ports",
+            chassisId);
         isNDF = false;
     }
     else
@@ -209,9 +213,10 @@ inline void
         asyncResp->res.jsonValue["@odata.type"] =
             "#NetworkDeviceFunctionCollection.NetworkDeviceFunctionCollection";
         asyncResp->res.jsonValue["Name"] = "Network Device Function Collection";
-        asyncResp->res.jsonValue["@odata.id"] = crow::utility::urlFromPieces(
-            "redfish", "v1", "Chassis", chassisId, "NetworkAdapters",
-            PLATFORMNETWORKADAPTER, "NetworkDeviceFunctions");
+        asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+            "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
+            "NetworkDeviceFunctions",
+            chassisId);
     }
     getNetworkAdapterCollectionMembers(
         asyncResp,
@@ -293,9 +298,10 @@ inline void doPort(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["Id"] = portId;
     asyncResp->res.jsonValue["Name"] = "Port";
     asyncResp->res.jsonValue["LinkNetworkTechnology"] = "Ethernet";
-    asyncResp->res.jsonValue["@odata.id"] = crow::utility::urlFromPieces(
-        "redfish", "v1", "Chassis", chassisId, "NetworkAdapters",
-        PLATFORMNETWORKADAPTER, "Ports", portId);
+    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
+        "Ports/{}",
+        chassisId, portId);
     using GetManagedPropertyType = boost::container::flat_map<
         std::string,
         std::variant<std::string, bool, double, uint64_t, uint32_t>>;
