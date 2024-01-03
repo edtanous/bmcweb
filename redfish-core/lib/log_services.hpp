@@ -93,6 +93,12 @@ static const Message*
     std::span<const MessageEntry>::iterator messageIt = std::find_if(
         registry.begin(), registry.end(),
         [&messageKey](const MessageEntry& messageEntry) {
+            if(messageKey.c_str() == nullptr)
+            {
+                BMCWEB_LOG_WARNING << "message key pointer is null.";
+                return false;
+            }
+
             return std::strcmp(messageEntry.first, messageKey.c_str()) == 0;
         });
     if (messageIt != registry.end())
