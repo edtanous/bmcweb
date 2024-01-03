@@ -706,9 +706,13 @@ inline void requestRoutesEROTChassisDOT(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKInstall")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) -> void {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::string cakKey;
         std::optional<bool> lockDisable;
         std::optional<std::string> apFirmwareSignature;
@@ -769,9 +773,13 @@ inline void requestRoutesEROTChassisDOT(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKLock")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) -> void {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::string key;
         if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Key",
                                                 key))
@@ -798,9 +806,13 @@ inline void requestRoutesEROTChassisDOT(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKTest")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
+            [&app](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) -> void {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::vector<uint8_t> data;
         executeDotCommand(asyncResp, chassisID,
                           dot::DotMctpVdmUtilCommand::CAKTest, data);
@@ -809,9 +821,13 @@ inline void requestRoutesEROTChassisDOT(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/DOTDisable")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) -> void {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::string key;
         if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Key",
                                                 key))
@@ -838,9 +854,13 @@ inline void requestRoutesEROTChassisDOT(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/DOTTokenInstall")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) -> void {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         if (req.body().size() != DOT_TOKEN_SIZE)
         {
             BMCWEB_LOG_ERROR("Invalid DOT token size: {}", req.body().size());

@@ -3395,9 +3395,13 @@ inline void requestRoutesSensor(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Sensors/<str>/")
         .privileges(redfish::privileges::patchSensor)
         .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisId, const std::string& sensorId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         crow::connections::systemBus->async_method_call(
             [asyncResp, chassisId, sensorId,
              req](const boost::system::error_code ec,

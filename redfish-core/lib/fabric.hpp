@@ -1454,9 +1454,13 @@ inline void requestRoutesNVSwitchReset(App& app)
                       "Actions/Switch.Reset")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& fabricId, const std::string& switchId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::optional<std::string> resetType;
         if (!redfish::json_util::readJsonAction(req, asyncResp->res,
                                                 "ResetType", resetType))

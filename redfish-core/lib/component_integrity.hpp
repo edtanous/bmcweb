@@ -195,9 +195,13 @@ inline void asyncGetSPDMMeasurementData(const std::string& objectPath,
 }
 
 inline void handleSPDMGETSignedMeasurement(
-    const crow::Request& req,
+    App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
 {
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
     std::optional<std::string> nonce;
     std::vector<uint8_t> nonceVec;
     std::optional<uint8_t> slotID;
@@ -517,7 +521,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                       "Actions/SPDMGetSignedMeasurements")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::post)(
-            handleSPDMGETSignedMeasurement);
+            std::bind_front(handleSPDMGETSignedMeasurement, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
                       "Actions/SPDMGetSignedMeasurements/data")

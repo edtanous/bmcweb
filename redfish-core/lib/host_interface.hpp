@@ -313,9 +313,13 @@ inline void requestHostInterfacesRoutes(App& app)
                  "/redfish/v1/Managers/" PLATFORMBMCID "/HostInterfaces/<str>/")
         .privileges(redfish::privileges::patchHostInterface)
         .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& ifaceId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         // Check for the match of requested HostInterface Id with
         // the configured HostInterface channel
         if (ifaceId.compare(HOSTIFACECHANNEL))

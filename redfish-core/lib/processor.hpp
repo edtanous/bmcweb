@@ -4680,9 +4680,13 @@ inline void requestRoutesProcessorSettings(App& app)
                  "Settings")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::optional<nlohmann::json> memSummary;
         if (!redfish::json_util::readJsonAction(req, asyncResp->res,
                                                 "MemorySummary", memSummary))
@@ -4789,9 +4793,13 @@ inline void requestRoutesProcessorReset(App& app)
                  "Actions/Processor.Reset")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::optional<std::string> resetType;
         if (!json_util::readJsonAction(req, asyncResp->res, "ResetType",
                                        resetType))

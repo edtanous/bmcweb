@@ -401,7 +401,7 @@ option(
 option(
     'insecure-ignore-content-type',
     type: 'feature',
-    value: 'disabled',
+    value: 'enabled',
     description: '''Allows parsing PUT/POST/PATCH content as JSON regardless
                     of the presence of the content-type header.  Enabling this
                     conflicts with the input parsing guidelines, but may be

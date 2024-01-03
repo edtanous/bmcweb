@@ -3425,9 +3425,13 @@ inline void requestRoutesInventorySoftware(App& app)
         .privileges(redfish::privileges::patchUpdateService)
         .methods(
             boost::beast::http::verb::
-                patch)([](const crow::Request& req,
+                patch)([&app](const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                           const std::string& param) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             BMCWEB_LOG_DEBUG("doPatch...");
             std::shared_ptr<std::string> swId =
                 std::make_shared<std::string>(param);

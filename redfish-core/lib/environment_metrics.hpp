@@ -210,9 +210,14 @@ inline void requestRoutesEnvironmentMetrics(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/EnvironmentMetrics/")
         .privileges(redfish::privileges::patchChassis)
         .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisId) {
+        
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::optional<nlohmann::json> powerLimit;
         std::optional<nlohmann::json> oem;
         // Read json request
@@ -354,9 +359,13 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                       "/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::optional<nlohmann::json> powerLimit;
         std::optional<nlohmann::json> oemObject;
 
@@ -535,9 +544,13 @@ inline void requestRoutesEdppReset(App& app)
         "EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         redfish::processor_utils::getProcessorObject(
             asyncResp, processorId,
             [](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,

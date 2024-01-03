@@ -4430,10 +4430,16 @@ inline void requestRoutesSystemFaultLogClear(App& app)
                       "/LogServices/FaultLog/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
-    { clearDump(asyncResp, "FaultLog"); });
+    { 
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        clearDump(asyncResp, "FaultLog"); 
+    });
 }
 
 inline void getFDRServiceState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
@@ -5332,8 +5338,12 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
              "/LogServices/EventLog/Actions/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
-            [&](const crow::Request& req,
+            [&app](const crow::Request& req,
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::string diagnosticDataType;
         std::string oemDiagnosticDataType;
         if (!redfish::json_util::readJsonAction(
@@ -6615,8 +6625,12 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                       "/LogServices/DebugTokenService/CollectDiagnosticData")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         std::string diagnosticDataType;
         std::string oemDiagnosticDataType;
         if (!redfish::json_util::readJsonAction(
