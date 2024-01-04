@@ -517,7 +517,6 @@ class Connection :
                 }
             }
 #endif // BMCWEB_INSECURE_DISABLE_AUTHX
-            doRead();
 
             if (parser->is_done())
             {
@@ -525,6 +524,7 @@ class Connection :
                 return;
             }
 
+            doRead();
         });
     }
 
