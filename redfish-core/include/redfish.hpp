@@ -419,9 +419,7 @@ class RedfishService
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
        requestRoutesUpdateServiceCommitImage(app);
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-       requestRoutesComputeDigestPost(app);
-#endif
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
         requestRoutesNvidiaOemBf(app);
         requestRoutesNvidiaManagerSetSelCapacityAction(app);
