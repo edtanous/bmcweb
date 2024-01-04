@@ -806,7 +806,7 @@ inline void requestRoutesEROTChassisDOT(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKTest")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
-            [&app](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) -> void {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
