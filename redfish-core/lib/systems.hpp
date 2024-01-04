@@ -4020,8 +4020,10 @@ inline void
     asyncResp->res.jsonValue["Storage"]["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
 #endif
+#ifdef BMCWEB_ENABLE_FABRIC_ADAPTER
     asyncResp->res.jsonValue["FabricAdapters"]["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/FabricAdapters";
+#endif
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"]["target"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Actions/ComputerSystem.Reset";
