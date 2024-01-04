@@ -143,8 +143,8 @@ struct PersistentStorageUtil
             respCallback(req, asyncResp, stdOut, stdErr, ec, errorCode);
             return;
         };
-        bp::async_system(*req.ioService, exitCallback, command,
-                         bp::std_in.close(), bp::std_out > *dataOut,
-                         bp::std_err > *dataErr);
+        bp::async_system(crow::connections::systemBus->get_io_context(),
+                         exitCallback, command, bp::std_in.close(),
+                         bp::std_out > *dataOut, bp::std_err > *dataErr);
     }
 };
