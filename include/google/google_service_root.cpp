@@ -19,9 +19,8 @@ namespace crow
 namespace google_api
 {
 
- void
-    handleGoogleV1Get(const crow::Request& /*req*/,
-                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+void handleGoogleV1Get(const crow::Request& /*req*/,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     asyncResp->res.jsonValue["@odata.type"] =
         "#GoogleServiceRoot.v1_0_0.GoogleServiceRoot";
@@ -33,7 +32,7 @@ namespace google_api
         "/google/v1/RootOfTrustCollection";
 }
 
- void handleRootOfTrustCollectionGet(
+void handleRootOfTrustCollectionGet(
     const crow::Request& /*req*/,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
@@ -60,7 +59,7 @@ using ResolvedEntityHandler = std::function<void(
     const std::string&, const std::shared_ptr<bmcweb::AsyncResp>&,
     const ResolvedEntity&)>;
 
- void hothGetSubtreeCallback(
+void hothGetSubtreeCallback(
     const std::string& command,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& rotId, const ResolvedEntityHandler& entityHandler,
@@ -93,10 +92,9 @@ using ResolvedEntityHandler = std::function<void(
     redfish::messages::resourceNotFound(asyncResp->res, "RootOfTrust", rotId);
 }
 
- void resolveRoT(const std::string& command,
-                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const std::string& rotId,
-                       ResolvedEntityHandler&& entityHandler)
+void resolveRoT(const std::string& command,
+                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                const std::string& rotId, ResolvedEntityHandler&& entityHandler)
 {
     constexpr std::array<std::string_view, 1> hothIfaces = {
         "xyz.openbmc_project.Control.Hoth"};
@@ -111,7 +109,7 @@ using ResolvedEntityHandler = std::function<void(
     });
 }
 
- void populateRootOfTrustEntity(
+void populateRootOfTrustEntity(
     const std::string& /*unused*/,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const ResolvedEntity& resolvedEntity)
@@ -135,19 +133,17 @@ using ResolvedEntityHandler = std::function<void(
         "Embedded";
 }
 
- void
-    handleRootOfTrustGet(const crow::Request& /*req*/,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const std::string& param)
+void handleRootOfTrustGet(const crow::Request& /*req*/,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& param)
 {
     std::string emptyCommand;
     resolveRoT(emptyCommand, asyncResp, param, populateRootOfTrustEntity);
 }
 
- void
-    invocationCallback(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const boost::system::error_code& ec,
-                       const std::vector<uint8_t>& responseBytes)
+void invocationCallback(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const boost::system::error_code& ec,
+                        const std::vector<uint8_t>& responseBytes)
 {
     if (ec)
     {
@@ -161,10 +157,9 @@ using ResolvedEntityHandler = std::function<void(
         bytesToHexString(responseBytes);
 }
 
- void
-    invokeRoTCommand(const std::string& command,
-                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                     const ResolvedEntity& resolvedEntity)
+void invokeRoTCommand(const std::string& command,
+                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                      const ResolvedEntity& resolvedEntity)
 {
     std::vector<uint8_t> bytes = hexStringToBytes(command);
     if (bytes.empty())
@@ -184,7 +179,7 @@ using ResolvedEntityHandler = std::function<void(
         "SendHostCommand", bytes);
 }
 
- void handleRoTSendCommandPost(
+void handleRoTSendCommandPost(
     const crow::Request& request,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& rotId)
@@ -202,7 +197,7 @@ using ResolvedEntityHandler = std::function<void(
     resolveRoT(command, asyncResp, rotId, invokeRoTCommand);
 }
 
- void requestRoutes(App& app)
+void requestRoutes(App& app)
 {
     BMCWEB_ROUTE(app, "/google/v1/")
         .methods(boost::beast::http::verb::get)(handleGoogleV1Get);

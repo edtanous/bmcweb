@@ -451,6 +451,7 @@ srcfiles_bmcweb = [
   'src/ossl_random.cpp',
   'src/systemd_utils.cpp',
   'include/google/google_service_root.cpp',
+  'include/ibm/management_console_rest.cpp',
 ]
 
 bmcweblib = static_library(
