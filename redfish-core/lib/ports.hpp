@@ -1,0 +1,531 @@
+#pragma once
+#include "lldptool_util.hpp"
+#include "ethernet.hpp"
+
+#include <app.hpp>
+
+namespace redfish
+{
+enum class ChassisIdSubtype
+{
+    Reserved = 0,
+    ChassisComponent = 1,
+    InterfaceAlias = 2,
+    PortComponent = 3,
+    MACAddress = 4,
+    NetworkAddress = 5,
+    InterfaceName = 6 ,
+    LocallyAssigned = 7
+};
+
+enum class PortIdSubtype
+{
+    Reserved = 0,
+    InterfaceAlias = 1,
+    PortComponent = 2,
+    MACAddress = 3,
+    NetworkAddress = 4,
+    InterfaceName = 5,
+    AgentCircuitID = 6,
+    LocallyAssigned = 7
+};
+
+
+inline void getLldpStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& ifaceId)
+{
+   LldpToolUtil::run(ifaceId, LldpTlv::ADMIN_STATUS, LldpCommandType::GET_LLDP, false, asyncResp,
+                    [ifaceId](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const std::string& stdOut, const std::string&,
+                    const boost::system::error_code& ec, int errorCode) {
+                    if (ec || errorCode)
+                    {
+                        messages::resourceErrorsDetectedFormatError(
+                            asyncResp->res, "/redfish/v1/Managers/" PLATFORMBMCID  "/DedicatedNetworkPorts/" + 
+                            ifaceId, " command failure");
+                        BMCWEB_LOG_ERROR << "Error while running lldtool get status";
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Error while running lldtool get status, Message: " << ec.message();
+                        }
+                        return;
+                    }
+                    if (stdOut.find("adminStatus=") != std::string::npos)
+                    {
+                       if (stdOut.find("disabled") != std::string::npos) 
+                       {
+                            asyncResp->res.jsonValue["Ports"]["EthernetProperties"]["LLDPEnabled"] = false;
+                        }
+                        else
+                        {
+                            asyncResp->res.jsonValue["Ports"]["EthernetProperties"]["LLDPEnabled"] = true;
+                          
+                       }
+                    }
+                    BMCWEB_LOG_DEBUG << "get Lldp Status: "<< stdOut;
+                }); 
+}
+
+inline void setLldpStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& ifaceId,
+                           LldpTlv commandType)
+{
+   LldpToolUtil::run(ifaceId, commandType, LldpCommandType::SET_LLDP, false, asyncResp,
+                    [ifaceId](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const std::string& , const std::string&,
+                    const boost::system::error_code& ec, int errorCode) {
+                    if (ec || errorCode)
+                    {
+                        messages::resourceErrorsDetectedFormatError(
+                            asyncResp->res, "/redfish/v1/Managers/" PLATFORMBMCID  "/DedicatedNetworkPorts/" + 
+                            ifaceId, " command failure");
+                        BMCWEB_LOG_ERROR << "Error while running lldtool set status";
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Error while running lldtool set status, Message: " << ec.message();
+                        }
+                        return;
+                    }
+                }); 
+}
+
+inline ChassisIdSubtype getChassisSubType(const std::string& chassisId)
+{
+    if (chassisId.find("MAC") != std::string::npos)
+    {
+        return ChassisIdSubtype::MACAddress;
+    }
+    if (chassisId.find("IP") != std::string::npos)
+    {
+        return ChassisIdSubtype::NetworkAddress;
+    }
+    if (chassisId.find("Ifname") != std::string::npos)
+    {
+        return ChassisIdSubtype::InterfaceName;
+    }
+
+    BMCWEB_LOG_ERROR << "Cannot find chassis subtype for chassis id: " << chassisId;
+    return ChassisIdSubtype::Reserved;
+}
+
+inline PortIdSubtype getPortSubType(const std::string& portId)
+{
+    if (portId.find("MAC") != std::string::npos)
+    {
+        return PortIdSubtype::MACAddress;
+    }
+    if (portId.find("IP") != std::string::npos)
+    {
+        return PortIdSubtype::NetworkAddress;
+    }
+    if (portId.find("Ifname") != std::string::npos)
+    {
+        return PortIdSubtype::InterfaceName;
+    }
+
+    BMCWEB_LOG_ERROR << "Cannot find port subtype for port id: " << portId;
+    return PortIdSubtype::Reserved;
+}
+
+inline std::vector<std::string> parseLldpCapabilities(std::string& systemCap)
+{
+    std::vector<std::string> capabilities;
+    std::string sysCapStr = "System capabilities:";
+    size_t startPos = systemCap.find(sysCapStr); 
+    std::string systemCapStr;
+    size_t nextPos = 0;
+
+    if (startPos == std::string::npos)
+    {
+        return capabilities;
+    }
+    size_t sysCapStrSize = sysCapStr.size();
+    nextPos = systemCap.find('\n', sysCapStrSize + startPos);
+    systemCapStr = systemCap.substr(startPos + sysCapStrSize, nextPos - startPos - sysCapStrSize);
+    std::string token;
+    std::istringstream systemCapStream(systemCapStr);
+    while (std::getline(systemCapStream, token, ',')) 
+    {
+        size_t pos = token.find("Only");
+        if (pos != std::string::npos)
+        {
+            token = token.substr(0, pos);
+        } 
+        // Remove space from start and end of token
+        token.erase(std::remove_if(token.begin(), token.end(), ::isspace), token.end());
+        size_t spacePos = token.find(' ');
+        if (spacePos != std::string::npos)
+        {
+            token = token.substr(0, spacePos);
+        }
+        capabilities.push_back(token);
+    }
+    return capabilities;
+}
+
+
+// Enable on BMC SYSTEM_CAPABILITIES, SYSTEM_DESCRIPTION, SYSTEM_NAME,
+inline void getEnableLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                               const std::string& ifaceId)
+{
+    LldpToolUtil::run(ifaceId, LldpTlv::SYSTEM_CAPABILITIES, LldpCommandType::ENABLE_TLV, 
+                    false, asyncResp,[ifaceId](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const std::string& stdOut, const std::string&,
+                    const boost::system::error_code& ec, int errorCode) {
+                    if (ec || errorCode)
+                    {
+                        messages::resourceErrorsDetectedFormatError(
+                            asyncResp->res, "/redfish/v1/Managers/" PLATFORMBMCID  "/DedicatedNetworkPorts/" + 
+                            ifaceId, " command failure");
+                        BMCWEB_LOG_ERROR << "Error while running lldtool enable TLV";
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Error while running lldtool enable TLV, Message: " << ec.message();
+                        }
+                        return;
+                    }      
+                    BMCWEB_LOG_DEBUG << "getEnableLldpTlvs capability enable response: " << stdOut;
+                });
+                
+    LldpToolUtil::run(ifaceId, LldpTlv::SYSTEM_DESCRIPTION, LldpCommandType::ENABLE_TLV, 
+                    false, asyncResp,[ifaceId](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const std::string& stdOut, const std::string&,
+                    const boost::system::error_code& ec, int errorCode) {
+                    if (ec || errorCode)
+                    {
+                        messages::resourceErrorsDetectedFormatError(
+                            asyncResp->res, "/redfish/v1/Managers/" PLATFORMBMCID  "/DedicatedNetworkPorts/" + 
+                            ifaceId, " command failure");
+                        BMCWEB_LOG_ERROR << "Error while running lldtool get TLV";
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Error while running lldtool get TLV, Message: " << ec.message();
+                        }
+                        return;
+                    }      
+                    BMCWEB_LOG_DEBUG << "getEnableLldpTlv  enable response: " << stdOut;
+                });
+
+    LldpToolUtil::run(ifaceId, LldpTlv::SYSTEM_NAME, LldpCommandType::ENABLE_TLV, 
+                    false, asyncResp,[ifaceId](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const std::string& stdOut, const std::string&,
+                    const boost::system::error_code& ec, int errorCode) {
+                    if (ec || errorCode)
+                    {
+                        messages::resourceErrorsDetectedFormatError(
+                            asyncResp->res, "/redfish/v1/Managers/" PLATFORMBMCID  "/DedicatedNetworkPorts/" + 
+                            ifaceId, " command failure");
+                        BMCWEB_LOG_ERROR << "Error while running lldtool enable TLV";
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Error while running lldtool enable TLV, message: " << ec.message();
+                        }
+                        return;
+                    }      
+                    BMCWEB_LOG_DEBUG << "lldptool capability enable response: " << stdOut;
+                });  
+}
+
+// Returns the string that is between the tlvName and next line that contains "TLV"
+inline std::string getTlvString(const std::string &commandOutput, 
+                                const std::string &tlvName)
+{
+    std::string result{};
+    size_t pos = commandOutput.find(tlvName);
+    if (pos != std::string::npos) 
+    {
+        size_t startPosNextLine = commandOutput.find('\n', pos);
+        size_t nextTlv = commandOutput.find("TLV", startPosNextLine);
+        if (startPosNextLine != std::string::npos && nextTlv != std::string::npos)
+        {
+            size_t endLinePos = commandOutput.rfind('\n', nextTlv);
+            if (endLinePos != std::string::npos)
+            {
+                result = commandOutput.substr(startPosNextLine, endLinePos - startPosNextLine -1);
+                // Erase spaces from the start of a string
+                result.erase(result.begin(), std::find_if(result.begin(), result.end(), [](unsigned char ch) {
+                    return !std::isspace(ch);}));
+            }
+        }
+    }
+    return result;
+}
+
+// Find the line that contains the searchString and return the string 
+//after the ":" and searchString
+inline std::string findLineContaining(const std::string &commandOutput, 
+                                      const std::string &searchString)
+{
+    std::string result{};
+    size_t pos = commandOutput.find(searchString);
+    if (pos != std::string::npos) 
+    {
+        size_t startPos = commandOutput.find(':', pos);
+        size_t endPos = commandOutput.find('\n', startPos);
+        if (endPos != std::string::npos) 
+        {
+            result = commandOutput.substr(startPos + 1, endPos - startPos -1);
+            // Erase spaces from the start of a string
+            result.erase(result.begin(), std::find_if(result.begin(), result.end(), [](unsigned char ch) {
+                return !std::isspace(ch);}));
+        }
+    }
+    return result;
+}
+
+inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                               const std::string& ifaceId,
+                               bool isReceived)
+{
+    LldpToolUtil::run(ifaceId, LldpTlv::ALL, LldpCommandType::GET, isReceived, 
+                    asyncResp, [ifaceId, isReceived](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const std::string& stdOut, const std::string&,
+                    const boost::system::error_code& ec, int errorCode) {
+                    if (ec || errorCode)
+                    {
+                        messages::resourceErrorsDetectedFormatError(
+                            asyncResp->res, "/redfish/v1/Managers/" PLATFORMBMCID  "/DedicatedNetworkPorts/" + 
+                            ifaceId, " command failure");
+                        BMCWEB_LOG_ERROR << "Error while running lldtool get TLV";
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "Error while running lldtool get TLV, Message: " << ec.message();
+                        }
+                        return;
+                    }
+                    std::string idStr;
+                    std::string lldpType = isReceived ? "LLDPReceive" : "LLDPTransmit";
+                    nlohmann::json& jsonSchema =  asyncResp->res.jsonValue["Ports"]["EthernetProperties"][lldpType];
+                    idStr = getTlvString(stdOut, "Chassis ID TLV");
+                    if (!idStr.empty())
+                    {
+                        jsonSchema["ChassisId"] = idStr;
+                        jsonSchema["ChassisSubtype"] = getChassisSubType(idStr);
+                    }
+
+                    idStr = getTlvString(stdOut, "Port ID TLV");
+                    if (!idStr.empty())
+                    {
+                        jsonSchema["PortId"] = idStr;
+                        jsonSchema["PortIdSubtype"] = getPortSubType(idStr);
+                    }
+
+                    idStr = getTlvString(stdOut, "System Capabilities TLV");
+                    if (!idStr.empty())
+                    {
+                        std::vector<std::string> capabilities = parseLldpCapabilities(idStr);
+                        if (!capabilities.empty())
+                        {
+                            jsonSchema["SystemCapabilities"] = capabilities;
+                        }
+                    }
+                    
+                    idStr = getTlvString(stdOut, "System Description TLV");
+                    if (!idStr.empty())
+                    {
+                        jsonSchema["SystemDescription"] = idStr;
+                    }
+
+                    idStr = getTlvString(stdOut, "System Name TLV");
+                    if (!idStr.empty())
+                    {
+                        jsonSchema["SystemName"] = idStr;
+                    }
+
+                    idStr = getTlvString(stdOut, "Management Address TLV");
+                    if (!idStr.empty())
+                    {
+                        std::string managementAddress = findLineContaining(idStr, "IPv4");
+                        if (!managementAddress.empty())
+                        {
+                            jsonSchema["ManagementAddress"] = managementAddress;
+                        }
+                        std::string managementAddressMac = findLineContaining(idStr, "MAC");
+                        if (!managementAddressMac.empty())
+                        {
+                            jsonSchema["ManagementAddressMAC"] = managementAddressMac;
+                        }
+                    }
+
+                    idStr = getTlvString(stdOut, "VLAN Name TLV");
+                    if (!idStr.empty())
+                    {
+                        jsonSchema["ManagementVlanId"] = idStr;     
+                    }
+                }); ; 
+}
+
+inline void getLldpInformation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                               const std::string& ifaceId)
+{
+    static bool islldpEnable = false;
+    if (!islldpEnable)
+    {
+        getEnableLldpTlvs(asyncResp, ifaceId);
+        islldpEnable = true;
+    }
+    getLldpStatus(asyncResp, ifaceId);
+    getLldpTlvs(asyncResp, ifaceId, true);
+    getLldpTlvs(asyncResp, ifaceId, false);
+}
+
+
+inline void requestPortsInterfacesRoutes(App& app)
+{
+        BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts/")
+        .privileges(redfish::privileges::getEthernetInterfaceCollection)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#PortCollection.PortCollection";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts";
+                asyncResp->res.jsonValue["Name"] =
+                    "Ethernet Dedicated Port Interface Collection";
+                asyncResp->res.jsonValue["Description"] =
+                    "The dedicated network ports of the manager";
+
+                // Get eth interface list, and call the below callback for JSON
+                // preparation
+                getEthernetIfaceList(
+                    [asyncResp](const bool& success,
+                                const boost::container::flat_set<std::string>&
+                                    ifaceList) {
+                        if (!success)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        int entryIdx = 1;
+                        nlohmann::json& ifaceArray =
+                            asyncResp->res.jsonValue["Members"];
+                        ifaceArray = nlohmann::json::array();
+                        std::string tag = "vlan";
+                        for (const std::string& ifaceItem : ifaceList)
+                        {
+                            std::size_t found = ifaceItem.find(tag);
+                            if (found == std::string::npos)
+                            {
+                                nlohmann::json::object_t iface;
+                                iface["@odata.id"] =
+                                    "/redfish/v1/Managers/" PLATFORMBMCID
+                                    "/DedicatedNetworkPorts/" + std::to_string(entryIdx);
+                                ifaceArray.push_back(std::move(iface));
+                                ++entryIdx;     
+                            }
+                        }
+                        asyncResp->res.jsonValue["Members@odata.count"] =
+                            ifaceArray.size();
+                    });
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/DedicatedNetworkPorts/<str>/")
+        .privileges(redfish::privileges::getEthernetInterface)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& entryIdx) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                getEthernetIfaceList(
+                    [asyncResp, entryIdx](const bool& success,
+                                const boost::container::flat_set<std::string>&
+                                    ifaceList) {
+                        if (!success)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        int entryIdxInt = std::stoi(entryIdx);
+                        int count = 1;
+                        std::string tag = "vlan";
+                        for (const std::string& ifaceItem : ifaceList)
+                        {
+                            // take only none vlan interfaces
+                            std::size_t found = ifaceItem.find(tag);
+                            if (found == std::string::npos)
+                            {
+                                if (count == entryIdxInt)
+                                {
+                                    getLldpInformation(asyncResp, ifaceItem);
+                                    asyncResp->res.jsonValue["Ports"]["EthernetInterfaces"]["@odata.id"] =
+                                    "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" + ifaceItem;
+                                    return;
+                                }
+                                ++count;  
+                            }
+                        }
+                        BMCWEB_LOG_ERROR << "No internet interface was found ";
+                    });   
+            });
+
+        BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/DedicatedNetworkPorts/<str>/")
+            .privileges(redfish::privileges::patchEthernetInterface)
+            .methods(boost::beast::http::verb::patch)(
+                [&app](const crow::Request& req,
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const std::string& ifaceInx) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                std::optional<bool> lldpEnabled;
+                if (!json_util::readJsonPatch(req, asyncResp->res, "LLDPEnabled", lldpEnabled))
+                {
+                    return;
+                }
+                if (lldpEnabled)
+                {
+                    LldpTlv commandType = LldpTlv::DISABLE_ADMIN_STATUS; 
+                    if (*lldpEnabled)
+                    {
+                        commandType = LldpTlv::ENABLE_ADMIN_STATUS;
+                    }
+                    getEthernetIfaceList([asyncResp, ifaceInx, commandType](const bool& success,
+                        const boost::container::flat_set<std::string>& ifaceList) {
+                        if (!success)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        int entryIdxInt = std::stoi(ifaceInx);
+                        int count = 1;
+                        std::string tag = "vlan";
+                        for (const std::string& ifaceItem : ifaceList)
+                        {
+                            std::size_t found = ifaceItem.find(tag);
+                            // Take only none vlan interfaces
+                            if (found == std::string::npos)
+                            {
+                                if (count == entryIdxInt)
+                                {
+                                    setLldpStatus(asyncResp, ifaceItem, commandType);
+                                    return;
+                                }
+                                ++count;  
+                            }
+                        }
+                        BMCWEB_LOG_ERROR << "No internet interface was found ";
+                    });   
+                }
+        });
+}
+}//namespace redfish

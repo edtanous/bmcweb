@@ -3523,7 +3523,9 @@ inline void requestRoutesManager(App& app)
                 "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol";
             asyncResp->res.jsonValue["EthernetInterfaces"]["@odata.id"] =
                 "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces";
-
+            asyncResp->res.jsonValue["DedicatedNetworkPorts"]["@odata.id"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts";    
+            
             redfish::conditions_utils::populateServiceConditions(asyncResp,
                                                                  PLATFORMBMCID);
             getServiceIdentification(asyncResp);
