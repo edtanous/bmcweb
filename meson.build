@@ -452,6 +452,7 @@ srcfiles_bmcweb = [
   'src/systemd_utils.cpp',
   'include/google/google_service_root.cpp',
   'include/ibm/management_console_rest.cpp',
+  'include/vm_websocket.cpp',
 ]
 
 bmcweblib = static_library(
