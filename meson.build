@@ -389,9 +389,18 @@ bmcweb_dependencies += conf_h_dep
 # Source files
 fs = import('fs')
 
-srcfiles_bmcweb = files(
-  'redfish-core/include/redfish.cpp',
+srcfiles_bmcweb = [
+  # These files are intentionally at the top because they take the longest to compile, so compiling them first reduces overall compile times
+  'src/run.cpp',
+  'redfish-core/lib/log_services.cpp',
+  'redfish-core/lib/event_service.cpp',
+  'redfish-core/lib/systems.cpp',
+  'redfish-core/lib/managers.cpp',
   'redfish-core/lib/account_service.cpp',
+  'redfish-core/lib/network_protocol.cpp',
+  # end long compile times
+
+  'redfish-core/include/redfish.cpp',
   'redfish-core/lib/aggregation_service.cpp',
   'redfish-core/lib/bios.cpp',
   'redfish-core/lib/cable.cpp',
@@ -399,19 +408,15 @@ srcfiles_bmcweb = files(
   'redfish-core/lib/chassis.cpp',
   'redfish-core/lib/environment_metrics.cpp',
   'redfish-core/lib/ethernet.cpp',
-  'redfish-core/lib/event_service.cpp',
   'redfish-core/lib/eventservice_sse.cpp',
   'redfish-core/lib/fabric_adapters.cpp',
   'redfish-core/lib/fan.cpp',
   'redfish-core/lib/hypervisor_system.cpp',
-  'redfish-core/lib/log_services.cpp',
   'redfish-core/lib/manager_diagnostic_data.cpp',
-  'redfish-core/lib/managers.cpp',
   'redfish-core/lib/memory.cpp',
   'redfish-core/lib/message_registries.cpp',
   'redfish-core/lib/metric_report.cpp',
   'redfish-core/lib/metric_report_definition.cpp',
-  'redfish-core/lib/network_protocol.cpp',
   'redfish-core/lib/pcie.cpp',
   'redfish-core/lib/pcie_slots.cpp',
   'redfish-core/lib/power.cpp',
@@ -424,7 +429,6 @@ srcfiles_bmcweb = files(
   'redfish-core/lib/sensors.cpp',
   'redfish-core/lib/service_root.cpp',
   'redfish-core/lib/storage.cpp',
-  'redfish-core/lib/systems.cpp',
   'redfish-core/lib/task.cpp',
   'redfish-core/lib/task_payload.cpp',
   'redfish-core/lib/telemetry_service.cpp',
@@ -433,7 +437,6 @@ srcfiles_bmcweb = files(
   'redfish-core/lib/trigger.cpp',
   'redfish-core/lib/update_service.cpp',
   'redfish-core/lib/virtual_media.cpp',
-  'src/run.cpp',
   'redfish-core/src/query.cpp',
   'redfish-core/src/error_messages.cpp',
   'redfish-core/src/registries.cpp',
@@ -447,7 +450,7 @@ srcfiles_bmcweb = files(
   'src/json_html_serializer.cpp',
   'src/ossl_random.cpp',
   'src/systemd_utils.cpp',
-)
+]
 
 bmcweblib = static_library(
   'bmcweblib',
