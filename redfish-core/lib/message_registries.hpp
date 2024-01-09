@@ -142,8 +142,12 @@ inline void handleMessageRoutesMessageRegistryFileGet(
 
     if (url != nullptr)
     {
-        asyncResp->res.jsonValue["Location"][0]["PublicationUri"] = url;
+        location["PublicationUri"] = url;
     }
+    locationMembers.emplace_back(std::move(location));
+    asyncResp->res.jsonValue["Location@odata.count"] = locationMembers.size();
+    asyncResp->res.jsonValue["Location"] = std::move(locationMembers);
+
 }
 
 inline void requestRoutesMessageRegistryFile(App& app)

@@ -42,7 +42,7 @@ using BaseBIOSTable = boost::container::flat_map<
                std::variant<int64_t, std::string, bool>,
                std::variant<int64_t, std::string, bool>,
                std::vector<std::tuple<std::string,
-                                      std::variant<int64_t, std::string>>>>>;
+                                      std::variant<int64_t, std::string>, std::string>>>>;
 
 using BaseBIOSTableItem = std::pair<
     std::string,
@@ -50,7 +50,7 @@ using BaseBIOSTableItem = std::pair<
                std::variant<int64_t, std::string, bool>,
                std::variant<int64_t, std::string, bool>,
                std::vector<std::tuple<std::string,
-                                      std::variant<int64_t, std::string>>>>>;
+                                      std::variant<int64_t, std::string>, std::string>>>>;
 
 using PendingAttrType = boost::container::flat_map<
     std::string,
@@ -61,7 +61,7 @@ using PendingAttrItemType = std::pair<
     std::tuple<std::string, std::variant<int64_t, std::string, bool>>>;
 
 using AttrBoundType =
-    std::tuple<std::string, std::variant<int64_t, std::string>>;
+    std::tuple<std::string, std::variant<int64_t, std::string>, std::string>;
 
 enum BaseBiosTableIndex
 {
@@ -694,7 +694,7 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         std::string attrMenuPath;
         std::string attrType;
         bool attrReadOnly = false;
-        std::vector<std::tuple<std::string, std::variant<int64_t, std::string>>>
+        std::vector<std::tuple<std::string, std::variant<int64_t, std::string>, std::string>>
             attrValues;
 
         attr = attrJson["AttributeName"].get<std::string>();
@@ -716,7 +716,7 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 {
                     attrValues.emplace_back(
                         "xyz.openbmc_project.BIOSConfig.Manager.BoundType.OneOf",
-                        value);
+                        value, "");
                 }
             }
             else if (attrType == "String")
@@ -724,11 +724,11 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const auto& minLength = attrJson["MinLength"].get<int64_t>();
                 attrValues.emplace_back(
                     "xyz.openbmc_project.BIOSConfig.Manager.BoundType.MinStringLength",
-                    minLength);
+                    minLength, "");
                 const auto& maxLength = attrJson["MaxLength"].get<int64_t>();
                 attrValues.emplace_back(
                     "xyz.openbmc_project.BIOSConfig.Manager.BoundType.MaxStringLength",
-                    maxLength);
+                    maxLength, "");
             }
             attrType = getDbusBiosAttrType(attrType);
             if (attrJson["DefaultValue"].is_null())
@@ -757,13 +757,13 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             // read and update the bound values
             attrValues.emplace_back(
                 "xyz.openbmc_project.BIOSConfig.Manager.BoundType.LowerBound",
-                attrJson["LowerBound"].get<int64_t>());
+                attrJson["LowerBound"].get<int64_t>(), "");
             attrValues.emplace_back(
                 "xyz.openbmc_project.BIOSConfig.Manager.BoundType.UpperBound",
-                attrJson["UpperBound"].get<int64_t>());
+                attrJson["UpperBound"].get<int64_t>(), "");
             attrValues.emplace_back(
                 "xyz.openbmc_project.BIOSConfig.Manager.BoundType.ScalarIncrement",
-                attrJson["ScalarIncrement"].get<int64_t>());
+                attrJson["ScalarIncrement"].get<int64_t>(), "");
 
             attrType = getDbusBiosAttrType(attrType);
             if (attrJson["DefaultValue"].is_null())
@@ -956,13 +956,6 @@ static void
         std::array<const char*, 1>{biosConfigIface});
 }
 
-using BaseBIOSTable = boost::container::flat_map<
-    std::string,
-    std::tuple<std::string, bool, std::string, std::string, std::string,
-               std::variant<int64_t, std::string, bool>,
-               std::variant<int64_t, std::string, bool>,
-               std::vector<std::tuple<std::string,
-                                      std::variant<int64_t, std::string>>>>>;
 /**
  *@brief
  *  1- Updates the BIOS Pending Attributes DBUS property, which are requested

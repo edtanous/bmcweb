@@ -308,19 +308,23 @@ inline void
         if (preValue == nullptr)
         {
             asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] =
-                static_cast<double>(*memorySizeInKB) / (1024 * 1024);
+                static_cast<int>(*memorySizeInKB) / (1024 * 1024);
         }
         else
         {
             asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] =
-                static_cast<double>(*memorySizeInKB) / (1024 * 1024) +
-                *preValue;
+                static_cast<int>(*memorySizeInKB) / (1024 * 1024) +
+                static_cast<int>(*preValue);
         }
         if constexpr (bmcwebEnableProcMemStatus)
         {
             asyncResp->res.jsonValue["MemorySummary"]["Status"]["State"] =
                 "Enabled";
         }
+    }
+    else
+    {
+        asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] = 0;
     }
 }
 
@@ -4496,5 +4500,15 @@ inline void requestRoutesSystems(App& app)
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleSystemCollectionResetActionGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/")
+        .privileges(redfish::privileges::getComputerSystem)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleComputerSystemSettingsGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/")
+        .privileges(redfish::privileges::patchComputerSystem)
+        .methods(boost::beast::http::verb::patch)(
+            std::bind_front(handleComputerSystemSettingsPatch, std::ref(app)));
 }
 } // namespace redfish
