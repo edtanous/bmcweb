@@ -607,9 +607,8 @@ void setDbusSelCapacity(size_t capacity,
     crow::connections::systemBus->async_method_call(
         respHandler, "xyz.openbmc_project.Logging",
         "/xyz/openbmc_project/logging",
-        "org.freedesktop.DBus.Properties", "Set",
-        "xyz.openbmc_project.Logging.Capacity", "InfoLogCapacity",
-        std::variant<size_t>(capacity));
+        "xyz.openbmc_project.Logging.Capacity", "SetInfoLogCapacity",
+        capacity);
 }
 
 /**
