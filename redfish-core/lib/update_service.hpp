@@ -1370,6 +1370,7 @@ void handleSatBMCResponse(
             return;
         }
 
+        std::string rfaPrefix = redfishAggregationPrefix;
         for (std::pair<const std::string, nlohmann::json>& prop : *object)
         {
             // only prefix fix-up on Task response.
@@ -1385,7 +1386,7 @@ void handleSatBMCResponse(
                 std::string path =
                     std::filesystem::path(*strValue).parent_path();
 
-                file = "5B247A_" + file;
+                file = rfaPrefix + "_" + file;
                 path += "/";
                 // add prefix on odata.id property.
                 prop.second = path + file;
@@ -1394,7 +1395,7 @@ void handleSatBMCResponse(
             {
                 std::string file = std::filesystem::path(*strValue).filename();
                 // add prefix on Id property.
-                prop.second = "5B247A_" + file;
+                prop.second = rfaPrefix + "_" + file;
             }
             else
             {
@@ -1430,7 +1431,7 @@ inline void forwardImage(
         return;
     }
 
-    const auto& sat = satelliteInfo.find("5B247A");
+    const auto& sat = satelliteInfo.find(redfishAggregationPrefix);
     if (sat == satelliteInfo.end())
     {
         BMCWEB_LOG_ERROR << "satellite BMC is not there.";
@@ -1560,12 +1561,14 @@ inline void processMultipartFormData(
     std::vector<std::string> uriTargets{*targets};
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     uint8_t count = 0;
+    std::string rfaPrefix = redfishAggregationPrefix;
     if (uriTargets.size() > 0)
     {
         for (const auto& uri : uriTargets)
         {
             std::string file = std::filesystem::path(uri).filename();
-            if (file.starts_with("5B247A_"))
+            std::string prefix = rfaPrefix + "_";
+            if (file.starts_with(prefix))
             {
                 count++;
             }

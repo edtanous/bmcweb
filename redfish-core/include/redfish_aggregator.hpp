@@ -430,9 +430,9 @@ class RedfishAggregator
                     }
 
                     // For now assume there will only be one satellite config.
-                    // Assign it the name/prefix "5B247A"
-                    addSatelliteConfig("5B247A", interface.second,
-                                       satelliteInfo);
+                    // Assign it the name/prefix
+                    addSatelliteConfig(redfishAggregationPrefix,
+                                       interface.second, satelliteInfo);
                 }
             }
         }
@@ -1215,6 +1215,7 @@ class RedfishAggregator
         // /redfish/v1/Chassis
         // /redfish/v1/UpdateService/FirmwareInventory
         const boost::urls::segments_view urlSegments = url.segments();
+        const std::string prefix(redfishAggregationPrefix);
         std::string collectionItem;
         boost::urls::url currentUrl("/");
         boost::urls::segments_view::iterator it = urlSegments.begin();
@@ -1234,9 +1235,9 @@ class RedfishAggregator
                 // might contain an aggregation prefix
                 // TODO: This needs to be rethought when we can support multiple
                 // satellites due to
-                // /redfish/v1/AggregationService/AggregationSources/5B247A
+                // /redfish/v1/AggregationService/AggregationSources/{prefix}
                 // being a local resource describing the satellite
-                if (collectionItem.starts_with("5B247A_"))
+                if (collectionItem.starts_with(prefix + "_"))
                 {
                     BMCWEB_LOG_DEBUG << "Need to forward a request";
 

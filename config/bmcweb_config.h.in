@@ -61,4 +61,5 @@ constexpr const uint8_t minPasswordLength = @MIN_PASSWORD_LENGTH@;
 constexpr const char* platformGpuNamePrefix = @PLATFORM_GPU_NAME_PREFIX@;
 constexpr const int gpuIndexStart = @GPU_INDEX_START@;
 constexpr const char* tlsCaCertificatePath = "@TLS_CACERT_PATH@";
+constexpr const char *redfishAggregationPrefix = @REDFISH_AGGREGATION_PREFIX@;
 // clang-format on

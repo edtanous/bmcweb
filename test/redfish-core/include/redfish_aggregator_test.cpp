@@ -228,14 +228,15 @@ TEST(addPrefixes, FixHttpHeadersInResponseBody)
     )",
                                                     nullptr, false);
 
-    addPrefixes(taskResp, "5B247A");
-    EXPECT_EQ(taskResp["@odata.id"], "/redfish/v1/TaskService/Tasks/5B247A_0");
+    std::string prefix(redfishAggregationPrefix);
+    addPrefixes(taskResp, prefix);
+    EXPECT_EQ(taskResp["@odata.id"],
+              "/redfish/v1/TaskService/Tasks/" + prefix + "_0");
     EXPECT_EQ(taskResp["TaskMonitor"],
-              "/redfish/v1/TaskService/Tasks/5B247A_0/Monitor");
+              "/redfish/v1/TaskService/Tasks/" + prefix + "_0/Monitor");
     nlohmann::json& httpHeaders = taskResp["Payload"]["HttpHeaders"];
-    EXPECT_EQ(
-        httpHeaders[4],
-        "Location: /redfish/v1/Managers/5B247A_bmc/LogServices/Dump/Entries/0");
+    EXPECT_EQ(httpHeaders[4], "Location: /redfish/v1/Managers/" + prefix +
+                                  "_bmc/LogServices/Dump/Entries/0");
 }
 
 // Attempts to perform prefix fixing on a response with response code "result".
