@@ -454,6 +454,7 @@ srcfiles_bmcweb = [
   'include/ibm/management_console_rest.cpp',
   'include/vm_websocket.cpp',
   'include/hostname_monitor.cpp',
+  'include/webassets.cpp',
 ]
 
 bmcweblib = static_library(

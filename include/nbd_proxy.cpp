@@ -225,10 +225,9 @@ using SessionMap = boost::container::flat_map<crow::websocket::Connection*,
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static SessionMap sessions;
 
-void
-    afterGetManagedObjects(crow::websocket::Connection& conn,
-                           const boost::system::error_code& ec,
-                           const dbus::utility::ManagedObjectType& objects)
+void afterGetManagedObjects(crow::websocket::Connection& conn,
+                            const boost::system::error_code& ec,
+                            const dbus::utility::ManagedObjectType& objects)
 {
     const std::string* socketValue = nullptr;
     const std::string* endpointValue = nullptr;
@@ -324,8 +323,7 @@ void onOpen(crow::websocket::Connection& conn)
     conn.deferRead();
 }
 
-void onClose(crow::websocket::Connection& conn,
-                    const std::string& reason)
+void onClose(crow::websocket::Connection& conn, const std::string& reason)
 {
     BMCWEB_LOG_DEBUG("nbd-proxy.onclose(reason = '{}')", reason);
     auto session = sessions.find(&conn);
@@ -339,8 +337,8 @@ void onClose(crow::websocket::Connection& conn,
 }
 
 void onMessage(crow::websocket::Connection& conn, std::string_view data,
-                      crow::websocket::MessageType /*type*/,
-                      std::function<void()>&& whenComplete)
+               crow::websocket::MessageType /*type*/,
+               std::function<void()>&& whenComplete)
 {
     BMCWEB_LOG_DEBUG("nbd-proxy.onMessage(len = {})", data.size());
 
