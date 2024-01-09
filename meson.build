@@ -453,6 +453,7 @@ srcfiles_bmcweb = [
   'include/google/google_service_root.cpp',
   'include/ibm/management_console_rest.cpp',
   'include/vm_websocket.cpp',
+  'include/dbus_monitor.cpp',
   'include/hostname_monitor.cpp',
   'include/webassets.cpp',
 ]
