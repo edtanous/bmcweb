@@ -154,12 +154,16 @@ inline void afterNetworkPortRequest(
 inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const crow::Request& req)
 {
+#ifndef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
     if (req.session == nullptr)
     {
         messages::internalError(asyncResp->res);
         return;
     }
-
+#else
+    // This log added to satishfy compiler error : unused variable req
+    BMCWEB_LOG_ERROR("getNetworkData session is null for request {}", req.methodString());
+#endif
     asyncResp->res.addHeader(
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/NetworkProtocol.json>; rel=describedby");
@@ -227,6 +231,7 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
     });
 
+#ifndef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
     Privileges effectiveUserPrivileges =
         redfish::getUserPrivileges(*req.session);
 
@@ -240,6 +245,7 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             "/redfish/v1/Managers/" PLATFORMBMCID
             "/NetworkProtocol/HTTPS/Certificates";
     }
+#endif
 
     getPortStatusAndPath(std::span(networkProtocolToDbus),
                          std::bind_front(afterNetworkPortRequest, asyncResp));
