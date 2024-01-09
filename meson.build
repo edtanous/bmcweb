@@ -454,6 +454,7 @@ srcfiles_bmcweb = [
   'include/ibm/management_console_rest.cpp',
   'include/vm_websocket.cpp',
   'include/dbus_monitor.cpp',
+  'include/image_upload.cpp',
   'include/hostname_monitor.cpp',
   'include/webassets.cpp',
 ]
