@@ -450,6 +450,7 @@ srcfiles_bmcweb = [
   'src/json_html_serializer.cpp',
   'src/ossl_random.cpp',
   'src/systemd_utils.cpp',
+  'include/google/google_service_root.cpp',
 ]
 
 bmcweblib = static_library(

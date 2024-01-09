@@ -4,6 +4,7 @@
 #include "async_resp.hpp"
 #include "error_messages.hpp"
 #include "ibm/locks.hpp"
+#include "json_loggers.hpp"
 #include "resource_messages.hpp"
 #include "str_utility.hpp"
 #include "utils/json_utils.hpp"
