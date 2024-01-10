@@ -1,15 +1,8 @@
 {
-<<<<<<< HEAD
-    "$id": "http://redfish.dmtf.org/schemas/v1/Port.v1_7_0.json",
-    "$ref": "#/definitions/Port",
-    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
-    "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
-=======
     "$id": "http://redfish.dmtf.org/schemas/v1/Port.v1_9_0.json",
     "$ref": "#/definitions/Port",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2023 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
->>>>>>> origin/master-october-10
     "definitions": {
         "Actions": {
             "additionalProperties": false,
@@ -33,12 +26,9 @@
                 "#Port.Reset": {
                     "$ref": "#/definitions/Reset"
                 },
-<<<<<<< HEAD
-=======
                 "#Port.ResetPPB": {
                     "$ref": "#/definitions/ResetPPB"
                 },
->>>>>>> origin/master-october-10
                 "Oem": {
                     "$ref": "#/definitions/OemActions",
                     "description": "The available OEM-specific actions for this resource.",
@@ -47,8 +37,6 @@
             },
             "type": "object"
         },
-<<<<<<< HEAD
-=======
         "CXL": {
             "additionalProperties": false,
             "description": "CXL properties for a port.",
@@ -159,7 +147,6 @@
             },
             "type": "object"
         },
->>>>>>> origin/master-october-10
         "ConfiguredNetworkLink": {
             "additionalProperties": false,
             "description": "A set of link settings that a port is configured to use for autonegotiation.",
@@ -203,8 +190,6 @@
             },
             "type": "object"
         },
-<<<<<<< HEAD
-=======
         "Congestion": {
             "additionalProperties": false,
             "description": "The congestion properties for a CXL port.",
@@ -370,7 +355,6 @@
             },
             "type": "string"
         },
->>>>>>> origin/master-october-10
         "EthernetProperties": {
             "additionalProperties": false,
             "description": "Ethernet-specific properties for a port.",
@@ -744,11 +728,7 @@
                 "IfAlias": "Interface alias, based on the ifAlias MIB object.",
                 "IfName": "Interface name, based on the ifName MIB object.",
                 "LocalAssign": "Locally assigned, based on a alpha-numeric value locally assigned.",
-<<<<<<< HEAD
-                "MacAddr": "MAC address, based on an agent detected unicast source address as defined in IEEE Std. 802.",
-=======
                 "MacAddr": "MAC address, based on an agent detected unicast source address as defined in IEEE standard 802.",
->>>>>>> origin/master-october-10
                 "NetworkAddr": "Network address, based on an agent detected network address.",
                 "NotTransmitted": "No data to be sent to/received from remote partner.",
                 "PortComp": "Port component, based in the value of entPhysicalAlias in RFC4133."
@@ -930,8 +910,6 @@
                     "longDescription": "This property shall contain the port ID subtype from IEEE 802.1AB-2009 Table 8-3 received from the remote partner across this link.  If no such port ID subtype has been received, this property should not be present.",
                     "readonly": true,
                     "versionAdded": "v1_4_0"
-<<<<<<< HEAD
-=======
                 },
                 "SystemCapabilities": {
                     "description": "The system capabilities received from the remote partner across this link.",
@@ -969,13 +947,10 @@
                         "null"
                     ],
                     "versionAdded": "v1_8_0"
->>>>>>> origin/master-october-10
                 }
             },
             "type": "object"
         },
-<<<<<<< HEAD
-=======
         "LLDPSystemCapabilities": {
             "enum": [
                 "None",
@@ -1012,7 +987,6 @@
             },
             "type": "string"
         },
->>>>>>> origin/master-october-10
         "LLDPTransmit": {
             "additionalProperties": false,
             "description": "Link Layer Data Protocol (LLDP) data being transmitted on this link.",
@@ -1124,8 +1098,6 @@
                     "longDescription": "This property shall contain the port ID subtype from IEEE 802.1AB-2009 Table 8-3 to be transmitted from this endpoint.  If no such port ID subtype is to be transmitted, this value shall be `NotTransmitted`.",
                     "readonly": false,
                     "versionAdded": "v1_4_0"
-<<<<<<< HEAD
-=======
                 },
                 "SystemCapabilities": {
                     "description": "The system capabilities to be transmitted from this endpoint.",
@@ -1163,7 +1135,6 @@
                         "null"
                     ],
                     "versionAdded": "v1_8_0"
->>>>>>> origin/master-october-10
                 }
             },
             "type": "object"
@@ -1245,26 +1216,18 @@
                 "Ethernet",
                 "InfiniBand",
                 "FibreChannel",
-<<<<<<< HEAD
-                "GenZ"
-=======
                 "GenZ",
                 "PCIe"
->>>>>>> origin/master-october-10
             ],
             "enumDescriptions": {
                 "Ethernet": "The port is capable of connecting to an Ethernet network.",
                 "FibreChannel": "The port is capable of connecting to a Fibre Channel network.",
                 "GenZ": "The port is capable of connecting to a Gen-Z fabric.",
-<<<<<<< HEAD
-                "InfiniBand": "The port is capable of connecting to an InfiniBand network."
-=======
                 "InfiniBand": "The port is capable of connecting to an InfiniBand network.",
                 "PCIe": "The port is capable of connecting to PCIe and CXL fabrics."
             },
             "enumVersionAdded": {
                 "PCIe": "v1_8_0"
->>>>>>> origin/master-october-10
             },
             "type": "string"
         },
@@ -1473,8 +1436,6 @@
                     "type": "integer",
                     "versionAdded": "v1_2_0"
                 },
-<<<<<<< HEAD
-=======
                 "CXL": {
                     "anyOf": [
                         {
@@ -1488,7 +1449,6 @@
                     "longDescription": "This property shall contain CXL-specific properties for this port.",
                     "versionAdded": "v1_8_0"
                 },
->>>>>>> origin/master-october-10
                 "CapableProtocolVersions": {
                     "description": "The protocol versions capable of being sent over this port.",
                     "items": {
@@ -1782,8 +1742,6 @@
                     "longDescription": "This property shall contain the port type for this port.",
                     "readonly": true
                 },
-<<<<<<< HEAD
-=======
                 "RemotePortId": {
                     "description": "The identifier of the remote port to which this port is connected.",
                     "longDescription": "This property shall contain the identifier of the remote port, such as a switch or device, to which this port is connected.",
@@ -1794,7 +1752,6 @@
                     ],
                     "versionAdded": "v1_8_0"
                 },
->>>>>>> origin/master-october-10
                 "SFP": {
                     "anyOf": [
                         {
@@ -1924,8 +1881,6 @@
             },
             "type": "string"
         },
-<<<<<<< HEAD
-=======
         "QoSTelemetryCapabilities": {
             "additionalProperties": false,
             "description": "The quality of service telemetry capabilities for a CXL port.",
@@ -1968,7 +1923,6 @@
             },
             "type": "object"
         },
->>>>>>> origin/master-october-10
         "Reset": {
             "additionalProperties": false,
             "description": "This action resets this port.",
@@ -2007,8 +1961,6 @@
             },
             "type": "object"
         },
-<<<<<<< HEAD
-=======
         "ResetPPB": {
             "additionalProperties": false,
             "description": "This action resets the PCI-to-PCI bridge (PPB) for this port.",
@@ -2042,7 +1994,6 @@
             "type": "object",
             "versionAdded": "v1_8_0"
         },
->>>>>>> origin/master-october-10
         "SFP": {
             "additionalProperties": false,
             "description": "A small form-factor pluggable (SFP) device attached to a port.",
@@ -2172,12 +2123,6 @@
                 "QSFP14",
                 "QSFP28",
                 "QSFP56",
-<<<<<<< HEAD
-                "MiniSASHD"
-            ],
-            "enumDescriptions": {
-                "MiniSASHD": "The SFP conforms to the SFF Specification SFF-8644.",
-=======
                 "MiniSASHD",
                 "QSFPDD",
                 "OSFP"
@@ -2185,15 +2130,11 @@
             "enumDescriptions": {
                 "MiniSASHD": "The SFP conforms to the SFF Specification SFF-8644.",
                 "OSFP": "The SFP conforms to the OSFP Specification.",
->>>>>>> origin/master-october-10
                 "QSFP": "The SFP conforms to the SFF Specification for QSFP.",
                 "QSFP14": "The SFP conforms to the SFF Specification for QSFP14.",
                 "QSFP28": "The SFP conforms to the SFF Specification for QSFP28.",
                 "QSFP56": "The SFP conforms to the SFF Specification for QSFP56.",
-<<<<<<< HEAD
-=======
                 "QSFPDD": "The SFP conforms to the QSFP Double Density Specification.",
->>>>>>> origin/master-october-10
                 "QSFPPlus": "The SFP conforms to the SFF Specification for QSFP+.",
                 "SFP": "The SFP conforms to the SFF Specification for SFP.",
                 "SFP28": "The SFP conforms to the SFF Specification for SFP+ and IEEE 802.3by Specification.",
@@ -2201,13 +2142,10 @@
                 "SFPPlus": "The SFP conforms to the SFF Specification for SFP+.",
                 "cSFP": "The SFP conforms to the CSFP MSA Specification."
             },
-<<<<<<< HEAD
-=======
             "enumVersionAdded": {
                 "OSFP": "v1_9_0",
                 "QSFPDD": "v1_9_0"
             },
->>>>>>> origin/master-october-10
             "type": "string"
         },
         "SupportedEthernetCapabilities": {
@@ -2223,11 +2161,6 @@
         }
     },
     "owningEntity": "DMTF",
-<<<<<<< HEAD
-    "release": "2022.2",
-    "title": "#Port.v1_7_0.Port"
-=======
     "release": "2023.1",
     "title": "#Port.v1_9_0.Port"
->>>>>>> origin/master-october-10
 }

@@ -1032,10 +1032,6 @@
         <edmx:Include Namespace="EthernetInterface.v1_9_1"/>
         <edmx:Include Namespace="EthernetInterface.v1_10_0"/>
     </edmx:Reference>
-<<<<<<< HEAD
-    <edmx:Reference Uri="/redfish/v1/schema/EventDestinationCollection_v1.xml">
-        <edmx:Include Namespace="EventDestinationCollection"/>
-=======
     <edmx:Reference Uri="/redfish/v1/schema/EthernetInterfaceCollection_v1.xml">
         <edmx:Include Namespace="EthernetInterfaceCollection"/>
     </edmx:Reference>
@@ -1102,7 +1098,9 @@
         <edmx:Include Namespace="Event.v1_7_0"/>
         <edmx:Include Namespace="Event.v1_7_1"/>
         <edmx:Include Namespace="Event.v1_8_0"/>
->>>>>>> origin/master-october-10
+    </edmx:Reference>
+    <edmx:Reference Uri="/redfish/v1/schema/EventDestinationCollection_v1.xml">
+        <edmx:Include Namespace="EventDestinationCollection"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/EventDestination_v1.xml">
         <edmx:Include Namespace="EventDestination"/>
@@ -1595,10 +1593,6 @@
         <edmx:Include Namespace="LogService.v1_3_1"/>
         <edmx:Include Namespace="LogService.v1_4_0"/>
     </edmx:Reference>
-<<<<<<< HEAD
-    <edmx:Reference Uri="/redfish/v1/schema/ManagerAccountCollection_v1.xml">
-        <edmx:Include Namespace="ManagerAccountCollection"/>
-=======
     <edmx:Reference Uri="/redfish/v1/schema/LogServiceCollection_v1.xml">
         <edmx:Include Namespace="LogServiceCollection"/>
     </edmx:Reference>
@@ -1726,7 +1720,9 @@
         <edmx:Include Namespace="Manager.v1_16_0"/>
         <edmx:Include Namespace="Manager.v1_17_0"/>
         <edmx:Include Namespace="Manager.v1_18_0"/>
->>>>>>> origin/master-october-10
+    </edmx:Reference>
+    <edmx:Reference Uri="/redfish/v1/schema/ManagerAccountCollection_v1.xml">
+        <edmx:Include Namespace="ManagerAccountCollection"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/ManagerAccount_v1.xml">
         <edmx:Include Namespace="ManagerAccount"/>
@@ -2425,7 +2421,6 @@
     <edmx:Reference Uri="/redfish/v1/schema/PhysicalContext_v1.xml">
         <edmx:Include Namespace="PhysicalContext"/>
     </edmx:Reference>
-<<<<<<< HEAD
     <edmx:Reference Uri="/redfish/v1/schema/PortCollection_v1.xml">
         <edmx:Include Namespace="PortCollection"/>
     </edmx:Reference>
@@ -2439,8 +2434,6 @@
         <edmx:Include Namespace="PortMetrics.v1_2_0"/>
         <edmx:Include Namespace="PortMetrics.v1_3_0"/>
     </edmx:Reference>
-=======
->>>>>>> origin/master-october-10
     <edmx:Reference Uri="/redfish/v1/schema/Port_v1.xml">
         <edmx:Include Namespace="Port"/>
         <edmx:Include Namespace="Port.v1_0_0"/>
@@ -2485,12 +2478,8 @@
         <edmx:Include Namespace="Port.v1_6_1"/>
         <edmx:Include Namespace="Port.v1_6_2"/>
         <edmx:Include Namespace="Port.v1_7_0"/>
-<<<<<<< HEAD
-    </edmx:Reference>
-    <edmx:Reference Uri="/redfish/v1/schema/PowerSubsystem_v1.xml">
-        <edmx:Include Namespace="PowerSubsystem"/>
-        <edmx:Include Namespace="PowerSubsystem.v1_0_0"/>
-        <edmx:Include Namespace="PowerSubsystem.v1_1_0"/>
+        <edmx:Include Namespace="Port.v1_8_0"/>
+        <edmx:Include Namespace="Port.v1_9_0"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/PowerSupplyCollection_v1.xml">
         <edmx:Include Namespace="PowerSupplyCollection"/>
@@ -2504,14 +2493,8 @@
         <edmx:Include Namespace="PowerSupply.v1_3_0"/>
         <edmx:Include Namespace="PowerSupply.v1_4_0"/>
         <edmx:Include Namespace="PowerSupply.v1_5_0"/>
-=======
-        <edmx:Include Namespace="Port.v1_8_0"/>
-        <edmx:Include Namespace="Port.v1_9_0"/>
     </edmx:Reference>
-    <edmx:Reference Uri="/redfish/v1/schema/PortCollection_v1.xml">
-        <edmx:Include Namespace="PortCollection"/>
->>>>>>> origin/master-october-10
-    </edmx:Reference>
+    
     <edmx:Reference Uri="/redfish/v1/schema/Power_v1.xml">
         <edmx:Include Namespace="Power"/>
         <edmx:Include Namespace="Power.v1_0_0"/>
@@ -2586,8 +2569,6 @@
         <edmx:Include Namespace="Power.v1_7_0"/>
         <edmx:Include Namespace="Power.v1_7_1"/>
     </edmx:Reference>
-<<<<<<< HEAD
-=======
     <edmx:Reference Uri="/redfish/v1/schema/PowerSubsystem_v1.xml">
         <edmx:Include Namespace="PowerSubsystem"/>
         <edmx:Include Namespace="PowerSubsystem.v1_0_0"/>
@@ -2612,7 +2593,6 @@
     <edmx:Reference Uri="/redfish/v1/schema/PowerSupplyCollection_v1.xml">
         <edmx:Include Namespace="PowerSupplyCollection"/>
     </edmx:Reference>
->>>>>>> origin/master-october-10
     <edmx:Reference Uri="/redfish/v1/schema/Privileges_v1.xml">
         <edmx:Include Namespace="Privileges"/>
         <edmx:Include Namespace="Privileges.v1_0_0"/>
@@ -3129,38 +3109,6 @@
         <edmx:Include Namespace="ServiceRoot.v1_15_1"/>
         <edmx:Include Namespace="ServiceRoot.v1_16_0"/>
     </edmx:Reference>
-<<<<<<< HEAD
-=======
-    <edmx:Reference Uri="/redfish/v1/schema/Session_v1.xml">
-        <edmx:Include Namespace="Session"/>
-        <edmx:Include Namespace="Session.v1_0_0"/>
-        <edmx:Include Namespace="Session.v1_0_2"/>
-        <edmx:Include Namespace="Session.v1_0_3"/>
-        <edmx:Include Namespace="Session.v1_0_4"/>
-        <edmx:Include Namespace="Session.v1_0_5"/>
-        <edmx:Include Namespace="Session.v1_0_6"/>
-        <edmx:Include Namespace="Session.v1_0_7"/>
-        <edmx:Include Namespace="Session.v1_0_8"/>
-        <edmx:Include Namespace="Session.v1_1_0"/>
-        <edmx:Include Namespace="Session.v1_1_1"/>
-        <edmx:Include Namespace="Session.v1_1_2"/>
-        <edmx:Include Namespace="Session.v1_1_3"/>
-        <edmx:Include Namespace="Session.v1_1_4"/>
-        <edmx:Include Namespace="Session.v1_1_5"/>
-        <edmx:Include Namespace="Session.v1_2_0"/>
-        <edmx:Include Namespace="Session.v1_2_1"/>
-        <edmx:Include Namespace="Session.v1_2_2"/>
-        <edmx:Include Namespace="Session.v1_2_3"/>
-        <edmx:Include Namespace="Session.v1_3_0"/>
-        <edmx:Include Namespace="Session.v1_3_1"/>
-        <edmx:Include Namespace="Session.v1_3_2"/>
-        <edmx:Include Namespace="Session.v1_4_0"/>
-        <edmx:Include Namespace="Session.v1_4_1"/>
-        <edmx:Include Namespace="Session.v1_5_0"/>
-        <edmx:Include Namespace="Session.v1_5_1"/>
-        <edmx:Include Namespace="Session.v1_6_0"/>
-    </edmx:Reference>
->>>>>>> origin/master-october-10
     <edmx:Reference Uri="/redfish/v1/schema/SessionCollection_v1.xml">
         <edmx:Include Namespace="SessionCollection"/>
     </edmx:Reference>
@@ -3206,6 +3154,7 @@
         <edmx:Include Namespace="Session.v1_3_1"/>
         <edmx:Include Namespace="Session.v1_4_0"/>
         <edmx:Include Namespace="Session.v1_5_0"/>
+        <edmx:Include Namespace="Session.v1_6_0"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/Settings_v1.xml">
         <edmx:Include Namespace="Settings"/>
@@ -3419,24 +3368,8 @@
         <edmx:Include Namespace="Switch.v1_7_0"/>
         <edmx:Include Namespace="Switch.v1_8_0"/>
     </edmx:Reference>
-<<<<<<< HEAD
     <edmx:Reference Uri="/redfish/v1/schema/TaskCollection_v1.xml">
         <edmx:Include Namespace="TaskCollection"/>
-=======
-    <edmx:Reference Uri="/redfish/v1/schema/StorageController_v1.xml">
-        <edmx:Include Namespace="StorageController"/>
-        <edmx:Include Namespace="StorageController.v1_0_0"/>
-        <edmx:Include Namespace="StorageController.v1_0_1"/>
-        <edmx:Include Namespace="StorageController.v1_0_2"/>
-        <edmx:Include Namespace="StorageController.v1_1_0"/>
-        <edmx:Include Namespace="StorageController.v1_1_1"/>
-        <edmx:Include Namespace="StorageController.v1_2_0"/>
-        <edmx:Include Namespace="StorageController.v1_3_0"/>
-        <edmx:Include Namespace="StorageController.v1_4_0"/>
-        <edmx:Include Namespace="StorageController.v1_5_0"/>
-        <edmx:Include Namespace="StorageController.v1_6_0"/>
-        <edmx:Include Namespace="StorageController.v1_7_0"/>
->>>>>>> origin/master-october-10
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/TaskService_v1.xml">
         <edmx:Include Namespace="TaskService"/>
@@ -3457,6 +3390,20 @@
         <edmx:Include Namespace="TaskService.v1_1_5"/>
         <edmx:Include Namespace="TaskService.v1_1_6"/>
         <edmx:Include Namespace="TaskService.v1_2_0"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/redfish/v1/schema/StorageController_v1.xml">
+        <edmx:Include Namespace="StorageController"/>
+        <edmx:Include Namespace="StorageController.v1_0_0"/>
+        <edmx:Include Namespace="StorageController.v1_0_1"/>
+        <edmx:Include Namespace="StorageController.v1_0_2"/>
+        <edmx:Include Namespace="StorageController.v1_1_0"/>
+        <edmx:Include Namespace="StorageController.v1_1_1"/>
+        <edmx:Include Namespace="StorageController.v1_2_0"/>
+        <edmx:Include Namespace="StorageController.v1_3_0"/>
+        <edmx:Include Namespace="StorageController.v1_4_0"/>
+        <edmx:Include Namespace="StorageController.v1_5_0"/>
+        <edmx:Include Namespace="StorageController.v1_6_0"/>
+        <edmx:Include Namespace="StorageController.v1_7_0"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/Task_v1.xml">
         <edmx:Include Namespace="Task"/>
@@ -3607,10 +3554,9 @@
         <edmx:Include Namespace="Thermal.v1_7_0"/>
         <edmx:Include Namespace="Thermal.v1_7_1"/>
     </edmx:Reference>
-<<<<<<< HEAD
     <edmx:Reference Uri="/redfish/v1/schema/TriggersCollection_v1.xml">
         <edmx:Include Namespace="TriggersCollection"/>
-=======
+    </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/ThermalMetrics_v1.xml">
         <edmx:Include Namespace="ThermalMetrics"/>
         <edmx:Include Namespace="ThermalMetrics.v1_0_0"/>
@@ -3623,8 +3569,7 @@
         <edmx:Include Namespace="ThermalSubsystem.v1_0_0"/>
         <edmx:Include Namespace="ThermalSubsystem.v1_1_0"/>
         <edmx:Include Namespace="ThermalSubsystem.v1_2_0"/>
->>>>>>> origin/master-october-10
-    </edmx:Reference>
+    </edmx:Reference>    
     <edmx:Reference Uri="/redfish/v1/schema/Triggers_v1.xml">
         <edmx:Include Namespace="Triggers"/>
         <edmx:Include Namespace="Triggers.v1_0_0"/>
@@ -3822,17 +3767,14 @@
         <edmx:Include Namespace="VirtualMedia.v1_6_0"/>
         <edmx:Include Namespace="VirtualMedia.v1_6_1"/>
     </edmx:Reference>
-<<<<<<< HEAD
     <edmx:DataServices>
         <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Service">
             <EntityContainer Name="Service" Extends="ServiceRoot.v1_0_0.ServiceContainer"/>
         </Schema>
     </edmx:DataServices>
-=======
     <edmx:Reference Uri="/redfish/v1/schema/VirtualMediaCollection_v1.xml">
         <edmx:Include Namespace="VirtualMediaCollection"/>
     </edmx:Reference>
->>>>>>> origin/master-october-10
     <edmx:Reference Uri="/redfish/v1/schema/OemManager_v1.xml">
         <edmx:Include Namespace="OemManager"/>
     </edmx:Reference>
@@ -3847,15 +3789,12 @@
         <edmx:Include Namespace="OpenBMCAccountService"/>
         <edmx:Include Namespace="OpenBMCAccountService.v1_0_0"/>
     </edmx:Reference>
-<<<<<<< HEAD
     <edmx:Reference Uri="/redfish/v1/schema/OemUpdateService_v1.xml">
         <edmx:Include Namespace="OemUpdateService"/>
     </edmx:Reference>
-=======
     <edmx:DataServices>
         <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Service">
             <EntityContainer Name="Service" Extends="ServiceRoot.v1_0_0.ServiceContainer"/>
         </Schema>
     </edmx:DataServices>
->>>>>>> origin/master-october-10
 </edmx:Edmx>

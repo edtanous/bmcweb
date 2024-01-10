@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!---->
 <!--################################################################################       -->
-<<<<<<< HEAD
-<!--# Redfish Schema:  Port v1.7.0                                                         -->
-<!--#                                                                                      -->
-<!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
-<!--# available at http://www.dmtf.org/standards/redfish                                   -->
-<!--# Copyright 2014-2022 DMTF.                                                            -->
-=======
 <!--# Redfish Schema:  Port v1.9.0                                                         -->
 <!--#                                                                                      -->
 <!--# For a detailed change log, see the README file contained in the DSP8010 bundle,      -->
 <!--# available at http://www.dmtf.org/standards/redfish                                   -->
 <!--# Copyright 2014-2023 DMTF.                                                            -->
->>>>>>> origin/master-october-10
 <!--# For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright -->
 <!--################################################################################       -->
 <!---->
@@ -137,8 +129,6 @@
           <Annotation Term="OData.LongDescription" String="This parameter shall contain the type of reset.  The service can accept a request without the parameter and perform an implementation specific default reset."/>
         </Parameter>
       </Action>
-<<<<<<< HEAD
-=======
 
       <Action Name="ResetPPB" IsBound="true">
         <Annotation Term="OData.Description" String="This action resets the PCI-to-PCI bridge (PPB) for this port."/>
@@ -153,7 +143,6 @@
           </Collection>
         </Annotation>
       </Action>
->>>>>>> origin/master-october-10
     </Schema>
 
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Port.v1_0_0">
@@ -521,8 +510,6 @@
         <Member Name="GenZ">
           <Annotation Term="OData.Description" String="The port is capable of connecting to a Gen-Z fabric."/>
         </Member>
-<<<<<<< HEAD
-=======
         <Member Name="PCIe">
           <Annotation Term="OData.Description" String="The port is capable of connecting to PCIe and CXL fabrics."/>
           <Annotation Term="Redfish.Revisions">
@@ -534,7 +521,6 @@
             </Collection>
           </Annotation>
         </Member>
->>>>>>> origin/master-october-10
       </EnumType>
     </Schema>
 
@@ -1098,11 +1084,7 @@
           <Annotation Term="OData.Description" String="Port component, based in the value of entPhysicalAlias in RFC4133."/>
         </Member>
         <Member Name="MacAddr">
-<<<<<<< HEAD
-          <Annotation Term="OData.Description" String="MAC address, based on an agent detected unicast source address as defined in IEEE Std. 802."/>
-=======
           <Annotation Term="OData.Description" String="MAC address, based on an agent detected unicast source address as defined in IEEE standard 802."/>
->>>>>>> origin/master-october-10
         </Member>
         <Member Name="NetworkAddr">
           <Annotation Term="OData.Description" String="Network address, based on an agent detected network address."/>
@@ -1199,8 +1181,6 @@
         <Member Name="MiniSASHD">
           <Annotation Term="OData.Description" String="The SFP conforms to the SFF Specification SFF-8644."/>
         </Member>
-<<<<<<< HEAD
-=======
         <Member Name="QSFPDD">
           <Annotation Term="OData.Description" String="The SFP conforms to the QSFP Double Density Specification."/>
           <Annotation Term="Redfish.Revisions">
@@ -1223,7 +1203,6 @@
             </Collection>
           </Annotation>
         </Member>
->>>>>>> origin/master-october-10
       </EnumType>
 
       <EnumType Name="MediumType">
@@ -1369,8 +1348,6 @@
       </ComplexType>
     </Schema>
 
-<<<<<<< HEAD
-=======
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Port.v1_8_0">
       <Annotation Term="Redfish.OwningEntity" String="DMTF"/>
       <Annotation Term="Redfish.Release" String="2022.3"/>
@@ -1646,6 +1623,5 @@
       <EntityType Name="Port" BaseType="Port.v1_8_0.Port"/>
     </Schema>
 
->>>>>>> origin/master-october-10
   </edmx:DataServices>
 </edmx:Edmx>
