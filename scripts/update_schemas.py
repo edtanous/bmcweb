@@ -49,11 +49,8 @@ include_list = [
     "ComponentIntegrityCollection",
     "Drive",
     "DriveCollection",
-<<<<<<< HEAD
     "Endpoint",
     "EndpointCollection",
-=======
->>>>>>> origin/master-october-10
     "EnvironmentMetrics",
     "EthernetInterface",
     "EthernetInterfaceCollection",
@@ -61,13 +58,10 @@ include_list = [
     "EventDestination",
     "EventDestinationCollection",
     "EventService",
-<<<<<<< HEAD
     "Fabric",
     "FabricCollection",
-=======
     "FabricAdapter",
     "FabricAdapterCollection",
->>>>>>> origin/master-october-10
     "Fan",
     "FanCollection",
     "IPAddresses",
@@ -225,24 +219,6 @@ class SchemaVersion:
     def __init__(self, key):
         key = str.casefold(key)
 
-<<<<<<< HEAD
-    # special case some files that don't seem to follow the naming convention,
-    # and cause sort problems.  These need brought up with DMTF TODO(Ed)
-    if key == "odata.4.0.0.json":
-        key = "odata.v4_0_0.json"
-    if key == "redfish-schema.1.0.0.json":
-        key = "redfish-schema.v1_0_0.json"
-    
-    if not any(char.isdigit() for char in key):
-        key = "v0.0.0"
-    else:
-        split_tup = key.split(".")
-        if len(split_tup) > 2:
-            key = split_tup[1].replace("_", ".")
-        else:
-            key = "v0.0.0"
-    return parse(key)
-=======
         split_tup = key.split(".")
         self.version_pieces = [split_tup[0]]
         if len(split_tup) < 2:
@@ -256,7 +232,6 @@ class SchemaVersion:
 
     def __lt__(self, other):
         return self.version_pieces < other.version_pieces
->>>>>>> origin/master-october-10
 
 
 # Remove the old files
@@ -312,26 +287,15 @@ for zip_file in zip_ref.infolist():
 
 # sort the json files by version
 for key, value in json_schema_files.items():
-<<<<<<< HEAD
-    value.sort(key=version_sort_key, reverse=True)
-# Create a dictionary ordered by schema name
-json_schema_files = OrderedDict(
-    # sorted(json_schema_files.items(), key=lambda x: version_sort_key(x[0]))
-    sorted(json_schema_files.items())
-)
-# csdl_filenames.sort(key=version_sort_key)
-csdl_filenames.sort()
-with open(metadata_index_path, "w") as metadata_index:
-=======
     value.sort(key=SchemaVersion, reverse=True)
 
 # Create a dictionary ordered by schema name
 json_schema_files = OrderedDict(
-    sorted(json_schema_files.items(), key=lambda x: SchemaVersion(x[0]))
+    # sorted(json_schema_files.items(), key=lambda x: SchemaVersion(x[0]))
+    sorted(json_schema_files.items())
 )
 
 csdl_filenames.sort(key=SchemaVersion)
->>>>>>> origin/master-october-10
 
 # Create oem filenames - from oem json names
 oem_csdl_filenames = []
@@ -403,7 +367,6 @@ with open(metadata_index_path, "w") as metadata_index:
         "        </Schema>\n"
         "    </edmx:DataServices>\n"
     )
-<<<<<<< HEAD
     # TODO:Issue#32 There's a bug in the script that currently deletes this
     # schema (because it's an OEM schema). Because it's the only six, and we
     # don't update schemas very often, we just manually fix it. Need a
@@ -461,8 +424,6 @@ with open(metadata_index_path, "w") as metadata_index:
     metadata_index.write('        <edmx:Include Namespace="OemUpdateService"/>\n')
     metadata_index.write("    </edmx:Reference>\n")
 
-=======
->>>>>>> origin/master-october-10
     metadata_index.write("</edmx:Edmx>\n")
 
 
