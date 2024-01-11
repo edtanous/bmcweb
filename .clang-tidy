@@ -325,7 +325,7 @@ readability-uppercase-literal-suffix'
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
 CheckOptions:
-  - { key: misc-include-cleaner.IgnoreHeaders,          value: "cstdlib;nlohmann/.*;boost/.*/src.hpp;dbus_monitor.hpp;google/google_service_root.hpp;ibm/management_console_rest.hpp;image_upload.hpp;nbd_proxy.hpp;openbmc_dbus_rest.hpp;redfish_aggregator.hpp;security_headers.hpp;ssl_key_handler.hpp"  }
+  - { key: misc-include-cleaner.IgnoreHeaders,          value: "cstdlib;stdio.h;signal.h;nlohmann/.*;boost/.*/src.hpp;dbus_monitor.hpp;google/google_service_root.hpp;ibm/management_console_rest.hpp;image_upload.hpp;nbd_proxy.hpp;openbmc_dbus_rest.hpp;redfish_aggregator.hpp;security_headers.hpp;ssl_key_handler.hpp"  }
   - { key: readability-identifier-naming.ClassCase,     value: CamelCase  }
   - { key: readability-identifier-naming.VariableCase,  value: camelBack }
   - { key: readability-identifier-naming.FunctionCase,  value: camelBack }

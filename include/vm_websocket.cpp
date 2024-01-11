@@ -1,12 +1,29 @@
 #include "app.hpp"
+#include "logging.hpp"
 #include "websocket.hpp"
 
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/beast/core/error.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/process/async_pipe.hpp>
-#include <boost/process/child.hpp>
+#include <boost/process/detail/child_decl.hpp>
 #include <boost/process/io.hpp>
+#include <boost/system/detail/error_code.hpp>
 
 #include <csignal>
+
+// NOLINTNEXTLINE(misc-include-cleaner)
+#include <boost/process/child.hpp>
+
+#include <cerrno>
+#include <csignal>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <system_error>
 
 namespace crow
 {

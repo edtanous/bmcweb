@@ -1,3 +1,22 @@
+#include <openssl/asn1.h>
+#include <openssl/evp.h>
+#include <openssl/obj_mac.h>
+#include <openssl/types.h>
+#include <openssl/x509.h>
+#include <systemd/sd-bus.h>
+
+#include <boost/system/detail/error_code.hpp>
+#include <sdbusplus/message.hpp>
+
+#include <array>
+#include <cstddef>
+#include <cstdio>
+#include <filesystem>
+#include <iterator>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <variant>
 #ifdef BMCWEB_ENABLE_SSL
 
 #include "dbus_singleton.hpp"
@@ -7,7 +26,6 @@
 #include "ssl_key_handler.hpp"
 
 #include <sdbusplus/bus/match.hpp>
-#include <sdbusplus/message/types.hpp>
 
 namespace crow
 {
