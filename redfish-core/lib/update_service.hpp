@@ -1594,6 +1594,20 @@ inline void processMultipartFormData(
             return;
         }
     }
+    // the update request is for BMC so only allow one FW update at a time
+    if (fwUpdateInProgress != false)
+    {
+        if (asyncResp)
+        {
+            // don't copy the image, update already in progress.
+            std::string resolution =
+                "Another update is in progress. Retry"
+                " the update operation once it is complete.";
+            redfish::messages::updateInProgressMsg(asyncResp->res, resolution);
+            BMCWEB_LOG_ERROR << "Update already in progress.";
+        }
+        return ;
+    }
 #endif
     areTargetsUpdateable(req, asyncResp, uriTargets);
 }
@@ -1625,6 +1639,7 @@ inline bool preCheckMultipartUpdateServiceReq(
         return false;
     }
 
+#ifndef BMCWEB_ENABLE_REDFISH_AGGREGATION
     // Only allow one FW update at a time
     if (fwUpdateInProgress != false)
     {
@@ -1639,6 +1654,7 @@ inline bool preCheckMultipartUpdateServiceReq(
         }
         return false;
     }
+#endif
 
     std::error_code spaceInfoError;
     const std::filesystem::space_info spaceInfo =
