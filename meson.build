@@ -130,6 +130,7 @@ feature_map = {
   'force-insecure-event-notification'           : '-DBMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION',
   'use-efficient-expand-on-sensors'             : '-DBMCWEB_ENABLE_EFFICIENT_EXPAND',
   'enable-fabric-adapter'                       : '-DBMCWEB_ENABLE_FABRIC_ADAPTER',
+  'enable-sse'                                  : '-DBMCWEB_ENABLE_SSE',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

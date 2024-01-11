@@ -64,9 +64,10 @@ inline void requestRoutesEventService(App& app)
             "#EventService.v1_7_2.EventService";
         asyncResp->res.jsonValue["Id"] = "EventService";
         asyncResp->res.jsonValue["Name"] = "Event Service";
+#ifdef BMCWEB_ENABLE_SSE
         asyncResp->res.jsonValue["ServerSentEventUri"] =
             "/redfish/v1/EventService/SSE";
-
+#endif
         asyncResp->res.jsonValue["Subscriptions"]["@odata.id"] =
             "/redfish/v1/EventService/Subscriptions";
         asyncResp->res

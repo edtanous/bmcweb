@@ -345,7 +345,9 @@ class RedfishService
         requestRoutesTaskCollection(app);
         requestRoutesTask(app);
         requestRoutesEventService(app);
+#ifdef BMCWEB_ENABLE_SSE
         requestRoutesEventServiceSse(app);
+#endif
         requestRoutesEventDestinationCollection(app);
 	requestRoutesEventDestination(app);
 	requestRoutesFabricAdapters(app);
