@@ -1,7 +1,7 @@
 #pragma once
 
 #include "async_resp.hpp"
-#include "boost_loggers.hpp"
+
 #include "http_request.hpp"
 #include "http_server.hpp"
 #include "logging.hpp"
