@@ -1785,6 +1785,24 @@
             "ParamTypes": ["string", "number", "number"],
             "Resolution": "None.",
             "Severity": "OK"
+        },
+        "DebugTokenRequestSuccess": {
+            "Description": "Signifies the successful completion of the debug token request.",
+            "Message": "The operation to request a debug token for device '%1' has been successfully completed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "DebugTokenStatusSuccess": {
+            "Description": "Signifies the successful completion of the debug token status request.",
+            "Message": "The operation to obtain a token status for device '%1' has been successfully completed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "None.",
+            "Severity": "OK"
         }
     },
     "Name": "OpenBMC Message Registry",

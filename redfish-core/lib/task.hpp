@@ -406,29 +406,33 @@ struct TaskData : std::enable_shared_from_this<TaskData>
         {
             return;
         }
-        match = std::make_unique<sdbusplus::bus::match_t>(
-            static_cast<sdbusplus::bus::bus&>(*crow::connections::systemBus),
-            matchStr,
-            [self = shared_from_this()](sdbusplus::message_t& message) {
-            boost::system::error_code ec;
+        if (matchStr != "0")
+        {
+            match = std::make_unique<sdbusplus::bus::match_t>(
+                static_cast<sdbusplus::bus::bus&>(
+                    *crow::connections::systemBus),
+                matchStr,
+                [self = shared_from_this()](sdbusplus::message_t& message) {
+                boost::system::error_code ec;
 
-            // callback to return True if callback is done, callback needs
-            // to update status itself if needed
-            if (self->callback(ec, message, self) == task::completed)
-            {
-                self->timer.cancel();
-                self->finishTask();
+                // callback to return True if callback is done, callback needs
+                // to update status itself if needed
+                if (self->callback(ec, message, self) == task::completed)
+                {
+                    self->timer.cancel();
+                    self->finishTask();
 
-                // Send event
-                self->sendTaskEvent(self->state, self->index);
+                    // Send event
+                    self->sendTaskEvent(self->state, self->index);
 
-                // reset the match after the callback was successful
-                boost::asio::post(
-                    crow::connections::systemBus->get_io_context(),
-                    [self] { self->match.reset(); });
-                return;
-            }
-        });
+                    // reset the match after the callback was successful
+                    boost::asio::post(
+                        crow::connections::systemBus->get_io_context(),
+                        [self] { self->match.reset(); });
+                    return;
+                }
+            });
+        }
 
         extendTimer(timeout);
         messages.emplace_back(getMsgCallback("Started", index));
@@ -647,7 +651,8 @@ inline void requestRoutesTask(App& app)
             if (!json_util::readJsonPatch(req, asyncResp->res, "TaskState",
                                           taskState, "Messages", messages))
             {
-                BMCWEB_LOG_DEBUG("/redfish/v1/TaskService/Tasks/<str>/Update/ readJsonPatch error");
+                BMCWEB_LOG_DEBUG(
+                    "/redfish/v1/TaskService/Tasks/<str>/Update/ readJsonPatch error");
                 return;
             }
 

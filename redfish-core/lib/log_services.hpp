@@ -6735,28 +6735,38 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     }
                     const auto& mctpEp = std::get<0>(ep);
                     const auto spdmObject = mctpEp.getSpdmObject();
+                    const auto deviceName =
+                        sdbusplus::message::object_path(spdmObject).filename();
                     std::string stateDesc;
                     switch (state)
                     {
                         case debug_token::EndpointState::StatusAcquired:
-                            stateDesc = "Debug token status acquired";
+                            task->messages.emplace_back(
+                                messages::debugTokenStatusSuccess(deviceName));
                             break;
                         case debug_token::EndpointState::TokenInstalled:
                             stateDesc = "Debug token already installed";
+                            task->messages.emplace_back(
+                                messages::resourceErrorsDetectedFormatError(
+                                    deviceName, stateDesc));
                             break;
                         case debug_token::EndpointState::RequestAcquired:
-                            stateDesc = "Debug token request acquired";
+                            task->messages.emplace_back(
+                                messages::debugTokenRequestSuccess(deviceName));
                             break;
                         case debug_token::EndpointState::Error:
                             stateDesc = "Error";
+                            task->messages.emplace_back(
+                                messages::resourceErrorsDetectedFormatError(
+                                    deviceName, stateDesc));
                             break;
                         default:
                             stateDesc = "Invalid state";
+                            task->messages.emplace_back(
+                                messages::resourceErrorsDetectedFormatError(
+                                    spdmObject, stateDesc));
                             break;
                     }
-                    task->messages.emplace_back(
-                        messages::resourceErrorsDetectedFormatError(spdmObject,
-                                                                    stateDesc));
                 }
             }
             if (result.size() != 0)

@@ -19,6 +19,7 @@
 #include "logging.hpp"
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
+#include "registries/openbmc_message_registry.hpp"
 #include "update_messages.hpp"
 
 #include <boost/beast/http/field.hpp>
@@ -52,7 +53,8 @@ static void addMessageToErrorJson(nlohmann::json& target,
         auto messageIdIterator = message.find("MessageId");
         if (messageIdIterator == message.end())
         {
-            BMCWEB_LOG_CRITICAL( "Attempt to add error message without MessageId");
+            BMCWEB_LOG_CRITICAL(
+                "Attempt to add error message without MessageId");
             return;
         }
 
@@ -281,7 +283,9 @@ nlohmann::json internalError()
 
 void internalError(crow::Response& res, const std::source_location location)
 {
-    BMCWEB_LOG_CRITICAL("Internal Error {}({}:{}) `{}`: ", location.file_name(), location.line(), location.column(), location.function_name());
+    BMCWEB_LOG_CRITICAL("Internal Error {}({}:{}) `{}`: ", location.file_name(),
+                        location.line(), location.column(),
+                        location.function_name());
     res.result(boost::beast::http::status::internal_server_error);
     addMessageToErrorJson(res.jsonValue, internalError());
 }
@@ -2063,6 +2067,40 @@ void unsupportedMediaType(crow::Response& res)
 {
     res.result(boost::beast::http::status::unsupported_media_type);
     addMessageToErrorJson(res.jsonValue, unsupportedMediaType());
+}
+
+/**
+ * @brief Method to get error message from OpenBMC message registry
+ *
+ * @param[in] name - registry index
+ * @param[in] args - argument
+ * @return nlohmann::json
+ */
+inline nlohmann::json getLogOpenBMC(redfish::registries::openbmc::Index name,
+                                    std::span<const std::string_view> args)
+{
+    size_t index = static_cast<size_t>(name);
+    if (index >= redfish::registries::openbmc::registry.size())
+    {
+        return {};
+    }
+    return getLogFromRegistry(redfish::registries::openbmc::header,
+                              redfish::registries::openbmc::registry, index,
+                              args);
+}
+
+nlohmann::json debugTokenRequestSuccess(const std::string& arg1)
+{
+    std::array<std::string_view, 1> args{arg1};
+    return getLogOpenBMC(
+        redfish::registries::openbmc::Index::debugTokenRequestSuccess, args);
+}
+
+nlohmann::json debugTokenStatusSuccess(const std::string& arg1)
+{
+    std::array<std::string_view, 1> args{arg1};
+    return getLogOpenBMC(
+        redfish::registries::openbmc::Index::debugTokenStatusSuccess, args);
 }
 
 } // namespace messages
