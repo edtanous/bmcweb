@@ -362,6 +362,8 @@ inline void getEROTChassis(const crow::Request& req,
                 asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
                     {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}};
 
+                asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
+                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
                 redfish::chassis_utils::getChassisUUID(
                     req, asyncResp, connectionNames[0].first, path, true);
 
