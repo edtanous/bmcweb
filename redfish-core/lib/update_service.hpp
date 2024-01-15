@@ -3460,28 +3460,54 @@ inline void requestRoutesSoftwareInventory(App& app)
                     // Ensure we find our input swId, otherwise return an
                     // error
                     bool found = false;
-                    for (const std::pair<
-                             std::string,
-                             std::vector<std::pair<
-                                 std::string, std::vector<std::string>>>>& obj :
-                         subtree)
+                    for (const auto& [path, serviceMap] : subtree)
                     {
-                        sdbusplus::message::object_path objPath(obj.first);
+                        sdbusplus::message::object_path objPath(path);
                         if (boost::equals(objPath.filename(), *swId) != true)
                         {
                             continue;
                         }
 
-                        if (obj.second.size() < 1)
+                        if (serviceMap.size() < 1)
                         {
                             continue;
                         }
 
                         found = true;
-                        fw_util::getFwStatus(asyncResp, swId,
-                                             obj.second[0].first);
-                        fw_util::getFwWriteProtectedStatus(asyncResp, swId,
-                                                           obj.second[0].first);
+                        std::string settingService;
+                        std::string versionService;
+                        for (const auto& [service, interface] : serviceMap)
+                        {
+                            if (std::ranges::find(interface, "xyz.openbmc_project.Software.Settings") !=
+                                interface.end())
+                            {
+                                settingService = service;
+                            }
+                            if (std::ranges::find(interface, "xyz.openbmc_project.Software.Version") !=
+                                interface.end())
+                            {
+                                versionService = service;
+                            }
+                        }
+
+                        if (versionService.empty())
+                        {
+                            BMCWEB_LOG_ERROR
+                                << "Firmware Inventory: Software.Version interface is missing for swId: "
+                                << *swId;
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        // The settingService is used for populating
+                        // WriteProtected property. This property is optional
+                        // and not implemented on all devices.
+                        if (!settingService.empty())
+                        {
+                            fw_util::getFwWriteProtectedStatus(asyncResp, swId,
+                                                               settingService);
+                        }
+                        fw_util::getFwStatus(asyncResp, swId, versionService);
+
                         crow::connections::systemBus->async_method_call(
                             [asyncResp,
                              swId](const boost::system::error_code errorCode,
@@ -3610,7 +3636,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                                 getRelatedItems(asyncResp, *swId,
                                                 *swInvPurpose);
                             },
-                            obj.second[0].first, obj.first,
+                            versionService, path,
                             "org.freedesktop.DBus.Properties", "GetAll","");
 
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
@@ -3644,8 +3670,8 @@ inline void requestRoutesSoftwareInventory(App& app)
                 "/xyz/openbmc_project/object_mapper",
                 "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/xyz/openbmc_project/software/",
                 static_cast<int32_t>(0),
-                std::array<const char*, 1>{
-                    "xyz.openbmc_project.Software.Version"});
+                std::array<const char*, 2>{
+                    "xyz.openbmc_project.Software.Version", "xyz.openbmc_project.Software.Settings"});
         });
 }
 
