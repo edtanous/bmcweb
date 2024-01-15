@@ -854,7 +854,6 @@ inline void
                 managedBy.emplace_back(std::move(manager));
                 asyncResp->res.jsonValue["Links"]["ManagedBy"] =
                     std::move(managedBy);
-                getChassisState(asyncResp);
                 getStorageLink(asyncResp, path);
                 });
 
@@ -956,11 +955,6 @@ inline void
         return;
     }
 
-    // TODO (Gunnar): Remove IndicatorLED after enough time has passed
-    if (!locationIndicatorActive && !indicatorLed)
-    {
-        return; // delete this when we support more patch properties
-    }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     if (oemJsonObj)
     {
