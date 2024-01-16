@@ -27,7 +27,7 @@
 #include <cors_preflight.hpp>
 #include <dbus_monitor.hpp>
 #include <dbus_singleton.hpp>
-//#include <dump_offload.hpp>
+#include <dump_offload.hpp>
 #include <google/google_service_root.hpp>
 #include <hostname_monitor.hpp>
 //#include <ibm/management_console_rest.hpp>
@@ -171,9 +171,9 @@ static int run()
     }
 #endif
 
-// #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
-//     crow::obmc_dump::requestRoutes(app);
-// #endif
+#ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
+    crow::obmc_dump::requestRoutes(app);
+#endif
 
     bmcweb::registerUserRemovedSignal();
 

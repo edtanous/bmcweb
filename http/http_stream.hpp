@@ -155,5 +155,6 @@ class ConnectionImpl : public Connection
     std::function<void()> handlerFunc;
     crow::Request req;
 };
+
 } // namespace streaming_response
 } // namespace crow

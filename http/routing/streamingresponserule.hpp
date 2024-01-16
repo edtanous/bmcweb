@@ -23,12 +23,13 @@ class StreamingResponseRule : public BaseRule
 
     void handle(const Request&,
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                const RoutingParams&) override
+                const std::vector<std::string>&) override
     {
         asyncResp->res.result(boost::beast::http::status::not_found);
     }
 
-    void handleUpgrade(const Request& req, Response&,
+    void handleUpgrade(const Request& req,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        boost::asio::ip::tcp::socket&& adaptor) override
     {
         std::shared_ptr<crow::streaming_response::ConnectionImpl<
@@ -37,16 +38,15 @@ class StreamingResponseRule : public BaseRule
                 std::make_shared<crow::streaming_response::ConnectionImpl<
                     boost::asio::ip::tcp::socket>>(req, std::move(adaptor),
                                                    openHandler, messageHandler,
-                                                   closeHandler, errorHandler);
-
+                                                   closeHandler, errorHandler);   
+        asyncResp->res.setCompleteRequestHandler(nullptr);                                     
         myConnection->start();
-        myConnection.reset();
-        myConnection = nullptr;
     }
 
-    void handleUpgrade(const Request& req, Response&,
+    void handleUpgrade(const Request& req,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        boost::beast::ssl_stream<boost::asio::ip::tcp::socket>&&
-                           adaptor) override
+                         adaptor) override
     {
         std::shared_ptr<crow::streaming_response::ConnectionImpl<
             boost::beast::ssl_stream<boost::asio::ip::tcp::socket>>>
@@ -55,9 +55,8 @@ class StreamingResponseRule : public BaseRule
                     boost::beast::ssl_stream<boost::asio::ip::tcp::socket>>>(
                     req, std::move(adaptor), openHandler, messageHandler,
                     closeHandler, errorHandler);
+        asyncResp->res.setCompleteRequestHandler(nullptr);
         myConnection->start();
-        myConnection.reset();
-        myConnection = nullptr;
     }
 
     template <typename Func>

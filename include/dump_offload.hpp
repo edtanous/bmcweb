@@ -227,6 +227,8 @@ inline void requestRoutes(App& app)
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
+
+
         std::string url(conn.req.target());
         std::filesystem::path dumpIdPath(
             url.substr(0, url.find("/attachment")));
@@ -241,6 +243,8 @@ inline void requestRoutes(App& app)
                                                     unixSocketPath);
         handlers[&conn]->connection = conn.getSharedReference();
         handlers[&conn]->getDumpSize(dumpId, dumpType);
+
+
     }).onclose([](crow::streaming_response::Connection& conn) {
         auto handler = handlers.find(&conn);
         if (handler == handlers.end())

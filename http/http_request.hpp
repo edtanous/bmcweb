@@ -53,6 +53,7 @@ struct Request
 
     Request& operator=(const Request&) = default;
     Request& operator=(Request&&) = default;
+
     ~Request() = default;
 
     boost::beast::http::verb method() const

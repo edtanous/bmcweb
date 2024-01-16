@@ -460,12 +460,12 @@ static bool
     return !redfishLogFiles.empty();
 }
 
-std::vector<std::pair<std::string, std::string>>
+std::vector<std::pair<std::string, std::variant<std::string, uint64_t>>>
     parseOEMAdditionalData(const std::string& oemData)
 {
     // Parse OEM data for encoded format string
     // oemDiagnosticDataType = "key1=value1;key2=value2;key3=value3"
-    std::vector<std::pair<std::string, std::string>> additionalData;
+    std::vector<std::pair<std::string, std::variant<std::string, uint64_t>>> additionalData;
     std::vector<std::string> tokens;
     boost::split(tokens, oemData, boost::is_any_of(";"));
     if (!tokens.empty())
@@ -1592,7 +1592,8 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
     std::optional<std::string> diagnosticDataType;
     std::optional<std::string> oemDiagnosticDataType;
-    std::vector<std::pair<std::string, std::string>> createDumpParamVec;
+    std::vector<std::pair<std::string, std::variant<std::string, uint64_t>>>
+        createDumpParamVec;
 
     if (!redfish::json_util::readJsonAction(
             req, asyncResp->res, "DiagnosticDataType", diagnosticDataType,
@@ -1650,9 +1651,6 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         messages::internalError(asyncResp->res);
         return;
     }
-
-    // std::vector<std::pair<std::string, std::variant<std::string, uint64_t>>>
-    //     createDumpParamVec;
 
     if (req.session != nullptr)
     {

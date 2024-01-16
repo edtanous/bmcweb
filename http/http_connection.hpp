@@ -334,9 +334,6 @@ class Connection :
         {
             BMCWEB_LOG_DEBUG("upgrade stream connection");
             handler->handleUpgrade(thisReq, asyncResp, std::move(adaptor));
-            // delete lambda with self shared_ptr
-            // to enable connection destruction
-            asyncResp->res.setCompleteRequestHandler(nullptr);
             return;
         }
 
