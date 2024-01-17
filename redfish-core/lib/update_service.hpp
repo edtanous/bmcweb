@@ -1520,6 +1520,77 @@ inline void forwardImage(
 #endif
 
 /**
+ * @brief Sets the ForceUpdate flag in the update policy.
+ *
+ * This function asynchronously updates the ForceUpdate flag in the software
+ * update policy.
+ *
+ * @param[in] asyncResp Pointer to the object holding the response data.
+ * @param[in] forceUpdate The boolean value to set for the ForceUpdate flag.
+ * @param[in] objpath The object's path for the UpdatePolicy.
+ * @param[in] callback A callback function to be called after the ForceUpdate
+ * update policy is changed. This is an optional parameter with a default value
+ * of an empty function.
+ *
+ * @return None
+ */
+inline void setForceUpdate(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& objpath, const bool forceUpdate,
+                           std::function<void()> callback = {})
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, forceUpdate, objpath, callback](
+            const boost::system::error_code errorCode,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) mutable {
+            if (errorCode)
+            {
+                BMCWEB_LOG_ERROR << "error_code = " << errorCode;
+                BMCWEB_LOG_ERROR << "error msg = " << errorCode.message();
+                if (asyncResp)
+                {
+                    messages::internalError(asyncResp->res);
+                }
+                return;
+            }
+            // Ensure we only got one service back
+            if (objInfo.size() != 1)
+            {
+                BMCWEB_LOG_ERROR << "Invalid Object Size " << objInfo.size();
+                if (asyncResp)
+                {
+                    messages::internalError(asyncResp->res);
+                }
+                return;
+            }
+            crow::connections::systemBus->async_method_call(
+                [asyncResp,
+                 callback](const boost::system::error_code errCodePolicy) {
+                    if (errCodePolicy)
+                    {
+                        BMCWEB_LOG_ERROR << "error_code = " << errCodePolicy;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    if (callback)
+                    {
+                        callback();
+                    }
+                },
+                objInfo[0].first, objpath, "org.freedesktop.DBus.Properties",
+                "Set", "xyz.openbmc_project.Software.UpdatePolicy",
+                "ForceUpdate", dbus::utility::DbusVariantType(forceUpdate));
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject",
+        "/xyz/openbmc_project/software",
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Software.UpdatePolicy"});
+}
+
+/**
  * @brief Process multipart form data
  *
  * @param[in] req  HTTP request
@@ -1973,7 +2044,6 @@ inline void requestRoutesUpdateService(App& app)
                                             pushURITargets;
                                     }
                                 }
-                                /*
                                 else if (propertyMap.first == "ForceUpdate")
                                 {
                                     auto forceUpdate =
@@ -1986,7 +2056,6 @@ inline void requestRoutesUpdateService(App& app)
                                             *forceUpdate;
                                     }
                                 }
-                                */
                             }
                             return;
                         },
@@ -2075,11 +2144,11 @@ inline void requestRoutesUpdateService(App& app)
 
             if (pushUriOptions)
             {
-                /*std::optional<bool> forceUpdate;*/
+                std::optional<bool> forceUpdate;
                 std::optional<nlohmann::json> pushUriApplyTime;
                 if (!json_util::readJson(
                         *pushUriOptions, asyncResp->res, "HttpPushUriApplyTime",
-                        pushUriApplyTime /*, "ForceUpdate", forceUpdate*/))
+                        pushUriApplyTime, "ForceUpdate", forceUpdate))
                 {
                     return;
                 }
@@ -2135,65 +2204,12 @@ inline void requestRoutesUpdateService(App& app)
                             dbus::utility::DbusVariantType{applyTimeNewVal});
                     }
                 }
-                /*
+
                 if (forceUpdate)
                 {
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp, forceUpdate](
-                            const boost::system::error_code errorCode,
-                            const std::vector<std::pair<
-                                std::string, std::vector<std::string>>>&
-                                objInfo) mutable {
-                            if (errorCode)
-                            {
-                                BMCWEB_LOG_ERROR << "error_code = "
-                                                 << errorCode;
-                                BMCWEB_LOG_ERROR << "error msg = "
-                                                 << errorCode.message();
-                                if (asyncResp)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                }
-                                return;
-                            }
-                            // Ensure we only got one service back
-                            if (objInfo.size() != 1)
-                            {
-                                BMCWEB_LOG_ERROR << "Invalid Object Size "
-                                                 << objInfo.size();
-                                if (asyncResp)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                }
-                                return;
-                            }
-                            crow::connections::systemBus->async_method_call(
-                                [asyncResp](
-                                    const boost::system::error_code
-                errCodePolicy) { if (errCodePolicy)
-                                    {
-                                        BMCWEB_LOG_ERROR << "error_code = "
-                                                         << errCodePolicy;
-                                        messages::internalError(asyncResp->res);
-                                        return;
-                                    }
-                                    messages::success(asyncResp->res);
-                                },
-                                objInfo[0].first,
-                                "/xyz/openbmc_project/software",
-                                "org.freedesktop.DBus.Properties", "Set",
-                                "xyz.openbmc_project.Software.UpdatePolicy",
-                                "ForceUpdate",
-                                dbus::utility::DbusVariantType(*forceUpdate));
-                        },
-                        "xyz.openbmc_project.ObjectMapper",
-                        "/xyz/openbmc_project/object_mapper",
-                        "xyz.openbmc_project.ObjectMapper", "GetObject",
-                        "/xyz/openbmc_project/software",
-                        std::array<const char*, 1>{
-                            "xyz.openbmc_project.Software.UpdatePolicy"});
+                    setForceUpdate(asyncResp, "/xyz/openbmc_project/software",
+                                   forceUpdate.value_or(false));
                 }
-                */
             }
 
             if (imgTargets)
