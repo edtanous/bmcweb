@@ -192,8 +192,23 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // defaults to ensure something is always returned.
     for (const auto& nwkProtocol : networkProtocolToDbus)
     {
-        asyncResp->res.jsonValue[nwkProtocol.first]["Port"] = nullptr;
-        asyncResp->res.jsonValue[nwkProtocol.first]["ProtocolEnabled"] = false;
+        const std::string_view protocolName = nwkProtocol.first;
+        // if TLS authentication is disabled then don't support HTTPS.
+        // even if SSL is enabled
+#ifdef BMCWEB_ENABLE_SSL
+        if (protocolName == "HTTPS" &&
+            !persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            continue;
+        }
+#else
+        if (protocolName == "HTTPS")
+        {
+            continue;
+        }
+#endif
+        asyncResp->res.jsonValue[protocolName]["Port"] = nullptr;
+        asyncResp->res.jsonValue[protocolName]["ProtocolEnabled"] = false;
     }
 
     std::string hostName = getHostName();
