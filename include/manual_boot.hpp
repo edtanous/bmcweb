@@ -1,5 +1,6 @@
 #pragma once
 
+#include "error_messages.hpp"
 #include "mctp_vdm_util_wrapper.hpp"
 #include "utils/mctp_utils.hpp"
 
@@ -21,8 +22,11 @@ inline void bootModeQuery(const crow::Request& req,
             {
                 BMCWEB_LOG_ERROR << "Endpoint ID for " << chassisId
                                  << " not found";
-                messages::resourceNotFound(
-                    asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                oem["ManualBootModeEnabled"] = nullptr;
+                messages::resourceErrorsDetectedFormatError(
+                    asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
+                    "device enumeration failure");
                 return;
             }
             uint32_t eid =
@@ -36,15 +40,18 @@ inline void bootModeQuery(const crow::Request& req,
                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     uint32_t, const std::string& stdOut, const std::string&,
                     const boost::system::error_code& ec, int errorCode) {
+                    nlohmann::json& oem =
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"];
                     if (ec || errorCode)
                     {
+                        oem["ManualBootModeEnabled"] = nullptr;
                         messages::resourceErrorsDetectedFormatError(
-                            asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
+                            asyncResp->res,
+
+                            "Oem/Nvidia/ManualBootModeEnabled",
                             "command failure");
                         return;
                     }
-                    nlohmann::json& oem =
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"];
                     std::string reEnabled = "(.|\n)*RX:( \\d\\d){9} 01(.|\n)*";
                     std::string reDisabled = "(.|\n)*RX:( \\d\\d){9} 00(.|\n)*";
                     if (std::regex_match(stdOut, std::regex(reEnabled)))
@@ -59,9 +66,10 @@ inline void bootModeQuery(const crow::Request& req,
                     }
                     BMCWEB_LOG_ERROR << "Invalid query_boot_mode response: "
                                      << stdOut;
+                    oem["ManualBootModeEnabled"] = nullptr;
                     messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
-                        "invalid response");
+                        asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
+                        "invalid backend response");
                 });
         },
         [asyncResp, chassisId](bool critical, const std::string& desc,
@@ -69,8 +77,9 @@ inline void bootModeQuery(const crow::Request& req,
             if (critical)
             {
                 BMCWEB_LOG_ERROR << desc << ": " << msg;
-                messages::resourceNotFound(
-                    asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                messages::resourceErrorsDetectedFormatError(
+                    asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
+                    "device enumeration failure");
             }
         },
         chassisId);
@@ -88,8 +97,9 @@ inline void bootModeSet(const crow::Request& req,
             {
                 BMCWEB_LOG_ERROR << "Endpoint ID for " << chassisId
                                  << " not found";
-                messages::resourceNotFound(
-                    asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                messages::resourceErrorsDetectedFormatError(
+                    asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
+                    "device enumeration failure");
                 return;
             }
             uint32_t eid =
@@ -108,8 +118,8 @@ inline void bootModeSet(const crow::Request& req,
                     if (ec || errorCode)
                     {
                         messages::resourceErrorsDetectedFormatError(
-                            asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
-                            "command failure");
+                            asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
+                            "device enumeration failure");
                         return;
                     }
                     std::string reSuccess = "(.|\n)*RX:( \\d\\d){8} 00(.|\n)*";
@@ -126,8 +136,8 @@ inline void bootModeSet(const crow::Request& req,
                     }
                     BMCWEB_LOG_ERROR << "Invalid boot_ap response: " << stdOut;
                     messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
-                        "invalid response");
+                        asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
+                        "invalid backend response");
                 });
         },
         [asyncResp, chassisId](bool critical, const std::string& desc,
@@ -135,8 +145,9 @@ inline void bootModeSet(const crow::Request& req,
             if (critical)
             {
                 BMCWEB_LOG_ERROR << desc << ": " << msg;
-                messages::resourceNotFound(
-                    asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                messages::resourceErrorsDetectedFormatError(
+                    asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
+                    "device enumeration failure");
             }
         },
         chassisId);
@@ -154,8 +165,7 @@ inline void bootAp(const crow::Request& req,
             {
                 BMCWEB_LOG_ERROR << "Endpoint ID for " << chassisId
                                  << " not found";
-                messages::resourceNotFound(
-                    asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                messages::internalError(asyncResp->res);
                 return;
             }
             uint32_t eid =
@@ -170,9 +180,7 @@ inline void bootAp(const crow::Request& req,
                     const boost::system::error_code& ec, int errorCode) {
                     if (ec || errorCode)
                     {
-                        messages::resourceErrorsDetectedFormatError(
-                            asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
-                            "command failure");
+                        messages::internalError(asyncResp->res);
                         return;
                     }
                     std::string reSuccess = "(.|\n)*RX:( \\d\\d){8} 00(.|\n)*";
@@ -188,9 +196,7 @@ inline void bootAp(const crow::Request& req,
                         return;
                     }
                     BMCWEB_LOG_ERROR << "Invalid boot_ap response: " << stdOut;
-                    messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res, "/redfish/v1/Chassis/" + chassisId,
-                        "invalid response");
+                    messages::internalError(asyncResp->res);
                 });
         },
         [asyncResp, chassisId](bool critical, const std::string& desc,
@@ -198,8 +204,7 @@ inline void bootAp(const crow::Request& req,
             if (critical)
             {
                 BMCWEB_LOG_ERROR << desc << ": " << msg;
-                messages::resourceNotFound(
-                    asyncResp->res, "#Chassis.v1_17_0.Chassis", chassisId);
+                messages::internalError(asyncResp->res);
             }
         },
         chassisId);
