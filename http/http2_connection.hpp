@@ -21,7 +21,6 @@
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/serializer.hpp>
-#include <boost/beast/http/string_body.hpp>
 #include <boost/beast/http/write.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
@@ -105,48 +104,35 @@ class HTTP2Connection :
         BMCWEB_LOG_DEBUG("File read callback length: {}", length);
         crow::Response& res = stream.res;
 
-        Response::string_response* body =
-            boost::variant2::get_if<Response::string_response>(&res.response);
-        Response::file_response* fbody =
-            boost::variant2::get_if<Response::file_response>(&res.response);
+        http::response<bmcweb::FileBody>& fbody = res.response;
 
         size_t size = res.size();
         BMCWEB_LOG_DEBUG("total: {} send_sofar: {}", size, stream.sentSofar);
 
-        size_t toSend = std::min(size - stream.sentSofar, length);
-        BMCWEB_LOG_DEBUG("Copying {} bytes to buf", toSend);
+        bmcweb::FileBody::writer writer(fbody.base(), fbody.body());
+        boost::beast::error_code ec;
+        boost::optional<std::pair<boost::asio::const_buffer, bool>> out =
+            writer.get(ec);
 
-        if (body != nullptr)
-        {
-            std::string::const_iterator bodyBegin = body->body().begin();
-            std::advance(bodyBegin, stream.sentSofar);
-
-            memcpy(buf, &*bodyBegin, toSend);
-        }
-        else if (fbody != nullptr)
-        {
-            boost::system::error_code ec;
-
-            size_t nread = fbody->body().file().read(buf, toSend, ec);
-            if (ec || nread != toSend)
-            {
-                return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
-            }
-        }
-        else
+        if (!out)
         {
             return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
         }
 
-        stream.sentSofar += toSend;
+        if (length < out->first.size())
+        {
+            return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
+        }
+        BMCWEB_LOG_DEBUG("Copying {} bytes to buf", out->first.size());
+        memcpy(buf, out->first.data(), out->first.size());
 
-        if (stream.sentSofar >= size)
+        if (!out->second)
         {
             BMCWEB_LOG_DEBUG("Setting OEF flag");
             *dataFlags |= NGHTTP2_DATA_FLAG_EOF;
             //*dataFlags |= NGHTTP2_DATA_FLAG_NO_COPY;
         }
-        return static_cast<ssize_t>(toSend);
+        return static_cast<ssize_t>(out->first.size());
     }
 
     nghttp2_nv headerFromStringViews(std::string_view name,

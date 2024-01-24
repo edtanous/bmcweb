@@ -2,15 +2,21 @@
 
 #include "utility.hpp"
 
+#include <unistd.h>
+
+#include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/file_posix.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/system/error_code.hpp>
+
+#include <string_view>
 
 namespace bmcweb
 {
 struct FileBody
 {
     class writer;
+    class reader;
     class value_type;
 
     static std::uint64_t size(const value_type& body);
@@ -28,25 +34,70 @@ class FileBody::value_type
 
     std::uint64_t fileSize = 0;
 
+    std::string strBody;
+
   public:
     EncodingType encodingType = EncodingType::Raw;
 
     ~value_type() = default;
     value_type() = default;
     explicit value_type(EncodingType enc) : encodingType(enc) {}
+    explicit value_type(std::string_view str) : strBody(str) {}
+
     value_type(value_type&& other) = default;
     value_type& operator=(value_type&& other) = default;
-    value_type(const value_type& other) = delete;
-    value_type& operator=(const value_type& other) = delete;
+
+    // Overload copy constructor, because posix doesn't have dup(), but linux
+    // does
+    value_type(const value_type& other)
+    {
+        fileSize = other.fileSize;
+        strBody = other.strBody;
+        encodingType = other.encodingType;
+        fileHandle.native_handle(dup(other.fileHandle.native_handle()));
+    }
+    value_type& operator=(const value_type& other)
+    {
+        if (this != &other)
+        {
+            fileSize = other.fileSize;
+            strBody = other.strBody;
+            encodingType = other.encodingType;
+            fileHandle.native_handle(dup(other.fileHandle.native_handle()));
+        }
+        return *this;
+    };
 
     boost::beast::file_posix& file()
     {
         return fileHandle;
     }
 
+    std::string& str()
+    {
+        return strBody;
+    }
+
+    const std::string& str() const
+    {
+        return strBody;
+    }
+
     std::uint64_t size() const
     {
+        if (!fileHandle.is_open())
+        {
+            return strBody.size();
+        }
         return fileSize;
+    }
+
+    void clear()
+    {
+        strBody.clear();
+        strBody.shrink_to_fit();
+        fileHandle = boost::beast::file_posix();
+        fileSize = 0;
     }
 
     void open(const char* path, boost::beast::file_mode mode,
@@ -98,6 +149,18 @@ class FileBody::writer
     boost::optional<std::pair<const_buffers_type, bool>>
         get(boost::beast::error_code& ec)
     {
+        if (!body.file().is_open())
+        {
+            size_t toReturn = std::min(readBufSize, remain);
+            boost::optional<std::pair<const_buffers_type, bool>> ret2 =
+                std::make_pair(
+                    const_buffers_type(body.str().data() +
+                                           (toReturn - body.str().size()),
+                                       toReturn),
+                    false);
+            remain -= toReturn;
+            return ret2;
+        }
         size_t toRead = fileReadBuf.size();
         if (remain < toRead)
         {
@@ -133,4 +196,49 @@ class FileBody::writer
         return ret;
     }
 };
+
+class FileBody::reader
+{
+    value_type& value;
+
+  public:
+    template <bool IsRequest, class Fields>
+    reader(boost::beast::http::header<IsRequest, Fields>& /*headers*/,
+           value_type& body) :
+        value(body)
+    {}
+
+    void init(const boost::optional<std::uint64_t>& /*content_length*/,
+              boost::beast::error_code& ec)
+    {
+        ec = {};
+    }
+
+    template <class ConstBufferSequence>
+    std::size_t put(const ConstBufferSequence& buffers,
+                    boost::system::error_code& ec)
+    {
+        ec = {};
+        value.str() += boost::beast::buffers_to_string(buffers);
+        std::string& body = value.str();
+
+        size_t extra = boost::beast::buffer_bytes(buffers);
+
+        body.reserve(body.size() + extra);
+
+        for (const auto b : boost::beast::buffers_range_ref(buffers))
+        {
+            body += std::string_view(static_cast<const char*>(b.data()),
+                                     b.size());
+        }
+
+        return extra;
+    }
+
+    void finish(boost::system::error_code& ec)
+    {
+        ec = {};
+    }
+};
+
 } // namespace bmcweb

@@ -3,7 +3,6 @@
 
 #include <boost/beast/http/fields.hpp>
 #include <boost/beast/http/message.hpp>
-#include <boost/beast/http/string_body.hpp>
 
 #include <memory>
 #include <string_view>
@@ -26,7 +25,7 @@ using ::testing::Test;
 class MultipartTest : public Test
 {
   public:
-    boost::beast::http::request<boost::beast::http::string_body> req{};
+    boost::beast::http::request<bmcweb::FileBody> req{};
     MultipartParser parser;
     std::error_code ec;
 };
@@ -37,16 +36,17 @@ TEST_F(MultipartTest, TestGoodMultipartParser)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
-                 "111111111111111111111111112222222222222222222222222222222\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "{\r\n-----------------------------d74496d66958873e123456\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test3\"\r\n\r\n"
-                 "{\r\n--------d74496d6695887}\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() =
+        "-----------------------------d74496d66958873e\r\n"
+        "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
+        "111111111111111111111111112222222222222222222222222222222\r\n"
+        "-----------------------------d74496d66958873e\r\n"
+        "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+        "{\r\n-----------------------------d74496d66958873e123456\r\n"
+        "-----------------------------d74496d66958873e\r\n"
+        "Content-Disposition: form-data; name=\"Test3\"\r\n\r\n"
+        "{\r\n--------d74496d6695887}\r\n"
+        "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     ParserError rc = parser.parse(reqIn);
@@ -76,10 +76,10 @@ TEST_F(MultipartTest, TestBadMultipartParser1)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
-                 "1234567890\r\n"
-                 "-----------------------------d74496d66958873e\r-\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
+                       "1234567890\r\n"
+                       "-----------------------------d74496d66958873e\r-\r\n";
 
     crow::Request reqIn(req, ec);
     ParserError rc = parser.parse(reqIn);
@@ -93,10 +93,10 @@ TEST_F(MultipartTest, TestBadMultipartParser2)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
-                 "abcd\r\n"
-                 "-----------------------------d74496d66958873e-\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
+                       "abcd\r\n"
+                       "-----------------------------d74496d66958873e-\r\n";
 
     crow::Request reqIn(req, ec);
     ParserError rc = parser.parse(reqIn);
@@ -110,13 +110,14 @@ TEST_F(MultipartTest, TestErrorBoundaryFormat)
             "multipart/form-data; "
             "boundary+=-----------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
-                 "{\"Key1\": 11223333333333333333333333333333333333333333}\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "123456\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() =
+        "-----------------------------d74496d66958873e\r\n"
+        "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
+        "{\"Key1\": 11223333333333333333333333333333333333333333}\r\n"
+        "-----------------------------d74496d66958873e\r\n"
+        "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+        "123456\r\n"
+        "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_BOUNDARY_FORMAT);
@@ -128,13 +129,13 @@ TEST_F(MultipartTest, TestErrorBoundaryCR)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r"
-                 "{\"Key1\": 112233}\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "123456\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n\r"
+                       "{\"Key1\": 112233}\r\n"
+                       "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+                       "123456\r\n"
+                       "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_BOUNDARY_CR);
@@ -146,13 +147,13 @@ TEST_F(MultipartTest, TestErrorBoundaryLF)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
-                 "{\"Key1\": 112233}\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "123456\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e\r"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
+                       "{\"Key1\": 112233}\r\n"
+                       "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+                       "123456\r\n"
+                       "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_BOUNDARY_LF);
@@ -164,13 +165,13 @@ TEST_F(MultipartTest, TestErrorBoundaryData)
             "multipart/form-data; "
             "boundary=---------------------------d7449sd6d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
-                 "{\"Key1\": 112233}\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "123456\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
+                       "{\"Key1\": 112233}\r\n"
+                       "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+                       "123456\r\n"
+                       "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_BOUNDARY_DATA);
@@ -182,13 +183,13 @@ TEST_F(MultipartTest, TestErrorEmptyHeader)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 ": form-data; name=\"Test1\"\r\n"
-                 "{\"Key1\": 112233}\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n"
-                 "123456\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       ": form-data; name=\"Test1\"\r\n"
+                       "{\"Key1\": 112233}\r\n"
+                       "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test2\"\r\n"
+                       "123456\r\n"
+                       "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_EMPTY_HEADER);
@@ -200,13 +201,13 @@ TEST_F(MultipartTest, TestErrorHeaderName)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-!!Disposition: form-data; name=\"Test1\"\r\n"
-                 "{\"Key1\": 112233}\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "123456\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       "Content-!!Disposition: form-data; name=\"Test1\"\r\n"
+                       "{\"Key1\": 112233}\r\n"
+                       "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+                       "123456\r\n"
+                       "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_HEADER_NAME);
@@ -218,13 +219,13 @@ TEST_F(MultipartTest, TestErrorHeaderValue)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r"
-                 "{\"Key1\": 112233}\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "123456\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test1\"\r"
+                       "{\"Key1\": 112233}\r\n"
+                       "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+                       "123456\r\n"
+                       "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_HEADER_VALUE);
@@ -236,13 +237,13 @@ TEST_F(MultipartTest, TestErrorHeaderEnding)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r"
-                 "{\"Key1\": 112233}\r\n"
-                 "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "123456\r\n"
-                 "-----------------------------d74496d66958873e--\r\n";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n\r"
+                       "{\"Key1\": 112233}\r\n"
+                       "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+                       "123456\r\n"
+                       "-----------------------------d74496d66958873e--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_HEADER_ENDING);
@@ -254,12 +255,12 @@ TEST_F(MultipartTest, TestGoodMultipartParserMultipleHeaders)
             "multipart/form-data; "
             "boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n"
-                 "Other-Header: value=\"v1\"\r\n"
-                 "\r\n"
-                 "Data1\r\n"
-                 "-----------------------------d74496d66958873e--";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n"
+                       "Other-Header: value=\"v1\"\r\n"
+                       "\r\n"
+                       "Data1\r\n"
+                       "-----------------------------d74496d66958873e--";
 
     crow::Request reqIn(req, ec);
     ParserError rc = parser.parse(reqIn);
@@ -280,11 +281,11 @@ TEST_F(MultipartTest, TestErrorHeaderWithoutColon)
     req.set("Content-Type", "multipart/form-data; "
                             "boundary=--end");
 
-    req.body() = "----end\r\n"
-                 "abc\r\n"
-                 "\r\n"
-                 "Data1\r\n"
-                 "----end--\r\n";
+    req.body().str() = "----end\r\n"
+                       "abc\r\n"
+                       "\r\n"
+                       "Data1\r\n"
+                       "----end--\r\n";
 
     crow::Request reqIn(req, ec);
     EXPECT_EQ(parser.parse(reqIn), ParserError::ERROR_UNEXPECTED_END_OF_HEADER);
@@ -295,7 +296,7 @@ TEST_F(MultipartTest, TestUnknownHeaderIsCorrectlyParsed)
     req.set("Content-Type", "multipart/form-data; "
                             "boundary=--end");
 
-    req.body() =
+    req.body().str() =
         "----end\r\n"
         "t-DiPpcccc:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccgcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaaaaaa\r\n"
         "\r\n"
@@ -322,7 +323,7 @@ TEST_F(MultipartTest, TestErrorMissingSeparatorBetweenMimeFieldsAndData)
         "Content-Type",
         "multipart/form-data; boundary=---------------------------d74496d66958873e");
 
-    req.body() =
+    req.body().str() =
         "-----------------------------d74496d66958873e\r\n"
         "t-DiPpcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccgcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaaaaaa\r\n"
         "Data1"
@@ -340,10 +341,10 @@ TEST_F(MultipartTest, TestDataWithoutMimeFields)
         "Content-Type",
         "multipart/form-data; boundary=---------------------------d74496d66958873e");
 
-    req.body() = "-----------------------------d74496d66958873e\r\n"
-                 "\r\n"
-                 "Data1\r\n"
-                 "-----------------------------d74496d66958873e--";
+    req.body().str() = "-----------------------------d74496d66958873e\r\n"
+                       "\r\n"
+                       "Data1\r\n"
+                       "-----------------------------d74496d66958873e--";
 
     crow::Request reqIn(req, ec);
     ParserError rc = parser.parse(reqIn);
@@ -364,7 +365,7 @@ TEST_F(MultipartTest, TestErrorMissingFinalBoundry)
 {
     req.set("Content-Type", "multipart/form-data; boundary=--XX");
 
-    req.body() =
+    req.body().str() =
         "----XX\r\n"
         "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
         "t-DiPpccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccAAAAAAAAAAAAAAABCDz\r\n"
@@ -380,13 +381,13 @@ TEST_F(MultipartTest, TestIgnoreDataAfterFinalBoundary)
 {
     req.set("Content-Type", "multipart/form-data; boundary=--XX");
 
-    req.body() = "----XX\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
-                 "Data1\r\n"
-                 "----XX--\r\n"
-                 "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
-                 "Data2\r\n"
-                 "----XX--\r\n";
+    req.body().str() = "----XX\r\n"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
+                       "Data1\r\n"
+                       "----XX--\r\n"
+                       "Content-Disposition: form-data; name=\"Test2\"\r\n\r\n"
+                       "Data2\r\n"
+                       "----XX--\r\n";
 
     crow::Request reqIn(req, ec);
     ParserError rc = parser.parse(reqIn);
@@ -405,12 +406,12 @@ TEST_F(MultipartTest, TestFinalBoundaryIsCorrectlyRecognized)
 {
     req.set("Content-Type", "multipart/form-data; boundary=--XX");
 
-    req.body() = "----XX\r\n"
-                 "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
-                 "Data1\r\n"
-                 "----XX-abc-\r\n"
-                 "StillData1\r\n"
-                 "----XX--\r\n";
+    req.body().str() = "----XX\r\n"
+                       "Content-Disposition: form-data; name=\"Test1\"\r\n\r\n"
+                       "Data1\r\n"
+                       "----XX-abc-\r\n"
+                       "StillData1\r\n"
+                       "----XX--\r\n";
 
     crow::Request reqIn(req, ec);
     ParserError rc = parser.parse(reqIn);
