@@ -52,8 +52,6 @@ static std::unique_ptr<sdbusplus::bus::match_t> fwUpdateMatcher;
 // Only allow one update at a time
 static bool fwUpdateInProgress = false;
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-// Match signals added on software path for staging fw package
-static std::unique_ptr<sdbusplus::bus::match_t> fwStageImageMatcher;
 // Allow staging, deleting or initializing firmware 
 // when staging of another firmware is not in a progress
 static bool fwImageIsStaging = false;
@@ -95,7 +93,6 @@ inline static void cleanUp()
 inline static void cleanUpStageObjects()
 {
     fwImageIsStaging = false;
-    fwStageImageMatcher = nullptr;
 }
 #endif
 
@@ -4356,87 +4353,97 @@ inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 /**
- * @brief Add dbus watcher to wait till staged firmware object is created
+ * @brief Create task for tracking firmware package staging.
  *
- * @param asyncResp
- * @param req
- * @param timeoutTimeSeconds
- * @param imagePath
+ * @param[in] asyncResp - http response
+ * @param[in] req - http request
+ * @param[in] timeoutTimeSeconds - the timeout duration for the staging task in
+ * seconds, default is set to fwObjectCreationDefaultTimeout.
  *
  * @return None
  */
-static void addDBusWatchForSoftwareObject(
+static void createStageFirmwarePackageTask(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const crow::Request& req,
     int timeoutTimeSeconds = fwObjectCreationDefaultTimeout,
     const std::string& imagePath = {})
 {
-
-    fwStageAvailableTimer =
-        std::make_unique<boost::asio::steady_timer>(*req.ioService);
-
-    fwStageAvailableTimer->expires_after(
-        std::chrono::seconds(timeoutTimeSeconds));
-
-    fwStageAvailableTimer->async_wait(
-        [asyncResp, imagePath](const boost::system::error_code& ec) {
+    auto messageHandlerCallback = [imagePath](const std::string_view state,
+                                              size_t index) {
+        nlohmann::json message{};
+        if (state == "Started")
+        {
+            message = messages::taskStarted(std::to_string(index));
+        }
+        else if (state == "Aborted" || state == "Exception")
+        {
             cleanUpStageObjects();
-
-            if (ec == boost::asio::error::operation_aborted)
-            {
-                // expected, we were canceled before the timer completed.
-                return;
-            }
-            BMCWEB_LOG_ERROR
-                << "Timed out waiting for staged firmware object being created";
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR << "Async_wait failed" << ec;
-                return;
-            }
-
-            if (asyncResp)
-            {
-                redfish::messages::internalError(asyncResp->res);
-            }
 
             if (!imagePath.empty())
             {
                 std::filesystem::remove(imagePath);
             }
-        });
 
-    auto callback = [asyncResp](sdbusplus::message_t& m) {
-        BMCWEB_LOG_DEBUG << "Match fired";
-
-        sdbusplus::message::object_path path;
-        dbus::utility::DBusInteracesMap interfaces;
-        m.read(path, interfaces);
-
-        if (std::find_if(
-                interfaces.begin(), interfaces.end(), [](const auto& i) {
-                    return i.first ==
-                           "xyz.openbmc_project.Software.PackageInformation";
-                }) != interfaces.end())
-        {
-            std::string stagedFirmwarePackageURI(
-                "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/0");
-            asyncResp->res.result(boost::beast::http::status::created);
-            asyncResp->res.jsonValue["StagedFirmwarePackageURI"] =
-                stagedFirmwarePackageURI;
-            asyncResp->res.addHeader(boost::beast::http::field::location,
-                                     stagedFirmwarePackageURI);
-
-            cleanUpStageObjects();
-            fwStageAvailableTimer = nullptr;
+            message = messages::taskAborted(std::to_string(index));
         }
+        return message;
     };
 
-    fwStageImageMatcher = std::make_unique<sdbusplus::bus::match_t>(
-        *crow::connections::systemBus,
-        "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
-        "member='InterfacesAdded',path='/'",
-        callback);
+    std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+        [](boost::system::error_code ec, sdbusplus::message::message& msg,
+           const std::shared_ptr<task::TaskData>& taskData) {
+            if (ec)
+            {
+                taskData->state = "Exception";
+                taskData->messages.emplace_back(
+                    messages::resourceErrorsDetectedFormatError(
+                        "Stage firmware package task", ec.message()));
+                taskData->finishTask();
+
+                return task::completed;
+            }
+
+            sdbusplus::message::object_path path;
+            dbus::utility::DBusInteracesMap interfaces;
+            msg.read(path, interfaces);
+
+            if (std::find_if(
+                    interfaces.begin(), interfaces.end(), [](const auto& i) {
+                        return i.first ==
+                               "xyz.openbmc_project.Software.PackageInformation";
+                    }) != interfaces.end())
+            {
+                std::string stagedFirmwarePackageURI(
+                    "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages/0");
+
+                nlohmann::json jsonResponse;
+                jsonResponse["StagedFirmwarePackageURI"] =
+                    stagedFirmwarePackageURI;
+
+                taskData->taskResponse.emplace(jsonResponse);
+                std::string location =
+                    "Location: /redfish/v1/TaskService/Tasks/" +
+                    std::to_string(taskData->index) + "/Monitor";
+                taskData->payload->httpHeaders.emplace_back(
+                    std::move(location));
+                taskData->state = "Completed";
+                taskData->percentComplete = 100;
+                taskData->messages.emplace_back(
+                    messages::taskCompletedOK(std::to_string(taskData->index)));
+                taskData->timer.cancel();
+                taskData->finishTask();
+                cleanUpStageObjects();
+                return task::completed;
+            }
+            return !task::completed;
+        },
+        "type='signal',member='InterfacesAdded',"
+        "interface='org.freedesktop.DBus.ObjectManager',"
+        "path='/'",
+        messageHandlerCallback);
+    task->startTimer(std::chrono::seconds(timeoutTimeSeconds));
+    task->populateResp(asyncResp->res);
+    task->payload.emplace(req);
 }
 
 /**
@@ -4458,8 +4465,8 @@ inline void addDBusWatchAndUploadPackage(
 
     try
     {
-        addDBusWatchForSoftwareObject(asyncResp, req,
-                                      fwObjectCreationDefaultTimeout, filepath);
+        createStageFirmwarePackageTask(
+            asyncResp, req, fwObjectCreationDefaultTimeout, filepath);
 
         fwImageIsStaging = true;
         BMCWEB_LOG_DEBUG << "Writing file to " << filepath;
@@ -4685,7 +4692,7 @@ inline void handleUpdateServiceStageFirmwarePackagePost(
     }
 
     // Only allow one FW staging at a time
-    if ((fwStageImageMatcher != nullptr) || (fwImageIsStaging == true))
+    if (fwImageIsStaging == true)
     {
         if (asyncResp)
         {
@@ -5052,7 +5059,7 @@ inline void handleUpdateServicePersistentStorageFwPackageGet(
         return;
     }
 
-    if ((fwStageImageMatcher != nullptr) || (fwImageIsStaging == true))
+    if (fwImageIsStaging == true)
     {
         if (asyncResp)
         {
@@ -5627,7 +5634,7 @@ inline void handleUpdateServiceInitiateFirmwarePackagePost(
         return;
     }
 
-    if ((fwStageImageMatcher != nullptr) || (fwImageIsStaging == true))
+    if (fwImageIsStaging == true)
     {
         if (asyncResp)
         {
@@ -5789,7 +5796,7 @@ inline void handleUpdateServiceDeleteFirmwarePackage(
         return;
     }
 
-    if ((fwStageImageMatcher != nullptr) || (fwImageIsStaging == true))
+    if (fwImageIsStaging == true)
     {
         if (asyncResp)
         {
