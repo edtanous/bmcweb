@@ -27,6 +27,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 namespace redfish
 {
@@ -116,7 +117,7 @@ inline void debugPropertiesFill(crow::Response& resp,
 }
 
 inline void
-    debugProperitesGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    debugPropertiesGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& svc, const std::string& path)
 {
     auto propCallback =
@@ -200,57 +201,55 @@ inline void
            const std::string& svc, const std::string& path) {
             if (path.empty())
             {
-		// Not an error :: partial success 
-		// propertyMissing:Indicates that a required property was not supplied as part of the request.
-                nlohmann::json missingProperty = messages::propertyMissing("Oem/Nvidia/ProcessorDebugCapabilities");
-                messages::moveErrorsToErrorJson(asyncResp->res.jsonValue, missingProperty);
-		return;
+                // Not an error :: partial success
+                // propertyMissing:Indicates that a required property was not
+                // supplied as part of the request.
+                nlohmann::json missingProperty = messages::propertyMissing(
+                    "Oem/Nvidia/ProcessorDebugCapabilities");
+                messages::moveErrorsToErrorJson(asyncResp->res.jsonValue,
+                                                missingProperty);
+                return;
             }
-            debugProperitesGet(asyncResp, svc, path);
+            debugPropertiesGet(asyncResp, svc, path);
         };
     findDebugInterface(asyncResp, getPropCallback);
 }
 
-inline void debugPropertySet(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
-                             const std::string& svc, const std::string& path,
-                             const std::string& prop, bool value)
+inline void debugCapabilitiesProcess(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& svc,
+    const std::string& path, const std::string& method,
+    const std::vector<std::string>& caps)
 {
-    using namespace std::string_literals;
     crow::connections::systemBus->async_method_call(
-        [aResp = std::move(asyncResp), prop,
-         value](const boost::system::error_code ec) {
+        [asyncResp, method, caps](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR << "DBUS response error: Set " << prop << " "
+                BMCWEB_LOG_ERROR << "DBUS response error: " << method << " "
                                  << ec;
-                messages::internalError(aResp->res);
+                messages::internalError(asyncResp->res);
                 return;
             }
-            messages::success(aResp->res, prop);
-            BMCWEB_LOG_ERROR << "Set " << prop << " done.";
+            messages::success(asyncResp->res, method);
         },
-        svc, path, "xyz.openbmc_project.Control.Processor.RemoteDebug",
-        value ? "Enable" : "Disable",
-        "xyz.openbmc_project.Control.Processor.RemoteDebug.DebugPolicy."s +
-            prop);
+        svc, path, "xyz.openbmc_project.Control.Processor.RemoteDebug", method,
+        caps);
 }
 
-inline void debugPropertySet(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
-                             const std::string& svc, const std::string& path,
-                             const std::string& prop, unsigned value)
+inline void
+    debugPropertySet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                     const std::string& svc, const std::string& path,
+                     const std::string& prop, unsigned value)
 {
     crow::connections::systemBus->async_method_call(
-        [aResp = std::move(asyncResp), prop,
-         value](const boost::system::error_code ec) {
+        [asyncResp, prop, value](const boost::system::error_code ec) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR << "DBUS response error: Set " << prop << " "
                                  << ec;
-                messages::internalError(aResp->res);
+                messages::internalError(asyncResp->res);
                 return;
             }
-            messages::success(aResp->res, prop);
-            BMCWEB_LOG_ERROR << "Set " << prop << " done.";
+            messages::success(asyncResp->res, prop);
         },
         svc, path, "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Processor.RemoteDebug", prop,
@@ -303,50 +302,40 @@ inline void handleDebugPolicyPatchReq(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     nlohmann::json& procCap)
 {
-    std::optional<bool> jtagDebug, deviceDebug, securePrivilegeNonInvasiveDebug,
-        securePrivilegeInvasiveDebug, nonInvasiveDebug, invasiveDebug;
+    using namespace std::string_literals;
+    const std::vector<std::string> caps{"DeviceDebug",
+                                        "InvasiveDebug",
+                                        "JtagDebug",
+                                        "NonInvasiveDebug",
+                                        "SecurePrivilegeInvasiveDebug",
+                                        "SecurePrivilegeNonInvasiveDebug"};
     std::optional<unsigned> timeout;
+    std::vector<std::string> capsToEnable;
+    std::vector<std::string> capsToDisable;
 
-    if (!fetchDebugPropertyFromJson(procCap, "JtagDebug", jtagDebug))
+    for (const auto& cap : caps)
     {
-        BMCWEB_LOG_ERROR << "JtagDebug property error";
-        messages::propertyUnknown(asyncResp->res, "JtagDebug");
-        return;
-    }
-    if (!fetchDebugPropertyFromJson(procCap, "DeviceDebug", deviceDebug))
-    {
-        BMCWEB_LOG_ERROR << "DeviceDebug property error";
-        messages::propertyUnknown(asyncResp->res, "DeviceDebug");
-        return;
-    }
-    if (!fetchDebugPropertyFromJson(procCap, "SecurePrivilegeNonInvasiveDebug",
-                                    securePrivilegeNonInvasiveDebug))
-    {
-        BMCWEB_LOG_ERROR << "SecurePrivilegeNonInvasiveDebug property error";
-        messages::propertyUnknown(asyncResp->res,
-                                  "SecurePrivilegeNonInvasiveDebug");
-        return;
-    }
-    if (!fetchDebugPropertyFromJson(procCap, "SecurePrivilegeInvasiveDebug",
-                                    securePrivilegeInvasiveDebug))
-    {
-        BMCWEB_LOG_ERROR << "SecurePrivilegeInvasiveDebug property error";
-        messages::propertyUnknown(asyncResp->res,
-                                  "SecurePrivilegeInvasiveDebug");
-        return;
-    }
-    if (!fetchDebugPropertyFromJson(procCap, "NonInvasiveDebug",
-                                    nonInvasiveDebug))
-    {
-        BMCWEB_LOG_ERROR << "NonInvasiveDebug property error";
-        messages::propertyUnknown(asyncResp->res, "NonInvasiveDebug");
-        return;
-    }
-    if (!fetchDebugPropertyFromJson(procCap, "InvasiveDebug", invasiveDebug))
-    {
-        BMCWEB_LOG_ERROR << "InvasiveDebug property error";
-        messages::propertyUnknown(asyncResp->res, "InvasiveDebug");
-        return;
+        std::optional<bool> value;
+        if (!fetchDebugPropertyFromJson(procCap, cap, value))
+        {
+            BMCWEB_LOG_ERROR << cap << " property error";
+            messages::propertyUnknown(asyncResp->res, cap);
+            return;
+        }
+        if (!value)
+        {
+            continue;
+        }
+        if (*value)
+        {
+            capsToEnable.push_back(
+                "xyz.openbmc_project.Control.Processor.RemoteDebug.DebugPolicy."s +
+                cap);
+            continue;
+        }
+        capsToDisable.push_back(
+            "xyz.openbmc_project.Control.Processor.RemoteDebug.DebugPolicy."s +
+            cap);
     }
     if (!fetchDebugTimeoutPropertyFromJson(procCap, timeout))
     {
@@ -355,8 +344,7 @@ inline void handleDebugPolicyPatchReq(
         return;
     }
     auto propSetCallback =
-        [jtagDebug, deviceDebug, securePrivilegeNonInvasiveDebug,
-         securePrivilegeInvasiveDebug, nonInvasiveDebug, invasiveDebug,
+        [capsToEnable, capsToDisable,
          timeout](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                   const std::string& svc, const std::string& path) {
             if (path.empty())
@@ -364,42 +352,19 @@ inline void handleDebugPolicyPatchReq(
                 messages::internalError(asyncResp->res);
                 return;
             }
-            if (jtagDebug)
+            if (!capsToEnable.empty())
             {
-                debugPropertySet(asyncResp, svc, path, "JtagDebug",
-                                 jtagDebug.value());
+                debugCapabilitiesProcess(asyncResp, svc, path, "Enable"s,
+                                         capsToEnable);
             }
-            if (deviceDebug)
+            if (!capsToDisable.empty())
             {
-                debugPropertySet(asyncResp, svc, path, "DeviceDebug",
-                                 deviceDebug.value());
-            }
-            if (securePrivilegeNonInvasiveDebug)
-            {
-                debugPropertySet(asyncResp, svc, path,
-                                 "SecurePrivilegeNonInvasiveDebug",
-                                 securePrivilegeNonInvasiveDebug.value());
-            }
-            if (securePrivilegeInvasiveDebug)
-            {
-                debugPropertySet(asyncResp, svc, path,
-                                 "SecurePrivilegeInvasiveDebug",
-                                 securePrivilegeInvasiveDebug.value());
-            }
-            if (nonInvasiveDebug)
-            {
-                debugPropertySet(asyncResp, svc, path, "NonInvasiveDebug",
-                                 nonInvasiveDebug.value());
-            }
-            if (invasiveDebug)
-            {
-                debugPropertySet(asyncResp, svc, path, "InvasiveDebug",
-                                 invasiveDebug.value());
+                debugCapabilitiesProcess(asyncResp, svc, path, "Disable"s,
+                                         capsToDisable);
             }
             if (timeout)
             {
-                debugPropertySet(asyncResp, svc, path, "Timeout",
-                                 timeout.value());
+                debugPropertySet(asyncResp, svc, path, "Timeout", *timeout);
             }
         };
 
@@ -407,4 +372,3 @@ inline void handleDebugPolicyPatchReq(
 }
 
 } // namespace redfish
-
