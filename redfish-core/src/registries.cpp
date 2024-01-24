@@ -31,6 +31,10 @@ const Message* getMessage(std::string_view messageID)
     // Redfish MessageIds are in the form
     // RegistryName.MajorVersion.MinorVersion.MessageKey, so parse it to find
     // the right Message
+    if (messageID.empty())
+    {
+        return nullptr;
+    }    
     std::vector<std::string> fields;
     fields.reserve(4);
     bmcweb::split(fields, messageID, '.');
