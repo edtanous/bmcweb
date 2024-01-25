@@ -3665,11 +3665,13 @@ inline void handleBMCLogServicesCollectionGet(
             }
             else if (path == "/xyz/openbmc_project/dump/faultlog")
             {
+#ifndef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG                
                 nlohmann::json::object_t member;
                 member["@odata.id"] =
                     "/redfish/v1/Managers/" PLATFORMBMCID
                                    "/LogServices/FaultLog";
                 logServiceArrayLocal.emplace_back(std::move(member));
+#endif
             }
         }
 
