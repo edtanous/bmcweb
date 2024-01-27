@@ -1148,6 +1148,7 @@ inline void
  * to HTTPRequest
  * @param[out] targets List of delivered targets in HTTPRequest
  * @param[out] applyTime Operation Apply Time
+ * @param[out] forceUpdate return true when force update policy should be set
  * @param[out] hasFile return true when 'UpdateFile' is added to HTTPRequest
  *
  * @return It returns true when parsing of the multipart update form is
@@ -1158,7 +1159,7 @@ inline bool
                        const MultipartParser& parser, bool& hasUpdateParameters,
                        std::optional<std::vector<std::string>>& targets,
                        std::optional<std::string>& applyTime, 
-                       bool& hasFile)
+                       std::optional<bool>& forceUpdate, bool& hasFile)
 {
     hasUpdateParameters = false;
     hasFile = false;
@@ -1192,11 +1193,25 @@ inline bool
             if (param.second == "UpdateParameters")
             {
                 hasUpdateParameters = true;
-                nlohmann::json content =
-                    nlohmann::json::parse(formpart.content);
 
-                json_util::readJson(content, asyncResp->res, "Targets", targets,
-                                    "@Redfish.OperationApplyTime", applyTime);
+                try
+                {
+                    nlohmann::json content =
+                        nlohmann::json::parse(formpart.content);
+
+                    json_util::readJson(content, asyncResp->res, "Targets",
+                                        targets, "@Redfish.OperationApplyTime",
+                                        applyTime, "ForceUpdate", forceUpdate);
+                }
+                catch (const std::exception& e)
+                {
+                    BMCWEB_LOG_ERROR
+                        << "Unable to parse JSON. Check the format of the request body."
+                        << "Exception caught: " << e.what();
+                    messages::unrecognizedRequestBody(asyncResp->res);
+
+                    return false;
+                }
             }
             else if (param.second == "UpdateFile")
             {
@@ -1525,10 +1540,10 @@ inline void forwardImage(
  * This function asynchronously updates the ForceUpdate flag in the software
  * update policy.
  *
- * @param[in] asyncResp Pointer to the object holding the response data.
- * @param[in] forceUpdate The boolean value to set for the ForceUpdate flag.
- * @param[in] objpath The object's path for the UpdatePolicy.
- * @param[in] callback A callback function to be called after the ForceUpdate
+ * @param[in] asyncResp - Pointer to the object holding the response data.
+ * @param[in] objpath - D-Bus object path for the UpdatePolicy.
+ * @param[in] forceUpdate - The boolean value to set for the ForceUpdate flag.
+ * @param[in] callback - A callback function to be called after the ForceUpdate
  * update policy is changed. This is an optional parameter with a default value
  * of an empty function.
  *
@@ -1536,7 +1551,7 @@ inline void forwardImage(
  */
 inline void setForceUpdate(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& objpath, const bool forceUpdate,
-                           std::function<void()> callback = {})
+                           const std::function<void()>& callback = {})
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, forceUpdate, objpath, callback](
@@ -1553,10 +1568,13 @@ inline void setForceUpdate(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
                 return;
             }
-            // Ensure we only got one service back
+            // Check if only one service implements
+            // xyz.openbmc_project.Software.UpdatePolicy
             if (objInfo.size() != 1)
             {
-                BMCWEB_LOG_ERROR << "Invalid Object Size " << objInfo.size();
+                BMCWEB_LOG_ERROR
+                    << "Expected exactly one service implementing xyz.openbmc_project.Software.UpdatePolicy, but found "
+                    << objInfo.size() << " services.";
                 if (asyncResp)
                 {
                     messages::internalError(asyncResp->res);
@@ -1605,12 +1623,13 @@ inline void processMultipartFormData(
     const MultipartParser& parser)
 {
     std::optional<std::string> applyTime;
+    std::optional<bool> forceUpdate;
     std::optional<std::vector<std::string>> targets;
     bool hasUpdateParameters = false;
     bool hasFile = false;
 
     if (!parseMultipartForm(asyncResp, parser, hasUpdateParameters, targets,
-                            applyTime, hasFile))
+                            applyTime, forceUpdate, hasFile))
     {
         return;
     }
@@ -1677,7 +1696,11 @@ inline void processMultipartFormData(
         return ;
     }
 #endif
-    areTargetsUpdateable(req, asyncResp, uriTargets);
+
+    setForceUpdate(asyncResp, "/xyz/openbmc_project/software",
+                   forceUpdate.value_or(false), [req, asyncResp, uriTargets]() {
+                       areTargetsUpdateable(req, asyncResp, uriTargets);
+                   });
 }
 
 /**
