@@ -256,7 +256,19 @@ inline void requestRoutesManagerResetAction(App& app)
                 {
                     return;
                 }
-
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+                if (resetType == "GracefulRestart" ||
+                    resetType == "ForceRestart" ||
+                    resetType == "GracefulShutdown")
+                {
+                    // Send an event for Manager Reset
+                    Event event = redfish::EventUtil::getInstance()
+                                      .createEventRebootReason("ManagerReset",
+                                                               "Managers");
+                    redfish::EventServiceManager::getInstance()
+                        .sendEventWithOOC(std::string(req.url), event);
+                }
+#endif
                 if (resetType == "GracefulRestart")
                 {
                     BMCWEB_LOG_DEBUG << "Proceeding with " << resetType;
@@ -339,7 +351,14 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                         asyncResp->res, resetType, "ResetToDefaultsType");
                     return;
                 }
-
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+                // Send an event for reset to defaults
+                Event event =
+                    redfish::EventUtil::getInstance().createEventRebootReason(
+                        "FactoryReset", "Managers");
+                redfish::EventServiceManager::getInstance().sendEventWithOOC(
+                    std::string(req.url), event);
+#endif
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, ifnameFactoryReset](
                         const boost::system::error_code ec,

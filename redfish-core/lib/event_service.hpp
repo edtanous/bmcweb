@@ -38,8 +38,10 @@ static constexpr const std::array<const char*, 3> supportedRetryPolicies = {
 static constexpr const std::array<const char*, 2> supportedResourceTypes = {
     "IBMConfigFile", "Task"};
 #else
-static constexpr const std::array<const char*, 1> supportedResourceTypes = {
-    "Task"};
+static constexpr const std::array<const char*, 11> supportedResourceTypes = {
+    "Task",         "AccountService",     "ManagerAccount", "SessionService",
+    "EventService", "UpdateService",      "Chassis",        "Systems",
+    "Managers",     "CertificateService", "VirtualMedia"};
 #endif
 
 static constexpr const uint8_t maxNoOfSubscriptions = 20;
@@ -158,9 +160,13 @@ inline void requestRoutesEventService(App& app)
                             *retryInterval;
                     }
                 }
-
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+                EventServiceManager::getInstance().setEventServiceConfig(
+                    eventServiceConfig, req.url);
+#else
                 EventServiceManager::getInstance().setEventServiceConfig(
                     eventServiceConfig);
+#endif
             });
 }
 
@@ -630,9 +636,9 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 EventServiceManager::getInstance().addSubscription(subValue);
             if (id.empty())
             {
-                messages::resourceAlreadyExists(
-                    asyncResp->res, "Subscription", "Destination",
-                    subValue->destinationUrl);
+                messages::resourceAlreadyExists(asyncResp->res, "Subscription",
+                                                "Destination",
+                                                subValue->destinationUrl);
                 return;
             }
 
@@ -740,10 +746,19 @@ inline void requestRoutesEventDestination(App& app)
                 if (context)
                 {
                     subValue->customText = *context;
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+                    // Send an event for property change
+                    Event event = redfish::EventUtil::getInstance()
+                                      .createEventPropertyModified(
+                                          "Context", *context, "EventService");
+                    redfish::EventServiceManager::getInstance()
+                        .sendEventWithOOC(std::string(req.url), event);
+#endif
                 }
 
                 if (headers)
                 {
+                    std::string keyValues;
                     boost::beast::http::fields fields;
                     for (const nlohmann::json& headerChunk : *headers)
                     {
@@ -760,9 +775,21 @@ inline void requestRoutesEventDestination(App& app)
                                 return;
                             }
                             fields.set(it.key(), *value);
+                            keyValues += it.key();
+                            keyValues.push_back(':');
+                            keyValues += *value;
+                            keyValues.push_back(' ');
                         }
                     }
                     subValue->httpHeaders = fields;
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+                    // Send an event for property change
+                    Event event = redfish::EventUtil::getInstance()
+                                      .createEventPropertyModified(
+                                          "Headers", keyValues, "EventService");
+                    redfish::EventServiceManager::getInstance()
+                        .sendEventWithOOC(std::string(req.url), event);
+#endif
                 }
 
                 if (retryPolicy)
@@ -777,6 +804,15 @@ inline void requestRoutesEventDestination(App& app)
                         return;
                     }
                     subValue->retryPolicy = *retryPolicy;
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+                    // Send an event for property change
+                    Event event =
+                        redfish::EventUtil::getInstance()
+                            .createEventPropertyModified(
+                                "RetryPolicy", *retryPolicy, "EventService");
+                    redfish::EventServiceManager::getInstance()
+                        .sendEventWithOOC(std::string(req.url), event);
+#endif
                 }
 
                 EventServiceManager::getInstance().updateSubscriptionData();
