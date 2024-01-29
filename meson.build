@@ -128,7 +128,7 @@ feature_map = {
   'manual-boot-mode-support'                    : '-DBMCWEB_ENABLE_MANUAL_BOOT_MODE',
   'force-insecure-event-notification'           : '-DBMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION',
   'use-efficient-expand-on-sensors'             : '-DBMCWEB_ENABLE_EFFICIENT_EXPAND',
-  'dbus-platform-metrics'                      : '-DBMCWEB_ENABLE_DBUS_PLATFORM_METRICS',  
+  'shmem-platform-metrics'                      : '-DBMCWEB_ENABLE_SHMEM_PLATFORM_METRICS',  
 }
 
 if(get_option('tls-auth-opt-in').enabled())
@@ -307,8 +307,11 @@ bmcweb_dependencies = []
 pam = cxx.find_library('pam', required: true)
 atomic =  cxx.find_library('atomic', required: true)
 openssl = dependency('openssl', required : true)
-nvshmem = dependency('nvidia-shmem', required : true)
-bmcweb_dependencies += [pam, atomic, openssl, nvshmem]
+bmcweb_dependencies += [pam, atomic, openssl]
+if get_option('shmem-platform-metrics').enabled()
+  nvshmem = dependency('nvidia-shmem', required : true)
+  bmcweb_dependencies += nvshmem
+endif
 
 sdbusplus = dependency('sdbusplus', required : false, include_type: 'system')
 if not sdbusplus.found()

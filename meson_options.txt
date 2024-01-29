@@ -38,11 +38,11 @@ option(
 )
 
 option(
-    'dbus-platform-metrics',
+    'shmem-platform-metrics',
     type : 'feature',
     value : 'disabled',
     description :
-    'Enable/disable the platform metrics to collect all sensors reading over dbus'
+    'Enable/disable the platform metrics to collect all sensors reading over shared memory'
 )
 
 # if you use this option and are seeing this comment, please comment here:
