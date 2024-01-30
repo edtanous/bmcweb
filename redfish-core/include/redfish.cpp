@@ -33,6 +33,8 @@
 #include "systems.hpp"
 #include "task.hpp"
 #include "telemetry_service.hpp"
+#include "thermal_metrics.hpp"
+#include "thermal_subsystem.hpp"
 #include "thermal.hpp"
 #include "trigger.hpp"
 #include "update_service.hpp"
