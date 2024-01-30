@@ -642,6 +642,16 @@ constexpr std::array registry = {
                      {"string", "string"},
                      "None.",
                  }},
+    MessageEntry{"ComponentUpdateSkipped",
+                 {
+                     "Indicates that component fimware update is skipped.",
+                     "The update operation for the component '%1' is skipped because '%2'.",
+                     "OK",
+                     "OK",
+                     2,
+                     {"string", "string"},
+                     "None.",
+                 }},
     MessageEntry{
         "GeneralFirmwareSecurityViolation",
         {
