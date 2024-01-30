@@ -5,6 +5,7 @@
 #include "registries/privilege_registry.hpp"
 #include "utils/sw_utils.hpp"
 
+
 namespace redfish
 {
 /**

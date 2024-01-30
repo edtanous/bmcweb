@@ -34,7 +34,7 @@
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/string_body.hpp>
 #include <boost/beast/http/write.hpp>
-#include <boost/beast/ssl/ssl_stream.hpp>
+#include <boost/asio/ssl/stream.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/container/devector.hpp>
 #include <boost/system/error_code.hpp>
@@ -157,7 +157,7 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
     Resolver resolver;
 
     boost::asio::ip::tcp::socket conn;
-    std::optional<boost::beast::ssl_stream<boost::asio::ip::tcp::socket&>>
+    std::optional<boost::asio::ssl::stream<boost::asio::ip::tcp::socket&>>
         sslConn;
 
     boost::asio::steady_timer timer;
