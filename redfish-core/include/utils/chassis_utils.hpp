@@ -436,12 +436,20 @@ inline void setBackgroundCopyEnabled(
 
     crow::connections::systemBus->async_method_call(
         [req, asyncResp, chassisId, chassisUUID, enabled,
-         isPCIe](const boost::system::error_code ec,
+         isPCIe, serviceName](const boost::system::error_code ec,
                  const dbus::utility::ManagedObjectType& resp) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
-                messages::internalError(asyncResp->res);
+                if (serviceName == "xyz.openbmc_project.MCTP.Control.PCIe")
+                {
+                    setBackgroundCopyEnabled(req, asyncResp, chassisId,
+                                             chassisUUID, enabled, false);
+                }
+                else
+                {
+                    messages::internalError(asyncResp->res);
+                }
                 return;
             }
 
@@ -547,12 +555,20 @@ inline void
 
     crow::connections::systemBus->async_method_call(
         [req, asyncResp, chassisId, chassisUUID, enabled,
-         isPCIe](const boost::system::error_code ec,
+         isPCIe, serviceName](const boost::system::error_code ec,
                  const dbus::utility::ManagedObjectType& resp) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
-                messages::internalError(asyncResp->res);
+                if (serviceName == "xyz.openbmc_project.MCTP.Control.PCIe")
+                {
+                    setInBandEnabled(req, asyncResp, chassisId,
+                                     chassisUUID, enabled, false);
+                }
+                else
+                {
+                    messages::internalError(asyncResp->res);
+                }
                 return;
             }
 
@@ -651,15 +667,21 @@ inline void getBackgroundCopyAndInBandInfo(
     {
         serviceName = "xyz.openbmc_project.MCTP.Control.SPI";
     }
-
     crow::connections::systemBus->async_method_call(
         [req, asyncResp, chassisUUID,
-         isPCIe](const boost::system::error_code ec,
+         isPCIe, serviceName](const boost::system::error_code ec,
                  const dbus::utility::ManagedObjectType& resp) {
             if (ec)
             {
                 BMCWEB_LOG_DEBUG << "DBUS response error for MCTP.Control";
-                messages::internalError(asyncResp->res);
+                if (serviceName == "xyz.openbmc_project.MCTP.Control.PCIe")
+                {
+                    getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID, false);
+                }
+                else
+                {
+                    messages::internalError(asyncResp->res);
+                }
                 return;
             }
 
