@@ -3748,6 +3748,12 @@ inline void requestRoutesSystems(App& app)
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";
 #endif
 
+#ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
+            asyncResp->res.jsonValue["EthernetInterfaces"] = {
+                {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                              "/EthernetInterfaces"}};
+#endif
+
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] =
                 15;

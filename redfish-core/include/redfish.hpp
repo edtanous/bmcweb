@@ -45,6 +45,10 @@
 #include "network_adapters.hpp"
 #endif
 
+#ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
+#include "system_host_eth.hpp"
+#endif
+
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
 #include "network_adapters_generic.hpp"
 #endif
@@ -130,6 +134,10 @@ class RedfishService
         requestRoutesNetworkAdapters(app);
         requestRoutesNetworkDeviceFunctions(app);
         requestRoutesACDPort(app);
+#endif
+
+#ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
+        requestHostEthernetInterfacesRoutes(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC

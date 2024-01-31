@@ -1598,15 +1598,16 @@ inline void parseInterfaceData(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& ifaceId, const EthernetInterfaceData& ethData,
     const boost::container::flat_set<IPv4AddressData>& ipv4Data,
-    const boost::container::flat_set<IPv6AddressData>& ipv6Data)
+    const boost::container::flat_set<IPv6AddressData>& ipv6Data,
+    const std::string& route="/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/",
+    const bool& vlans=true)
 {
     constexpr const std::array<const char*, 1> inventoryForEthernet = {
         "xyz.openbmc_project.Inventory.Item.Ethernet"};
 
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
     jsonResponse["Id"] = ifaceId;
-    jsonResponse["@odata.id"] =
-        "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" + ifaceId;
+    jsonResponse["@odata.id"] = route + ifaceId;
     jsonResponse["InterfaceEnabled"] = ethData.nicEnabled;
 
     auto health = std::make_shared<HealthPopulate>(asyncResp);
@@ -1670,11 +1671,10 @@ inline void parseInterfaceData(
         }
         jsonResponse["FQDN"] = fqdn;
     }
-
-    jsonResponse["VLANs"] = {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
-                                           "/EthernetInterfaces/" +
-                                               ifaceId + "/VLANs"}};
-
+    if (vlans)
+    {
+        jsonResponse["VLANs"] = {{"@odata.id", route + ifaceId + "/VLANs"}};
+    }
     jsonResponse["NameServers"] = ethData.nameServers;
     jsonResponse["StaticNameServers"] = ethData.staticNameServers;
 
