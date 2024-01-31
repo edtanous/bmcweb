@@ -47,6 +47,8 @@ inline void
                 thisMetric["MetricValue"] = e.sensorValue;
                 thisMetric["Timestamp"] = e.timestampStr;
                 thisMetric["MetricProperty"] = e.metricProperty;
+                thisMetric["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaMetricReport.v1_0_0.NvidiaMetricReport";
                 thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = true;
                 if (requestTimestamp != 0 && thisMetric["MetricValue"] != "nan")
                 {
