@@ -10,6 +10,7 @@
 #include "http_body.hpp"
 #include "http_response.hpp"
 #include "logging.hpp"
+#include "otel.hpp"
 #include "ssl_key_handler.hpp"
 
 #include <openssl/err.h>

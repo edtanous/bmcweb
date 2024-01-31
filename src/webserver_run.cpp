@@ -18,6 +18,7 @@
 #include "login_routes.hpp"
 #include "obmc_console.hpp"
 #include "openbmc_dbus_rest.hpp"
+#include "otel.hpp"
 #include "persistent_data.hpp"
 #include "redfish.hpp"
 #include "redfish_aggregator.hpp"
@@ -96,7 +97,10 @@ int runWebserver()
             redfish::RedfishAggregator::getInstance();
         }
     }
-
+    if constexpr (BMCWEB_EXPERIMENTAL_OPENTELEMETRY)
+    {
+        initOtel(io);
+    }
     if constexpr (BMCWEB_REST)
     {
         crow::dbus_monitor::requestRoutes(app);

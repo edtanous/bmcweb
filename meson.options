@@ -475,6 +475,14 @@ option(
     description: 'Enable HTTP/2 protocol support using nghttp2.',
 )
 
+# BMCWEB_EXPERIMENTAL_OPENTELEMETRY
+option(
+    'experimental-opentelemetry',
+    type: 'feature',
+    value: 'enabled',
+    description: 'Enable OpenTelemetry support',
+)
+
 # BMCWEB_WATCHDOG_TIMEOUT
 option(
     'watchdog-timeout-seconds',

@@ -181,6 +181,8 @@ if not (plain or debug)
     )
 endif
 
+srcfiles_bmcweb = []
+
 # Boost dependency configuration
 
 add_project_arguments(
@@ -247,6 +249,45 @@ if not nghttp2.found()
     nghttp2 = nghttp2_ex.dependency('nghttp2')
 endif
 bmcweb_dependencies += nghttp2
+
+if (get_option('experimental-opentelemetry').allowed())
+  cmake = import('cmake')
+  opt = cmake.subproject_options()
+  opt.add_cmake_defines({
+    'BUILD_SHARED_LIBS': 'OFF',
+    'BUILD_TESTING': 'OFF',
+    'OPENTELEMETRY_INSTALL': 'OFF',
+    'WITH_API_ONLY': 'OFF',
+    'WITH_BENCHMARK': 'OFF',
+    'WITH_ELASTICSEARCH': 'OFF',
+    'WITH_EXAMPLES_HTTP': 'OFF',
+    'WITH_EXAMPLES': 'OFF',
+    'WITH_FUNC_TESTS': 'OFF',
+    'WITH_NO_DEPRECATED_CODE': 'ON',
+    'WITH_NO_GETENV': 'OFF',
+    'WITH_OPENTRACING': 'OFF',
+    'WITH_OTLP_GRPC': 'OFF',
+    'WITH_OTLP_HTTP': 'OFF',
+    'WITH_PROMETHEUS': 'OFF',
+    'WITH_STL': 'ON',
+    'WITH_ZIPKIN': 'OFF',
+  })
+
+  otel = cmake.subproject('opentelemetry-cpp', required: true, options: opt)
+  #message('CMake targets:\n - ' + '\n - '.join(otel.target_list()))
+
+  otel_dep = [
+    otel.dependency('opentelemetry_api'),
+    otel.dependency('opentelemetry_trace'),
+    otel.dependency('opentelemetry_resources'),
+    otel.dependency('opentelemetry_common'),
+    otel.dependency('opentelemetry_exporter_ostream_span'),
+    otel.dependency('opentelemetry_exporter_in_memory'),
+  ]
+
+  srcfiles_bmcweb += ['http/otel.cpp',]
+  bmcweb_dependencies += otel_dep
+endif
 
 sdbusplus = dependency('sdbusplus')
 bmcweb_dependencies += sdbusplus
@@ -369,7 +410,7 @@ subdir('features')
 # Source files
 fs = import('fs')
 
-srcfiles_bmcweb = files(
+srcfiles_bmcweb += files(
     'http/mutual_tls.cpp',
     'http/routing/sserule.cpp',
     'http/routing/websocketrule.cpp',

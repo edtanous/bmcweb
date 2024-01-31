@@ -138,7 +138,16 @@ struct Request
         return req.base();
     }
 
+    boost::beast::http::fields& fields()
+    {
+        return req.base();
+    }
+
     const std::string& body() const
+    {
+        return req.body().str();
+    }
+    std::string& body()
     {
         return req.body().str();
     }
