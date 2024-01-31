@@ -13,6 +13,7 @@
 #include "nbd_proxy.hpp"
 #include "obmc_console.hpp"
 #include "openbmc_dbus_rest.hpp"
+#include "otel.hpp"
 #include "redfish.hpp"
 #include "redfish_aggregator.hpp"
 #include "security_headers.hpp"
@@ -142,6 +143,11 @@ static int run()
     BMCWEB_LOG_INFO("Start Hostname Monitor Service...");
     crow::hostname_monitor::registerHostnameSignal();
 #endif
+
+    if constexpr (bmcwebEnableOpenTelemetry)
+    {
+        initOtel(*io);
+    }
 
     bmcweb::registerUserRemovedSignal();
 

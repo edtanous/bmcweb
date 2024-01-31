@@ -223,6 +223,19 @@ security_flags = [
   '-Wformat-security'
 ]
 
+srcfiles_bmcweb = files(
+  'redfish-core/src/error_messages.cpp',
+  'redfish-core/src/registries.cpp',
+  'redfish-core/src/utils/time_utils.cpp',
+  'redfish-core/src/utils/json_utils.cpp',
+  'src/boost_asio_ssl.cpp',
+  'src/boost_asio.cpp',
+  'src/boost_beast.cpp',
+  'src/dbus_singleton.cpp',
+  'src/json_html_serializer.cpp',
+  'src/ossl_random.cpp',
+)
+
 ## Add security flags for builds of type 'release','debugoptimized' and 'minsize'
 
 if not (get_option('buildtype') == 'plain' or get_option('buildtype').startswith('debug'))
@@ -237,7 +250,6 @@ endif
 
 add_project_arguments(
 cxx.get_supported_arguments([
-  '-DBOOST_ASIO_DISABLE_CONCEPTS',
   '-DBOOST_ALL_NO_LIB',
   '-DBOOST_ALLOW_DEPRECATED_HEADERS',
   '-DBOOST_ASIO_DISABLE_THREADS',
@@ -291,6 +303,45 @@ if not nghttp2.found()
 endif
 bmcweb_dependencies += nghttp2
 
+if (get_option('experimental-opentelemetry').allowed())
+  cmake = import('cmake')
+  opt = cmake.subproject_options()
+  opt.add_cmake_defines({
+    'BUILD_SHARED_LIBS': 'OFF',
+    'BUILD_TESTING': 'OFF',
+    'OPENTELEMETRY_INSTALL': 'OFF',
+    'WITH_API_ONLY': 'OFF',
+    'WITH_BENCHMARK': 'OFF',
+    'WITH_ELASTICSEARCH': 'OFF',
+    'WITH_EXAMPLES_HTTP': 'OFF',
+    'WITH_EXAMPLES': 'OFF',
+    'WITH_FUNC_TESTS': 'OFF',
+    'WITH_NO_DEPRECATED_CODE': 'ON',
+    'WITH_NO_GETENV': 'OFF',
+    'WITH_OPENTRACING': 'OFF',
+    'WITH_OTLP_GRPC': 'OFF',
+    'WITH_OTLP_HTTP': 'OFF',
+    'WITH_PROMETHEUS': 'OFF',
+    'WITH_STL': 'ON',
+    'WITH_ZIPKIN': 'OFF',
+  })
+
+  otel = cmake.subproject('opentelemetry-cpp', required: true, options: opt)
+  #message('CMake targets:\n - ' + '\n - '.join(otel.target_list()))
+
+  otel_dep = [
+    otel.dependency('opentelemetry_api'),
+    otel.dependency('opentelemetry_trace'),
+    otel.dependency('opentelemetry_resources'),
+    otel.dependency('opentelemetry_common'),
+    otel.dependency('opentelemetry_exporter_ostream_span'),
+    otel.dependency('opentelemetry_exporter_in_memory'),
+  ]
+
+  srcfiles_bmcweb += ['http/otel.cpp',]
+  bmcweb_dependencies += otel_dep
+endif
+
 sdbusplus = dependency('sdbusplus', required : false, include_type: 'system')
 if not sdbusplus.found()
   sdbusplus_proj = subproject('sdbusplus', required: true)
@@ -328,7 +379,14 @@ boost = dependency(
   include_type: 'system'
 )
 if boost.found()
-  bmcweb_dependencies += [boost]
+  boost_asio = boost
+  boost_beast = boost
+  boost_callable_traits = boost
+  boost_headers = boost
+  boost_process = boost
+  boost_type_index = boost
+  boost_url = boost
+  boost_uuid = boost
 else
   cmake = import('cmake')
   opt = cmake.subproject_options()
@@ -344,7 +402,9 @@ else
   boost_type_index = boost.dependency('boost_type_index').as_system()
   boost_url = boost.dependency('boost_url').as_system()
   boost_uuid = boost.dependency('boost_uuid').as_system()
-  bmcweb_dependencies += [
+
+endif
+bmcweb_dependencies += [
     boost_asio,
     boost_beast,
     boost_callable_traits,
@@ -352,9 +412,8 @@ else
     boost_process,
     boost_type_index,
     boost_url,
-    boost_uuid
-  ]
-endif
+    boost_uuid,
+]
 
 if get_option('tests').allowed()
   gtest = dependency('gtest', main: true, version: '1.14.0', disabler: true, required : false)
@@ -388,24 +447,27 @@ bmcweb_dependencies += conf_h_dep
 # Source files
 fs = import('fs')
 
-srcfiles_bmcweb = files(
-  'redfish-core/src/error_messages.cpp',
-  'redfish-core/src/registries.cpp',
-  'redfish-core/src/utils/time_utils.cpp',
-  'redfish-core/src/utils/json_utils.cpp',
-  'src/boost_asio_ssl.cpp',
-  'src/boost_asio.cpp',
-  'src/boost_beast.cpp',
-  'src/dbus_singleton.cpp',
-  'src/json_html_serializer.cpp',
-  'src/ossl_random.cpp',
-)
 
 bmcweblib = static_library(
   'bmcweblib',
   srcfiles_bmcweb,
   include_directories : incdir,
   dependencies: bmcweb_dependencies,
+)
+
+executable(
+  'log_exporter',
+  [
+    'src/log_exporer.cpp',
+    'src/boost_asio.cpp',
+    'src/boost_beast.cpp',
+  ],
+  include_directories: ['http'],
+  dependencies: [
+    boost_asio,
+    boost_url,
+    conf_h_dep,
+  ],
 )
 
 # Generate the bmcweb executable
