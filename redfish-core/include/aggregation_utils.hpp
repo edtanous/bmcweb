@@ -63,4 +63,10 @@ constexpr std::array<std::string_view, 44> topCollections{
     "/UpdateService/RemoteServerCertificates",
     "/UpdateService/SoftwareInventory",
 };
+
+constexpr std::array prefixURLTable{
+    "/EventService/Subscriptions",
+    "/Registries",
+    "/TaskService/Tasks",
+};
 } // namespace redfish

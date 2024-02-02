@@ -222,7 +222,16 @@ static inline void addPrefixToStringItem(std::string& strValue,
         {
             std::string collectionItem(prefix);
             std::string seg((*it).data(), (*it).size());
-            collectionItem += "_" + seg;
+            // the prefix is not prepended to avoid the double prefix
+            std::string urlPrefix(prefix);
+            if (seg.starts_with(urlPrefix + "_"))
+            {
+               collectionItem = seg;
+            } 
+            else
+            {
+               collectionItem += "_" + seg;
+            }
             url.segments().push_back(collectionItem);
             it++;
             addedPrefix = true;
@@ -728,6 +737,7 @@ class RedfishAggregator
 
         // We need to strip the prefix from the request's path
         std::string targetURI(thisReq.target());
+        auto path = std::filesystem::path(targetURI);
         size_t pos = targetURI.find(prefix + "_");
         if (pos == std::string::npos)
         {
@@ -737,7 +747,17 @@ class RedfishAggregator
             messages::internalError(asyncResp->res);
             return;
         }
-        targetURI.erase(pos, prefix.size() + 1);
+
+        std::string dirName(path.parent_path());
+        auto link = dirName.substr(std::strlen("/redfish/v1"));
+        auto match = std::binary_search(prefixURLTable.begin(), prefixURLTable.end(), link);
+        if (match == true)
+        {
+            BMCWEB_LOG_DEBUG <<"removing prefix on:" <<targetURI;
+            targetURI.erase(pos, prefix.size() + 1);
+        }
+
+        BMCWEB_LOG_DEBUG <<"forward: " << targetURI;
 
         std::function<void(crow::Response&)> cb =
             std::bind_front(processResponse, prefix, asyncResp);
