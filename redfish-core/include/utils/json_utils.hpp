@@ -21,6 +21,7 @@
 #include "http_response.hpp"
 #include "human_sort.hpp"
 #include "logging.hpp"
+#include "type_id.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -65,30 +66,6 @@ bool processJsonFromRequest(crow::Response& res, const crow::Request& req,
                             nlohmann::json& reqJson);
 namespace details
 {
-
-template <typename Type>
-struct IsOptional : std::false_type
-{};
-
-template <typename Type>
-struct IsOptional<std::optional<Type>> : std::true_type
-{};
-
-template <typename Type>
-struct IsVector : std::false_type
-{};
-
-template <typename Type>
-struct IsVector<std::vector<Type>> : std::true_type
-{};
-
-template <typename Type>
-struct IsStdArray : std::false_type
-{};
-
-template <typename Type, std::size_t size>
-struct IsStdArray<std::array<Type, size>> : std::true_type
-{};
 
 enum class UnpackErrorCode
 {
@@ -209,14 +186,14 @@ bool unpackValue(nlohmann::json& jsonValue, std::string_view key,
 {
     bool ret = true;
 
-    if constexpr (IsOptional<Type>::value)
+    if constexpr (bmcweb::IsOptional<Type>::value)
     {
         value.emplace();
         ret = unpackValue<typename Type::value_type>(jsonValue, key, res,
                                                      *value) &&
               ret;
     }
-    else if constexpr (IsStdArray<Type>::value)
+    else if constexpr (bmcweb::IsStdArray<Type>::value)
     {
         if (!jsonValue.is_array())
         {
@@ -236,7 +213,7 @@ bool unpackValue(nlohmann::json& jsonValue, std::string_view key,
                   ret;
         }
     }
-    else if constexpr (IsVector<Type>::value)
+    else if constexpr (bmcweb::IsVector<Type>::value)
     {
         if (!jsonValue.is_array())
         {
@@ -276,13 +253,13 @@ template <typename Type>
 bool unpackValue(nlohmann::json& jsonValue, std::string_view key, Type& value)
 {
     bool ret = true;
-    if constexpr (IsOptional<Type>::value)
+    if constexpr (bmcweb::IsOptional<Type>::value)
     {
         value.emplace();
         ret = unpackValue<typename Type::value_type>(jsonValue, key, *value) &&
               ret;
     }
-    else if constexpr (IsStdArray<Type>::value)
+    else if constexpr (bmcweb::IsStdArray<Type>::value)
     {
         if (!jsonValue.is_array())
         {
@@ -300,7 +277,7 @@ bool unpackValue(nlohmann::json& jsonValue, std::string_view key, Type& value)
                   ret;
         }
     }
-    else if constexpr (IsVector<Type>::value)
+    else if constexpr (bmcweb::IsVector<Type>::value)
     {
         if (!jsonValue.is_array())
         {
@@ -475,7 +452,7 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
                 [](auto&& val) {
                 using ContainedType =
                     std::remove_pointer_t<std::decay_t<decltype(val)>>;
-                return details::IsOptional<ContainedType>::value;
+                return bmcweb::IsOptional<ContainedType>::value;
             },
                 perUnpack.value);
             if (isOptional)
