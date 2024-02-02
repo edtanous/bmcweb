@@ -74,6 +74,32 @@ class Handler : public std::enable_shared_from_this<Handler>
         doRead();
     }
 
+    void afterDoWrite(const std::shared_ptr<Handler>& /*self*/,
+                      const boost::beast::error_code& ec,
+                      std::size_t bytesWritten)
+    {
+        BMCWEB_LOG_DEBUG("Wrote {}bytes", bytesWritten);
+        doingWrite = false;
+        inputBuffer->consume(bytesWritten);
+
+        if (session == nullptr)
+        {
+            return;
+        }
+        if (ec == boost::asio::error::eof)
+        {
+            session->close("VM socket port closed");
+            return;
+        }
+        if (ec)
+        {
+            session->close("Error in writing to proxy port");
+            BMCWEB_LOG_ERROR("Error in VM socket write {}", ec);
+            return;
+        }
+        doWrite();
+    }
+
     void doWrite()
     {
         if (doingWrite)
@@ -91,29 +117,34 @@ class Handler : public std::enable_shared_from_this<Handler>
         doingWrite = true;
         pipeIn.async_write_some(
             inputBuffer->data(),
-            [this, self(shared_from_this())](const boost::beast::error_code& ec,
-                                             std::size_t bytesWritten) {
-            BMCWEB_LOG_DEBUG("Wrote {}bytes", bytesWritten);
-            doingWrite = false;
-            inputBuffer->consume(bytesWritten);
+            std::bind_front(&Handler::afterDoWrite, this, shared_from_this()));
+    }
 
-            if (session == nullptr)
+    void afterDoRead(const std::shared_ptr<Handler>& /*self*/,
+                     const boost::system::error_code& ec, std::size_t bytesRead)
+    {
+        BMCWEB_LOG_DEBUG("Read done.  Read {} bytes", bytesRead);
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Couldn't read from VM port: {}", ec);
+            if (session != nullptr)
             {
-                return;
+                session->close("Error in connecting to VM port");
             }
-            if (ec == boost::asio::error::eof)
-            {
-                session->close("VM socket port closed");
-                return;
-            }
-            if (ec)
-            {
-                session->close("Error in writing to proxy port");
-                BMCWEB_LOG_ERROR("Error in VM socket write {}", ec);
-                return;
-            }
-            doWrite();
-        });
+            return;
+        }
+        if (session == nullptr)
+        {
+            return;
+        }
+
+        outputBuffer->commit(bytesRead);
+        std::string_view payload(
+            static_cast<const char*>(outputBuffer->data().data()), bytesRead);
+        session->sendBinary(payload);
+        outputBuffer->consume(bytesRead);
+
+        doRead();
     }
 
     void doRead()
@@ -122,32 +153,7 @@ class Handler : public std::enable_shared_from_this<Handler>
 
         pipeOut.async_read_some(
             outputBuffer->prepare(bytes),
-            [this, self(shared_from_this())](
-                const boost::system::error_code& ec, std::size_t bytesRead) {
-            BMCWEB_LOG_DEBUG("Read done.  Read {} bytes", bytesRead);
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("Couldn't read from VM port: {}", ec);
-                if (session != nullptr)
-                {
-                    session->close("Error in connecting to VM port");
-                }
-                return;
-            }
-            if (session == nullptr)
-            {
-                return;
-            }
-
-            outputBuffer->commit(bytesRead);
-            std::string_view payload(
-                static_cast<const char*>(outputBuffer->data().data()),
-                bytesRead);
-            session->sendBinary(payload);
-            outputBuffer->consume(bytesRead);
-
-            doRead();
-        });
+            std::bind_front(&Handler::afterDoRead, this, shared_from_this()));
     }
 
     boost::asio::readable_pipe pipeOut;
@@ -164,63 +170,71 @@ class Handler : public std::enable_shared_from_this<Handler>
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::shared_ptr<Handler> handler;
 
+inline void onOpen(crow::websocket::Connection& conn)
+{
+    BMCWEB_LOG_DEBUG("Connection {} opened", logPtr(&conn));
+
+    if (session != nullptr)
+    {
+        conn.close("Session already connected");
+        return;
+    }
+
+    if (handler != nullptr)
+    {
+        conn.close("Handler already running");
+        return;
+    }
+
+    session = &conn;
+
+    // media is the last digit of the endpoint /vm/0/0. A future
+    // enhancement can include supporting different endpoint values.
+    const char* media = "0";
+    handler = std::make_shared<Handler>(media, conn.getIoContext());
+    handler->connect();
+}
+
+inline void onClose(crow::websocket::Connection& conn,
+                    const std::string& /*reason*/)
+{
+    if (&conn != session)
+    {
+        return;
+    }
+
+    session = nullptr;
+    handler->doClose();
+    handler->inputBuffer->clear();
+    handler->outputBuffer->clear();
+    handler.reset();
+}
+
+inline void onMessage(crow::websocket::Connection& conn,
+                      const std::string& data, bool /*isBinary*/)
+{
+    if (data.length() >
+        handler->inputBuffer->capacity() - handler->inputBuffer->size())
+    {
+        BMCWEB_LOG_ERROR("Buffer overrun when writing {} bytes", data.length());
+        conn.close("Buffer overrun");
+        return;
+    }
+
+    boost::asio::buffer_copy(handler->inputBuffer->prepare(data.size()),
+                             boost::asio::buffer(data));
+    handler->inputBuffer->commit(data.size());
+    handler->doWrite();
+}
+
 inline void requestRoutes(App& app)
 {
     BMCWEB_ROUTE(app, "/vm/0/0")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .websocket()
-        .onopen([](crow::websocket::Connection& conn) {
-        BMCWEB_LOG_DEBUG("Connection {} opened", logPtr(&conn));
-
-        if (session != nullptr)
-        {
-            conn.close("Session already connected");
-            return;
-        }
-
-        if (handler != nullptr)
-        {
-            conn.close("Handler already running");
-            return;
-        }
-
-        session = &conn;
-
-        // media is the last digit of the endpoint /vm/0/0. A future
-        // enhancement can include supporting different endpoint values.
-        const char* media = "0";
-        handler = std::make_shared<Handler>(media, conn.getIoContext());
-        handler->connect();
-    })
-        .onclose([](crow::websocket::Connection& conn,
-                    const std::string& /*reason*/) {
-        if (&conn != session)
-        {
-            return;
-        }
-
-        session = nullptr;
-        handler->doClose();
-        handler->inputBuffer->clear();
-        handler->outputBuffer->clear();
-        handler.reset();
-    })
-        .onmessage([](crow::websocket::Connection& conn,
-                      const std::string& data, bool) {
-        if (data.length() >
-            handler->inputBuffer->capacity() - handler->inputBuffer->size())
-        {
-            BMCWEB_LOG_ERROR("Buffer overrun when writing {} bytes",
-                             data.length());
-            conn.close("Buffer overrun");
-            return;
-        }
-
-        boost::asio::buffer_copy(handler->inputBuffer->prepare(data.size()),
-                                 boost::asio::buffer(data));
-        handler->inputBuffer->commit(data.size());
-        handler->doWrite();
-    });
+        .onopen(onOpen)
+        .onclose(onClose)
+        .onmessage(onMessage);
 }
 
 } // namespace obmc_vm
