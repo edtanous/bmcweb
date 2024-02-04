@@ -25,6 +25,7 @@
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/systemd_utils.hpp>
+#include <managers.hpp>
 
 namespace redfish
 {
@@ -224,6 +225,8 @@ inline void handleServiceRootGetImpl(
         "/redfish/v1/EventService";
     asyncResp->res.jsonValue["TelemetryService"]["@odata.id"] =
         "/redfish/v1/TelemetryService";
+    getServiceIdentification(asyncResp);
+
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Cables"]["@odata.id"] = "/redfish/v1/Cables";
 #endif

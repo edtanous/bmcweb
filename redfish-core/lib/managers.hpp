@@ -3074,6 +3074,43 @@ inline void
         "GetManagedObjects");
 }
 
+inline void setServiceIdentification(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                     std::string sysId)
+{
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus,
+        "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/Software/Settings/ServiceIdentification",
+        "xyz.openbmc_project.Inventory.Decorator.AssetTag",
+        "AssetTag", sysId,
+        [aResp{std::move(aResp)}](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "DBUS response error on ServiceIdentification setProperty: "
+                    << ec;
+                return;
+            }
+        });
+}
+
+inline void getServiceIdentification(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings", 
+        "/xyz/openbmc_project/Software/Settings/ServiceIdentification",
+        "xyz.openbmc_project.Inventory.Decorator.AssetTag", "AssetTag",
+        [asyncResp](const boost::system::error_code ec,
+                    const std::string& sysId) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for ServiceIdentification" << ec;
+                return;
+            }
+            asyncResp->res.jsonValue["ServiceIdentification"] = sysId;
+        });
+}
+
 inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         std::string datetime)
 {
@@ -3489,6 +3526,7 @@ inline void requestRoutesManager(App& app)
 
             redfish::conditions_utils::populateServiceConditions(asyncResp,
                                                                  PLATFORMBMCID);
+            getServiceIdentification(asyncResp);
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE
             asyncResp->res.jsonValue["HostInterfaces"] = {
@@ -4041,10 +4079,11 @@ inline void requestRoutesManager(App& app)
             std::optional<nlohmann::json> oem;
             std::optional<nlohmann::json> links;
             std::optional<std::string> datetime;
+            std::optional<std::string> serviceIdentification;
 
             if (!redfish::json_util::readJsonPatch(req, asyncResp->res, "Oem",
                                                    oem, "DateTime", datetime,
-                                                   "Links", links))
+                                                   "Links", links, "ServiceIdentification", serviceIdentification))
             {
                 return;
             }
@@ -4208,6 +4247,10 @@ inline void requestRoutesManager(App& app)
             if (datetime)
             {
                 setDateTime(asyncResp, std::move(*datetime));
+            }
+            if (serviceIdentification)
+            {
+                setServiceIdentification(asyncResp, std::move(*serviceIdentification));
             }
         });
 }
