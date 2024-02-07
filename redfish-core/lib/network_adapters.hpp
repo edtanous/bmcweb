@@ -173,12 +173,12 @@ inline void
         chassisId);
     asyncResp->res.jsonValue["Ports"]["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
-        "Ports",
+        "/Ports",
         chassisId);
     asyncResp->res.jsonValue["NetworkDeviceFunctions"]["@odata.id"] =
         boost::urls::format(
             "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
-            "NetworkDeviceFunctions",
+            "/NetworkDeviceFunctions",
             chassisId);
 }
 
@@ -203,7 +203,7 @@ inline void
         asyncResp->res.jsonValue["Name"] = "Port Collection";
         asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
             "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
-            "Ports",
+            "/Ports",
             chassisId);
         isNDF = false;
     }
@@ -215,7 +215,7 @@ inline void
         asyncResp->res.jsonValue["Name"] = "Network Device Function Collection";
         asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
             "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
-            "NetworkDeviceFunctions",
+            "/NetworkDeviceFunctions",
             chassisId);
     }
     getNetworkAdapterCollectionMembers(
@@ -300,7 +300,7 @@ inline void doPort(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["LinkNetworkTechnology"] = "Ethernet";
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER
-        "Ports/{}",
+        "/Ports/{}",
         chassisId, portId);
     using GetManagedPropertyType = boost::container::flat_map<
         std::string,
