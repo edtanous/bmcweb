@@ -3690,7 +3690,7 @@ inline void requestRoutesSystems(App& app)
             asyncResp->res.jsonValue["Name"] = PLATFORMSYSTEMID;
             asyncResp->res.jsonValue["Id"] = PLATFORMSYSTEMID;
             asyncResp->res.jsonValue["SystemType"] = "Physical";
-            asyncResp->res.jsonValue["Description"] = "Computer System";
+            asyncResp->res.jsonValue["Description"] = PLATFORMSYSTEMDESCRIPTION;
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             asyncResp->res.jsonValue["ProcessorSummary"]["Count"] = 0;
 #endif //#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
