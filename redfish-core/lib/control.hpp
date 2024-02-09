@@ -10,11 +10,20 @@
 namespace redfish
 {
 
+#ifdef BMCWEB_CONTROL_SETPOINT_UNITS_PERCENTAGE
+const std::string setPointUnits = "%";
+const std::string setPointPropName = "PowerCapPercentage";
+#else
+const std::string setPointUnits = "W";
+const std::string setPointPropName = "PowerCap";
+#endif
+
 std::map<std::string, std::string> modes = {
     {"xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance",
      "Automatic"},
     {"xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM", "Override"},
-    {"xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving", "Manual"}};
+    {"xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving", "Manual"},
+    {"xyz.openbmc_project.Control.Power.Mode.PowerMode.Static", "Disabled"}};
 const std::array<const char*, 2> powerinterfaces = {
     "xyz.openbmc_project.Control.Power.Cap",
     "xyz.openbmc_project.Control.Power.Mode"};
@@ -76,7 +85,7 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      "xyz.openbmc_project.Inventory.Decorator.Area"))
                 {
                     crow::connections::systemBus->async_method_call(
-                        [asyncResp, path](
+                        [asyncResp, path, interface](
                             const boost::system::error_code errorno,
                             const std::vector<
                                 std::pair<std::string,
@@ -101,9 +110,13 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             {
                                 propertyName = "AllowableMin";
                             }
-                            else if (propertyName == "PowerCap")
+                            else if (propertyName == setPointPropName)
                             {
                                 propertyName = "SetPoint";
+                            }
+                            else if (propertyName == "DefaultPowerCap")
+                            {
+                                propertyName = "DefaultSetPoint";
                             }
                             else if (propertyName == "PhysicalContext")
                             {
@@ -579,7 +592,7 @@ inline void changepowercap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
             },
                 element.first, path, "org.freedesktop.DBus.Properties", "Set",
-                "xyz.openbmc_project.Control.Power.Cap", "PowerCap",
+                "xyz.openbmc_project.Control.Power.Cap", setPointPropName,
                 dbus::utility::DbusVariantType(setpoint));
         }
     },
@@ -653,36 +666,107 @@ inline void
         std::array<const char*, 1>{"xyz.openbmc_project.Control.Power.Cap"});
 }
 
+inline void
+    changeControlMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& path, const std::string& mode)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, mode, path](
+            const boost::system::error_code& errorno,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) {
+            if (errorno)
+            {
+                BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", errorno);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            for (const auto& element : objInfo)
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, path, mode,
+                     element](const boost::system::error_code& ec2,
+                              sdbusplus::message::message& msg) {
+                        if (!ec2)
+                        {
+                            BMCWEB_LOG_DEBUG("Set ControlMode property succeeded");
+                            messages::success(asyncResp->res);
+                            return;
+                        }
+                        // Read and convert dbus error message to redfish error
+                        const sd_bus_error* dbusError = msg.get_error();
+                        if (dbusError == nullptr)
+                        {
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        if (strcmp(dbusError->name,
+                                   "xyz.openbmc_project.Common."
+                                   "Device.Error.WriteFailure") == 0)
+                        {
+                            // Service failed to change the config
+                            messages::operationFailed(asyncResp->res);
+                        }
+                        else if (
+                            strcmp(
+                                dbusError->name,
+                                "org.freedesktop.DBus.Error.UnknownProperty") ==
+                            0)
+                        {
+                            // Some implementation does not have PowerCapEnable
+                            return;
+                        }
+                        else
+                        {
+                            messages::internalError(asyncResp->res);
+                        }
+                    },
+                    element.first, path, "org.freedesktop.DBus.Properties",
+                    "Set", "xyz.openbmc_project.Control.Power.Mode",
+                    "PowerMode", dbus::utility::DbusVariantType(mode));
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", path,
+        std::array<const char*, 1>{"xyz.openbmc_project.Control.Power.Mode"});
+}
 inline void requestRoutesChassisControlsCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Controls/")
         .privileges(redfish::privileges::getControl)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID) {
-        auto getChassisPath =
-            [asyncResp,
-             chassisID](const std::optional<std::string>& validChassisPath) {
-            if (!validChassisPath)
-            {
-                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
-                messages::resourceNotFound(asyncResp->res, "Chassis",
-                                           chassisID);
-                return;
-            }
-            asyncResp->res.jsonValue = {
-                {"@odata.type", "#ControlCollection.ControlCollection"},
-                {"@odata.id", "/redfish/v1/Chassis/" + chassisID + "/Controls"},
-                {"Name", "Controls"},
-                {"Description",
-                 "The collection of Controlable resource instances " +
-                     chassisID}};
-            getPowercontrolObjects(asyncResp, chassisID, *validChassisPath);
-        };
-        redfish::chassis_utils::getValidChassisPath(asyncResp, chassisID,
-                                                    std::move(getChassisPath));
-    });
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                auto getChassisPath = [asyncResp, chassisID](
+                                          const std::optional<std::string>&
+                                              validChassisPath) {
+                    if (!validChassisPath)
+                    {
+                        BMCWEB_LOG_ERROR("Not a valid chassis ID: {}", chassisID);
+                        messages::resourceNotFound(asyncResp->res, "Chassis",
+                                                   chassisID);
+                        return;
+                    }
+                    asyncResp->res.jsonValue = {
+                        {"@odata.type", "#ControlCollection.ControlCollection"},
+                        {"@odata.id",
+                         "/redfish/v1/Chassis/" + chassisID + "/Controls"},
+                        {"Name", "Controls"},
+                        {"Description",
+                         "The collection of Controlable resource instances " +
+                             chassisID}};
+                    getPowercontrolObjects(asyncResp, chassisID,
+                                           *validChassisPath);
+                };
+                redfish::chassis_utils::getValidChassisPath(
+                    asyncResp, chassisID, std::move(getChassisPath));
+            });
 }
 inline void requestRoutesChassisControls(App& app)
 {
@@ -692,6 +776,10 @@ inline void requestRoutesChassisControls(App& app)
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID, const std::string& controlID) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         auto getControlSystem =
             [asyncResp, chassisID,
              controlID](const std::optional<std::string>& validChassisPath) {
@@ -703,7 +791,7 @@ inline void requestRoutesChassisControls(App& app)
                 return;
             }
             asyncResp->res.jsonValue["@odata.type"] = "#Control.v1_3_0.Control";
-            asyncResp->res.jsonValue["SetPointUnits"] = "W";
+            asyncResp->res.jsonValue["SetPointUnits"] = setPointUnits;
             asyncResp->res.jsonValue["Id"] = controlID;
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
             asyncResp->res.jsonValue["@odata.id"] =
@@ -737,6 +825,7 @@ inline void requestRoutesChassisControls(App& app)
                         asyncResp->res.jsonValue["Name"] =
                             "System Power Control";
                         asyncResp->res.jsonValue["ControlType"] = "Power";
+                        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                         getChassisPower(asyncResp, object, *validChassisPath);
                         getTotalPower(asyncResp, chassisID);
                         validendpoint = true;
@@ -880,78 +969,113 @@ inline void requestRoutesChassisControls(App& app)
 
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Controls/<str>")
         .privileges(redfish::privileges::patchControl)
-        .methods(boost::beast::http::verb::patch)(
-            [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID, const std::string& controlID) {
-        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-        {
-            return;
-        }
-        auto patchControlSystem =
-            [asyncResp, chassisID, controlID,
-             req](const std::optional<std::string>& validChassisPath) {
-            if (!validChassisPath)
+        .methods(
+            boost::beast::http::verb::
+                patch)([&app](const crow::Request& req,
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& chassisID,
+                          const std::string& controlID) {
+
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
             {
-                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
-                messages::resourceNotFound(asyncResp->res, "Chassis",
-                                           chassisID);
                 return;
             }
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, chassisID, controlID,
-                 req](const boost::system::error_code ec,
-                      std::variant<std::vector<std::string>>& resp) {
-                if (ec)
+            auto patchControlSystem = [asyncResp, chassisID, controlID,
+                                       req](const std::optional<std::string>&
+                                                validChassisPath) {
+                if (!validChassisPath)
                 {
-                    BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", ec);
-                    messages::internalError(asyncResp->res);
+                    BMCWEB_LOG_ERROR("Not a valid chassis ID: {}", chassisID);
+                    messages::resourceNotFound(asyncResp->res, "Chassis",
+                                               chassisID);
                     return;
                 }
-                std::vector<std::string>* data =
-                    std::get_if<std::vector<std::string>>(&resp);
-                if (data == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("control id resource not found");
-                    messages::resourceNotFound(asyncResp->res, "ControlID",
-                                               controlID);
-                    return;
-                }
-                auto validendpoint = false;
-                for (const auto& object : *data)
-                {
-                    sdbusplus::message::object_path objPath(object);
-                    if (objPath.filename() == controlID)
-                    {
-                        validendpoint = true;
-                        std::string mode;
-                        std::optional<uint32_t> setpoint;
-
-                        if (!json_util::readJsonAction(req, asyncResp->res,
-                                                       "SetPoint", setpoint))
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, chassisID, controlID,
+                     req](const boost::system::error_code ec,
+                          std::variant<std::vector<std::string>>& resp) {
+                        if (ec)
                         {
+                            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}", ec);
+                            messages::internalError(asyncResp->res);
                             return;
                         }
-                        if (setpoint)
+                        std::vector<std::string>* data =
+                            std::get_if<std::vector<std::string>>(&resp);
+                        if (data == nullptr)
                         {
-                            changepowercap(asyncResp, object, *setpoint);
+                            BMCWEB_LOG_ERROR("control id resource not found");
+                            messages::resourceNotFound(asyncResp->res,
+                                                       "ControlID", controlID);
+                            return;
                         }
+                        auto validendpoint = false;
+                        for (const auto& object : *data)
+                        {
+                            sdbusplus::message::object_path objPath(object);
+                            if (objPath.filename() == controlID)
+                            {
+                                validendpoint = true;
+                                std::optional<std::string> mode;
+                                std::optional<uint32_t> setpoint;
+                                if (!json_util::readJsonAction(
+                                        req, asyncResp->res,
+                                        "ControlMode", mode,
+                                        "SetPoint", setpoint))
+                                {
+                                    return;
+                                }
+                                if (mode)
+                                {
+                                    auto modefound = false;
+                                    for (const auto& pair : modes) {
+                                        if (pair.second == mode) {
+                                            changeControlMode(
+                                                asyncResp,
+                                                object,
+                                                pair.first);
+                                            modefound = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!modefound)
+                                    {
+                                        BMCWEB_LOG_ERROR("invalid input");
+                                        messages::
+                                            actionParameterUnknown(
+                                                asyncResp->res,
+                                                "ControlMode", *mode);
+                                    }
+                                }
+                                if (setpoint)
+                                {
+                                    if ((setPointUnits == "%") &&
+                                        (setpoint > 100))
+                                    {
+                                        BMCWEB_LOG_ERROR("invalid input");
+                                        std::string strValue = std::to_string(setpoint.value());
+                                        messages::
+                                            actionParameterUnknown(asyncResp->res,
+                                            "SetPoint", std::string_view(strValue));
+                                    }
+                                    changepowercap(asyncResp, object, *setpoint);
+                                }
+                                break;
+                            }
+                        }
+                        if (!validendpoint)
+                        {
+                            BMCWEB_LOG_ERROR("control id resource not found");
+                            messages::resourceNotFound(asyncResp->res,
+                                                       "ControlID", controlID);
+                        }
+                    },
+                    "xyz.openbmc_project.ObjectMapper",
+                    *validChassisPath + "/power_controls",
+                    "org.freedesktop.DBus.Properties", "Get",
+                    "xyz.openbmc_project.Association", "endpoints");
+            };
 
-                        break;
-                    }
-                }
-                if (!validendpoint)
-                {
-                    BMCWEB_LOG_ERROR("control id resource not found");
-                    messages::resourceNotFound(asyncResp->res, "ControlID",
-                                               controlID);
-                }
-            },
-                "xyz.openbmc_project.ObjectMapper",
-                *validChassisPath + "/power_controls",
-                "org.freedesktop.DBus.Properties", "Get",
-                "xyz.openbmc_project.Association", "endpoints");
-        };
 
         auto patchControlCpu =
             [asyncResp, chassisID, controlID,

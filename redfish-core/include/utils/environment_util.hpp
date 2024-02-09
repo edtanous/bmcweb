@@ -800,7 +800,16 @@ inline void
                 }
                 for (const std::string& ctrlPath : *data)
                 {
+                    getPowerCap(asyncResp, connectionName, ctrlPath);
                     getPowerCap(asyncResp, resourceId, ctrlPath);
+                    // Skip getControlMode if it does not support the Control
+                    // Mode
+                    if (std::find(interfaces.begin(), interfaces.end(),
+                                  "xyz.openbmc_project.Control.Mode") !=
+                        interfaces.end())
+                    {
+                        getControlMode(asyncResp, connectionName, ctrlPath);
+                    }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     getPowerMode(asyncResp, connectionName, ctrlPath);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES

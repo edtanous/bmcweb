@@ -90,6 +90,8 @@ constexpr const char* crashdumpOnDemandInterface =
     "com.intel.crashdump.OnDemand";
 constexpr const char* crashdumpTelemetryInterface =
     "com.intel.crashdump.Telemetry";
+constexpr char const* logEntryVersion =
+    "#LogEntry.v1_13_0.LogEntry";
 
 enum class DumpCreationProgress
 {
@@ -105,7 +107,7 @@ static void generateMessageRegistry(
     nlohmann::json& logEntry,
     const std::string& odataId, /* e.g. /redfish/v1/Systems/system/LogServices/"
                                   "EventLog/Entries/ */
-    const std::string& odataTypeVer /* e.g. v1_8_0 */, const std::string& id,
+    const std::string& odataTypeVer /* e.g. v1_13_0 */, const std::string& id,
     const std::string& name, const std::string& timestamp,
     const std::string& messageId, const std::string& messageArgs,
     const std::string& resolution, const bool& resolved,
@@ -503,6 +505,23 @@ void deleteDbusLogEntry(const std::string& entryId,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 
+bool isSelEntry(const std::string* message, const std::vector<std::string>* additionalData)
+{
+    if ((message != nullptr) && (*message == "xyz.openbmc_project.Logging.SEL.Error.Created"))
+    {
+        return true;
+    }
+    if (additionalData != nullptr)
+    {
+        AdditionalData additional(*additionalData);
+        if (additional.count("namespace") > 0 && additional["namespace"] == "SEL")
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void deleteDbusSELEntry(std::string& entryID,
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
@@ -517,12 +536,13 @@ void deleteDbusSELEntry(std::string& entryID,
         }
         if (ec)
         {
-            BMCWEB_LOG_ERROR("SELLogEntry (DBus) " "resp_handler got error {}", ec);
+            BMCWEB_LOG_ERROR("SELLogEntry (DBus) resp_handler got error {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
         uint32_t* id = nullptr;
         std::string* message = nullptr;
+        const std::vector<std::string>* additionalData = nullptr;
 
         for (auto& propertyMap : resp)
         {
@@ -535,13 +555,18 @@ void deleteDbusSELEntry(std::string& entryID,
             {
                 message = std::get_if<std::string>(&propertyMap.second);
             }
+            else if (propertyMap.first == "AdditionalData")
+            {
+                additionalData =
+                    std::get_if<std::vector<std::string>>(&propertyMap.second);
+            }
         }
         if (id == nullptr || message == nullptr)
         {
             messages::internalError(asyncResp->res);
             return;
         }
-        if (*message == "xyz.openbmc_project.Logging.SEL.Error.Created")
+        if (isSelEntry(message, additionalData))
         {
             deleteDbusLogEntry(entryID, asyncResp);
             return;
@@ -609,6 +634,24 @@ inline void parseDumpEntryFromDbusObject(
             }
         }
         else if (interfaceMap.first == "xyz.openbmc_project.Dump.Entry")
+        {
+            for (const auto& propertyMap : interfaceMap.second)
+            {
+                if (propertyMap.first == "Size")
+                {
+                    const auto* sizePtr =
+                        std::get_if<uint64_t>(&propertyMap.second);
+                    if (sizePtr == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        break;
+                    }
+                    size = *sizePtr;
+                    break;
+                }
+            }
+        }
+        else if (interfaceMap.first == "xyz.openbmc_project.FDR.Entry")
         {
             for (const auto& propertyMap : interfaceMap.second)
             {
@@ -895,6 +938,11 @@ static std::string getDumpEntriesPath(const std::string& dumpType)
         entriesPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/Dump/Entries/";
     }
+    else if (dumpType == "FDR")
+    {
+        entriesPath =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR/Entries/";
+    }
     else if (dumpType == "FaultLog")
     {
         entriesPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -1074,50 +1122,103 @@ inline void
                 {
                     thisEntry["CPER"]["Oem"]["NvSeverity"] = nvSeverity;
                 }
-                if (nvSocketNumber != "NA")
+                else if (dumpType == "FDR")
                 {
-                    thisEntry["CPER"]["Oem"]["NvSocketNumber"] = nvSocketNumber;
+                    thisEntry["Created"] =
+                        redfish::time_utils::getDateTimeUint(timestampS);
+                    thisEntry["DiagnosticDataType"] = "OEM";
+                    thisEntry["OEMDiagnosticDataType"] = "FDR";
+                    thisEntry["AdditionalDataURI"] = entriesPath + entryID +
+                                                     "/attachment";
+                    thisEntry["AdditionalDataSizeBytes"] = size;
                 }
-                if (pcieVendorID != "NA")
+                else if (dumpType == "FaultLog")
                 {
-                    thisEntry["CPER"]["Oem"]["PcieVendorId"] = pcieVendorID;
-                }
-                if (pcieDeviceID != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["PcieDeviceId"] = pcieDeviceID;
-                }
-                if (pcieClassCode != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["PcieClassCode"] = pcieClassCode;
-                }
-                if (pcieFunctionNumber != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["PcieFunctionNumber"] =
-                        pcieFunctionNumber;
-                }
-                if (pcieDeviceNumber != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["PcieDeviceNumber"] =
-                        pcieDeviceNumber;
-                }
-                if (pcieSegmentNumber != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["PcieSegmentNumber"] =
-                        pcieSegmentNumber;
-                }
-                if (pcieDeviceBusNumber != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["PcieDeviceBusNumber"] =
-                        pcieDeviceBusNumber;
-                }
-                if (pcieSecondaryBusNumber != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["PcieSecondaryBusNumber"] =
-                        pcieSecondaryBusNumber;
-                }
-                if (pcieSlotNumber != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["PcieSlotNumber"] = pcieSlotNumber;
+                    thisEntry["Created"] =
+                        redfish::time_utils::getDateTimeUint(timestampS);
+                    thisEntry["DiagnosticDataType"] =
+                        faultLogDiagnosticDataType;
+                    thisEntry["AdditionalDataURI"] = entriesPath + entryID +
+                                                     "/attachment";
+                    thisEntry["AdditionalDataSizeBytes"] = size;
+                    // CPER Properties
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
+                        "#NvidiaLogEntry.v1_0_0.CPER";
+                    if (sectionType != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["SectionType"] =
+                            sectionType;
+                    }
+                    if (fruid != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["FruID"] = fruid;
+                    }
+                    if (severity != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["Severity"] =
+                            severity;
+                    }
+                    if (nvipSignature != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["NvIpSignature"] =
+                            nvipSignature;
+                    }
+                    if (nvSeverity != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["NvSeverity"] =
+                            nvSeverity;
+                    }
+                    if (nvSocketNumber != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["NvSocketNumber"] =
+                            nvSocketNumber;
+                    }
+                    if (pcieVendorID != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeVendorId"] =
+                            pcieVendorID;
+                    }
+                    if (pcieDeviceID != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceId"] =
+                            pcieDeviceID;
+                    }
+                    if (pcieClassCode != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeClassCode"] =
+                            pcieClassCode;
+                    }
+                    if (pcieFunctionNumber != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]
+                                 ["PCIeFunctionNumber"] = pcieFunctionNumber;
+                    }
+                    if (pcieDeviceNumber != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceNumber"] =
+                            pcieDeviceNumber;
+                    }
+                    if (pcieSegmentNumber != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]
+                                 ["PCIeSegmentNumber"] = pcieSegmentNumber;
+                    }
+                    if (pcieDeviceBusNumber != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]
+                                 ["PCIeDeviceBusNumber"] = pcieDeviceBusNumber;
+                    }
+                    if (pcieSecondaryBusNumber != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]
+                                 ["PCIeSecondaryBusNumber"] =
+                                     pcieSecondaryBusNumber;
+                    }
+                    if (pcieSlotNumber != "NA")
+                    {
+                        thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeSlotNumber"] =
+                            pcieSlotNumber;
+                    }
                 }
             }
             entriesArray.emplace_back(std::move(thisEntry));
@@ -1274,65 +1375,107 @@ inline void
                     asyncResp->res.jsonValue["CPER"]["Oem"]["NvIpSignature"] =
                         nvipSignature;
                 }
-                if (nvSeverity != "NA")
+                else if (dumpType == "FDR")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["NvSeverity"] =
-                        nvSeverity;
+                    asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
+                    asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
+                    asyncResp->res.jsonValue["AdditionalDataURI"] =
+                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                        "/LogServices/FDR/Entries/" +
+                        entryID + "/attachment";
                 }
-                if (nvSocketNumber != "NA")
+                else if (dumpType == "FaultLog")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["NvSocketNumber"] =
-                        nvSocketNumber;
-                }
-                if (pcieVendorID != "NA")
-                {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["PcieVendorId"] =
-                        pcieVendorID;
-                }
-                if (pcieDeviceID != "NA")
-                {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["PcieDeviceId"] =
-                        pcieDeviceID;
-                }
-                if (pcieClassCode != "NA")
-                {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["PcieClassCode"] =
-                        pcieClassCode;
-                }
-                if (pcieFunctionNumber != "NA")
-                {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PcieFunctionNumber"] =
-                        pcieFunctionNumber;
-                }
-                if (pcieDeviceNumber != "NA")
-                {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PcieDeviceNumber"] =
-                        pcieDeviceNumber;
-                }
-                if (pcieSegmentNumber != "NA")
-                {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PcieSegmentNumber"] =
-                        pcieSegmentNumber;
-                }
-                if (pcieDeviceBusNumber != "NA")
-                {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PcieDeviceBusNumber"] =
-                        pcieDeviceBusNumber;
-                }
-                if (pcieSecondaryBusNumber != "NA")
-                {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PcieSecondaryBusNumber"] =
-                        pcieSecondaryBusNumber;
-                }
-                if (pcieSlotNumber != "NA")
-                {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["PcieSlotNumber"] =
-                        pcieSlotNumber;
+                    asyncResp->res.jsonValue["DiagnosticDataType"] =
+                        faultLogDiagnosticDataType;
+                    asyncResp->res.jsonValue["AdditionalDataURI"] =
+                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                        "/LogServices/FaultLog/Entries/" +
+                        entryID + "/attachment";
+                    if (sectionType != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["SectionType"] =
+                            sectionType;
+                    }
+                    if (fruid != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["FruID"] =
+                            fruid;
+                    }
+                    if (severity != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["Severity"] =
+                            severity;
+                    }
+                    if (nvipSignature != "NA")
+                    {
+                        asyncResp->res
+                            .jsonValue["CPER"]["Oem"]["NvIpSignature"] =
+                            nvipSignature;
+                    }
+                    if (nvSeverity != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]["NvSeverity"] =
+                            nvSeverity;
+                    }
+                    if (nvSocketNumber != "NA")
+                    {
+                        asyncResp->res
+                            .jsonValue["CPER"]["Oem"]["NvSocketNumber"] =
+                            nvSocketNumber;
+                    }
+                    if (pcieVendorID != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]
+                                                ["PCIeVendorId"] = pcieVendorID;
+                    }
+                    if (pcieDeviceID != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]
+                                                ["PCIeDeviceId"] = pcieDeviceID;
+                    }
+                    if (pcieClassCode != "NA")
+                    {
+                        asyncResp->res
+                            .jsonValue["CPER"]["Oem"]["PCIeClassCode"] =
+                            pcieClassCode;
+                    }
+                    if (pcieFunctionNumber != "NA")
+                    {
+                        asyncResp->res
+                            .jsonValue["CPER"]["Oem"]["PCIeFunctionNumber"] =
+                            pcieFunctionNumber;
+                    }
+                    if (pcieDeviceNumber != "NA")
+                    {
+                        asyncResp->res
+                            .jsonValue["CPER"]["Oem"]["PCIeDeviceNumber"] =
+                            pcieDeviceNumber;
+                    }
+                    if (pcieSegmentNumber != "NA")
+                    {
+                        asyncResp->res
+                            .jsonValue["CPER"]["Oem"]["PCIeSegmentNumber"] =
+                            pcieSegmentNumber;
+                    }
+                    if (pcieDeviceBusNumber != "NA")
+                    {
+                        asyncResp->res
+                            .jsonValue["CPER"]["Oem"]["PCIeDeviceBusNumber"] =
+                            pcieDeviceBusNumber;
+                    }
+                    if (pcieSecondaryBusNumber != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["Oem"]
+                                                ["PCIeSecondaryBusNumber"] =
+                            pcieSecondaryBusNumber;
+                    }
+                    if (pcieSlotNumber != "NA")
+                    {
+                        asyncResp->res
+                            .jsonValue["CPER"]["Oem"]["PCIeSlotNumber"] =
+                            pcieSlotNumber;
+                    }
                 }
             }
         }
@@ -1421,6 +1564,11 @@ inline std::string getDumpEntryPath(const std::string& dumpPath)
     {
         return "/redfish/v1/Systems/" PLATFORMSYSTEMID
                "/LogServices/Dump/Entries/";
+    }
+    if (dumpPath == "/xyz/openbmc_project/dump/fdr/entry")
+    {
+        return "/redfish/v1/Systems/" PLATFORMSYSTEMID
+               "/LogServices/FDR/Entries/";
     }
     return "";
 }
@@ -1625,6 +1773,30 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             return;
         }
         dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/";
+    }
+    else if (dumpType == "FDR")
+    {
+        // Decode oemDiagnosticDataType string format
+        createDumpParamVec = parseOEMAdditionalData(*oemDiagnosticDataType);
+
+        if (!oemDiagnosticDataType || !diagnosticDataType)
+        {
+            BMCWEB_LOG_ERROR("CreateDump action parameter 'DiagnosticDataType'/'OEMDiagnosticDataType' value not found!");
+            messages::actionParameterMissing(
+                asyncResp->res, "CollectDiagnosticData",
+                "DiagnosticDataType & OEMDiagnosticDataType");
+            return;
+        }
+
+        if (*diagnosticDataType != "OEM")
+        {
+            BMCWEB_LOG_ERROR("Wrong parameter values passed");
+            messages::actionParameterValueError(
+                asyncResp->res, "DiagnosticDataType",
+                "LogService.CollectDiagnosticData");
+            return;
+        }
+        dumpPath = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR/";
     }
     else if (dumpType == "BMC")
     {
@@ -2188,7 +2360,7 @@ static LogParseError
     }
 
     // Fill in the log entry with the gathered data
-    logEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    logEntryJson["@odata.type"] = logEntryVersion;
     logEntryJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/LogServices/EventLog/Entries/" +
                                 logEntryID;
@@ -3023,6 +3195,13 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
     std::string generatorId;
     std::string messageId;
     bool resolved = false;
+    bool isMessageRegistry = false;
+    std::string sensorData;
+    std::string deviceName;
+    std::ostringstream hexCodeEventDir;
+    std::string messageArgs;
+    std::string originOfCondition;
+    const std::string* resolution = nullptr;
 
     for (auto& propertyMap : resp)
     {
@@ -3067,54 +3246,80 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
             }
             resolved = *resolveptr;
         }
+        else if (propertyMap.first == "Resolution")
+        {
+            resolution = std::get_if<std::string>(
+                &propertyMap.second);
+        }
         else if (propertyMap.first == "AdditionalData")
         {
             std::string eventDir;
             std::string recordType;
-            std::string sensorData;
-            std::ostringstream hexCodeEventDir;
             additionalDataVectorString =
                 std::get_if<std::vector<std::string>>(&propertyMap.second);
-            for (std::string& i : *additionalDataVectorString)
+           if (additionalDataVectorString != nullptr)
             {
-                std::vector<std::string> additionalDataKVpair;
-                boost::split(additionalDataKVpair, i, boost::is_any_of("="));
-                if (additionalDataKVpair.size() == 2)
+                AdditionalData additional(*additionalDataVectorString);
+                if (additional.count("REDFISH_MESSAGE_ID") > 0)
                 {
-                    if (additionalDataKVpair[0] == "EVENT_DIR")
+                    isMessageRegistry = true;
+                    messageId = additional["REDFISH_MESSAGE_ID"];
+                    BMCWEB_LOG_DEBUG("RedFish MessageId: [{}]", messageId);
+
+                    if (additional.count("REDFISH_MESSAGE_ARGS") > 0)
+                    {
+                        messageArgs =
+                            additional["REDFISH_MESSAGE_ARGS"];
+                    }
+                }
+                else
+                {
+                    if (additional.count("EVENT_DIR") > 0)
                     {
                         hexCodeEventDir << "0x" << std::setfill('0')
                                         << std::setw(2) << std::hex
-                                        << std::stoi(additionalDataKVpair[1]);
+                                        << std::stoi(additional["EVENT_DIR"]);
                     }
-                    else if (additionalDataKVpair[0] == "GENERATOR_ID")
+                    if (additional.count("GENERATOR_ID") > 0)
                     {
                         std::ostringstream hexCodeGeneratorId;
-                        if (!additionalDataKVpair[1].empty())
+                        if (!additional["GENERATOR_ID"].empty())
                         {
                             hexCodeGeneratorId
                                 << "0x" << std::setfill('0') << std::setw(4)
                                 << std::hex
-                                << std::stoi(additionalDataKVpair[1]);
+                                << std::stoi(additional["GENERATOR_ID"]);
                             generatorId = hexCodeGeneratorId.str();
                         }
                     }
-                    else if (additionalDataKVpair[0] == "RECORD_TYPE")
+                    if (additional.count("RECORD_TYPE") > 0)
                     {
-                        recordType = additionalDataKVpair[1];
+                        recordType = additional["RECORD_TYPE"];
                     }
-                    else if (additionalDataKVpair[0] == "SENSOR_DATA")
+                    if (additional.count("SENSOR_DATA") > 0)
                     {
-                        sensorData = additionalDataKVpair[1];
+                        sensorData = additional["SENSOR_DATA"];
                         boost::algorithm::to_lower(sensorData);
                     }
+                    // MessageId for SEL is of the form 0xNNaabbcc
+                    // where 'NN' is the EventDir/EventType byte, aa is first byte
+                    // sensor data, bb is second byte sensor data, cc is third byte
+                    // sensor data
+                    messageId = hexCodeEventDir.str() + sensorData;
+                    BMCWEB_LOG_DEBUG("RedFish MessageId: [{}]", messageId);
+
+                }
+                if (additional.count("REDFISH_ORIGIN_OF_CONDITION") > 0)
+                {
+                    originOfCondition =
+                        additional["REDFISH_ORIGIN_OF_CONDITION"];
+                }
+                if (additional.count("DEVICE_NAME") > 0)
+                {
+                    deviceName = additional["DEVICE_NAME"];
                 }
             }
-            // MessageId for SEL is of the form 0xNNaabbcc
-            // where 'NN' is the EventDir/EventType byte, aa is first byte
-            // sensor data, bb is second byte sensor data, cc is third byte
-            // sensor data
-            messageId = hexCodeEventDir.str() + sensorData;
+
         }
     }
     if (id == nullptr || message == nullptr || severity == nullptr)
@@ -3122,32 +3327,53 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
         throw std::runtime_error("Invalid SEL Entry");
         return;
     }
-    if (*message != "xyz.openbmc_project.Logging.SEL.Error.Created")
+    if (!isSelEntry(message, additionalDataVectorString))
     {
         return;
     }
-    thisEntry["@odata.type"] = "#LogEntry.v1_8_0.LogEntry";
-    thisEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                             "/LogServices/SEL/"
-                             "Entries/" +
-                             std::to_string(*id);
-    thisEntry["Name"] = "System Event Log Entry";
-    thisEntry["Id"] = std::to_string(*id);
-    if (!generatorId.empty())
+    if (isMessageRegistry)
     {
-        thisEntry["GeneratorId"] = generatorId;
+        message_registries::generateMessageRegistry(
+            thisEntry,
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+            "/LogServices/"
+            "SEL/Entries/",
+            "v1_13_0", std::to_string(*id),
+            "System Event Log Entry",
+            redfish::time_utils::getDateTimeStdtime(timestamp),
+            messageId, messageArgs, *resolution, resolved,
+            *severity);
+        thisEntry["EntryType"] = "SEL";
     }
-    if (!messageId.empty())
+
+    // generateMessageRegistry will not create the entry if
+    // the messageId can't be found in message registries.
+    // So check the entry 'Id' anyway to cover that case.
+    if (thisEntry["Id"].size() == 0)
     {
-        thisEntry["MessageId"] = messageId;
+        thisEntry["@odata.type"] = logEntryVersion;
+        thisEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/LogServices/SEL/"
+                                "Entries/" +
+                                std::to_string(*id);
+        thisEntry["Name"] = "System Event Log Entry";
+        thisEntry["Id"] = std::to_string(*id);
+        if (!generatorId.empty())
+        {
+            thisEntry["GeneratorId"] = generatorId;
+        }
+        if (!messageId.empty())
+        {
+            thisEntry["MessageId"] = messageId;
+        }
+        thisEntry["Message"] = *message;
+        thisEntry["Resolved"] = resolved;
+        thisEntry["EntryType"] = "SEL";
+        thisEntry["Severity"] = translateSeverityDbusToRedfish(*severity);
+        thisEntry["Created"] = redfish::time_utils::getDateTimeStdtime(timestamp);
+        thisEntry["Modified"] =
+            redfish::time_utils::getDateTimeStdtime(updateTimestamp);
     }
-    thisEntry["Message"] = *message;
-    thisEntry["Resolved"] = resolved;
-    thisEntry["EntryType"] = "SEL";
-    thisEntry["Severity"] = translateSeverityDbusToRedfish(*severity);
-    thisEntry["Created"] = redfish::time_utils::getDateTimeStdtime(timestamp);
-    thisEntry["Modified"] =
-        redfish::time_utils::getDateTimeStdtime(updateTimestamp);
 }
 
 inline void requestRoutesDBusSELLogEntryCollection(App& app)
@@ -3316,6 +3542,8 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
                     {
                         uint32_t* id = nullptr;
                         std::string* message = nullptr;
+                        const std::vector<std::string>* additionalData = nullptr;
+
                         for (auto& interfaceMap : objectPath.second)
                         {
                             if (interfaceMap.first ==
@@ -3333,14 +3561,17 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
                                         message = std::get_if<std::string>(
                                             &propertyMap.second);
                                     }
+                                    else if (propertyMap.first == "AdditionalData")
+                                    {
+                                        additionalData = std::get_if<std::vector<std::string>>(&propertyMap.second);
+                                    }
                                 }
                                 if (id == nullptr || message == nullptr)
                                 {
                                     messages::internalError(asyncResp->res);
                                     continue;
                                 }
-                                if (*message ==
-                                    "xyz.openbmc_project.Logging.SEL.Error.Created")
+                                if (isSelEntry(message, additionalData))
                                 {
                                     std::string entryId = std::to_string(*id);
                                     deleteDbusLogEntry(entryId, asyncResp);
@@ -3419,7 +3650,7 @@ inline void fillHostLoggerEntryJson(const std::string& logEntryID,
                                     nlohmann::json::object_t& logEntryJson)
 {
     // Fill in the log entry with the gathered data.
-    logEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    logEntryJson["@odata.type"] = logEntryVersion;
     logEntryJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/LogServices/HostLogger/Entries/" +
                                 logEntryID;
@@ -3769,7 +4000,7 @@ static int
     }
 
     // Fill in the log entry with the gathered data
-    bmcJournalLogEntryJson["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+    bmcJournalLogEntryJson["@odata.type"] = logEntryVersion;
     bmcJournalLogEntryJson["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
                                           "/LogServices/Journal/Entries/" +
                                           bmcJournalLogEntryID;
@@ -4498,9 +4729,16 @@ inline void
     asyncResp->res.jsonValue["DateTime"] = redfishDateTimeOffset.first;
     asyncResp->res.jsonValue["DateTimeLocalOffset"] =
         redfishDateTimeOffset.second;
+    asyncResp->res.jsonValue["Entries"] = {
+        {"@odata.id",
+         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/FDR/Entries"}};
     asyncResp->res.jsonValue["Actions"]["#LogService.ClearLog"] = {
         {"target", "/redfish/v1/Systems/" PLATFORMSYSTEMID
                    "/LogServices/FDR/Actions/LogService.ClearLog"}};
+    asyncResp->res.jsonValue["Actions"]["#LogService.CollectDiagnosticData"] = {
+        {"target",
+         "/redfish/v1/Systems/" PLATFORMSYSTEMID
+         "/LogServices/FDR/Actions/LogService.CollectDiagnosticData"}};
 
     getFDRServiceState(asyncResp);
 }
@@ -4623,7 +4861,75 @@ inline void requestRoutesSystemFDRService(App& app)
             std::bind_front(handleFDRServicePatch, std::ref(app)));
 }
 
-void inline requestRoutesSystemFDRServiceClear(App& app)
+inline void requestRoutesSystemFDREntryCollection(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/FDR/Entries/")
+        .privileges(redfish::privileges::getLogEntryCollection)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#LogEntryCollection.LogEntryCollection";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                    "/LogServices/FDR/Entries";
+                asyncResp->res.jsonValue["Name"] = "System FDR Entries";
+                asyncResp->res.jsonValue["Description"] =
+                    "Collection of System FDR Entries";
+
+                getDumpEntryCollection(asyncResp, "FDR");
+            });
+}
+
+inline void requestRoutesSystemFDREntry(App& app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/FDR/Entries/<str>/")
+        .privileges(redfish::privileges::getLogEntry)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                getDumpEntryById(asyncResp, param, "FDR");
+            });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/FDR/Entries/<str>/")
+        .privileges(redfish::privileges::deleteLogEntry)
+        .methods(boost::beast::http::verb::delete_)(
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               const std::string& param) {
+                deleteDumpEntry(asyncResp, param, "FDR");
+            });
+}
+
+inline void requestRoutesSystemFDRCreate(App& app)
+{
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                 "/LogServices/FDR/Actions/LogService.CollectDiagnosticData/")
+        .privileges(redfish::privileges::postLogService)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleLogServicesDumpCollectDiagnosticDataPost,
+                            std::ref(app), "FDR"));
+}
+
+void inline requestRoutesSystemFDRClear(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/FDR/Actions/LogService.ClearLog/")
@@ -4657,8 +4963,7 @@ void inline requestRoutesSystemFDRServiceClear(App& app)
             }
             messages::success(asyncResp->res);
         },
-            "xyz.openbmc_project.Dump.Manager",
-            "/xyz/openbmc_project/dump/system",
+            "xyz.openbmc_project.Dump.Manager", "/xyz/openbmc_project/dump/fdr",
             "xyz.openbmc_project.Dump.Create", "CreateDump",
             createDumpParamVec);
     });
@@ -5590,8 +5895,52 @@ inline static bool parsePostCode(const std::string& postCodeID,
     return ptrValue == &*end && ecValue == std::errc();
 }
 
+/**
+ * @brief Parse post code ID and get the current value and index value
+ *        eg: postCodeID=B1-2, currentValue=1, index=2
+ *
+ * @param[in]  postCodeID     Post Code ID
+ * @param[out] currentValue   Current value
+ * @param[out] index          Index value
+ *
+ * @return bool true if the parsing is successful, false the parsing fails
+ */
+inline static bool parsePostCode(const std::string& postCodeID,
+                                 uint64_t& currentValue, uint16_t& index)
+{
+    std::vector<std::string> split;
+    boost::algorithm::split(split, postCodeID, boost::is_any_of("-"));
+    if (split.size() != 2 || split[0].length() < 2 || split[0].front() != 'B')
+    {
+        return false;
+    }
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    const char* start = split[0].data() + 1;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    const char* end = split[0].data() + split[0].size();
+    auto [ptrIndex, ecIndex] = std::from_chars(start, end, index);
+
+    if (ptrIndex != end || ecIndex != std::errc())
+    {
+        return false;
+    }
+
+    start = split[1].data();
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    end = split[1].data() + split[1].size();
+    auto [ptrValue, ecValue] = std::from_chars(start, end, currentValue);
+    if (ptrValue != end || ecValue != std::errc())
+    {
+        return false;
+    }
+
+    return true;
+}
+
 static bool fillPostCodeEntry(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     const boost::container::flat_map<
         uint64_t, std::tuple<uint64_t, std::vector<uint8_t>>>& postcode,
     const uint16_t bootIndex, const uint64_t codeIndex = 0,
@@ -5693,7 +6042,7 @@ static bool fillPostCodeEntry(
 
         // Format entry
         nlohmann::json::object_t bmcLogEntry;
-        bmcLogEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+        bmcLogEntry["@odata.type"] = logEntryVersion;
         bmcLogEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                    "/LogServices/PostCodes/Entries/" +
                                    postcodeEntryID;
@@ -5717,62 +6066,62 @@ static bool fillPostCodeEntry(
         // that entry in this case
         if (codeIndex != 0)
         {
-            asyncResp->res.jsonValue.update(bmcLogEntry);
+            aResp->res.jsonValue.update(bmcLogEntry);
             return true;
         }
 
-        nlohmann::json& logEntryArray = asyncResp->res.jsonValue["Members"];
-        logEntryArray.emplace_back(std::move(bmcLogEntry));
+        nlohmann::json& logEntryArray = aResp->res.jsonValue["Members"];
+        logEntryArray.push_back(std::move(bmcLogEntry));
     }
 
     // Return value is always false when querying multiple entries
     return false;
 }
 
-static void
-    getPostCodeForEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::string& entryId)
+static void getPostCodeForEntry(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                const std::string& entryId)
 {
     uint16_t bootIndex = 0;
     uint64_t codeIndex = 0;
+
     if (!parsePostCode(entryId, codeIndex, bootIndex))
     {
         // Requested ID was not found
-        messages::resourceNotFound(asyncResp->res, "LogEntry", entryId);
+        messages::resourceNotFound(aResp->res, "LogEntry", entryId);
         return;
     }
 
     if (bootIndex == 0 || codeIndex == 0)
     {
         // 0 is an invalid index
-        messages::resourceNotFound(asyncResp->res, "LogEntry", entryId);
+        messages::resourceNotFound(aResp->res, "LogEntry", entryId);
         return;
     }
-
     crow::connections::systemBus->async_method_call(
-        [asyncResp, entryId, bootIndex,
-         codeIndex](const boost::system::error_code& ec,
+        [aResp, entryId, bootIndex,
+         codeIndex](const boost::system::error_code ec,
                     const boost::container::flat_map<
                         uint64_t, std::tuple<uint64_t, std::vector<uint8_t>>>&
                         postcode) {
         if (ec)
         {
             BMCWEB_LOG_DEBUG("DBUS POST CODE PostCode response error");
-            messages::internalError(asyncResp->res);
+            messages::internalError(aResp->res);
             return;
         }
 
+        // skip the empty postcode boots
         if (postcode.empty())
         {
-            messages::resourceNotFound(asyncResp->res, "LogEntry", entryId);
+            messages::resourceNotFound(aResp->res, "LogEntry", entryId);
             return;
         }
 
         asyncResp->res.jsonValue["Members@odata.count"] =
             asyncResp->res.jsonValue["Members"].size();
-        if (!fillPostCodeEntry(asyncResp, postcode, bootIndex, codeIndex))
+        if (!fillPostCodeEntry(aResp, postcode, bootIndex, codeIndex))
         {
-            messages::resourceNotFound(asyncResp->res, "LogEntry", entryId);
+            messages::resourceNotFound(aResp->res, "LogEntry", entryId);
             return;
         }
     },
@@ -6589,6 +6938,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
 // (GetDebugTokenRequest, GetDebugTokenStatus) output data
 static std::vector<std::string> debugTokenData;
 static constexpr const uint32_t debugTokenTaskTimeoutSec{60};
+
 inline void requestRoutesDebugToken(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID

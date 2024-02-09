@@ -19,6 +19,10 @@
 #include <array>
 #include <string_view>
 
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+#include "shmem_utils.hpp"
+#endif
+
 namespace redfish
 {
 
@@ -161,6 +165,10 @@ inline void requestRoutesMetricReportCollection(App& app)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         asyncResp->res.jsonValue["@odata.type"] =
             "#MetricReportCollection.MetricReportCollection";
         asyncResp->res.jsonValue["@odata.id"] =
@@ -709,13 +717,17 @@ inline void requestRoutesMetricReport(App& app)
             return;
         }
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
-        const uint64_t requestTimestamp = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        BMCWEB_LOG_DEBUG("Request submitted at{}", requestTimestamp);
-        getPlatforMetrics(asyncResp, id, requestTimestamp);
-        return;
+                const uint64_t requestTimestamp = static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch())
+                        .count());
+                BMCWEB_LOG_DEBUG("Request submitted at {}", requestTimestamp);
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+                redfish::shmem::getShmemPlatformMetrics(asyncResp, id, requestTimestamp);
+#else
+                getPlatforMetrics(asyncResp, id, requestTimestamp);
+#endif
+                return;
 #else
         const std::string reportPath = telemetry::getDbusReportPath(id);
         crow::connections::systemBus->async_method_call(

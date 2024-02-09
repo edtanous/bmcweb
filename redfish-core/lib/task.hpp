@@ -669,6 +669,10 @@ inline void requestRoutesTask(App& app)
                 {
                     ptr->timer.cancel();
                     ptr->finishTask();
+                    if (ptr->state == "Completed")
+                    {
+                        ptr->percentComplete = 100;
+                    }
                 }
                 ptr->sendTaskEvent(ptr->state, ptr->index);
             }

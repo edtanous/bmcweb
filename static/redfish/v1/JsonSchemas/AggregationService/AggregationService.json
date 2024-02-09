@@ -38,7 +38,7 @@
             "type": "object"
         },
         "AggregationService": {
-            "additionalProperties": false,
+            "additionalProperties": true,
             "description": "The AggregationService schema contains properties for managing aggregation operations, either on ad hoc combinations of resources or on defined sets of resources called aggregates.  Access points define the properties needed to access the entity being aggregated and connection methods describe the protocol or other semantics of the connection.",
             "longDescription": "This resource shall represent an aggregation service for a Redfish implementation.",
             "patternProperties": {
@@ -161,7 +161,7 @@
         },
         "Reset": {
             "additionalProperties": false,
-            "description": "This action is used to reset a set of resources.  For example this could be a list of computer systems.",
+            "description": "This action is used to reset a set of resources. For example this could be a list of computer systems.",
             "longDescription": "This action shall perform a reset of a set of resources.",
             "parameters": {
                 "BatchSize": {

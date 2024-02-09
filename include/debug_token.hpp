@@ -115,11 +115,29 @@ class StatusQueryHandler : public OperationHandler
                         std::move(ep), std::string(), std::vector<uint8_t>(),
                         EndpointState::None));
                 }
-                getStatus();
-                return;
-            }
-            errCallback(true, "Endpoint enumeration", "no endpoints found");
-        },
+                if (mctpEndpoints && mctpEndpoints->size() != 0)
+                {
+                    endpoints =
+                        std::make_shared<std::vector<DebugTokenEndpoint>>();
+                    endpoints->reserve(mctpEndpoints->size());
+                    for (auto& ep : *mctpEndpoints)
+                    {
+                        const auto& msgTypes = ep.getMctpMessageTypes();
+                        if (std::find(msgTypes.begin(), msgTypes.end(),
+                                      mctp_utils::mctpMessageTypeVdm) !=
+                            msgTypes.end())
+                        {
+                            endpoints->emplace_back(std::make_tuple(
+                                std::move(ep), std::string(),
+                                std::vector<uint8_t>(), EndpointState::None));
+                        }
+                    }
+                    endpoints->shrink_to_fit();
+                    getStatus();
+                    return;
+                }
+                errCallback(true, "Endpoint enumeration", "no endpoints found");
+            },
             [errorCallback](bool critical, const std::string& desc,
                             const std::string& error) {
             errorCallback(critical, desc, error);
@@ -523,49 +541,107 @@ class RequestHandler : public OperationHandler
                     const boost::system::error_code ec,
                     const boost::container::flat_map<
                         std::string, dbus::utility::DbusVariantType>& props) {
-                const auto& mctpEp = std::get<0>(*endpoint);
-                const auto& spdmObject = mctpEp.getSpdmObject();
-                auto& request = std::get<2>(*endpoint);
-                auto& state = std::get<3>(*endpoint);
-                const std::string desc = "Reading properties of " + spdmObject +
-                                         " object";
-                BMCWEB_LOG_DEBUG("{}", desc);
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
-                    errCallback(false, desc, ec.message());
-                    state = EndpointState::Error;
-                    finalize();
-                    return;
-                }
-                auto itSign = props.find("SignedMeasurements");
-                auto itCert = props.find("Certificate");
-                if (itSign == props.end() || itCert == props.end())
-                {
-                    errCallback(false, desc, "cannot find property");
-                    state = EndpointState::Error;
-                    finalize();
-                    return;
-                }
-                auto sign = std::get_if<std::vector<uint8_t>>(&itSign->second);
-                auto cert =
-                    std::get_if<std::vector<std::tuple<uint8_t, std::string>>>(
-                        &itCert->second);
-                if (!sign || !cert)
-                {
-                    errCallback(false, desc, "cannot decode property");
-                    state = EndpointState::Error;
-                    finalize();
-                    return;
-                }
-                auto certSlot = std::find_if(
-                    cert->begin(), cert->end(),
-                    [](const auto& e) { return std::get<0>(e) == 0; });
-                if (certSlot == cert->end())
-                {
-                    errCallback(false, desc,
-                                "cannot find certificate for slot 0");
-                    state = EndpointState::Error;
+                    const auto& mctpEp = std::get<0>(*endpoint);
+                    const auto& spdmObject = mctpEp.getSpdmObject();
+                    auto& request = std::get<2>(*endpoint);
+                    auto& state = std::get<3>(*endpoint);
+                    const std::string desc =
+                        "Reading properties of " + spdmObject + " object";
+                    BMCWEB_LOG_DEBUG("{}", desc);
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
+                        errCallback(false, desc, ec.message());
+                        state = EndpointState::Error;
+                        finalize();
+                        return;
+                    }
+                    auto itSign = props.find("SignedMeasurements");
+                    if (itSign == props.end())
+                    {
+                        errCallback(false, desc,
+                                    "cannot find SignedMeasurements property");
+                        state = EndpointState::Error;
+                        finalize();
+                        return;
+                    }
+                    auto sign =
+                        std::get_if<std::vector<uint8_t>>(&itSign->second);
+                    if (!sign)
+                    {
+                        errCallback(
+                            false, desc,
+                            "cannot decode SignedMeasurements property");
+                        state = EndpointState::Error;
+                        finalize();
+                        return;
+                    }
+                    auto itCaps = props.find("Capabilities");
+                    if (itCaps == props.end())
+                    {
+                        errCallback(false, desc,
+                                    "cannot find Capabilities property");
+                        state = EndpointState::Error;
+                        finalize();
+                        return;
+                    }
+                    auto caps = std::get_if<uint32_t>(&itCaps->second);
+                    if (!caps)
+                    {
+                        errCallback(false, desc,
+                                    "cannot decode Capabilities property");
+                        state = EndpointState::Error;
+                        finalize();
+                        return;
+                    }
+                    std::string pem;
+                    if (*caps & spdmCertCapability)
+                    {
+                        auto itCert = props.find("Certificate");
+                        if (itCert == props.end())
+                        {
+                            errCallback(false, desc,
+                                        "cannot find Certificate property");
+                            state = EndpointState::Error;
+                            finalize();
+                            return;
+                        }
+                        auto cert = std::get_if<
+                            std::vector<std::tuple<uint8_t, std::string>>>(
+                            &itCert->second);
+                        if (!cert)
+                        {
+                            errCallback(false, desc,
+                                        "cannot decode Certificate property");
+                            state = EndpointState::Error;
+                            finalize();
+                            return;
+                        }
+                        auto certSlot = std::find_if(
+                            cert->begin(), cert->end(),
+                            [](const auto& e) { return std::get<0>(e) == 0; });
+                        if (certSlot == cert->end())
+                        {
+                            errCallback(false, desc,
+                                        "cannot find certificate for slot 0");
+                            state = EndpointState::Error;
+                            finalize();
+                            return;
+                        }
+                        pem = std::get<1>(*certSlot);
+                    }
+                    size_t size =
+                        sizeof(ServerRequestHeader) + sign->size() + pem.size();
+                    auto header = std::make_unique<ServerRequestHeader>();
+                    header->version = 0x0001;
+                    header->size = static_cast<uint16_t>(size);
+                    request.reserve(size);
+                    request.resize(sizeof(ServerRequestHeader));
+                    std::memcpy(request.data(), header.get(),
+                                sizeof(ServerRequestHeader));
+                    request.insert(request.end(), sign->begin(), sign->end());
+                    request.insert(request.end(), pem.begin(), pem.end());
+                    state = EndpointState::RequestAcquired;
                     finalize();
                     return;
                 }

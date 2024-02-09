@@ -317,7 +317,7 @@ inline void
 {
     BMCWEB_LOG_DEBUG("Get Switch Data");
     using PropertyType =
-        std::variant<std::string, bool, size_t, std::vector<std::string>>;
+        std::variant<std::string, bool, double, size_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     // Get interface properties
     crow::connections::systemBus->async_method_call(

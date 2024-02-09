@@ -495,6 +495,10 @@ inline void
                                 BMCWEB_LOG_DEBUG("UUID = {}", valueStr);
                                 asyncResp->res.jsonValue["UUID"] = valueStr;
                             }
+#ifdef BMCWEB_ENABLE_BIOS
+                            // UUID from smbios if exist
+                            sw_util::getSwBIOSUUID(aResp);
+#endif                            
                         });
                     }
                     else if (interfaceName ==
@@ -666,6 +670,12 @@ inline void getHostState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
         {
             asyncResp->res.jsonValue["PowerState"] = "PoweringOff";
             asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
+        }
+        else if (hostState ==
+                 "xyz.openbmc_project.State.Host.HostState.Standby")
+        {
+            aResp->res.jsonValue["PowerState"] = "Paused";
+            aResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
         }
         else
         {
@@ -4459,6 +4469,27 @@ inline void handleSystemCollectionResetActionGet(
     parameters.emplace_back(std::move(parameter));
 
     asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::variant<bool>& resp) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("DBUS response error, {}", ec);
+            return;
+        }
+
+        bool enabledNmi = std::get<bool>(resp);
+        if (enabledNmi == true)
+        {
+            asyncResp->res.jsonValue["Parameters"][0]["AllowableValues"]
+                .emplace_back("Nmi");
+        }
+    },
+        "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/Control/ChassisCapabilities",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Control.ChassisCapabilities", "ChassisNMIEnabled");
 }
 /**
  * SystemResetActionInfo derived class for delivering Computer Systems

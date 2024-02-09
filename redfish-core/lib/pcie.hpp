@@ -847,7 +847,7 @@ static inline void getPCIeDeviceFunctionsList(
                     }
                 }
             }
-            asyncResp->res.jsonValue["PCIeFunctions@odata.count"] =
+            asyncResp->res.jsonValue["Members@odata.count"] =
                 pcieFunctionList.size();
         };
     std::string escapedPath = std::string(path) + "/" + device;

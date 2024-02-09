@@ -438,6 +438,96 @@ class Event
     }
 };
 
+class EventUtil
+{
+  public:
+    EventUtil(const EventUtil&) = delete;
+    EventUtil& operator=(const EventUtil&) = delete;
+    EventUtil(EventUtil&&) = delete;
+    EventUtil& operator=(EventUtil&&) = delete;
+    ~EventUtil() = default;
+    static EventUtil& getInstance()
+    {
+        static EventUtil handler;
+        return handler;
+    }
+    // This function is used to form event message
+    Event createEventPropertyModified(const std::string& arg1,
+                                      const std::string& arg2,
+                                      const std::string& resourceType)
+    {
+        Event event(propertyModified);
+        std::vector<std::string> messageArgs;
+        messageArgs.push_back(arg1);
+        messageArgs.push_back(arg2);
+        event.setRegistryMsg(messageArgs);
+
+        formBaseEvent(event, resourceType);
+
+        return event;
+    }
+
+    // This function is used to form event message
+    Event createEventResourceCreated(const std::string& resourceType)
+    {
+        Event event(resorceCreated);
+        formBaseEvent(event, resourceType);
+        return event;
+    }
+
+    // This function is used to form event message
+    Event createEventResourceRemoved(const std::string& resourceType)
+    {
+        Event event(resourceDeleted);
+        formBaseEvent(event, resourceType);
+        return event;
+    }
+
+    // This function is used to form event message
+    Event createEventRebootReason(const std::string& arg,
+                                  const std::string& resourceType)
+    {
+        Event event(rebootReason);
+
+        std::vector<std::string> messageArgs;
+        messageArgs.push_back(arg);
+        event.setRegistryMsg(messageArgs);
+        formBaseEvent(event, resourceType);
+
+        return event;
+    }
+
+  private:
+    void formBaseEvent(Event& event, const std::string& resourceType)
+    {
+        // Set message severity
+        event.messageSeverity = "Informational";
+
+        // Set message timestamp
+        int64_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::system_clock::now().time_since_epoch())
+                         .count();
+        std::string timestamp =
+            std::move(redfish::time_utils::getDateTimeStdtime(
+                redfish::time_utils::getTimestamp(static_cast<uint64_t>(ms))));
+        event.eventTimestamp = timestamp;
+
+        // Set message resource
+        event.resourceType = resourceType;
+    }
+    // Private constructor for singleton
+    EventUtil() = default;
+    // CI throwing build errors for using capital letters
+    // PROPERTY_MODIFIED,RESORCE_CREATED RESOURCE_DELETED and REBOOT_REASON
+    static constexpr char const* propertyModified =
+        "Base.1.15.PropertyValueModified";
+    static constexpr char const* resorceCreated =
+        "ResourceEvent.1.2.ResourceCreated";
+    static constexpr char const* resourceDeleted =
+        "ResourceEvent.1.2.ResourceRemoved";
+    static constexpr char const* rebootReason = "OpenBMC.0.4.BMCRebootReason";
+};
+
 inline bool isFilterQuerySpecialChar(char c)
 {
     switch (c)
@@ -533,8 +623,11 @@ class Subscription : public persistent_data::UserSubscription
     Subscription(Subscription&&) = delete;
     Subscription& operator=(Subscription&&) = delete;
 
-    Subscription(boost::urls::url_view url, boost::asio::io_context& ioc) :
-        policy(std::make_shared<crow::ConnectionPolicy>())
+    Subscription(const std::string& inHost, uint16_t inPort,
+                 const std::string& inPath, const std::string& inUriProto) :
+        host(inHost),
+        port(inPort), policy(std::make_shared<crow::ConnectionPolicy>()),
+        client(policy), path(inPath), uriProto(inUriProto)
     {
         destinationUrl = url;
         client.emplace(ioc, policy);
@@ -542,8 +635,11 @@ class Subscription : public persistent_data::UserSubscription
         policy->invalidResp = retryRespHandler;
     }
 
-    explicit Subscription(crow::sse_socket::Connection& connIn) :
-        sseConn(&connIn)
+    explicit Subscription(
+        const std::shared_ptr<boost::asio::ip::tcp::socket>& adaptor) :
+        policy(std::make_shared<crow::ConnectionPolicy>()),
+        client(policy),
+        sseConn(std::make_shared<crow::ServerSentEvents>(adaptor))
     {}
 
     ~Subscription() = default;
@@ -559,12 +655,9 @@ class Subscription : public persistent_data::UserSubscription
         }
 
         // A connection pool will be created if one does not already exist
-        if (client)
-        {
-            client->sendData(std::move(msg), destinationUrl, httpHeaders,
-                             boost::beast::http::verb::post);
-            return true;
-        }
+        client.sendData(msg, host, port, path, useSSL, httpHeaders,
+                        boost::beast::http::verb::post);
+        eventSeqNum++;
 
         if (sseConn != nullptr)
         {
@@ -657,7 +750,15 @@ class Subscription : public persistent_data::UserSubscription
 
             if (!this->resourceTypes.empty() && !event.resourceType.empty())
             {
-                // TODO ResourceType filtering
+                // ResourceType filtering
+                auto obj =
+                    std::find(this->resourceTypes.begin(),
+                              this->resourceTypes.end(), event.resourceType);
+
+                if (obj == this->resourceTypes.end())
+                {
+                    return false;
+                }
             }
 
             // TODO Other property filtering which current UserSubscription do
@@ -1041,8 +1142,12 @@ class EventServiceManager
 
         persistent_data::getConfig().writeData();
     }
-
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+    void setEventServiceConfig(const persistent_data::EventServiceConfig& cfg,
+                               const std::string_view url)
+#else
     void setEventServiceConfig(const persistent_data::EventServiceConfig& cfg)
+#endif
     {
         bool updateConfig = false;
         bool updateRetryCfg = false;
@@ -1050,6 +1155,15 @@ class EventServiceManager
         if (serviceEnabled != cfg.enabled)
         {
             serviceEnabled = cfg.enabled;
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+            // Send an event for session creation
+            Event event =
+                redfish::EventUtil::getInstance().createEventPropertyModified(
+                    "ServiceEnabled", std::to_string(serviceEnabled),
+                    "EventService");
+            redfish::EventServiceManager::getInstance().sendEventWithOOC(
+                std::string(url), event);
+#endif
             if (serviceEnabled && noOfMetricReportSubscribers != 0U)
             {
                 registerMetricReportSignal();
@@ -1058,6 +1172,7 @@ class EventServiceManager
             {
                 unregisterMetricReportSignal();
             }
+
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
             if (serviceEnabled)
             {
@@ -1076,6 +1191,15 @@ class EventServiceManager
             retryAttempts = cfg.retryAttempts;
             updateConfig = true;
             updateRetryCfg = true;
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+            // Send an event for property change
+            Event event =
+                redfish::EventUtil::getInstance().createEventPropertyModified(
+                    "DeliveryRetryAttempts", std::to_string(retryAttempts),
+                    "EventService");
+            redfish::EventServiceManager::getInstance().sendEventWithOOC(
+                std::string(url), event);
+#endif
         }
 
         if (retryTimeoutInterval != cfg.retryTimeoutInterval)
@@ -1083,6 +1207,15 @@ class EventServiceManager
             retryTimeoutInterval = cfg.retryTimeoutInterval;
             updateConfig = true;
             updateRetryCfg = true;
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+            // Send an event for property change
+            Event event =
+                redfish::EventUtil::getInstance().createEventPropertyModified(
+                    "DeliveryRetryIntervalSeconds",
+                    std::to_string(retryTimeoutInterval), "EventService");
+            redfish::EventServiceManager::getInstance().sendEventWithOOC(
+                std::string(url), event);
+#endif
         }
 
         if (updateConfig)
@@ -1735,6 +1868,47 @@ class EventServiceManager
     const std::string softwarePrefixDbus = "/xyz/openbmc_project/software/";
     const std::string firmwarePrefix =
         "/redfish/v1/UpdateService/FirmwareInventory/";
+    const std::string userPrefixDbus = "/xyz/openbmc_project/user/";
+    const std::string userPrefix = "/redfish/v1/AccountService/Accounts/";
+    const std::string accountPolicyPrefixDbus = "/xyz/openbmc_project/user";
+    const std::string accountPolicyPrefix = "/redfish/v1/AccountService";
+    const std::string virtualMediaLegacyUSB1PrefixDbus =
+        "/xyz/openbmc_project/VirtualMedia/Legacy/USB1";
+    const std::string virtualMediaUSB1Prefix =
+        "/redfish/v1/Managers/" PLATFORMBMCID
+        "/VirtualMedia/USB1/Actions/VirtualMedia.";
+    const std::string virtualMediaLegacyUSB2PrefixDbus =
+        "/xyz/openbmc_project/VirtualMedia/Legacy/USB2";
+    const std::string virtualMediaUSB2Prefix =
+        "/redfish/v1/Managers/" PLATFORMBMCID
+        "/VirtualMedia/USB2/Actions/VirtualMedia.";
+    const std::string sessionServiceServicePrefix = "/redfish/v1/";
+    const std::string networkPrefixDbus = "/xyz/openbmc_project/network/";
+    const std::string networkPrefix =
+        "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/";
+    const std::string ldapCertificateDbusPrefix =
+        "/xyz/openbmc_project/certs/client/ldap/";
+    const std::string ldapCertificatePrefix =
+        "/redfish/v1/AccountService/LDAP/Certificates/";
+    const std::string authorityCertificateDbusPrefix =
+        "/xyz/openbmc_project/certs/authority/ldap/";
+    const std::string authorityCertificatePrefix =
+        "/redfish/v1/Managers/" PLATFORMBMCID "/Truststore/Certificates/";
+    const std::string httpsCertificateDbusPrefix =
+        "/xyz/openbmc_project/certs/server/https/";
+    const std::string httpsCertificatePrefix =
+        "/redfish/v1/Managers/" PLATFORMBMCID
+        "/NetworkProtocol/HTTPS/Certificates/";
+    const std::string updateServiceDbusPrefix =
+        "/xyz/openbmc_project/software/";
+    const std::string updateServicePrefix = "/redfish/v1/UpdateService/";
+    const std::string managerResetDbusPrefix =
+        "/xyz/openbmc_project/state/bmc0/";
+    const std::string managerResetPrefix =
+        "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/";
+    const std::string ledGroupsDbusPrefix =
+        "/xyz/openbmc_project/led/groups/enclosure_identify";
+    const std::string ledPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
 
     /**
      *  @brief Table used to find OriginOfCondition
@@ -1745,7 +1919,109 @@ class EventServiceManager
         {processorPrefixDbus, processorPrefix},
         {memoryPrefixDbus, memoryPrefix},
         {softwarePrefixDbus, firmwarePrefix},
-        {sensorSubTree, chassisPrefix}};
+        {sensorSubTree, chassisPrefix},
+        {userPrefixDbus, userPrefix},
+        {virtualMediaLegacyUSB1PrefixDbus, virtualMediaUSB1Prefix},
+        {virtualMediaLegacyUSB2PrefixDbus, virtualMediaUSB2Prefix},
+        {accountPolicyPrefixDbus, accountPolicyPrefix},
+        {networkPrefixDbus, networkPrefix},
+        {ldapCertificateDbusPrefix, ldapCertificatePrefix},
+        {authorityCertificateDbusPrefix, authorityCertificatePrefix},
+        {httpsCertificateDbusPrefix, httpsCertificatePrefix},
+        {updateServiceDbusPrefix, updateServicePrefix},
+        {managerResetDbusPrefix, managerResetPrefix},
+        {ledGroupsDbusPrefix, ledPrefix}};
+
+    const std::string minpasswordLengthDbus = "MinPasswordLength";
+    const std::string minpasswordLength = "MinPasswordLength";
+    const std::string accountUnlockTimeoutDbus = "AccountUnlockTimeout";
+    const std::string accountLockoutDuration = "AccountLockoutDuration";
+    const std::string maxLoginAttemptBeforeLockoutDbus =
+        "MaxLoginAttemptBeforeLockout";
+    const std::string maxLoginAttemptBeforeLockout =
+        "MaxLoginAttemptBeforeLockout";
+    const std::string userEnabledDbus = "UserEnabled";
+    const std::string userEnabled = "UserEnabled";
+    const std::string userLockedForFailedAttemptDbus =
+        "UserLockedForFailedAttempt";
+    const std::string locked = "Locked";
+    const std::string userPrivilegeDbus = "UserPrivilege";
+    const std::string roleid = "RoleId";
+    const std::string ldapbindDNPasswordDbus = "LDAPBindDNPassword";
+    const std::string password = "Password";
+    const std::string ldapBindDNDbus = "LDAPBindDN";
+    const std::string usernameDbus = "UserName";
+    const std::string username = "UserName";
+    const std::string ldapServerURIDbus = "LDAPServerURI";
+    const std::string serviceAddresses = "ServiceAddresses";
+    const std::string enabledDbus = "Enabled";
+    const std::string srvcEnabled = "ServiceEnabled";
+    const std::string ldapBaseDNDbus = "LDAPBaseDN";
+    const std::string baseDistinguishedNames = "BaseDistinguishedNames";
+    const std::string groupNameAttributeDbus = "GroupNameAttribute";
+    const std::string groupsAttribute = "GroupsAttribute";
+    const std::string userNameAttributeDbus = "UserNameAttribute";
+    const std::string userNameAttribute = "UsernameAttribute";
+    const std::string privilageDbus = "Privilege";
+    const std::string localRole = "LocalRole";
+    const std::string groupNameDbus = "GroupName";
+    const std::string remoteGroup = "RemoteGroup";
+    const std::string modulePowercapDbus = "ModulePowerCap";
+    const std::string setpoint = "SetPoint";
+    const std::string nicEnabledDbus = "NICEnabled";
+    const std::string vlanEnable = "VLANEnable";
+    const std::string dhcbEnableDbus = "DHCPEnabled";
+    const std::string dhcbEnabled = "DHCPEnabled";
+
+    /**
+     * @brief Map Dbus Property to Redfish Property
+     */
+    std::unordered_map<std::string, std::string> dBusToRedfishProperty = {
+        {minpasswordLengthDbus, minpasswordLength},
+        {accountUnlockTimeoutDbus, accountLockoutDuration},
+        {maxLoginAttemptBeforeLockoutDbus, maxLoginAttemptBeforeLockout},
+        {userEnabledDbus, userEnabled},
+        {userLockedForFailedAttemptDbus, locked},
+        {userPrivilegeDbus, roleid},
+        {ldapbindDNPasswordDbus, password},
+        {ldapBindDNDbus, username},
+        {ldapServerURIDbus, serviceAddresses},
+        {enabledDbus, srvcEnabled},
+        {ldapBaseDNDbus, baseDistinguishedNames},
+        {usernameDbus, username},
+        {groupNameAttributeDbus, groupsAttribute},
+        {userNameAttributeDbus, userNameAttribute},
+        {privilageDbus, localRole},
+        {groupNameDbus, remoteGroup},
+        {modulePowercapDbus, setpoint},
+        {nicEnabledDbus, vlanEnable},
+        {dhcbEnableDbus, dhcbEnabled}};
+
+    const std::string certificateDbusPrefix = "/xyz/openbmc_project/certs";
+    const std::string systemsDbusPrefix =
+        "/xyz/openbmc_project/inventory/system";
+    const std::string accountServiceDbusPrefix = "/xyz/openbmc_project/user";
+    const std::string managerAccountDbusPrefix = "/xyz/openbmc_project/user/";
+    const std::string virtualMediaDbusPrefix =
+        "/xyz/openbmc_project/VirtualMedia";
+
+    struct CompareKeys
+    {
+        bool operator()(const std::string& a, const std::string& b) const
+        {
+            // Using std::greater to sort in descending order
+            return std::greater<std::string>()(a, b);
+        }
+    };
+    /**
+     * @brief Map dbuspath  to resourceType
+     */
+    std::map<std::string, std::string, CompareKeys> dBusToResourceType = {
+        {certificateDbusPrefix, "CertificateService"},
+        {systemsDbusPrefix, "Systems"},
+        {accountServiceDbusPrefix, "AccountService"},
+        {managerAccountDbusPrefix, "ManagerAccount"},
+        {virtualMediaDbusPrefix, "VirtualMedia"}};
 
     void unregisterDbusLoggingSignal()
     {
@@ -1801,6 +2077,7 @@ class EventServiceManager
             std::string originOfCondition = "";
             std::string message;
             std::string deviceName;
+            std::string resourceType;
             std::vector<std::string> messageArgs = {};
             const std::vector<std::string>* additionalDataPtr;
 
@@ -1833,6 +2110,22 @@ class EventServiceManager
                                 for (auto& msgArg : messageArgs)
                                 {
                                     boost::trim(msgArg);
+                                }
+
+                                if (!messageArgs[0].empty())
+                                {
+                                    // Map dbus property to redfish property
+                                    if (dBusToRedfishProperty.find(
+                                            messageArgs[0]) !=
+                                        dBusToRedfishProperty.end())
+                                    {
+                                        messageArgs[0] = dBusToRedfishProperty
+                                            [messageArgs[0]];
+                                    }
+                                    else
+                                    {
+                                        BMCWEB_LOG_ERROR("property mapping not found for {}", messageArgs[0]);
+                                    }
                                 }
                             }
                             else if (additional.count("REDFISH_MESSAGE_ARGS") >
@@ -1929,6 +2222,18 @@ class EventServiceManager
                 AdditionalData additional(*additionalDataPtr);
                 if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
                 {
+                    std::string ooc = additional["REDFISH_ORIGIN_OF_CONDITION"];
+                    for (auto& it : dBusToResourceType)
+                    {
+                        if (ooc.find(it.first) != std::string::npos)
+                        {
+                            resourceType = it.second;
+                            break;
+                        }
+                    }
+                    // resourceType empty error case not handled because it will
+                    // impact existing resourceErrordetected error messages
+                    event.resourceType = resourceType;
                     eventServiceOOC(additional["REDFISH_ORIGIN_OF_CONDITION"],
                                     deviceName, event);
                 }

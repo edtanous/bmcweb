@@ -572,27 +572,19 @@ std::string translateThrottleDuration(const std::string& metricName,
     return metricValue;
 }
 
-std::string translateAccumlatedDuration(const std::string& metricName,
-                                        const uint32_t& reading)
+std::string translateAccumlatedDuration(const uint64_t& reading)
 {
     std::string metricValue;
-    if ((metricName == "AccumulatedSMUtilizationDuration") ||
-        (metricName == "AccumulatedGPUContextUtilizationDuration"))
+    std::optional<std::string> duration =
+        redfish::time_utils::toDurationStringFromUint(reading);
+    if (duration)
     {
-        auto nanoseconds = static_cast<uint64_t>(reading);
-        std::optional<std::string> duration =
-            redfish::time_utils::toDurationStringFromNano(nanoseconds);
-        if (duration)
-        {
-            metricValue = *duration;
-        }
+        metricValue = *duration;
     }
-    else
-    {
-        metricValue = std::to_string(reading);
-    }
+
     return metricValue;
 }
+
 void getMetricValue(const std::string& deviceType,
                     const std::string& deviceName,
                     const std::string& subDeviceName,
@@ -700,28 +692,24 @@ void getMetricValue(const std::string& deviceType,
         }
         else if (const uint32_t* reading = std::get_if<uint32_t>(&value))
         {
-            if (ifaceName == "xyz.openbmc_project.State.ProcessorPerformance")
-            {
-                std::string val = translateAccumlatedDuration(metricName,
-                                                              *reading);
-                thisMetric["MetricValue"] = val;
-            }
-            else
-            {
                 thisMetric["MetricValue"] = std::to_string(*reading);
-            }
+
         }
         else if (const uint64_t* reading = std::get_if<uint64_t>(&value))
         {
-            if (ifaceName == "xyz.openbmc_project.State.ProcessorPerformance")
+            if ((ifaceName ==
+                 "xyz.openbmc_project.State.ProcessorPerformance") &&
+                ((metricName == "AccumulatedSMUtilizationDuration") ||
+                 (metricName == "AccumulatedGPUContextUtilizationDuration")))
             {
-                std::string val = translateThrottleDuration(metricName,
-                                                            *reading);
+                std::string val = translateAccumlatedDuration(*reading);
                 thisMetric["MetricValue"] = val;
             }
             else
             {
-                thisMetric["MetricValue"] = std::to_string(*reading);
+                std::string val =
+                    translateThrottleDuration(metricName, *reading);
+                thisMetric["MetricValue"] = val;
             }
         }
         else if (const double* reading = std::get_if<double>(&value))

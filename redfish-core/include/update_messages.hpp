@@ -198,6 +198,19 @@ inline nlohmann::json resourceErrorsDetected(const std::string& arg1,
         {"Resolution", "None."}};
 }
 
+inline nlohmann::json componentUpdateSkipped(const std::string& arg1,
+                                                    const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "OpenBMC.0.4.ComponentUpdateSkipped"},
+        {"Message", "The update operation for the component '" + arg1 +
+                        "' is skipped because '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+
 inline nlohmann::json getUpdateMessage(const std::string& msgId,
                                        std::vector<std::string>& args)
 {
@@ -275,6 +288,10 @@ inline nlohmann::json getUpdateMessage(const std::string& msgId,
     if (msgId == "ResourceEvent.1.0.ResourceErrorsDetected")
     {
         return resourceErrorsDetected(arg0, arg1);
+    }
+    if (msgId == "OpenBMC.0.4.ComponentUpdateSkipped")
+    {
+        return componentUpdateSkipped(arg0, arg1);
     }
 
     return {};

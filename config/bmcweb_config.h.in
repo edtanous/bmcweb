@@ -38,7 +38,7 @@ constexpr const char* otpProvisioningStatusFilePath = "@OTP_PROVISIONING_STATUS_
 
 constexpr const char* computerSystemInventoryPath = "@COMPUTER_SYSTEM_INVENTORY_PATH@";
 
-constexpr const uint64_t staleSensorUpperLimitms = @STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND@;
+constexpr const int64_t staleSensorUpperLimitms = @STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND@;
 
 constexpr const uint64_t pmSensingInterval = @PLATFORM_METRICS_SENSING_INTERVAL@;
 
@@ -70,4 +70,6 @@ constexpr const bool bmcwebEnableProcMemStatus = @BMCWEB_ENABLE_PROC_MEM_STATUS@
 constexpr const bool bmcwebEnableMultiHost = @BMCWEB_ENABLE_MULTI_HOST@ == 1;
 
 constexpr const bool bmcwebEnableHTTP2 = @BMCWEB_ENABLE_HTTP2@ == 1;
+constexpr const char* tlsCaCertificatePath = "@TLS_CACERT_PATH@";
+constexpr const char *redfishAggregationPrefix = @REDFISH_AGGREGATION_PREFIX@;
 // clang-format on

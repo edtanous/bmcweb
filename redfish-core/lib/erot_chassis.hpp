@@ -20,6 +20,7 @@
 #include "dot.hpp"
 #include "in_band.hpp"
 #include "lsp.hpp"
+#include "manual_boot.hpp"
 
 #include <openssl/bio.h>
 #include <openssl/ec.h>
@@ -276,17 +277,27 @@ inline void getEROTChassis(const crow::Request& req,
                 continue;
             }
 #ifdef BMCWEB_ENABLE_DOT
-            auto& oemActionsJson = asyncResp->res.jsonValue["Actions"]["Oem"];
-            std::string oemActionsRoute = "/redfish/v1/Chassis/" + chassisId +
-                                          "/Actions/Oem/";
-            oemActionsJson["#CAKInstall"]["target"] = oemActionsRoute +
-                                                      "CAKInstall";
-            oemActionsJson["#CAKLock"]["target"] = oemActionsRoute + "CAKLock";
-            oemActionsJson["#CAKTest"]["target"] = oemActionsRoute + "CAKTest";
-            oemActionsJson["#DOTDisable"]["target"] = oemActionsRoute +
-                                                      "DOTDisable";
-            oemActionsJson["#DOTTokenInstall"]["target"] = oemActionsRoute +
-                                                           "DOTTokenInstall";
+            auto& oemActionsJsonDot =
+                asyncResp->res.jsonValue["Actions"]["Oem"];
+            std::string oemActionsRouteDot = "/redfish/v1/Chassis/" +
+                                             chassisId + "/Actions/Oem/";
+            oemActionsJsonDot["#CAKInstall"]["target"] = oemActionsRouteDot +
+                                                         "CAKInstall";
+            oemActionsJsonDot["#CAKLock"]["target"] = oemActionsRouteDot +
+                                                      "CAKLock";
+            oemActionsJsonDot["#CAKTest"]["target"] = oemActionsRouteDot +
+                                                      "CAKTest";
+            oemActionsJsonDot["#DOTDisable"]["target"] = oemActionsRouteDot +
+                                                         "DOTDisable";
+            oemActionsJsonDot["#DOTTokenInstall"]["target"] =
+                oemActionsRouteDot + "DOTTokenInstall";
+#endif
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+            auto& oemActionsJsonManualBoot =
+                asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"];
+            oemActionsJsonManualBoot["#BootProtectedDevice"]["target"] =
+                "/redfish/v1/Chassis/" + chassisId +
+                "/Actions/Oem/Nvidia/BootProtectedDevice";
 #endif
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
@@ -332,6 +343,11 @@ inline void getEROTChassis(const crow::Request& req,
 
             asyncResp->res.jsonValue["Certificates"]["@odata.id"] = certsObject;
 
+            asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
+                {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}};
+
+            asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
+                {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
             redfish::chassis_utils::getChassisUUID(
                 req, asyncResp, connectionNames[0].first, path, true);
 
@@ -358,6 +374,9 @@ inline void getEROTChassis(const crow::Request& req,
 
             redfish::conditions_utils::populateServiceConditions(asyncResp,
                                                                  chassisId);
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+            manual_boot::bootModeQuery(req, asyncResp, chassisId);
+#endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
             return;
         }
 
@@ -384,6 +403,10 @@ inline void requestRoutesEROTChassisCertificate(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID,
                const std::string& certificateID) -> void {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         redfish::chassis_utils::isEROTChassis(
             chassisID, [req, asyncResp, chassisID, certificateID](bool isEROT) {
             if (!isEROT)
@@ -412,10 +435,14 @@ inline void requestRoutesEROTChassisCertificate(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Certificates/")
         .privileges(redfish::privileges::getCertificateCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) {
-        std::string url = "/redfish/v1/Chassis/" + chassisID + "/Certificates/";
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        std::string url = "/redfish/v1/Chassis/" + chassisID + "/Certificates";
         asyncResp->res.jsonValue = {
             {"@odata.id", url},
             {"@odata.type", "#CertificateCollection.CertificateCollection"},
@@ -423,7 +450,7 @@ inline void requestRoutesEROTChassisCertificate(App& app)
 
         nlohmann::json& members = asyncResp->res.jsonValue["Members"];
         members = nlohmann::json::array();
-        members.push_back({{"@odata.id", url + "CertChain"}});
+        members.push_back({{"@odata.id", url + "/CertChain"}});
 
         asyncResp->res.jsonValue["Members@odata.count"] = members.size();
     });
@@ -467,17 +494,34 @@ inline void
 
     std::optional<bool> backgroundCopyEnabled;
     std::optional<bool> inBandEnabled;
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+    std::optional<bool> manualBootModeEnabled;
+#endif
 
-    if (!json_util::readJson(
-            *oemNvidiaObject, asyncResp->res, "AutomaticBackgroundCopyEnabled",
-            backgroundCopyEnabled, "InbandUpdatePolicyEnabled", inBandEnabled))
+    if (!json_util::readJson(*oemNvidiaObject, asyncResp->res,
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+                             "ManualBootModeEnabled", manualBootModeEnabled,
+#endif
+                             "AutomaticBackgroundCopyEnabled",
+                             backgroundCopyEnabled, "InbandUpdatePolicyEnabled",
+                             inBandEnabled))
     {
         return;
     }
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+    if (manualBootModeEnabled.has_value())
+    {
+        manual_boot::bootModeSet(req, asyncResp, chassisId,
+                                 *manualBootModeEnabled);
+    }
+#endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
 
+    if (!backgroundCopyEnabled.has_value() && !inBandEnabled.has_value())
+    {
+        return;
+    }
     const std::array<const char*, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
-
     crow::connections::systemBus->async_method_call(
         [req, asyncResp, chassisId(std::string(chassisId)),
          backgroundCopyEnabled,
@@ -707,8 +751,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -774,8 +818,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -807,8 +851,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -822,8 +866,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -855,25 +899,43 @@ inline void requestRoutesEROTChassisDOT(App& app)
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisID) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisID) -> void {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
         }
-        if (req.body().size() != DOT_TOKEN_SIZE)
+        if (req.body.size() != DOT_TOKEN_SIZE)
         {
-            BMCWEB_LOG_ERROR("Invalid DOT token size: {}", req.body().size());
+            BMCWEB_LOG_ERROR("Invalid DOT token size: {}", req.body.size());
             messages::invalidUpload(asyncResp->res, "DOT token install",
                                     "filesize has to be equal to " +
                                         std::to_string(DOT_TOKEN_SIZE));
             return;
         }
-        std::vector<uint8_t> data(req.body().begin(), req.body().end());
+        std::vector<uint8_t> data(req.body.begin(), req.body.end());
         executeDotCommand(asyncResp, chassisID,
                           dot::DotMctpVdmUtilCommand::DOTTokenInstall, data);
     });
 }
 #endif // BMCWEB_ENABLE_DOT
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+inline void requestRoutesEROTChassisManualBootMode(App& app)
+{
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Chassis/<str>/Actions/Oem/Nvidia/BootProtectedDevice")
+        .privileges(redfish::privileges::postChassis)
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisId) -> void {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                manual_boot::bootAp(req, asyncResp, chassisId);
+            });
+}
+#endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
 
 } // namespace redfish

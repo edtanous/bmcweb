@@ -170,6 +170,10 @@ inline void requestAssemblyRoutes(App& app)
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisId) {
         BMCWEB_LOG_DEBUG("Assembly doGet enter");
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         const std::array<const char*, 1> interface = {
             "xyz.openbmc_project.Inventory.Item.Chassis"};
         // Get chassis collection

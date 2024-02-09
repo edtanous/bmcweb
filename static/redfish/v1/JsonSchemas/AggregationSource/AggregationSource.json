@@ -76,7 +76,7 @@
                 "AggregationType": {
                     "$ref": "#/definitions/AggregationType",
                     "description": "The type of aggregation used towards the aggregation source.",
-                    "longDescription": "This property shall contain the type of aggregation used for the connection method towards the aggregation source.  If this property is not present, the value shall be assumed to be `Full`.",
+                    "longDescription": "This property shall contain the type of aggregation used for the connection method towards the aggregation source.  If this property is not present, the value shall be assumed to be `Complete`.",
                     "readonly": false,
                     "versionAdded": "v1_2_0"
                 },
@@ -126,8 +126,7 @@
                     "type": [
                         "string",
                         "null"
-                    ],
-                    "writeOnly": true
+                    ]
                 },
                 "SNMP": {
                     "anyOf": [
@@ -474,8 +473,7 @@
                         "string",
                         "null"
                     ],
-                    "versionAdded": "v1_1_0",
-                    "writeOnly": true
+                    "versionAdded": "v1_1_0"
                 },
                 "AuthenticationKeySet": {
                     "description": "Indicates if the AuthenticationKey property is set.",
@@ -507,8 +505,7 @@
                         "string",
                         "null"
                     ],
-                    "versionAdded": "v1_1_0",
-                    "writeOnly": true
+                    "versionAdded": "v1_1_0"
                 },
                 "EncryptionKeySet": {
                     "description": "Indicates if the EncryptionKey property is set.",

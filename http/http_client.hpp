@@ -135,6 +135,7 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
     std::string subId;
     std::shared_ptr<ConnectionPolicy> connPolicy;
     boost::urls::url host;
+    uint16_t port;
     uint32_t connId;
 
     // Data buffers
@@ -504,6 +505,26 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
             BMCWEB_LOG_DEBUG("{}, id: {} closed gracefully", host, connId);
         }
 
+        if (sslConn)
+        {
+            std::optional<boost::asio::ssl::context> sslCtx =
+                ensuressl::getSSLClientContext();
+            if (!sslCtx)
+            {
+                BMCWEB_LOG_ERROR("prepareSSLContext failed - {} : {} , id: {}", host, port, std::to_string(connId));
+                state = ConnState::sslInitFailed;
+                waitAndRetry();
+            }
+            else
+            {
+                sslConn.reset();
+                sslConn.emplace(conn, *sslCtx);
+                state = ConnState::initialized;
+                setCipherSuiteTLSext();
+            }
+            return;
+        }
+
         if (retry)
         {
             // Now let's try to resend the data
@@ -585,10 +606,11 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
     explicit ConnectionInfo(
         boost::asio::io_context& iocIn, const std::string& idIn,
         const std::shared_ptr<ConnectionPolicy>& connPolicyIn,
-        boost::urls::url_view hostIn, unsigned int connIdIn) :
+        boost::urls::url_view hostIn, uint16_t destPortIn, bool useSSL,
+        unsigned int connIdIn) :
         subId(idIn),
-        connPolicy(connPolicyIn), host(hostIn), connId(connIdIn),
-        resolver(iocIn), conn(iocIn), timer(iocIn)
+        connPolicy(connPolicyIn), host(hostIn), port(destPortIn),
+        connId(connIdIn), resolver(iocIn), conn(iocIn), timer(iocIn)
     {
         if (host.scheme() == "https")
         {
@@ -620,6 +642,8 @@ class ConnectionPool : public std::enable_shared_from_this<ConnectionPool>
     std::string id;
     std::shared_ptr<ConnectionPolicy> connPolicy;
     boost::urls::url destIP;
+    uint16_t destPort;
+    bool useSSL;
     std::vector<std::shared_ptr<ConnectionInfo>> connections;
     boost::container::devector<PendingRequest> requestQueue;
 
@@ -789,7 +813,7 @@ class ConnectionPool : public std::enable_shared_from_this<ConnectionPool>
         unsigned int newId = static_cast<unsigned int>(connections.size());
 
         auto& ret = connections.emplace_back(std::make_shared<ConnectionInfo>(
-            ioc, id, connPolicy, destIP, newId));
+            ioc, id, connPolicy, destIP, destPort, useSSL, newId));
 
         BMCWEB_LOG_DEBUG("Added connection {} to pool {}", connections.size() - 1, id);
 
@@ -800,9 +824,10 @@ class ConnectionPool : public std::enable_shared_from_this<ConnectionPool>
     explicit ConnectionPool(
         boost::asio::io_context& iocIn, const std::string& idIn,
         const std::shared_ptr<ConnectionPolicy>& connPolicyIn,
-        boost::urls::url_view destIPIn) :
+        boost::urls::url_view destIPIn, uint16_t destPortIn, bool useSSLIn) :
         ioc(iocIn),
-        id(idIn), connPolicy(connPolicyIn), destIP(destIPIn)
+        id(idIn), connPolicy(connPolicyIn), destIP(destIPIn),
+        destPort(destPortIn), useSSL(useSSLIn)
     {
         BMCWEB_LOG_DEBUG("Initializing connection pool for {}", id);
 
@@ -840,19 +865,23 @@ class HttpClient
     HttpClient& operator=(HttpClient&&) = delete;
     ~HttpClient() = default;
 
-    // Send a request to destIP where additional processing of the
+    // Send a request to destIP:destPort where additional processing of the
     // result is not required
-    void sendData(std::string&& data, boost::urls::url_view destUri,
+    void sendData(std::string& data, const std::string& destIP,
+                  uint16_t destPort, boost::urls::url_view destUri, bool useSSL,
                   const boost::beast::http::fields& httpHeader,
                   const boost::beast::http::verb verb)
     {
         const std::function<void(Response&)> cb = genericResHandler;
-        sendDataWithCallback(std::move(data), destUri, httpHeader, verb, cb);
+        sendDataWithCallback(std::move(data), destIP, destPort, destUri, useSSL,
+                             httpHeader, verb, cb);
     }
 
     // Send request to destIP and use the provided callback to
     // handle the response
-    void sendDataWithCallback(std::string&& data, boost::urls::url_view destUrl,
+    void sendDataWithCallback(std::string& data, const std::string& destIP,
+                              uint16_t destPort, boost::urls::url_view destUri,
+                              bool useSSL,
                               const boost::beast::http::fields& httpHeader,
                               const boost::beast::http::verb verb,
                               const std::function<void(Response&)>& resHandler)
@@ -863,11 +892,11 @@ class HttpClient
         if (pool.first->second == nullptr)
         {
             pool.first->second = std::make_shared<ConnectionPool>(
-                ioc, clientKey, connPolicy, destUrl);
+                ioc, clientKey, connPolicy, destIP, destPort, useSSL);
         }
         // Send the data using either the existing connection pool or the newly
         // created connection pool
-        pool.first->second->sendData(std::move(data), destUrl, httpHeader, verb,
+        pool.first->second->sendData(std::move(data), destUri, httpHeader, verb,
                                      resHandler);
     }
 };

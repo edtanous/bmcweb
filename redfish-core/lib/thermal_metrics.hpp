@@ -125,7 +125,15 @@ inline void processSensorsValue(
                         }
                     }
 
-                    objectJson["Reading"] = std::to_string(reading);
+                    if (std::isnan(reading))
+                    {
+                        objectJson["Reading"] = nullptr;
+                    }
+                    else
+                    {
+                        objectJson["Reading"] = reading;
+                    }
+
                     if (physicalContext != nullptr)
                     {
                         objectJson["PhysicalContext"] =
@@ -390,9 +398,13 @@ inline void requestRoutesThermalMetrics(App& app)
                  "/redfish/v1/Chassis/<str>/ThermalSubsystem/ThermalMetrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& param) {
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& param) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         const std::string& chassisId = param;
         // Identify chassis
         const std::array<const char*, 1> interface = {

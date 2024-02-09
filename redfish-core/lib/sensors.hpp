@@ -1027,13 +1027,20 @@ inline void objectPropertiesToJson(
                     BMCWEB_LOG_WARNING("Sensor value for {} was unexpectedly {}", valueName, *doubleValue);
                     continue;
                 }
-                if (forceToInt)
+                if (!std::isinf(*doubleValue))
                 {
-                    sensorJson[key] = static_cast<int64_t>(*doubleValue);
-                }
-                else
-                {
-                    sensorJson[key] = *doubleValue;
+                    if (forceToInt)
+                    {
+                        if (forceToInt)
+                        {
+                            sensorJson[key] =
+                                static_cast<int64_t>(*doubleValue);
+                        }
+                        else
+                        {
+                            sensorJson[key] = *doubleValue;
+                        }
+                    }
                 }
                 continue;
             }

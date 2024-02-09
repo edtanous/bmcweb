@@ -5,6 +5,7 @@ namespace redfish
 namespace port_utils
 {
 
+const std::string nvlinkToken = "NVLink";
 // Get PCIe device link speed generation
 /*inline std::string getLinkSpeedGeneration(double currentSpeed, size_t width)
 {
@@ -135,6 +136,11 @@ inline std::string getPortProtocol(const std::string& portProtocol)
         "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.PCIe")
     {
         return "PCIe";
+    }
+    if (portProtocol ==
+        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.NVLink.C2C")
+    {
+        return "NVLink.C2C";
     }
 
     // Unknown or others
@@ -268,9 +274,27 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for protocol type");
-                    messages::internalError(asyncResp->res);
-                    return;
+                    const std::string* value =
+                        std::get_if<std::string>(&property.second);
+                    if (value == nullptr)
+                    {
+                        BMCWEB_LOG_DEBUG("Null value returned " "for protocol type");
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    std::string portProtocol = getPortProtocol(*value);
+                    if (portProtocol.find(nvlinkToken) != std::string::npos &&
+                        portProtocol.size() > nvlinkToken.size())
+                    {
+                        asyncResp->res.jsonValue["PortProtocol"] = nvlinkToken;
+                        std::string expandPortName = portProtocol.substr(nvlinkToken.size() + 1);
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["PortProtocol"] = expandPortName;
+                    }
+                    else
+                    {
+                        asyncResp->res.jsonValue["PortProtocol"] = portProtocol;
+                    }
                 }
                 asyncResp->res.jsonValue["PortProtocol"] =
                     getPortProtocol(*value);

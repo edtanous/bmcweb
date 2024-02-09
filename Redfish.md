@@ -96,6 +96,27 @@ Fields common to all schemas
 #### ManagerAccountCollection
 
 - Description
+- ServiceEnabled
+
+### /redfish/v1/AggregationService/AggregationSources
+
+#### AggregationSourceCollection
+
+- Members
+- Members@odata.count
+
+### /redfish/v1/AggregationService/AggregationSources/{AggregationSourceId}
+
+#### AggregationSource
+
+- HostName
+- Password
+
+### /redfish/v1/AccountService/Accounts/
+
+#### ManagerAccountCollection
+
+- Description
 - Members
 - Members@odata.count
 

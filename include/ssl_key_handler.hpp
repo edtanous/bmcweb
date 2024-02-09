@@ -615,10 +615,11 @@ inline std::optional<boost::asio::ssl::context> getSSLClientContext()
 
     // Add a directory containing certificate authority files to be used
     // for performing verification.
-    sslCtx.set_default_verify_paths(ec);
+    // e.g. /etc/ssl/certs/authority/
+    sslCtx.add_verify_path(tlsCaCertificatePath, ec);
     if (ec)
     {
-        BMCWEB_LOG_ERROR("SSL context set_default_verify failed");
+        BMCWEB_LOG_ERROR("SSL context add_verify_path failed");
         return std::nullopt;
     }
 

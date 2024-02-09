@@ -49,6 +49,8 @@
 #include <string_view>
 #include <variant>
 
+#include "persistentstorage_util.hpp"
+
 namespace redfish
 {
 
@@ -252,6 +254,20 @@ inline void requestRoutesManagerResetAction(App& app)
             return;
         }
 
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+                if (resetType == "GracefulRestart" ||
+                    resetType == "ForceRestart" ||
+                    resetType == "GracefulShutdown")
+                {
+                    // Send an event for Manager Reset
+                    Event event = redfish::EventUtil::getInstance()
+                                      .createEventRebootReason("ManagerReset",
+                                                               "Managers");
+                    redfish::EventServiceManager::getInstance()
+                        .sendEventWithOOC(std::string(req.url), event);
+                }
+#endif
+
         if (resetType == "GracefulRestart")
         {
             BMCWEB_LOG_DEBUG("Proceeding with {}", resetType);
@@ -329,6 +345,15 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                                                   "ResetToDefaultsType");
             return;
         }
+
+#ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
+                // Send an event for reset to defaults
+                Event event =
+                    redfish::EventUtil::getInstance().createEventRebootReason(
+                        "FactoryReset", "Managers");
+                redfish::EventServiceManager::getInstance().sendEventWithOOC(
+                    std::string(req.url), event);
+#endif
 
         crow::connections::systemBus->async_method_call(
             [asyncResp, ifnameFactoryReset](
@@ -436,6 +461,72 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
 }
 
 /**
+ * eMMCSecureErase class supports POST method for eMMC Secure Erase
+ */
+inline void requestRoutesNvidiaManagerEmmcSecureErase(App& app)
+{
+
+    /**
+     * Function handles ResetToDefaults POST method request.
+     *
+     */
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/Actions/Oem/eMMC.SecureErase")
+        .privileges(redfish::privileges::postManager)
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+
+                std::string setCommand = "/sbin/fw_setenv emmc_secure_erase yes";
+                PersistentStorageUtil persistentStorageUtil;
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                BMCWEB_LOG_DEBUG("Post eMMC Secure Erase.");
+                auto resetEMMCSecureEraseCallback =
+                    []([[maybe_unused]] const crow::Request& req,
+                    [[maybe_unused]] const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    [[maybe_unused]] const std::string& stdOut,
+                    [[maybe_unused]] const std::string& stdErr,
+                    [[maybe_unused]] const boost::system::error_code& ec,
+                    [[maybe_unused]] int errorCode) -> void {
+                    BMCWEB_LOG_INFO("Setting eMMC Secure Erase uboot env");
+                    return;
+                };
+                persistentStorageUtil.executeEnvCommand(req, asyncResp, setCommand,
+                                                        std::move(resetEMMCSecureEraseCallback));
+                doBMCGracefulRestart(asyncResp);
+            });
+}
+
+inline void requestRoutesManagerEmmcSecureEraseActionInfo(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/EmmcSecureEraseActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#ActionInfo.v1_1_2.ActionInfo";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/EmmcSecureEraseActionInfo";
+                asyncResp->res.jsonValue["Name"] = "Emmc Secure Erase Action Info";
+                asyncResp->res.jsonValue["Id"] = "EmmcSecureEraseActionInfo";
+            });
+}
+
+/**
  * ManagerResetActionInfo derived class for delivering Manager
  * ResetType AllowableValues using ResetInfo schema.
  */
@@ -523,6 +614,106 @@ inline void requestRoutesNvidiaManagerSetSelCapacityAction(App& app)
                                                         "ErrorInfoCap", capacity))
                 {
                     BMCWEB_LOG_ERROR("Unable to set ErrorInfoCap");
+                    return;
+                }
+
+                setDbusSelCapacity(capacity, asyncResp);
+            });
+}
+
+void getDbusSelCapacity(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+
+    auto respHandler = [asyncResp](const boost::system::error_code ec,
+                                   const std::variant<size_t>& capacity) {
+        if (ec.value() == EBADR)
+        {
+            messages::resourceNotFound(
+                asyncResp->res, "#Manager.v1_11_0.Manager", "Capacity");
+            return;
+        }
+        if (ec)
+        {
+            asyncResp->res.result(
+                boost::beast::http::status::internal_server_error);
+            return;
+        }
+        const size_t* capacityValue = std::get_if<size_t>(&capacity);
+        if (capacityValue == nullptr) {
+            BMCWEB_LOG_ERROR("dbuserror nullptr error");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        asyncResp->res.jsonValue["ErrorInfoCap"] = *capacityValue;
+    };
+    crow::connections::systemBus->async_method_call(
+        respHandler, "xyz.openbmc_project.Logging",
+        "/xyz/openbmc_project/logging",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Logging.Capacity", "InfoLogCapacity");
+}
+
+/**
+ * NvidiaManagerGetSelCapacity class supports GET method for getting
+ * the SEL capacity.
+ */
+inline void requestRoutesNvidiaManagerGetSelCapacity(App& app)
+{
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/Oem/Nvidia/SelCapacity/")
+        .privileges(redfish::privileges::getManager)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request&,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                getDbusSelCapacity(asyncResp);
+            });
+}
+
+void setDbusSelCapacity(size_t capacity,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    auto respHandler = [asyncResp, capacity](const boost::system::error_code ec) {
+        if (ec.value() == EBADR)
+        {
+            messages::resourceNotFound(
+                asyncResp->res, "#Manager.v1_11_0.Manager", "Capacity");
+            return;
+        }
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        asyncResp->res.result(boost::beast::http::status::no_content);
+    };
+    crow::connections::systemBus->async_method_call(
+        respHandler, "xyz.openbmc_project.Logging",
+        "/xyz/openbmc_project/logging",
+        "xyz.openbmc_project.Logging.Capacity", "SetInfoLogCapacity",
+        capacity);
+}
+
+/**
+ * NvidiaManagerSetSelCapacityAction class supports POST method for configuration
+ * of SEL capacity.
+ */
+inline void requestRoutesNvidiaManagerSetSelCapacityAction(App& app)
+{
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+                      "/Actions/Oem/Nvidia/SelCapacity/")
+        .privileges(redfish::privileges::postManager)
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                size_t capacity = 0;
+
+                if (!redfish::json_util::readJsonAction(req, asyncResp->res,
+                                                        "ErrorInfoCap", capacity))
+                {
+                    BMCWEB_LOG_ERROR("unable to set ErrorInfoCap");
                     return;
                 }
 
@@ -2553,6 +2744,73 @@ inline void getManagerState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 }
 
 /**
+ * @brief Retrieves telemetry ready state data over DBus
+ *
+ * @param[in] aResp Shared pointer for completing asynchronous calls
+ * @param[in] connectionName - service name
+ * @param[in] path - object path
+ * @return none
+ */
+inline void getTelemetryState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& connectionName,
+                            const std::string& path)
+{
+    BMCWEB_LOG_DEBUG("Get manager service Telemetry state.");
+    crow::connections::systemBus->async_method_call(
+        [aResp](const boost::system::error_code ec,
+                const std::vector<std::pair<
+                    std::string, std::variant<std::string>>>& propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("Error in getting manager service state");
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const std::pair<std::string, std::variant<std::string>>&
+                     property : propertiesList)
+            {
+                if (property.first == "FeatureType")
+                {
+                    const std::string* value =
+                            std::get_if<std::string>(&property.second);
+                    if (*value == "xyz.openbmc_project.State.FeatureReady.FeatureTypes.Telemetry")
+                    {
+                        for (const std::pair<std::string, std::variant<std::string>>&
+                         propertyItr : propertiesList)
+                        {
+                            if (propertyItr.first == "State")
+                            {
+                                const std::string* stateValue =
+                                    std::get_if<std::string>(&propertyItr.second);
+                                if (stateValue == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG("Null value returned for manager service state");
+                                    messages::internalError(aResp->res);
+                                    return;
+                                }
+                                std::string state =
+                                redfish::chassis_utils::getTelemetryStateType(*stateValue);
+                                aResp->res.jsonValue["Status"]["State"] = state;
+                                if (state == "Enabled")
+                                {
+                                    aResp->res.jsonValue["Status"]["Health"] = "OK";
+                                }
+                                else
+                                {
+                                    aResp->res.jsonValue["Status"]["Health"] =      "Critical";
+                                }
+                            }
+                        }
+                    }
+                }
+                
+            }
+        },  
+        connectionName, path, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.State.FeatureReady");
+}
+
+/**
  * @brief Retrieves BMC asset properties data over DBus
  *
  * @param[in] aResp Shared pointer for completing asynchronous calls
@@ -3201,6 +3459,23 @@ inline void requestRoutesManager(App& app)
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
+            oem["UptimeSeconds"] = [asyncResp]()->double {
+                double uptime = 0;
+                auto ifs = std::ifstream("/proc/uptime", std::ifstream::in);
+                if(ifs.good())
+                {
+                    ifs >> uptime;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Failed to get uptime from /proc/uptime.");
+                    messages::internalError(asyncResp->res);
+                }
+                return uptime;
+            }();
+#endif //BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
+
         // NvidiaManager
         nlohmann::json& oemNvidia = oem["Nvidia"];
         oemNvidia["@odata.type"] = "#OemManager.Nvidia";
@@ -3288,6 +3563,8 @@ inline void requestRoutesManager(App& app)
         oemNvidia["AuthenticationTLSRequired"] =
             persistent_data::getConfig().isTLSAuthEnabled();
 #endif
+
+            populatePersistentStorageSettingStatus(req, asyncResp);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         // Manager.Reset (an action) can be many values, OpenBMC only
@@ -3329,6 +3606,13 @@ inline void requestRoutesManager(App& app)
                             "/redfish/v1/Managers/" PLATFORMBMCID
                             "/Oem/Nvidia/AsyncOOBRawCommandActionInfo";
 
+            oemActions["#eMMC.SecureErase"]["target"] =
+                "/redfish/v1/Managers/" PLATFORMBMCID
+                "/Actions/Oem/eMMC.SecureErase";
+            oemActions["#eMMC.SecureErase"]
+                        ["@Redfish.ActionInfo"] =
+                            "/redfish/v1/Managers/" PLATFORMBMCID
+                            "/Oem/EmmcSecureEraseActionInfo";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         std::pair<std::string, std::string> redfishDateTimeOffset =
@@ -3502,8 +3786,7 @@ inline void requestRoutesManager(App& app)
                     }
                     return;
                 }
-                messages::resourceNotFound(
-                    asyncResp->res, "#Manager.v1_11_0.Manager", PLATFORMBMCID);
+                BMCWEB_LOG_ERROR("Could not find interface xyz.openbmc_project.Inventory.Item.ManagementService");
             }
         },
             "xyz.openbmc_project.ObjectMapper",
@@ -3512,7 +3795,58 @@ inline void requestRoutesManager(App& app)
             "/xyz/openbmc_project/inventory", int32_t(0),
             std::array<const char*, 1>{"xyz.openbmc_project.Inventory."
                                        "Item.ManagementService"});
-                                       
+
+        // call to get telemtery Ready status
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, bmcId](
+                const boost::system::error_code ec,
+                const std::vector<std::pair<
+                    std::string, std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>>&
+                    subtree) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("Error while getting manager service state");
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (!subtree.empty())
+            {
+                // Iterate over all retrieved ObjectPaths.
+                for (const std::pair<
+                         std::string,
+                         std::vector<
+                             std::pair<std::string, std::vector<std::string>>>>&
+                         object : subtree)
+                {
+                    const std::string& path = object.first;
+                    const std::vector<
+                        std::pair<std::string, std::vector<std::string>>>&
+                        connectionNames = object.second;
+
+                    const std::string& connectionName =
+                        connectionNames[0].first;
+                    const std::vector<std::string>& interfaces =
+                        connectionNames[0].second;
+                    for (const auto& interfaceName : interfaces)
+                    {
+                        if (interfaceName == "xyz.openbmc_project.State."
+                                             "FeatureReady")
+                        {
+                            getTelemetryState(asyncResp, connectionName, path);
+                        }
+                    }
+                }
+                return;
+            }
+            BMCWEB_LOG_ERROR("Could not find interface xyz.openbmc_project.State.FeatureReady");
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", int32_t(0),
+            std::array<const char*, 1>{"xyz.openbmc_project.State."
+                                       "FeatureReady"});
+
         sdbusplus::asio::getProperty<double>(
             *crow::connections::systemBus, "org.freedesktop.systemd1",
             "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
@@ -3693,9 +4027,12 @@ inline void requestRoutesManager(App& app)
             {
                 std::optional<std::string> privilege;
                 std::optional<bool> tlsAuth;
+                std::optional<nlohmann::json> persistentStorageSettings;
                 if (!redfish::json_util::readJson(
-                        *nvidia, asyncResp->res, "AuthenticationTLSRequired",
-                        tlsAuth, "SMBPBIFencingPrivilege", privilege))
+                                *nvidia, asyncResp->res,
+                                "AuthenticationTLSRequired", tlsAuth,
+                                "SMBPBIFencingPrivilege", privilege,
+                                "PersistentStorageSettings", persistentStorageSettings))
                 {
                     BMCWEB_LOG_ERROR("Illegal Property {}", oem->dump(2, ' ', true, nlohmann::json::error_handler_t::replace));
                     return;
@@ -3762,6 +4099,11 @@ inline void requestRoutesManager(App& app)
                     }
                 }
 #endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+                if (persistentStorageSettings)
+                {
+                    handleUpdateServicePersistentStoragePatch(req, true,
+                                                              asyncResp);
+                }
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         }

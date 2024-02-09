@@ -67,7 +67,7 @@ TEST(ToDurationStringFromUintTest, PositiveTests)
         static_cast<uint64_t>(std::chrono::milliseconds::max().count());
 
     EXPECT_NE(toDurationStringFromUint(maxAcceptedTimeMs), std::nullopt);
-    EXPECT_EQ(toDurationStringFromUint(0), "PT");
+    EXPECT_EQ(toDurationStringFromUint(0), "PT0S");
     EXPECT_EQ(toDurationStringFromUint(250), "PT0.250S");
     EXPECT_EQ(toDurationStringFromUint(5000), "PT5.000S");
 }

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "account_service.hpp"
+#include "aggregation_service.hpp"
 #include "assembly.hpp"
 #include "aggregation_service.hpp"
 #include "bios.hpp"
@@ -111,7 +112,12 @@ class RedfishService
 	{
             requestRoutesRoles(app);
             requestRoutesRoleCollection(app);
-	}
+        }
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+        requestRoutesAggregationService(app);
+        requestRoutesAggregationSourceCollection(app);
+        requestRoutesAggregationSource(app);
+#endif
         requestRoutesServiceRoot(app);
         requestRoutesNetworkProtocol(app);
         if (persistent_data::getConfig().isTLSAuthEnabled())
@@ -157,6 +163,12 @@ class RedfishService
         requestRoutesManagerDiagnosticData(app);
         requestRoutesChassisCollection(app);
         requestRoutesChassis(app);
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesChassisEnvironmentMetricsClearOOBSetPoint(app);
+        requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(app);
+#endif
+
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesChassisResetAction(app);
         requestRoutesChassisResetActionInfo(app);
@@ -208,23 +220,26 @@ class RedfishService
            requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(app);
 
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
-          requestRoutesSystemDumpService(app);
-          requestRoutesSystemDumpEntryCollection(app);
-	  requestRoutesSystemDumpEntry(app);
-          requestRoutesSystemDumpCreate(app);
-          requestRoutesSystemDumpClear(app);
+        requestRoutesSystemDumpService(app);
+        requestRoutesSystemDumpEntryCollection(app);
+        requestRoutesSystemDumpEntry(app);
+        requestRoutesSystemDumpCreate(app);
+        requestRoutesSystemDumpClear(app);
 
-          requestRoutesBMCDumpService(app);
-          requestRoutesBMCDumpEntryCollection(app);
-          requestRoutesBMCDumpEntry(app);
-          requestRoutesBMCDumpCreate(app);
-          requestRoutesBMCDumpClear(app);
- #endif
+        requestRoutesBMCDumpService(app);
+        requestRoutesBMCDumpEntryCollection(app);
+        requestRoutesBMCDumpEntry(app);
+        requestRoutesBMCDumpCreate(app);
+        requestRoutesBMCDumpClear(app);
+#endif
 
- #ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
-         requestRoutesSystemFDRService(app);
-         requestRoutesSystemFDRServiceClear(app);
- #endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
+#ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
+        requestRoutesSystemFDRService(app);
+        requestRoutesSystemFDREntryCollection(app);
+        requestRoutesSystemFDREntry(app);
+        requestRoutesSystemFDRCreate(app);
+        requestRoutesSystemFDRClear(app);
+#endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
 
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
          requestRoutesSystemFaultLogService(app);
@@ -265,6 +280,8 @@ class RedfishService
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesEdppReset(app);
         requestRoutesNvidiaManagerResetToDefaultsAction(app);
+        requestRoutesNvidiaManagerEmmcSecureErase(app);
+        requestRoutesManagerEmmcSecureEraseActionInfo(app);
 
         requestRouteSyncRawOobCommand(app);
         requestRouteAsyncRawOobCommand(app);
@@ -382,6 +399,9 @@ class RedfishService
 	requestRoutesEROTChassisCertificate(app);
 #ifdef BMCWEB_ENABLE_DOT
         requestRoutesEROTChassisDOT(app);
+#endif
+#ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+        requestRoutesEROTChassisManualBootMode(app);
 #endif
         requestRoutesComponentIntegrity(app);
         requestRoutesServiceConditions(app);

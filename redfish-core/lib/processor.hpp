@@ -1977,7 +1977,7 @@ inline void
                 (property.first == "AccumulatedGPUContextUtilizationDuration"))
             {
                 auto propName = property.first;
-                const uint32_t* val = std::get_if<uint32_t>(&property.second);
+                const uint64_t* val = std::get_if<uint64_t>(&property.second);
                 if (val == nullptr)
                 {
                     BMCWEB_LOG_DEBUG("Get  acc duraiton property failed");

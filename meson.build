@@ -7,7 +7,7 @@ project('bmcweb', 'cpp',
             'b_lto=true',
             'b_ndebug=if-release',
             'buildtype=debugoptimized',
-            'cpp_rtti=false',
+            'cpp_rtti=true',
             'cpp_std=c++20',
             'warning_level=3',
             'werror=true',
@@ -65,6 +65,7 @@ incdir = include_directories(
 ## create a MAP of  "options : feature_flag"
 
 feature_map = {
+  'power-control-type-percentage'               : '-DBMCWEB_CONTROL_SETPOINT_UNITS_PERCENTAGE',
   'platform-metrics'                            : '-DBMCWEB_ENABLE_PLATFORM_METRICS',
   'basic-auth'                                  : '-DBMCWEB_ENABLE_BASIC_AUTHENTICATION',
   'cookie-auth'                                 : '-DBMCWEB_ENABLE_COOKIE_AUTHENTICATION',
@@ -89,6 +90,7 @@ feature_map = {
   'nvidia-oem-common-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES',
   'nvidia-oem-bf-properties'                    : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES',
   'nvidia-oem-bf3-properties'                   : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES',
+  'nvidia-oem-oberon-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES',
   'network-adapters'                            : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS',
   'network-adapters-generic'                    : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC',
   'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
@@ -122,16 +124,17 @@ feature_map = {
   'dhcp-configuration-update'                   : '-DBMCWEB_DHCP_CONFIGURATION_UPDATE',
   'host-os-features'                            : '-DBMCWEB_ENABLE_HOST_OS_FEATURE',
   'fencing-privilege'                           : '-DBMCWEB_ENABLE_FENCING_PRIVILEGE',
+  'host-auxpower-features'                            : '-DBMCWEB_ENABLE_HOST_AUX_POWER',
   'nic-configuration-update'                    : '-DBMCWEB_NIC_CONFIGURATION_UPDATE',
   'command-shell'                               : '-DBMCWEB_ENABLE_IPMI_SOL',
   'redfish-system-faultlog-dump-log'            : '-DBMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG',
   'reset-bios-by-clear-nonvolatile'             : '-DBMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE',
   'dot-support'                                 : '-DBMCWEB_ENABLE_DOT',
   'debug-interface-support'                     : '-DBMCWEB_ENABLE_DEBUG_INTERFACE',
+  'manual-boot-mode-support'                    : '-DBMCWEB_ENABLE_MANUAL_BOOT_MODE',
   'force-insecure-event-notification'           : '-DBMCWEB_FORCE_INSECURE_EVENT_NOTIFICATION',
   'use-efficient-expand-on-sensors'             : '-DBMCWEB_ENABLE_EFFICIENT_EXPAND',
-  'enable-fabric-adapter'                       : '-DBMCWEB_ENABLE_FABRIC_ADAPTER',
-  'enable-sse'                                  : '-DBMCWEB_ENABLE_SSE',
+  'shmem-platform-metrics'                      : '-DBMCWEB_ENABLE_SHMEM_PLATFORM_METRICS',  
 }
 
 if(get_option('tls-auth-opt-in').enabled())
@@ -310,6 +313,10 @@ pam = cxx.find_library('pam', required: true)
 atomic =  cxx.find_library('atomic', required: true)
 openssl = dependency('openssl', required : true)
 bmcweb_dependencies += [pam, atomic, openssl]
+if get_option('shmem-platform-metrics').enabled()
+  nvshmem = dependency('nvidia-shmem', required : true)
+  bmcweb_dependencies += nvshmem
+endif
 
 nghttp2 = dependency('libnghttp2', version: '>=1.52.0', required : false)
 if not nghttp2.found()

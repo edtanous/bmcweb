@@ -33,6 +33,7 @@ conf_data.set_quoted('PLATFORM_METRICS_ID', get_option('platform-metrics-id'))
 conf_data.set_quoted('HOST_IFACE_CHANNEL', get_option('host-iface-channel'))
 conf_data.set_quoted('PLATFORM_GPU_NAME_PREFIX', get_option('platform-gpu-name-prefix'))
 conf_data.set_quoted('PLATFORM_CHASSIS_NAME', get_option('platform-chassis-name'))
+conf_data.set_quoted('REDFISH_AGGREGATION_PREFIX', get_option('redfish-aggregation-prefix'))
 conf_data.set_quoted('FW_MCTP_MAPPING_JSON', join_paths(package_datadir, 'fw_mctp_mapping.json'))
 conf_data.set('BUILD_DESCRIPTION_FILE_PATH', get_option('build-description-file-path'))
 conf_data.set('COMPUTER_SYSTEM_INVENTORY_PATH', get_option('computer-system-inventory-path'))
@@ -62,6 +63,7 @@ endif
 loglvlopt = loglvlopt.to_upper()
 conf_data.set('BMCWEB_LOGGING_LEVEL', loglvlopt)
 
+conf_data.set('TLS_CACERT_PATH', get_option('tls-cacert-path') )
 conf_h_dep = declare_dependency(
     include_directories: include_directories('.'),
     sources: configure_file(

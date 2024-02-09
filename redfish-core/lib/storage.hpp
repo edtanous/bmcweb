@@ -133,13 +133,9 @@ inline void afterChassisDriveCollectionSubtree(
     auto& count = asyncResp->res.jsonValue["Drives@odata.count"];
     count = 0;
 
-
     for (const auto& [path, objDict] : ret)
     {
         uint32_t num = 0;
-        // EM also populate NVMe drives to Dbus 
-        // We expect to have NVMe resource from nvme-manager so we filter out
-        // drive instances from EM by the number of Dbus interface.
         for (const std::string& interface : objDict.begin()->second)
         {
             if (std::find_if(driveInterface.begin(), driveInterface.end(),
@@ -154,20 +150,16 @@ inline void afterChassisDriveCollectionSubtree(
         {
             continue;
         }
-        // FIXME: Health Populate
-        //if constexpr (bmcwebEnableHealthPopulate)
-        //{
-        //    health->inventory.insert(health->inventory.end(), path);
-        //}
+        health->inventory.insert(health->inventory.end(), path);
 
         nlohmann::json::object_t driveJson;
         std::string file = std::filesystem::path(path).filename();
+
         driveJson["@odata.id"] = boost::urls::format(
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/{}",
             file);
-        driveArray.emplace_back(std::move(driveJson));
+        driveArray.push_back(driveJson);
     }
-
     count = driveArray.size();
 }
 
