@@ -773,7 +773,7 @@ inline void requestRoutesChassisControls(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Controls/<str>")
         .privileges(redfish::privileges::getControl)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID, const std::string& controlID) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))

@@ -507,9 +507,8 @@ class EventUtil
         int64_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                          std::chrono::system_clock::now().time_since_epoch())
                          .count();
-        std::string timestamp =
-            std::move(redfish::time_utils::getDateTimeStdtime(
-                redfish::time_utils::getTimestamp(static_cast<uint64_t>(ms))));
+        std::string timestamp = redfish::time_utils::getDateTimeStdtime(
+            redfish::time_utils::getTimestamp(static_cast<uint64_t>(ms)));
         event.eventTimestamp = timestamp;
 
         // Set message resource
@@ -623,11 +622,8 @@ class Subscription : public persistent_data::UserSubscription
     Subscription(Subscription&&) = delete;
     Subscription& operator=(Subscription&&) = delete;
 
-    Subscription(const std::string& inHost, uint16_t inPort,
-                 const std::string& inPath, const std::string& inUriProto) :
-        host(inHost),
-        port(inPort), policy(std::make_shared<crow::ConnectionPolicy>()),
-        client(policy), path(inPath), uriProto(inUriProto)
+    Subscription(boost::urls::url_view url, boost::asio::io_context& ioc) :
+        policy(std::make_shared<crow::ConnectionPolicy>())
     {
         destinationUrl = url;
         client.emplace(ioc, policy);
@@ -635,11 +631,8 @@ class Subscription : public persistent_data::UserSubscription
         policy->invalidResp = retryRespHandler;
     }
 
-    explicit Subscription(
-        const std::shared_ptr<boost::asio::ip::tcp::socket>& adaptor) :
-        policy(std::make_shared<crow::ConnectionPolicy>()),
-        client(policy),
-        sseConn(std::make_shared<crow::ServerSentEvents>(adaptor))
+    explicit Subscription(crow::sse_socket::Connection& connIn) :
+        sseConn(&connIn)
     {}
 
     ~Subscription() = default;
@@ -655,9 +648,12 @@ class Subscription : public persistent_data::UserSubscription
         }
 
         // A connection pool will be created if one does not already exist
-        client.sendData(msg, host, port, path, useSSL, httpHeaders,
+        if (client)
+        {
+            client->sendData(std::move(msg), destinationUrl, httpHeaders,
                         boost::beast::http::verb::post);
-        eventSeqNum++;
+        return true;
+        }
 
         if (sseConn != nullptr)
         {
@@ -925,6 +921,7 @@ class Subscription : public persistent_data::UserSubscription
     std::string subId;
     uint64_t eventSeqNum = 1;
     boost::urls::url host;
+    uint16_t port = 0;
     std::shared_ptr<crow::ConnectionPolicy> policy;
     crow::sse_socket::Connection* sseConn = nullptr;
     std::optional<crow::HttpClient> client;

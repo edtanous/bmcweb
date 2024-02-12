@@ -497,7 +497,7 @@ inline void
                             }
 #ifdef BMCWEB_ENABLE_BIOS
                             // UUID from smbios if exist
-                            sw_util::getSwBIOSUUID(aResp);
+                            sw_util::getSwBIOSUUID(asyncResp);
 #endif                            
                         });
                     }
@@ -674,8 +674,8 @@ inline void getHostState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
         else if (hostState ==
                  "xyz.openbmc_project.State.Host.HostState.Standby")
         {
-            aResp->res.jsonValue["PowerState"] = "Paused";
-            aResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
+            asyncResp->res.jsonValue["PowerState"] = "Paused";
+            asyncResp->res.jsonValue["Status"]["State"] = "StandbyOffline";
         }
         else
         {

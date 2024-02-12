@@ -224,7 +224,7 @@ inline void debugCapabilitiesProcess(
         [asyncResp, method, caps](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", prop, ec);
+                BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", method, ec);
                 messages::internalError(asyncResp->res);
                 return;
             }

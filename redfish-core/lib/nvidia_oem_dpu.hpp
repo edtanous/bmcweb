@@ -661,7 +661,7 @@ inline void
         [asyncResp](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for setting DPU OOB enable/disable)";
+                BMCWEB_LOG_ERROR("DBUS response error for setting DPU OOB enable/disable");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -738,12 +738,13 @@ inline void handleTruststoreCertificatesCollectionGet(
     asyncResp->res.jsonValue["Name"] = "TruststoreBios Certificate Collection";
     asyncResp->res.jsonValue["@Redfish.SupportedCertificates"] = {"PEM"};
 
-    collection_util::getCollectionMembers(
+    const std::array<std::string_view, 1> interfaces{
+        "xyz.openbmc_project.Certs.Certificate"};
+    redfish::collection_util::getCollectionMembers(
         asyncResp,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Truststore/Certificates",
-        {"xyz.openbmc_project.Certs.Certificate"},
-        std::string(truststoreBiosPath)
-            .c_str());
+        boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                         "/Oem/Nvidia/Truststore/Certificates"),
+        interfaces, std::string(truststoreBiosPath).c_str());
 }
 
 inline void
@@ -1022,8 +1023,8 @@ inline void
                 // Since the action is placed under the general "Action" section,
                 // The request is being edited with the required TargetUri
                 crow::Request reqFixedTar(req);
-                reqFixedTar.url = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                "/Oem/Nvidia/Truststore/Certificates/Actions/TruststoreCertificates.ResetKeys";
+                reqFixedTar.target("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/Oem/Nvidia/Truststore/Certificates/Actions/TruststoreCertificates.ResetKeys");
                 createPendingRequest(reqFixedTar, asyncResp);
                 return;
             }
@@ -1080,46 +1081,6 @@ inline void requestRoutesNvidiaOemBf(App& app)
             bluefield::requestOemNvidiaRshim(asyncResp, *bmcRshimEnabled);
         }
     });
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
-    BMCWEB_ROUTE(app, bluefield::oemNvidiaGet)
-        .privileges(redfish::privileges::getComputerSystem)
-        .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                std::optional<nlohmann::json> bmcRshim;
-                if (!redfish::json_util::readJsonPatch(req, asyncResp->res,
-                                                       "BmcRShim", bmcRshim))
-                {
-                    BMCWEB_LOG_ERROR(
-                        "Illegal Property {}",
-                        asyncResp->res.jsonValue.dump(
-                            2, ' ', true,
-                            nlohmann::json::error_handler_t::replace));
-                    return;
-                }
-                if (bmcRshim)
-                {
-                    std::optional<bool> bmcRshimEnabled;
-                    if (!redfish::json_util::readJson(*bmcRshim, asyncResp->res,
-                                                      "BmcRShimEnabled",
-                                                      bmcRshimEnabled))
-                    {
-                        BMCWEB_LOG_ERROR(
-                            "Illegal Property {}",
-                            asyncResp->res.jsonValue.dump(
-                                2, ' ', true,
-                                nlohmann::json::error_handler_t::replace));
-                        return;
-                    }
-
-                    bluefield::requestOemNvidiaRshim(asyncResp,
-                                                     *bmcRshimEnabled);
-                }
-            });
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch")
         .privileges(redfish::privileges::getSwitch)
         .methods(boost::beast::http::verb::get)(

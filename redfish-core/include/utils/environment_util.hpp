@@ -785,8 +785,8 @@ inline void
             }
 
             crow::connections::systemBus->async_method_call(
-                [asyncResp, connectionName,
-                 resourceId](const boost::system::error_code& e,
+                [asyncResp, connectionName, interfaces,
+                     resourceId](const boost::system::error_code& e,
                              std::variant<std::vector<std::string>>& resp) {
                 if (e)
                 {

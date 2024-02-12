@@ -357,7 +357,7 @@ inline void handleEnvironmentMetricsGet(
     asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]
                             ["#NvidiaEnvironmentMetrics.ClearOOBSetPoint"] = {
         {"target",
-         "/redfish/v1/Chassis/" + chassisID +
+         "/redfish/v1/Chassis/" + chassisId +
              "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ClearOOBSetPoint"}};
     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
         "#NvidiaEnvironmentMetrics.v1_0_0.NvidiaEnvironmentMetrics";
@@ -555,7 +555,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                  "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp"}};
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-        getProcessorEnvironmentMetricsData(asyncResp, processorId);
+        redfish::nvidia_env_utils::getProcessorEnvironmentMetricsData(asyncResp, processorId);
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -734,7 +734,7 @@ inline void requestRoutesMemoryEnvironmentMetrics(App& app)
         asyncResp->res.jsonValue["@odata.id"] = envMetricsURI;
         asyncResp->res.jsonValue["Id"] = "EnvironmentMetrics";
         asyncResp->res.jsonValue["Name"] = dimmId + " Environment Metrics";
-        getMemoryEnvironmentMetricsData(asyncResp, dimmId);
+        redfish::nvidia_env_utils::getMemoryEnvironmentMetricsData(asyncResp, dimmId);
     });
 }
 
@@ -762,7 +762,7 @@ inline void requestRoutesEdppReset(App& app)
             [](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId, const std::string& objectPath,
                const MapperServiceMap& serviceMap) {
-            postEdppReset(asyncResp, processorId, objectPath, serviceMap);
+            redfish::nvidia_env_utils::postEdppReset(asyncResp, processorId, objectPath, serviceMap);
         });
     });
 }

@@ -128,7 +128,7 @@ inline void
     Event event = redfish::EventUtil::getInstance().createEventResourceRemoved(
         "SessionService");
     redfish::EventServiceManager::getInstance().sendEventWithOOC(
-        std::string(req.url), event);
+        std::string(req.target()), event);
 #endif
 }
 
@@ -265,7 +265,7 @@ inline void handleSessionCollectionPost(
     Event event = redfish::EventUtil::getInstance().createEventResourceCreated(
         "SessionService");
     redfish::EventServiceManager::getInstance().sendEventWithOOC(
-        std::string(req.url), event);
+        std::string(req.target()), event);
 #endif
 }
 inline void handleSessionServiceHead(
@@ -352,7 +352,7 @@ inline void handleSessionServicePatch(
                     std::to_string(sessionTimeoutInseconds.count()),
                     "SessionService");
             redfish::EventServiceManager::getInstance().sendEventWithOOC(
-                std::string(req.url), event);
+                std::string(req.target()), event);
 #endif
         }
         else

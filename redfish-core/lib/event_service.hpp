@@ -54,7 +54,6 @@ static constexpr const std::array<const char*, 11> supportedResourceTypes = {
     "Managers",     "CertificateService", "VirtualMedia"};
 #endif
 
-static constexpr const uint8_t maxNoOfSubscriptions = 20;
 
 inline void requestRoutesEventService(App& app)
 {
@@ -172,7 +171,7 @@ inline void requestRoutesEventService(App& app)
 
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
         EventServiceManager::getInstance().setEventServiceConfig(
-            eventServiceConfig, req.url);
+            eventServiceConfig, req.target());
 #else
         EventServiceManager::getInstance().setEventServiceConfig(
             eventServiceConfig);
@@ -861,12 +860,13 @@ inline void requestRoutesEventDestination(App& app)
                                       .createEventPropertyModified(
                                           "Context", *context, "EventService");
                     redfish::EventServiceManager::getInstance()
-                        .sendEventWithOOC(std::string(req.url), event);
+                        .sendEventWithOOC(std::string(req.target()), event);
 #endif            
         }
 
         if (headers)
         {
+            std::string keyValues;
             boost::beast::http::fields fields;
             for (const nlohmann::json& headerChunk : *headers)
             {
@@ -895,7 +895,7 @@ inline void requestRoutesEventDestination(App& app)
                 redfish::EventUtil::getInstance().createEventPropertyModified(
                     "Headers", keyValues, "EventService");
             redfish::EventServiceManager::getInstance().sendEventWithOOC(
-                std::string(req.url), event);
+                std::string(req.target()), event);
 #endif
         }
 
@@ -916,7 +916,7 @@ inline void requestRoutesEventDestination(App& app)
                             .createEventPropertyModified(
                                 "RetryPolicy", *retryPolicy, "EventService");
                     redfish::EventServiceManager::getInstance()
-                        .sendEventWithOOC(std::string(req.url), event);
+                        .sendEventWithOOC(std::string(req.target()), event);
 #endif            
         }
 

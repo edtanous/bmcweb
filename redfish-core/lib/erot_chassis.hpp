@@ -399,7 +399,7 @@ inline void requestRoutesEROTChassisCertificate(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Certificates/<str>/")
         .privileges(redfish::privileges::getCertificate)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisID,
                const std::string& certificateID) -> void {
@@ -905,15 +905,15 @@ inline void requestRoutesEROTChassisDOT(App& app)
         {
             return;
         }
-        if (req.body.size() != DOT_TOKEN_SIZE)
+        if (req.body().size() != DOT_TOKEN_SIZE)
         {
-            BMCWEB_LOG_ERROR("Invalid DOT token size: {}", req.body.size());
+            BMCWEB_LOG_ERROR("Invalid DOT token size: {}", req.body().size());
             messages::invalidUpload(asyncResp->res, "DOT token install",
                                     "filesize has to be equal to " +
                                         std::to_string(DOT_TOKEN_SIZE));
             return;
         }
-        std::vector<uint8_t> data(req.body.begin(), req.body.end());
+        std::vector<uint8_t> data(req.body().begin(), req.body().end());
         executeDotCommand(asyncResp, chassisID,
                           dot::DotMctpVdmUtilCommand::DOTTokenInstall, data);
     });

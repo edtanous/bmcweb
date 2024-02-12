@@ -43,15 +43,20 @@ class MctpEndpoint
                 BMCWEB_LOG_DEBUG("findAssociations callback for {}", spdmObject);
                 if (ec)
                 {
-                    callback(false, "invalid MCTP object path: " + mctpObj);
+                    BMCWEB_LOG_ERROR("{} : {}", spdmObject, ec.message());
+                    callback(false, ec.message());
                     return;
                 }
-                try
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&association);
+                if (data == nullptr || data->empty())
                 {
-                    mctpEid = std::stoi(v.back());
-                    callback(true, mctpObj);
+                    callback(false,
+                             spdmObj + ": no SPDM / MCTP association found");
+                    return;
                 }
-                catch (std::invalid_argument const&)
+                mctpObj = data->front();
+                if (mctpObj.rfind(mctpObjectPrefix, 0) == 0)
                 {
                     std::vector<std::string> v;
                     boost::split(v, mctpObj, boost::is_any_of("/"));

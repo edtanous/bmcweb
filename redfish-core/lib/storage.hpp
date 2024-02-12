@@ -150,7 +150,11 @@ inline void afterChassisDriveCollectionSubtree(
         {
             continue;
         }
-        health->inventory.insert(health->inventory.end(), path);
+        // FIXME: Health Populate
+        //if constexpr (bmcwebEnableHealthPopulate)
+        //{
+        //    health->inventory.insert(health->inventory.end(), path);
+        //}
 
         nlohmann::json::object_t driveJson;
         std::string file = std::filesystem::path(path).filename();

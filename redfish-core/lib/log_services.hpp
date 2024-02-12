@@ -5872,43 +5872,6 @@ inline static bool parsePostCode(const std::string& postCodeID,
                                  uint64_t& currentValue, uint16_t& index)
 {
     std::vector<std::string> split;
-    bmcweb::split(split, postCodeID, '-');
-    if (split.size() != 2 || split[0].length() < 2 || split[0].front() != 'B')
-    {
-        return false;
-    }
-
-    auto start = std::next(split[0].begin());
-    auto end = split[0].end();
-    auto [ptrIndex, ecIndex] = std::from_chars(&*start, &*end, index);
-
-    if (ptrIndex != &*end || ecIndex != std::errc())
-    {
-        return false;
-    }
-
-    start = split[1].begin();
-    end = split[1].end();
-
-    auto [ptrValue, ecValue] = std::from_chars(&*start, &*end, currentValue);
-
-    return ptrValue == &*end && ecValue == std::errc();
-}
-
-/**
- * @brief Parse post code ID and get the current value and index value
- *        eg: postCodeID=B1-2, currentValue=1, index=2
- *
- * @param[in]  postCodeID     Post Code ID
- * @param[out] currentValue   Current value
- * @param[out] index          Index value
- *
- * @return bool true if the parsing is successful, false the parsing fails
- */
-inline static bool parsePostCode(const std::string& postCodeID,
-                                 uint64_t& currentValue, uint16_t& index)
-{
-    std::vector<std::string> split;
     boost::algorithm::split(split, postCodeID, boost::is_any_of("-"));
     if (split.size() != 2 || split[0].length() < 2 || split[0].front() != 'B')
     {
@@ -6029,7 +5992,7 @@ static bool fillPostCodeEntry(
             redfish::registries::fillMessageArgs(messageArgs, message->message);
         if (msg.empty())
         {
-            messages::internalError(asyncResp->res);
+            messages::internalError(aResp->res);
             return false;
         }
 
@@ -6117,8 +6080,8 @@ static void getPostCodeForEntry(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             return;
         }
 
-        asyncResp->res.jsonValue["Members@odata.count"] =
-            asyncResp->res.jsonValue["Members"].size();
+        aResp->res.jsonValue["Members@odata.count"] =
+            aResp->res.jsonValue["Members"].size();
         if (!fillPostCodeEntry(aResp, postcode, bootIndex, codeIndex))
         {
             messages::resourceNotFound(aResp->res, "LogEntry", entryId);

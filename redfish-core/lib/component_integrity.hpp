@@ -211,7 +211,7 @@ inline void handleSPDMGETSignedMeasurement(
     }
     // the request body should either be empty (or pure whitespace),
     // contain an empty json, or be fully valid
-    std::string body = req.body;
+    std::string body = req.body();
     body.erase(std::remove_if(body.begin(), body.end(), isspace), body.end());
     if (!body.empty() && body != "{}" &&
         !json_util::readJsonAction(req, asyncResp->res, "Nonce", nonce,

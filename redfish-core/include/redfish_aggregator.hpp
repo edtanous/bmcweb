@@ -1,12 +1,12 @@
 #pragma once
 
-#include <aggregation_utils.hpp>
+#include "aggregation_utils.hpp"
+#include "dbus_utility.hpp"
+#include "error_messages.hpp"
+#include "http_client.hpp"
+#include "http_connection.hpp"
+
 #include <boost/algorithm/string/predicate.hpp>
-#include <dbus_utility.hpp>
-#include <error_messages.hpp>
-#include <http_client.hpp>
-#include <http_connection.hpp>
-#include <utility.hpp>
 
 #include <array>
 #include <ranges>
@@ -386,12 +386,6 @@ class RedfishAggregator
   private:
     crow::HttpClient client;
 
-    RedfishAggregator() :
-        client(std::make_shared<crow::ConnectionPolicy>(getAggregationPolicy()))
-    {
-        getSatelliteConfigs(constructorCallback);
-    }
-
     // Dummy callback used by the Constructor so that it can report the number
     // of satellite configs when the class is first created
     static void constructorCallback(
@@ -666,8 +660,7 @@ class RedfishAggregator
             return;
         }
 
-        const boost::urls::segments_view urlSegments =
-            thisReq.urlView.segments();
+        const boost::urls::segments_view urlSegments = thisReq.url().segments();
         boost::urls::url currentUrl("/");
         boost::urls::segments_view::iterator it = urlSegments.begin();
         boost::urls::segments_view::iterator end = urlSegments.end();
@@ -730,9 +723,14 @@ class RedfishAggregator
             std::bind_front(processResponse, prefix, asyncResp);
 
         std::string data = thisReq.req.body();
-        client.sendDataWithCallback(
-            data, std::string(sat->second.host()), sat->second.port_number(),
-            targetURI, false /*useSSL*/, thisReq.fields, thisReq.method(), cb);
+        boost::urls::url url(sat->second);
+        url.set_path(path);
+        if (targetURI.has_query())
+        {
+            url.set_query(targetURI.query());
+        }
+        client.sendDataWithCallback(std::move(data), url, thisReq.fields(),
+                                    thisReq.method(), cb);
     }
 
     // Forward a request for a collection URI to each known satellite BMC
@@ -778,48 +776,28 @@ class RedfishAggregator
             url.set_path(thisReq.url().path());
 
             std::string data = thisReq.req.body();
-            client.sendDataWithCallback(data, std::string(sat.second.host()),
-                                        sat.second.port_number(), targetURI,
-                                        false /*useSSL*/, thisReq.fields,
+            
+            client.sendDataWithCallback(std::move(data), url, thisReq.fields(),
                                         thisReq.method(), cb);
         }
     }
 
-    // Forward request for a URI that is uptree of a top level collection to
-    // each known satellite BMC
-    void forwardContainsSubordinateRequests(
-        const crow::Request& thisReq,
-        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-        const std::unordered_map<std::string, boost::urls::url>& satelliteInfo)
-    {
-        for (const auto& sat : satelliteInfo)
-        {
-            std::function<void(crow::Response&)> cb = std::bind_front(
-                processContainsSubordinateResponse, sat.first, asyncResp);
-
-            // will ignore an expanded resource in the response if that resource
-            // is not already supported by the aggregating BMC
-            // TODO: Improve the processing so that we don't have to strip query
-            // params in this specific case
-            std::string targetURI(thisReq.target());
-            std::string data = thisReq.req.body();
-            client.sendDataWithCallback(
-                data, std::string(sat.second.host()),
-                sat.second.port_number(), targetURI, false /*useSSL*/,
-                thisReq.fields, thisReq.method(), cb);
-        }
-    }
-
   public:
+explicit RedfishAggregator(boost::asio::io_context& ioc) :
+        client(ioc,
+               std::make_shared<crow::ConnectionPolicy>(getAggregationPolicy()))
+    {
+        getSatelliteConfigs(constructorCallback);
+    }
     RedfishAggregator(const RedfishAggregator&) = delete;
     RedfishAggregator& operator=(const RedfishAggregator&) = delete;
     RedfishAggregator(RedfishAggregator&&) = delete;
     RedfishAggregator& operator=(RedfishAggregator&&) = delete;
     ~RedfishAggregator() = default;
 
-    static RedfishAggregator& getInstance()
+    static RedfishAggregator& getInstance(boost::asio::io_context* io = nullptr)
     {
-        static RedfishAggregator handler;
+        static RedfishAggregator handler(*io);
         return handler;
     }
 
@@ -832,7 +810,9 @@ class RedfishAggregator
             handler)
     {
         BMCWEB_LOG_DEBUG("Gathering satellite configs");
-        crow::connections::systemBus->async_method_call(
+        sdbusplus::message::object_path path("/xyz/openbmc_project/inventory");
+        dbus::utility::getManagedObjects(
+            "xyz.openbmc_project.EntityManager", path,
             [handler{std::move(handler)}](
                 const boost::system::error_code& ec,
                 const dbus::utility::ManagedObjectType& objects) {
@@ -852,18 +832,13 @@ class RedfishAggregator
             if (!satelliteInfo.empty())
             {
                 BMCWEB_LOG_DEBUG( "Redfish Aggregation enabled with {} satellite BMCs", std::to_string(satelliteInfo.size()));
-
             }
             else
             {
                 BMCWEB_LOG_DEBUG( "No satellite BMCs detected.  Redfish Aggregation not enabled");
-
             }
             handler(ec, satelliteInfo);
-            },
-            "xyz.openbmc_project.EntityManager",
-            "/xyz/openbmc_project/inventory",
-            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+            });
     }
 
     // Processes the response returned by a satellite BMC and loads its
@@ -1283,9 +1258,7 @@ class RedfishAggregator
 
         // If nothing else then the request could be for a resource which has a
         // top level collection as a subordinate
-        auto path = std::string_view(url.encoded_path().data(),
-                                     url.encoded_path().size());
-        if (searchCollectionsArray(path, SearchType::ContainsSubordinate))
+        if (searchCollectionsArray(url.path(), SearchType::ContainsSubordinate))
         {
             startAggregation(AggregationType::ContainsSubordinate, thisReq,
                              asyncResp);

@@ -264,7 +264,7 @@ inline void requestRoutesManagerResetAction(App& app)
                                       .createEventRebootReason("ManagerReset",
                                                                "Managers");
                     redfish::EventServiceManager::getInstance()
-                        .sendEventWithOOC(std::string(req.url), event);
+                        .sendEventWithOOC(std::string(req.target()), event);
                 }
 #endif
 
@@ -352,7 +352,7 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                     redfish::EventUtil::getInstance().createEventRebootReason(
                         "FactoryReset", "Managers");
                 redfish::EventServiceManager::getInstance().sendEventWithOOC(
-                    std::string(req.url), event);
+                    std::string(req.target()), event);
 #endif
 
         crow::connections::systemBus->async_method_call(
@@ -614,106 +614,6 @@ inline void requestRoutesNvidiaManagerSetSelCapacityAction(App& app)
                                                         "ErrorInfoCap", capacity))
                 {
                     BMCWEB_LOG_ERROR("Unable to set ErrorInfoCap");
-                    return;
-                }
-
-                setDbusSelCapacity(capacity, asyncResp);
-            });
-}
-
-void getDbusSelCapacity(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-
-    auto respHandler = [asyncResp](const boost::system::error_code ec,
-                                   const std::variant<size_t>& capacity) {
-        if (ec.value() == EBADR)
-        {
-            messages::resourceNotFound(
-                asyncResp->res, "#Manager.v1_11_0.Manager", "Capacity");
-            return;
-        }
-        if (ec)
-        {
-            asyncResp->res.result(
-                boost::beast::http::status::internal_server_error);
-            return;
-        }
-        const size_t* capacityValue = std::get_if<size_t>(&capacity);
-        if (capacityValue == nullptr) {
-            BMCWEB_LOG_ERROR("dbuserror nullptr error");
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        asyncResp->res.jsonValue["ErrorInfoCap"] = *capacityValue;
-    };
-    crow::connections::systemBus->async_method_call(
-        respHandler, "xyz.openbmc_project.Logging",
-        "/xyz/openbmc_project/logging",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Logging.Capacity", "InfoLogCapacity");
-}
-
-/**
- * NvidiaManagerGetSelCapacity class supports GET method for getting
- * the SEL capacity.
- */
-inline void requestRoutesNvidiaManagerGetSelCapacity(App& app)
-{
-
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/Oem/Nvidia/SelCapacity/")
-        .privileges(redfish::privileges::getManager)
-        .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request&,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                getDbusSelCapacity(asyncResp);
-            });
-}
-
-void setDbusSelCapacity(size_t capacity,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-    auto respHandler = [asyncResp, capacity](const boost::system::error_code ec) {
-        if (ec.value() == EBADR)
-        {
-            messages::resourceNotFound(
-                asyncResp->res, "#Manager.v1_11_0.Manager", "Capacity");
-            return;
-        }
-        if (ec)
-        {
-            messages::internalError(asyncResp->res);
-            return;
-        }
-
-        asyncResp->res.result(boost::beast::http::status::no_content);
-    };
-    crow::connections::systemBus->async_method_call(
-        respHandler, "xyz.openbmc_project.Logging",
-        "/xyz/openbmc_project/logging",
-        "xyz.openbmc_project.Logging.Capacity", "SetInfoLogCapacity",
-        capacity);
-}
-
-/**
- * NvidiaManagerSetSelCapacityAction class supports POST method for configuration
- * of SEL capacity.
- */
-inline void requestRoutesNvidiaManagerSetSelCapacityAction(App& app)
-{
-
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/Actions/Oem/Nvidia/SelCapacity/")
-        .privileges(redfish::privileges::postManager)
-        .methods(boost::beast::http::verb::post)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                size_t capacity = 0;
-
-                if (!redfish::json_util::readJsonAction(req, asyncResp->res,
-                                                        "ErrorInfoCap", capacity))
-                {
-                    BMCWEB_LOG_ERROR("unable to set ErrorInfoCap");
                     return;
                 }
 
