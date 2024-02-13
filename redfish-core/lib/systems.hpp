@@ -3876,6 +3876,8 @@ inline void handleComputerSystemSettingsGet(
     getBootProperties(asyncResp, true);
     getUefiPropertySettingsHost(asyncResp);
     getAutomaticRetry(asyncResp, true);
+    asyncResp->res.jsonValue["Boot"]["BootOptions"]["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/BootOptions";
 }
 
 inline void handleComputerSystemSettingsPatch(
