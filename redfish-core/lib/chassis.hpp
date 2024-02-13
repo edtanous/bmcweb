@@ -1265,12 +1265,15 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 {
                     const std::string* value =
                         std::get_if<std::string>(&property.second);
-                    if (value == nullptr)
+                    if (value != nullptr && !value->empty())
+                    {
+                        asyncResp->res.jsonValue["Model"] = *value;
+                    }
+                    else if (value == nullptr)
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    asyncResp->res.jsonValue["Model"] = *value;
                 }
                 if (propertyName == "SparePartNumber")
                 {
