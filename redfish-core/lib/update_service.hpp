@@ -3725,10 +3725,33 @@ inline void requestRoutesSoftwareInventory(App& app)
 
                                 std::string formatDesc =
                                     swInvPurpose->substr(endDesc);
+                                
+                                it = propertiesList.find("Description");
                                 asyncResp->res.jsonValue["Description"] =
-                                    formatDesc + " image";
+                                        formatDesc + " image";
+                                if (it != propertiesList.end())
+                                {
+                                    const std::string* description =
+                                        std::get_if<std::string>(&it->second);
+                                    if (description != nullptr && !description->empty())
+                                    {
+                                        asyncResp->res.jsonValue["Description"] = *description;
+                                    }
+                                }
+
                                 getRelatedItems(asyncResp, *swId,
                                                 *swInvPurpose);
+                                
+                                it = propertiesList.find("PrettyName");
+                                if (it != propertiesList.end())
+                                {
+                                    const std::string* foundName = 
+                                        std::get_if<std::string>(&it->second);
+                                    if (foundName != nullptr && !foundName->empty())
+                                    {
+                                        asyncResp->res.jsonValue["Name"] = *foundName;
+                                    }
+                                }
                             },
                             versionService, path,
                             "org.freedesktop.DBus.Properties", "GetAll","");
