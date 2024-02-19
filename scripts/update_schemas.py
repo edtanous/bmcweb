@@ -158,6 +158,8 @@ include_list = [
     "TrustedComponent",
     "TrustedComponentCollection",
     "UpdateService",
+    "VLanNetworkInterfaceCollection",
+    "VLanNetworkInterface",
     "VirtualMedia",
     "VirtualMediaCollection",
     "odata",
