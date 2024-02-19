@@ -1031,15 +1031,11 @@ inline void objectPropertiesToJson(
                 {
                     if (forceToInt)
                     {
-                        if (forceToInt)
-                        {
-                            sensorJson[key] =
-                                static_cast<int64_t>(*doubleValue);
-                        }
-                        else
-                        {
-                            sensorJson[key] = *doubleValue;
-                        }
+                        sensorJson[key] = static_cast<int64_t>(*doubleValue);
+                    }
+                    else
+                    {
+                        sensorJson[key] = *doubleValue;
                     }
                 }
                 continue;
