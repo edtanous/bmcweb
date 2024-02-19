@@ -322,7 +322,7 @@ inline void handleSPDMGETSignedMeasurement(
                 std::string location =
                     "Location: /redfish/v1/"
                     "ComponentIntegrity/" +
-                    id + "/Actions/SPDMGetSignedMeasurements/data";
+                    id + "/Actions/ComponentIntegrity.SPDMGetSignedMeasurements/data";
                 taskData->payload->httpHeaders.emplace_back(
                     std::move(location));
                 taskData->state = "Completed";
@@ -502,7 +502,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                     {"Actions",
                      {{"#ComponentIntegrity.SPDMGetSignedMeasurements",
                        {{"target", "/redfish/v1/ComponentIntegrity/" + id +
-                                       "/Actions/SPDMGetSignedMeasurements"},
+                                       "/Actions/ComponentIntegrity.SPDMGetSignedMeasurements"},
                         {"@Redfish.ActionInfo",
                          "/redfish/v1/ComponentIntegrity/" + id +
                              "/SPDMGetSignedMeasurementsActionInfo"}}}}},
@@ -584,13 +584,13 @@ inline void requestRoutesComponentIntegrity(App& app)
         });
 
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
-                      "Actions/SPDMGetSignedMeasurements")
+                      "Actions/ComponentIntegrity.SPDMGetSignedMeasurements")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleSPDMGETSignedMeasurement, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
-                      "Actions/SPDMGetSignedMeasurements/data")
+                      "Actions/ComponentIntegrity.SPDMGetSignedMeasurements/data")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

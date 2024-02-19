@@ -7216,14 +7216,14 @@ inline void requestRoutesDebugToken(App& app)
             {"#LogService.CollectDiagnosticData",
              {{"target",
                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-               "/LogServices/DebugTokenService/CollectDiagnosticData"}}}};
+               "/LogServices/DebugTokenService/LogService.CollectDiagnosticData"}}}};
     });
 }
 
 inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/LogServices/DebugTokenService/CollectDiagnosticData")
+                      "/LogServices/DebugTokenService/LogService.CollectDiagnosticData")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
