@@ -593,8 +593,13 @@ class Router
 
         BMCWEB_LOG_DEBUG("Matched rule (upgrade) '{}' {} / {}", rule.rule, static_cast<uint32_t>(*verb), methods);
 
+        if (req.session == nullptr)
+        {
+            rule.handleUpgrade(req, asyncResp, std::move(adaptor));
+            return;
+        }
         // TODO(ed) This should be able to use std::bind_front, but it doesn't
-        // appear to work with the std::move on adaptor.
+        // appear to work with the std::move on adaptor.        
         validatePrivilege(
             req, asyncResp, rule,
             [&rule, asyncResp, adaptor(std::forward<Adaptor>(adaptor))](

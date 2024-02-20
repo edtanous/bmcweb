@@ -564,6 +564,20 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                 "Disabled";
                         }
                     }
+                    else if (propertyName == "DefaultPowerCap")
+                    {
+                        const uint32_t* value =
+                            std::get_if<uint32_t>(&property.second);
+                        if (value == nullptr)
+                        {
+                            BMCWEB_LOG_DEBUG("Null value returned "
+                                             "for type");
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["PowerLimitWatts"]
+                                                ["DefaultSetPoint"] = *value;
+                    }
                 }
             },
                 element.first, objPath, "org.freedesktop.DBus.Properties",
