@@ -1444,7 +1444,7 @@ inline void forwardImage(
         return;
     }
 
-    crow::HttpClient client( 
+    crow::HttpClient client(*req.ioService, 
         std::make_shared<crow::ConnectionPolicy>(getPostAggregationPolicy()));
 
     MultipartParser parser;
@@ -1518,12 +1518,11 @@ inline void forwardImage(
         data += boundary.substr(2);
         data += "--\r\n";
 
-        std::string targetURI(req.target());
-
+        boost::urls::url url(sat->second);
+        url.set_path(req.url().path());
         client.sendDataWithCallback(
-            data, std::string(sat->second.host()),
-            sat->second.port_number(), targetURI, false /*useSSL*/, req.fields,
-            boost::beast::http::verb::post, cb);
+            std::move(data), url,
+            req.fields(), boost::beast::http::verb::post, cb);
     }
 }
 #endif
