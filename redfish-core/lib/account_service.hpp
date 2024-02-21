@@ -1233,6 +1233,11 @@ inline void updateUserProperties(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                     // If password is invalid
                     messages::propertyValueFormatError(asyncResp->res,
                                                        *password, "Password");
+                    size_t maxrepeat = 3;
+                    if (!password.value().empty())
+                    {
+                        maxrepeat = static_cast<size_t>(3 + (0.09 * static_cast<double>(strlen(password.value().c_str()))));
+                    }
                     std::string resolution =
                         " Password should be " +
                         std::to_string(minPasswordLength) +
@@ -1240,9 +1245,13 @@ inline void updateUserProperties(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                         std::to_string(minUcaseCharacters) +
                         " uppercase character, " +
                         std::to_string(minLcaseCharacters) +
-                        " lower case character, " + std::to_string(minDigits) +
-                        " digit" + " and " + std::to_string(minSpecCharacters) +
-                        " special character.";
+                        " lower case character, " +
+                        std::to_string(minDigits) +
+                        " digit, " +
+                        std::to_string(minSpecCharacters) +
+                        " special character and " +
+                        std::to_string(maxrepeat) +
+                        " maximum number of consecutive character pairs";
 
                     // update the resolution message and add the password
                     // policy
@@ -1779,6 +1788,11 @@ inline void handleAccountCollectionPost(
 
                         if (retval == PAM_AUTHTOK_ERR)
                         {
+                            size_t maxrepeat = 3;
+                            if (!password.empty())
+                            {
+                                maxrepeat = static_cast<size_t>(3 + (0.09 * static_cast<double>(strlen(password.c_str()))));
+                            }
                             std::string resolution =
                                 "Password should be " +
                                 std::to_string(*minPassLength) +
@@ -1787,9 +1801,12 @@ inline void handleAccountCollectionPost(
                                 " uppercase character, " +
                                 std::to_string(minLcaseCharacters) +
                                 " lower case character, " +
-                                std::to_string(minDigits) + " digit and " +
+                                std::to_string(minDigits) +
+                                " digit," +
                                 std::to_string(minSpecCharacters) +
-                                " special character.";
+                                " special character and " +
+                                std::to_string(maxrepeat) +
+                                " maximum number of consecutive character pairs";
 
                             // update the resolution message and add the
                             // password policy too
