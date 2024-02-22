@@ -3508,7 +3508,8 @@ inline void requestRoutesManager(App& app)
             asyncResp->res.jsonValue["Description"] =
                 "Baseboard Management Controller";
             asyncResp->res.jsonValue["PowerState"] = "On";
-            asyncResp->res.jsonValue["Status"]["State"] = "Starting";
+            // get BMC manager state
+            sw_util::getBmcState(asyncResp);
             asyncResp->res.jsonValue["Status"]["Health"] = "OK";
 
             asyncResp->res.jsonValue["ManagerType"] = "BMC";
