@@ -1698,7 +1698,7 @@ inline void processMultipartFormData(
 #endif
 
     setForceUpdate(asyncResp, "/xyz/openbmc_project/software",
-                   forceUpdate.value_or(false), [req, asyncResp, uriTargets]() {
+                   forceUpdate.value_or(false), [&req, asyncResp, uriTargets]() {
                        areTargetsUpdateable(req, asyncResp, uriTargets);
                    });
 }
