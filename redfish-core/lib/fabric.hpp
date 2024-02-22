@@ -444,7 +444,7 @@ inline void
             }
             else if (propertyName == "CurrentBandwidth")
             {
-                const size_t* value = std::get_if<size_t>(&property.second);
+                const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
                     BMCWEB_LOG_DEBUG("Null value returned " "for CurrentBandwidth");
@@ -455,7 +455,7 @@ inline void
             }
             else if (propertyName == "MaxBandwidth")
             {
-                const size_t* value = std::get_if<size_t>(&property.second);
+                const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
                     BMCWEB_LOG_DEBUG("Null value returned " "for MaxBandwidth");
