@@ -46,6 +46,7 @@
 #include <utils/json_utils.hpp>
 #include <utils/origin_utils.hpp>
 #include <utils/registry_utils.hpp>
+#include <utils/log_services_util.hpp>
 
 #include <cstdlib>
 #include <ctime>
@@ -318,6 +319,8 @@ class Event
     std::string messageSeverity = "";
     std::string oem = "";
     std::string originOfCondition = "";
+    std::string eventResolution = "";
+    std::string logEntryId = "";
     redfish_bool specificEventExistsInGroup = redfishBoolNa;
 
     // derived properties
@@ -342,6 +345,10 @@ class Event
         }
         valid = true;
         messageSeverity = registryMsg->messageSeverity;
+        if (registryMsg->resolution != nullptr)
+        {
+            eventResolution = registryMsg->resolution;
+        }
     }
 
     bool isValid()
@@ -486,6 +493,16 @@ class Event
         {
             eventLogEntry["SpecificEventExistsInGroup"] =
                 specificEventExistsInGroup == redfishBoolFalse ? false : true;
+        }
+        if (!eventResolution.empty())
+        {
+            eventLogEntry["Resolution"] = eventResolution;
+        }
+        if (!logEntryId.empty())
+        {
+            eventLogEntry["LogEntry"] = nlohmann::json::object();
+            eventLogEntry["LogEntry"]["@odata.id"] =
+                    redfish::getLogEntryDataId(logEntryId);
         }
         return 0;
     }
@@ -839,11 +856,13 @@ class Subscription : public persistent_data::UserSubscription
                 BMCWEB_LOG_ERROR << "Failed to format the event log entry";
             }
 
-            nlohmann::json msg = {{"@odata.type", "#Event.v1_7_0.Event"},
+            nlohmann::json eventsArray =  nlohmann::json::array();
+            eventsArray.push_back(logEntry);
+            nlohmann::json msg = {{"@odata.type", "#Event.v1_9_0.Event"},
                                   {"Id", std::to_string(eventSeqNum)},
                                   {"Name", "Event Log"},
                                   {"Context", customText},
-                                  {"Events", logEntry}};
+                                  {"Events", eventsArray}};
 
             std::string strMsg = msg.dump(
                 2, ' ', true, nlohmann::json::error_handler_t::replace);
@@ -2139,6 +2158,8 @@ class EventServiceManager
             std::string message;
             std::string deviceName;
             std::string resourceType;
+            std::string logEntryId;
+            std::string resolution;
             std::vector<std::string> messageArgs = {};
             const std::vector<std::string>* additionalDataPtr;
 
@@ -2234,6 +2255,35 @@ class EventServiceManager
                         return;
                     }
                 }
+                else if (key == "Id")
+                {
+                    const uint32_t* ipPtr = std::get_if<uint32_t>(&val);
+                    if (ipPtr != nullptr)
+                    {
+                        logEntryId = std::to_string(*ipPtr);
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_ERROR << "Invalid type of Id "
+                                            "property.";
+                        return;
+                    }
+                }
+                else if (key == "Resolution")
+                {
+                    const std::string* resolutionPtr;
+                    resolutionPtr = std::get_if<std::string>(&val);
+                    if (resolutionPtr != nullptr)
+                    {
+                        resolution = std::move(*resolutionPtr);
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_ERROR << "Invalid type of Resolution "
+                                            "property.";
+                        return;
+                    }
+                }
                 else if (key == "Severity")
                 {
                     const std::string* severityPtr;
@@ -2292,6 +2342,8 @@ class EventServiceManager
                 event.eventTimestamp = timestamp;
                 event.setRegistryMsg(messageArgs);
                 event.messageArgs = messageArgs;
+                event.eventResolution = resolution;
+                event.logEntryId = logEntryId;
                 AdditionalData additional(*additionalDataPtr);
                 if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
                 {

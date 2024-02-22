@@ -51,6 +51,7 @@
 #include <utils/origin_utils.hpp>
 #include <utils/registry_utils.hpp>
 #include <utils/time_utils.hpp>
+#include <utils/log_services_util.hpp>
 
 #include <charconv>
 #include <chrono>
@@ -2257,9 +2258,7 @@ static LogParseError
 
     // Fill in the log entry with the gathered data
     logEntryJson["@odata.type"] = logEntryVersion;
-    logEntryJson["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/LogServices/EventLog/Entries/" +
-                                logEntryID;
+    logEntryJson["@odata.id"] = getLogEntryDataId(logEntryID);
     logEntryJson["Name"] = "System Event Log Entry";
     logEntryJson["Id"] = logEntryID;
     logEntryJson["Message"] = std::move(msg);
@@ -2659,9 +2658,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                             thisEntry["@odata.type"] =
                                 logEntryVersion;
                             thisEntry["@odata.id"] =
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
-                                "LogServices/EventLog/Entries/" +
-                                std::to_string(*id);
+                                    getLogEntryDataId(std::to_string(*id));
                             thisEntry["Name"] = "System Event Log Entry";
                             thisEntry["Id"] = std::to_string(*id);
                             thisEntry["Message"] = *message;
@@ -2679,11 +2676,8 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         if (filePath != nullptr)
                         {
                             thisEntry["AdditionalDataURI"] =
-                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                "/LogServices/"
-                                "EventLog/"
-                                "Entries/" +
-                                std::to_string(*id) + "/attachment";
+                               getLogEntryAdditionalDataURI(
+                                                           std::to_string(*id));
                         }
                         entriesArray.push_back(thisEntry);
                     }
@@ -2902,11 +2896,8 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     if (filePath != nullptr)
                     {
                         asyncResp->res.jsonValue["AdditionalDataURI"] =
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/LogServices/"
-                            "EventLog/"
-                            "Entries/" +
-                            std::to_string(*id) + "/attachment";
+                           getLogEntryAdditionalDataURI(std::to_string(*id));
+
                     }
                 },
                 "xyz.openbmc_project.Logging",
@@ -6848,13 +6839,8 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                     nullptr)
                                                                 {
                                                                     thisEntry["AdditionalDataURI"] =
-                                                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                                                        "/LogServices/"
-                                                                        "EventLog/"
-                                                                        "Entries/" +
-                                                                        std::to_string(
-                                                                            *id) +
-                                                                        "/attachment";
+                                                                       getLogEntryAdditionalDataURI(
+                                                                                 std::to_string(*id));
                                                                 }
                                                                 entriesArray
                                                                     .push_back(
