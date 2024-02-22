@@ -1944,7 +1944,7 @@ inline void requestRoutesUpdateService(App& app)
                 return;
             }
             asyncResp->res.jsonValue["@odata.type"] =
-                "#UpdateService.v1_8_0.UpdateService";
+                "#UpdateService.v1_11_0.UpdateService";
             asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/UpdateService";
             asyncResp->res.jsonValue["Id"] = "UpdateService";
             asyncResp->res.jsonValue["Description"] =
