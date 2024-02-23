@@ -376,6 +376,47 @@ inline void
 }
 
 /**
+ * @brief Retrieves BMC state
+ *
+ * @param[in] aResp  Shared pointer for generating response message.
+ *
+ * @return None.
+ */
+inline void getBmcState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, "xyz.openbmc_project.State.BMC",
+        "/xyz/openbmc_project/state/bmc0", "xyz.openbmc_project.State.BMC", "CurrentBMCState",
+        [aResp](const boost::system::error_code ec, const std::string& propertyValue) {
+            if (ec)
+            {
+                aResp->res.jsonValue["Status"]["State"] = "Enabled";
+                return;
+            }
+            auto leafName = propertyValue.substr(propertyValue.find_last_of('.') + 1);
+            std::string bmcState = "";
+            if (leafName == "Ready")
+            {
+                bmcState = "Enabled";
+            }
+            else if (leafName == "Quiesced")
+            {
+                bmcState = "Quiesced";
+            }
+            else if (leafName == "UpdateInProgress")
+            {
+                bmcState = "Updating";
+            }
+            else
+            {
+                // leafName == NotReady
+                bmcState = "Starting";
+            }
+            aResp->res.jsonValue["Status"]["State"] = bmcState;
+        });
+}
+
+/**
  * @brief Retrieves SMBIOS UUID
  *
  * @param[in] aResp  Shared pointer for generating response message.

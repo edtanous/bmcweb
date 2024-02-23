@@ -43,6 +43,7 @@
 #include "message_registries.hpp"
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
+#include "ports.hpp"
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
 #include "network_adapters.hpp"
@@ -125,6 +126,7 @@ class RedfishService
             requestRoutesSession(app);
         }
         requestEthernetInterfacesRoutes(app);
+        requestPortsInterfacesRoutes(app);
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesThermal(app);
