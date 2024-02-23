@@ -1109,11 +1109,6 @@ inline void
 
         BMCWEB_LOG_DEBUG("Boot mode: {}", bootModeStr);
 
-        asyncResp->res
-            .jsonValue["Boot"]
-                      ["BootSourceOverrideTarget@Redfish.AllowableValues"] = {
-            "None", "Pxe", "Hdd", "Cd", "Diags", "BiosSetup", "Usb"};
-
         if (bootModeStr !=
             "xyz.openbmc_project.Control.Boot.Mode.Modes.Regular")
         {
