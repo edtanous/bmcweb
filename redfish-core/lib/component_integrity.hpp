@@ -418,23 +418,42 @@ inline void requestRoutesComponentIntegrity(App& app)
                         nlohmann::json& memberArray =
                             asyncResp->res.jsonValue["Members"];
                         memberArray = nlohmann::json::array();
-
+                        asyncResp->res.jsonValue["Members@odata.count"] = 0;
                         for (const std::pair<
                                  std::string,
                                  std::vector<std::pair<
                                      std::string, std::vector<std::string>>>>&
                                  object : subtree)
                         {
-                            sdbusplus::message::object_path objPath(
-                                object.first);
-                            memberArray.push_back(
-                                {{"@odata.id",
-                                  "/redfish/v1/ComponentIntegrity/" +
-                                      objPath.filename()}});
-                        }
+                            auto objPathString = object.first;
+                            sdbusplus::asio::getProperty<bool>(
+                                *crow::connections::systemBus, object.second[0].first, objPathString,
+                                "xyz.openbmc_project.Object.Enable", "Enabled",
+                                [asyncResp, objPathString, &memberArray]
+                                    (const boost::system::error_code ec,
+                                     const bool& enabled)
+                                {
+                                    if (ec)
+                                    {
+                                        BMCWEB_LOG_ERROR
+                                            << "DBUS response error for enabled property"
+                                            << ", error=" << ec.what();
+                                        return;
+                                    }
 
-                        asyncResp->res.jsonValue["Members@odata.count"] =
-                            memberArray.size();
+                                    if (enabled == false)
+                                    {
+                                        return;
+                                    }
+
+                                    sdbusplus::message::object_path objPath(objPathString);
+                                    memberArray.push_back(
+                                    {{"@odata.id",
+                                    "/redfish/v1/ComponentIntegrity/" +
+                                    objPath.filename()}});
+                                    asyncResp->res.jsonValue["Members@odata.count"] = memberArray.size();
+                                });
+                        }
                     },
                     dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,
                     dbus_utils::mapperIntf, "GetSubTree", rootSPDMDbusPath, 0,
