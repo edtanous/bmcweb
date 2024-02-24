@@ -3466,9 +3466,10 @@ inline void requestRoutesManager(App& app)
                                 }
                             }
                             getLinkManagerForSwitches(asyncResp, path);
-
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                             redfish::conditions_utils::
                                 populateServiceConditions(asyncResp, bmcId);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                             auto health = std::make_shared<HealthRollup>(
@@ -3478,9 +3479,12 @@ inline void requestRoutesManager(App& app)
                                     asyncResp->res
                                         .jsonValue["Status"]["Health"] =
                                         rootHealth;
+                                    BMCWEB_LOG_DEBUG << healthRollup;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                                     asyncResp->res
                                         .jsonValue["Status"]["HealthRollup"] =
                                         healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
                                 });
                             health->start();
 #endif
@@ -3526,9 +3530,10 @@ inline void requestRoutesManager(App& app)
                 "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces";
             asyncResp->res.jsonValue["DedicatedNetworkPorts"]["@odata.id"] =
                 "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts";    
-            
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY     
             redfish::conditions_utils::populateServiceConditions(asyncResp,
                                                                  PLATFORMBMCID);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY 
             getServiceIdentification(asyncResp);
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE

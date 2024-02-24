@@ -1118,7 +1118,10 @@ inline void getAcceleratorDataByService(
         objPath, [aResp](const std::string& rootHealth,
                          const std::string& healthRollup) {
             aResp->res.jsonValue["Status"]["Health"] = rootHealth;
+            BMCWEB_LOG_DEBUG << healthRollup;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
             aResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
         });
     health->start();
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
@@ -3467,8 +3470,10 @@ inline void requestRoutesProcessor(App& app)
 
                 redfish::processor_utils::getProcessorObject(
                     asyncResp, processorId, getProcessorData);
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY                  
                 redfish::conditions_utils::populateServiceConditions(
                     asyncResp, processorId);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY  
             });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/")
@@ -5374,10 +5379,12 @@ inline void requestRoutesProcessorPort(App& app)
                                                 .jsonValue["Metrics"]
                                                           ["@odata.id"] =
                                                 metricsURI;
-                                            asyncResp->res
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY                                             
+                                             asyncResp->res
                                                 .jsonValue["Status"]
                                                           ["Conditions"] =
                                                 nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY         
                                             for (const auto& [service,
                                                               interfaces] :
                                                  object1)

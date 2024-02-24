@@ -1914,7 +1914,9 @@ class BMCStatusAsyncResp
         {
             asyncResp->res.jsonValue["Status"]["State"] = "UnavailableOffline";
         }
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
         asyncResp->res.jsonValue["Status"]["Conditions"] = nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
     }
 
     BMCStatusAsyncResp(const BMCStatusAsyncResp&) = delete;
@@ -3732,10 +3734,14 @@ inline void requestRoutesSoftwareInventory(App& app)
                             "org.freedesktop.DBus.Properties", "GetAll","");
 
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                         asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                             "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                         asyncResp->res.jsonValue["Status"]["Conditions"] =
                             nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
                     }
                     if (!found)
                     {
@@ -3817,11 +3823,13 @@ inline void requestRoutesInventorySoftware(App& app)
 
                         asyncResp->res.jsonValue["Id"] = *swId;
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-                        asyncResp->res.jsonValue["Status"]["HealthRollup"] =
-                            "OK";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+                        asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY                        
                         asyncResp->res.jsonValue["Status"]["Conditions"] =
                             nlohmann::json::array();
-
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY  
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, swId, path, searchPath](
                                 const boost::system::error_code errorCode,

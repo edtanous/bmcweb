@@ -317,8 +317,8 @@ class Event
     std::vector<std::string> messageArgs = {};
     std::string message = "";
     std::string messageSeverity = "";
-    std::string oem = "";
     std::string originOfCondition = "";
+    nlohmann::json oem = nlohmann::json::object();
     std::string eventResolution = "";
     std::string logEntryId = "";
     redfish_bool specificEventExistsInGroup = redfishBoolNa;
@@ -482,7 +482,7 @@ class Event
         }
         if (!oem.empty())
         {
-            eventLogEntry["Oem"] = oem;
+            eventLogEntry.update(oem);
         }
         if (!originOfCondition.empty() && includeOriginOfCondition)
         {
@@ -2336,12 +2336,25 @@ class EventServiceManager
                 {
                     return;
                 }
-                event.eventId = eventId;
                 event.messageSeverity =
                     translateSeverityDbusToRedfish(severity);
                 event.eventTimestamp = timestamp;
                 event.setRegistryMsg(messageArgs);
                 event.messageArgs = messageArgs;
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                event.oem =
+                {
+                    {
+                        "Oem", {
+                            {"Nvidia", {
+                                {"@odata.type", "#NvidiaEvent.v1_0_0.EventRecord"},
+                                {"Device", deviceName},
+                                {"ErrorId", eventId}}
+                            }
+                        }
+                    }
+                };
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 event.eventResolution = resolution;
                 event.logEntryId = logEntryId;
                 AdditionalData additional(*additionalDataPtr);

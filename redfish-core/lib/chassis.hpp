@@ -29,8 +29,8 @@
 #include <sdbusplus/unpack_properties.hpp>
 #include <utils/chassis_utils.hpp>
 #include <utils/collection.hpp>
-#include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/json_utils.hpp>
 
 namespace redfish
@@ -1498,9 +1498,9 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     {
         getChassisState(asyncResp);
     }
-
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
     redfish::conditions_utils::populateServiceConditions(asyncResp, chassisId);
-
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     // Baseboard Chassis OEM properties if exist, search by association
     getOemBaseboardChassisAssert(asyncResp, objPath);
@@ -1511,7 +1511,10 @@ inline void getChassisData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         objPath, [asyncResp](const std::string& rootHealth,
                              const std::string& healthRollup) {
             asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+            BMCWEB_LOG_DEBUG << healthRollup;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
             asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
         });
     health->start();
 #else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE

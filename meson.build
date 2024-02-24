@@ -104,6 +104,8 @@ feature_map = {
   'vm-websocket'                                : '-DBMCWEB_ENABLE_VM_WEBSOCKET',
   'xtoken-auth'                                 : '-DBMCWEB_ENABLE_XTOKEN_AUTHENTICATION',
   'health-rollup-alternative'                   : '-DBMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE',
+  'disable-health-rollup'                       : '-DBMCWEB_DISABLE_HEALTH_ROLLUP',
+  'disable-conditions-array'                    : '-DBMCWEB_DISABLE_CONDITIONS_ARRAY',
   #'vm-nbdproxy'                                : '-DBMCWEB_ENABLE_VM_NBDPROXY',
   'rmedia'                	                    : '-DBMCWEB_ENABLE_RMEDIA',
   'tls-auth-opt-in'                             : '-DBMCWEB_ENABLE_TLS_AUTH_OPT_IN',
