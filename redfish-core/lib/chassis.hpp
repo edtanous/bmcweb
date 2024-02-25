@@ -2125,31 +2125,49 @@ inline void powerCycle(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 inline void handleChassisResetActionInfoPost(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+#ifdef BMCWEB_ENABLE_EROT_RESET
+    const std::string& chassisId)
+#else
     const std::string& /*chassisId*/)
+#endif //BMCWEB_ENABLE_EROT_RESET
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
-    BMCWEB_LOG_DEBUG << "Post Chassis Reset.";
+#ifdef BMCWEB_ENABLE_EROT_RESET
+    redfish::chassis_utils::isEROTChassis(
+    chassisId, [req, asyncResp, chassisId](bool isEROT) {
+        if (isEROT)
+        {
+            handleEROTChassisResetAction(req, asyncResp, chassisId);
+        }
+        else
+        {
+#endif //BMCWEB_ENABLE_EROT_RESET
+            BMCWEB_LOG_DEBUG << "Post Chassis Reset.";
 
-    std::string resetType;
+            std::string resetType;
 
-    if (!json_util::readJsonAction(req, asyncResp->res, "ResetType", resetType))
-    {
-        return;
-    }
+            if (!json_util::readJsonAction(req, asyncResp->res, "ResetType", resetType))
+            {
+                return;
+            }
 
-    if (resetType != "PowerCycle")
-    {
-        BMCWEB_LOG_DEBUG << "Invalid property value for ResetType: "
-                         << resetType;
-        messages::actionParameterNotSupported(asyncResp->res, resetType,
-                                              "ResetType");
+            if (resetType != "PowerCycle")
+            {
+                BMCWEB_LOG_DEBUG << "ERROR Invalid property value for ResetType: "
+                                << resetType;
+                messages::actionParameterNotSupported(asyncResp->res, resetType,
+                                                    "ResetType");
 
-        return;
-    }
-    powerCycle(asyncResp);
+                return;
+            }
+            powerCycle(asyncResp);
+#ifdef BMCWEB_ENABLE_EROT_RESET
+        }
+    });
+#endif //BMCWEB_ENABLE_EROT_RESET
 }
 
 #ifdef BMCWEB_ENABLE_HOST_AUX_POWER
