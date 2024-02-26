@@ -109,6 +109,14 @@ option(
 )
 
 option(
+    'lldp-dedicated-ports',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enable LLDP information under the path of dedicated ports:
+                    /v1/Managers/bmc/DedicatedNetworkPorts/1'''
+)
+
+option(
     'redfish-dump-log',
     type: 'feature',
     value: 'disabled',
