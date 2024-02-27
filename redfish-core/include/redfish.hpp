@@ -104,16 +104,13 @@ class RedfishService
         {
          requestAccountServiceRoutes(app);
 	}
-#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
-         requestRoutesAggregationService(app);
-         requestRoutesAggregationSourceCollection(app);
-         requestRoutesAggregationSource(app);
-#endif
+
         if (persistent_data::getConfig().isTLSAuthEnabled())
 	{
             requestRoutesRoles(app);
             requestRoutesRoleCollection(app);
         }
+        
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
         requestRoutesAggregationService(app);
         requestRoutesAggregationSourceCollection(app);
