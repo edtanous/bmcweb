@@ -34,8 +34,8 @@
 #include <sdbusplus/asio/property.hpp>
 #include <utils/chassis_utils.hpp>
 #include <utils/collection.hpp>
-#include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
+#include <utils/conditions_utils.hpp>
 #include <utils/json_utils.hpp>
 
 namespace redfish
@@ -306,8 +306,10 @@ inline void getEROTChassis(const crow::Request& req,
                 [asyncResp](const std::string& rootHealth,
                             const std::string& healthRollup) {
                 asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                 asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                     healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
             },
                 &health_state::ok);
             health->start();
@@ -371,9 +373,11 @@ inline void getEROTChassis(const crow::Request& req,
             // Link association to parent chassis
             redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
                                                                objPath);
-
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
             redfish::conditions_utils::populateServiceConditions(asyncResp,
                                                                  chassisId);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
+
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
             manual_boot::bootModeQuery(req, asyncResp, chassisId);
 #endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE

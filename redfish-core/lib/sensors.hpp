@@ -3203,9 +3203,13 @@ inline void
             */
 
             asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
             asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
             asyncResp->res.jsonValue["Status"]["Conditions"] =
                 nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 
             handleSensorGet(asyncResp, chassisId, sensorId, sensorPath);
             // Add related item data

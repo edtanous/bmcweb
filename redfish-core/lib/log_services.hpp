@@ -112,9 +112,12 @@ static void generateMessageRegistry(
     const std::string& name, const std::string& timestamp,
     const std::string& messageId, const std::string& messageArgs,
     const std::string& resolution, const bool& resolved,
+    const std::string& eventId, const std::string& deviceName, 
     const std::string& severity = "")
 {
-    BMCWEB_LOG_DEBUG("Generating MessageRegitry for [{}]", messageId);
+    BMCWEB_LOG_DEBUG(
+        "Generating MessageRegitry for [{}] For Device {} For EventId {} ",
+        messageId, deviceName, eventId);
     const registries::Message* msg = registries::getMessage(messageId);
 
     if (msg == nullptr)
@@ -173,6 +176,21 @@ static void generateMessageRegistry(
                 {"MessageArgs", msgArgs},
                 {"Resolution", resolution},
                 {"Resolved", resolved}};
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    nlohmann::json oem =
+    {
+        {
+            "Oem", {
+                {"Nvidia", {
+                    {"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
+                    {"Device", deviceName},
+                    {"ErrorId", eventId}}
+                }
+            }
+        }
+    };
+    logEntry.update(oem);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 }
 
 } // namespace message_registries
@@ -2611,6 +2629,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                 const std::string* severity = nullptr;
                 const std::string* message = nullptr;
                 const std::string* filePath = nullptr;
+                const std::string* eventId = nullptr;
                 bool resolved = false;
                 const std::string* notify = nullptr;
                 const std::string* resolution = nullptr;
@@ -2691,6 +2710,11 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                     return;
                                 }
                             }
+                            else if (propertyMap.first == "EventId")
+                            {
+                                eventId = std::get_if<std::string>(
+                                    &propertyMap.second);
+                            }
                         }
                         if (id == nullptr || message == nullptr ||
                             severity == nullptr)
@@ -2757,14 +2781,15 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         thisEntry,
                         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/"
                         "EventLog/Entries/",
-                        "v1_9_0", std::to_string(*id), "System Event Log Entry",
+                        "v1_13_0", std::to_string(*id), "System Event Log Entry",
                         redfish::time_utils::getDateTimeStdtime(timestamp),
                         messageId, messageArgs, *resolution, resolved,
-                        *severity);
-
+                        *eventId, deviceName, *severity);
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                     origin_utils::convertDbusObjectToOriginOfCondition(
                         originOfCondition, std::to_string(*id), asyncResp,
                         thisEntry, deviceName);
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
                 }
 
                 // generateMessageRegistry will not create the entry if
@@ -2772,7 +2797,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                 // So check the entry 'Id' anyway to cover that case.
                 if (thisEntry["Id"].size() == 0)
                 {
-                    thisEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+                    thisEntry["@odata.type"] = "#LogEntry.v1_13_0.LogEntry";
                     thisEntry["@odata.id"] =
                         getLogEntryDataId(std::to_string(*id));
                     thisEntry["Name"] = "System Event Log Entry";
@@ -2787,12 +2812,22 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     thisEntry["Modified"] =
                         redfish::time_utils::getDateTimeStdtime(
                             updateTimestamp);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                    nlohmann::json oem = {
+                        {"Oem",
+                         {{"Nvidia",
+                           {{"@odata.type",
+                             "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
+                            {"Device", deviceName},
+                            {"ErrorId", *eventId}}}}}};
+                    thisEntry.update(oem);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     std::optional<bool> notifyAction =
                         getProviderNotifyAction(*notify);
                     if (notifyAction)
                     {
                         thisEntry["ServiceProviderNotified"] = *notifyAction;
-                    }                
+                    }
                 }
                 if (filePath != nullptr)
                 {
@@ -2862,6 +2897,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             const std::string* severity = nullptr;
             const std::string* message = nullptr;
             const std::string* filePath = nullptr;
+            const std::string* eventId = nullptr;
             bool resolved = false;
             const std::string* resolution = nullptr;
             const std::vector<std::string>* additionalDataRaw = nullptr;
@@ -2872,7 +2908,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 timestamp, "UpdateTimestamp", updateTimestamp, "Severity",
                 severity, "Message", message, "Resolved", resolved,
                 "Resolution", resolution, "AdditionalData", additionalDataRaw, "Path", filePath,
-                "ServiceProviderNotify", notify);
+                "ServiceProviderNotify", notify, "EventId", eventId);
 
             if (!success)
             {
@@ -2917,13 +2953,16 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     asyncResp->res.jsonValue,
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/"
                     "EventLog/Entries/",
-                    "v1_9_0", std::to_string(*id), "System Event Log Entry",
-                    redfish::time_utils::getDateTimeStdtime(redfish::time_utils::getTimestamp(*timestamp)),
-                    messageId, messageArgs, *resolution, resolved, *severity);
-
+                    "v1_13_0", std::to_string(*id), "System Event Log Entry",
+                    redfish::time_utils::getDateTimeStdtime(
+                        redfish::time_utils::getTimestamp(*timestamp)),
+                    messageId, messageArgs, *resolution, resolved,
+                    *eventId, deviceName, *severity);
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                 origin_utils::convertDbusObjectToOriginOfCondition(
                     originOfCondition, std::to_string(*id), asyncResp,
                     asyncResp->res.jsonValue, deviceName);
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
             }
 
             // generateMessageRegistry will not create the entry if
@@ -2940,7 +2979,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 }
 
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogEntry.v1_9_0.LogEntry";
+                    "#LogEntry.v1_13_0.LogEntry";
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/"
                     "EventLog/"
@@ -2968,14 +3007,23 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     redfish::time_utils::getDateTimeUintMs(*timestamp);
                 asyncResp->res.jsonValue["Modified"] =
                     redfish::time_utils::getDateTimeUintMs(*updateTimestamp);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                nlohmann::json oem = {
+                    {"Oem",
+                     {{"Nvidia",
+                       {{"@odata.type",
+                         "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
+                        {"Device", deviceName},
+                        {"ErrorId", *eventId}}}}}};
+                asyncResp->res.jsonValue.update(oem);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 if (filePath != nullptr)
                 {
                     getLogEntryAdditionalDataURI(std::to_string(*id));
                 }
-        }
+            }
     });
 	    });
-
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/EventLog/Entries/<str>/")
@@ -3180,6 +3228,7 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
     std::time_t timestamp{};
     std::time_t updateTimestamp{};
     std::string* severity = nullptr;
+    std::string* eventId = nullptr;
     std::string* message = nullptr;
     std::vector<std::string>* additionalDataVectorString = nullptr;
     std::string generatorId;
@@ -3221,6 +3270,10 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
         else if (propertyMap.first == "Severity")
         {
             severity = std::get_if<std::string>(&propertyMap.second);
+        }
+        else if (propertyMap.first == "EventId")
+        {
+            eventId = std::get_if<std::string>(&propertyMap.second);
         }
         else if (propertyMap.first == "Message")
         {
@@ -3332,7 +3385,7 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
             "System Event Log Entry",
             redfish::time_utils::getDateTimeStdtime(timestamp),
             messageId, messageArgs, *resolution, resolved,
-            *severity);
+            *eventId, deviceName, *severity);
         thisEntry["EntryType"] = "SEL";
     }
 
@@ -3363,6 +3416,15 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
         thisEntry["Created"] = redfish::time_utils::getDateTimeStdtime(timestamp);
         thisEntry["Modified"] =
             redfish::time_utils::getDateTimeStdtime(updateTimestamp);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        nlohmann::json oem = {
+            {"Oem",
+             {{"Nvidia",
+               {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
+                {"Device", deviceName},
+                {"ErrorId", *eventId}}}}}};
+        thisEntry.update(oem);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     }
 }
 
@@ -5096,7 +5158,7 @@ static void
                                    "/LogServices/Crashdump/Entries/" +
                                    logID + "/" + filename;
         nlohmann::json::object_t logEntry;
-        logEntry["@odata.type"] = "#LogEntry.v1_9_0.LogEntry";
+        logEntry["@odata.type"] = "#LogEntry.v1_13_0.LogEntry";
         logEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/LogServices/Crashdump/Entries/" +
                                 logID;
@@ -6610,6 +6672,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                             std::time_t timestamp{};
                             std::time_t updateTimestamp{};
                             const std::string* severity = nullptr;
+                            const std::string* eventId = nullptr;
                             const std::string* message = nullptr;
                             const std::string* filePath = nullptr;
                             bool resolved = false;
@@ -6721,6 +6784,13 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                     std::get_if<std::string>(
                                                         &propertyMap.second);
                                             }
+                                            else if (propertyMap.first ==
+                                                     "EventId")
+                                            {
+                                                eventId =
+                                                    std::get_if<std::string>(
+                                                        &propertyMap.second);
+                                            }
                                         }
                                         if (id == nullptr ||
                                             message == nullptr ||
@@ -6784,7 +6854,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                     "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                                     "/LogServices/"
                                                     "EventLog/Entries/",
-                                                    "v1_9_0",
+                                                    "v1_13_0",
                                                     std::to_string(*id),
                                                     "System Event Log Entry",
                                                     redfish::time_utils::
@@ -6792,8 +6862,10 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                             timestamp),
                                                     messageId, messageArgs,
                                                     *resolution, resolved,
+                                                    *eventId, deviceName,
                                                     *severity);
 
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                                             origin_utils::
                                                 convertDbusObjectToOriginOfCondition(
                                                     originOfCondition,
@@ -6801,6 +6873,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                     asyncResp, thisEntry,
                                                     deviceName);
                                         }
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
 
                                         // generateMessageRegistry
                                         // will not
@@ -6819,7 +6892,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                         if (thisEntry["Id"].size() == 0)
                                         {
                                             thisEntry["@odata.type"] =
-                                                "#LogEntry.v1_9_0.LogEntry";
+                                                "#LogEntry.v1_13_0.LogEntry";
                                             thisEntry["@odata.id"] =
                                                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                                 "/LogServices/"
@@ -6843,6 +6916,16 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                 time_utils::getDateTimeStdtime(
                                                     updateTimestamp);
                                         }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                                        nlohmann::json oem = {
+                                            {"Oem",
+                                             {{"Nvidia",
+                                               {{"@odata.type",
+                                                 "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
+                                                {"Device", deviceName},
+                                                {"ErrorId", *eventId}}}}}};
+                                        thisEntry.update(oem);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                                         if (filePath != nullptr)
                                         {
                                             thisEntry["AdditionalDataURI"] =

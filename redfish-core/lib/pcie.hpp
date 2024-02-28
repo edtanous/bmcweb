@@ -433,24 +433,32 @@ static inline void
                     escapedPath, [asyncResp](const std::string& rootHealth,
                                              const std::string& healthRollup) {
                 asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                 asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                     healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
             });
             health->start();
 #else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
             asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
             asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
         }
         else if (*s == "xyz.openbmc_project.State.Chassis.PowerState.Off")
         {
             asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
             asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
             asyncResp->res.jsonValue["Status"]["HealthRollup"] = "Critical";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Unrecognized 'CurrentPowerState' value: '{}'. Omitting 'Status' entry in the response", *s);
+            BMCWEB_LOG_DEBUG(
+                "Unrecognized 'CurrentPowerState' value: '{}'. Omitting 'Status' entry in the response",
+                *s);
         }
     };
     crow::connections::systemBus->async_method_call(
@@ -1785,10 +1793,10 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             getPCIeDeviceState(asyncResp, device,
                                                chassisPCIePath, connectionName);
                         }
-
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                         redfish::conditions_utils::populateServiceConditions(
                             asyncResp, device);
-
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                         nlohmann::json& oem =
                             asyncResp->res.jsonValue["Oem"]["Nvidia"];

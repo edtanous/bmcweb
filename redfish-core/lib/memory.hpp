@@ -409,8 +409,9 @@ inline void
     asyncResp->res.jsonValue[jsonPtr]["Status"]["Health"] = "OK";
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     std::string dimmIdStr{dimmId};
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
     redfish::conditions_utils::populateServiceConditions(asyncResp, dimmIdStr);
-
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
     const uint16_t* memoryDataWidth = nullptr;
     const size_t* memorySizeInKB = nullptr;
     const std::string* partNumber = nullptr;
@@ -645,9 +646,11 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
         objPath, [asyncResp](const std::string& rootHealth,
-                         const std::string& healthRollup) {
+                             const std::string& healthRollup) {
         asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
         asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+#endif //  BMCWEB_DISABLE_HEALTH_ROLLUP
     });
     health->start();
 #else  // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE

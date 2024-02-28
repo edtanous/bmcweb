@@ -477,11 +477,17 @@ inline void
 
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-                std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(objPath, [asyncResp](const std::string& rootHealth, const std::string& healthRollup) {
-                    asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
-                    asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
-                });
-                health->start();
+            std::shared_ptr<HealthRollup> health =
+                std::make_shared<HealthRollup>(
+                    objPath, [asyncResp](const std::string& rootHealth,
+                                         const std::string& healthRollup) {
+                asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+                asyncResp->res.jsonValue["Status"]["HealthRollup"] =
+                    healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+            });
+            health->start();
 #else
             auto health = std::make_shared<HealthPopulate>(asyncResp);
 
@@ -890,7 +896,9 @@ inline void
                 getChassisState(asyncResp);
             }
             
-            redfish::conditions_utils::populateServiceConditions(asyncResp, chassisId);
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
+    redfish::conditions_utils::populateServiceConditions(asyncResp, chassisId);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             // Baseboard Chassis OEM properties if exist, search by association
             redfish::nvidia_chassis_utils::getOemBaseboardChassisAssert(asyncResp, objPath);

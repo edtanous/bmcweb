@@ -3304,8 +3304,10 @@ inline void requestRoutesManager(App& app)
                     }
                     getLinkManagerForSwitches(asyncResp, path);
 
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                     redfish::conditions_utils::populateServiceConditions(
                         asyncResp, bmcId);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                     auto health = std::make_shared<HealthRollup>(
@@ -3313,8 +3315,10 @@ inline void requestRoutesManager(App& app)
                                           const std::string& healthRollup) {
                         asyncResp->res.jsonValue["Status"]["Health"] =
                             rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                         asyncResp->res.jsonValue["Status"]["HealthRollup"] =
                             healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
                     });
                     health->start();
 #endif
@@ -3358,8 +3362,10 @@ inline void requestRoutesManager(App& app)
         asyncResp->res.jsonValue["EthernetInterfaces"]["@odata.id"] =
             "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces";
 
-        redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                             PLATFORMBMCID);
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY     
+            redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                                 PLATFORMBMCID);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY 
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE
         asyncResp->res.jsonValue["HostInterfaces"] = {
@@ -3673,7 +3679,8 @@ inline void requestRoutesManager(App& app)
                         connectionNames = object.second;
                     if (!boost::ends_with(path, PLATFORMBMCID))
                     {
-                        continue;
+                        BMCWEB_LOG_ERROR("Error while getting manager service state");
+                        return;
                     }
 
                     // At /redfish/v1/Managers/HGX_BMC_0, we want
@@ -4126,7 +4133,7 @@ inline void requestRoutesManagerCollection(App& app)
             if (ec)
             {
                 BMCWEB_LOG_DEBUG("DBUS response error");
-                messages::internalError(asyncResp->res);
+                //messages::internalError(asyncResp->res);
                 return;
             }
             nlohmann::json& members = asyncResp->res.jsonValue["Members"];

@@ -23,7 +23,6 @@
 #include <utils/conditions_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
-
 #include <variant>
 
 namespace redfish
@@ -283,8 +282,10 @@ inline void
                                         {"Id", portId}};
             std::string portMetricsURI = portURI + "/Metrics";
             asyncResp->res.jsonValue["Metrics"]["@odata.id"] = portMetricsURI;
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
             asyncResp->res.jsonValue["Status"]["Conditions"] =
                 nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 
             const std::string& connectionName = connectionNames[0].first;
             redfish::port_utils::getPortData(asyncResp, connectionName,
@@ -507,15 +508,18 @@ inline void
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
     asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
-
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
     // update switch health
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
         objPath, [asyncResp](const std::string& rootHealth,
                              const std::string& healthRollup) {
         asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
         asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
     });
     health->start();
 
@@ -1150,8 +1154,10 @@ inline void requestRoutesSwitch(App& app)
                         // Link association to manager
                         getManagerLink(asyncResp, path);
 
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                         redfish::conditions_utils::populateServiceConditions(
                             asyncResp, switchId);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
                         return;
                     }
                     // Couldn't find an object with that name.

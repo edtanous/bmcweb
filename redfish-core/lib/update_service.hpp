@@ -1322,7 +1322,6 @@ inline crow::ConnectionPolicy getPostAggregationPolicy()
  * @return None
  */
 void handleSatBMCResponse(
-    const std::string& prefix,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, crow::Response& resp)
 {
 
@@ -1338,13 +1337,8 @@ void handleSatBMCResponse(
     if (resp.resultInt() !=
         static_cast<unsigned>(boost::beast::http::status::accepted))
     {
-        BMCWEB_LOG_DEBUG("Collection resource does not exist in satellite BMC {}", prefix);
-        // Return the error if we haven't had any successes
-        if (asyncResp->res.resultInt()  !=  static_cast<unsigned>(boost::beast::http::status::ok))
-        {
-            asyncResp->res.result(resp.result());
-            asyncResp->res.body() = resp.body();
-        }
+        asyncResp->res.result(resp.result());
+        asyncResp->res.body() = resp.body();
         return;
     }
 
@@ -1425,6 +1419,7 @@ void handleSatBMCResponse(
  */
 inline void forwardImage(
     const crow::Request& req,
+    const bool updateAll,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const boost::system::error_code &ec,
     const std::unordered_map<std::string, boost::urls::url>& satelliteInfo)
@@ -1458,7 +1453,7 @@ inline void forwardImage(
     }
 
     std::function<void(crow::Response&)> cb =
-        std::bind_front(handleSatBMCResponse, sat->first, asyncResp);
+        std::bind_front(handleSatBMCResponse, asyncResp);
 
     bool hasUpdateFile = false;
     std::string data;
@@ -1498,12 +1493,52 @@ inline void forwardImage(
             else if (param.second == "UpdateParameters")
             {
                 data += "Content-Type: application/json\r\n\r\n";
-                // Todo: add URL back when satellite BMC can support
-                // the URL validation from another resource except for
-                // firmware or software inventory.
-                // e.g. URL are ComputerSystem resource.
-                // at this moment,just forward the image to HMC.
-                data += "{}\r\n";
+                nlohmann::json content =
+                    nlohmann::json::parse(formpart.content, nullptr, false);
+                if (content.is_discarded())
+                {
+                    BMCWEB_LOG_INFO("UpdateParameters parse error:{}", formpart.content);
+                    continue;
+                }
+                std::optional<std::vector<std::string>> targets;
+                std::optional<bool> forceUpdate;
+
+                json_util::readJson(content, asyncResp->res, "Targets", targets,
+                                    "ForceUpdate", forceUpdate);
+
+                nlohmann::json paramJson = nlohmann::json::object();
+
+                const std::string urlPrefix = redfishAggregationPrefix;
+                // individual components update
+                if (targets && updateAll == false)
+                {
+                    paramJson["Targets"] = nlohmann::json::array();
+
+                    for (auto & uri: *targets) 
+                    {
+                        // the special handling for Oberon System.
+                        // we don't remove the prefix if the resource's prefix
+                        // from FirmwareInventory is the same with RFA prefix. 
+#ifdef RAF_PREFIX_REMOVAL
+                        // remove prefix before the update request is forwarded.
+                        std::string file = std::filesystem::path(uri).filename();
+                        size_t pos = uri.find(urlPrefix + "_");
+                        if (pos != std::string::npos)
+                        {
+                            uri.erase(pos, urlPrefix.size() + 1);
+                        }
+#endif
+                        BMCWEB_LOG_DEBUG("uri in Targets: {}", uri);
+                        paramJson["Targets"].push_back(uri);
+                    }
+                }
+                if (forceUpdate)
+                {
+                    paramJson["ForceUpdate"] = *forceUpdate;
+                }
+                data += paramJson.dump();
+                data += "\r\n";
+                BMCWEB_LOG_DEBUG("form data: {}", data);
             }
         }
     }
@@ -1640,6 +1675,7 @@ inline void processMultipartFormData(
 
     std::vector<std::string> uriTargets{*targets};
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    bool updateAll = false;
     uint8_t count = 0;
     std::string rfaPrefix = redfishAggregationPrefix;
     if (uriTargets.size() > 0)
@@ -1651,6 +1687,23 @@ inline void processMultipartFormData(
             if (file.starts_with(prefix))
             {
                 count++;
+            }
+
+            auto parsed = boost::urls::parse_relative_ref(uri);
+            if (!parsed)
+            {
+                BMCWEB_LOG_DEBUG("Couldn't parse URI from resource ", uri);
+                return;
+            }
+
+            boost::urls::url_view thisUrl = *parsed;
+
+            //this is the Chassis resource from satellite BMC for all component
+            //firmware update.
+            if (crow::utility::readUrlSegments(thisUrl, "redfish", "v1",
+                                               "Chassis", rfaHmcUpdateTarget))
+            {
+                updateAll = true;
             }
         }
         // There is one URI at least for satellite BMC.
@@ -1669,7 +1722,7 @@ inline void processMultipartFormData(
                 BMCWEB_LOG_DEBUG("forward image {}", uriTargets[0]);
 
                 RedfishAggregator::getSatelliteConfigs(
-                    std::bind_front(forwardImage, req, asyncResp));
+                    std::bind_front(forwardImage, req, updateAll, asyncResp));
             }
             return;
         }
@@ -1691,7 +1744,7 @@ inline void processMultipartFormData(
 #endif
 
     setForceUpdate(asyncResp, "/xyz/openbmc_project/software",
-                   forceUpdate.value_or(false), [req, asyncResp, uriTargets]() {
+                   forceUpdate.value_or(false), [&req, asyncResp, uriTargets]() {
                        areTargetsUpdateable(req, asyncResp, uriTargets);
                    });
 }
@@ -1853,7 +1906,9 @@ class BMCStatusAsyncResp
         {
             asyncResp->res.jsonValue["Status"]["State"] = "UnavailableOffline";
         }
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
         asyncResp->res.jsonValue["Status"]["Conditions"] = nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
     }
 
     BMCStatusAsyncResp(const BMCStatusAsyncResp&) = delete;
@@ -3607,9 +3662,13 @@ inline void requestRoutesSoftwareInventory(App& app)
                     "org.freedesktop.DBus.Properties", "GetAll", "");
 
                 asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                 asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                 asyncResp->res.jsonValue["Status"]["Conditions"] =
                     nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
             }
             if (!found)
             {
@@ -3684,11 +3743,13 @@ inline void requestRoutesInventorySoftware(App& app)
 
                         asyncResp->res.jsonValue["Id"] = *swId;
                         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-                        asyncResp->res.jsonValue["Status"]["HealthRollup"] =
-                            "OK";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+                        asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY                        
                         asyncResp->res.jsonValue["Status"]["Conditions"] =
                             nlohmann::json::array();
-
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY  
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, swId, path, searchPath](
                                 const boost::system::error_code errorCode,

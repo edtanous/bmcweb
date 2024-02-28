@@ -42,6 +42,8 @@
 #include <sdbusplus/message.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 #include <utils/privilege_utils.hpp>
+#include <utils/sw_utils.hpp>
+#include <utils/istmode_utils.hpp>
 
 #include <array>
 #include <string_view>
@@ -400,7 +402,8 @@ inline void
                 connectionNames = object.second;
             if (connectionNames.empty())
             {
-                continue;
+                BMCWEB_LOG_ERROR("getComputerSystem DBUS response error");
+                return;
             }
 
             std::shared_ptr<HealthPopulate> memoryHealth = nullptr;
@@ -4025,6 +4028,11 @@ inline void
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors";
     asyncResp->res.jsonValue["Memory"]["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    ist_mode_utils::getIstMode(asyncResp);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Storage"]["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
@@ -4176,7 +4184,8 @@ inline void handleComputerSystemPatch(
     asyncResp->res.addHeader(
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
-
+    
+    std::optional<bool> istModeEnabled;
     std::optional<bool> locationIndicatorActive;
     std::optional<std::string> indicatorLed;
     std::optional<std::string> assetTag;
@@ -4245,7 +4254,8 @@ inline void handleComputerSystemPatch(
                         "Boot/BootNext", bootNext,
                         "Boot/BootOrderPropertySelection", bootOrderPropertySelection,
                         "Boot/HttpBootUri", httpBootUri,
-                        "Oem/Nvidia/ProcessorDebugCapabilities", processorDebugCapabilities
+                        "Oem/Nvidia/ProcessorDebugCapabilities", processorDebugCapabilities,
+                        "Oem/Nvidia/ISTModeEnabled", istModeEnabled
                         ))
                 {
                     return;
@@ -4253,6 +4263,14 @@ inline void handleComputerSystemPatch(
     // clang-format on
 
     asyncResp->res.result(boost::beast::http::status::no_content);
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    // Update istMode
+    if (istModeEnabled)
+    {
+        ist_mode_utils::setIstMode(asyncResp, req, *istModeEnabled);
+    }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
     if (assetTag)
     {
