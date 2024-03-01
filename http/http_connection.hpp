@@ -427,8 +427,14 @@ class Connection :
 #endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
 
         std::size_t attachmentPos = url.rfind("attachment");
+        std::size_t satellitesPos = std::string::npos;
+
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+        satellitesPos = url.rfind(redfishAggregationPrefix);
+#endif
+
         if ((dumpPos != std::string::npos) &&
-            (attachmentPos != std::string::npos))
+            (attachmentPos != std::string::npos) && (satellitesPos == std::string::npos))
         {
             BMCWEB_LOG_DEBUG << "upgrade stream connection";
             handler->handleUpgrade(thisReq, res, std::move(adaptor));
