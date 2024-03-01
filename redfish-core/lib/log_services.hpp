@@ -2657,7 +2657,6 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         }
                         if (isMessageRegistry)
                         {
-
                             message_registries::generateMessageRegistry(
                                 thisEntry,
                                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -2668,7 +2667,8 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                 redfish::time_utils::getDateTimeStdtime(
                                     timestamp),
                                 messageId, messageArgs, *resolution, resolved,
-                                *eventId, deviceName, *severity);
+                                (eventId == nullptr) ? "" : *eventId, 
+                                deviceName, *severity);
 #ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                             origin_utils::convertDbusObjectToOriginOfCondition(
                                 originOfCondition, std::to_string(*id),
@@ -2705,12 +2705,12 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                     "Oem", {
                                         {"Nvidia", {
                                             {"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
-                                            {"Device", deviceName},
-                                            {"ErrorId", *eventId}}
+                                            {"Device", deviceName}}
                                         }
                                     }
                                 }
                             };
+                            oem["Oem"]["Nvidia"]["ErrorId"] = (eventId == nullptr) ? "" : *eventId;
                             thisEntry.update(oem);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                         }
@@ -2906,7 +2906,8 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                             "System Event Log Entry",
                             redfish::time_utils::getDateTimeStdtime(timestamp),
                             messageId, messageArgs, *resolution, resolved,
-                            *eventId, deviceName, *severity);
+                            (eventId == nullptr) ? "" : *eventId, deviceName, 
+                            *severity);
 #ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
                         origin_utils::convertDbusObjectToOriginOfCondition(
                             originOfCondition, std::to_string(*id), asyncResp,
@@ -2947,12 +2948,12 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                                 "Oem", {
                                     {"Nvidia", {
                                         {"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
-                                        {"Device", deviceName},
-                                        {"ErrorId", *eventId}}
+                                        {"Device", deviceName}}
                                     }
                                 }
                             }
                         };
+                        oem["Oem"]["Nvidia"]["ErrorId"] = (eventId == nullptr) ? "" : *eventId;
                         asyncResp->res.jsonValue.update(oem);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     }
@@ -3321,7 +3322,8 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
             "System Event Log Entry",
             redfish::time_utils::getDateTimeStdtime(timestamp),
             messageId, messageArgs, *resolution, resolved,
-            *eventId, deviceName, *severity);
+            (eventId == nullptr) ? "" : *eventId, deviceName, 
+            *severity);
         thisEntry["EntryType"] = "SEL";
     }
 
@@ -3359,12 +3361,12 @@ void populateRedfishSELEntry(GetManagedPropertyType& resp,
                 "Oem", {
                     {"Nvidia", {
                         {"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
-                        {"Device", deviceName},
-                        {"ErrorId", *eventId}}
+                        {"Device", deviceName}}
                     }
                 }
             }
         };
+        oem["Oem"]["Nvidia"]["ErrorId"] = (eventId == nullptr) ? "" : *eventId;
         thisEntry.update(oem);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     }
@@ -6865,7 +6867,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                         messageArgs,
                                                                         *resolution,
                                                                         resolved,
-                                                                        *eventId,
+                                                                        (eventId == nullptr) ? "" : *eventId,
                                                                         deviceName,
                                                                         *severity);
 #ifndef BMCWEB_DISABLE_HEALTH_ROLLUP                                                                   
@@ -6940,12 +6942,12 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                                             "Oem", {
                                                                                 {"Nvidia", {
                                                                                     {"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"},
-                                                                                    {"Device", deviceName},
-                                                                                    {"ErrorId", *eventId}}
+                                                                                    {"Device", deviceName}}
                                                                                 }
                                                                             }
                                                                         }
                                                                     };
+                                                                    oem["Oem"]["Nvidia"]["ErrorId"] = (eventId == nullptr) ? "" : *eventId;
                                                                     thisEntry.update(oem);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                                                                 }
