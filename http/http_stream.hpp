@@ -137,8 +137,8 @@ class ConnectionImpl : public Connection
             if (ec)
             {
                 BMCWEB_LOG_DEBUG("Error in async_write {}", ec);
-                close();
                 (handlerFunc)(true);
+                close();
                 return;
             }
             (handlerFunc)(false);
