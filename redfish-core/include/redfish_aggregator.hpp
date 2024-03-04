@@ -279,6 +279,21 @@ static inline void addPrefixToItem(nlohmann::json& item,
     item = *strValue;
 }
 
+static inline void addPrefixToID(nlohmann::json& item,
+                                   std::string_view prefix)
+{
+    std::string* strValue = item.get_ptr<std::string*>();
+    if (strValue == nullptr)
+    {
+        BMCWEB_LOG_CRITICAL("Field wasn't a string????");
+        return;
+    }
+    if (strValue->find(prefix) == std::string::npos)
+    {
+        item = std::string(prefix) + "_" + *strValue;
+    }
+}
+
 static inline void addAggregatedHeaders(crow::Response& asyncResp,
                                         const crow::Response& resp,
                                         std::string_view prefix)
@@ -353,6 +368,12 @@ static inline void addPrefixes(nlohmann::json& json, std::string_view prefix)
             if (isPropertyUri(item.first))
             {
                 addPrefixToItem(item.second, prefix);
+                continue;
+            }
+
+            if (item.first == "Id")
+            {
+                addPrefixToID(item.second, prefix);
                 continue;
             }
 
@@ -844,6 +865,15 @@ explicit RedfishAggregator(boost::asio::io_context& ioc) :
                  const std::unordered_map<std::string, boost::urls::url>&)>
             handler)
     {
+        static std::unordered_map<std::string, boost::urls::url> cachedSatInfo = {};
+        if (cachedSatInfo.size())
+        {
+            auto ec = boost::system::errc::make_error_code(
+                boost::system::errc::success);
+            handler(ec, cachedSatInfo);
+            return;
+        }
+
         BMCWEB_LOG_DEBUG("Gathering satellite configs");
         sdbusplus::message::object_path path("/xyz/openbmc_project/inventory");
         dbus::utility::getManagedObjects(
@@ -873,6 +903,7 @@ explicit RedfishAggregator(boost::asio::io_context& ioc) :
                 BMCWEB_LOG_DEBUG( "No satellite BMCs detected.  Redfish Aggregation not enabled");
             }
             handler(ec, satelliteInfo);
+            cachedSatInfo = satelliteInfo;
             });
     }
 
@@ -1304,5 +1335,4 @@ explicit RedfishAggregator(boost::asio::io_context& ioc) :
         return Result::LocalHandle;
     }
 };
-
 } // namespace redfish
