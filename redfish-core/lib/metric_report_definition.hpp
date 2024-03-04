@@ -2109,7 +2109,7 @@ inline void populateMetricPropertiesAndWildcards(
                     nvswitchMetricPropertiesAray;
             }
 
-            if (deviceType == "ProcessorGpmMetrics")
+            if (!gpuPath.empty() && deviceType == "ProcessorGpmMetrics")
             {
                 std::string gpmIface = "com.nvidia.GPMMetrics";
                 std::string nvdecInstanceProperty =
