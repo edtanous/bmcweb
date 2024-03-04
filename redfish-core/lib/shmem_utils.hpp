@@ -1,6 +1,5 @@
 #pragma once
-#include "telemetry_mrd_client.hpp"
-
+#include "tal.hpp"
 #include <nlohmann/json.hpp>
 
 namespace redfish
@@ -17,7 +16,7 @@ inline void
     try
     {
         const auto& values =
-            nv::shmem::sensor_aggregation::getAllMRDValues(metricId);
+            tal::TelemetryAggregator::getAllMrds(metricId);
         asyncResp->res.jsonValue["@odata.type"] =
             "#MetricReport.v1_4_2.MetricReport";
         std::string metricUri = "/redfish/v1/TelemetryService/MetricReports/";
@@ -58,7 +57,7 @@ inline void
                         thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = false;
                     }
                     // enable this line for sensor age calculation
-                    // thisMetric["Oem"]["Nvidia"]["FreshnessInms"] = freshness;
+                    //thisMetric["Oem"]["Nvidia"]["FreshnessInms"] = freshness;
                 }
                 resArray.push_back(thisMetric);
             }

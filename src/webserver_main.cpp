@@ -50,6 +50,7 @@
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
+#include <tal.hpp>
 
 #include <exception>
 #include <memory>
@@ -177,6 +178,10 @@ static int run()
 
     bmcweb::registerUserRemovedSignal();
 
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+    //Intialise the tal for the client, this will invoke the tal modules.
+    tal::TelemetryAggregator::namespaceInit(tal::ProcessType::Client);
+#endif
     app.run();
     io->run();
 

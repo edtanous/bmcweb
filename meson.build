@@ -322,8 +322,8 @@ atomic =  cxx.find_library('atomic', required: true)
 openssl = dependency('openssl', required : true)
 bmcweb_dependencies += [pam, atomic, openssl]
 if get_option('shmem-platform-metrics').enabled()
-  nvshmem = dependency('nvidia-shmem', required : true)
-  bmcweb_dependencies += nvshmem
+  nvtal = dependency('nvidia-tal', required : true)
+  bmcweb_dependencies += nvtal
 endif
 
 nghttp2 = dependency('libnghttp2', version: '>=1.52.0', required : false)
