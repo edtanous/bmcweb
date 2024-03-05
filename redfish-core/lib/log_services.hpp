@@ -2114,8 +2114,12 @@ inline void requestRoutesSELLogService(App& app)
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/SEL/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/SEL";
                 asyncResp->res.jsonValue["@odata.type"] =
@@ -3379,8 +3383,12 @@ inline void requestRoutesDBusSELLogEntryCollection(App& app)
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(
             boost::beast::http::verb::
-                get)([](const crow::Request&,
+                get)([&app](const crow::Request&req,
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             // Collections don't include the static data added by SubRoute
             // because it has a duplicate entry for members
             asyncResp->res.jsonValue["@odata.type"] =
@@ -3453,11 +3461,15 @@ inline void requestRoutesDBusSELLogEntry(App& app)
                       "/LogServices/SEL/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& param)
 
             {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 std::string entryID = param;
                 dbus::utility::escapePathForDbus(entryID);
 
@@ -3501,9 +3513,13 @@ inline void requestRoutesDBusSELLogEntry(App& app)
                       "/LogServices/SEL/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
         .methods(boost::beast::http::verb::delete_)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 std::string entryID = param;
 
                 dbus::utility::escapePathForDbus(entryID);
@@ -3525,8 +3541,12 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
         .privileges(redfish::privileges::postLogService)
         .methods(
             boost::beast::http::verb::
-                post)([](const crow::Request&,
+                post)([&app](const crow::Request& req,
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             crow::connections::systemBus->async_method_call(
                 [asyncResp](const boost::system::error_code ec,
                             GetManagedObjectsType& resp) {
@@ -4545,10 +4565,14 @@ inline void requestRoutesSystemFaultLogService(App& app)
                       "/LogServices/FaultLog/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
             {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.id"] =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID
                     "/LogServices/FaultLog";
@@ -4587,8 +4611,12 @@ inline void requestRoutesSystemFaultLogEntryCollection(App& app)
                       "/LogServices/FaultLog/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#LogEntryCollection.LogEntryCollection";
                 asyncResp->res.jsonValue["@odata.id"] =
@@ -4609,9 +4637,13 @@ inline void requestRoutesSystemFaultLogEntry(App& app)
         .privileges(redfish::privileges::getLogEntry)
 
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 getDumpEntryById(asyncResp, param, "FaultLog");
             });
 
@@ -4632,10 +4664,16 @@ inline void requestRoutesSystemFaultLogClear(App& app)
                       "/LogServices/FaultLog/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
-            { clearDump(asyncResp, "FaultLog"); });
+            {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+                clearDump(asyncResp, "FaultLog");
+            });
 }
 
 inline void getFDRServiceState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
@@ -4876,9 +4914,13 @@ inline void requestRoutesSystemFDREntry(App& app)
                       "/LogServices/FDR/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
         .methods(boost::beast::http::verb::delete_)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& param) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 deleteDumpEntry(asyncResp, param, "FDR");
             });
 }
@@ -5196,11 +5238,15 @@ inline void requestRoutesCrashdumpFile(App& app)
                       "/LogServices/Crashdump/Entries/<str>/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& logID, const std::string& fileName) {
                 // Do not call getRedfishRoute here since the crashdump file is
                 // not a Redfish resource.
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
 
                 auto getStoredLogCallback =
                     [asyncResp, logID, fileName,
@@ -5594,8 +5640,12 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
         .privileges(redfish::privileges::postLogService)
         .methods(
             boost::beast::http::verb::
-                post)([&](const crow::Request& req,
+                post)([&app](const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string diagnosticDataType;
             std::string oemDiagnosticDataType;
             if (!redfish::json_util::readJsonAction(
@@ -5736,8 +5786,12 @@ inline void requestRoutesPostCodesLogService(App& app)
                       "/LogServices/PostCodes/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 asyncResp->res.jsonValue = {
                     {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                   "/LogServices/PostCodes"},
@@ -6129,6 +6183,10 @@ inline void requestRoutesPostCodesEntryCollection(App& app)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 query_param::QueryCapabilities capabilities = {
                     .canDelegateTop = true,
                     .canDelegateSkip = true,
@@ -6163,9 +6221,13 @@ inline void requestRoutesPostCodesEntryAdditionalData(App& app)
                       "/LogServices/PostCodes/Entries/<str>/attachment/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& postCodeID) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 if (!http_helpers::isContentTypeAllowed(
                         req.getHeaderValue("Accept"),
                         http_helpers::ContentType::OctetStream, true))
@@ -6244,9 +6306,13 @@ inline void requestRoutesPostCodesEntry(App& app)
                       "/LogServices/PostCodes/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& targetID) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 getPostCodeForEntry(asyncResp, targetID);
             });
 }
@@ -6259,11 +6325,15 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/LogServices/")
         .privileges(redfish::privileges::getLogServiceCollection)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& chassisId)
 
             {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 const std::array<const char*, 2> interfaces = {
                     "xyz.openbmc_project.Inventory.Item.Board",
                     "xyz.openbmc_project.Inventory.Item.Chassis"};
@@ -6339,10 +6409,14 @@ inline void requestRoutesChassisXIDLogService(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/LogServices/XID/")
         .privileges(redfish::privileges::getLogService)
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& chassisId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             const std::array<const char*, 2> interfaces = {
                 "xyz.openbmc_project.Inventory.Item.Board",
                 "xyz.openbmc_project.Inventory.Item.Chassis"};
@@ -6475,10 +6549,14 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/LogServices/XID/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& chassisId) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             const std::array<const char*, 2> interfaces = {
                 "xyz.openbmc_project.Inventory.Item.Board",
                 "xyz.openbmc_project.Inventory.Item.Chassis"};
@@ -7013,8 +7091,12 @@ inline void requestRoutesDebugToken(App& app)
         .privileges(redfish::privileges::getLogEntry)
         .methods(
             boost::beast::http::verb::
-                get)([](const crow::Request&,
+                get)([&app](const crow::Request& req,
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             asyncResp->res.jsonValue["@odata.id"] =
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
                 "/LogServices/DebugTokenService";
@@ -7044,8 +7126,12 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
         .privileges(redfish::privileges::getLogEntry)
         .methods(
             boost::beast::http::verb::
-                post)([](const crow::Request& req,
+                post)([&app](const crow::Request& req,
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string diagnosticDataType;
             std::string oemDiagnosticDataType;
             if (!redfish::json_util::readJsonAction(
@@ -7268,9 +7354,13 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
                       "/DiagnosticData/<uint>/attachment")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request& req,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const uint32_t& id) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 std::string_view accept = req.getHeaderValue("Accept");
                 if (!accept.empty() &&
                     !http_helpers::isContentTypeAllowed(
