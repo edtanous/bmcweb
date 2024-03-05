@@ -699,11 +699,15 @@ inline void requestRoutesNvidiaSyncOOBRawCommandActionInfo(App& app)
         "/redfish/v1/Managers/<str>/Oem/Nvidia/SyncOOBRawCommandActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& bmcId)
 
             {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 // Process non bmc service manager
                 if (bmcId != PLATFORMBMCID)
                 {
@@ -759,11 +763,15 @@ inline void requestRoutesNvidiaAsyncOOBRawCommandActionInfo(App& app)
         "/redfish/v1/Managers/<str>/Oem/Nvidia/AsyncOOBRawCommandActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& bmcId)
 
             {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
                 // Process non bmc service manager
                 if (bmcId != PLATFORMBMCID)
                 {
