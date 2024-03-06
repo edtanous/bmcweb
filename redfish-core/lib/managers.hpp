@@ -3561,10 +3561,10 @@ inline void requestRoutesManager(App& app)
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
             nlohmann::json& oemOpenbmc = oem["OpenBmc"];
             oem["@odata.type"] = "#OemManager.Oem";
-            oem["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "/Oem";
+            oem["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "#/Oem";
             oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
             oemOpenbmc["@odata.id"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/Oem/OpenBmc";
+                "/redfish/v1/Managers/" PLATFORMBMCID "#/Oem/OpenBmc";
 
             oemOpenbmc["Certificates"] = {{"@odata.id",
                                            "/redfish/v1/Managers/" PLATFORMBMCID
