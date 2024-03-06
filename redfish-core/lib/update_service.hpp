@@ -3778,10 +3778,14 @@ inline void requestRoutesInventorySoftware(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/SoftwareInventory/<str>/")
         .privileges(redfish::privileges::getSoftwareInventory)
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& param) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string searchPath = "/xyz/openbmc_project/inventory_software/";
             std::shared_ptr<std::string> swId =
                 std::make_shared<std::string>(param);
