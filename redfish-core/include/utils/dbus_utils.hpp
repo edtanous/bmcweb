@@ -30,6 +30,91 @@ constexpr const char* mapperObjectPath = "/xyz/openbmc_project/object_mapper";
 constexpr const char* mapperIntf = "xyz.openbmc_project.ObjectMapper";
 constexpr const char* objDeleteIntf = "xyz.openbmc_project.Object.Delete";
 
+inline std::string getRedfishLtssmState(const std::string& state)
+{
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.Detect")
+    {
+        return "Detect";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.Polling")
+    {
+        return "Polling";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.Configuration")
+    {
+        return "Configuration";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.Recovery")
+    {
+        return "Recovery";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.RecoveryEQ")
+    {
+        return "RecoveryEQ";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.L0")
+    {
+        return "L0";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.L0s")
+    {
+        return "L0s";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.L1")
+    {
+        return "L1";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.L1_PLL_PD")
+    {
+        return "L1_PLL_PD";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.L2")
+    {
+        return "L2";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.L1_CPM")
+    {
+        return "L1_CPM";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.L1_1")
+    {
+        return "L1_1";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.L1_2")
+    {
+        return "L1_2";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.HotReset")
+    {
+        return "HotReset";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.Loopback")
+    {
+        return "Loopback";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.Disabled")
+    {
+        return "Disabled";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.LinkDown")
+    {
+        return "LinkDown";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.LinkReady")
+    {
+        return "LinkReady";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.LanesInSleep")
+    {
+        return "LanesInSleep";
+    }
+    if (state == "xyz.openbmc_project.PCIe.LTSSMState.State.IllegalState")
+    {
+        return "IllegalState";
+    }
+    return "";
+}
+
 inline std::string getRedfishIstMode(const std::string& mode)
 {
     if (mode == "xyz.openbmc_project.Control.Mode.StateOfISTMode.Disabled")

@@ -52,6 +52,8 @@ static constexpr const char* pcieClockReferenceIntf =
     "xyz.openbmc_project.Inventory.Decorator.PCIeRefClock";
 static constexpr const char* nvlinkClockReferenceIntf =
     "com.nvidia.NVLink.NVLinkRefClock";
+static constexpr char const* pcieLtssmIntf =
+    "xyz.openbmc_project.PCIe.LTSSMState";
 
 static inline std::string getPCIeType(const std::string& pcieType)
 {
@@ -396,6 +398,81 @@ static inline void getPCIeDeviceNvLinkClkRefOem(
         std::move(getPCIeDeviceOemCallback), service, escapedPath,
         "org.freedesktop.DBus.Properties", "GetAll", nvlinkClockReferenceIntf);
 }
+
+// PCIeDevice LTSSM State
+static inline void getPCIeLTssmState(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& device, const std::string& path,
+    const std::string& service)
+{
+    BMCWEB_LOG_DEBUG ("FROM getPCIeLTssmState");
+
+    std::string escapedPath = std::string(path) + "/" + device;
+    dbus::utility::escapePathForDbus(escapedPath);
+
+	crow::connections::systemBus->async_method_call(
+			[asyncResp, service](const boost::system::error_code ec,
+				std::variant<std::vector<std::string>>& resp) {
+			if (ec)
+			{
+			    BMCWEB_LOG_ERROR("Failed to get connected_port");
+			    return; // no ports = no failures
+			}
+			std::vector<std::string>* data =
+			std::get_if<std::vector<std::string>>(&resp);
+			if (data == nullptr)
+			{
+			    return;
+			}
+
+			for (const std::string& portPath : *data)
+			{
+
+			auto getPCIeLtssmCallback =
+			[asyncResp{asyncResp}](
+					const boost::system::error_code ec,
+					const std::vector<std::pair<std::string, std::variant<std::string>>>&
+					propertiesList) {
+				if (ec)
+				{
+					BMCWEB_LOG_ERROR("DBUS response error on getting PCIeDevice LTSSM State");
+					messages::internalError(asyncResp->res);
+					return;
+				}
+
+				for (const std::pair<std::string, std::variant<std::string>>& property :
+						propertiesList)
+				{
+					const std::string& propertyName = property.first;
+					if (propertyName == "LTSSMState")
+					{
+						const std::string* value = std::get_if<std::string>(&property.second);
+						if (value != nullptr)
+						{
+							std::string val = redfish::dbus_utils::getRedfishLtssmState(*value);
+							if(val.empty())
+								asyncResp->res
+									.jsonValue["Oem"]["Nvidia"][propertyName] = nlohmann::json::value_t::null;
+
+							else
+							{
+								asyncResp->res
+									.jsonValue["Oem"]["Nvidia"][propertyName] = val;
+							}
+						}
+					}
+				}
+			};
+			crow::connections::systemBus->async_method_call(
+					std::move(getPCIeLtssmCallback), service, portPath,
+					"org.freedesktop.DBus.Properties", "GetAll", pcieLtssmIntf);
+			}
+			},
+			"xyz.openbmc_project.ObjectMapper", escapedPath + "/connected_port",
+			"org.freedesktop.DBus.Properties", "Get",
+			"xyz.openbmc_project.Association", "endpoints");
+}
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 // PCIeDevice State
@@ -1801,7 +1878,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                         nlohmann::json& oem =
                             asyncResp->res.jsonValue["Oem"]["Nvidia"];
                         oem["@odata.type"] =
-                            "#NvidiaPCIeDevice.v1_0_0.NvidiaPCIeDevice";
+                            "#NvidiaPCIeDevice.v1_1_0.NvidiaPCIeDevice";
                         // Baseboard PCIeDevices Oem properties
                         if (std::find(interfaces2.begin(), interfaces2.end(),
                                       pcieClockReferenceIntf) !=
@@ -1811,6 +1888,9 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                                                    chassisPCIePath,
                                                    connectionName);
                         }
+
+                        getPCIeLTssmState(asyncResp, device, chassisPCIePath,
+                                            connectionName);
 
                         // Baseboard PCIeDevices nvlink Oem
                         // properties
