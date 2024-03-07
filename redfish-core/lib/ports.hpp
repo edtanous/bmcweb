@@ -400,8 +400,7 @@ inline void getLldpInformation(const std::shared_ptr<bmcweb::AsyncResp>& asyncRe
     getLldpTlvs(asyncResp, ifaceId, false);
 }
 
-
-inline void requestPortsInterfacesRoutes(App& app)
+inline void requestDedicatedPortsInterfacesRoutes(App& app)
 {
         BMCWEB_ROUTE(app,
                  "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts/")
@@ -457,7 +456,7 @@ inline void requestPortsInterfacesRoutes(App& app)
                     });
             });
 
-#ifdef BMCWEB_ENABLE_LLDP_DEDICATED_PORTS
+
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/DedicatedNetworkPorts/<str>/")
         .privileges(redfish::privileges::getEthernetInterface)
@@ -553,7 +552,6 @@ inline void requestPortsInterfacesRoutes(App& app)
                     });   
                 }
         });
-#endif //BMCWEB_ENABLE_LLDP_DEDICATED_PORTS
 }
 
 }//namespace redfish

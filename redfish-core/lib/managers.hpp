@@ -3536,8 +3536,10 @@ inline void requestRoutesManager(App& app)
                 "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol";
             asyncResp->res.jsonValue["EthernetInterfaces"]["@odata.id"] =
                 "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces";
+#ifdef BMCWEB_ENABLE_LLDP_DEDICATED_PORTS
             asyncResp->res.jsonValue["DedicatedNetworkPorts"]["@odata.id"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts";    
+                "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts";
+#endif    
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY     
             redfish::conditions_utils::populateServiceConditions(asyncResp,
                                                                  PLATFORMBMCID);
