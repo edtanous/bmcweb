@@ -26,6 +26,9 @@ namespace bluefield
     const std::string& truststoreBiosService = "xyz.openbmc_project.Certs.Manager.AuthorityBios.TruststoreBios";
     const std::string& truststoreBiosPath = "/xyz/openbmc_project/certs/authorityBios/truststoreBios";
 
+    const std::string dpuFruObj = "xyz.openbmc_project.Control.dpu_fru";
+    const std::string dpuFruPath = "/xyz/openbmc_project/inventory/system/board";
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 struct PropertyInfo
 {
@@ -312,9 +315,6 @@ const PropertyInfo nicTristateAttributeInfo = {
     .redfishToDbus = {{"Default", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Default"},
                  {"Enabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Enabled"},
                  {"Disabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Disabled"}}};
-
-constexpr char oemNvidiaGet[] =
-    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";
 
 constexpr char hostRhimTarget[] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                   "/Oem/Nvidia/Actions/HostRshim.Set";
@@ -1204,8 +1204,9 @@ inline void requestRoutesNvidiaOemBf(App& app)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
                             &bluefield::externalHostPrivilege, std::ref(app)));
+#endif
 
-    BMCWEB_ROUTE(app, bluefield::oemNvidiaGet)
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1214,6 +1215,7 @@ inline void requestRoutesNvidiaOemBf(App& app)
                 {
                     return;
                 }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
                 auto& nvidia = asyncResp->res.jsonValue;
                 auto& connectx = nvidia["Connectx"];
                 auto& actions = nvidia["Actions"];
@@ -1237,8 +1239,53 @@ inline void requestRoutesNvidiaOemBf(App& app)
 
                 actions["#TruststoreCertificates.ResetKeys"]
                 ["ResetKeysType@Redfish.AllowableValues"] = {"DeleteAllKeys"};
-            });
+#endif
+                sdbusplus::asio::getAllProperties(
+                    *crow::connections::systemBus, bluefield::dpuFruObj, bluefield::dpuFruPath, "xyz.openbmc_project.Inventory.Host.BfFruInfo",
+                    [asyncResp](const boost::system::error_code ec,
+                                        const dbus::utility::DBusPropertiesMap&
+                                            propertiesList) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR << "DBUS response error: " << ec;
+                            return;
+                        }
 
+                        const std::string* baseMac = nullptr;;
+                        const std::string* baseGuid = nullptr;
+                        const std::string* description = nullptr;
+
+                        const bool success = sdbusplus::unpackPropertiesNoThrow(
+                            dbus_utils::UnpackErrorPrinter(), propertiesList,
+                            "Description", description, "BaseGUID",
+                            baseGuid, "BaseMAC", baseMac);
+
+                        if (!success)
+                        {
+                            return;
+                        }
+
+                        if (description != nullptr)
+                        {
+                            asyncResp->res.jsonValue["Description"] =
+                                *description;
+                        }
+
+                        if (baseGuid != nullptr)
+                        {
+                            asyncResp->res.jsonValue["BaseGUID"] =
+                                *baseGuid;
+                        }
+
+                        if (baseMac != nullptr)
+                        {
+                            asyncResp->res.jsonValue["BaseMAC"] =
+                                *baseMac;
+                        }
+                    });
+
+            });
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
     BMCWEB_ROUTE(app, bluefield::dpuStrpOptionGet)
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
