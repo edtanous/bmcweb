@@ -26,7 +26,7 @@ inline void getIstMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             if (ec)
             {
                 BMCWEB_LOG_ERROR("D-Bus response error on GetSubTree {}", ec);
-                messages::internalError(aResp->res);
+                //messages::internalError(aResp->res);
                 return;
             }
             // Throw an error on empty subtree response

@@ -2815,7 +2815,7 @@ inline void getPowerMode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     constexpr std::array<std::string_view, 1> interfaces = {
         "xyz.openbmc_project.Control.Power.Mode"};
     dbus::utility::getSubTree(
-        "/xyz/openbmc_project/control/power", 0, interfaces,
+        "/", 0, interfaces,
         [asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
