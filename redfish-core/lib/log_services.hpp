@@ -1720,8 +1720,8 @@ inline void createDumpTaskCallback(
             nlohmann::json retMessage = messages::success();
             taskData->messages.emplace_back(retMessage);
 
-            boost::urls::url url = boost::urls::format(
-                "/redfish/v1/Managers/{}/LogServices/Dump/Entries/{}", PLATFORMBMCID,dumpId);
+            boost::urls::url url = boost::urls::format("{}{}", dumpEntryPath,
+                                                       dumpId);
 
             std::string headerLoc = "Location: ";
             headerLoc += url.buffer();
