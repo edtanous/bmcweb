@@ -30,6 +30,8 @@ enum class PortIdSubtype
     LocallyAssigned = 7
 };
 
+const std::string lldpTransmit = "LLDPTransmit";
+const std::string lldpReceive = "LLDPReceive";
 
 inline void getLldpStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& ifaceId)
@@ -287,11 +289,11 @@ inline void setLldpTlvProperty(nlohmann::json& jsonSchema,
                           const std::string& propertyValue,
                           const std::string& lldpType)
 {
-    if (!property.empty())
+    if (!propertyValue.empty())
     {
         jsonSchema[property] = propertyValue;
     }
-    else if (lldpType == "LLDPTransmit")
+    else if (lldpType == lldpTransmit)
     {
         jsonSchema[property] = "";
     }
@@ -319,7 +321,7 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         return;
                     }
                     std::string idStr;
-                    std::string lldpType = isReceived ? "LLDPReceive" : "LLDPTransmit";
+                    std::string lldpType = isReceived ? lldpReceive : lldpTransmit;
                     nlohmann::json& jsonSchema =  asyncResp->res.jsonValue["Ports"]["EthernetProperties"][lldpType];
                     idStr = getTlvString(stdOut, "Chassis ID TLV");
                     if (!idStr.empty())
@@ -327,7 +329,7 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         jsonSchema["ChassisId"] = idStr;
                         jsonSchema["ChassisIdSubtype"] = getChassisSubType(idStr);
                     }
-                    else if (lldpType == "LLDPTransmit")
+                    else if (lldpType == lldpTransmit)
                     {
                         jsonSchema["ChassisId"] = "NotTransmitted";
                     }
@@ -338,7 +340,7 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         jsonSchema["PortId"] = idStr;
                         jsonSchema["PortIdSubtype"] = getPortSubType(idStr);
                     }
-                    else if (lldpType == "LLDPTransmit")
+                    else if (lldpType == lldpTransmit)
                     {
                         jsonSchema["PortId"] = "NotTransmitted";
                     }
@@ -347,8 +349,8 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     if (!idStr.empty())
                     {
                         std::vector<std::string> capabilities = parseLldpCapabilities(idStr);
-                        if ((!capabilities.empty() && lldpType == "LLDPReceive") ||
-                            (lldpType == "LLDPTransmit"))
+                        if ((!capabilities.empty() && lldpType == lldpReceive) ||
+                            (lldpType == lldpTransmit))
                         {
                             jsonSchema["SystemCapabilities"] = capabilities;
                         }
@@ -378,7 +380,7 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     {
                         jsonSchema["ManagementVlanId"] = std::stoi(match.str(1));     
                     }
-                    else if (lldpType == "LLDPTransmit")
+                    else if (lldpType == lldpTransmit)
                     {
                         jsonSchema["ManagementVlanId"] = 4095;
                     }
