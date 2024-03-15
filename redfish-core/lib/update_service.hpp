@@ -34,6 +34,7 @@
 #include "ossl_random.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
+#include "registries/openbmc_message_registry.hpp"
 #include "task.hpp"
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
