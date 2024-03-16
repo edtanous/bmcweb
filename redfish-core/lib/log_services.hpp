@@ -4399,11 +4399,31 @@ inline void
 
     asyncResp->res.jsonValue["Entries"]["@odata.id"] = dumpPath + "/Entries";
 
+    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#LogService.v1_2_0.LogService";
+    sdbusplus::asio::getProperty<bool>(
+        *crow::connections::systemBus, 
+        "xyz.openbmc_project.Dump.Manager",
+        "/xyz/openbmc_project/dump/retimer",
+        "xyz.openbmc_project.Dump.DebugMode", "DebugMode",
+        [asyncResp](const boost::system::error_code ec,
+                    const bool DebugModeEnabled) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG << "DBUS response error for RetimerDebugModeEnabled";
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["RetimerDebugModeEnabled"] = DebugModeEnabled;
+        });
+
     if (collectDiagnosticDataSupported)
     {
         asyncResp->res.jsonValue["Actions"]["#LogService.CollectDiagnosticData"]
                                 ["target"] =
             dumpPath + "/Actions/LogService.CollectDiagnosticData";
+        asyncResp->res.jsonValue["Actions"]["#LogService.CollectDiagnosticData"]
+                                ["@Redfish.ActionInfo"] =
+            dumpPath + "/CollectDiagnosticDataActionInfo";
     }
 
     constexpr std::array<std::string_view, 1> interfaces = {deleteAllInterface};
@@ -4460,6 +4480,53 @@ inline void handleLogServicesDumpServiceComputerSystemGet(
         return;
     }
     getDumpServiceInfo(asyncResp, "System");
+}
+
+inline void handleLogServicesDumpServiceComputerSystemPatch(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    std::optional<nlohmann::json> oemObject;
+    if (!json_util::readJsonPatch(req, asyncResp->res, "Oem", oemObject))
+    {
+        return;
+    }
+
+    std::optional<nlohmann::json> oemNvidiaObject;
+    if (!json_util::readJson(*oemObject, asyncResp->res, "Nvidia", oemNvidiaObject))
+    {
+        return;
+    }
+
+    std::optional<bool> retimerDebugModeEnabled;
+    if (!json_util::readJson(*oemNvidiaObject, asyncResp->res,
+                             "RetimerDebugModeEnabled", retimerDebugModeEnabled))
+    {
+        return;
+    }
+
+    sdbusplus::asio::setProperty(
+        *crow::connections::systemBus,
+        "xyz.openbmc_project.Dump.Manager",
+        "/xyz/openbmc_project/dump/retimer",
+        "xyz.openbmc_project.Dump.DebugMode", "DebugMode",
+        *retimerDebugModeEnabled, [asyncResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR
+                    << "DBUS response error on DebugMode setProperty: "
+                    << ec;
+                messages::internalError(asyncResp->res);
+                return;
+            }
+        });
+    messages::success(asyncResp->res);
+    return;
 }
 
 inline void handleLogServicesDumpEntriesCollectionGet(
@@ -4693,6 +4760,11 @@ inline void requestRoutesSystemDumpService(App& app)
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleLogServicesDumpServiceComputerSystemGet, std::ref(app)));
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/")
+        .privileges(redfish::privileges::patchLogService)
+        .methods(boost::beast::http::verb::patch)(
+            std::bind_front(handleLogServicesDumpServiceComputerSystemPatch, std::ref(app)));
 }
 
 inline void requestRoutesSystemDumpEntryCollection(App& app)
