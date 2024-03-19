@@ -683,11 +683,15 @@ inline void requestRoutesNvidiaSyncOOBRawCommandActionInfo(App& app)
         "/redfish/v1/Managers/<str>/Oem/Nvidia/SyncOOBRawCommandActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& bmcId)
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& bmcId)
 
     {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         // Process non bmc service manager
         if (bmcId != PLATFORMBMCID)
         {
@@ -736,11 +740,16 @@ inline void requestRoutesNvidiaAsyncOOBRawCommandActionInfo(App& app)
         "/redfish/v1/Managers/<str>/Oem/Nvidia/AsyncOOBRawCommandActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& bmcId)
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& bmcId)
 
     {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+
         // Process non bmc service manager
         if (bmcId != PLATFORMBMCID)
         {
@@ -3361,10 +3370,13 @@ inline void requestRoutesManager(App& app)
             "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol";
         asyncResp->res.jsonValue["EthernetInterfaces"]["@odata.id"] =
             "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces";
-
-#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY     
-            redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                                 PLATFORMBMCID);
+#ifdef BMCWEB_ENABLE_LLDP_DEDICATED_PORTS
+        asyncResp->res.jsonValue["DedicatedNetworkPorts"]["@odata.id"] =
+            "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts";
+#endif
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
+        redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                             PLATFORMBMCID);
 #endif // BMCWEB_DISABLE_CONDITIONS_ARRAY 
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE
@@ -3384,10 +3396,10 @@ inline void requestRoutesManager(App& app)
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         nlohmann::json& oemOpenbmc = oem["OpenBmc"];
         oem["@odata.type"] = "#OemManager.Oem";
-        oem["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "/Oem";
+        oem["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "#/Oem";
         oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
         oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                                  "/Oem/OpenBmc";
+                                  "#/Oem/OpenBmc";
 
         oemOpenbmc["Certificates"] = {{"@odata.id",
                                        "/redfish/v1/Managers/" PLATFORMBMCID

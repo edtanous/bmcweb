@@ -45,6 +45,14 @@ option(
     'Enable/disable the platform metrics to collect all sensors reading over shared memory'
 )
 
+option(
+    'erot-reset',
+    type : 'feature',
+    value : 'disabled',
+    description :
+    'Enable/disable ERoT reset option'
+)
+
 # if you use this option and are seeing this comment, please comment here:
 # https://github.com/openbmc/bmcweb/issues/188 and put forward your intentions
 # for this code.  At this point, no daemon has been upstreamed that implements
@@ -106,6 +114,14 @@ option(
     value: 'disabled',
     description: '''Enable CPU log service transactions through Redfish. Paths
                     are under /redfish/v1/Systems/system/LogServices/Crashdump'.'''
+)
+
+option(
+    'lldp-dedicated-ports',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enable LLDP information under the path of dedicated ports:
+                    /v1/Managers/bmc/DedicatedNetworkPorts/1'''
 )
 
 option(
@@ -328,6 +344,7 @@ option ('platform-system-id', type : 'string', value : 'system', description : '
 option ('platform-system-description', type : 'string', value : 'Computer System', description : 'Platform specific computer system description')
 option ('platform-bmc-id', type : 'string', value : 'bmc', description : 'Platform specific managers bmc id')
 option ('platform-network-adapter', type : 'string', value : 'networkadapter', description : 'Platform network adapter')
+option ('host-eth-iface', type : 'feature', value : 'disabled', description : 'Enable Host Ethernet Interface')
 option ('network-adapters', type : 'feature', value : 'disabled', description : 'Enable NetworkAdapters')
 option ('network-adapters-generic', type : 'feature', value : 'disabled', description : 'Enable Generic NetworkAdapters')
 option ('platform-total-power-sensor-name', type : 'string', value : 'TotalHSC_Power', description : 'Platform specific total power sensor name, which has system power watts readings')

@@ -40,6 +40,7 @@
 
 namespace redfish
 {
+namespace bp = boost::process;
 
 namespace erot
 {
@@ -276,6 +277,15 @@ inline void getEROTChassis(const crow::Request& req,
                 BMCWEB_LOG_ERROR("Got 0 Connection names");
                 continue;
             }
+
+#ifdef BMCWEB_ENABLE_EROT_RESET
+            asyncResp->res.jsonValue["Actions"]["#Chassis.Reset"]["target"] =
+                "/redfish/v1/Chassis/" + chassisId + "/Actions/Chassis.Reset";
+            asyncResp->res
+                .jsonValue["Actions"]["#Chassis.Reset"]["@Redfish.ActionInfo"] =
+                "/redfish/v1/Chassis/" + chassisId + "/ResetActionInfo";
+#endif
+
 #ifdef BMCWEB_ENABLE_DOT
             auto& oemActionsJsonDot =
                 asyncResp->res.jsonValue["Actions"]["Oem"];
@@ -942,4 +952,272 @@ inline void requestRoutesEROTChassisManualBootMode(App& app)
 }
 #endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
 
+#ifdef BMCWEB_ENABLE_EROT_RESET
+/**
+@brief - Performs ERoT chassis graceful reset using /usr/bin/erot_reset_pre.sh and /usr/bin/erot_reset.sh scripts.
+         The scripts are platform-specific and need to be installed separately.
+         Upon successful reset, the ERoT reset will also reset the BMC by toggling the AP_reset pin.
+         There are three cases of failure:
+         1. An update procedure is already in progress.
+         2. There is no EC firmware pending.
+         3. The command is not supported by the current ERoT firmware.
+@param[in] - asyncResp: Response const variable
+             endpointId: ERoT endpoint ID
+*/
+inline void gracefulRestart(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, 
+                            uint32_t endpointId)
+{
+    enum EROTRstErr {NoErr = 0, UpdateInProgress = 1, NoFwPending = 2, CmdNotSupported = 3};
+    std::string erotResetPrePath = "/usr/bin/erot_reset_pre.sh";
+    std::string erotResetPath = "/usr/bin/erot_reset.sh";
+
+    if ((!std::filesystem::exists(erotResetPrePath)) ||
+        (!std::filesystem::exists(erotResetPath)))
+    {
+        BMCWEB_LOG_DEBUG("ERROR Cannot perform ERoT self reset: The action is not supported by the current BMC version");
+        messages::actionNotSupported(asyncResp->res, "ERoT self-reset");
+        return;
+    }
+
+    std::string command = erotResetPrePath + " " + std::to_string(endpointId);
+    auto dataOut = std::make_shared<boost::process::ipstream>();
+    auto dataErr = std::make_shared<boost::process::ipstream>();
+    auto exitCallback = [asyncResp, dataOut, dataErr, erotResetPath, endpointId]
+                         (const boost::system::error_code& ec,
+                            int errorCode) mutable {
+        BMCWEB_LOG_DEBUG("ec: {}  errorCode {}", ec, errorCode);
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("ERROR DBUS response error {}", ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        if (errorCode == EROTRstErr::UpdateInProgress)
+        {
+            BMCWEB_LOG_DEBUG("ERROR Cannot perform ERoT self reset: An update is in progress");
+            messages::updateInProgressMsg(asyncResp->res,
+                    "Retry the operation once firmware update operation is complete.");
+            return;
+        }
+
+        if (errorCode == EROTRstErr::NoFwPending)
+        {
+            BMCWEB_LOG_DEBUG("ERROR Cannot perform ERoT self reset: There is no EC FW pending");
+            messages::resourceNotFound(asyncResp->res, "ERoT FW", "Pending-ERoT-FW");
+            return;
+        }
+
+        if (errorCode == EROTRstErr::CmdNotSupported)
+        {
+            BMCWEB_LOG_DEBUG("ERROR Cannot perform ERoT self reset: The action is not supported by the current ERoT version");
+            messages::actionNotSupported(asyncResp->res, "ERoT self-reset");
+            return;
+        }
+
+        std::string command = erotResetPath + " " + std::to_string(endpointId);
+        auto secondExitCallback = [](const boost::system::error_code& ec, int errorCode) mutable {
+        BMCWEB_LOG_DEBUG("ec: {}  errorCode {}", ec, errorCode);
+        };
+        BMCWEB_LOG_DEBUG("Sending ERoT self-reset command");
+
+        /* During the erotReset script, ERoT performs a self reset which leads to BMC external reset.
+        Hence it is unnecessary to check its results */
+        messages::success(asyncResp->res);
+
+        bp::async_system(crow::connections::systemBus->get_io_context(),
+                     std::move(secondExitCallback), command, bp::std_in.close(),
+                     bp::std_out > *dataOut, bp::std_err > *dataErr);
+    };
+    bp::async_system(crow::connections::systemBus->get_io_context(),
+                     std::move(exitCallback), command, bp::std_in.close(),
+                     bp::std_out > *dataOut, bp::std_err > *dataErr);
+}
+
+/**
+@brief - Finds the endpoint ID associated with the given chassis UUID.
+@param[in] - req: Request const variable
+             asyncResp: Response const variable
+             chassisUUID: ERoT chassis UUID
+             isPCIe: Indicates if ERoT is connected via PCIe or SPI
+*/
+inline void findEIDforEROTReset(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisUUID, bool isPCIe = true)
+{
+    std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
+    if (!isPCIe)
+    {
+        serviceName = "xyz.openbmc_project.MCTP.Control.SPI";
+    }
+
+    crow::connections::systemBus->async_method_call(
+        [req, asyncResp, chassisUUID,
+         isPCIe](const boost::system::error_code ec,
+                 const dbus::utility::ManagedObjectType& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("ERROR DBUS response error for MCTP.Control");
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            const uint32_t* eid = nullptr;
+            const std::string* uuid = nullptr;
+            bool foundEID = false;
+
+            for (auto& objectPath : resp)
+            {
+                for (auto& interfaceMap : objectPath.second)
+                {
+                    if (interfaceMap.first == "xyz.openbmc_project.Common.UUID")
+                    {
+                        for (auto& propertyMap : interfaceMap.second)
+                        {
+                            if (propertyMap.first == "UUID")
+                            {
+                                uuid = std::get_if<std::string>(
+                                    &propertyMap.second);
+                            }
+                        }
+                    }
+
+                    if (interfaceMap.first ==
+                        "xyz.openbmc_project.MCTP.Endpoint")
+                    {
+                        for (auto& propertyMap : interfaceMap.second)
+                        {
+                            if (propertyMap.first == "EID")
+                            {
+                                eid = std::get_if<uint32_t>(&propertyMap.second);
+                            }
+                        }
+                    }
+                }
+
+                if ((*uuid) == chassisUUID)
+                {
+                    foundEID = true;
+                    break;
+                }
+            }
+
+            if (foundEID)
+            {
+                gracefulRestart(asyncResp, *eid);
+            }
+            else
+            {
+                if (isPCIe)
+                {
+                    findEIDforEROTReset(req, asyncResp, chassisUUID, false);
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG
+                        << "ERROR Can not find relevant MCTP endpoint for chassis "
+                        << chassisUUID;
+                }
+            }
+        },
+        serviceName, "/xyz/openbmc_project/mctp",
+        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+}
+
+/**
+@brief - Performs ERoT chassis reset action. Currently GracefulRestart is supported.
+@param[in] - req: Request const variable
+             asyncResp: Response const variable
+             chassisId: ERoT chassis ID
+*/
+inline void handleEROTChassisResetAction(
+    const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId)
+{
+    BMCWEB_LOG_DEBUG("Post ERoT Chassis Reset.");
+
+    std::string resetType;
+
+    if (!json_util::readJsonAction(req, asyncResp->res, "ResetType", resetType))
+    {
+        return;
+    }
+
+    if (resetType != "GracefulRestart")
+    {
+        BMCWEB_LOG_DEBUG("ERROR Invalid property value for ResetType: {}", resetType);
+        messages::actionParameterNotSupported(asyncResp->res, resetType, "ResetType");
+        return;
+    }
+
+    const std::array<const char*, 1> interfaces = {
+        "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
+
+    crow::connections::systemBus->async_method_call(
+        [req, asyncResp, chassisId(std::string(chassisId))](
+            const boost::system::error_code ec,
+            const crow::openbmc_mapper::GetSubTreeType& subtree) {
+            if (ec)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            bool chassisIdFound = false;
+
+            // Iterate over all retrieved ObjectPaths.
+            for (const std::pair<std::string,
+                                 std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>&
+                     object : subtree)
+            {
+                const std::string& path = object.first;
+                const std::vector<
+                    std::pair<std::string, std::vector<std::string>>>&
+                    connectionNames = object.second;
+
+                sdbusplus::message::object_path objPath(path);
+                if (objPath.filename() != chassisId)
+                {
+                    continue;
+                }
+
+                if (connectionNames.size() < 1)
+                {
+                    BMCWEB_LOG_ERROR("ERROR Got 0 Connection names");
+                    continue;
+                }
+
+                chassisIdFound = true;
+
+                sdbusplus::asio::getProperty<std::string>(
+                    *crow::connections::systemBus, connectionNames[0].first, path,
+                    "xyz.openbmc_project.Common.UUID", "UUID",
+                    [req, asyncResp](const boost::system::error_code ec,
+                            const std::string& chassisUUID) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG("ERROR DBUS response error for UUID");
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    findEIDforEROTReset(req, asyncResp, chassisUUID, false);
+                });
+            }
+
+            /* Couldn't find an object with that name. Return an error */
+            if (chassisIdFound == false)
+            {
+                messages::resourceNotFound(asyncResp->res,
+                                        "#Chassis.v1_17_0.Chassis", chassisId);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0, interfaces);
+}
+#endif //BMCWEB_ENABLE_EROT_RESET
 } // namespace redfish

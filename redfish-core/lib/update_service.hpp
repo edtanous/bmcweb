@@ -1936,7 +1936,7 @@ inline void requestRoutesUpdateService(App& app)
                 return;
             }
             asyncResp->res.jsonValue["@odata.type"] =
-                "#UpdateService.v1_8_0.UpdateService";
+                "#UpdateService.v1_11_0.UpdateService";
             asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/UpdateService";
             asyncResp->res.jsonValue["Id"] = "UpdateService";
             asyncResp->res.jsonValue["Description"] =
@@ -3654,9 +3654,32 @@ inline void requestRoutesSoftwareInventory(App& app)
                     }
 
                     std::string formatDesc = swInvPurpose->substr(endDesc);
+                    it = propertiesList.find("Description");
                     asyncResp->res.jsonValue["Description"] = formatDesc +
                                                               " image";
+
+                    if (it != propertiesList.end())
+                    {
+                        const std::string* description =
+                            std::get_if<std::string>(&it->second);
+                        if (description != nullptr && !description->empty())
+                        {
+                            asyncResp->res.jsonValue["Description"] =
+                                *description;
+                        }
+                    }
                     getRelatedItems(asyncResp, *swId, *swInvPurpose);
+
+                    it = propertiesList.find("PrettyName");
+                    if (it != propertiesList.end())
+                    {
+                        const std::string* foundName =
+                            std::get_if<std::string>(&it->second);
+                        if (foundName != nullptr && !foundName->empty())
+                        {
+                            asyncResp->res.jsonValue["Name"] = *foundName;
+                        }
+                    }
                 },
                     versionService, obj.first,
                     "org.freedesktop.DBus.Properties", "GetAll", "");
@@ -3698,10 +3721,14 @@ inline void requestRoutesInventorySoftware(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/SoftwareInventory/<str>/")
         .privileges(redfish::privileges::getSoftwareInventory)
         .methods(
-            boost::beast::http::verb::get)([](const crow::Request&,
+            boost::beast::http::verb::get)([&app](const crow::Request& req,
                                               const std::shared_ptr<
                                                   bmcweb::AsyncResp>& asyncResp,
                                               const std::string& param) {
+            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+            {
+                return;
+            }
             std::string searchPath = "/xyz/openbmc_project/inventory_software/";
             std::shared_ptr<std::string> swId =
                 std::make_shared<std::string>(param);

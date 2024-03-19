@@ -49,6 +49,10 @@
 #include "network_adapters.hpp"
 #endif
 
+#ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
+#include "system_host_eth.hpp"
+#endif
+
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
 #include "network_adapters_generic.hpp"
 #endif
@@ -123,7 +127,9 @@ class RedfishService
             requestRoutesSession(app);
         }
         requestEthernetInterfacesRoutes(app);
-        requestPortsInterfacesRoutes(app);
+#ifdef BMCWEB_ENABLE_LLDP_DEDICATED_PORTS
+        requestDedicatedPortsInterfacesRoutes(app);
+#endif
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesThermal(app);
@@ -135,6 +141,10 @@ class RedfishService
          requestRoutesNetworkAdapters(app);
          requestRoutesNetworkDeviceFunctions(app);
          requestRoutesACDPort(app);
+#endif
+
+#ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
+        requestHostEthernetInterfacesRoutes(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC

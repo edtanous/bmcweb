@@ -1553,17 +1553,18 @@ inline std::string extractParentInterfaceName(const std::string& ifaceId)
     return ifaceId.substr(0, pos);
 }
 
-inline void
-    parseInterfaceData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const std::string& ifaceId,
-                       const EthernetInterfaceData& ethData,
-                       const std::vector<IPv4AddressData>& ipv4Data,
-                       const std::vector<IPv6AddressData>& ipv6Data)
+inline void parseInterfaceData(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& ifaceId, const EthernetInterfaceData& ethData,
+    const std::vector<IPv4AddressData>& ipv4Data,
+    const std::vector<IPv6AddressData>& ipv6Data,    
+    const std::string& route = "/redfish/v1/Managers/" PLATFORMBMCID
+                               "/EthernetInterfaces/",
+    const bool& vlans = true)
 {
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
     jsonResponse["Id"] = ifaceId;
-    jsonResponse["@odata.id"] =
-        "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" + ifaceId;
+    jsonResponse["@odata.id"] = route + ifaceId;
     jsonResponse["InterfaceEnabled"] = ethData.nicEnabled;
 
     if constexpr (bmcwebEnableHealthPopulate)
@@ -1628,6 +1629,11 @@ inline void
             fqdn += "." + ethData.domainnames[0];
         }
         jsonResponse["FQDN"] = fqdn;
+    }
+    
+    if (vlans)
+    {
+        jsonResponse["VLANs"] = {{"@odata.id", route + ifaceId + "/VLANs"}};
     }
 
     if (ethData.vlanId)

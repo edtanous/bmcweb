@@ -30,6 +30,8 @@ enum class PortIdSubtype
     LocallyAssigned = 7
 };
 
+const std::string lldpTransmit = "LLDPTransmit";
+const std::string lldpReceive = "LLDPReceive";
 
 inline void getLldpStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& ifaceId)
@@ -131,7 +133,7 @@ inline PortIdSubtype getPortSubType(const std::string& portId)
 
 inline std::vector<std::string> parseLldpCapabilities(std::string& systemCap)
 {
-    std::vector<std::string> capabilities;
+    std::vector<std::string> capabilities{};
     std::string sysCapStr = "System capabilities:";
     size_t startPos = systemCap.find(sysCapStr); 
     std::string systemCapStr;
@@ -159,6 +161,10 @@ inline std::vector<std::string> parseLldpCapabilities(std::string& systemCap)
         if (spacePos != std::string::npos)
         {
             token = token.substr(0, spacePos);
+        }
+        if (token == "None")
+        {
+            return {};
         }
         capabilities.push_back(token);
     }
@@ -246,7 +252,7 @@ inline std::string getTlvString(const std::string &commandOutput,
             size_t endLinePos = commandOutput.rfind('\n', nextTlv);
             if (endLinePos != std::string::npos)
             {
-                result = commandOutput.substr(startPosNextLine, endLinePos - startPosNextLine -1);
+                result = commandOutput.substr(startPosNextLine, endLinePos - startPosNextLine);
                 // Erase spaces from the start of a string
                 result.erase(result.begin(), std::find_if(result.begin(), result.end(), [](unsigned char ch) {
                     return !std::isspace(ch);}));
@@ -278,6 +284,21 @@ inline std::string findLineContaining(const std::string &commandOutput,
     return result;
 }
 
+inline void setLldpTlvProperty(nlohmann::json& jsonSchema, 
+                          const std::string& property,
+                          const std::string& propertyValue,
+                          const std::string& lldpType)
+{
+    if (!propertyValue.empty())
+    {
+        jsonSchema[property] = propertyValue;
+    }
+    else if (lldpType == lldpTransmit)
+    {
+        jsonSchema[property] = "";
+    }
+}
+
 inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                const std::string& ifaceId,
                                bool isReceived)
@@ -300,13 +321,17 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         return;
                     }
                     std::string idStr;
-                    std::string lldpType = isReceived ? "LLDPReceive" : "LLDPTransmit";
+                    std::string lldpType = isReceived ? lldpReceive : lldpTransmit;
                     nlohmann::json& jsonSchema =  asyncResp->res.jsonValue["Ports"]["EthernetProperties"][lldpType];
                     idStr = getTlvString(stdOut, "Chassis ID TLV");
                     if (!idStr.empty())
                     {
                         jsonSchema["ChassisId"] = idStr;
-                        jsonSchema["ChassisSubtype"] = getChassisSubType(idStr);
+                        jsonSchema["ChassisIdSubtype"] = getChassisSubType(idStr);
+                    }
+                    else if (lldpType == lldpTransmit)
+                    {
+                        jsonSchema["ChassisId"] = "NotTransmitted";
                     }
 
                     idStr = getTlvString(stdOut, "Port ID TLV");
@@ -315,49 +340,51 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         jsonSchema["PortId"] = idStr;
                         jsonSchema["PortIdSubtype"] = getPortSubType(idStr);
                     }
+                    else if (lldpType == lldpTransmit)
+                    {
+                        jsonSchema["PortId"] = "NotTransmitted";
+                    }
 
                     idStr = getTlvString(stdOut, "System Capabilities TLV");
                     if (!idStr.empty())
                     {
                         std::vector<std::string> capabilities = parseLldpCapabilities(idStr);
-                        if (!capabilities.empty())
+                        if ((!capabilities.empty() && lldpType == lldpReceive) ||
+                            (lldpType == lldpTransmit))
                         {
                             jsonSchema["SystemCapabilities"] = capabilities;
                         }
                     }
                     
                     idStr = getTlvString(stdOut, "System Description TLV");
-                    if (!idStr.empty())
-                    {
-                        jsonSchema["SystemDescription"] = idStr;
-                    }
+                    setLldpTlvProperty(jsonSchema, "SystemDescription", idStr, lldpType);
 
                     idStr = getTlvString(stdOut, "System Name TLV");
-                    if (!idStr.empty())
-                    {
-                        jsonSchema["SystemName"] = idStr;
-                    }
+                    setLldpTlvProperty(jsonSchema, "SystemName", idStr, lldpType);
 
                     idStr = getTlvString(stdOut, "Management Address TLV");
                     if (!idStr.empty())
                     {
                         std::string managementAddress = findLineContaining(idStr, "IPv4");
-                        if (!managementAddress.empty())
-                        {
-                            jsonSchema["ManagementAddress"] = managementAddress;
-                        }
+                        setLldpTlvProperty(jsonSchema, "ManagementAddressIPv4", managementAddress, lldpType);
+
                         std::string managementAddressMac = findLineContaining(idStr, "MAC");
-                        if (!managementAddressMac.empty())
-                        {
-                            jsonSchema["ManagementAddressMAC"] = managementAddressMac;
-                        }
+                        setLldpTlvProperty(jsonSchema, "ManagementAddressMAC", managementAddressMac, lldpType);
                     }
 
                     idStr = getTlvString(stdOut, "VLAN Name TLV");
-                    if (!idStr.empty())
+                    // Matches all strings that represent a valid integer
+                    std::regex e("(\\d+)");  
+                    std::smatch match;
+                    if (!idStr.empty() && std::regex_search(idStr, match, e) && match.size() > 1)
                     {
-                        jsonSchema["ManagementVlanId"] = idStr;     
+                        jsonSchema["ManagementVlanId"] = std::stoi(match.str(1));     
                     }
+                    else if (lldpType == lldpTransmit)
+                    {
+                        jsonSchema["ManagementVlanId"] = 4095;
+                    }
+
                 }); ; 
 }
 
@@ -375,8 +402,7 @@ inline void getLldpInformation(const std::shared_ptr<bmcweb::AsyncResp>& asyncRe
     getLldpTlvs(asyncResp, ifaceId, false);
 }
 
-
-inline void requestPortsInterfacesRoutes(App& app)
+inline void requestDedicatedPortsInterfacesRoutes(App& app)
 {
         BMCWEB_ROUTE(app,
                  "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts/")
@@ -431,6 +457,7 @@ inline void requestPortsInterfacesRoutes(App& app)
                             ifaceArray.size();
                     });
             });
+
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/DedicatedNetworkPorts/<str>/")
@@ -528,4 +555,5 @@ inline void requestPortsInterfacesRoutes(App& app)
                 }
         });
 }
+
 }//namespace redfish

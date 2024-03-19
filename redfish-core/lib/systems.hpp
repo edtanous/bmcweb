@@ -4075,6 +4075,13 @@ inline void
     asyncResp->res.jsonValue["SerialConsole"]["SSH"]["HotKeySequenceDisplay"] =
         "Press ~. to exit console";
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
+
+#ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
+    asyncResp->res.jsonValue["EthernetInterfaces"] = {
+        {"@odata.id",
+         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/EthernetInterfaces"}};
+#endif
+
     getPortStatusAndPath(std::span{protocolToDBusForSystems},
                          std::bind_front(afterPortRequest, asyncResp));
 

@@ -1339,6 +1339,13 @@ inline void updateUserProperties(
                 // If password is invalid
                 messages::propertyValueFormatError(asyncResp->res, *password,
                                                    "Password");
+                size_t maxrepeat = 3;
+                if (!password.value().empty())
+                {
+                    maxrepeat = static_cast<size_t>(
+                        3 + (0.09 * static_cast<double>(
+                                        strlen(password.value().c_str()))));
+                }
                 std::string resolution =
                     " Password should be " + std::to_string(minPasswordLength) +
                     " character long including " +
@@ -1346,8 +1353,9 @@ inline void updateUserProperties(
                     " uppercase character, " +
                     std::to_string(minLcaseCharacters) +
                     " lower case character, " + std::to_string(minDigits) +
-                    " digit" + " and " + std::to_string(minSpecCharacters) +
-                    " special character.";
+                    " digit, " + std::to_string(minSpecCharacters) +
+                    " special character and " + std::to_string(maxrepeat) +
+                    " maximum number of consecutive character pairs";
 
                 // update the resolution message and add the password
                 // policy
@@ -1805,6 +1813,13 @@ inline void processAfterCreateUser(
 
                 if (retval == PAM_AUTHTOK_ERR)
                 {
+                    size_t maxrepeat = 3;
+                    if (!password.empty())
+                    {
+                        maxrepeat = static_cast<size_t>(
+                            3 + (0.09 * static_cast<double>(
+                                            strlen(password.c_str()))));
+                    }
                     std::string resolution =
                         "Password should be " + std::to_string(minPassLength) +
                         " character long including " +
@@ -1812,16 +1827,15 @@ inline void processAfterCreateUser(
                         " uppercase character, " +
                         std::to_string(minLcaseCharacters) +
                         " lower case character, " + std::to_string(minDigits) +
-                        " digit and " + std::to_string(minSpecCharacters) +
-                        " special character.";
-
+                        " digit," + std::to_string(minSpecCharacters) +
+                        " special character and " + std::to_string(maxrepeat) +
+                        " maximum number of consecutive character pairs";
                     // update the resolution message and add the
                     // password policy too
                     redfish::message_registries::updateResolution(
                         asyncResp, "Password", resolution);
                     BMCWEB_LOG_ERROR("pamUpdatePassword Failed");
                 }
-
 
         // At this point we have a user that's been
         // created, but the password set

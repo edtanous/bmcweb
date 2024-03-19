@@ -434,121 +434,122 @@ inline std::string getMemoryMetricURIDef(std::string &propertyName)
 inline std::string getProcessorGpmMetricURIDef(std::string& propertyName)
 {
     std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string gpuPrefix(platformGpuNamePrefix);
 
     if (propertyName == "DMMAUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/DMMAUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/DMMAUtilizationPercent";
     }
     else if (propertyName == "FP16ActivityPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP16ActivityPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP16ActivityPercent";
     }
     else if (propertyName == "FP32ActivityPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP32ActivityPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP32ActivityPercent";
     }
     else if (propertyName == "FP64ActivityPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP64ActivityPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/FP64ActivityPercent";
     }
     else if (propertyName == "GraphicsEngineActivityPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/GraphicsEngineActivityPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/GraphicsEngineActivityPercent";
     }
     else if (propertyName == "HMMAUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/HMMAUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/HMMAUtilizationPercent";
     }
     else if (propertyName == "IMMAUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/IMMAUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/IMMAUtilizationPercent";
     }
     else if (propertyName == "IntergerActivityUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/IntergerActivityUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/IntergerActivityUtilizationPercent";
     }
     else if (propertyName == "NVDecUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVDecUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVDecUtilizationPercent";
     }
     else if (propertyName == "NVJpgInstanceUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVJpgInstanceUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVJpgInstanceUtilizationPercent/{InstanceId}";
     }
     else if (propertyName == "NVDecInstanceUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVDecInstanceUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVDecInstanceUtilizationPercent/{InstanceId}";
     }
     else if (propertyName == "NVJpgUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVJpgUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVJpgUtilizationPercent";
     }
     else if (propertyName == "NVLinkDataTxBandwidthGbps")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkDataTxBandwidthGbps";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkDataTxBandwidthGbps";
     }
     else if (propertyName == "NVLinkDataRxBandwidthGbps")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkDataRxBandwidthGbps";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkDataRxBandwidthGbps";
     }
     else if (propertyName == "NVLinkRawTxBandwidthGbps")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkRawTxBandwidthGbps";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkRawTxBandwidthGbps";
     }
     else if (propertyName == "NVLinkRawRxBandwidthGbps")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkRawRxBandwidthGbps";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVLinkRawRxBandwidthGbps";
     }
     else if (propertyName == "NVOfaUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVOfaUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/NVOfaUtilizationPercent";
     }
     else if (propertyName == "PCIeRawTxBandwidthGbps")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/PCIeRawTxBandwidthGbps";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/PCIeRawTxBandwidthGbps";
     }
     else if (propertyName == "PCIeRawRxBandwidthGbps")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/PCIeRawRxBandwidthGbps";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/PCIeRawRxBandwidthGbps";
     }
     else if (propertyName == "SMActivityPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/SMActivityPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/SMActivityPercent";
     }
     else if (propertyName == "SMOccupancyPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/SMOccupancyPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/SMOccupancyPercent";
     }
     else if (propertyName == "TensorCoreActivityPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/ProcessorMetrics#/Oem/Nvidia/TensorCoreActivityPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/ProcessorMetrics#/Oem/Nvidia/TensorCoreActivityPercent";
     }
     else if (propertyName == "CapacityUtilizationPercent")
     {
         propURI +=
-            "/Processors/GPU_SXM_{GpuId}/MemorySummary/MemoryMetrics#/CapacityUtilizationPercent";
+            "/Processors/" + gpuPrefix + "{GpuId}/MemorySummary/MemoryMetrics#/CapacityUtilizationPercent";
     }
     return propURI;
 }
@@ -685,11 +686,21 @@ inline std::string getProcessorMetricURIDef(std::string &propertyName)
     }
     else if (propertyName == "PCIeType")
     {
-        propURI += "/Processors/" + gpuPrefix + "{GpuId}#/SystemInterface/PCIe/PCIeType";
+        propURI = "/redfish/v1/Chassis/" PLATFORMDEVICEPREFIX;
+        propURI += gpuPrefix + "{GpuId}/PCIeDevices/" + gpuPrefix +
+                   "{GpuId}#/PCIeInterface/PCIeType";
     }
     else if (propertyName == "MaxLanes")
     {
-        propURI += "/Processors/" + gpuPrefix + "{GpuId}#/SystemInterface/PCIe/MaxLanes";
+        propURI = "/redfish/v1/Chassis/" PLATFORMDEVICEPREFIX;
+        propURI += gpuPrefix + "{GpuId}/PCIeDevices/" + gpuPrefix +
+                   "{GpuId}#/PCIeInterface/MaxLanes";
+    }
+    else if (propertyName == "LanesInUse")
+    {
+        propURI = "/redfish/v1/Chassis/" PLATFORMDEVICEPREFIX;
+        propURI += gpuPrefix + "{GpuId}/PCIeDevices/" + gpuPrefix +
+                   "{GpuId}#/PCIeInterface/LanesInUse";
     }
     else if (propertyName == "OperatingSpeedMHz")
     {

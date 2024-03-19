@@ -65,6 +65,7 @@ incdir = include_directories(
 ## create a MAP of  "options : feature_flag"
 
 feature_map = {
+  'lldp-dedicated-ports'                        : '-DBMCWEB_ENABLE_LLDP_DEDICATED_PORTS', 
   'power-control-type-percentage'               : '-DBMCWEB_CONTROL_SETPOINT_UNITS_PERCENTAGE',
   'platform-metrics'                            : '-DBMCWEB_ENABLE_PLATFORM_METRICS',
   'basic-auth'                                  : '-DBMCWEB_ENABLE_BASIC_AUTHENTICATION',
@@ -92,6 +93,7 @@ feature_map = {
   'nvidia-oem-bf3-properties'                   : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES',
   'nvidia-oem-oberon-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES',
   'network-adapters'                            : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS',
+  'host-eth-iface'                              : '-DBMCWEB_ENABLE_HOST_ETH_IFACE',
   'network-adapters-generic'                    : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC',
   'redfish-dbus-log'                            : '-DBMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES',
   'redfish-dump-log'                            : '-DBMCWEB_ENABLE_REDFISH_DUMP_LOG',
@@ -138,6 +140,7 @@ feature_map = {
   'use-efficient-expand-on-sensors'             : '-DBMCWEB_ENABLE_EFFICIENT_EXPAND',
   'shmem-platform-metrics'                      : '-DBMCWEB_ENABLE_SHMEM_PLATFORM_METRICS',
   'enable-sse'                                  : '-DBMCWEB_ENABLE_SSE',
+  'erot-reset'                                  : '-DBMCWEB_ENABLE_EROT_RESET',
 }
 
 if(get_option('tls-auth-opt-in').enabled())
