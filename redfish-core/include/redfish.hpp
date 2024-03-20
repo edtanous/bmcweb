@@ -230,12 +230,14 @@ class RedfishService
 
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
         requestRoutesSystemDumpService(app);
+        requestRoutesSystemDumpServiceActionInfo(app);
         requestRoutesSystemDumpEntryCollection(app);
         requestRoutesSystemDumpEntry(app);
         requestRoutesSystemDumpCreate(app);
         requestRoutesSystemDumpClear(app);
 
         requestRoutesBMCDumpService(app);
+        requestRoutesBMCDumpServiceActionInfo(app);
         requestRoutesBMCDumpEntryCollection(app);
         requestRoutesBMCDumpEntry(app);
         requestRoutesBMCDumpCreate(app);

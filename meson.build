@@ -92,6 +92,7 @@ feature_map = {
   'nvidia-oem-bf-properties'                    : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES',
   'nvidia-oem-bf3-properties'                   : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES',
   'nvidia-oem-oberon-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES',
+  'nvidia-retimer-debugmode'                    : '-DBMCWEB_ENABLE_NVIDIA_RETIMER_DEBUGMODE',
   'network-adapters'                            : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS',
   'host-eth-iface'                              : '-DBMCWEB_ENABLE_HOST_ETH_IFACE',
   'network-adapters-generic'                    : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC',

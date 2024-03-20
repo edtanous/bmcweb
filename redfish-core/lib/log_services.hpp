@@ -4399,7 +4399,7 @@ inline void
 
     asyncResp->res.jsonValue["Entries"]["@odata.id"] = dumpPath + "/Entries";
 
-    asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#LogService.v1_2_0.LogService";
+#ifdef BMCWEB_ENABLE_NVIDIA_RETIMER_DEBUGMODE
     sdbusplus::asio::getProperty<bool>(
         *crow::connections::systemBus, 
         "xyz.openbmc_project.Dump.Manager",
@@ -4409,13 +4409,14 @@ inline void
                     const bool DebugModeEnabled) {
             if (ec)
             {
-                BMCWEB_LOG_DEBUG << "DBUS response error for RetimerDebugModeEnabled";
+                BMCWEB_LOG_ERROR("DBUS response error for RetimerDebugModeEnabled {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaLogService.v1_2_0.NvidiaLogService";
             asyncResp->res.jsonValue["Oem"]["Nvidia"]["RetimerDebugModeEnabled"] = DebugModeEnabled;
         });
-
+#endif // BMCWEB_ENABLE_NVIDIA_RETIMER_DEBUGMODE
     if (collectDiagnosticDataSupported)
     {
         asyncResp->res.jsonValue["Actions"]["#LogService.CollectDiagnosticData"]
@@ -4518,9 +4519,7 @@ inline void handleLogServicesDumpServiceComputerSystemPatch(
         *retimerDebugModeEnabled, [asyncResp](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR
-                    << "DBUS response error on DebugMode setProperty: "
-                    << ec;
+                BMCWEB_LOG_ERROR("DBUS response error DebugMode setProperty {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -4666,6 +4665,42 @@ inline void requestRoutesBMCDumpService(App& app)
             handleLogServicesDumpServiceGet, std::ref(app), "BMC"));
 }
 
+inline void requestRoutesBMCDumpServiceActionInfo(App& app)
+{
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/CollectDiagnosticDataActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#ActionInfo.v1_2_0.ActionInfo";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/LogServices/Dump/CollectDiagnosticDataActionInfo";
+                asyncResp->res.jsonValue["Name"] = "CollectDiagnosticDataActionInfo Action Info";
+                asyncResp->res.jsonValue["Id"] = "CollectDiagnosticDataActionInfo";
+                
+                nlohmann::json::object_t parameter_diagnosticDataType;
+                parameter_diagnosticDataType["Name"] = "DiagnosticDataType";
+                parameter_diagnosticDataType["Required"] = true;
+                parameter_diagnosticDataType["DataType"] = "String";
+
+                nlohmann::json::array_t diagnosticDataType_allowableValues;
+                diagnosticDataType_allowableValues.push_back("BMC");
+                parameter_diagnosticDataType["AllowableValues"] = std::move(diagnosticDataType_allowableValues);
+
+                nlohmann::json::array_t parameters;
+                parameters.push_back(std::move(parameter_diagnosticDataType));
+
+                asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+            });
+}
+
 inline void requestRoutesBMCDumpEntryCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
@@ -4765,6 +4800,56 @@ inline void requestRoutesSystemDumpService(App& app)
         .privileges(redfish::privileges::patchLogService)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleLogServicesDumpServiceComputerSystemPatch, std::ref(app)));
+}
+
+inline void requestRoutesSystemDumpServiceActionInfo(App& app)
+{
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/CollectDiagnosticDataActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+                {
+                    return;
+                }
+
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#ActionInfo.v1_2_0.ActionInfo";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices/Dump/CollectDiagnosticDataActionInfo";
+                asyncResp->res.jsonValue["Name"] = "CollectDiagnosticDataActionInfo Action Info";
+                asyncResp->res.jsonValue["Id"] = "CollectDiagnosticDataActionInfo";
+                
+                nlohmann::json::object_t parameter_diagnosticDataType;
+                parameter_diagnosticDataType["Name"] = "DiagnosticDataType";
+                parameter_diagnosticDataType["Required"] = true;
+                parameter_diagnosticDataType["DataType"] = "String";
+
+                nlohmann::json::array_t diagnosticDataType_allowableValues;
+                diagnosticDataType_allowableValues.push_back("OEM");
+                parameter_diagnosticDataType["AllowableValues"] = std::move(diagnosticDataType_allowableValues);
+
+                nlohmann::json::object_t parameter_OEMDiagnosticDataType;
+                parameter_OEMDiagnosticDataType["Name"] = "OEMDiagnosticDataType";
+                parameter_OEMDiagnosticDataType["Required"] = true;
+                parameter_OEMDiagnosticDataType["DataType"] = "String";
+
+                nlohmann::json::array_t OEMDiagnosticDataType_allowableValues;
+                OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=SelfTest");
+                OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=FPGA");
+                OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=EROT");
+                OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=RetLTSSM");
+                OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=RetRegister");
+                parameter_OEMDiagnosticDataType["AllowableValues"] = std::move(OEMDiagnosticDataType_allowableValues);
+                
+                nlohmann::json::array_t parameters;
+                parameters.push_back(std::move(parameter_diagnosticDataType));
+                parameters.push_back(std::move(parameter_OEMDiagnosticDataType));
+
+                asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+            });
 }
 
 inline void requestRoutesSystemDumpEntryCollection(App& app)
