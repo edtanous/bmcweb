@@ -215,6 +215,7 @@ add_project_arguments(
     '-Wno-global-constructors',
     '-Wno-newline-eof',
     '-Wno-padded',
+    '-Wno-shadow',
     '-Wno-used-but-marked-unused',
     '-Wno-weak-vtables',
     '-Wno-switch-enum',
