@@ -80,7 +80,7 @@ const std::string softwarePrefixDbus = "/xyz/openbmc_project/software/";
 const std::string firmwarePrefix =
     "/redfish/v1/UpdateService/FirmwareInventory/";
 
-std::map<std::string, std::string> dBusToRedfishURI = {
+static std::map<std::string, std::string> dBusToRedfishURI = {
     {chassisPrefixDbus, chassisPrefix},     {fabricsPrefixDbus, fabricsPrefix},
     {processorPrefixDbus, processorPrefix}, {memoryPrefixDbus, memoryPrefix},
     {softwarePrefixDbus, firmwarePrefix},   {sensorSubTree, chassisPrefix}};
