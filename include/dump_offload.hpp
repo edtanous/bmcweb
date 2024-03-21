@@ -15,7 +15,7 @@ namespace crow
 namespace obmc_dump
 {
 
-std::string unixSocketPathDir = "/var/lib/bmcweb/";
+static std::string unixSocketPathDir = "/var/lib/bmcweb/";
 
 inline void handleDumpOffloadUrl(const crow::Request& req, crow::Response& res,
                                  const std::string& entryId,

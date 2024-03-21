@@ -660,11 +660,15 @@ inline void
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             sdbusplus::asio::getAllProperties(
-                *crow::connections::systemBus, connectionName, path,
-                "",
-                [asyncResp, chassisId(std::string(chassisId)), operationalStatusPresent,
-                 path](const boost::system::error_code& /*ec2*/,
-                       const dbus::utility::DBusPropertiesMap& propertiesList) {
+                *crow::connections::systemBus, connectionName, path, "",
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                [asyncResp, chassisId(std::string(chassisId)), path,
+                 operationalStatusPresent](
+#else
+                [asyncResp, chassisId(std::string(chassisId)), path](
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                    const boost::system::error_code& /*ec2*/,
+                    const dbus::utility::DBusPropertiesMap& propertiesList) {
                 const std::string* partNumber = nullptr;
                 const std::string* serialNumber = nullptr;
                 const std::string* manufacturer = nullptr;
@@ -813,8 +817,8 @@ inline void
                         redfish::chassis_utils::getPowerStateType(*state);
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-               asyncResp->res.jsonValue["Name"] = chassisId;
-               asyncResp->res.jsonValue["Id"] = chassisId;
+                asyncResp->res.jsonValue["Name"] = chassisId;
+                asyncResp->res.jsonValue["Id"] = chassisId;
 #ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
                 asyncResp->res.jsonValue["Thermal"]["@odata.id"] =
@@ -876,7 +880,7 @@ inline void
                 asyncResp->res.jsonValue["Links"]["ManagedBy"] =
                     std::move(managedBy);
                 getStorageLink(asyncResp, path);
-                });
+            });
 
             for (const auto& interface : interfaces2)
             {

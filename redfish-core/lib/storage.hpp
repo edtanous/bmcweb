@@ -43,7 +43,7 @@
 namespace redfish
 {
 // task uri for long-run drive operation:1650
-std::vector<std::string> taskUris;
+static std::vector<std::string> taskUris;
 // drive resouce has two interfaces from Dbus.
 // EM will also populate drive resource with the only one interface
 const std::array<const char*, 2> driveInterface = {

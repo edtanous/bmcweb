@@ -240,7 +240,7 @@ inline void
                      const std::string& prop, unsigned value)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp, prop, value](const boost::system::error_code ec) {
+        [asyncResp, prop](const boost::system::error_code ec) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", prop, ec);

@@ -241,7 +241,7 @@ inline void handleSPDMGETSignedMeasurement(
         {
             nonceVec = redfish::stl_utils::hexStringToVector(*nonce);
         }
-        catch (const std::invalid_argument& e)
+        catch ([[maybe_unused]] const std::invalid_argument& e)
         {
             BMCWEB_LOG_ERROR("Invalid character for nonce hex string in {}", *nonce);
             messages::actionParameterValueError(asyncResp->res, "Nonce",

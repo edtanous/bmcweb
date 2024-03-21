@@ -38,7 +38,7 @@ struct CommitImageValueEntry
     }
 };
 
-std::vector<CommitImageValueEntry> getAllowableValues()
+inline std::vector<CommitImageValueEntry> getAllowableValues()
 {
     static std::vector<CommitImageValueEntry> allowableValues;
 
@@ -78,7 +78,7 @@ std::vector<CommitImageValueEntry> getAllowableValues()
 
             allowableValues.push_back(allowableVal);
         }
-        catch (const std::exception& e)
+        catch ([[maybe_unused]] const std::exception& e)
         {
             BMCWEB_LOG_ERROR("FW MCTP EID map format error.");
         }

@@ -481,7 +481,7 @@ static bool
     return !redfishLogFiles.empty();
 }
 
-std::vector<std::pair<std::string, std::variant<std::string, uint64_t>>>
+inline std::vector<std::pair<std::string, std::variant<std::string, uint64_t>>>
     parseOEMAdditionalData(const std::string& oemData)
 {
     // Parse OEM data for encoded format string
@@ -506,8 +506,9 @@ std::vector<std::pair<std::string, std::variant<std::string, uint64_t>>>
     return additionalData;
 }
 
-void deleteDbusLogEntry(const std::string& entryId,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void
+    deleteDbusLogEntry(const std::string& entryId,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     auto respHandler = [asyncResp](const boost::system::error_code ec) {
         if (ec)
@@ -524,7 +525,8 @@ void deleteDbusLogEntry(const std::string& entryId,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 
-bool isSelEntry(const std::string* message, const std::vector<std::string>* additionalData)
+inline bool isSelEntry(const std::string* message,
+                       const std::vector<std::string>* additionalData)
 {
     if ((message != nullptr) && (*message == "xyz.openbmc_project.Logging.SEL.Error.Created"))
     {
@@ -541,8 +543,9 @@ bool isSelEntry(const std::string* message, const std::vector<std::string>* addi
     return false;
 }
 
-void deleteDbusSELEntry(std::string& entryID,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void
+    deleteDbusSELEntry(std::string& entryID,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, entryID](const boost::system::error_code ec,
@@ -3271,8 +3274,8 @@ inline void requestRoutesDBusEventLogEntryDownload(App& app)
     });
 }
 
-void populateRedfishSELEntry(GetManagedPropertyType& resp,
-                             nlohmann::json& thisEntry)
+inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
+                                    nlohmann::json& thisEntry)
 {
     uint32_t* id = nullptr;
     std::time_t timestamp{};
@@ -3539,7 +3542,7 @@ inline void requestRoutesDBusSELLogEntryCollection(App& app)
                                             entriesArray.push_back(thisEntry);
                                         }
                                     }
-                                    catch (const std::runtime_error& e)
+                                    catch ([[maybe_unused]] const std::runtime_error& e)
                                     {
                                         messages::internalError(asyncResp->res);
                                         continue;
@@ -3605,7 +3608,7 @@ inline void requestRoutesDBusSELLogEntry(App& app)
                         {
                             populateRedfishSELEntry(resp, thisEntry);
                         }
-                        catch (const std::runtime_error& e)
+                        catch ([[maybe_unused]] const std::runtime_error& e)
                         {
                             messages::internalError(asyncResp->res);
                             return;
@@ -6269,34 +6272,27 @@ inline static bool parsePostCode(const std::string& postCodeID,
                                  uint64_t& currentValue, uint16_t& index)
 {
     std::vector<std::string> split;
-    boost::algorithm::split(split, postCodeID, boost::is_any_of("-"));
+    bmcweb::split(split, postCodeID, '-');
     if (split.size() != 2 || split[0].length() < 2 || split[0].front() != 'B')
     {
         return false;
     }
 
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    const char* start = split[0].data() + 1;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    const char* end = split[0].data() + split[0].size();
-    auto [ptrIndex, ecIndex] = std::from_chars(start, end, index);
+    auto start = std::next(split[0].begin());
+    auto end = split[0].end();
+    auto [ptrIndex, ecIndex] = std::from_chars(&*start, &*end, index);
 
-    if (ptrIndex != end || ecIndex != std::errc())
+    if (ptrIndex != &*end || ecIndex != std::errc())
     {
         return false;
     }
 
-    start = split[1].data();
+    start = split[1].begin();
+    end = split[1].end();
 
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    end = split[1].data() + split[1].size();
-    auto [ptrValue, ecValue] = std::from_chars(start, end, currentValue);
-    if (ptrValue != end || ecValue != std::errc())
-    {
-        return false;
-    }
+    auto [ptrValue, ecValue] = std::from_chars(&*start, &*end, currentValue);
 
-    return true;
+    return ptrValue == &*end && ecValue == std::errc();
 }
 
 static bool fillPostCodeEntry(

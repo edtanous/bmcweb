@@ -51,11 +51,13 @@
 
 namespace redfish
 {
-const std::string& entityMangerService = "xyz.openbmc_project.EntityManager";
-const std::string& card1Path =
+static const std::string& entityMangerService =
+    "xyz.openbmc_project.EntityManager";
+static const std::string& card1Path =
     "/xyz/openbmc_project/inventory/system/board/Card1";
-const std::string& settingsService = "xyz.openbmc_project.Settings";
-const std::string& host0BootPath = "/xyz/openbmc_project/control/host0/boot";
+static const std::string& settingsService = "xyz.openbmc_project.Settings";
+static const std::string& host0BootPath =
+    "/xyz/openbmc_project/control/host0/boot";
 
 const static std::array<std::pair<std::string_view, std::string_view>, 2>
     protocolToDBusForSystems{
@@ -2052,7 +2054,8 @@ inline void
  *
  * @return None.
  */
-void populateFromEntityManger(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+inline void
+    populateFromEntityManger(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 {
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
@@ -2112,9 +2115,10 @@ void populateFromEntityManger(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
  *
  * @return None.
  */
-void setEntityMangerProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                             const std::string& interface,
-                             const std::string& property, std::string& value)
+inline void
+    setEntityMangerProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& interface,
+                            const std::string& property, std::string& value)
 {
     crow::connections::systemBus->async_method_call(
         [aResp, property](const boost::system::error_code ec) {
@@ -2137,9 +2141,9 @@ void setEntityMangerProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  *
  * @return None.
  */
-void getUefiPropertySettingsHost(
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-    bool addSourcesList = false)
+inline void
+    getUefiPropertySettingsHost(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                bool addSourcesList = false)
 {
     if (addSourcesList)
     {

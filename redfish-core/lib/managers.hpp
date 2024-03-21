@@ -573,10 +573,11 @@ inline void requestRoutesManagerResetActionInfo(App& app)
     });
 }
 
-void setDbusSelCapacity(size_t capacity,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void
+    setDbusSelCapacity(size_t capacity,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    auto respHandler = [asyncResp, capacity](const boost::system::error_code ec) {
+    auto respHandler = [asyncResp](const boost::system::error_code ec) {
         if (ec.value() == EBADR)
         {
             messages::resourceNotFound(
@@ -609,7 +610,7 @@ inline void requestRoutesNvidiaManagerSetSelCapacityAction(App& app)
                       "/Actions/Oem/Nvidia/SelCapacity/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
-            [&app](const crow::Request& req,
+            [](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
                 size_t capacity = 0;
 
@@ -624,7 +625,8 @@ inline void requestRoutesNvidiaManagerSetSelCapacityAction(App& app)
             });
 }
 
-void getDbusSelCapacity(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void
+    getDbusSelCapacity(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
 
     auto respHandler = [asyncResp](const boost::system::error_code ec,
@@ -662,15 +664,14 @@ void getDbusSelCapacity(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
  */
 inline void requestRoutesNvidiaManagerGetSelCapacity(App& app)
 {
-
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/Oem/Nvidia/SelCapacity/")
         .privileges(redfish::privileges::getManager)
         .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request&,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                getDbusSelCapacity(asyncResp);
-            });
+            [](const crow::Request&,
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        getDbusSelCapacity(asyncResp);
+    });
 }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES

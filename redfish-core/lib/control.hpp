@@ -18,7 +18,7 @@ const std::string setPointUnits = "W";
 const std::string setPointPropName = "PowerCap";
 #endif
 
-std::map<std::string, std::string> modes = {
+static std::map<std::string, std::string> modes = {
     {"xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance",
      "Automatic"},
     {"xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM", "Override"},
@@ -33,12 +33,11 @@ inline void
                            const std::string& chassisPath)
 {
     nlohmann::json& members = asyncResp->res.jsonValue["Members"];
-    nlohmann::json& count = asyncResp->res.jsonValue["Members@odata.count"];
     members = nlohmann::json::array();
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisID, &members,
-         &count](const boost::system::error_code,
-                 std::variant<std::vector<std::string>>& resp) {
+        [asyncResp, chassisID,
+         &members](const boost::system::error_code,
+                   std::variant<std::vector<std::string>>& resp) {
         std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
@@ -621,9 +620,8 @@ inline void
         for (const auto& element : objInfo)
         {
             crow::connections::systemBus->async_method_call(
-                [asyncResp, path, enabled,
-                 element](const boost::system::error_code ec2,
-                          sdbusplus::message::message& msg) {
+                [asyncResp, path, element](const boost::system::error_code ec2,
+                                           sdbusplus::message::message& msg) {
                 if (!ec2)
                 {
                     BMCWEB_LOG_DEBUG("Set power cap enable property succeeded");

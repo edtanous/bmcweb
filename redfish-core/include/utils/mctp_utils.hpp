@@ -157,10 +157,10 @@ using ErrorCallback = std::function<void(
     bool /* is critical (end of operation) */,
     const std::string& /* resource / procedure associated with the error */,
     const std::string& /* error message*/)>;
-void enumerateMctpEndpoints(EndpointCallback&& endpointCallback,
-                            ErrorCallback&& errorCallback,
-                            const std::string& spdmObjectFilter = "",
-                            uint64_t timeoutUs = 0)
+inline void enumerateMctpEndpoints(EndpointCallback&& endpointCallback,
+                                   ErrorCallback&& errorCallback,
+                                   const std::string& spdmObjectFilter = "",
+                                   uint64_t timeoutUs = 0)
 {
     crow::connections::systemBus->async_method_call_timed(
         [endpointCallback{std::forward<EndpointCallback>(endpointCallback)},

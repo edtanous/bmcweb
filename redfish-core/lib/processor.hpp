@@ -4605,8 +4605,8 @@ inline void patchEccMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
     }
     // Set the property, with handler to check error responses
     crow::connections::systemBus->async_method_call(
-        [resp, processorId, eccModeEnabled](boost::system::error_code ec,
-                                            sdbusplus::message::message& msg) {
+        [resp, processorId](boost::system::error_code ec,
+                            sdbusplus::message::message& msg) {
         if (!ec)
         {
             BMCWEB_LOG_DEBUG("Set eccModeEnabled succeeded");

@@ -30,7 +30,7 @@ enum class DotMctpVdmUtilCommand
     DOTTokenInstall,
 };
 
-std::map<const DotMctpVdmUtilCommand, const std::string> commandsMap{
+static std::map<const DotMctpVdmUtilCommand, const std::string> commandsMap{
     {DotMctpVdmUtilCommand::CAKInstall, "cak_install"},
     {DotMctpVdmUtilCommand::CAKLock, "cak_lock"},
     {DotMctpVdmUtilCommand::CAKTest, "cak_test"},

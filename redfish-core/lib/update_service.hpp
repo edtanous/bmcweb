@@ -2306,7 +2306,7 @@ inline void requestRoutesUpdateService(App& app)
                                 for (const std::string& path : swInvPaths)
                                 {
                                     std::size_t idPos = path.rfind(objPath);
-                                    if ((idPos == std::string::npos))
+                                    if (idPos == std::string::npos)
                                     {
                                         continue;
                                     }

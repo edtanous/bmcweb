@@ -8,9 +8,9 @@
 namespace redfish
 {
 
-const std::string& istMgrServ = "com.Nvidia.IstModeManager";
-const std::string& istMgrIface = "com.Nvidia.IstModeManager.Server";
-const std::string& istMgrPath = "/xyz/openbmc_project/IstModeManager";
+static const std::string& istMgrServ = "com.Nvidia.IstModeManager";
+static const std::string& istMgrIface = "com.Nvidia.IstModeManager.Server";
+static const std::string& istMgrPath = "/xyz/openbmc_project/IstModeManager";
 
 namespace ist_mode_utils
 {

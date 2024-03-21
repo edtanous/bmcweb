@@ -2285,7 +2285,7 @@ inline void requestRoutesBiosReset(App& app)
                       "/Bios/Actions/Bios.ResetBios/")
         .privileges(redfish::privileges::postBios)
         .methods(boost::beast::http::verb::post)(
-#if BMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE
+#ifdef BMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE
             std::bind_front(handleNvidiaBiosResetPost, std::ref(app))
 #else
             std::bind_front(handleBiosResetPost, std::ref(app))

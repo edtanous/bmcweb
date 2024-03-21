@@ -342,7 +342,7 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
     return suffix;
 }
 
-std::string
+static std::string
     generateURI(const std::string& deviceType, const std::string& deviceName,
                 const std::string& subDeviceName, const std::string& devicePath,
                 const std::string& metricName, const std::string& ifaceName)
@@ -507,9 +507,9 @@ static inline std::string toPCIeType(const std::string& pcieType)
     return "Unknown";
 }
 
-std::string translateReading(const std::string& ifaceName,
-                             const std::string& metricName,
-                             const std::string& reading)
+inline std::string translateReading(const std::string& ifaceName,
+                                    const std::string& metricName,
+                                    const std::string& reading)
 {
     std::string metricValue;
     if (ifaceName == "xyz.openbmc_project.State.ProcessorPerformance")
@@ -548,8 +548,8 @@ std::string translateReading(const std::string& ifaceName,
     return metricValue;
 }
 
-std::string translateThrottleDuration(const std::string& metricName,
-                                      const uint64_t& reading)
+inline std::string translateThrottleDuration(const std::string& metricName,
+                                             const uint64_t& reading)
 {
     std::string metricValue;
     if ((metricName == "PowerLimitThrottleDuration") ||
@@ -572,7 +572,7 @@ std::string translateThrottleDuration(const std::string& metricName,
     return metricValue;
 }
 
-std::string translateAccumlatedDuration(const uint64_t& reading)
+inline std::string translateAccumlatedDuration(const uint64_t& reading)
 {
     std::string metricValue;
     std::optional<std::string> duration =
@@ -585,13 +585,14 @@ std::string translateAccumlatedDuration(const uint64_t& reading)
     return metricValue;
 }
 
-void getMetricValue(const std::string& deviceType,
-                    const std::string& deviceName,
-                    const std::string& subDeviceName,
-                    const std::string& devicePath,
-                    const std::string& metricName, const std::string& ifaceName,
-                    const dbus::utility::DbusVariantType& value,
-                    const uint64_t& t, nlohmann::json& resArray)
+inline void getMetricValue(const std::string& deviceType,
+                           const std::string& deviceName,
+                           const std::string& subDeviceName,
+                           const std::string& devicePath,
+                           const std::string& metricName,
+                           const std::string& ifaceName,
+                           const dbus::utility::DbusVariantType& value,
+                           const uint64_t& t, nlohmann::json& resArray)
 {
     nlohmann::json thisMetric = nlohmann::json::object();
     /*

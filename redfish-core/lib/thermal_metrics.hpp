@@ -84,7 +84,7 @@ inline void processSensorsValue(
                 const dbus::utility::DbusVariantType& valueVariant =
                     thisValueIt->second;
                 const double* doubleValue = std::get_if<double>(&valueVariant);
-                double reading = NAN;
+                double reading = static_cast<double>(NAN);
                 if (doubleValue != nullptr)
                 {
                     reading = *doubleValue;

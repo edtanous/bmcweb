@@ -940,7 +940,6 @@ class Subscription : public persistent_data::UserSubscription
     std::string subId;
     uint64_t eventSeqNum = 1;
     boost::urls::url host;
-    uint16_t port = 0;
     std::shared_ptr<crow::ConnectionPolicy> policy;
     crow::sse_socket::Connection* sseConn = nullptr;
     std::optional<crow::HttpClient> client;
@@ -1853,7 +1852,7 @@ class EventServiceManager
 
         matchTelemetryMonitor = std::make_shared<sdbusplus::bus::match_t>(
             *crow::connections::systemBus, matchStr,
-            [this](sdbusplus::message::message& msg) {
+            [](sdbusplus::message::message& msg) {
             if (msg.is_method_error())
             {
                 BMCWEB_LOG_ERROR("TelemetryMonitor Signal error");

@@ -129,18 +129,17 @@ inline void getCollectionMembersByAssociation(
 
         // Collection members
         nlohmann::json& members = aResp->res.jsonValue["Members"];
-        nlohmann::json& count = aResp->res.jsonValue["Members@odata.count"];
 
         members = nlohmann::json::array();
         for (const std::string& sensorpath : *data)
         {
             // Check Interface in Object or not
             crow::connections::systemBus->async_method_call(
-                [aResp, collectionPath, sensorpath, &members,
-                 &count](const boost::system::error_code ec,
-                         const std::vector<
-                             std::pair<std::string, std::vector<std::string>>>&
-                         /*object*/) {
+                [aResp, collectionPath, sensorpath, &members](
+                    const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string, std::vector<std::string>>>&
+                    /*object*/) {
                 if (ec)
                 {
                     // the path does not implement any interfaces

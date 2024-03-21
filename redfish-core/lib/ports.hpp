@@ -385,7 +385,7 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         jsonSchema["ManagementVlanId"] = 4095;
                     }
 
-                }); ; 
+                }); 
 }
 
 inline void getLldpInformation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,

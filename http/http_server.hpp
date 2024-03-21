@@ -39,7 +39,7 @@ class Server
         ioService(std::move(io)),
         acceptor(std::move(acceptorIn)),
         signals(*ioService, SIGINT, SIGTERM, SIGHUP), timer(*ioService),
-        fileWatcher(), handler(handlerIn), adaptorCtx(std::move(adaptorCtx))
+        fileWatcher(), handler(handlerIn), adaptorCtx(std::move(adaptorCtxIn))
     {}
 
     Server(Handler* handlerIn, const std::string& bindaddr, uint16_t port,

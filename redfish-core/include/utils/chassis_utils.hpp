@@ -79,8 +79,9 @@ inline std::string getPowerStateType(const std::string& stateType)
     return "";
 }
 
-void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                     const std::string& path, const std::string& connection)
+inline void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& path,
+                            const std::string& connection)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](boost::system::error_code ec1, const int retValue) {

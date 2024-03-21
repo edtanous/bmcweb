@@ -722,8 +722,7 @@ class RedfishAggregator
             {
                 // We've matched a resource collection so this current segment
                 // must contain an aggregation prefix
-                std::string_view  name((*it).data(), (*it).size());
-                findSatellite(thisReq, asyncResp, satelliteInfo, name);
+                findSatellite(thisReq, asyncResp, satelliteInfo, *it);
                 return;
             }
 

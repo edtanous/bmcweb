@@ -50,7 +50,7 @@ enum EMMCServiceExitCodes
 };
 
 /* EMMC Service error mapping */
-std::unordered_map<ExitCode, ErrorMapping> emmcServiceErrorMapping = {
+static std::unordered_map<ExitCode, ErrorMapping> emmcServiceErrorMapping = {
     {emmcInitFail,
      {"PersistentStorage Initialization Failure",
       "Reset the baseboard and retry the operation."}},
@@ -76,7 +76,8 @@ std::unordered_map<ExitCode, ErrorMapping> emmcServiceErrorMapping = {
  * @param[in] exitCode
  * @return std::optional<ErrorMapping>
  */
-std::optional<ErrorMapping> getEMMCErrorMessageFromExitCode(ExitCode exitCode)
+inline std::optional<ErrorMapping>
+    getEMMCErrorMessageFromExitCode(ExitCode exitCode)
 {
     if (emmcServiceErrorMapping.find(exitCode) != emmcServiceErrorMapping.end())
     {

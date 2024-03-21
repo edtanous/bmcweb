@@ -13,21 +13,27 @@ namespace redfish
 {
 namespace bluefield
 {
-    const char* dbusPropertyInterface = "org.freedesktop.DBus.Properties";
-    const char* systemdServiceBf = "org.freedesktop.systemd1";
-    const char* systemdUnitIntfBf = "org.freedesktop.systemd1.Unit";
+static const char* dbusPropertyInterface = "org.freedesktop.DBus.Properties";
+static const char* systemdServiceBf = "org.freedesktop.systemd1";
+static const char* systemdUnitIntfBf = "org.freedesktop.systemd1.Unit";
 
-    const char* switchModeSystemdObj = "/org/freedesktop/systemd1/unit/torswitch_2dmode_2eservice";
-    const char* ctlBMCSwitchModeService = "xyz.openbmc_project.Settings";
-    const char* ctlBMCSwitchModeBMCObj = "/xyz/openbmc_project/control/torswitchportsmode";
-    const char* ctlBMCSwitchModeIntf = "xyz.openbmc_project.Control.TorSwitchPortsMode";
-    const char* ctlBMCSwitchMode = "TorSwitchPortsMode";
+static const char* switchModeSystemdObj =
+    "/org/freedesktop/systemd1/unit/torswitch_2dmode_2eservice";
+static const char* ctlBMCSwitchModeService = "xyz.openbmc_project.Settings";
+static const char* ctlBMCSwitchModeBMCObj =
+    "/xyz/openbmc_project/control/torswitchportsmode";
+static const char* ctlBMCSwitchModeIntf =
+    "xyz.openbmc_project.Control.TorSwitchPortsMode";
+static const char* ctlBMCSwitchMode = "TorSwitchPortsMode";
 
-    const std::string& truststoreBiosService = "xyz.openbmc_project.Certs.Manager.AuthorityBios.TruststoreBios";
-    const std::string& truststoreBiosPath = "/xyz/openbmc_project/certs/authorityBios/truststoreBios";
+static const std::string& truststoreBiosService =
+    "xyz.openbmc_project.Certs.Manager.AuthorityBios.TruststoreBios";
+static const std::string& truststoreBiosPath =
+    "/xyz/openbmc_project/certs/authorityBios/truststoreBios";
 
-    const std::string dpuFruObj = "xyz.openbmc_project.Control.dpu_fru";
-    const std::string dpuFruPath = "/xyz/openbmc_project/inventory/system/board";
+static const std::string dpuFruObj = "xyz.openbmc_project.Control.dpu_fru";
+static const std::string dpuFruPath =
+    "/xyz/openbmc_project/inventory/system/board";
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 struct PropertyInfo
@@ -1234,7 +1240,7 @@ inline void requestRoutesNvidiaOemBf(App& app)
                             return;
                         }
 
-                        const std::string* baseMac = nullptr;;
+                        const std::string* baseMac = nullptr;
                         const std::string* baseGuid = nullptr;
                         const std::string* description = nullptr;
 

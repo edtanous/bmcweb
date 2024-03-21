@@ -38,7 +38,7 @@ struct FileWatcherEvent
 class InotifyFileWatcher
 {
   public:
-    InotifyFileWatcher() : io(nullptr), sd(nullptr), buf(), watchedDirs(){};
+    InotifyFileWatcher() : io(nullptr), sd(nullptr), buf(), watchedDirs(){}
 
     ~InotifyFileWatcher()
     {
@@ -130,7 +130,7 @@ class InotifyFileWatcher
                 BMCWEB_LOG_ERROR("InotifyFileWatcher malloc error.");
                 return;
             }
-            std::memcpy(alignedEvp, (buf.data() + offset),
+            std::memcpy(alignedEvp, &buf[offset],
                         sizeof(inotify_event) + NAME_MAX + 1 - offset);
 
             FileWatcherEvent fwev(std::string(dirForEvent(*alignedEvp)),

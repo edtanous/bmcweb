@@ -36,7 +36,7 @@ void removeDuplicate(T& t)
     t.erase(firstDuplicate(t.begin(), t.end()), t.end());
 }
 
-std::vector<uint8_t> getBytes(const std::string& s)
+inline std::vector<uint8_t> getBytes(const std::string& s)
 {
     std::vector<uint8_t> bytes;
     bytes.reserve(s.size());
@@ -47,7 +47,7 @@ std::vector<uint8_t> getBytes(const std::string& s)
     return bytes;
 }
 
-uint8_t hexCharToInt(char ch)
+inline uint8_t hexCharToInt(char ch)
 {
     if (ch >= '0' && ch <= '9')
     {
@@ -64,7 +64,7 @@ uint8_t hexCharToInt(char ch)
     throw std::invalid_argument("Invalid character for hex");
 }
 
-std::vector<uint8_t> hexStringToVector(std::string_view str)
+inline std::vector<uint8_t> hexStringToVector(std::string_view str)
 {
     if (str.size() % 2)
     {

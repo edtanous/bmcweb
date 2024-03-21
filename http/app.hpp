@@ -137,13 +137,13 @@ class App
              BMCWEB_LOG_DEBUG("HTTP RUN");
              if (-1 == socketFd)
              {
-                 server = std::move(std::make_unique<server_t>(
-                     this, bindaddrStr, portUint, nullptr, io));
+                 server = std::make_unique<server_t>(this, bindaddrStr,
+                                                     portUint, nullptr, io);
              }
              else
              {
-                 server = std::move(
-                     std::make_unique<server_t>(this, socketFd, nullptr, io));
+                 server = std::make_unique<server_t>(this, socketFd, nullptr,
+                                                     io);
              }
              server->run();
          }

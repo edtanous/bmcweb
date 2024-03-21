@@ -107,35 +107,35 @@ inline void bootModeSet(const crow::Request& req,
                                          : MctpVdmUtilCommand::BOOTMODE_DISABLE;
             mctpVdmUtilWrapper.run(
                 cmd, req, asyncResp,
-                [enabled, chassisId](
+                [chassisId](
                     const crow::Request&,
                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     uint32_t, const std::string& stdOut, const std::string&,
                     const boost::system::error_code& ec, int errorCode) {
-                    if (ec || errorCode)
-                    {
-                        messages::resourceErrorsDetectedFormatError(
-                            asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
-                            "device enumeration failure");
-                        return;
-                    }
-                    std::string reSuccess = "(.|\n)*RX:( \\d\\d){8} 00(.|\n)*";
-                    std::string reFailure = "(.|\n)*RX:( \\d\\d){8} 81(.|\n)*";
-                    if (std::regex_match(stdOut, std::regex(reSuccess)))
-                    {
-                        messages::success(asyncResp->res);
-                        return;
-                    }
-                    if (std::regex_match(stdOut, std::regex(reFailure)))
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    BMCWEB_LOG_ERROR("Invalid boot_ap response: {}", stdOut);
+                if (ec || errorCode)
+                {
                     messages::resourceErrorsDetectedFormatError(
                         asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
-                        "invalid backend response");
-                });
+                        "device enumeration failure");
+                    return;
+                }
+                std::string reSuccess = "(.|\n)*RX:( \\d\\d){8} 00(.|\n)*";
+                std::string reFailure = "(.|\n)*RX:( \\d\\d){8} 81(.|\n)*";
+                if (std::regex_match(stdOut, std::regex(reSuccess)))
+                {
+                    messages::success(asyncResp->res);
+                    return;
+                }
+                if (std::regex_match(stdOut, std::regex(reFailure)))
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                BMCWEB_LOG_ERROR("Invalid boot_ap response: {}", stdOut);
+                messages::resourceErrorsDetectedFormatError(
+                    asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
+                    "invalid backend response");
+            });
         },
         [asyncResp, chassisId](bool critical, const std::string& desc,
                                const std::string& msg) {

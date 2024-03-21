@@ -163,7 +163,7 @@ inline sensor::ReadingType toReadingType(std::string_view sensorType)
     }
     if (sensorType == "frequency")
     {
-        return sensor::ReadingType::Frequency;;
+        return sensor::ReadingType::Frequency;
     }
     return sensor::ReadingType::Invalid;
 }
@@ -3290,8 +3290,8 @@ inline void setThresholdReadingProperty(
     const std::string& objectPath)
 {
     crow::connections::systemBus->async_method_call(
-        [asyncResp, serviceName, objectPath, interfaceName, propertyName,
-         readingValue](const boost::system::error_code ec) {
+        [asyncResp, serviceName, objectPath, interfaceName,
+         propertyName](const boost::system::error_code ec) {
         if (ec)
         {
             messages::internalError(asyncResp->res);
@@ -3308,7 +3308,6 @@ inline void processSensorThresholdValues(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& serviceName, const std::string& objectPath)
 {
-    const boost::system::error_code ec;
     std::optional<nlohmann::json> thresholdsObj;
 
     if (!json_util::readJsonAction(req, asyncResp->res, "Thresholds",
