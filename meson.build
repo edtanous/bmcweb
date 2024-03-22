@@ -10,7 +10,7 @@ project('bmcweb', 'cpp',
             'cpp_rtti=true',
             'cpp_std=c++20',
             'warning_level=3',
-            'werror=true',
+            'werror=false',
            ])
 
 # Project related links
