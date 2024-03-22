@@ -1115,9 +1115,9 @@ inline void findEIDforEROTReset(
                 }
                 else
                 {
-                    BMCWEB_LOG_DEBUG
-                        << "ERROR Can not find relevant MCTP endpoint for chassis "
-                        << chassisUUID;
+                    BMCWEB_LOG_DEBUG(
+                        "ERROR Can not find relevant MCTP endpoint for chassis {}",
+                        chassisUUID);
                 }
             }
         },
