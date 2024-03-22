@@ -26,6 +26,9 @@
 #include "utils/json_utils.hpp"
 #include "utils/sw_utils.hpp"
 #include "utils/time_utils.hpp"
+#include "utils/nvidia_manager_utils.hpp"
+
+#include <app.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time.hpp>
 #include <query.hpp>
@@ -2652,72 +2655,6 @@ inline void getManagerState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         "xyz.openbmc_project.State.Decorator.OperationalStatus");
 }
 
-/**
- * @brief Retrieves telemetry ready state data over DBus
- *
- * @param[in] aResp Shared pointer for completing asynchronous calls
- * @param[in] connectionName - service name
- * @param[in] path - object path
- * @return none
- */
-inline void getTelemetryState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                            const std::string& connectionName,
-                            const std::string& path)
-{
-    BMCWEB_LOG_DEBUG("Get manager service Telemetry state.");
-    crow::connections::systemBus->async_method_call(
-        [aResp](const boost::system::error_code ec,
-                const std::vector<std::pair<
-                    std::string, std::variant<std::string>>>& propertiesList) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG("Error in getting manager service state");
-                messages::internalError(aResp->res);
-                return;
-            }
-            for (const std::pair<std::string, std::variant<std::string>>&
-                     property : propertiesList)
-            {
-                if (property.first == "FeatureType")
-                {
-                    const std::string* value =
-                            std::get_if<std::string>(&property.second);
-                    if (*value == "xyz.openbmc_project.State.FeatureReady.FeatureTypes.Telemetry")
-                    {
-                        for (const std::pair<std::string, std::variant<std::string>>&
-                         propertyItr : propertiesList)
-                        {
-                            if (propertyItr.first == "State")
-                            {
-                                const std::string* stateValue =
-                                    std::get_if<std::string>(&propertyItr.second);
-                                if (stateValue == nullptr)
-                                {
-                                    BMCWEB_LOG_DEBUG("Null value returned for manager service state");
-                                    messages::internalError(aResp->res);
-                                    return;
-                                }
-                                std::string state =
-                                redfish::chassis_utils::getTelemetryStateType(*stateValue);
-                                aResp->res.jsonValue["Status"]["State"] = state;
-                                if (state == "Enabled")
-                                {
-                                    aResp->res.jsonValue["Status"]["Health"] = "OK";
-                                }
-                                else
-                                {
-                                    aResp->res.jsonValue["Status"]["Health"] =      "Critical";
-                                }
-                            }
-                        }
-                    }
-                }
-                
-            }
-        },  
-        connectionName, path, "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.State.FeatureReady");
-}
 
 /**
  * @brief Retrieves BMC asset properties data over DBus
@@ -2999,29 +2936,6 @@ inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         });
 }
 
-inline void
-    checkForQuiesced(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-    sdbusplus::asio::getProperty<std::string>(
-        *crow::connections::systemBus, "org.freedesktop.systemd1",
-        "/org/freedesktop/systemd1/unit/obmc-bmc-service-quiesce@0.target",
-        "org.freedesktop.systemd1.Unit", "ActiveState",
-        [asyncResp](const boost::system::error_code& ec,
-                    const std::string& val) {
-        if (!ec)
-        {
-            if (val == "active")
-            {
-                asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
-                asyncResp->res.jsonValue["Status"]["State"] = "Quiesced";
-                return;
-            }
-        }
-        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-    });
-}
-
 inline void getLinkManagerForSwitches(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& objPath)
@@ -3226,6 +3140,30 @@ inline void
             return;
         }
         asyncResp->res.jsonValue["CommandShell"]["ServiceEnabled"] = isEnable;
+    });
+}
+
+inline void
+    checkForQuiesced(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& bmcId)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1/unit/obmc-bmc-service-quiesce@0.target",
+        "org.freedesktop.systemd1.Unit", "ActiveState",
+        [asyncResp, bmcId](const boost::system::error_code& ec,
+                    const std::string& val) {
+        if (!ec)
+        {
+            if (val == "active")
+            {
+                asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
+                asyncResp->res.jsonValue["Status"]["State"] = "Quiesced";
+                return;
+            }
+        }
+        asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+        asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+        nvidia_manager_util::getOemReadyState(asyncResp, bmcId);
     });
 }
 
@@ -3752,62 +3690,11 @@ inline void requestRoutesManager(App& app)
             std::array<const char*, 1>{"xyz.openbmc_project.Inventory."
                                        "Item.ManagementService"});
 
-        // call to get telemtery Ready status
-        crow::connections::systemBus->async_method_call(
-            [asyncResp, bmcId](
-                const boost::system::error_code ec,
-                const std::vector<std::pair<
-                    std::string, std::vector<std::pair<
-                                     std::string, std::vector<std::string>>>>>&
-                    subtree) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("Error while getting manager service state");
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            if (!subtree.empty())
-            {
-                // Iterate over all retrieved ObjectPaths.
-                for (const std::pair<
-                         std::string,
-                         std::vector<
-                             std::pair<std::string, std::vector<std::string>>>>&
-                         object : subtree)
-                {
-                    const std::string& path = object.first;
-                    const std::vector<
-                        std::pair<std::string, std::vector<std::string>>>&
-                        connectionNames = object.second;
-
-                    const std::string& connectionName =
-                        connectionNames[0].first;
-                    const std::vector<std::string>& interfaces =
-                        connectionNames[0].second;
-                    for (const auto& interfaceName : interfaces)
-                    {
-                        if (interfaceName == "xyz.openbmc_project.State."
-                                             "FeatureReady")
-                        {
-                            getTelemetryState(asyncResp, connectionName, path);
-                        }
-                    }
-                }
-                return;
-            }
-            BMCWEB_LOG_ERROR("Could not find interface xyz.openbmc_project.State.FeatureReady");
-        },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/", int32_t(0),
-            std::array<const char*, 1>{"xyz.openbmc_project.State."
-                                       "FeatureReady"});
-
         sdbusplus::asio::getProperty<double>(
             *crow::connections::systemBus, "org.freedesktop.systemd1",
             "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
             "Progress",
-            [asyncResp](const boost::system::error_code& ec, double val) {
+            [asyncResp, bmcId](const boost::system::error_code& ec, double val) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR("Error while getting progress");
@@ -3820,7 +3707,7 @@ inline void requestRoutesManager(App& app)
                 asyncResp->res.jsonValue["Status"]["State"] = "Starting";
                 return;
             }
-            checkForQuiesced(asyncResp);
+            checkForQuiesced(asyncResp, bmcId);
             });
 
         constexpr std::array<std::string_view, 1> interfaces = {

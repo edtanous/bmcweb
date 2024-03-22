@@ -103,7 +103,7 @@ void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "ClearPowerCap");
 }
 
-inline std::string getTelemetryStateType(const std::string& stateType)
+inline std::string getFeatureReadyStateType(const std::string& stateType)
 {
     if (stateType == "xyz.openbmc_project.State.FeatureReady.States.Enabled")
     {
