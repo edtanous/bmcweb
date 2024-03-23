@@ -319,7 +319,8 @@ inline void
         if (ec2)
         {
             BMCWEB_LOG_ERROR("DBUS response error {}", ec2);
-            messages::internalError(asyncResp->res);
+            //Don't return HTTP 500 here
+            //messages::internalError(asyncResp->res);
             return;
         }
         processMemoryProperties(asyncResp, properties);
@@ -333,7 +334,8 @@ inline void afterGetUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (ec)
     {
         BMCWEB_LOG_ERROR("DBUS response error {}", ec);
-        messages::internalError(asyncResp->res);
+        //Don't return HTTP 500 here
+        //messages::internalError(asyncResp->res);
         return;
     }
     BMCWEB_LOG_DEBUG("Got {} UUID properties.", properties.size());

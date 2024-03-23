@@ -153,7 +153,9 @@ inline void populateSoftwareInformation(
                         {
                             return;
                         }
-                        messages::internalError(asyncResp->res);
+                        // Don't return HTTP 500 here
+                        //messages::internalError(aResp->res);
+
                         return;
                     }
                     // example propertiesList
