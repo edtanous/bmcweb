@@ -49,7 +49,6 @@
       <EntityType Name="AggregationService" BaseType="Resource.v1_0_0.Resource" Abstract="true">
         <Annotation Term="OData.Description" String="The AggregationService schema contains properties for managing aggregation operations, either on ad hoc combinations of resources or on defined sets of resources called aggregates.  Access points define the properties needed to access the entity being aggregated and connection methods describe the protocol or other semantics of the connection."/>
         <Annotation Term="OData.LongDescription" String="This resource shall represent an aggregation service for a Redfish implementation."/>
-        <Annotation Term="OData.AdditionalProperties" Bool="true"/>
         <Annotation Term="Capabilities.InsertRestrictions">
           <Record>
             <PropertyValue Property="Insertable" Bool="false"/>

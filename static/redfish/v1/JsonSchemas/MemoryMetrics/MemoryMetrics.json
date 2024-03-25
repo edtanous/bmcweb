@@ -1,8 +1,8 @@
 {
-    "$id": "http://redfish.dmtf.org/schemas/v1/MemoryMetrics.v1_5_0.json",
+    "$id": "http://redfish.dmtf.org/schemas/v1/MemoryMetrics.v1_7_0.json",
     "$ref": "#/definitions/MemoryMetrics",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
-    "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
+    "copyright": "Copyright 2014-2023 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
     "definitions": {
         "Actions": {
             "additionalProperties": false,
@@ -97,6 +97,103 @@
                         "boolean",
                         "null"
                     ]
+                }
+            },
+            "type": "object"
+        },
+        "AlertCapabilities": {
+            "additionalProperties": false,
+            "description": "The conditions that would generate an alert to the CXL Fabric Manager or host.",
+            "longDescription": "This type shall contain the conditions that would generate an alert to the CXL Fabric Manager or host.",
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "CorrectableECCError": {
+                    "description": "Indicates whether correctable ECC errors generate an alert to the CXL Fabric Manager or host.",
+                    "longDescription": "This property shall indicate whether correctable ECC errors generate an alert to the CXL Fabric Manager or host.",
+                    "readonly": true,
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "versionAdded": "v1_6_0"
+                },
+                "SpareBlock": {
+                    "description": "Indicates whether spare block conditions generate an alert to the CXL Fabric Manager or host.",
+                    "longDescription": "This property shall indicate whether spare block conditions generate an alert to the CXL Fabric Manager or host.",
+                    "readonly": true,
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "versionAdded": "v1_6_0"
+                },
+                "Temperature": {
+                    "description": "Indicates whether temperature conditions generate an alert to the CXL Fabric Manager or host.",
+                    "longDescription": "This property shall indicate whether temperature conditions generate an alert to the CXL Fabric Manager or host.",
+                    "readonly": true,
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "versionAdded": "v1_6_0"
+                },
+                "UncorrectableECCError": {
+                    "description": "Indicates whether uncorrectable ECC errors generate an alert to the CXL Fabric Manager or host.",
+                    "longDescription": "This property shall indicate whether uncorrectable ECC errors generate an alert to the CXL Fabric Manager or host.",
+                    "readonly": true,
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "versionAdded": "v1_6_0"
+                }
+            },
+            "type": "object"
+        },
+        "CXL": {
+            "additionalProperties": false,
+            "description": "The memory metrics specific to CXL devices.",
+            "longDescription": "This type shall contain the memory metrics specific to CXL devices.",
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "AlertCapabilities": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/AlertCapabilities"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "description": "The conditions that would generate an alert to the CXL Fabric Manager or host.",
+                    "longDescription": "This property shall contain the conditions that would generate an alert to the CXL Fabric Manager or host.",
+                    "versionAdded": "v1_6_0"
                 }
             },
             "type": "object"
@@ -426,6 +523,51 @@
                     ],
                     "units": "By"
                 },
+                "CXL": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/CXL"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "description": "The memory metrics specific to CXL devices.",
+                    "longDescription": "This property shall contain the memory metrics specific to CXL devices.",
+                    "versionAdded": "v1_6_0"
+                },
+                "CapacityUtilizationPercent": {
+                    "description": "The memory capacity utilization as a percentage.",
+                    "longDescription": "This property shall contain the memory capacity utilization as a percentage.  When this resource is subordinate to the MemorySummary object, this property shall be the memory capacity utilization over all memory as a percentage.",
+                    "minimum": 0,
+                    "readonly": true,
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "units": "%",
+                    "versionAdded": "v1_7_0"
+                },
+                "CorrectedPersistentErrorCount": {
+                    "description": "The number of corrected errors in persistent memory.",
+                    "longDescription": "This property shall contain the number of corrected errors in persistent memory.",
+                    "readonly": true,
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "versionAdded": "v1_6_0"
+                },
+                "CorrectedVolatileErrorCount": {
+                    "description": "The number of corrected errors in volatile memory.",
+                    "longDescription": "This property shall contain the number of corrected errors in volatile memory.",
+                    "readonly": true,
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "versionAdded": "v1_6_0"
+                },
                 "CurrentPeriod": {
                     "$ref": "#/definitions/CurrentPeriod",
                     "description": "The memory metrics since the last reset or ClearCurrentPeriod action.",
@@ -441,6 +583,16 @@
                         }
                     ],
                     "readonly": true
+                },
+                "DirtyShutdownCount": {
+                    "description": "The number of shutdowns while outstanding writes have not completed to persistent memory.",
+                    "longDescription": "This property shall contain number of shutdowns while outstanding writes have not completed to persistent memory.",
+                    "readonly": true,
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "versionAdded": "v1_6_0"
                 },
                 "HealthData": {
                     "$ref": "#/definitions/HealthData",
@@ -508,6 +660,6 @@
         }
     },
     "owningEntity": "DMTF",
-    "release": "2022.1",
-    "title": "#MemoryMetrics.v1_5_0.MemoryMetrics"
+    "release": "2023.1",
+    "title": "#MemoryMetrics.v1_7_0.MemoryMetrics"
 }

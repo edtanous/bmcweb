@@ -15,6 +15,13 @@
 namespace redfish
 {
 
+// Nvidia specific SatMC handling URIs where Prefix patchup needs to be done.
+constexpr std::array prefixURLTable{
+    "/EventService/Subscriptions",
+    "/Registries",
+    "/TaskService/Tasks",
+};
+
 constexpr unsigned int aggregatorReadBodyLimit = 50 * 1024 * 1024; // 50MB
 
 enum class Result
