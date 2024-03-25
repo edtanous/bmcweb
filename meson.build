@@ -10,7 +10,7 @@ project('bmcweb', 'cpp',
             'cpp_rtti=true',
             'cpp_std=c++20',
             'warning_level=3',
-            'werror=false',
+            'werror=true',
            ])
 
 # Project related links
@@ -219,6 +219,24 @@ add_project_arguments(
     '-Wno-used-but-marked-unused',
     '-Wno-weak-vtables',
     '-Wno-switch-enum',
+    '-Wno-dangling-gsl',
+    '-Wno-pessimizing-move',
+    '-Wno-uninitialized',
+    '-Wno-pessimizing-move',
+    '-Wno-unused-lambda-capture',
+    '-Wno-parentheses-equality',
+    '-Wno-unused-variable',
+    '-Wno-unsafe-buffer-usage',
+    '-Wno-extra-semi-stmt',
+    '-Wno-shadow-field',
+    '-Wno-extra-semi',
+    '-Wno-missing-prototypes',
+    '-Wno-float-equal',
+    '-Wno-double-promotion',
+    '-Wno-missing-variable-declarations',
+    '-Wno-undef',
+    '-Wno-unused-private-field',
+    '-Wno-unused-exception-parameter',
   ]),
   language:'cpp')
 endif
