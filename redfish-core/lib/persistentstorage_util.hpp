@@ -33,9 +33,6 @@ using ErrorMessage = std::string;
 using Resolution = std::string;
 using ErrorMapping = std::pair<ErrorMessage, Resolution>;
 
-/* Match signals added on emmc partition service */
-static std::unique_ptr<sdbusplus::bus::match_t> emmcServiceSignalMatch;
-
 /* Exist codes returned by nvidia-emmc partition service after completion.*/
 enum EMMCServiceExitCodes
 {
@@ -155,242 +152,15 @@ struct PersistentStorageUtil
 };
 
 /**
- * @brief reset emmc variable when enabling emmc service fails
+ * @brief populate Status.State property based on EMMC service exit code
  *
- * @param[in] req
- * @param[in] asyncResp
+ * @param asyncResp - Pointer to object holding response data.
+ *
+ * @return None.
  */
-inline void resetEMMCEnvironmentVariable(
-    const crow::Request& req,
+inline void populatePersistentStorageSettingStatus(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    std::string setCommand = "/sbin/fw_setenv emmc";
-    PersistentStorageUtil persistentStorageUtil;
-    auto resetEMMCCallback =
-        []([[maybe_unused]] const crow::Request& req,
-           [[maybe_unused]] const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-           [[maybe_unused]] const std::string& stdOut,
-           [[maybe_unused]] const std::string& stdErr,
-           [[maybe_unused]] const boost::system::error_code& ec,
-           [[maybe_unused]] int errorCode) -> void {
-        BMCWEB_LOG_INFO("Resetting PersistentStorage env");
-        return;
-    };
-    persistentStorageUtil.executeEnvCommand(req, asyncResp, setCommand,
-                                            std::move(resetEMMCCallback));
-}
-
-/**
- * @brief start emmc partition service and waits for completion
- *
- * @param[in] req
- * @param[in] asyncResp
- */
-inline void startEMMCPartitionService(
-    const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-    std::string serviceUnit = "nvidia-emmc-partition.service";
-    auto emmcServiceSignalCallback = [req, asyncResp, serviceUnit](
-                                         sdbusplus::message_t& msg) mutable {
-        BMCWEB_LOG_DEBUG("Received signal for emmc partition service state change");
-        uint32_t newStateID{};
-        sdbusplus::message::object_path newStateObjPath;
-        std::string newStateUnit{};
-        std::string newStateResult{};
-
-        // Read the msg and populate each variable
-        msg.read(newStateID, newStateObjPath, newStateUnit, newStateResult);
-        if (newStateUnit == serviceUnit)
-        {
-            if (newStateResult == "done" || newStateResult == "failed" ||
-                newStateResult == "dependency")
-            {
-                crow::connections::systemBus->async_method_call(
-                    [req, asyncResp](const boost::system::error_code ec,
-                                     const std::variant<int32_t>& property) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR("DBUS response error getting service status: {}", ec.message());
-                            redfish::messages::internalError(asyncResp->res);
-                            emmcServiceSignalMatch = nullptr;
-                            return;
-                        }
-                        const int32_t* serviceStatus =
-                            std::get_if<int32_t>(&property);
-                        if (serviceStatus == nullptr)
-                        {
-                            BMCWEB_LOG_ERROR("Invalid service exit status code");
-                            redfish::messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        if (*serviceStatus == emmcPartitionMounted ||
-                            *serviceStatus == eudaProgrammedNotActivated)
-                        {
-                            std::string resolution =
-                                "PersistentStorage Enable operation is successful. "
-                                "Reset the baseboard to activate the PersistentStorage";
-                            BMCWEB_LOG_INFO("PersistentStorage enable success.");
-                            redfish::messages::success(asyncResp->res,
-                                                       resolution);
-                            emmcServiceSignalMatch = nullptr;
-                        }
-                        else
-                        {
-                            BMCWEB_LOG_ERROR("EMMC Service failed with error: {}", *serviceStatus);
-                            std::optional<ErrorMapping> errorMapping =
-                                getEMMCErrorMessageFromExitCode(*serviceStatus);
-                            if (errorMapping)
-                            {
-                                BMCWEB_LOG_ERROR("PersistentStorage.Enable Error Message: {}", (*errorMapping).first);
-                                redfish::messages::
-                                    resourceErrorsDetectedFormatError(
-                                        asyncResp->res,
-                                        "PersistentStorage.Enable",
-                                        (*errorMapping).first,
-                                        (*errorMapping).second);
-                            }
-                            else
-                            {
-                                redfish::messages::internalError(
-                                    asyncResp->res);
-                            }
-                            resetEMMCEnvironmentVariable(req, asyncResp);
-                            emmcServiceSignalMatch = nullptr;
-                        }
-                    },
-                    "org.freedesktop.systemd1",
-                    "/org/freedesktop/systemd1/unit/nvidia_2demmc_2dpartition_2eservice",
-                    "org.freedesktop.DBus.Properties", "Get",
-                    "org.freedesktop.systemd1.Service", "ExecMainStatus");
-            }
-        }
-    };
-    emmcServiceSignalMatch = std::make_unique<sdbusplus::bus::match::match>(
-        *crow::connections::systemBus,
-        "interface='org.freedesktop.systemd1.Manager',type='signal',"
-        "member='JobRemoved',path='/org/freedesktop/systemd1'",
-        emmcServiceSignalCallback);
-    crow::connections::systemBus->async_method_call(
-        [asyncResp{asyncResp}](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("Error while starting EMMC partition service");
-                BMCWEB_LOG_ERROR("DBUS response error code = {}", ec);
-                BMCWEB_LOG_ERROR("DBUS response error msg = {}", ec.message());
-                emmcServiceSignalMatch = nullptr;
-                messages::internalError(asyncResp->res);
-                return;
-            }
-        },
-        "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-        "org.freedesktop.systemd1.Manager", "RestartUnit", serviceUnit,
-        "replace");
-}
-
-/**
- * @brief enable EMMC
- *
- * @param[in] req
- * @param[in] asyncResp
- */
-inline void enableEMMC(const crow::Request& req,
-                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-    std::string setCommand = "/sbin/fw_setenv emmc enable";
-    PersistentStorageUtil persistentStorageUtil;
-    auto setEMMCCallback =
-        []([[maybe_unused]] const crow::Request& req,
-           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-           [[maybe_unused]] const std::string& stdOut,
-           [[maybe_unused]] const std::string& stdErr,
-           [[maybe_unused]] const boost::system::error_code& ec,
-           [[maybe_unused]] int errorCode) -> void {
-        BMCWEB_LOG_INFO("PersistentStorage setting env is success");
-        startEMMCPartitionService(req, asyncResp);
-        return;
-    };
-    persistentStorageUtil.executeEnvCommand(req, asyncResp, setCommand,
-                                            std::move(setEMMCCallback));    
-    return;
-}
-
-/**
- * @brief patch handler for persistent storage service
- *
- * @param[in] app
- * @param[in] req
- * @param[in] asyncResp
- */
-inline void handleUpdateServicePersistentStoragePatch(
-    const crow::Request& req, bool enabled,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-
-    if (enabled == false)
-    {
-        BMCWEB_LOG_ERROR("Disabling PersistentStorage is not allowed.");
-        messages::propertyValueIncorrect(
-            asyncResp->res, "PersistentStorage.Enable", "false");
-    }
-    else
-    {            
-        std::string getCommand = "/sbin/fw_printenv";
-        PersistentStorageUtil persistentStorageUtil;
-        auto getEMMCCallback =
-            [](const crow::Request& req,
-                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                const std::string& stdOut,
-                [[maybe_unused]] const std::string& stdErr,
-                [[maybe_unused]] const boost::system::error_code& ec,
-                [[maybe_unused]] int errorCode) -> void {
-            if (stdOut.find("emmc=enable") != std::string::npos)
-            {
-                BMCWEB_LOG_ERROR("PersistentStorage already enabled");
-                redfish::messages::noOperation(asyncResp->res);
-            }
-            else
-            {
-                BMCWEB_LOG_INFO("PersistentStorage is not enabled. Enabling PersistentStorage");
-                enableEMMC(req, asyncResp);
-            }
-            return;
-        };
-        persistentStorageUtil.executeEnvCommand(req, asyncResp, getCommand,
-                                                    std::move(getEMMCCallback));
-    }
-
-    return;
-}
-
-/**
- * @brief populate Enabled and Status.State property based on EMMC enablement and EMMC service exit code
- * 
- * @param asyncResp 
- */
-inline void
-    populatePersistentStorageSettingStatus(const crow::Request& req, const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-    std::string getCommand = "/sbin/fw_printenv";
-    PersistentStorageUtil persistentStorageUtil;
-    auto respCallback =
-        []([[maybe_unused]] const crow::Request& req,
-            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-            const std::string& stdOut,
-            [[maybe_unused]] const std::string& stdErr,
-            [[maybe_unused]] const boost::system::error_code& ec,
-            [[maybe_unused]] int errorCode) -> void {
-                if (stdOut.find("emmc=enable") != std::string::npos)
-                {
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["PersistentStorageSettings"]["Enabled"] = true;
-                }
-                else
-                {
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"]["PersistentStorageSettings"]["Enabled"] = false;
-                }
-        };
-    persistentStorageUtil.executeEnvCommand(req, asyncResp, getCommand,
-                                                    respCallback);
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
                     const std::variant<int32_t>& property) {
@@ -409,15 +179,21 @@ inline void
             }
             if (*serviceStatus == emmcPartitionMounted)
             {
-                asyncResp->res.jsonValue["Oem"]["Nvidia"]["PersistentStorageSettings"]["Status"]["State"] = "Enabled";
+                asyncResp->res
+                    .jsonValue["Oem"]["Nvidia"]["PersistentStorageSettings"]
+                              ["Status"]["State"] = "Enabled";
             }
             else if (*serviceStatus == eudaProgrammedNotActivated)
             {
-                asyncResp->res.jsonValue["Oem"]["Nvidia"]["PersistentStorageSettings"]["Status"]["State"] = "StandbyOffline";
+                asyncResp->res
+                    .jsonValue["Oem"]["Nvidia"]["PersistentStorageSettings"]
+                              ["Status"]["State"] = "StandbyOffline";
             }
             else
             {
-                asyncResp->res.jsonValue["Oem"]["Nvidia"]["PersistentStorageSettings"]["Status"]["State"] = "Disabled";
+                asyncResp->res
+                    .jsonValue["Oem"]["Nvidia"]["PersistentStorageSettings"]
+                              ["Status"]["State"] = "Disabled";
             }
         },
         "org.freedesktop.systemd1",

@@ -3458,7 +3458,7 @@ inline void requestRoutesManager(App& app)
             persistent_data::getConfig().isTLSAuthEnabled();
 #endif
 
-            populatePersistentStorageSettingStatus(req, asyncResp);
+            populatePersistentStorageSettingStatus(asyncResp);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         // Manager.Reset (an action) can be many values, OpenBMC only
@@ -3874,13 +3874,10 @@ inline void requestRoutesManager(App& app)
                 {
                     std::optional<std::string> privilege;
                     std::optional<bool> tlsAuth;
-                    std::optional<nlohmann::json> persistentStorageSettings;
                     if (!redfish::json_util::readJson(
                             *nvidia, asyncResp->res,
                             "AuthenticationTLSRequired", tlsAuth,
-                            "SMBPBIFencingPrivilege", privilege,
-                            "PersistentStorageSettings",
-                            persistentStorageSettings))
+                            "SMBPBIFencingPrivilege", privilege))
                     {
                         BMCWEB_LOG_ERROR(
                             "Illegal Property {}",
@@ -3954,11 +3951,6 @@ inline void requestRoutesManager(App& app)
                         }
                     }
 #endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
-                    if (persistentStorageSettings)
-                    {
-                        handleUpdateServicePersistentStoragePatch(req, true,
-                                                                  asyncResp);
-                    }
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             }
