@@ -110,7 +110,7 @@ static int run()
     redfish::RedfishService redfish(app);
 
     // Create EventServiceManager instance and initialize Config
-    // redfish::EventServiceManager::getInstance(&*io);
+    redfish::EventServiceManager::getInstance(&*io);
 
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     // Create RedfishAggregator instance and initialize Config
