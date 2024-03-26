@@ -25,17 +25,19 @@
  * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
- *
+ * @param[in] callback - A callback function to be called after update
+ *AutomaticBackgroundCopyEnabled property
  * @return
  */
 inline void updateBackgroundCopyEnabled(
     const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId,
+    const std::function<void()>& callback = {})
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
 
     auto responseCallback =
-        []([[maybe_unused]] const crow::Request& req,
+        [callback]([[maybe_unused]] const crow::Request& req,
            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
            [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
            [[maybe_unused]] const std::string& stdErr,
@@ -56,6 +58,12 @@ inline void updateBackgroundCopyEnabled(
         {
             oem["AutomaticBackgroundCopyEnabled"] = false;
         }
+
+        if (callback)
+        {
+            callback();
+        }
+
         return;
     };
 
@@ -70,16 +78,19 @@ inline void updateBackgroundCopyEnabled(
  * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used by mctp-vdm-util tool to call request
  *on MCTP
+ * @param[in] callback - A callback function to be called after update
+ *BackgroundCopyStatus property
  *
  * @return
  */
 inline void updateBackgroundCopyStatusPending(
     const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId,
+    const std::function<void()>& callback = {})
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
     auto bgCopyQueryResponseCallback =
-        []([[maybe_unused]] const crow::Request& req,
+        [callback]([[maybe_unused]] const crow::Request& req,
            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
            [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
            [[maybe_unused]] const std::string& stdErr,
@@ -99,6 +110,12 @@ inline void updateBackgroundCopyStatusPending(
         {
             oem["BackgroundCopyStatus"] = "Completed";
         }
+
+        if (callback)
+        {
+            callback();
+        }
+
         return;
     };
 
@@ -115,16 +132,19 @@ inline void updateBackgroundCopyStatusPending(
  * @param asyncResp - Pointer to object holding response data
  * @param endpointId the EID which is used
  * by mctp-vdm-util tool to call request on MCTP
+ * @param[in] callback - A callback function to be called after update
+ *BackgroundCopyStatus property
  *
  * @return
  */
 inline void updateBackgroundCopyStatus(
     const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, uint32_t endpointId,
+    const std::function<void()>& callback = {})
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
     auto bgCopyQueryResponseCallback =
-        []([[maybe_unused]] const crow::Request& req,
+        [callback]([[maybe_unused]] const crow::Request& req,
            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
            [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
            [[maybe_unused]] const std::string& stdErr,
@@ -145,6 +165,11 @@ inline void updateBackgroundCopyStatus(
         {
             nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
             oem["BackgroundCopyStatus"] = "InProgress";
+
+            if (callback)
+            {
+                callback();
+            }
         }
         else
         {

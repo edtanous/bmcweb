@@ -709,27 +709,48 @@ inline void getBackgroundCopyAndInBandInfo(
             }
         }
 
-        if (foundEID)
-        {
-            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
-            oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
-            updateInBandEnabled(req, asyncResp, *eid);
-            updateBackgroundCopyEnabled(req, asyncResp, *eid);
-            updateBackgroundCopyStatus(req, asyncResp, *eid);
-        }
-        else
-        {
-            if (isPCIe)
+            if (foundEID)
             {
-                getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID,
-                                               false);
+                nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
+
+                // Calling the following methods, updateInBandEnabled,
+                // updateBackgroundCopyEnabled, and updateBackgroundCopyStatus
+                // asynchronously, may cause unpredictable behavior. These
+                // methods use 'mctp-vdm-util', which is not designed to handle
+                // more than one request at the same time. Running more than one
+                // command simultaneously may result in output from a previous
+                // (or another) request. The fix addresses this issue by
+                // changing the way the functions are called, simulating
+                // synchronous execution by invoking each command sequentially
+                // instead of simultaneously.
+
+                uint32_t endpointId = *eid;
+                updateInBandEnabled(req, asyncResp, endpointId,
+                                    [req, asyncResp, endpointId]() {
+                                        updateBackgroundCopyEnabled(
+                                            req, asyncResp, endpointId,
+                                            [req, asyncResp, endpointId]() {
+                                                updateBackgroundCopyStatus(
+                                                    req, asyncResp, endpointId);
+                                            });
+                                    });
             }
             else
             {
-                BMCWEB_LOG_DEBUG("Can not find relevant MCTP endpoint for chassis {}", chassisUUID);
+                if (isPCIe)
+                {
+                    getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID,
+                                                   false);
+                }
+                else
+                {
+                    BMCWEB_LOG_DEBUG(
+                        "Can not find relevant MCTP endpoint for chassis {}",
+                        chassisUUID);
+                }
             }
-        }
-    },
+        },
         serviceName, "/xyz/openbmc_project/mctp",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
