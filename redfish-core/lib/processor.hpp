@@ -1854,7 +1854,7 @@ inline void
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+                "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
             if (property.first == "Value")
             {
                 const std::string* state =
@@ -1892,7 +1892,7 @@ inline void
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+                "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
             if (property.first == "Value")
             {
                 const std::string* state =
@@ -1931,7 +1931,7 @@ inline void
                 }
 
                 json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+                    "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
                 json["Oem"]["Nvidia"]["ThrottleReasons"] =
                     formattedThrottleReasons;
             }
@@ -2108,7 +2108,7 @@ inline void
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+                "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
             if (property.first == "Status")
             {
                 const std::string* state =
@@ -2151,7 +2151,7 @@ inline void getMemorySpareChannelPresenceData(
             return;
         }
         json["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+            "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
         json["Oem"]["Nvidia"]["MemorySpareChannelPresence"] =
             *memorySpareChannelPresence;
     },
@@ -2183,7 +2183,7 @@ inline void getMemoryPageRetirementCountData(
             return;
         }
         json["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaProcessorMetrics.v1_1_0.NvidiaProcessorMetrics";
+            "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
         json["Oem"]["Nvidia"]["MemoryPageRetirementCount"] =
             *memoryPageRetirementCount;
     },
@@ -3699,6 +3699,23 @@ inline void getProcessorMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 aResp->res.jsonValue["CacheMetricsTotal"]["LifeTime"]
                                     ["UncorrectableECCErrorCount"] = *value;
             }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                else if (property.first == "isThresholdExceeded")
+                {
+                    const bool* value =
+                        std::get_if<bool>(&property.second);
+                    if (value == nullptr)
+                    {
+	                    BMCWEB_LOG_ERROR("NULL Value returned for isThresholdExceeded Property");
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+                    aResp->res
+                        .jsonValue["Oem"]["Nvidia"]["SRAMECCErrorThresholdExceeded"] =
+                        *value;
+                }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
