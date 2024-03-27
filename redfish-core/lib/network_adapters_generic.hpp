@@ -771,6 +771,159 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
+inline void
+    getSwitchPorts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& portPath,
+                            const std::string& fabricId,
+                            const std::string& switchName)
+{
+    BMCWEB_LOG_DEBUG("Get connected switch ports on {}", switchName);
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, portPath, fabricId,
+         switchName](const boost::system::error_code ec,
+                     std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("Get connected switch failed on{}",
+                                 switchName);
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_DEBUG(
+                    "No response data on {} switch_port association",
+                    portPath);
+                return;
+            }
+            nlohmann::json& switchlinksArray =
+                asyncResp->res.jsonValue["Links"]["ConnectedSwitchPorts"];
+            for (const std::string& portPath1 : *data)
+            {
+                sdbusplus::message::object_path objectPath(portPath1);
+                std::string portId = objectPath.filename();
+                if (portId.empty())
+                {
+                    BMCWEB_LOG_ERROR("Unable to fetch port");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                nlohmann::json thisPort = nlohmann::json::object();
+                std::string portUri = "/redfish/v1/Fabrics/" + fabricId;
+                portUri += "/Switches/" + switchName + "/Ports/";
+                portUri += portId;
+                thisPort["@odata.id"] = portUri;
+                switchlinksArray.push_back(std::move(thisPort));
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", portPath + "/switch_port",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void
+    getConnectedSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& switchPath,
+                         const std::string& portPath,
+                         const std::string& switchName)
+{
+    BMCWEB_LOG_DEBUG("Get connected switch on{}", switchName);
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, switchPath, portPath,
+         switchName](const boost::system::error_code ec,
+                     std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("Dbus response error");
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_DEBUG("Get connected switch failed on: {}",
+                                 switchName);
+                return;
+            }
+            for (const std::string& fabricPath : *data)
+            {
+                sdbusplus::message::object_path objectPath(fabricPath);
+                std::string fabricId = objectPath.filename();
+                if (fabricId.empty())
+                {
+                    BMCWEB_LOG_ERROR("Empty fabrics Id");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                nlohmann::json& switchlinksArray =
+                    asyncResp->res.jsonValue["Links"]["ConnectedSwitches"];
+                nlohmann::json thisSwitch = nlohmann::json::object();
+                std::string switchUri = "/redfish/v1/Fabrics/";
+                switchUri += fabricId;
+                switchUri += "/Switches/";
+                switchUri += switchName;
+                thisSwitch["@odata.id"] = switchUri;
+                switchlinksArray.push_back(std::move(thisSwitch));
+                getSwitchPorts(asyncResp, portPath, fabricId,
+                                        switchName);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", switchPath + "/fabrics",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void updatePortLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            const std::string& objPath,
+                            const std::string& chassisId,
+                            const std::string& networkAdapterId,
+                            const std::string& portId)
+{
+    BMCWEB_LOG_DEBUG("Get associated Port Links");
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath, chassisId, networkAdapterId,
+         portId](const boost::system::error_code ec,
+               std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("Get associated switch failed on: {}", objPath);
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_DEBUG(
+                    "No data when getting associated switch on: {}",
+                    objPath);
+                return;
+            }
+            nlohmann::json& switchlinksArray =
+                aResp->res.jsonValue["Links"]["ConnectedSwitches"];
+            switchlinksArray = nlohmann::json::array();
+            nlohmann::json& portlinksArray =
+                aResp->res.jsonValue["Links"]["ConnectedSwitchPorts"];
+            portlinksArray = nlohmann::json::array();
+            for (const std::string& switchPath : *data)
+            {
+                sdbusplus::message::object_path objectPath(switchPath);
+                std::string switchName = objectPath.filename();
+                if (switchName.empty())
+                {
+                    BMCWEB_LOG_ERROR("Empty switch name");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                getConnectedSwitch(aResp, switchPath, objPath,
+                                     switchName);
+            }
+        },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/associated_switch",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 inline void getPortDataByAssociation(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& objPath, const std::string& chassisId,
@@ -862,6 +1015,9 @@ inline void getPortDataByAssociation(
                 sensorPath + "/associated_port",
                 "org.freedesktop.DBus.Properties", "Get",
                 "xyz.openbmc_project.Association", "endpoints");
+
+            updatePortLink(asyncResp, sensorPath, chassisId, networkAdapterId,
+                        portId);
             return;
         }
     },
