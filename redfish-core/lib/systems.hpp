@@ -4227,8 +4227,9 @@ inline void handleComputerSystemPatch(
     std::optional<std::string> bootNext;
     std::optional<std::string> bootOrderPropertySelection;
     std::optional<std::string> httpBootUri;
+#ifdef BMCWEB_ENABLE_DEBUG_INTERFACE
     std::optional<nlohmann::json> processorDebugCapabilities;
-
+#endif
 
     // clang-format off
                 if (!json_util::readJsonPatch(
@@ -4265,7 +4266,9 @@ inline void handleComputerSystemPatch(
                         "Boot/BootNext", bootNext,
                         "Boot/BootOrderPropertySelection", bootOrderPropertySelection,
                         "Boot/HttpBootUri", httpBootUri,
+#ifdef BMCWEB_ENABLE_DEBUG_INTERFACE
                         "Oem/Nvidia/ProcessorDebugCapabilities", processorDebugCapabilities,
+#endif
                         "Oem/Nvidia/ISTModeEnabled", istModeEnabled
                         ))
                 {
