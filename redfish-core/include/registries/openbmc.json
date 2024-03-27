@@ -1803,7 +1803,35 @@
             "ParamTypes": ["string"],
             "Resolution": "None.",
             "Severity": "OK"
+        },
+        "IPCWarningThresholdCrossed": {
+            "Description": "Indicates that the IPC monitor has detected a service crossing the warning threshold limit set on a property",
+            "Message": "DBus IPC Monitor detected %1 unit crossing warning threshold set on %2 IPC property. Property Reading=%3 Threshold=%4.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 4,
+            "ParamTypes": ["string", "string", "number", "number"],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "IPCCriticalThresholdCrossed": {
+            "Description":  "Indicates that the IPC monitor has detected a service crossing the critical threshold limit set on a property",
+            "Message": "DBus IPC Monitor detected %1 unit crossing critical threshold set on %2 IPC property. Property Reading=%3 Threshold=%4.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 4,
+            "ParamTypes": ["string", "string", "number", "number"],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "ServiceRestartReason": {
+            "Description": "Indicates Service restarted.",
+            "Message": "Service %1 restarted due to reason %2.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": ["string", "string"],
+            "Resolution": "None.",
+            "Severity": "Critical"
         }
+
     },
     "Name": "OpenBMC Message Registry",
     "OwningEntity": "OpenBMC",
