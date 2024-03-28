@@ -42,6 +42,7 @@
 #include <utils/json_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
+#include <utils/nvidia_processor_utils.hpp>
 #include <utils/time_utils.hpp>
 
 #include <filesystem>
@@ -2234,6 +2235,14 @@ inline void getProcessorMigModeData(
     getMigModeData(aResp, cpuId, service, objPath);
 }
 
+inline void getProcessorCCModeData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
+    const std::string& service, const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG(" get GpuCCMode data");
+    redfish::nvidia_processor_utils::getCCModeData(aResp, cpuId, service, objPath);
+}
+
 inline void getProcessorRemoteDebugState(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath)
@@ -2699,6 +2708,11 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             else if (interface == "com.nvidia.MigMode")
             {
                 getProcessorMigModeData(aResp, processorId, serviceName,
+                                        objectPath);
+            }
+            else if (interface == "com.nvidia.CCMode")
+            {
+                getProcessorCCModeData(aResp, processorId, serviceName,
                                         objectPath);
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
@@ -4547,7 +4561,14 @@ inline void
                 {
                     getEccPendingData(aResp, processorId, service, path);
                 }
-
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                if (std::find(interfaces.begin(), interfaces.end(),
+                                  "com.nvidia.CCMode") !=
+                    interfaces.end())
+                {
+                    redfish::nvidia_processor_utils::getCCModePendingData(aResp, processorId, service, path);
+                }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 if (std::find(interfaces.begin(), interfaces.end(),
                               "xyz.openbmc_project.Software.ApplyTime") !=
                     interfaces.end())
@@ -4709,8 +4730,10 @@ inline void requestRoutesProcessorSettings(App& app)
             return;
         }
         std::optional<nlohmann::json> memSummary;
+        std::optional<nlohmann::json> oemObject;
         if (!redfish::json_util::readJsonAction(req, asyncResp->res,
-                                                "MemorySummary", memSummary))
+                                                "MemorySummary", memSummary,
+                                                "Oem", oemObject))
         {
             return;
         }
@@ -4732,6 +4755,56 @@ inline void requestRoutesProcessorSettings(App& app)
                 });
             }
         }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        // Update ccMode
+        std::optional<nlohmann::json> oemNvidiaObject;
+        
+        if (oemObject &&
+            redfish::json_util::readJson(*oemObject, asyncResp->res,
+                                        "Nvidia", oemNvidiaObject))
+        {
+            std::optional<bool> ccMode;
+            std::optional<bool> ccDevMode;
+            if (oemNvidiaObject && redfish::json_util::readJson(
+                                    *oemNvidiaObject, asyncResp->res,
+                                    "CCModeEnabled", ccMode,
+                                    "CCDevModeEnabled", ccDevMode))
+            {
+                if (ccMode && ccDevMode)
+                {
+                    messages::queryCombinationInvalid(asyncResp->res);
+                    return;
+                }
+
+                if (ccMode)
+                {
+                    redfish::processor_utils::getProcessorObject(
+                        asyncResp, processorId,
+                        [ccMode](const std::shared_ptr<bmcweb::AsyncResp>&
+                                    asyncResp1,
+                                const std::string& processorId1,
+                                const std::string& objectPath,
+                                const MapperServiceMap& serviceMap) {
+                            redfish::nvidia_processor_utils::patchCCMode(asyncResp1, processorId1, *ccMode,
+                                        objectPath, serviceMap);
+                        });
+                }
+                if (ccDevMode)
+                {
+                    redfish::processor_utils::getProcessorObject(
+                        asyncResp, processorId,
+                        [ccDevMode](const std::shared_ptr<bmcweb::AsyncResp>&
+                                    asyncResp1,
+                                const std::string& processorId1,
+                                const std::string& objectPath,
+                                const MapperServiceMap& serviceMap) {
+                            redfish::nvidia_processor_utils::patchCCDevMode(asyncResp1, processorId1, *ccDevMode,
+                                        objectPath, serviceMap);
+                        });
+                }
+            }
+        }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     });
 }
 
