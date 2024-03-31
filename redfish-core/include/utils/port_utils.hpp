@@ -137,10 +137,12 @@ inline std::string getPortProtocol(const std::string& portProtocol)
     {
         return "PCIe";
     }
+
+    // C2C is a non-standard protocol in DMTF. Use the standard port protocol for C2C
     if (portProtocol ==
         "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.NVLink.C2C")
     {
-        return "NVLink.C2C";
+        return "NVLink";
     }
 
     // Unknown or others
