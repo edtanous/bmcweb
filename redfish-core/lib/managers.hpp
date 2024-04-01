@@ -3354,7 +3354,7 @@ inline void requestRoutesManager(App& app)
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
-            oem["UptimeSeconds"] = [asyncResp]()->double {
+            oem["Nvidia"]["UptimeSeconds"] = [asyncResp]()->double {
                 double uptime = 0;
                 auto ifs = std::ifstream("/proc/uptime", std::ifstream::in);
                 if(ifs.good())
