@@ -1079,7 +1079,7 @@ inline void
             {
                 continue;
             }
-            uint64_t timestampS = 0;
+            uint64_t timestampUs = 0;
             uint64_t size = 0;
             std::string dumpStatus;
             std::string originatorId;
@@ -1110,7 +1110,7 @@ inline void
             }
 
             parseDumpEntryFromDbusObject(
-                object, dumpStatus, size, timestampS,
+                object, dumpStatus, size, timestampUs,
                 faultLogDiagnosticDataType, sectionType, fruid, severity,
                 nvipSignature, nvSeverity, nvSocketNumber, pcieVendorID,
                 pcieDeviceID, pcieClassCode, pcieFunctionNumber,
@@ -1132,7 +1132,7 @@ inline void
             thisEntry["EntryType"] = "Event";
             thisEntry["Name"] = dumpType + " Dump Entry";
             thisEntry["Created"] =
-                redfish::time_utils::getDateTimeUintUs(timestampS);
+                redfish::time_utils::getDateTimeUintUs(timestampUs);
 
             if (!originatorId.empty())
             {
@@ -1142,8 +1142,6 @@ inline void
 
             if (dumpType == "BMC")
             {
-                thisEntry["Created"] =
-                    redfish::time_utils::getDateTimeUint(timestampS);
                 thisEntry["DiagnosticDataType"] = "Manager";
                 thisEntry["AdditionalDataURI"] = entriesPath + entryID +
                                                  "/attachment";
@@ -1151,8 +1149,6 @@ inline void
             }
             else if (dumpType == "System")
             {
-                thisEntry["Created"] =
-                    redfish::time_utils::getDateTimeUint(timestampS);
                 thisEntry["DiagnosticDataType"] = "OEM";
                 thisEntry["OEMDiagnosticDataType"] = "System";
                 thisEntry["AdditionalDataURI"] = entriesPath + entryID +
@@ -1161,8 +1157,6 @@ inline void
             }
             else if (dumpType == "FaultLog")
             {
-                thisEntry["Created"] =
-                    redfish::time_utils::getDateTimeUint(timestampS);
                 thisEntry["DiagnosticDataType"] = faultLogDiagnosticDataType;
                 thisEntry["AdditionalDataURI"] = entriesPath + entryID +
                                                  "/attachment";
@@ -1191,8 +1185,6 @@ inline void
                 }
                 else if (dumpType == "FDR")
                 {
-                    thisEntry["Created"] =
-                        redfish::time_utils::getDateTimeUint(timestampS);
                     thisEntry["DiagnosticDataType"] = "OEM";
                     thisEntry["OEMDiagnosticDataType"] = "FDR";
                     thisEntry["AdditionalDataURI"] = entriesPath + entryID +
@@ -1201,8 +1193,6 @@ inline void
                 }
                 else if (dumpType == "FaultLog")
                 {
-                    thisEntry["Created"] =
-                        redfish::time_utils::getDateTimeUint(timestampS);
                     thisEntry["DiagnosticDataType"] =
                         faultLogDiagnosticDataType;
                     thisEntry["AdditionalDataURI"] = entriesPath + entryID +
@@ -1392,7 +1382,7 @@ inline void
 
             asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
             asyncResp->res.jsonValue["Created"] =
-                redfish::time_utils::getDateTimeUint(timestampUs);
+                redfish::time_utils::getDateTimeUintUs(timestampUs);
             // Set schema defaults
             asyncResp->res.jsonValue["Message"] = "";
             asyncResp->res.jsonValue["Severity"] = "OK";
