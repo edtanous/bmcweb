@@ -3472,7 +3472,7 @@ inline void requestRoutesSoftwareInventory(App& app)
         constexpr std::array<std::string_view, 2> interfaces = {
             "xyz.openbmc_project.Software.Version", "xyz.openbmc_project.Software.Settings"};
         dbus::utility::getSubTree(
-            "/", 0, interfaces,
+            "/xyz/openbmc_project/software/", 0, interfaces,
             [asyncResp, swId](
                 const boost::system::error_code& ec,
                 const std::vector<std::pair<
