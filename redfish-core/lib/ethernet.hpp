@@ -1566,8 +1566,7 @@ inline void parseInterfaceData(
     const std::vector<IPv4AddressData>& ipv4Data,
     const std::vector<IPv6AddressData>& ipv6Data,    
     const std::string& route = "/redfish/v1/Managers/" PLATFORMBMCID
-                               "/EthernetInterfaces/",
-    const bool& vlans = true)
+                               "/EthernetInterfaces/")
 {
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
     jsonResponse["Id"] = ifaceId;
@@ -1636,11 +1635,6 @@ inline void parseInterfaceData(
             fqdn += "." + ethData.domainnames[0];
         }
         jsonResponse["FQDN"] = fqdn;
-    }
-    
-    if (vlans)
-    {
-        jsonResponse["VLANs"] = {{"@odata.id", route + ifaceId + "/VLANs"}};
     }
 
     if (ethData.vlanId)
