@@ -537,3 +537,7 @@ if(get_option('tests').enabled())
     #   test(fs.stem(test_src), test_bin)
     # endforeach
 endif
+
+if(get_option('redfish-aggregation').enabled())
+subdir('event-listener')
+endif

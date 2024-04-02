@@ -754,7 +754,13 @@ inline void requestRoutesEventDestinationCollection(App& app)
             messages::internalError(asyncResp->res);
             return;
         }
-
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+        // new subscription is added so start redfish event listener.
+        if (EventServiceManager::getInstance().getNumberOfSubscriptions() == 1)
+        {
+            startRedfishEventListener(*req.ioService);
+        }
+#endif
         messages::created(asyncResp->res);
         asyncResp->res.addHeader(
             "Location", "/redfish/v1/EventService/Subscriptions/" + id);
@@ -949,6 +955,15 @@ inline void requestRoutesEventDestination(App& app)
             asyncResp->res.result(boost::beast::http::status::not_found);
             return;
         }
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+        // there will be no subscription after the deletion
+        // stop redfish event listener
+        if (EventServiceManager::getInstance()
+                .getNumberOfSubscriptions() == 1)
+        {
+            stopRedfishEventListener(*req.ioService);
+        }
+#endif
         EventServiceManager::getInstance().deleteSubscription(param);
     });
 }

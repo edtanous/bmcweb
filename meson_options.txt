@@ -329,6 +329,8 @@ option(
 option('power-control-type-percentage', type : 'feature', value : 'disabled', description : 'set power control SetPointUnits to percentage.')
 option ('redfish-aggregation-prefix', type : 'string', value : '5B247A', description : 'redfish aggregation prefix')
 option ('rfa-hmc-update-target', type : 'string', value : 'HGX_Chassis_0', description : 'the update target to update all HMC components')
+option ('rfa-bmc-host-url', type : 'string', value : 'http://bmc_ip:8080/', description : 'BMC url to receive redfish events from satellite BMC')
+option ('rfa-delay-subscribe-time', type : 'integer', min : 5, max : 300, value: 60, description : 'the deferred time to subscribe HMC EventService')
 option('health-rollup-alternative', type : 'feature', value : 'disabled', description : 'Enable health rollup alternative with support of xyz.openbmc_project.State.Decorator.Health interface and health_rollup association.')
 option('disable-health-rollup', type : 'feature', value : 'disabled', description : 'Disable health rollup.')
 option('disable-conditions-array', type : 'feature', value : 'disabled', description : 'Disable conditions array.')

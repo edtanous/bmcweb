@@ -26,6 +26,7 @@
 #include "str_utility.hpp"
 #include "utility.hpp"
 #include "utils/json_utils.hpp"
+#include "subscriber.hpp"
 
 #include <sys/inotify.h>
 
@@ -269,6 +270,7 @@ class Event
     nlohmann::json oem = nlohmann::json::object();
     std::string eventResolution = "";
     std::string logEntryId = "";
+    std::string satBMCLogEntryUrl = "";
     redfish_bool specificEventExistsInGroup = redfishBoolNa;
 
     // derived properties
@@ -448,8 +450,19 @@ class Event
         if (!logEntryId.empty())
         {
             eventLogEntry["LogEntry"] = nlohmann::json::object();
-            eventLogEntry["LogEntry"]["@odata.id"] =
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+            if (!satBMCLogEntryUrl.empty())
+            {
+                // the URL is from the satellite BMC so URL fixup will be performed. 
+                addPrefixToStringItem(satBMCLogEntryUrl, redfishAggregationPrefix);
+                eventLogEntry["LogEntry"]["@odata.id"] = satBMCLogEntryUrl;
+            }
+            else
+#endif
+            {
+                eventLogEntry["LogEntry"]["@odata.id"] =
                     redfish::getLogEntryDataId(logEntryId);
+            }
         }
         return 0;
     }
@@ -1063,6 +1076,17 @@ class EventServiceManager
             // Update retry configuration.
             subValue->updateRetryConfig(retryAttempts, retryTimeoutInterval);
         }
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+        subscribeTimer = std::make_unique<boost::asio::steady_timer>(
+            crow::connections::systemBus->get_io_context(),
+            std::chrono::seconds(rfaDeferSubscribeTime));
+
+        if (getNumberOfSubscriptions() > 0)
+        {
+            // start RF event listener and subscribe HMC eventService.
+            initRedfishEventListener(ioc);
+        }
+#endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
         registerDbusLoggingSignal();
@@ -2094,6 +2118,8 @@ class EventServiceManager
             std::string deviceName;
             std::string resourceType;
             std::string logEntryId;
+            // this variable will record the log entry from the satellite BMC.
+            std::string satBMCLogEntryUrl;
             std::string resolution;
             std::vector<std::string> messageArgs = {};
             const std::vector<std::string>* additionalDataPtr;
@@ -2112,6 +2138,10 @@ class EventServiceManager
                         if (additional.count("DEVICE_NAME") > 0)
                         {
                             deviceName = additional["DEVICE_NAME"];
+                        }
+                        if (additional.count("REDFISH_LOGENTRY") == 1)
+                        {
+                            satBMCLogEntryUrl = additional["REDFISH_LOGENTRY"];
                         }
                         if (additional.count("REDFISH_MESSAGE_ID") == 1)
                         {
@@ -2278,6 +2308,7 @@ class EventServiceManager
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 event.eventResolution = resolution;
                 event.logEntryId = logEntryId;
+                event.satBMCLogEntryUrl = satBMCLogEntryUrl;
                 AdditionalData additional(*additionalDataPtr);
                 if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
                 {
@@ -2312,6 +2343,16 @@ class EventServiceManager
     inline void eventServiceOOC(const std::string& path,
                                 const std::string& devName, Event& event)
     {
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+        // OOC Path in HMC events is already converted to Redfish path.
+        if (path.starts_with("/redfish/v1/"))
+        {
+            std::string oocPath(path);
+            addPrefixToStringItem(oocPath, redfishAggregationPrefix);
+            sendEventWithOOC(oocPath, event);
+            return;
+        }
+#endif
         sdbusplus::message::object_path objPath(path);
         std::string deviceName = objPath.filename();
         if (false == deviceName.empty())
