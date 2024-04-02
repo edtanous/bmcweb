@@ -62,6 +62,9 @@ using UnitStruct =
                std::string, sdbusplus::message::object_path, uint32_t,
                std::string, sdbusplus::message::object_path>;
 
+using GetObjectType =
+    std::vector<std::pair<std::string, std::vector<std::string>>>;
+
 template <typename CallbackFunc>
 void getMainChassisId(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                       CallbackFunc&& callback)
@@ -340,5 +343,143 @@ inline void
         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
         "xyz.openbmc_project.User.Manager", "GetUserInfo", user);
 }
+
+/**
+ * @brief Fill out firmware version of component
+ *
+ * @param[in,out]   asyncResp   Async HTTP response.
+ * @param[in]       objectPath  D-Bus object to query.
+ */
+inline void
+    getComponentFirmwareVersion(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
+                                const std::string& objectPath)
+{
+    const std::string serviceObjectMapper = "xyz.openbmc_project.ObjectMapper";
+
+    sdbusplus::asio::getProperty<std::vector<std::string>>(
+        *crow::connections::systemBus, serviceObjectMapper,
+        objectPath + "/parent_chassis", "xyz.openbmc_project.Association",
+        "endpoints",
+        [serviceObjectMapper,
+         asyncResp](const boost::system::error_code ec,
+                    const std::vector<std::string>& objPaths) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR(
+                "getComponentFirmwareVersion getProperty parent_chassis DBUS error");
+            BMCWEB_LOG_ERROR("error_code = ", ec);
+            BMCWEB_LOG_ERROR("error msg = ", ec.message());
+
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        if (!objPaths.empty())
+        {
+            const std::string& firstElement = objPaths.front();
+
+            sdbusplus::asio::getProperty<std::vector<std::string>>(
+                *crow::connections::systemBus, serviceObjectMapper,
+                firstElement + "/activation", "xyz.openbmc_project.Association",
+                "endpoints",
+                [asyncResp](const boost::system::error_code ec,
+                            const std::vector<std::string>& objPaths) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR(
+                        "getComponentFirmwareVersion getProperty activation DBUS error");
+                    BMCWEB_LOG_ERROR("error_code = ", ec);
+                    BMCWEB_LOG_ERROR("error msg = ", ec.message());
+
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                if (!objPaths.empty())
+                {
+                    const std::string& firstElement = objPaths.front();
+
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp,
+                         firstElement](const boost::system::error_code ec,
+                                       const GetObjectType& resp) {
+                        std::string url;
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "getComponentFirmwareVersion async_method_call GetObject DBUS error");
+                            BMCWEB_LOG_ERROR("error_code = ", ec);
+                            BMCWEB_LOG_ERROR("error msg = ", ec.message());
+
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+
+                        std::string softwareVersionInterface =
+                            "xyz.openbmc_project.Software.Version";
+                        std::string serviceObjectSoftware;
+
+                        for (const auto& serObj : resp)
+                        {
+                            auto interfaces = serObj.second;
+                            for (const auto& interface : interfaces)
+                            {
+                                if (interface == softwareVersionInterface)
+                                {
+                                    serviceObjectSoftware = serObj.first;
+                                    break;
+                                }
+                            }
+
+                            if (!serviceObjectSoftware.empty())
+                            {
+                                break;
+                            }
+                        }
+
+                        if (!serviceObjectSoftware.empty())
+                        {
+                            sdbusplus::asio::getProperty<std::string>(
+                                *crow::connections::systemBus,
+                                serviceObjectSoftware, firstElement,
+                                softwareVersionInterface, "Version",
+                                [asyncResp](const boost::system::error_code ec,
+                                            const std::string& property) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "getComponentFirmwareVersion getProperty Version DBUS error");
+                                    BMCWEB_LOG_ERROR("error_code = ", ec);
+                                    BMCWEB_LOG_ERROR("error msg = ",
+                                                     ec.message());
+
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["FirmwareVersion"] =
+                                    property;
+                            });
+                        }
+                    },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetObject",
+                        firstElement, std::array<const char*, 0>());
+
+                    return;
+                }
+
+                BMCWEB_LOG_ERROR(
+                    "Could not find property endpoints in activation element");
+            });
+
+            return;
+        }
+
+        BMCWEB_LOG_ERROR(
+            "Could not find property endpoints in parent_chassis element");
+    });
+}
+
 } // namespace redfish
 #endif

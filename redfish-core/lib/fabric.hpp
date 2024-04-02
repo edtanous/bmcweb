@@ -322,8 +322,8 @@ inline void
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     // Get interface properties
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec,
-                    const PropertiesMap& properties) {
+        [asyncResp, objPath](const boost::system::error_code ec,
+                             const PropertiesMap& properties) {
         if (ec)
         {
             messages::internalError(asyncResp->res);
@@ -431,18 +431,6 @@ inline void
                 }
                 asyncResp->res.jsonValue[propertyName] = *value;
             }
-            else if (propertyName == "Version")
-            {
-                const std::string* value =
-                    std::get_if<std::string>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for revision");
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                asyncResp->res.jsonValue["FirmwareVersion"] = *value;
-            }
             else if (propertyName == "CurrentBandwidth")
             {
                 const double* value = std::get_if<double>(&property.second);
@@ -504,6 +492,8 @@ inline void
                 asyncResp->res.jsonValue["UUID"] = *value;
             }
         }
+
+        getComponentFirmwareVersion(asyncResp, objPath);
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 

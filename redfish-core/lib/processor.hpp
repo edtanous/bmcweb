@@ -2664,10 +2664,6 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getCpuLocationType(aResp, serviceName, objectPath);
             }
-            else if (interface == "xyz.openbmc_project.Software.Version")
-            {
-                getProcessorFirmwareVersion(aResp, serviceName, objectPath);
-            }
             else if (interface == "xyz.openbmc_project.Common.UUID")
             {
                 getProcessorUUID(aResp, serviceName, objectPath);
@@ -2718,6 +2714,9 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         }
     }
+
+    getComponentFirmwareVersion(aResp, objectPath);
+
     aResp->res.jsonValue["EnvironmentMetrics"] = {
         {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
                           processorId + "/EnvironmentMetrics"}};
