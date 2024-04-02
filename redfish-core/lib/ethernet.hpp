@@ -27,6 +27,7 @@
 #include "registries/privilege_registry.hpp"
 #include "utils/ip_utils.hpp"
 #include "utils/json_utils.hpp"
+#include "generated/enums/ip_addresses.hpp"
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -74,6 +75,7 @@ struct IPv6AddressData
     std::string address;
     std::string origin;
     uint8_t prefixLength = 0;
+    ip_addresses::AddressState state;
 };
 /**
  * Structure for keeping basic single Ethernet Interface information
@@ -482,6 +484,11 @@ inline void extractIPV6Data(const std::string& ethifaceId,
                             if (address != nullptr)
                             {
                                 ipv6Address.address = *address;
+                                ipv6Address.state = ip_addresses::AddressState::Preferred;
+                            }
+                            else
+                            {
+                                ipv6Address.state = ip_addresses::AddressState::Invalid;
                             }
                         }
                         else if (property.first == "Origin")
@@ -1705,6 +1712,7 @@ inline void parseInterfaceData(
         ipv6["Address"] = ipv6Config.address;
         ipv6["PrefixLength"] = ipv6Config.prefixLength;
         ipv6["AddressOrigin"] = ipv6Config.origin;
+        ipv6["AddressState"] = ipv6Config.state;
 
         ipv6Array.emplace_back(std::move(ipv6));
         if (ipv6Config.origin == "Static")
