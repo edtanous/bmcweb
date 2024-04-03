@@ -50,7 +50,9 @@
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
 #include <tal.hpp>
+#endif
 
 #include <exception>
 #include <memory>
