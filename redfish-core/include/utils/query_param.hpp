@@ -8,6 +8,7 @@
 #include "http_response.hpp"
 #include "logging.hpp"
 #include "str_utility.hpp"
+#include "redfish_aggregator.hpp"
 
 #include <sys/types.h>
 
@@ -507,9 +508,19 @@ inline bool processOnly(crow::App& app, crow::Response& res,
     }
 
     auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    auto needToCallHandlers = RedfishAggregator::beginAggregation(newReq, asyncResp) == Result::LocalHandle;
+#endif
+
     BMCWEB_LOG_DEBUG("setting completion handler on {}", logPtr(&asyncResp->res));
     asyncResp->res.setCompleteRequestHandler(std::move(completionHandler));
     asyncResp->res.setIsAliveHelper(res.releaseIsAliveHelper());
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    if (!needToCallHandlers)
+    {
+        return true;
+    }
+#endif
     app.handle(newReq, asyncResp);
     return true;
 }
