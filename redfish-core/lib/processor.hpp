@@ -1855,7 +1855,7 @@ inline void
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
+                "#NvidiaProcessorMetrics.v1_4_0.NvidiaGPUProcessorMetrics";
             if (property.first == "Value")
             {
                 const std::string* state =
@@ -1893,7 +1893,7 @@ inline void
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
+                "#NvidiaProcessorMetrics.v1_4_0.NvidiaGPUProcessorMetrics";
             if (property.first == "Value")
             {
                 const std::string* state =
@@ -1932,7 +1932,7 @@ inline void
                 }
 
                 json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
+                    "#NvidiaProcessorMetrics.v1_4_0.NvidiaGPUProcessorMetrics";
                 json["Oem"]["Nvidia"]["ThrottleReasons"] =
                     formattedThrottleReasons;
             }
@@ -2109,7 +2109,7 @@ inline void
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
+                "#NvidiaProcessorMetrics.v1_4_0.NvidiaGPUProcessorMetrics";
             if (property.first == "Status")
             {
                 const std::string* state =
@@ -2152,7 +2152,7 @@ inline void getMemorySpareChannelPresenceData(
             return;
         }
         json["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
+            "#NvidiaProcessorMetrics.v1_4_0.NvidiaGPUProcessorMetrics";
         json["Oem"]["Nvidia"]["MemorySpareChannelPresence"] =
             *memorySpareChannelPresence;
     },
@@ -2184,7 +2184,7 @@ inline void getMemoryPageRetirementCountData(
             return;
         }
         json["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaProcessorMetrics.v1_4_0.NvidiaProcessorMetrics";
+            "#NvidiaProcessorMetrics.v1_4_0.NvidiaGPUProcessorMetrics";
         json["Oem"]["Nvidia"]["MemoryPageRetirementCount"] =
             *memoryPageRetirementCount;
     },
