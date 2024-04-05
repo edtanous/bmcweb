@@ -29,6 +29,7 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/url/format.hpp>
 #include <sdbusplus/bus/match.hpp>
+#include <utils/privilege_utils.hpp>
 
 #include <chrono>
 #include <memory>
