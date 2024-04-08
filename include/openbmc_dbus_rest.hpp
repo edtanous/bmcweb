@@ -28,8 +28,6 @@
 #include <systemd/sd-bus.h>
 #include <tinyxml2.h>
 
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/beast/http/status.hpp>
 #include <boost/beast/http/verb.hpp>
 #include <boost/container/flat_map.hpp>
@@ -427,7 +425,10 @@ inline void getObjectAndEnumerate(
 
         // Map indicating connection name, and the path where the object
         // manager exists
-        boost::container::flat_map<std::string, std::string> connections;
+        boost::container::flat_map<
+            std::string, std::string, std::less<>,
+            std::vector<std::pair<std::string, std::string>>>
+            connections;
 
         for (const auto& object : *(transaction->subtree))
         {
@@ -593,10 +594,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
                              const nlohmann::json& inputJson)
 {
     int r = 0;
-    BMCWEB_LOG_DEBUG(
-        "Converting {} to type: {}",
-        inputJson.dump(2, ' ', true, nlohmann::json::error_handler_t::replace),
-        argType);
+    BMCWEB_LOG_DEBUG("Converting {} to type: {}", inputJson, argType);
     const std::vector<std::string> argTypes = dbusArgSplit(argType);
 
     // Assume a single object for now.
@@ -708,7 +706,14 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
             }
             else if (stringValue != nullptr)
             {
-                boolInt = boost::istarts_with(*stringValue, "t") ? 1 : 0;
+                if (!stringValue->empty())
+                {
+                    if (stringValue->front() == 't' ||
+                        stringValue->front() == 'T')
+                    {
+                        boolInt = 1;
+                    }
+                }
             }
             else
             {
@@ -860,7 +865,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
         }
         else if (argCode.starts_with("(") && argCode.ends_with(")"))
         {
-            std::string containedType = argCode.substr(1, argCode.size() - 1);
+            std::string containedType = argCode.substr(1, argCode.size() - 2);
             r = sd_bus_message_open_container(m, SD_BUS_TYPE_STRUCT,
                                               containedType.c_str());
             if (r < 0)
@@ -869,7 +874,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
             }
 
             nlohmann::json::const_iterator it = j->begin();
-            for (const std::string& argCode2 : dbusArgSplit(argType))
+            for (const std::string& argCode2 : dbusArgSplit(containedType))
             {
                 if (it == j->end())
                 {
@@ -886,7 +891,7 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
         }
         else if (argCode.starts_with("{") && argCode.ends_with("}"))
         {
-            std::string containedType = argCode.substr(1, argCode.size() - 1);
+            std::string containedType = argCode.substr(1, argCode.size() - 2);
             r = sd_bus_message_open_container(m, SD_BUS_TYPE_DICT_ENTRY,
                                               containedType.c_str());
             if (r < 0)
@@ -940,7 +945,10 @@ int readMessageItem(const std::string& typeCode, sdbusplus::message_t& m,
                     nlohmann::json& data)
 {
     T value;
-
+    // When T == char*, this warning fires.  Unclear how to resolve
+    // Given that sd-bus takes a void pointer to a char*, and that's
+    // Not something we can fix.
+    // NOLINTNEXTLINE(bugprone-multi-level-implicit-pointer-conversion)
     int r = sd_bus_message_read_basic(m.get(), typeCode.front(), &value);
     if (r < 0)
     {
@@ -2531,8 +2539,7 @@ inline void requestRoutes(App& app)
 
         for (const auto& file : files)
         {
-            std::ifstream readFile(file.path());
-            if (!readFile.good())
+            if (!asyncResp->res.openFile(file))
             {
                 continue;
             }
@@ -2561,8 +2568,6 @@ inline void requestRoutes(App& app)
                 boost::beast::http::field::content_disposition,
                 contentDispositionParam);
 
-            asyncResp->res.body() = {std::istreambuf_iterator<char>(readFile),
-                                     std::istreambuf_iterator<char>()};
             return;
         }
         asyncResp->res.result(boost::beast::http::status::not_found);

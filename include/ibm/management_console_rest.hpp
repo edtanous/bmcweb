@@ -6,9 +6,9 @@
 #include "event_service_manager.hpp"
 #include "ibm/locks.hpp"
 #include "resource_messages.hpp"
+#include "str_utility.hpp"
 #include "utils/json_utils.hpp"
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/container/flat_set.hpp>
 #include <nlohmann/json.hpp>
 #include <sdbusplus/message/types.hpp>
@@ -49,7 +49,7 @@ inline void handleFilePut(const crow::Request& req,
     std::error_code ec;
     // Check the content-type of the request
     boost::beast::string_view contentType = req.getHeaderValue("content-type");
-    if (!boost::iequals(contentType, "application/octet-stream"))
+    if (!bmcweb::asciiIEquals(contentType, "application/octet-stream"))
     {
         asyncResp->res.result(boost::beast::http::status::not_acceptable);
         asyncResp->res.jsonValue["Description"] = contentNotAcceptableMsg;
@@ -213,7 +213,6 @@ inline void handleFilePut(const crow::Request& req,
     }
     file << data;
 
-    std::string origin = "/ibm/v1/Host/ConfigFiles/" + fileID;
     // Push an event
     if (fileExists)
     {
@@ -403,7 +402,7 @@ inline void handleFileUrl(const crow::Request& req,
 inline void
     handleAcquireLockAPI(const crow::Request& req,
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         std::vector<nlohmann::json> body)
+                         std::vector<nlohmann::json::object_t> body)
 {
     LockRequests lockRequestStructure;
     for (auto& element : body)
@@ -412,11 +411,11 @@ inline void
         uint64_t resourceId = 0;
 
         SegmentFlags segInfo;
-        std::vector<nlohmann::json> segmentFlags;
+        std::vector<nlohmann::json::object_t> segmentFlags;
 
-        if (!redfish::json_util::readJson(element, asyncResp->res, "LockType",
-                                          lockType, "ResourceID", resourceId,
-                                          "SegmentFlags", segmentFlags))
+        if (!redfish::json_util::readJsonObject(
+                element, asyncResp->res, "LockType", lockType, "ResourceID",
+                resourceId, "SegmentFlags", segmentFlags))
         {
             BMCWEB_LOG_DEBUG("Not a Valid JSON");
             asyncResp->res.result(boost::beast::http::status::bad_request);
@@ -432,9 +431,9 @@ inline void
             std::string lockFlags;
             uint32_t segmentLength = 0;
 
-            if (!redfish::json_util::readJson(e, asyncResp->res, "LockFlag",
-                                              lockFlags, "SegmentLength",
-                                              segmentLength))
+            if (!redfish::json_util::readJsonObject(
+                    e, asyncResp->res, "LockFlag", lockFlags, "SegmentLength",
+                    segmentLength))
             {
                 asyncResp->res.result(boost::beast::http::status::bad_request);
                 return;
@@ -744,7 +743,7 @@ inline void requestRoutes(App& app)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-        std::vector<nlohmann::json> body;
+        std::vector<nlohmann::json::object_t> body;
         if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Request",
                                                 body))
         {

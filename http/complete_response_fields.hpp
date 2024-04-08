@@ -10,7 +10,6 @@
 #include "utils/hex_utils.hpp"
 
 #include <boost/beast/http/message.hpp>
-#include <boost/beast/http/string_body.hpp>
 #include <nlohmann/json.hpp>
 
 #include <array>
@@ -27,34 +26,35 @@ inline void completeResponseFields(const Request& req, Response& res)
     authentication::cleanupTempSession(req);
 
     res.setHashAndHandleNotModified();
-
-    if (res.body().empty() && res.jsonValue.is_structured())
+    if (res.jsonValue.is_structured())
     {
         using http_helpers::ContentType;
         std::array<ContentType, 3> allowed{ContentType::CBOR, ContentType::JSON,
                                            ContentType::HTML};
-        ContentType prefered =
-            getPreferedContentType(req.getHeaderValue("Accept"), allowed);
+        ContentType preferred =
+            getPreferredContentType(req.getHeaderValue("Accept"), allowed);
 
-        if (prefered == ContentType::HTML)
+        if (preferred == ContentType::HTML)
         {
             json_html_util::prettyPrintJson(res);
         }
-        else if (prefered == ContentType::CBOR)
+        else if (preferred == ContentType::CBOR)
         {
             res.addHeader(boost::beast::http::field::content_type,
                           "application/cbor");
-            nlohmann::json::to_cbor(res.jsonValue, res.body());
+            std::string cbor;
+            nlohmann::json::to_cbor(res.jsonValue, cbor);
+            res.write(std::move(cbor));
         }
         else
         {
-            // Technically prefered could also be NoMatch here, but we'd
+            // Technically preferred could also be NoMatch here, but we'd
             // like to default to something rather than return 400 for
             // backward compatibility.
             res.addHeader(boost::beast::http::field::content_type,
                           "application/json");
-            res.body() = res.jsonValue.dump(
-                2, ' ', true, nlohmann::json::error_handler_t::replace);
+            res.write(res.jsonValue.dump(
+                2, ' ', true, nlohmann::json::error_handler_t::replace));
         }
     }
 }

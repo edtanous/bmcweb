@@ -154,7 +154,11 @@ template <typename Callback>
 inline void checkDbusPathExists(const std::string& path, Callback&& callbackIn)
 {
     crow::connections::systemBus->async_method_call(
+<<<<<<< HEAD
         [callback{std::forward<Callback>(callbackIn)}](
+=======
+        [callback = std::forward<Callback>(callback)](
+>>>>>>> master
             const boost::system::error_code& ec,
             const dbus::utility::MapperGetObject& objectNames) {
         callback(!ec && !objectNames.empty());

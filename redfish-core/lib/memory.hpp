@@ -19,7 +19,6 @@
 
 #include "app.hpp"
 #include "dbus_utility.hpp"
-#include "health.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
@@ -645,6 +644,7 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                                  const std::string& service,
                                  const std::string& objPath)
 {
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
     std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
         objPath, [asyncResp](const std::string& rootHealth,
@@ -662,6 +662,8 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
     health->populate();
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE*/
 
+=======
+>>>>>>> master
     BMCWEB_LOG_DEBUG("Get available system components.");
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objPath, "",

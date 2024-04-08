@@ -1,5 +1,9 @@
 #pragma once
+<<<<<<< HEAD
 #include "http_request.hpp"
+=======
+#include "http_body.hpp"
+>>>>>>> master
 #include "logging.hpp"
 #include "utils/hex_utils.hpp"
 
@@ -7,49 +11,62 @@
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/beast/http/basic_dynamic_body.hpp>
 #include <boost/beast/http/message.hpp>
-#include <boost/beast/http/string_body.hpp>
 #include <nlohmann/json.hpp>
 
 #include <optional>
 #include <string>
+<<<<<<< HEAD
 
+=======
+#include <string_view>
+#include <utility>
+>>>>>>> master
 namespace crow
 {
 
 template <typename Adaptor, typename Handler>
 class Connection;
 
+namespace http = boost::beast::http;
+
 struct Response
 {
     template <typename Adaptor, typename Handler>
     friend class crow::Connection;
-    using response_type =
-        boost::beast::http::response<boost::beast::http::string_body>;
 
-    response_type stringResponse;
+    http::response<bmcweb::HttpBody> response;
 
     nlohmann::json jsonValue;
+    using fields_type = http::header<false, http::fields>;
+    fields_type& fields()
+    {
+        return response.base();
+    }
+
+    const fields_type& fields() const
+    {
+        return response.base();
+    }
 
     void addHeader(std::string_view key, std::string_view value)
     {
-        stringResponse.insert(key, value);
+        fields().insert(key, value);
     }
 
-    void addHeader(boost::beast::http::field key, std::string_view value)
+    void addHeader(http::field key, std::string_view value)
     {
-        stringResponse.insert(key, value);
+        fields().insert(key, value);
     }
 
-    void clearHeader(boost::beast::http::field key)
+    void clearHeader(http::field key)
     {
-        stringResponse.erase(key);
+        fields().erase(key);
     }
 
     Response() = default;
-
     Response(Response&& res) noexcept :
-        stringResponse(std::move(res.stringResponse)),
-        jsonValue(std::move(res.jsonValue)), completed(res.completed)
+        response(std::move(res.response)), jsonValue(std::move(res.jsonValue)),
+        completed(res.completed)
     {
         // See note in operator= move handler for why this is needed.
         if (!res.completed)
@@ -57,14 +74,11 @@ struct Response
             completeRequestHandler = std::move(res.completeRequestHandler);
             res.completeRequestHandler = nullptr;
         }
-        isAliveHelper = res.isAliveHelper;
-        res.isAliveHelper = nullptr;
     }
 
     ~Response() = default;
 
     Response(const Response&) = delete;
-
     Response& operator=(const Response& r) = delete;
 
     Response& operator=(Response&& r) noexcept
@@ -75,8 +89,7 @@ struct Response
         {
             return *this;
         }
-        stringResponse = std::move(r.stringResponse);
-        r.stringResponse.clear();
+        response = std::move(r.response);
         jsonValue = std::move(r.jsonValue);
 
         // Only need to move completion handler if not already completed
@@ -94,34 +107,37 @@ struct Response
             completeRequestHandler = nullptr;
         }
         completed = r.completed;
-        isAliveHelper = std::move(r.isAliveHelper);
-        r.isAliveHelper = nullptr;
         return *this;
     }
 
     void result(unsigned v)
     {
-        stringResponse.result(v);
+        fields().result(v);
     }
 
-    void result(boost::beast::http::status v)
+    void result(http::status v)
     {
-        stringResponse.result(v);
+        fields().result(v);
     }
 
-    boost::beast::http::status result() const
+    void copyBody(const Response& res)
     {
-        return stringResponse.result();
+        response.body() = res.response.body();
+    }
+
+    http::status result() const
+    {
+        return fields().result();
     }
 
     unsigned resultInt() const
     {
-        return stringResponse.result_int();
+        return fields().result_int();
     }
 
     std::string_view reason() const
     {
-        return stringResponse.reason();
+        return fields().reason();
     }
 
     bool isCompleted() const noexcept
@@ -129,75 +145,73 @@ struct Response
         return completed;
     }
 
-    std::string& body()
+    const std::string* body()
     {
-        return stringResponse.body();
+        return &response.body().str();
     }
 
     std::string_view getHeaderValue(std::string_view key) const
     {
-        return stringResponse.base()[key];
+        return fields()[key];
     }
 
     void keepAlive(bool k)
     {
-        stringResponse.keep_alive(k);
+        response.keep_alive(k);
     }
 
     bool keepAlive() const
     {
-        return stringResponse.keep_alive();
+        return response.keep_alive();
+    }
+
+    std::optional<uint64_t> size()
+    {
+        return response.body().payloadSize();
     }
 
     void preparePayload()
     {
         // This code is a throw-free equivalent to
         // beast::http::message::prepare_payload
-        boost::optional<uint64_t> pSize = stringResponse.payload_size();
-        using boost::beast::http::status;
-        using boost::beast::http::status_class;
-        using boost::beast::http::to_status_class;
+        std::optional<uint64_t> pSize = response.body().payloadSize();
         if (!pSize)
         {
-            pSize = 0;
+            return;
         }
-        else
-        {
-            bool is1XXReturn = to_status_class(stringResponse.result()) ==
+        using http::status;
+        using http::status_class;
+        using http::to_status_class;
+        bool is1XXReturn = to_status_class(result()) ==
                                status_class::informational;
-            if (*pSize > 0 &&
-                (is1XXReturn || stringResponse.result() == status::no_content ||
-                 stringResponse.result() == status::not_modified))
+        if (*pSize > 0 && (is1XXReturn || result() == status::no_content ||
+                           result() == status::not_modified))
             {
-                BMCWEB_LOG_CRITICAL(
-                    "{} Response content provided but code was no-content or not_modified, which aren't allowed to have a body",
+            BMCWEB_LOG_CRITICAL("{} Response content provided but code was "
+                                "no-content or not_modified, which aren't "
+                                "allowed to have a body",
                     logPtr(this));
-                pSize = 0;
-                body().clear();
+            response.content_length(0);
+            return;
             }
-        }
-        stringResponse.content_length(*pSize);
+        response.content_length(*pSize);
     }
 
     void clear()
     {
         BMCWEB_LOG_DEBUG("{} Clearing response containers", logPtr(this));
-        stringResponse.clear();
-        stringResponse.body().shrink_to_fit();
+        response.clear();
+        response.body().clear();
+
         jsonValue = nullptr;
         completed = false;
         expectedHash = std::nullopt;
     }
 
-    void write(std::string_view bodyPart)
-    {
-        stringResponse.body() += std::string(bodyPart);
-    }
-
     std::string computeEtag() const
     {
         // Only set etag if this request succeeded
-        if (result() != boost::beast::http::status::ok)
+        if (result() != http::status::ok)
         {
             return "";
         }
@@ -208,6 +222,11 @@ struct Response
         }
         size_t hashval = std::hash<nlohmann::json>{}(jsonValue);
         return "\"" + intToHexString(hashval, 8) + "\"";
+    }
+
+    void write(std::string&& bodyPart)
+    {
+        response.body().str() = std::move(bodyPart);
     }
 
     void end()
@@ -230,11 +249,6 @@ struct Response
         }
     }
 
-    bool isAlive() const
-    {
-        return isAliveHelper && isAliveHelper();
-    }
-
     void setCompleteRequestHandler(std::function<void(Response&)>&& handler)
     {
         BMCWEB_LOG_DEBUG("{} setting completion handler", logPtr(this));
@@ -255,32 +269,20 @@ struct Response
         return ret;
     }
 
-    void setIsAliveHelper(std::function<bool()>&& handler)
-    {
-        isAliveHelper = std::move(handler);
-    }
-
-    std::function<bool()> releaseIsAliveHelper()
-    {
-        std::function<bool()> ret = std::move(isAliveHelper);
-        isAliveHelper = nullptr;
-        return ret;
-    }
-
     void setHashAndHandleNotModified()
     {
         // Can only hash if we have content that's valid
-        if (jsonValue.empty() || result() != boost::beast::http::status::ok)
+        if (jsonValue.empty() || result() != http::status::ok)
         {
             return;
         }
         size_t hashval = std::hash<nlohmann::json>{}(jsonValue);
         std::string hexVal = "\"" + intToHexString(hashval, 8) + "\"";
-        addHeader(boost::beast::http::field::etag, hexVal);
+        addHeader(http::field::etag, hexVal);
         if (expectedHash && hexVal == *expectedHash)
         {
             jsonValue = nullptr;
-            result(boost::beast::http::status::not_modified);
+            result(http::status::not_modified);
         }
     }
 
@@ -289,11 +291,37 @@ struct Response
         expectedHash = hash;
     }
 
+    bool openFile(const std::filesystem::path& path,
+                  bmcweb::EncodingType enc = bmcweb::EncodingType::Raw)
+    {
+        boost::beast::error_code ec;
+        response.body().open(path.c_str(), boost::beast::file_mode::read, ec);
+        response.body().encodingType = enc;
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Failed to open file {}", path.c_str());
+            return false;
+        }
+        return true;
+    }
+
+    bool openFd(int fd, bmcweb::EncodingType enc = bmcweb::EncodingType::Raw)
+    {
+        boost::beast::error_code ec;
+        response.body().encodingType = enc;
+        response.body().setFd(fd, ec);
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Failed to set fd");
+            return false;
+        }
+        return true;
+    }
+
   private:
     std::optional<std::string> expectedHash;
     bool completed = false;
     std::function<void(Response&)> completeRequestHandler;
-    std::function<bool()> isAliveHelper;
 };
 
 struct DynamicResponse

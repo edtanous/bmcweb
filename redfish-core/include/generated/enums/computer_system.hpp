@@ -171,6 +171,8 @@ enum class PowerMode{
     Static,
     OSControlled,
     OEM,
+    EfficiencyFavorPower,
+    EfficiencyFavorPerformance,
 };
 
 enum class CompositionUseCase{
@@ -183,6 +185,17 @@ enum class KMIPCachePolicy{
     Invalid,
     None,
     AfterFirstUse,
+};
+
+enum class DecommissionType{
+    Invalid,
+    All,
+    UserData,
+    ManagerConfig,
+    BIOSConfig,
+    NetworkConfig,
+    StorageConfig,
+    Logs,
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(BootSource, {
@@ -351,6 +364,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(PowerMode, {
     {PowerMode::Static, "Static"},
     {PowerMode::OSControlled, "OSControlled"},
     {PowerMode::OEM, "OEM"},
+    {PowerMode::EfficiencyFavorPower, "EfficiencyFavorPower"},
+    {PowerMode::EfficiencyFavorPerformance, "EfficiencyFavorPerformance"},
 });
 
 NLOHMANN_JSON_SERIALIZE_ENUM(CompositionUseCase, {
@@ -363,6 +378,17 @@ NLOHMANN_JSON_SERIALIZE_ENUM(KMIPCachePolicy, {
     {KMIPCachePolicy::Invalid, "Invalid"},
     {KMIPCachePolicy::None, "None"},
     {KMIPCachePolicy::AfterFirstUse, "AfterFirstUse"},
+});
+
+NLOHMANN_JSON_SERIALIZE_ENUM(DecommissionType, {
+    {DecommissionType::Invalid, "Invalid"},
+    {DecommissionType::All, "All"},
+    {DecommissionType::UserData, "UserData"},
+    {DecommissionType::ManagerConfig, "ManagerConfig"},
+    {DecommissionType::BIOSConfig, "BIOSConfig"},
+    {DecommissionType::NetworkConfig, "NetworkConfig"},
+    {DecommissionType::StorageConfig, "StorageConfig"},
+    {DecommissionType::Logs, "Logs"},
 });
 
 }

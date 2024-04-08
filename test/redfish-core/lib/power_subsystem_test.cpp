@@ -1,10 +1,12 @@
 #include "async_resp.hpp"
+#include "http_response.hpp"
 #include "power_subsystem.hpp"
 
 #include <nlohmann/json.hpp>
 #include <query.hpp>
 #include <utils/dbus_utils.hpp>
 
+#include <memory>
 #include <optional>
 #include <string>
 

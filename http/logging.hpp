@@ -166,9 +166,14 @@ struct FormatString
     std::source_location loc;
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    FormatString(const char* strIn, const std::source_location& locIn =
+    FormatString(const char* stringIn, const std::source_location& locIn =
                                         std::source_location::current()) :
+<<<<<<< HEAD
         str(strIn), loc(locIn)
+=======
+        str(stringIn),
+        loc(locIn)
+>>>>>>> master
     {}
 };
 
@@ -181,7 +186,7 @@ const void* logPtr(T p)
 }
 
 template <LogLevel level>
-inline void vlog(const FormatString& format, std::format_args&& args)
+inline void vlog(const FormatString& format, const std::format_args& args)
 {
     if constexpr (bmcwebCurrentLoggingLevel < level)
     {
@@ -195,7 +200,8 @@ inline void vlog(const FormatString& format, std::format_args&& args)
     filename = filename.substr(filename.rfind('/') + 1);
     std::cout << std::format("[{} {}:{}] ", levelString, filename,
                              format.loc.line())
-              << std::vformat(format.str, args) << std::endl;
+              << std::vformat(format.str, args) << '\n'
+              << std::flush;
 }
 } // namespace crow
 

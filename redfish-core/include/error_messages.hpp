@@ -506,11 +506,11 @@ void propertyValueExternalConflict(crow::Response& res, std::string_view arg1,
  * @param[in] arg2 Parameter of message that will replace %2 in its body.
  *
  * @returns Message PropertyValueIncorrect formatted to JSON */
-nlohmann::json propertyValueIncorrect(const nlohmann::json& arg1,
-                                      std::string_view arg2);
+nlohmann::json propertyValueIncorrect(std::string_view arg1,
+                                      const nlohmann::json& arg2);
 
-void propertyValueIncorrect(crow::Response& res, const nlohmann::json& arg1,
-                            std::string_view arg2);
+void propertyValueIncorrect(crow::Response& res, std::string_view arg1,
+                            const nlohmann::json& arg2);
 
 /**
  * @brief Formats ResourceCreationConflict message into JSON
@@ -569,7 +569,7 @@ void operationFailed(crow::Response& res);
 
 /**
  * @brief Formats OperationTimeout message into JSON
- * Message body: "A timeout internal to the service occured as part of the
+ * Message body: "A timeout internal to the service occurred as part of the
  * request.  Partial results may have been returned."
  *
  *
@@ -1101,7 +1101,7 @@ void mutualExclusiveProperties(crow::Response& res, const std::string& arg1,
 
 /**
  * @brief Formats InsufficientStorage message into JSON
- * Message body: "Insufficent storage or memory available to complete the
+ * Message body: "Insufficient storage or memory available to complete the
  *  request."
  * @returns Message InsufficientStorage formatted to JSON */
 nlohmann::json insufficientStorage();

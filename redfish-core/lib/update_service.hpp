@@ -39,9 +39,12 @@
 #include "utils/dbus_utils.hpp"
 #include "utils/sw_utils.hpp"
 
+<<<<<<< HEAD
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/container/flat_map.hpp>
+=======
+>>>>>>> master
 #include <boost/system/error_code.hpp>
 #include <boost/url/format.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -55,6 +58,12 @@
 #include <utils/fw_utils.hpp>
 
 #include <array>
+<<<<<<< HEAD
+=======
+#include <filesystem>
+#include <optional>
+#include <string>
+>>>>>>> master
 #include <string_view>
 
 namespace redfish
@@ -101,12 +110,13 @@ constexpr auto retimerHashMaxTimeSec =
 const std::string firmwarePrefix =
     "redfish/v1/UpdateService/FirmwareInventory/";
 
-inline static void cleanUp()
+inline void cleanUp()
 {
     fwUpdateInProgress = false;
     fwUpdateMatcher = nullptr;
 }
 
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 inline static void cleanUpStageObjects()
 {
@@ -115,6 +125,9 @@ inline static void cleanUpStageObjects()
 #endif
 
 inline static void activateImage(const std::string& objPath,
+=======
+inline void activateImage(const std::string& objPath,
+>>>>>>> master
                                  const std::string& service)
 {
     BMCWEB_LOG_DEBUG("Activate image for {} {}", objPath, service);
@@ -376,7 +389,7 @@ static void
                                 // allow them time to complete the
                                 // update (probably cycle the
                                 // system) if this expires then
-                                // task will be cancelled
+                                // task will be canceled
                                 taskData->extendTimer(std::chrono::hours(5));
                                 fwUpdateInProgress = true;
                                 return !task::completed;
@@ -536,6 +549,70 @@ static void monitorForSoftwareAvailable(
         preTaskLoggingHandler);
 }
 
+struct TftpUrl
+{
+    std::string fwFile;
+    std::string tftpServer;
+};
+
+inline std::optional<TftpUrl>
+    parseTftpUrl(std::string imageURI,
+                 std::optional<std::string> transferProtocol,
+                 crow::Response& res)
+{
+    if (imageURI.find("://") == std::string::npos)
+    {
+        if (imageURI.starts_with("/"))
+        {
+            messages::actionParameterValueTypeError(
+                res, imageURI, "ImageURI", "UpdateService.SimpleUpdate");
+            return std::nullopt;
+        }
+        if (!transferProtocol)
+        {
+            messages::actionParameterValueTypeError(
+                res, imageURI, "ImageURI", "UpdateService.SimpleUpdate");
+            return std::nullopt;
+        }
+        // OpenBMC currently only supports TFTP
+        if (*transferProtocol != "TFTP")
+        {
+            messages::actionParameterNotSupported(res, "TransferProtocol",
+                                                  *transferProtocol);
+            BMCWEB_LOG_ERROR("Request incorrect protocol parameter: {}",
+                             *transferProtocol);
+            return std::nullopt;
+        }
+        imageURI = "tftp://" + imageURI;
+    }
+
+    boost::system::result<boost::urls::url> url =
+        boost::urls::parse_absolute_uri(imageURI);
+    if (!url)
+    {
+        messages::actionParameterValueTypeError(res, imageURI, "ImageURI",
+                                                "UpdateService.SimpleUpdate");
+
+        return std::nullopt;
+    }
+    url->normalize();
+
+    if (url->scheme() != "tftp")
+    {
+        messages::actionParameterNotSupported(res, "ImageURI", imageURI);
+        return std::nullopt;
+    }
+    std::string path(url->encoded_path());
+    if (path.size() < 2)
+    {
+        messages::actionParameterNotSupported(res, "ImageURI", imageURI);
+        return std::nullopt;
+    }
+    path.erase(0, 1);
+    std::string host(url->encoded_host_and_port());
+    return TftpUrl{path, host};
+}
+
 /**
  * UpdateServiceActionsSimpleUpdate class supports handle POST method for
  * SimpleUpdate action.
@@ -577,6 +654,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
             BMCWEB_LOG_DEBUG("Missing ImageURI");
             return;
         }
+<<<<<<< HEAD
 
         if (!transferProtocol)
         {
@@ -657,6 +735,16 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
         std::string server = imageURI.substr(0, separator);
         std::string fwFile = imageURI.substr(separator + 1);
         BMCWEB_LOG_DEBUG("Server: {} File: {}", server, fwFile);
+=======
+        std::optional<TftpUrl> ret = parseTftpUrl(imageURI, transferProtocol,
+                                                  asyncResp->res);
+        if (!ret)
+        {
+            return;
+        }
+
+        BMCWEB_LOG_DEBUG("Server: {} File: {}", ret->tftpServer, ret->fwFile);
+>>>>>>> master
 
         // Allow only one operation at a time
         if (fwUpdateInProgress != false)
@@ -803,6 +891,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                         "xyz.openbmc_project.Common.SCP", "DownloadViaSCP",
                         server, *username, fwFile, *targetPath);
                 },
+<<<<<<< HEAD
                     objInfo[0].first, objName,
                     "org.freedesktop.DBus.Properties", "Get",
                     "xyz.openbmc_project.Common.FilePath", "Path");
@@ -814,6 +903,11 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                     "xyz.openbmc_project.Software.Version",
                     "xyz.openbmc_project.Common.FilePath"});
         }
+=======
+            "xyz.openbmc_project.Software.Download",
+            "/xyz/openbmc_project/software", "xyz.openbmc_project.Common.TFTP",
+            "DownloadViaTFTP", ret->fwFile, ret->tftpServer);
+>>>>>>> master
 
         BMCWEB_LOG_DEBUG("Exit UpdateService.SimpleUpdate doPost");
     });
@@ -853,6 +947,7 @@ inline void uploadImageFile(const crow::Request& req,
         return;
     }
 
+<<<<<<< HEAD
     bool hasUpdateFile = false;
 
     for (const FormPart& formpart : parser.mime_fields)
@@ -1125,6 +1220,13 @@ inline void
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
         "/xyz/openbmc_project/software/", static_cast<int32_t>(0),
         std::array<std::string, 1>{"xyz.openbmc_project.Software.Version"});
+=======
+    setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
+                    sdbusplus::message::object_path(
+                        "/xyz/openbmc_project/software/apply_time"),
+                    "xyz.openbmc_project.Software.ApplyTime",
+                    "RequestedApplyTime", "ApplyTime", applyTimeNewVal);
+>>>>>>> master
 }
 
 /**
@@ -1186,6 +1288,7 @@ inline bool
                 {
                     nlohmann::json content =
                         nlohmann::json::parse(formpart.content);
+<<<<<<< HEAD
 
                     json_util::readJson(content, asyncResp->res, "Targets",
                                         targets, "@Redfish.OperationApplyTime",
@@ -1660,6 +1763,43 @@ inline void processMultipartFormData(
     {
         return;
     }
+=======
+                nlohmann::json::object_t* obj =
+                    content.get_ptr<nlohmann::json::object_t*>();
+                if (obj == nullptr)
+                {
+                    messages::propertyValueFormatError(asyncResp->res, targets,
+                                                       "UpdateParameters");
+                    return;
+                }
+
+                if (!json_util::readJsonObject(
+                        *obj, asyncResp->res, "Targets", targets,
+                        "@Redfish.OperationApplyTime", applyTime))
+                {
+                    return;
+                }
+                if (targets.size() != 1)
+                {
+                    messages::propertyValueFormatError(asyncResp->res, targets,
+                                                       "Targets");
+                    return;
+                }
+                if (targets[0] != "/redfish/v1/Managers/bmc")
+                {
+                    messages::propertyValueNotInList(asyncResp->res, targets[0],
+                                                     "Targets/0");
+                    return;
+                }
+                targetFound = true;
+            }
+            else if (param.second == "UpdateFile")
+            {
+                uploadData = &(formpart.content);
+            }
+        }
+    }
+>>>>>>> master
 
     if (!validateUpdateFileFormData(asyncResp, hasFile))
     {
@@ -1862,7 +2002,15 @@ inline void
     BMCWEB_LOG_DEBUG(
         "Execute HTTP POST method '/redfish/v1/UpdateService/update/'");
 
+<<<<<<< HEAD
     if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
+=======
+    BMCWEB_LOG_DEBUG("doPost: contentType={}", contentType);
+
+    // Make sure that content type is application/octet-stream or
+    // multipart/form-data
+    if (bmcweb::asciiIEquals(contentType, "application/octet-stream"))
+>>>>>>> master
     {
         return;
     }
@@ -2187,6 +2335,7 @@ inline void requestRoutesUpdateService(App& app)
         }
         BMCWEB_LOG_DEBUG("doPatch...");
 
+<<<<<<< HEAD
         std::optional<nlohmann::json> pushUriOptions;
         std::optional<std::vector<std::string>> imgTargets;
         if (!json_util::readJsonPatch(req, asyncResp->res, "HttpPushUriOptions",
@@ -2210,9 +2359,12 @@ inline void requestRoutesUpdateService(App& app)
 
             if (pushUriApplyTime)
             {
+=======
+>>>>>>> master
                 std::optional<std::string> applyTime;
-                if (!json_util::readJson(*pushUriApplyTime, asyncResp->res,
-                                         "ApplyTime", applyTime))
+        if (!json_util::readJsonPatch(
+                req, asyncResp->res,
+                "HttpPushUriOptions/HttpPushUriApplyTime/ApplyTime", applyTime))
                 {
                     return;
                 }
@@ -2225,6 +2377,7 @@ inline void requestRoutesUpdateService(App& app)
                         applyTimeNewVal =
                             "xyz.openbmc_project.Software.ApplyTime.RequestedApplyTimes.Immediate";
                     }
+<<<<<<< HEAD
                     else if (applyTime == "OnReset")
                     {
                         applyTimeNewVal =
@@ -2238,6 +2391,9 @@ inline void requestRoutesUpdateService(App& app)
                             asyncResp->res, *applyTime, "ApplyTime");
                         return;
                     }
+=======
+    });
+>>>>>>> master
 
                     // Set the requested image apply time value
                     sdbusplus::asio::setProperty(

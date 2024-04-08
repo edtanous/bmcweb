@@ -5,8 +5,7 @@
 #include "error_messages.hpp"
 #include "http_client.hpp"
 #include "http_connection.hpp"
-
-#include <boost/algorithm/string/predicate.hpp>
+#include "parsing.hpp"
 
 #include <array>
 #include <ranges>
@@ -165,8 +164,12 @@ inline bool searchCollectionsArray(std::string_view uri,
 // defined in the above array.
 inline bool isPropertyUri(std::string_view propertyName)
 {
-    return boost::iends_with(propertyName, "uri") ||
-           std::binary_search(nonUriProperties.begin(), nonUriProperties.end(),
+    if (propertyName.ends_with("uri") || propertyName.ends_with("Uri") ||
+        propertyName.ends_with("URI"))
+    {
+        return true;
+    }
+    return std::binary_search(nonUriProperties.begin(), nonUriProperties.end(),
                               propertyName);
 }
 
@@ -385,7 +388,7 @@ static inline void addPrefixes(nlohmann::json& json, std::string_view prefix)
                 continue;
             }
 
-            // Recusively parse the rest of the json
+            // Recursively parse the rest of the json
             addPrefixes(item.second, prefix);
         }
         return;
@@ -792,7 +795,7 @@ class RedfishAggregator
         std::function<void(crow::Response&)> cb =
             std::bind_front(processResponse, prefix, asyncResp);
 
-        std::string data = thisReq.req.body();
+        std::string data = thisReq.body();
         boost::urls::url url(sat->second);
         url.set_path(path);
         if (targetURI.has_query())
@@ -820,7 +823,7 @@ class RedfishAggregator
             {
                 url.set_query(thisReq.url().query());
             }
-            std::string data = thisReq.req.body();
+            std::string data = thisReq.body();
             client.sendDataWithCallback(std::move(data), url, thisReq.fields(),
                                         thisReq.method(), cb);
         }
@@ -845,7 +848,7 @@ class RedfishAggregator
             boost::urls::url url(sat.second);
             url.set_path(thisReq.url().path());
 
-            std::string data = thisReq.req.body();
+            std::string data = thisReq.body();
 
             client.sendDataWithCallback(std::move(data), url, thisReq.fields(),
                                         thisReq.method(), cb);
@@ -945,12 +948,10 @@ class RedfishAggregator
         // We want to attempt prefix fixing regardless of response code
         // The resp will not have a json component
         // We need to create a json from resp's stringResponse
-        std::string_view contentType = resp.getHeaderValue("Content-Type");
-        if (boost::iequals(contentType, "application/json") ||
-            boost::iequals(contentType, "application/json; charset=utf-8"))
+        if (isJsonContentType(resp.getHeaderValue("Content-Type")))
         {
-            nlohmann::json jsonVal = nlohmann::json::parse(resp.body(), nullptr,
-                                                           false);
+            nlohmann::json jsonVal = nlohmann::json::parse(*resp.body(),
+                                                           nullptr, false);
             if (jsonVal.is_discarded())
             {
                 BMCWEB_LOG_ERROR("Error parsing satellite response as JSON");
@@ -973,7 +974,7 @@ class RedfishAggregator
         {
             // We allow any Content-Type that is not "application/json" now
             asyncResp->res.result(resp.result());
-            asyncResp->res.write(resp.body());
+            asyncResp->res.copyBody(resp);
         }
         addAggregatedHeaders(asyncResp->res, resp, prefix);
     }
@@ -1002,19 +1003,17 @@ class RedfishAggregator
             if (asyncResp->res.resultInt() != 200)
             {
                 asyncResp->res.result(resp.result());
-                asyncResp->res.write(resp.body());
+                asyncResp->res.copyBody(resp);
             }
             return;
         }
 
         // The resp will not have a json component
         // We need to create a json from resp's stringResponse
-        std::string_view contentType = resp.getHeaderValue("Content-Type");
-        if (boost::iequals(contentType, "application/json") ||
-            boost::iequals(contentType, "application/json; charset=utf-8"))
+        if (isJsonContentType(resp.getHeaderValue("Content-Type")))
         {
-            nlohmann::json jsonVal = nlohmann::json::parse(resp.body(), nullptr,
-                                                           false);
+            nlohmann::json jsonVal = nlohmann::json::parse(*resp.body(),
+                                                           nullptr, false);
             if (jsonVal.is_discarded())
             {
                 BMCWEB_LOG_ERROR("Error parsing satellite response as JSON");
@@ -1136,20 +1135,18 @@ class RedfishAggregator
             if (asyncResp->res.resultInt() != 200)
             {
                 asyncResp->res.result(resp.result());
-                asyncResp->res.write(resp.body());
+                asyncResp->res.copyBody(resp);
             }
             return;
         }
 
         // The resp will not have a json component
         // We need to create a json from resp's stringResponse
-        std::string_view contentType = resp.getHeaderValue("Content-Type");
-        if (boost::iequals(contentType, "application/json") ||
-            boost::iequals(contentType, "application/json; charset=utf-8"))
+        if (isJsonContentType(resp.getHeaderValue("Content-Type")))
         {
             bool addedLinks = false;
-            nlohmann::json jsonVal = nlohmann::json::parse(resp.body(), nullptr,
-                                                           false);
+            nlohmann::json jsonVal = nlohmann::json::parse(*resp.body(),
+                                                           nullptr, false);
             if (jsonVal.is_discarded())
             {
                 BMCWEB_LOG_ERROR("Error parsing satellite response as JSON");

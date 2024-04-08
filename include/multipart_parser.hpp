@@ -106,7 +106,7 @@ class MultipartParser
                             return ParserError::ERROR_BOUNDARY_LF;
                         }
                         index = 0;
-                        mime_fields.push_back({});
+                        mime_fields.emplace_back();
                         state = State::HEADER_FIELD_START;
                         break;
                     }
@@ -210,6 +210,8 @@ class MultipartParser
                 }
                 case State::END:
                     break;
+                default:
+                    return ParserError::ERROR_UNEXPECTED_END_OF_INPUT;
             }
         }
 
@@ -238,7 +240,7 @@ class MultipartParser
         return static_cast<char>(c | 0x20);
     }
 
-    inline bool isBoundaryChar(char c) const
+    bool isBoundaryChar(char c) const
     {
         return boundaryIndex[static_cast<unsigned char>(c)];
     }
@@ -305,7 +307,7 @@ class MultipartParser
                 {
                     // unset the PART_BOUNDARY flag
                     flags = Boundary::NON_BOUNDARY;
-                    mime_fields.push_back({});
+                    mime_fields.emplace_back();
                     state = State::HEADER_FIELD_START;
                     return ParserError::PARSER_SUCCESS;
                 }

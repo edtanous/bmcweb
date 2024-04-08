@@ -160,6 +160,7 @@ option(
 )
 option('redfish-dbus-event', type : 'feature', value : 'disabled', description : 'Enable Redfish event service pushes based on DBUS signals of DBUS log service transactions.')
 option(
+<<<<<<< HEAD
     'redfish-enable-proccessor-memory-status',
     type: 'feature',
     value: 'enabled',
@@ -170,6 +171,8 @@ option(
 )
 
 option(
+=======
+>>>>>>> master
     'redfish-provisioning-feature',
     type: 'feature',
     value: 'disabled',
@@ -181,7 +184,7 @@ option(
     'bmcweb-logging',
     type: 'combo',
     choices : [ 'disabled', 'enabled', 'debug', 'info', 'warning', 'error', 'critical' ],
-    value: 'disabled',
+    value: 'error',
     description: '''Enable output the extended logging level.
                     - disabled: disable bmcweb log traces.
                     - enabled: treated as 'debug'
@@ -228,6 +231,20 @@ option(
 )
 
 option(
+    'mutual-tls-common-name-parsing',
+    type: 'combo',
+    choices: ['username', 'meta'],
+    value: 'username',
+    description: '''Sets logic to map the Subject Common Name field to a user
+                    in client TLS certificates.
+                    - username: Use the Subject CN field as a BMC username
+                                (default)
+                    - meta:     Parses the Subject CN in the format used by
+                                Meta Inc (see mutual_tls_meta.cpp for details)
+                    '''
+)
+
+option(
     'ibm-management-console',
     type: 'feature',
     value: 'disabled',
@@ -257,11 +274,10 @@ option('firmware-image-limit', type: 'integer', min : 0, max : 512, value : 30, 
 option(
     'redfish-new-powersubsystem-thermalsubsystem',
     type: 'feature',
-    value: 'disabled',
+    value: 'enabled',
     description: '''Enable/disable the new PowerSubsystem, ThermalSubsystem,
                     and all children schemas. This includes displaying all
-                    sensors in the SensorCollection. At a later date, this
-                    feature will be defaulted to enabled.'''
+                    sensors in the SensorCollection.'''
 )
 
 option(
@@ -269,7 +285,8 @@ option(
     type: 'feature',
     value: 'enabled',
     description: '''Enable/disable the old Power / Thermal. The default
-                    condition is allowing the old Power / Thermal.'''
+                    condition is allowing the old Power / Thermal. This
+                    will be disabled by default June 2024. '''
 )
 
 option(
@@ -292,6 +309,7 @@ option(
 )
 
 option(
+<<<<<<< HEAD
     'redfish-health-populate',
     type: 'feature',
     value: 'enabled',
@@ -300,6 +318,8 @@ option(
 )
 
 option(
+=======
+>>>>>>> master
     'https_port',
     type: 'integer',
     min: 1,
@@ -371,7 +391,7 @@ option(
     value: 'disabled',
     description: '''This is a temporary option flag for staging the
     ComputerSystemCollection transition to multi-host.  It, as well as the code
-    still beneath it will be removed on 9/1/2023.  Do not enable in a
+    still beneath it will be removed on 9/1/2024.  Do not enable in a
     production environment, or where API stability is required.'''
 )
 

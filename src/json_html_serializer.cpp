@@ -2,11 +2,18 @@
 
 #include "http_response.hpp"
 
+#include <boost/beast/http/field.hpp>
 #include <nlohmann/json.hpp>
 
-#include <algorithm>
 #include <array>
-#include <limits>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <iterator>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 namespace json_html_util
 {
@@ -532,7 +539,7 @@ static void dump(std::string& out, const nlohmann::json& val)
             out += "null";
             return;
         }
-        case nlohmann::json::value_t::binary:
+        default:
         {
             // Do nothing;  Should never happen.
             return;
@@ -562,8 +569,10 @@ void dumpHtml(std::string& out, const nlohmann::json& json)
 
 void prettyPrintJson(crow::Response& res)
 {
-    json_html_util::dumpHtml(res.body(), res.jsonValue);
+    std::string html;
+    json_html_util::dumpHtml(html, res.jsonValue);
 
+    res.write(std::move(html));
     res.addHeader(boost::beast::http::field::content_type,
                   "text/html;charset=UTF-8");
 }

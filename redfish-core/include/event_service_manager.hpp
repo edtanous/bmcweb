@@ -30,8 +30,11 @@
 
 #include <sys/inotify.h>
 
+<<<<<<< HEAD
 #include <async_resp.hpp>
 #include <boost/algorithm/string/classification.hpp>
+=======
+>>>>>>> master
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/beast/http/parser.hpp>
@@ -930,6 +933,11 @@ class Subscription : public persistent_data::UserSubscription
     void updateRetryConfig(uint32_t retryAttempts,
                            uint32_t retryTimeoutInterval)
     {
+        if (policy == nullptr)
+        {
+            BMCWEB_LOG_DEBUG("Retry policy was nullptr, ignoring set");
+            return;
+        }
         policy->maxRetryAttempts = retryAttempts;
         policy->retryIntervalSecs = std::chrono::seconds(retryTimeoutInterval);
     }
@@ -1540,7 +1548,7 @@ class EventServiceManager
                 std::string strMsg = msgJson.dump(
                     2, ' ', true, nlohmann::json::error_handler_t::replace);
                 entry->sendEvent(std::move(strMsg));
-                eventId++; // increament the eventId
+                eventId++; // increment the eventId
             }
             else
             {

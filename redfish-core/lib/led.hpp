@@ -46,7 +46,7 @@ inline void
         if (ec == boost::system::errc::invalid_argument)
         {
             BMCWEB_LOG_DEBUG(
-                "Get identity blinking LED failed, missmatch in property type");
+                "Get identity blinking LED failed, mismatch in property type");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -68,7 +68,7 @@ inline void
             if (ec2 == boost::system::errc::invalid_argument)
             {
                 BMCWEB_LOG_DEBUG(
-                    "Get enclosure identity led failed, missmatch in property type");
+                    "Get enclosure identity led failed, mismatch in property type");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -156,13 +156,13 @@ inline void
 }
 
 /**
- * @brief Retrieves identify led group properties over dbus
+ * @brief Retrieves identify system led group properties over dbus
  *
  * @param[in] asyncResp     Shared pointer for generating response message.
  *
  * @return None.
  */
-inline void getLocationIndicatorActive(
+inline void getSystemLocationIndicatorActive(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     BMCWEB_LOG_DEBUG("Get LocationIndicatorActive");
@@ -176,7 +176,7 @@ inline void getLocationIndicatorActive(
         if (ec == boost::system::errc::invalid_argument)
         {
             BMCWEB_LOG_DEBUG(
-                "Get identity blinking LED failed, missmatch in property type");
+                "Get identity blinking LED failed, mismatch in property type");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -198,7 +198,7 @@ inline void getLocationIndicatorActive(
             if (ec2 == boost::system::errc::invalid_argument)
             {
                 BMCWEB_LOG_DEBUG(
-                    "Get enclosure identity led failed, missmatch in property type");
+                    "Get enclosure identity led failed, mismatch in property type");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -214,14 +214,14 @@ inline void getLocationIndicatorActive(
 }
 
 /**
- * @brief Sets identify led group properties
+ * @brief Sets identify system led group properties
  *
  * @param[in] asyncResp     Shared pointer for generating response message.
  * @param[in] ledState  LED state passed from request
  *
  * @return None.
  */
-inline void setLocationIndicatorActive(
+inline void setSystemLocationIndicatorActive(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const bool ledState)
 {
     BMCWEB_LOG_DEBUG("Set LocationIndicatorActive");

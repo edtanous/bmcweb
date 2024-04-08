@@ -37,12 +37,15 @@
 #include <tinyxml2.h>
 #include <unistd.h>
 
+<<<<<<< HEAD
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/asio.hpp>
 #include <boost/beast/http.hpp>
+=======
+>>>>>>> master
 #include <boost/beast/http/verb.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/process.hpp>
@@ -69,11 +72,17 @@
 
 #include <array>
 #include <charconv>
+<<<<<<< HEAD
 #include <chrono>
+=======
+#include <cstddef>
+>>>>>>> master
 #include <filesystem>
+#include <iterator>
 #include <optional>
 #include <ranges>
 #include <span>
+#include <string>
 #include <string_view>
 #include <variant>
 #include <vector>
@@ -236,8 +245,16 @@ inline std::optional<bool> getProviderNotifyAction(const std::string& notify)
     return notifyAction;
 }
 
-inline static int getJournalMetadata(sd_journal* journal,
-                                     std::string_view field,
+inline std::string getDumpPath(std::string_view dumpType)
+{
+    std::string dbusDumpPath = "/xyz/openbmc_project/dump/";
+    std::ranges::transform(dumpType, std::back_inserter(dbusDumpPath),
+                           bmcweb::asciiToLower);
+
+    return dbusDumpPath;
+}
+
+inline int getJournalMetadata(sd_journal* journal, std::string_view field,
                                      std::string_view& contents)
 {
     const char* data = nullptr;
@@ -258,9 +275,8 @@ inline static int getJournalMetadata(sd_journal* journal,
     return ret;
 }
 
-inline static int getJournalMetadata(sd_journal* journal,
-                                     std::string_view field, const int& base,
-                                     long int& contents)
+inline int getJournalMetadata(sd_journal* journal, std::string_view field,
+                              const int& base, long int& contents)
 {
     int ret = 0;
     std::string_view metadata;
@@ -274,6 +290,7 @@ inline static int getJournalMetadata(sd_journal* journal,
     return ret;
 }
 
+<<<<<<< HEAD
 // static bool getSkipParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 //                          const crow::Request& req, uint64_t& skip)
 // {
@@ -324,6 +341,9 @@ inline static int getJournalMetadata(sd_journal* journal,
 
 inline static bool getEntryTimestamp(sd_journal* journal,
                                      std::string& entryTimestamp)
+=======
+inline bool getEntryTimestamp(sd_journal* journal, std::string& entryTimestamp)
+>>>>>>> master
 {
     int ret = 0;
     uint64_t timestamp = 0;
@@ -337,7 +357,7 @@ inline static bool getEntryTimestamp(sd_journal* journal,
     return true;
 }
 
-inline static bool getUniqueEntryID(sd_journal* journal, std::string& entryID,
+inline bool getUniqueEntryID(sd_journal* journal, std::string& entryID,
                                     const bool firstEntry = true)
 {
     int ret = 0;
@@ -430,16 +450,27 @@ static bool getUniqueEntryID(const std::string& logEntry, std::string& entryID,
 }
 
 // Entry is formed like "BootID_timestamp" or "BootID_timestamp_index"
+<<<<<<< HEAD
 inline static bool
     getTimestampFromID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        const std::string& entryID, sd_id128_t& bootID,
+=======
+inline bool
+    getTimestampFromID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       std::string_view entryIDStrView, sd_id128_t& bootID,
+>>>>>>> master
                        uint64_t& timestamp, uint64_t& index)
 {
-    if (entryID.empty())
+    // Convert the unique ID back to a bootID + timestamp to find the entry
+    auto underscore1Pos = entryIDStrView.find('_');
+    if (underscore1Pos == std::string_view::npos)
     {
+        // EntryID has no bootID or timestamp
+        messages::resourceNotFound(asyncResp->res, "LogEntry", entryIDStrView);
         return false;
     }
 
+<<<<<<< HEAD
     // Convert the unique ID back to a bootID + timestamp to find the entry
     std::string_view entryIDStrView(entryID);
     auto underscore1Pos = entryIDStrView.find('_');
@@ -459,10 +490,22 @@ inline static bool
     if (sd_id128_from_string(bootIDStr.c_str(), &bootID) < 0)
     {
         messages::resourceNotFound(asyncResp->res, "LogEntry", entryID);
+=======
+    // EntryID has bootID + timestamp
+
+    // Convert entryIDViewString to BootID
+    // NOTE: bootID string which needs to be null-terminated for
+    // sd_id128_from_string()
+    std::string bootIDStr(entryIDStrView.substr(0, underscore1Pos));
+    if (sd_id128_from_string(bootIDStr.c_str(), &bootID) < 0)
+    {
+        messages::resourceNotFound(asyncResp->res, "LogEntry", entryIDStrView);
+>>>>>>> master
         return false;
     }
 
     // Get the timestamp from entryID
+<<<<<<< HEAD
     std::string_view timestampStrView = entryIDStrView;
     timestampStrView.remove_prefix(underscore1Pos + 1);
 
@@ -488,6 +531,38 @@ inline static bool
                                      timestampStrView.end(), timestamp);
     if (ec != std::errc())
     {
+=======
+    entryIDStrView.remove_prefix(underscore1Pos + 1);
+
+    auto [timestampEnd, tstampEc] = std::from_chars(
+        entryIDStrView.begin(), entryIDStrView.end(), timestamp);
+    if (tstampEc != std::errc())
+    {
+        messages::resourceNotFound(asyncResp->res, "LogEntry", entryIDStrView);
+        return false;
+    }
+    entryIDStrView = std::string_view(
+        timestampEnd,
+        static_cast<size_t>(std::distance(timestampEnd, entryIDStrView.end())));
+    if (entryIDStrView.empty())
+    {
+        index = 0U;
+        return true;
+    }
+    // Timestamp might include optional index, if two events happened at the
+    // same "time".
+    if (entryIDStrView[0] != '_')
+    {
+        messages::resourceNotFound(asyncResp->res, "LogEntry", entryIDStrView);
+        return false;
+    }
+    entryIDStrView.remove_prefix(1);
+    auto [ptr, indexEc] = std::from_chars(entryIDStrView.begin(),
+                                          entryIDStrView.end(), index);
+    if (indexEc != std::errc() || ptr != entryIDStrView.end())
+    {
+        messages::resourceNotFound(asyncResp->res, "LogEntry", entryIDStrView);
+>>>>>>> master
         return false;
     }
     return true;
@@ -1060,9 +1135,7 @@ inline void
                                                   " Dump Entries";
 
         nlohmann::json::array_t entriesArray;
-        std::string dumpEntryPath =
-            "/xyz/openbmc_project/dump/" +
-            std::string(boost::algorithm::to_lower_copy(dumpType)) + "/entry/";
+        std::string dumpEntryPath = getDumpPath(dumpType) + "/entry/";
 
         dbus::utility::ManagedObjectType resp(objects);
         std::ranges::sort(resp, [](const auto& l, const auto& r) {
@@ -1317,9 +1390,7 @@ inline void
         }
 
         bool foundDumpEntry = false;
-        std::string dumpEntryPath =
-            "/xyz/openbmc_project/dump/" +
-            std::string(boost::algorithm::to_lower_copy(dumpType)) + "/entry/";
+        std::string dumpEntryPath = getDumpPath(dumpType) + "/entry/";
 
         for (const auto& objectPath : resp)
         {
@@ -1575,12 +1646,163 @@ inline void deleteDumpEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             return;
         }
     };
+
     crow::connections::systemBus->async_method_call(
         respHandler, "xyz.openbmc_project.Dump.Manager",
-        "/xyz/openbmc_project/dump/" +
-            std::string(boost::algorithm::to_lower_copy(dumpType)) + "/entry/" +
-            entryID,
+        std::format("{}/entry/{}", getDumpPath(dumpType), entryID),
         "xyz.openbmc_project.Object.Delete", "Delete");
+}
+inline bool checkSizeLimit(int fd, crow::Response& res)
+{
+    long long int size = lseek(fd, 0, SEEK_END);
+    if (size <= 0)
+    {
+        BMCWEB_LOG_ERROR("Failed to get size of file, lseek() returned {}",
+                         size);
+        messages::internalError(res);
+        return false;
+    }
+
+    // Arbitrary max size of 20MB to accommodate BMC dumps
+    constexpr long long int maxFileSize = 20LL * 1024LL * 1024LL;
+    if (size > maxFileSize)
+    {
+        BMCWEB_LOG_ERROR("File size {} exceeds maximum allowed size of {}",
+                         size, maxFileSize);
+        messages::internalError(res);
+        return false;
+    }
+    off_t rc = lseek(fd, 0, SEEK_SET);
+    if (rc < 0)
+    {
+        BMCWEB_LOG_ERROR("Failed to reset file offset to 0");
+        messages::internalError(res);
+        return false;
+    }
+    return true;
+}
+inline void
+    downloadEntryCallback(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& entryID,
+                          const std::string& downloadEntryType,
+                          const boost::system::error_code& ec,
+                          const sdbusplus::message::unix_fd& unixfd)
+{
+    if (ec.value() == EBADR)
+    {
+        messages::resourceNotFound(asyncResp->res, "EntryAttachment", entryID);
+        return;
+    }
+    if (ec)
+    {
+        BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
+        messages::internalError(asyncResp->res);
+        return;
+    }
+
+    // Make sure we know how to process the retrieved entry attachment
+    if ((downloadEntryType != "BMC") && (downloadEntryType != "System"))
+    {
+        BMCWEB_LOG_ERROR("downloadEntryCallback() invalid entry type: {}",
+                         downloadEntryType);
+        messages::internalError(asyncResp->res);
+    }
+
+    int fd = -1;
+    fd = dup(unixfd);
+    if (fd < 0)
+    {
+        BMCWEB_LOG_ERROR("Failed to open file");
+        messages::internalError(asyncResp->res);
+        return;
+    }
+    if (!checkSizeLimit(fd, asyncResp->res))
+    {
+        close(fd);
+        return;
+    }
+    if (downloadEntryType == "System")
+    {
+        if (!asyncResp->res.openFd(fd, bmcweb::EncodingType::Base64))
+        {
+            messages::internalError(asyncResp->res);
+            close(fd);
+            return;
+        }
+        asyncResp->res.addHeader(
+            boost::beast::http::field::content_transfer_encoding, "Base64");
+        return;
+    }
+    if (!asyncResp->res.openFd(fd))
+    {
+        messages::internalError(asyncResp->res);
+        close(fd);
+        return;
+    }
+    asyncResp->res.addHeader(boost::beast::http::field::content_type,
+                             "application/octet-stream");
+}
+
+inline void
+    downloadDumpEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                      const std::string& entryID, const std::string& dumpType)
+{
+    if (dumpType != "BMC")
+    {
+        BMCWEB_LOG_WARNING("Can't find Dump Entry {}", entryID);
+        messages::resourceNotFound(asyncResp->res, dumpType + " dump", entryID);
+        return;
+    }
+
+    std::string dumpEntryPath = std::format("{}/entry/{}",
+                                            getDumpPath(dumpType), entryID);
+
+    auto downloadDumpEntryHandler =
+        [asyncResp, entryID,
+         dumpType](const boost::system::error_code& ec,
+                   const sdbusplus::message::unix_fd& unixfd) {
+        downloadEntryCallback(asyncResp, entryID, dumpType, ec, unixfd);
+    };
+
+    crow::connections::systemBus->async_method_call(
+        std::move(downloadDumpEntryHandler), "xyz.openbmc_project.Dump.Manager",
+        dumpEntryPath, "xyz.openbmc_project.Dump.Entry", "GetFileHandle");
+}
+
+inline void
+    downloadEventLogEntry(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& systemName,
+                          const std::string& entryID,
+                          const std::string& dumpType)
+{
+    if constexpr (bmcwebEnableMultiHost)
+    {
+        // Option currently returns no systems.  TBD
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+    if (systemName != "system")
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+
+    std::string entryPath =
+        sdbusplus::message::object_path("/xyz/openbmc_project/logging/entry") /
+        entryID;
+
+    auto downloadEventLogEntryHandler =
+        [asyncResp, entryID,
+         dumpType](const boost::system::error_code& ec,
+                   const sdbusplus::message::unix_fd& unixfd) {
+        downloadEntryCallback(asyncResp, entryID, dumpType, ec, unixfd);
+    };
+
+    crow::connections::systemBus->async_method_call(
+        std::move(downloadEventLogEntryHandler), "xyz.openbmc_project.Logging",
+        entryPath, "xyz.openbmc_project.Logging.Entry", "GetEntry");
 }
 
 inline DumpCreationProgress
@@ -1657,7 +1879,7 @@ inline void createDumpTaskCallback(
     }
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, payload, createdObjPath,
+        [asyncResp, payload = std::move(payload), createdObjPath,
          dumpEntryPath{std::move(dumpEntryPath)},
          dumpId](const boost::system::error_code& ec,
                  const std::string& introspectXml) {
@@ -1976,18 +2198,13 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         BMCWEB_LOG_DEBUG("Dump Created. Path: {}", objPath.str);
         createDumpTaskCallback(std::move(payload), asyncResp, objPath);
     },
-        "xyz.openbmc_project.Dump.Manager",
-        "/xyz/openbmc_project/dump/" +
-            std::string(boost::algorithm::to_lower_copy(dumpType)),
+        "xyz.openbmc_project.Dump.Manager", getDumpPath(dumpType),
         "xyz.openbmc_project.Dump.Create", "CreateDump", createDumpParamVec);
 }
 
 inline void clearDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       const std::string& dumpType)
 {
-    std::string dumpTypeLowerCopy =
-        std::string(boost::algorithm::to_lower_copy(dumpType));
-
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code& ec) {
         if (ec)
@@ -1996,12 +2213,17 @@ inline void clearDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             messages::internalError(asyncResp->res);
             return;
         }
+<<<<<<< HEAD
     }, "xyz.openbmc_project.Dump.Manager",
         "/xyz/openbmc_project/dump/" + dumpTypeLowerCopy,
+=======
+    },
+        "xyz.openbmc_project.Dump.Manager", getDumpPath(dumpType),
+>>>>>>> master
         "xyz.openbmc_project.Collection.DeleteAll", "DeleteAll");
 }
 
-inline static void
+inline void
     parseCrashdumpParameters(const dbus::utility::DBusPropertiesMap& params,
                              std::string& filename, std::string& timestamp,
                              std::string& logfile)
@@ -3128,18 +3350,10 @@ inline void requestRoutesDBusEventLogEntry(App& app)
         }
         BMCWEB_LOG_DEBUG("Set Resolved");
 
-        sdbusplus::asio::setProperty(
-            *crow::connections::systemBus, "xyz.openbmc_project.Logging",
+        setDbusProperty(asyncResp, "xyz.openbmc_project.Logging",
             "/xyz/openbmc_project/logging/entry/" + entryId,
-            "xyz.openbmc_project.Logging.Entry", "Resolved", *resolved,
-            [asyncResp, entryId](const boost::system::error_code& ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
-                messages::internalError(asyncResp->res);
-                return;
-            }
-        });
+                        "xyz.openbmc_project.Logging.Entry", "Resolved",
+                        "Resolved", *resolved);
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -3199,6 +3413,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
     });
 }
 
+<<<<<<< HEAD
 inline void requestRoutesDBusEventLogEntryDownload(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -3729,6 +3944,8 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
     });
 }
 
+=======
+>>>>>>> master
 constexpr const char* hostLoggerFolderPath = "/var/log/console";
 
 inline bool
@@ -4155,9 +4372,17 @@ static int
     bmcJournalLogEntryJson["Id"] = bmcJournalLogEntryID;
     bmcJournalLogEntryJson["Message"] = std::move(message);
     bmcJournalLogEntryJson["EntryType"] = "Oem";
-    bmcJournalLogEntryJson["Severity"] = severity <= 2   ? "Critical"
-                                         : severity <= 4 ? "Warning"
-                                                         : "OK";
+    log_entry::EventSeverity severityEnum = log_entry::EventSeverity::OK;
+    if (severity <= 2)
+    {
+        severityEnum = log_entry::EventSeverity::Critical;
+    }
+    else if (severity <= 4)
+    {
+        severityEnum = log_entry::EventSeverity::Warning;
+    }
+
+    bmcJournalLogEntryJson["Severity"] = severityEnum;
     bmcJournalLogEntryJson["OemRecordFormat"] = "BMC Journal Entry";
     bmcJournalLogEntryJson["Created"] = std::move(entryTimeStr);
     return 0;
@@ -4265,8 +4490,12 @@ inline void requestRoutesBMCJournalLogEntry(App& app)
         {
             return;
         }
+<<<<<<< HEAD
         // Convert the unique ID back to a timestamp to find the
         // entry
+=======
+        // Convert the unique ID back to a timestamp to find the entry
+>>>>>>> master
         sd_id128_t bootID{};
         uint64_t ts = 0;
         uint64_t index = 0;
@@ -4429,11 +4658,7 @@ inline void
             // response.
             return;
         }
-
-        const std::string dbusDumpPath =
-            "/xyz/openbmc_project/dump/" +
-            boost::algorithm::to_lower_copy(dumpType);
-
+        std::string dbusDumpPath = getDumpPath(dumpType);
         for (const std::string& path : subTreePaths)
         {
             if (path == dbusDumpPath)
@@ -4550,6 +4775,7 @@ inline void handleLogServicesDumpEntryGet(
     }
     getDumpEntryById(asyncResp, dumpId, dumpType);
 }
+
 inline void handleLogServicesDumpEntryComputerSystemGet(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -4584,6 +4810,37 @@ inline void handleLogServicesDumpEntryComputerSystemDelete(
         return;
     }
     deleteDumpEntry(asyncResp, dumpId, "System");
+}
+
+inline void handleLogServicesDumpEntryDownloadGet(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& dumpId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    downloadDumpEntry(asyncResp, dumpId, dumpType);
+}
+
+inline void handleDBusEventLogEntryDownloadGet(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemName, const std::string& entryID)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    if (!http_helpers::isContentTypeAllowed(
+            req.getHeaderValue("Accept"),
+            http_helpers::ContentType::OctetStream, true))
+    {
+        asyncResp->res.result(boost::beast::http::status::bad_request);
+        return;
+    }
+    downloadEventLogEntry(asyncResp, systemName, entryID, dumpType);
 }
 
 inline void handleLogServicesDumpCollectDiagnosticDataPost(
@@ -4717,6 +4974,16 @@ inline void requestRoutesBMCDumpEntry(App& app)
             handleLogServicesDumpEntryDelete, std::ref(app), "BMC"));
 }
 
+inline void requestRoutesBMCDumpEntryDownload(App& app)
+{
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Managers/bmc/LogServices/Dump/Entries/<str>/attachment/")
+        .privileges(redfish::privileges::getLogEntry)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleLogServicesDumpEntryDownloadGet, std::ref(app), "BMC"));
+}
+
 inline void requestRoutesBMCDumpCreate(App& app)
 {
     BMCWEB_ROUTE(app,
@@ -4735,6 +5002,16 @@ inline void requestRoutesBMCDumpClear(App& app)
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleLogServicesDumpClearLogPost, std::ref(app), "BMC"));
+}
+
+inline void requestRoutesDBusEventLogEntryDownload(App& app)
+{
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/LogServices/EventLog/Entries/<str>/attachment/")
+        .privileges(redfish::privileges::getLogEntry)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleDBusEventLogEntryDownloadGet, std::ref(app), "System"));
 }
 
 inline void requestRoutesFaultLogDumpService(App& app)
@@ -5644,7 +5921,7 @@ inline void requestRoutesCrashdumpFile(App& app)
                 return;
             }
 
-            if (!std::filesystem::exists(dbusFilepath))
+            if (!asyncResp->res.openFile(dbusFilepath))
             {
                 messages::resourceMissingAtURI(
                     asyncResp->res,
@@ -5654,9 +5931,6 @@ inline void requestRoutesCrashdumpFile(App& app)
 
                 return;
             }
-            std::ifstream ifs(dbusFilepath, std::ios::in | std::ios::binary);
-            asyncResp->res.body() =
-                std::string(std::istreambuf_iterator<char>{ifs}, {});
 
             // Configure this to be a file download when accessed
             // from a browser
@@ -6213,8 +6487,8 @@ inline void requestRoutesPostCodesClear(App& app)
  *
  * @return bool true if the parsing is successful, false the parsing fails
  */
-inline static bool parsePostCode(const std::string& postCodeID,
-                                 uint64_t& currentValue, uint16_t& index)
+inline bool parsePostCode(const std::string& postCodeID, uint64_t& currentValue,
+                          uint16_t& index)
 {
     std::vector<std::string> split;
     bmcweb::split(split, postCodeID, '-');
@@ -6632,8 +6906,14 @@ inline void requestRoutesPostCodesEntryAdditionalData(App& app)
 
             asyncResp->res.addHeader("Content-Type",
                                      "application/octet-stream");
+<<<<<<< HEAD
             asyncResp->res.addHeader("Content-Transfer-Encoding", "Base64");
             asyncResp->res.body() = crow::utility::base64encode(strData);
+=======
+            asyncResp->res.addHeader(
+                boost::beast::http::field::content_transfer_encoding, "Base64");
+            asyncResp->res.write(crow::utility::base64encode(strData));
+>>>>>>> master
         },
             "xyz.openbmc_project.State.Boot.PostCode0",
             "/xyz/openbmc_project/State/Boot/PostCode0",

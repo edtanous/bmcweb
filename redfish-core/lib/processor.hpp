@@ -20,8 +20,11 @@
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "generated/enums/processor.hpp"
+<<<<<<< HEAD
 #include "health.hpp"
 #include "pcie.hpp"
+=======
+>>>>>>> master
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
@@ -49,6 +52,7 @@
 #include <filesystem>
 #include <limits>
 #include <ranges>
+#include <string>
 #include <string_view>
 
 namespace redfish
@@ -3367,10 +3371,14 @@ inline void requestRoutesOperatingConfigCollection(App& app)
 
                 // Use the common search routine to construct the
                 // Collection of all Config objects under this CPU.
+<<<<<<< HEAD
                 std::string operationConfiguuri =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
                     cpuName + "/OperatingConfigs";
                 constexpr std::array<std::string_view, 1> interfaces{
+=======
+                constexpr std::array<std::string_view, 1> interface{
+>>>>>>> master
                     "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"};
                 collection_util::getCollectionMembers(
                     asyncResp, boost::urls::url(operationConfiguuri),
@@ -3544,6 +3552,7 @@ inline void requestRoutesProcessor(App& app)
             return;
         }
 
+<<<<<<< HEAD
         std::optional<int> speedLimit;
         std::optional<bool> speedLocked;
         std::optional<nlohmann::json> oemObject;
@@ -3552,6 +3561,12 @@ inline void requestRoutesProcessor(App& app)
                 req, asyncResp->res, "SpeedLimitMHz", speedLimit, "SpeedLocked",
                 speedLocked, "AppliedOperatingConfig", appliedConfigJson, "Oem",
                 oemObject))
+=======
+        std::optional<std::string> appliedConfigUri;
+        if (!json_util::readJsonPatch(req, asyncResp->res,
+                                      "AppliedOperatingConfig/@odata.id",
+                                      appliedConfigUri))
+>>>>>>> master
         {
             return;
         }
@@ -3562,6 +3577,7 @@ inline void requestRoutesProcessor(App& app)
             messages::propertyMissing(asyncResp->res, "SpeedLimit");
         }
 
+<<<<<<< HEAD
         // speedlocked is required property for patching speedlimit
         else if (!speedLocked && speedLimit)
         {
@@ -3642,10 +3658,15 @@ inline void requestRoutesProcessor(App& app)
             {
                 return;
             }
+=======
+        if (appliedConfigUri)
+        {
+>>>>>>> master
             // Check for 404 and find matching D-Bus object, then run
             // property patch handlers if that all succeeds.
             redfish::processor_utils::getProcessorObject(
                 asyncResp, processorId,
+<<<<<<< HEAD
                 [appliedConfigUri = std::move(appliedConfigUri)](
                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
                     const std::string& processorId1,
@@ -3655,6 +3676,9 @@ inline void requestRoutesProcessor(App& app)
                                             appliedConfigUri, objectPath,
                                             serviceMap);
             });
+=======
+                                               *appliedConfigUri));
+>>>>>>> master
         }
     });
 }

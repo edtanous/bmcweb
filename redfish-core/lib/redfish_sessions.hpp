@@ -179,7 +179,7 @@ inline void handleSessionCollectionGet(
     asyncResp->res.jsonValue["@odata.type"] =
         "#SessionCollection.SessionCollection";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/SessionService/Sessions/";
+        "/redfish/v1/SessionService/Sessions";
     asyncResp->res.jsonValue["Name"] = "Session Collection";
     asyncResp->res.jsonValue["Description"] = "Session Collection";
 }
@@ -295,7 +295,7 @@ inline void
 
     asyncResp->res.jsonValue["@odata.type"] =
         "#SessionService.v1_0_2.SessionService";
-    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/SessionService/";
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/SessionService";
     asyncResp->res.jsonValue["Name"] = "Session Service";
     asyncResp->res.jsonValue["Id"] = "SessionService";
     asyncResp->res.jsonValue["Description"] = "Session Service";
@@ -324,7 +324,7 @@ inline void handleSessionServicePatch(
 
     if (sessionTimeout)
     {
-        // The mininum & maximum allowed values for session timeout
+        // The minimum & maximum allowed values for session timeout
         // are 30 seconds and 86400 seconds respectively as per the
         // session service schema mentioned at
         // https://redfish.dmtf.org/schemas/v1/SessionService.v1_1_7.json

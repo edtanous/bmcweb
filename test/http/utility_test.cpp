@@ -1,16 +1,14 @@
-#include "bmcweb_config.h"
 
 #include "utility.hpp"
 
-#include <boost/url/error.hpp>
+#include <boost/system/result.hpp>
+#include <boost/url/parse.hpp>
 #include <boost/url/url.hpp>
 #include <boost/url/url_view.hpp>
-#include <nlohmann/json.hpp>
 
-#include <cstdint>
+#include <algorithm>
 #include <ctime>
 #include <functional>
-#include <limits>
 #include <string>
 #include <string_view>
 
@@ -69,6 +67,27 @@ TEST(Utility, Base64EncodeString)
 
     encoded = base64encode("f0\0 Bar"s);
     EXPECT_EQ(encoded, "ZjAAIEJhcg==");
+}
+
+TEST(Utility, Base64Encoder)
+{
+    using namespace std::string_literals;
+    std::string data = "f0\0 Bar"s;
+    for (size_t chunkSize = 1; chunkSize < 6; chunkSize++)
+    {
+        std::string_view testString(data);
+        std::string out;
+        Base64Encoder encoder;
+        while (!testString.empty())
+        {
+            size_t thisChunk = std::min(testString.size(), chunkSize);
+            encoder.encode(testString.substr(0, thisChunk), out);
+            testString.remove_prefix(thisChunk);
+        }
+
+        encoder.finalize(out);
+        EXPECT_EQ(out, "ZjAAIEJhcg==");
+    }
 }
 
 TEST(Utility, Base64EncodeDecodeString)
@@ -162,9 +181,9 @@ TEST(AppendUrlFromPieces, PiecesAreAppendedViaDelimiters)
     appendUrlPieces(url, "bar");
     EXPECT_EQ(std::string_view(url.data(), url.size()), "/redfish/v1/foo/bar");
 
-    appendUrlPieces(url, "/", "bad&tring");
+    appendUrlPieces(url, "/", "bad&string");
     EXPECT_EQ(std::string_view(url.data(), url.size()),
-              "/redfish/v1/foo/bar/%2F/bad&tring");
+              "/redfish/v1/foo/bar/%2F/bad&string");
 }
 
 } // namespace

@@ -159,7 +159,7 @@ endif
 # being enabled during the configuration time.
 
 foreach option_key,option_value : feature_map
-  if(get_option(option_key).enabled())
+  if(get_option(option_key).allowed())
     if(option_key == 'mutual-tls-auth' or option_key == 'insecure-disable-ssl')
       if(get_option('insecure-disable-ssl').disabled() or get_option('mutual-tls-auth').disabled())
         add_project_arguments(option_value,language:'cpp')
@@ -182,14 +182,18 @@ foreach option_key,option_value : feature_map
   endif
 endforeach
 
-if(get_option('tests').enabled())
+if(get_option('tests').allowed())
   summary('unittest','NA', section : 'Enabled Features')
 endif
 
 # Add compiler arguments
 
-# -Wpedantic, -Wextra comes by default with warning level
+if (cxx.get_id() == 'clang')
+  if (cxx.version().version_compare('<17.0'))
+    error('This project requires clang-17 or higher')
+  endif
 add_project_arguments(
+<<<<<<< HEAD
   cxx.get_supported_arguments([
   '-Wcast-align',
   '-Wconversion',
@@ -207,7 +211,10 @@ add_project_arguments(
 if (cxx.get_id() == 'clang' and cxx.version().version_compare('>9.0'))
 add_project_arguments(
   cxx.get_supported_arguments([
+=======
+>>>>>>> master
     '-Weverything',
+    '-Wformat=2',
     '-Wno-c++98-compat-pedantic',
     '-Wno-c++98-compat',
     '-Wno-documentation-unknown-command',
@@ -220,26 +227,39 @@ add_project_arguments(
     '-Wno-used-but-marked-unused',
     '-Wno-weak-vtables',
     '-Wno-switch-enum',
-  ]),
+    '-Wno-unused-macros',
+    '-Wno-covered-switch-default',
   language:'cpp')
 endif
 
-# if compiler is gnu-gcc , and version is > 8.0 then we add few more
-# compiler arguments , we know that will pass
+if (cxx.get_id() == 'gcc')
+  if (cxx.version().version_compare('<13.0'))
+    error('This project requires gcc-13 or higher')
+  endif
 
-if (cxx.get_id() == 'gcc' and cxx.version().version_compare('>8.0'))
   add_project_arguments(
-    cxx.get_supported_arguments([
+    '-Wformat=2',
+    '-Wcast-align',
+    '-Wconversion',
+    '-Woverloaded-virtual',
+    '-Wsign-conversion',
+    '-Wunused',
      '-Wduplicated-cond',
      '-Wduplicated-branches',
      '-Wlogical-op',
      '-Wnull-dereference',
      '-Wunused-parameter',
      '-Wdouble-promotion',
+<<<<<<< HEAD
      #TODO: Enable this flags
      #'-Wshadow',
      #'-Wno-psabi',
      ]),
+=======
+    '-Wshadow',
+    '-Wno-psabi',
+    '-Wno-attributes',
+>>>>>>> master
     language:'cpp')
 endif
 
@@ -319,12 +339,33 @@ bmcweb_dependencies = []
 
 pam = cxx.find_library('pam', required: true)
 atomic =  cxx.find_library('atomic', required: true)
+<<<<<<< HEAD
 openssl = dependency('openssl', required : true)
 bmcweb_dependencies += [pam, atomic, openssl]
 if get_option('shmem-platform-metrics').enabled()
   nvtal = dependency('nvidia-tal', required : true)
   bmcweb_dependencies += nvtal
 endif
+=======
+bmcweb_dependencies += [pam, atomic]
+
+openssl = dependency('openssl', required : false, version: '>=3.0.0')
+if not openssl.found() or get_option('b_sanitize') != 'none'
+  openssl_proj = subproject(
+    'openssl',
+    required: true,
+    default_options: ['warning_level=0', 'werror=false']
+  )
+  openssl = openssl_proj.get_variable('openssl_dep')
+  openssl = openssl.as_system('system')
+else
+  # When we build openssl as a subproject, the warnings analyzer starts
+  # flagging all the C macros as old style casts, so only enable the
+  # warning for non subprojects.
+  add_project_arguments('-Wold-style-cast', language: 'cpp')
+endif
+bmcweb_dependencies += [openssl]
+>>>>>>> master
 
 nghttp2 = dependency('libnghttp2', version: '>=1.52.0', required : false)
 if not nghttp2.found()
@@ -335,7 +376,7 @@ if not nghttp2.found()
     'ENABLE_STATIC_LIB': true
   })
   nghttp2_ex = cmake.subproject('nghttp2', options: opt_var)
-  nghttp2 = nghttp2_ex.dependency('nghttp2')
+  nghttp2 = nghttp2_ex.dependency('nghttp2_static')
 endif
 bmcweb_dependencies += nghttp2
 
@@ -351,6 +392,7 @@ tinyxml = dependency(
     'tinyxml2',
     include_type: 'system',
     version: '>=9.0.0',
+    default_options: ['tests=false'],
 )
 if not tinyxml.found()
     tinyxml_proj = subproject('tinyxml2', required: true)
@@ -363,33 +405,53 @@ systemd = dependency('systemd')
 zlib = dependency('zlib')
 bmcweb_dependencies += [systemd, zlib]
 
-nlohmann_json = dependency('nlohmann_json', version: '>=3.9.2', required: false, include_type: 'system')
-if not nlohmann_json.found()
-    nlohmann_json_proj = subproject('nlohmann_json', required: true)
-    nlohmann_json = nlohmann_json_proj.get_variable('nlohmann_json_dep')
-    nlohmann_json = nlohmann_json.as_system('system')
-endif
-bmcweb_dependencies += nlohmann_json
+nlohmann_json_dep = dependency('nlohmann_json', version: '>=3.11.2', include_type: 'system')
+bmcweb_dependencies += nlohmann_json_dep
 
-boost = dependency('boost', modules: ['url'], version : '>=1.83.0', required : false, include_type: 'system')
+boost = dependency(
+  'boost',
+  modules: [
+    'url',
+    ],
+  version : '>=1.84.0',
+  required : false,
+  include_type: 'system'
+)
 if boost.found()
   bmcweb_dependencies += [boost]
 else
   cmake = import('cmake')
   opt = cmake.subproject_options()
   opt.add_cmake_defines({
-    'BOOST_INCLUDE_LIBRARIES': 'url'
+    'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;headers;process;type_index;url;uuid',
+    'BUILD_SHARED_LIBS': 'OFF',
   })
+
   boost = cmake.subproject('boost', required: true, options: opt)
-  boost_url = boost.dependency('boost_url').as_system()
+  boost_asio = boost.dependency('boost_asio').as_system()
+  boost_beast = boost.dependency('boost_beast').as_system()
+  boost_callable_traits = boost.dependency('boost_callable_traits').as_system()
   boost_headers = boost.dependency('boost_headers').as_system()
-  bmcweb_dependencies += [boost_url, boost_headers]
+  boost_process = boost.dependency('boost_process').as_system()
+  boost_type_index = boost.dependency('boost_type_index').as_system()
+  boost_url = boost.dependency('boost_url').as_system()
+  boost_uuid = boost.dependency('boost_uuid').as_system()
+  bmcweb_dependencies += [
+    boost_asio,
+    boost_beast,
+    boost_callable_traits,
+    boost_headers,
+    boost_process,
+    boost_type_index,
+    boost_url,
+    boost_uuid
+  ]
 endif
 
-if get_option('tests').enabled()
-  gtest = dependency('gtest', main: true, disabler: true, required : false)
+if get_option('tests').allowed()
+  gtest = dependency('gtest', main: true, version: '>=1.14.0', disabler: true, required : false)
   gmock = dependency('gmock', required : false)
-  if not gtest.found() and get_option('tests').enabled()
+  if not gtest.found() and get_option('tests').allowed()
     gtest_proj = subproject('gtest', required: true)
     gtest = gtest_proj.get_variable('gtest_main_dep')
     gmock = gtest_proj.get_variable('gmock_dep')
@@ -421,6 +483,7 @@ fs = import('fs')
 srcfiles_bmcweb = files(
   'redfish-core/src/error_messages.cpp',
   'redfish-core/src/registries.cpp',
+  'redfish-core/src/utils/dbus_utils.cpp',
   'redfish-core/src/utils/time_utils.cpp',
   'redfish-core/src/utils/json_utils.cpp',
   'src/boost_asio_ssl.cpp',
@@ -451,10 +514,22 @@ executable(
 )
 
 srcfiles_unittest = files(
+<<<<<<< HEAD
   #'test/http/crow_getroutes_test.cpp',
+=======
+  'test/http/crow_getroutes_test.cpp',
+  'test/http/http2_connection_test.cpp',
+  'test/http/http_connection_test.cpp',
+  'test/http/mutual_tls.cpp',
+>>>>>>> master
   'test/http/router_test.cpp',
+  'test/http/parsing_test.cpp',
+  'test/http/http_response_test.cpp',
   'test/http/utility_test.cpp',
   'test/http/verb_test.cpp',
+  'test/http/server_sent_event_test.cpp',
+  'test/http/mutual_tls_meta.cpp',
+  'test/http/http_body_test.cpp',
   'test/include/dbus_utility_test.cpp',
   #'test/include/google/google_service_root_test.cpp',
   'test/include/json_html_serializer.cpp',
@@ -472,6 +547,7 @@ srcfiles_unittest = files(
   'test/redfish-core/include/redfish_aggregator_test.cpp',
   'test/redfish-core/include/registries_test.cpp',
   'test/redfish-core/include/utils/hex_utils_test.cpp',
+  'test/redfish-core/include/utils/dbus_utils.cpp',
   'test/redfish-core/include/utils/ip_utils_test.cpp',
   'test/redfish-core/include/utils/json_utils_test.cpp',
   'test/redfish-core/include/utils/query_param_test.cpp',
@@ -484,6 +560,7 @@ srcfiles_unittest = files(
   #'test/redfish-core/lib/thermal_subsystem_test.cpp',
   #'test/redfish-core/lib/power_subsystem_test.cpp',
   'test/redfish-core/lib/sensors_test.cpp',
+<<<<<<< HEAD
 )
 
 # if(get_option('tests').enabled())
@@ -511,6 +588,20 @@ if(get_option('tests').enabled())
     #     'redfish-core/lib',
     #     'http'
     # )
+=======
+  'test/redfish-core/lib/system_test.cpp',
+  'test/redfish-core/lib/log_services_dump_test.cpp',
+  'test/redfish-core/lib/log_services_test.cpp',
+  'test/redfish-core/lib/update_service_test.cpp',
+  'test/redfish-core/lib/service_root_test.cpp',
+  'test/redfish-core/lib/thermal_subsystem_test.cpp',
+  'test/redfish-core/lib/power_subsystem_test.cpp',
+  'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
+)
+
+
+if(get_option('tests').allowed())
+>>>>>>> master
     # generate the test executable
     ut_bin = executable(
       'bmcweb_unit_test',

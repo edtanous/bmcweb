@@ -1,7 +1,16 @@
 #include "async_resp.hpp"
+#include "error_messages.hpp"
+#include "http_response.hpp"
 #include "redfish_aggregator.hpp"
 
+#include <boost/beast/http/field.hpp>
+#include <boost/beast/http/status.hpp>
 #include <nlohmann/json.hpp>
+
+#include <array>
+#include <memory>
+#include <string>
+#include <utility>
 
 #include <gtest/gtest.h> // IWYU pragma: keep
 
@@ -108,7 +117,6 @@ TEST(addPrefixToItem, UnsupportedURIs)
         for (const auto& id : validIDs)
         {
             std::string initial("/redfish/v1/" + std::string(root) + "/");
-            std::string correct(initial + "asdfjkl_" + std::string(id));
             initial += id;
             jsonRequest["@odata.id"] = initial;
             addPrefixToItem(jsonRequest["@odata.id"], "asdfjkl");
@@ -137,7 +145,7 @@ TEST(addPrefixToItem, TopLevelCollections)
     {
         std::string initial("/redfish/v1/" + std::string(root));
         jsonRequest["@odata.id"] = initial;
-        addPrefixToItem(jsonRequest["@odata.id"], "perfix");
+        addPrefixToItem(jsonRequest["@odata.id"], "prefix");
         EXPECT_EQ(jsonRequest["@odata.id"], initial);
     }
 }
@@ -249,8 +257,8 @@ void assertProcessResponse(unsigned result)
     jsonResp["Name"] = "Test";
 
     crow::Response resp;
-    resp.body() = jsonResp.dump(2, ' ', true,
-                                nlohmann::json::error_handler_t::replace);
+    resp.write(
+        jsonResp.dump(2, ' ', true, nlohmann::json::error_handler_t::replace));
     resp.addHeader("Content-Type", "application/json");
     resp.addHeader("Allow", "GET");
     resp.addHeader("Location", "/redfish/v1/Chassis/TestChassis");
@@ -352,8 +360,8 @@ void populateCollectionNotFound(crow::Response& resp)
 // from a satellite which will not have a json component
 void convertToSat(crow::Response& resp)
 {
-    resp.body() = resp.jsonValue.dump(2, ' ', true,
-                                      nlohmann::json::error_handler_t::replace);
+    resp.write(resp.jsonValue.dump(2, ' ', true,
+                                   nlohmann::json::error_handler_t::replace));
     resp.jsonValue.clear();
 }
 
@@ -495,7 +503,7 @@ TEST(processCollectionResponse, preserveHeaders)
 void assertProcessResponseContentType(std::string_view contentType)
 {
     crow::Response resp;
-    resp.body() = "responseBody";
+    resp.write("responseBody");
     resp.addHeader("Content-Type", contentType);
     resp.addHeader("Location", "/redfish/v1/Chassis/TestChassis");
     resp.addHeader("Link", "metadataLink");
@@ -508,7 +516,7 @@ void assertProcessResponseContentType(std::string_view contentType)
               "/redfish/v1/Chassis/prefix_TestChassis");
     EXPECT_EQ(asyncResp->res.getHeaderValue("Link"), "");
     EXPECT_EQ(asyncResp->res.getHeaderValue("Retry-After"), "120");
-    EXPECT_EQ(asyncResp->res.body(), "responseBody");
+    EXPECT_EQ(*asyncResp->res.body(), "responseBody");
 }
 
 TEST(processResponse, DifferentContentType)
@@ -659,8 +667,8 @@ TEST(processContainsSubordinateResponse, addLinks)
     jsonValue["Test"]["@odata.id"] = "/redfish/v1/Test";
     jsonValue["TelemetryService"]["@odata.id"] = "/redfish/v1/TelemetryService";
     jsonValue["UpdateService"]["@odata.id"] = "/redfish/v1/UpdateService";
-    resp.body() = jsonValue.dump(2, ' ', true,
-                                 nlohmann::json::error_handler_t::replace);
+    resp.write(
+        jsonValue.dump(2, ' ', true, nlohmann::json::error_handler_t::replace));
 
     auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
     asyncResp->res.result(200);
@@ -702,8 +710,8 @@ TEST(processContainsSubordinateResponse, localNotOK)
     jsonValue["Test"]["@odata.id"] = "/redfish/v1/Test";
     jsonValue["TelemetryService"]["@odata.id"] = "/redfish/v1/TelemetryService";
     jsonValue["UpdateService"]["@odata.id"] = "/redfish/v1/UpdateService";
-    resp.body() = jsonValue.dump(2, ' ', true,
-                                 nlohmann::json::error_handler_t::replace);
+    resp.write(
+        jsonValue.dump(2, ' ', true, nlohmann::json::error_handler_t::replace));
 
     RedfishAggregator::processContainsSubordinateResponse("prefix", asyncResp,
                                                           resp);
@@ -770,8 +778,8 @@ TEST(processContainsSubordinateResponse, noValidLinks)
     nlohmann::json jsonValue;
     resp.addHeader("Content-Type", "application/json");
     jsonValue["@odata.id"] = "/redfish/v1";
-    resp.body() = jsonValue.dump(2, ' ', true,
-                                 nlohmann::json::error_handler_t::replace);
+    resp.write(
+        jsonValue.dump(2, ' ', true, nlohmann::json::error_handler_t::replace));
 
     RedfishAggregator::processContainsSubordinateResponse("prefix", asyncResp,
                                                           resp);
@@ -789,8 +797,8 @@ TEST(processContainsSubordinateResponse, noValidLinks)
     jsonValue["Test"]["@odata.id"] = "/redfish/v1/Test";
     jsonValue["TelemetryService"]["@odata.id"] = "/redfish/v1/TelemetryService";
     jsonValue["UpdateService"]["@odata.id"] = "/redfish/v1/UpdateService";
-    resp.body() = jsonValue.dump(2, ' ', true,
-                                 nlohmann::json::error_handler_t::replace);
+    resp.write(
+        jsonValue.dump(2, ' ', true, nlohmann::json::error_handler_t::replace));
 
     RedfishAggregator::processContainsSubordinateResponse("prefix", asyncResp,
                                                           resp);

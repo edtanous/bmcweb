@@ -8,15 +8,16 @@ else
   conf_data.set('FIRMWARE_IMAGE_LIMIT_MB', get_option('firmware-image-limit'))
 endif
 xss_enabled = get_option('insecure-disable-xss')
-conf_data.set10('BMCWEB_INSECURE_DISABLE_XSS_PREVENTION', xss_enabled.enabled())
+conf_data.set10('BMCWEB_INSECURE_DISABLE_XSS_PREVENTION', xss_enabled.allowed())
 enable_redfish_query = get_option('insecure-enable-redfish-query')
-conf_data.set10('BMCWEB_INSECURE_ENABLE_QUERY_PARAMS', enable_redfish_query.enabled())
+conf_data.set10('BMCWEB_INSECURE_ENABLE_QUERY_PARAMS', enable_redfish_query.allowed())
 # enable_redfish_aggregation = get_option('redfish-aggregation')
-# conf_data.set10('BMCWEB_ENABLE_REDFISH_AGGREGATION', enable_redfish_aggregation.enabled())
+# conf_data.set10('BMCWEB_ENABLE_REDFISH_AGGREGATION', enable_redfish_aggregation.allowed())
 insecure_push_style_notification = get_option('insecure-push-style-notification')
-conf_data.set10('BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING', insecure_push_style_notification.enabled())
+conf_data.set10('BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING', insecure_push_style_notification.allowed())
 conf_data.set('MESON_INSTALL_PREFIX', get_option('prefix'))
 conf_data.set('HTTPS_PORT', get_option('https_port'))
+<<<<<<< HEAD
 conf_data.set('STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND', get_option('stalesensor-upper-limit-milisecond'))
 conf_data.set('PLATFORM_METRICS_SENSING_INTERVAL', get_option('platform-metrics-sensing-interval'))
 conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-location'))
@@ -53,10 +54,14 @@ enable_health_populate = get_option('redfish-health-populate')
 conf_data.set10('BMCWEB_ENABLE_HEALTH_POPULATE', enable_health_populate.enabled())
 enable_proc_mem_status = get_option('redfish-enable-proccessor-memory-status')
 conf_data.set10('BMCWEB_ENABLE_PROC_MEM_STATUS', enable_proc_mem_status.enabled())
+=======
+>>>>>>> master
 enable_multi_host = get_option('experimental-redfish-multi-computer-system')
-conf_data.set10('BMCWEB_ENABLE_MULTI_HOST', enable_multi_host.enabled())
+conf_data.set10('BMCWEB_ENABLE_MULTI_HOST', enable_multi_host.allowed())
 enable_http2 = get_option('experimental-http2')
-conf_data.set10('BMCWEB_ENABLE_HTTP2', enable_http2.enabled())
+conf_data.set10('BMCWEB_ENABLE_HTTP2', enable_http2.allowed())
+conf_data.set10('BMCWEB_ENABLE_MTLS_COMMON_NAME_PARSING_META', get_option('mutual-tls-common-name-parsing') == 'meta')
+
 
 # Logging level
 loglvlopt = get_option('bmcweb-logging')
@@ -97,4 +102,3 @@ install_data(
   install_dir: '/etc/pam.d/',
   rename: 'webserver',
 )
-

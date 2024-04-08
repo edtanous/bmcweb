@@ -1,5 +1,5 @@
 {
-    "$id": "http://redfish.dmtf.org/schemas/v1/Chassis.v1_23_0.json",
+    "$id": "http://redfish.dmtf.org/schemas/v1/Chassis.v1_25_0.json",
     "$ref": "#/definitions/Chassis",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
     "copyright": "Copyright 2014-2023 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
@@ -108,7 +108,7 @@
                 },
                 "DepthMm": {
                     "description": "The depth of the chassis.",
-                    "longDescription": "This property shall represent the depth (length) of the chassis, in millimeters, as specified by the manufacturer.",
+                    "longDescription": "This property shall represent the depth (length) of the chassis, in millimeter units, as specified by the manufacturer.",
                     "minimum": 0,
                     "readonly": true,
                     "type": [
@@ -129,6 +129,12 @@
                     ],
                     "readonly": true
                 },
+                "Doors": {
+                    "$ref": "#/definitions/Doors",
+                    "description": "The doors or access panels of the chassis.",
+                    "longDescription": "This property shall contain information about the doors or access panels of the chassis.",
+                    "versionAdded": "v1_24_0"
+                },
                 "Drives": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/DriveCollection.json#/definitions/DriveCollection",
                     "description": "The link to the collection of drives within this chassis.",
@@ -136,7 +142,7 @@
                     "versionAdded": "v1_14_0"
                 },
                 "ElectricalSourceManagerURIs": {
-                    "description": "The URIs of the management interfaces for the upstream electrical source connections for this chassis.",
+                    "description": "The URIs of the management interfaces for the external electrical source connections for this chassis.",
                     "format": "uri-reference",
                     "items": {
                         "type": [
@@ -144,20 +150,20 @@
                             "null"
                         ]
                     },
-                    "longDescription": "This property shall contain an array of URIs to the management applications or devices that provide monitoring or control of the upstream electrical sources that provide power to this chassis.",
+                    "longDescription": "This property shall contain an array of URIs to the management applications or devices that provide monitoring or control of the external electrical sources that provide power to this chassis.",
                     "readonly": false,
                     "type": "array",
                     "versionAdded": "v1_18_0"
                 },
                 "ElectricalSourceNames": {
-                    "description": "The names of the upstream electrical sources, such as circuits or outlets, connected to this chassis.",
+                    "description": "The names of the external electrical sources, such as circuits or outlets, connected to this chassis.",
                     "items": {
                         "type": [
                             "string",
                             "null"
                         ]
                     },
-                    "longDescription": "This property shall contain an arrays of strings that identify the upstream electrical sources, such as the names of circuits or outlets, that provide power to this chassis.",
+                    "longDescription": "This property shall contain an array of strings that identify the external electrical sources, such as the names of circuits or outlets, that provide power to this chassis.",
                     "readonly": false,
                     "type": "array",
                     "versionAdded": "v1_18_0"
@@ -190,9 +196,36 @@
                     "readonly": true,
                     "versionAdded": "v1_20_0"
                 },
+                "HeatingCoolingEquipmentNames": {
+                    "description": "The names of the external heating or cooling equipment, such as coolant distribution units, connected to this chassis.",
+                    "items": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "longDescription": "This property shall contain an array of strings that identify the external heating or cooling equipment, such as the names of specific coolant distribution units, that provide thermal management for this chassis.",
+                    "readonly": false,
+                    "type": "array",
+                    "versionAdded": "v1_25_0"
+                },
+                "HeatingCoolingManagerURIs": {
+                    "description": "The URIs of the management interfaces for the external heating or cooling equipment for this chassis.",
+                    "format": "uri-reference",
+                    "items": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "longDescription": "This property shall contain an array of URIs to the management applications or devices that provide monitoring or control of the external heating or cooling equipment that provide thermal management for this chassis.",
+                    "readonly": false,
+                    "type": "array",
+                    "versionAdded": "v1_25_0"
+                },
                 "HeightMm": {
                     "description": "The height of the chassis.",
-                    "longDescription": "This property shall represent the height of the chassis, in millimeters, as specified by the manufacturer.",
+                    "longDescription": "This property shall represent the height of the chassis, in millimeter units, as specified by the manufacturer.",
                     "minimum": 0,
                     "readonly": true,
                     "type": [
@@ -239,7 +272,7 @@
                 "Location": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/Resource.json#/definitions/Location",
                     "description": "The location of the chassis.",
-                    "longDescription": "This property shall contain location information of the associated chassis.",
+                    "longDescription": "This property shall contain the location information of the associated chassis.",
                     "versionAdded": "v1_2_0"
                 },
                 "LocationIndicatorActive": {
@@ -357,10 +390,12 @@
                 },
                 "PCIeSlots": {
                     "$ref": "http://redfish.dmtf.org/schemas/v1/PCIeSlots.json#/definitions/PCIeSlots",
+                    "deprecated": "This property has been deprecated in favor of the PCIeDevices property.  The PCIeSlots schema has been deprecated in favor of the PCIeDevice schema.  Empty PCIe slots are represented by PCIeDevice resources using the `Absent` value of the State property within Status.",
                     "description": "The link to the PCIe slot properties for this chassis.",
                     "longDescription": "This property shall contain a link to the resource of type PCIeSlots that represents the PCIe slot information for this chassis.",
                     "readonly": true,
-                    "versionAdded": "v1_8_0"
+                    "versionAdded": "v1_8_0",
+                    "versionDeprecated": "v1_24_0"
                 },
                 "PartNumber": {
                     "description": "The part number of the chassis.",
@@ -425,7 +460,7 @@
                 },
                 "Replaceable": {
                     "description": "An indication of whether this component can be independently replaced as allowed by the vendor's replacement policy.",
-                    "longDescription": "This property shall indicate whether this component can be independently replaced as allowed by the vendor's replacement policy.  A value of `false` indicates the component needs to be replaced by policy, as part of another component.  If the `LocationType` property of this component contains `Embedded`, this property shall contain `false`.",
+                    "longDescription": "This property shall indicate whether this component can be independently replaced as allowed by the vendor's replacement policy.  A value of `false` indicates the component needs to be replaced by policy as part of another component.  If the `LocationType` property of this component contains `Embedded`, this property shall contain `false`.",
                     "readonly": true,
                     "type": [
                         "boolean",
@@ -529,7 +564,7 @@
                         }
                     ],
                     "description": "The UUID for this chassis.",
-                    "longDescription": "This property shall contain the universal unique identifier number for this chassis.",
+                    "longDescription": "This property shall contain the universally unique identifier number for this chassis.",
                     "readonly": true,
                     "versionAdded": "v1_7_0"
                 },
@@ -545,7 +580,7 @@
                 },
                 "WeightKg": {
                     "description": "The weight of the chassis.",
-                    "longDescription": "This property shall represent the published mass, commonly referred to as weight, of the chassis, in kilograms.",
+                    "longDescription": "This property shall represent the published mass, commonly referred to as weight, of the chassis, in kilogram units.",
                     "minimum": 0,
                     "readonly": true,
                     "type": [
@@ -557,7 +592,7 @@
                 },
                 "WidthMm": {
                     "description": "The width of the chassis.",
-                    "longDescription": "This property shall represent the width of the chassis, in millimeters, as specified by the manufacturer.",
+                    "longDescription": "This property shall represent the width of the chassis, in millimeter units, as specified by the manufacturer.",
                     "minimum": 0,
                     "readonly": true,
                     "type": [
@@ -601,6 +636,7 @@
                 "StorageEnclosure",
                 "ImmersionTank",
                 "HeatExchanger",
+                "PowerStrip",
                 "Other"
             ],
             "enumDescriptions": {
@@ -617,6 +653,7 @@
                 "Module": "A small, typically removable, chassis or card that contains devices for a particular subsystem or function.",
                 "Other": "A chassis that does not fit any of these definitions.",
                 "Pod": "A collection of equipment racks in a large, likely transportable, container.",
+                "PowerStrip": "A power strip, typically placed in the zero-U space of a rack.",
                 "Rack": "An equipment rack, typically a 19-inch wide freestanding unit.",
                 "RackGroup": "A group of racks that form a single entity or share infrastructure.",
                 "RackMount": "A single-system chassis designed specifically for mounting in an equipment rack.",
@@ -632,10 +669,133 @@
                 "HeatExchanger": "v1_23_0",
                 "IPBasedDrive": "v1_3_0",
                 "ImmersionTank": "v1_23_0",
+                "PowerStrip": "v1_25_0",
                 "RackGroup": "v1_4_0",
                 "StorageEnclosure": "v1_6_0"
             },
             "type": "string"
+        },
+        "Door": {
+            "additionalProperties": false,
+            "description": "A door or access panel on the chassis.",
+            "longDescription": "This type shall describe a door or access panel on the chassis.",
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "DoorState": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/DoorState"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "description": "The state of the door.",
+                    "longDescription": "This property shall contain the current state of the door.",
+                    "readonly": true,
+                    "versionAdded": "v1_24_0"
+                },
+                "Locked": {
+                    "description": "Indicates if the door is locked.",
+                    "longDescription": "This property shall indicate if the door is locked.",
+                    "readonly": false,
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "versionAdded": "v1_24_0"
+                },
+                "UserLabel": {
+                    "description": "A user-assigned label.",
+                    "longDescription": "This property shall contain a user-assigned label used to identify this resource.  If a value has not been assigned by a user, the value of this property shall be an empty string.",
+                    "readonly": false,
+                    "type": "string",
+                    "versionAdded": "v1_24_0"
+                }
+            },
+            "type": "object"
+        },
+        "DoorState": {
+            "enum": [
+                "Locked",
+                "Closed",
+                "LockedAndOpen",
+                "Open"
+            ],
+            "enumDescriptions": {
+                "Closed": "Door is closed.",
+                "Locked": "Door is closed and locked.",
+                "LockedAndOpen": "Door is open and locked.",
+                "Open": "Door is open."
+            },
+            "enumLongDescriptions": {
+                "Closed": "This value shall indicate that the door is closed but unlocked.",
+                "Locked": "This value shall indicate that the door is both closed and locked.  In this state, the door cannot be opened unless the value of the Locked property is set to `false`.",
+                "LockedAndOpen": "This value shall indicate that the door is open but the lock has been engaged.  It may be possible to close the door while in this state.",
+                "Open": "This value shall indicate that the door is open."
+            },
+            "type": "string"
+        },
+        "Doors": {
+            "additionalProperties": false,
+            "description": "The doors or access panels of the chassis.",
+            "longDescription": "This type shall describe the doors or access panels of the chassis.",
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "Front": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/Door"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "description": "The front door of the chassis.",
+                    "longDescription": "This property shall contain information related to the front door, as defined by the manufacturer, of the chassis.",
+                    "versionAdded": "v1_24_0"
+                },
+                "Rear": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/Door"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "description": "The rear door of the chassis.",
+                    "longDescription": "This property shall contain information related to the rear door, as defined by the manufacturer, of the chassis.",
+                    "versionAdded": "v1_24_0"
+                }
+            },
+            "type": "object"
         },
         "EnvironmentalClass": {
             "enum": [
@@ -660,7 +820,7 @@
                 "Off"
             ],
             "enumDeprecated": {
-                "Unknown": "This value has been deprecated in favor of returning null if the state is unknown."
+                "Unknown": "This value has been deprecated in favor of returning `null` if the state is unknown."
             },
             "enumDescriptions": {
                 "Blinking": "The indicator LED is blinking.",
@@ -797,7 +957,7 @@
                     "$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/count"
                 },
                 "CoolingUnits": {
-                    "description": "An arrays of links to cooling unit functionality contained in this chassis.",
+                    "description": "An array of links to cooling unit functionality contained in this chassis.",
                     "items": {
                         "$ref": "http://redfish.dmtf.org/schemas/v1/CoolingUnit.json#/definitions/CoolingUnit"
                     },
@@ -919,7 +1079,7 @@
                     "items": {
                         "$ref": "http://redfish.dmtf.org/schemas/v1/PowerSupply.json#/definitions/PowerSupply"
                     },
-                    "longDescription": "This property shall contain an array of links to resources of type PowerSupply that represent the power supplies that provide power to this chassis.  This property shall not be present if the PoweredByParent property contains `true` or the power supplies are contained in the PowerSubsystem resource for this chassis.",
+                    "longDescription": "This property shall contain an array of links to resources of type PowerSupply that represent the power supplies that provide power to this chassis.  This property shall not be present if the PoweredByParent property contains `true` or if the power supplies are contained in the PowerSubsystem resource for this chassis.",
                     "readonly": true,
                     "type": "array",
                     "versionAdded": "v1_20_0"
@@ -959,7 +1119,7 @@
                     "items": {
                         "$ref": "http://redfish.dmtf.org/schemas/v1/ResourceBlock.json#/definitions/ResourceBlock"
                     },
-                    "longDescription": "This property shall contain an array of links of to resources of type ResourceBlock that this chassis contains.",
+                    "longDescription": "This property shall contain an array of links to resources of type ResourceBlock that this chassis contains.",
                     "readonly": true,
                     "type": "array",
                     "versionAdded": "v1_5_0"
@@ -1073,7 +1233,7 @@
                     ],
                     "description": "The policy that describes how the physical security state of the chassis returns to a normal state.",
                     "longDescription": "This property shall contain the policy that describes how the IntrusionSensor property returns to the `Normal` value.",
-                    "readonly": true,
+                    "readonly": false,
                     "versionAdded": "v1_1_0"
                 }
             },
@@ -1140,6 +1300,6 @@
         }
     },
     "owningEntity": "DMTF",
-    "release": "2023.1",
-    "title": "#Chassis.v1_23_0.Chassis"
+    "release": "2023.3",
+    "title": "#Chassis.v1_25_0.Chassis"
 }

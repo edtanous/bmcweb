@@ -6,6 +6,7 @@
 #include "generated/enums/pcie_device.hpp"
 #include "generated/enums/pcie_slots.hpp"
 #include "http/utility.hpp"
+#include "utils/collection.hpp"
 
 #include <boost/system/error_code.hpp>
 #include <boost/url/format.hpp>
@@ -34,11 +35,14 @@ namespace pcie_util
 
 inline void
     getPCIeDeviceList(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                      const std::string& name)
+                      const nlohmann::json::json_pointer& jsonKeyName)
 {
     static constexpr std::array<std::string_view, 1> pcieDeviceInterface = {
         "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
+    const boost::urls::url pcieDeviceUrl =
+        boost::urls::url("/redfish/v1/Systems/system/PCIeDevices");
 
+<<<<<<< HEAD
     dbus::utility::getSubTreePaths(
         "/xyz/openbmc_project/inventory", 0, pcieDeviceInterface,
         [asyncResp, name](const boost::system::error_code& ec,
@@ -73,6 +77,11 @@ inline void
         }
         asyncResp->res.jsonValue[name + "@odata.count"] = pcieDeviceList.size();
     });
+=======
+    collection_util::getCollectionToKey(
+        asyncResp, pcieDeviceUrl, pcieDeviceInterface,
+        "/xyz/openbmc_project/inventory", jsonKeyName);
+>>>>>>> master
 }
 
 inline std::optional<pcie_slots::SlotTypes>

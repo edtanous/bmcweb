@@ -471,13 +471,12 @@ inline void handleReplaceCertificateAction(
         return;
     }
     std::string certificate;
-    nlohmann::json certificateUri;
+    std::string certURI;
     std::optional<std::string> certificateType = "PEM";
 
     if (!json_util::readJsonAction(req, asyncResp->res, "CertificateString",
-                                   certificate, "CertificateUri",
-                                   certificateUri, "CertificateType",
-                                   certificateType))
+                                   certificate, "CertificateUri/@odata.id",
+                                   certURI, "CertificateType", certificateType))
     {
         BMCWEB_LOG_ERROR("Required parameters are missing");
         return;
@@ -495,14 +494,6 @@ inline void handleReplaceCertificateAction(
         return;
     }
 
-    std::string certURI;
-    if (!redfish::json_util::readJson(certificateUri, asyncResp->res,
-                                      "@odata.id", certURI))
-    {
-        messages::actionParameterMissing(asyncResp->res, "ReplaceCertificate",
-                                         "CertificateUri");
-        return;
-    }
     BMCWEB_LOG_INFO("Certificate URI to replace: {}", certURI);
 
     boost::system::result<boost::urls::url> parsedUrl =
@@ -583,7 +574,7 @@ static std::unique_ptr<sdbusplus::bus::match_t> csrMatcher;
  * @brief Read data from CSR D-bus object and set to response
  *
  * @param[in] asyncResp Shared pointer to the response message
- * @param[in] certURI Link to certifiate collection URI
+ * @param[in] certURI Link to certificate collection URI
  * @param[in] service D-Bus service name
  * @param[in] certObjPath certificate D-Bus object path
  * @param[in] csrObjPath CSR D-Bus object path
@@ -635,7 +626,7 @@ inline void
     std::string organization;
     std::string organizationalUnit;
     std::string state;
-    nlohmann::json certificateCollection;
+    std::string certURI;
 
     // Optional parameters
     std::optional<std::vector<std::string>> optAlternativeNames =
@@ -656,13 +647,14 @@ inline void
             req, asyncResp->res, "City", city, "CommonName", commonName,
             "ContactPerson", optContactPerson, "Country", country,
             "Organization", organization, "OrganizationalUnit",
-            organizationalUnit, "State", state, "CertificateCollection",
-            certificateCollection, "AlternativeNames", optAlternativeNames,
-            "ChallengePassword", optChallengePassword, "Email", optEmail,
-            "GivenName", optGivenName, "Initials", optInitials, "KeyBitLength",
-            optKeyBitLength, "KeyCurveId", optKeyCurveId, "KeyPairAlgorithm",
-            optKeyPairAlgorithm, "KeyUsage", optKeyUsage, "Surname", optSurname,
-            "UnstructuredName", optUnstructuredName))
+            organizationalUnit, "State", state,
+            "CertificateCollection/@odata.id", certURI, "AlternativeNames",
+            optAlternativeNames, "ChallengePassword", optChallengePassword,
+            "Email", optEmail, "GivenName", optGivenName, "Initials",
+            optInitials, "KeyBitLength", optKeyBitLength, "KeyCurveId",
+            optKeyCurveId, "KeyPairAlgorithm", optKeyPairAlgorithm, "KeyUsage",
+            optKeyUsage, "Surname", optSurname, "UnstructuredName",
+            optUnstructuredName))
     {
         return;
     }
@@ -675,13 +667,6 @@ inline void
     {
         messages::actionParameterNotSupported(asyncResp->res, "GenerateCSR",
                                               "ChallengePassword");
-        return;
-    }
-
-    std::string certURI;
-    if (!redfish::json_util::readJson(certificateCollection, asyncResp->res,
-                                      "@odata.id", certURI))
-    {
         return;
     }
 
@@ -912,9 +897,9 @@ inline void handleHTTPSCertificateCollectionPost(
     asyncResp->res.jsonValue["Name"] = "HTTPS Certificate";
     asyncResp->res.jsonValue["Description"] = "HTTPS Certificate";
 
-    std::string certFileBody = getCertificateFromReqBody(asyncResp, req);
+    std::string certHttpBody = getCertificateFromReqBody(asyncResp, req);
 
-    if (certFileBody.empty())
+    if (certHttpBody.empty())
     {
         BMCWEB_LOG_ERROR("Cannot get certificate from request body.");
         messages::unrecognizedRequestBody(asyncResp->res);
@@ -922,7 +907,7 @@ inline void handleHTTPSCertificateCollectionPost(
     }
 
     std::shared_ptr<CertificateFile> certFile =
-        std::make_shared<CertificateFile>(certFileBody);
+        std::make_shared<CertificateFile>(certHttpBody);
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, certFile](const boost::system::error_code& ec,
@@ -1019,9 +1004,9 @@ inline void handleLDAPCertificateCollectionPost(
     {
         return;
     }
-    std::string certFileBody = getCertificateFromReqBody(asyncResp, req);
+    std::string certHttpBody = getCertificateFromReqBody(asyncResp, req);
 
-    if (certFileBody.empty())
+    if (certHttpBody.empty())
     {
         BMCWEB_LOG_ERROR("Cannot get certificate from request body.");
         messages::unrecognizedRequestBody(asyncResp->res);
@@ -1029,7 +1014,7 @@ inline void handleLDAPCertificateCollectionPost(
     }
 
     std::shared_ptr<CertificateFile> certFile =
-        std::make_shared<CertificateFile>(certFileBody);
+        std::make_shared<CertificateFile>(certHttpBody);
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, certFile](const boost::system::error_code& ec,
@@ -1141,9 +1126,9 @@ inline void handleTrustStoreCertificateCollectionPost(
     {
         return;
     }
-    std::string certFileBody = getCertificateFromReqBody(asyncResp, req);
+    std::string certHttpBody = getCertificateFromReqBody(asyncResp, req);
 
-    if (certFileBody.empty())
+    if (certHttpBody.empty())
     {
         BMCWEB_LOG_ERROR("Cannot get certificate from request body.");
         messages::unrecognizedRequestBody(asyncResp->res);
@@ -1151,7 +1136,7 @@ inline void handleTrustStoreCertificateCollectionPost(
     }
 
     std::shared_ptr<CertificateFile> certFile =
-        std::make_shared<CertificateFile>(certFileBody);
+        std::make_shared<CertificateFile>(certHttpBody);
     crow::connections::systemBus->async_method_call(
         [asyncResp, certFile](const boost::system::error_code& ec,
                               const std::string& objectPath) {

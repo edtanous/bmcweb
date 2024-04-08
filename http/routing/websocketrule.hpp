@@ -36,9 +36,9 @@ class WebSocketRule : public BaseRule
             crow::websocket::ConnectionImpl<boost::asio::ip::tcp::socket>>
             myConnection = std::make_shared<
                 crow::websocket::ConnectionImpl<boost::asio::ip::tcp::socket>>(
-                req, req.url(), std::move(adaptor), openHandler, messageHandler,
-                messageExHandler, closeHandler, errorHandler);
-        myConnection->start();
+                req.url(), req.session, std::move(adaptor), openHandler,
+                messageHandler, messageExHandler, closeHandler, errorHandler);
+        myConnection->start(req);
     }
     void handleUpgrade(const Request& req,
                        const std::shared_ptr<bmcweb::AsyncResp>& /*asyncResp*/,
@@ -50,9 +50,9 @@ class WebSocketRule : public BaseRule
             boost::beast::ssl_stream<boost::asio::ip::tcp::socket>>>
             myConnection = std::make_shared<crow::websocket::ConnectionImpl<
                 boost::beast::ssl_stream<boost::asio::ip::tcp::socket>>>(
-                req, req.url(), std::move(adaptor), openHandler, messageHandler,
-                messageExHandler, closeHandler, errorHandler);
-        myConnection->start();
+                req.url(), req.session, std::move(adaptor), openHandler,
+                messageHandler, messageExHandler, closeHandler, errorHandler);
+        myConnection->start(req);
     }
 
     template <typename Func>

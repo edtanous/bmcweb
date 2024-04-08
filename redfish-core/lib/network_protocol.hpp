@@ -101,7 +101,7 @@ void getEthernetIfaceData(CallbackFunc&& callback)
     sdbusplus::message::object_path path("/xyz/openbmc_project/network");
     dbus::utility::getManagedObjects(
         "xyz.openbmc_project.Network", path,
-        [callback{std::forward<CallbackFunc>(callback)}](
+        [callback = std::forward<CallbackFunc>(callback)](
             const boost::system::error_code& ec,
             const dbus::utility::ManagedObjectType& dbusData) {
         std::vector<std::string> ntpServers;
@@ -325,21 +325,17 @@ inline void
         {
             if (!ntpServerObject->empty())
             {
-                messages::propertyValueNotInList(
-                    asyncResp->res,
-                    ntpServer.dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace),
-                    "NTP/NTPServers/" + std::to_string(index));
+                messages::propertyValueNotInList(asyncResp->res, ntpServer,
+                                                 "NTP/NTPServers/" +
+                                                     std::to_string(index));
                 return;
             }
             // Can't retain an item that doesn't exist
             if (currentNtpServer == currentNtpServers.end())
             {
-                messages::propertyValueOutOfRange(
-                    asyncResp->res,
-                    ntpServer.dump(2, ' ', true,
-                                   nlohmann::json::error_handler_t::replace),
-                    "NTP/NTPServers/" + std::to_string(index));
+                messages::propertyValueOutOfRange(asyncResp->res, ntpServer,
+                                                  "NTP/NTPServers/" +
+                                                      std::to_string(index));
 
                 return;
             }
@@ -352,11 +348,9 @@ inline void
             ntpServer.get_ptr<const std::string*>();
         if (ntpServerStr == nullptr)
         {
-            messages::propertyValueTypeError(
-                asyncResp->res,
-                ntpServer.dump(2, ' ', true,
-                               nlohmann::json::error_handler_t::replace),
-                "NTP/NTPServers/" + std::to_string(index));
+            messages::propertyValueTypeError(asyncResp->res, ntpServer,
+                                             "NTP/NTPServers/" +
+                                                 std::to_string(index));
             return;
         }
         if (currentNtpServer == currentNtpServers.end())
@@ -435,7 +429,7 @@ inline void
 
         for (const auto& entry : subtree)
         {
-            if (boost::algorithm::starts_with(entry.first, netBasePath))
+            if (entry.first.starts_with(netBasePath))
             {
                 sdbusplus::asio::setProperty(
                     *crow::connections::systemBus, entry.second.begin()->first,

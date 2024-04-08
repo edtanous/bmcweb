@@ -12,6 +12,7 @@ enum class MFABypassType{
     GoogleAuthenticator,
     MicrosoftAuthenticator,
     ClientCertificate,
+    OneTimePasscode,
     OEM,
 };
 
@@ -63,6 +64,13 @@ enum class CertificateMappingAttribute{
     UserPrincipalName,
 };
 
+enum class BasicAuthState{
+    Invalid,
+    Enabled,
+    Unadvertised,
+    Disabled,
+};
+
 NLOHMANN_JSON_SERIALIZE_ENUM(MFABypassType, {
     {MFABypassType::Invalid, "Invalid"},
     {MFABypassType::All, "All"},
@@ -70,6 +78,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(MFABypassType, {
     {MFABypassType::GoogleAuthenticator, "GoogleAuthenticator"},
     {MFABypassType::MicrosoftAuthenticator, "MicrosoftAuthenticator"},
     {MFABypassType::ClientCertificate, "ClientCertificate"},
+    {MFABypassType::OneTimePasscode, "OneTimePasscode"},
     {MFABypassType::OEM, "OEM"},
 });
 
@@ -119,6 +128,13 @@ NLOHMANN_JSON_SERIALIZE_ENUM(CertificateMappingAttribute, {
     {CertificateMappingAttribute::Whole, "Whole"},
     {CertificateMappingAttribute::CommonName, "CommonName"},
     {CertificateMappingAttribute::UserPrincipalName, "UserPrincipalName"},
+});
+
+NLOHMANN_JSON_SERIALIZE_ENUM(BasicAuthState, {
+    {BasicAuthState::Invalid, "Invalid"},
+    {BasicAuthState::Enabled, "Enabled"},
+    {BasicAuthState::Unadvertised, "Unadvertised"},
+    {BasicAuthState::Disabled, "Disabled"},
 });
 
 }

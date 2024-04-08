@@ -1,12 +1,12 @@
 #pragma once
 
 #include "common.hpp"
+#include "http_body.hpp"
 #include "sessions.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/beast/http/message.hpp>
-#include <boost/beast/http/string_body.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/url/url.hpp>
 
@@ -19,22 +19,29 @@ namespace crow
 
 struct Request
 {
-    boost::beast::http::request<boost::beast::http::string_body> req;
+    boost::beast::http::request<bmcweb::HttpBody> req;
 
   private:
-    boost::urls::url urlBase{};
+    boost::urls::url urlBase;
 
   public:
     bool isSecure{false};
 
-    boost::asio::io_context* ioService{};
-    boost::asio::ip::address ipAddress{};
+    boost::asio::io_context* ioService = nullptr;
+    boost::asio::ip::address ipAddress;
 
     std::shared_ptr<persistent_data::UserSession> session;
 
+<<<<<<< HEAD
     std::string userRole{};
     Request(boost::beast::http::request<boost::beast::http::string_body> reqIn,
             std::error_code& ec) : req(std::move(reqIn))
+=======
+    std::string userRole;
+    Request(boost::beast::http::request<bmcweb::HttpBody> reqIn,
+            std::error_code& ec) :
+        req(std::move(reqIn))
+>>>>>>> master
     {
         if (!setUrlInfo())
         {
@@ -55,9 +62,34 @@ struct Request
 
     ~Request() = default;
 
+    void addHeader(std::string_view key, std::string_view value)
+    {
+        req.insert(key, value);
+    }
+
+    void addHeader(boost::beast::http::field key, std::string_view value)
+    {
+        req.insert(key, value);
+    }
+
+    void clear()
+    {
+        req.clear();
+        urlBase.clear();
+        isSecure = false;
+        ioService = nullptr;
+        ipAddress = boost::asio::ip::address();
+        session = nullptr;
+        userRole = "";
+    }
+
     boost::beast::http::verb method() const
     {
         return req.method();
+    }
+    void method(boost::beast::http::verb verb)
+    {
+        req.method(verb);
     }
 
     std::string_view getHeaderValue(std::string_view key) const
@@ -68,6 +100,11 @@ struct Request
     std::string_view getHeaderValue(boost::beast::http::field key) const
     {
         return req[key];
+    }
+
+    void clearHeader(boost::beast::http::field key)
+    {
+        req.erase(key);
     }
 
     std::string_view methodString() const
@@ -92,7 +129,7 @@ struct Request
 
     const std::string& body() const
     {
-        return req.body();
+        return req.body().str();
     }
 
     bool target(std::string_view target)

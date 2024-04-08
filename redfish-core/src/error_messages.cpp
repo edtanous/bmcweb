@@ -24,13 +24,16 @@
 
 #include <boost/beast/http/field.hpp>
 #include <boost/beast/http/status.hpp>
+#include <boost/url/url_view.hpp>
 #include <nlohmann/json.hpp>
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <source_location>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 
 // IWYU pragma: no_include <stddef.h>
@@ -917,17 +920,17 @@ void propertyValueExternalConflict(crow::Response& res, std::string_view arg1,
  * See header file for more information
  * @endinternal
  */
-nlohmann::json propertyValueIncorrect(const nlohmann::json& arg1,
-                                      std::string_view arg2)
+nlohmann::json propertyValueIncorrect(std::string_view arg1,
+                                      const nlohmann::json& arg2)
 {
-    std::string arg1Str = arg1.dump(2, ' ', true,
+    std::string arg2Str = arg2.dump(2, ' ', true,
                                     nlohmann::json::error_handler_t::replace);
     return getLog(redfish::registries::base::Index::propertyValueIncorrect,
-                  std::to_array<std::string_view>({arg1Str, arg2}));
+                  std::to_array<std::string_view>({arg1, arg2Str}));
 }
 
-void propertyValueIncorrect(crow::Response& res, const nlohmann::json& arg1,
-                            std::string_view arg2)
+void propertyValueIncorrect(crow::Response& res, std::string_view arg1,
+                            const nlohmann::json& arg2)
 {
     res.result(boost::beast::http::status::bad_request);
     addMessageToErrorJson(res.jsonValue, propertyValueIncorrect(arg1, arg2));

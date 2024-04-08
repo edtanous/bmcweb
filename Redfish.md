@@ -218,7 +218,6 @@ Fields common to all schemas
 - HotPluggable
 - Links/ComputerSystems
 - Links/ManagedBy
-- PCIeDevices
 - Power
   - Shall be included if component contains voltage/current sensing components,
     otherwise will be omitted.
@@ -242,7 +241,7 @@ Fields common to all schemas
 
 - Drives
 - Drives@odata.count
-- Status (this is dependant on a entity manager association from Chassis to
+- Status (this is dependent on a entity manager association from Chassis to
   Drives)
 
 ### /redfish/v1/Chassis/{ChassisId}/EnvironmentMetrics/
@@ -339,9 +338,12 @@ Fields common to all schemas
 #### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/ThermalMetrics/
 
 ##### ThermalMetrics
+<<<<<<< HEAD
 
 - TemperatureReadingsCelsius
 
+=======
+>>>>>>> master
 
 #### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Fans
 
@@ -630,6 +632,14 @@ other.
 #### ManagerDiagnosticData
 
 - ServiceRootUptimeSeconds
+- FreeStorageSpaceKiB
+- MemoryStatistics/AvailableBytes
+- MemoryStatistics/BuffersAndCacheBytes
+- MemoryStatistics/FreeBytes
+- MemoryStatistics/SharedBytes
+- MemoryStatistics/TotalBytes
+- ProcessorStatistics/KernelPercent
+- ProcessorStatistics/UserPercent
 
 ### /redfish/v1/Managers/bmc/NetworkProtocol/
 
@@ -951,6 +961,14 @@ other.
 - TotalCores
 - TotalThreads
 - Version
+
+### /redfish/v1/Systems/system/ResetActionInfo/
+
+#### ActionInfo
+
+- Parameters/AllowableValues
+- Parameters/DataType
+- Parameters/Required
 
 ### /redfish/v1/Systems/system/Storage/
 

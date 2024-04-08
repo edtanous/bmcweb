@@ -1,10 +1,6 @@
 #pragma once
 
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/constants.hpp>
-#include <boost/iterator/iterator_facade.hpp>
-#include <boost/type_index/type_index_facade.hpp>
-
+#include <algorithm>
 #include <cctype>
 #include <iomanip>
 #include <ostream>
@@ -45,8 +41,8 @@ constexpr std::array<ContentTypePair, 5> contentTypes{{
 }};
 
 inline ContentType
-    getPreferedContentType(std::string_view header,
-                           std::span<const ContentType> preferedOrder)
+    getPreferredContentType(std::string_view header,
+                            std::span<const ContentType> preferedOrder)
 {
     size_t lastIndex = 0;
     while (lastIndex < header.size() + 1)
@@ -103,7 +99,7 @@ inline bool isContentTypeAllowed(std::string_view header, ContentType type,
                                  bool allowWildcard)
 {
     auto types = std::to_array({type});
-    ContentType allowed = getPreferedContentType(header, types);
+    ContentType allowed = getPreferredContentType(header, types);
     if (allowed == ContentType::ANY)
     {
         return allowWildcard;

@@ -3,9 +3,17 @@
 #include "registries/base_message_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
 #include "str_utility.hpp"
+<<<<<<< HEAD
 #include "registries_selector.hpp"
+=======
+
+#include <algorithm>
+#include <cstring>
+>>>>>>> master
 #include <ranges>
+#include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace redfish::registries

@@ -471,7 +471,7 @@ inline std::string getDateTimeStdtime(std::time_t secondsSinceEpoch)
 
 /**
  * Returns the current Date, Time & the local Time Offset
- * infromation in a pair
+ * information in a pair
  *
  * @param[in] None
  *
@@ -484,7 +484,7 @@ inline std::pair<std::string, std::string> getDateTimeOffsetNow()
     std::string dateTime = getDateTimeStdtime(time);
 
     /* extract the local Time Offset value from the
-     * recevied dateTime string.
+     * received dateTime string.
      */
     std::string timeOffset("Z00:00");
     std::size_t lastPos = dateTime.size();
@@ -497,6 +497,7 @@ inline std::pair<std::string, std::string> getDateTimeOffsetNow()
     return std::make_pair(dateTime, timeOffset);
 }
 
+<<<<<<< HEAD
 inline std::time_t getTimestamp(uint64_t millisTimeStamp)
 {
     // Retrieve Created property with format:
@@ -508,6 +509,9 @@ inline std::time_t getTimestamp(uint64_t millisTimeStamp)
 }
 
 using usSinceEpoch = std::chrono::duration<uint64_t, std::micro>;
+=======
+using usSinceEpoch = std::chrono::duration<int64_t, std::micro>;
+>>>>>>> master
 std::optional<usSinceEpoch> dateStringToEpoch(std::string_view datetime);
 } // namespace time_utils
 } // namespace redfish

@@ -64,17 +64,18 @@ constexpr const int gpuIndexStart = @GPU_INDEX_START@;
 
 constexpr const char* bmcwebLoggingLevel = "@BMCWEB_LOGGING_LEVEL@";
 
-constexpr const bool bmcwebEnableHealthPopulate = @BMCWEB_ENABLE_HEALTH_POPULATE@ == 1;
-
-constexpr const bool bmcwebEnableProcMemStatus = @BMCWEB_ENABLE_PROC_MEM_STATUS@ == 1;
-
 constexpr const bool bmcwebEnableMultiHost = @BMCWEB_ENABLE_MULTI_HOST@ == 1;
 
 constexpr const bool bmcwebEnableHTTP2 = @BMCWEB_ENABLE_HTTP2@ == 1;
+<<<<<<< HEAD
 constexpr const char* tlsCaCertificatePath = "@TLS_CACERT_PATH@";
 constexpr const char *redfishAggregationPrefix = @REDFISH_AGGREGATION_PREFIX@;
 constexpr const char *rfaHmcUpdateTarget = @RFA_HMC_UPDATE_TARGET@;
 constexpr const char *rfaBmcHostURL = @RFA_BMC_HOST_URL@;
 constexpr const int rfaDeferSubscribeTime = @RFA_SUBSCRIBE_TIME@;
 
+=======
+
+constexpr const bool bmcwebMTLSCommonNameParsingMeta = @BMCWEB_ENABLE_MTLS_COMMON_NAME_PARSING_META@ == 1;
+>>>>>>> master
 // clang-format on

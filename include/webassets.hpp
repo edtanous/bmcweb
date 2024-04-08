@@ -6,7 +6,6 @@
 #include "routing.hpp"
 #include "webroutes.hpp"
 
-#include <boost/algorithm/string/replace.hpp>
 #include <boost/container/flat_set.hpp>
 
 #include <filesystem>
@@ -165,17 +164,13 @@ inline void requestRoutes(App& app)
                 }
 
                 // res.set_header("Cache-Control", "public, max-age=86400");
-                std::ifstream inf(absolutePath);
-                if (!inf)
+                if (!asyncResp->res.openFile(absolutePath))
                 {
                     BMCWEB_LOG_DEBUG("failed to read file");
                     asyncResp->res.result(
                         boost::beast::http::status::internal_server_error);
                     return;
                 }
-
-                asyncResp->res.body() = {std::istreambuf_iterator<char>(inf),
-                                         std::istreambuf_iterator<char>()};
             });
         }
     }

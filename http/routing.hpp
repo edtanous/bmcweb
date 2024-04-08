@@ -320,7 +320,7 @@ class Trie
                     case ParamType::PATH:
                         BMCWEB_LOG_DEBUG("<path>");
                         break;
-                    case ParamType::MAX:
+                    default:
                         BMCWEB_LOG_DEBUG("<ERROR>");
                         break;
                 }
@@ -432,7 +432,7 @@ class Router
             allRules.emplace_back(std::move(ruleObject));
             return *ptr;
         }
-        static_assert(numArgs < 5, "Max number of args supported is 5");
+        static_assert(numArgs <= 5, "Max number of args supported is 5");
     }
 
     void internalAddRuleObject(const std::string& rule, BaseRule* ruleObject)
@@ -611,7 +611,7 @@ class Router
         // appear to work with the std::move on adaptor.
         validatePrivilege(
             req, asyncResp, rule,
-            [&rule, asyncResp, adaptor(std::forward<Adaptor>(adaptor))](
+            [&rule, asyncResp, adaptor = std::forward<Adaptor>(adaptor)](
                 Request& thisReq) mutable {
             rule.handleUpgrade(thisReq, asyncResp, std::move(adaptor));
         });

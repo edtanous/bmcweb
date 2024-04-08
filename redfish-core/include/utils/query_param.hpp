@@ -11,7 +11,6 @@
 
 #include <sys/types.h>
 
-#include <boost/algorithm/string/classification.hpp>
 #include <boost/beast/http/message.hpp> // IWYU pragma: keep
 #include <boost/beast/http/status.hpp>
 #include <boost/beast/http/verb.hpp>
@@ -181,7 +180,10 @@ struct Query
     std::optional<size_t> top = std::nullopt;
 
     // Select
-    SelectTrie selectTrie = {};
+    // Unclear how to make this use structured initialization without this.
+    // Might be a tidy bug?  Ignore for now
+    // NOLINTNEXTLINE(readability-redundant-member-init)
+    SelectTrie selectTrie{};
 };
 
 // The struct defines how resource handlers in redfish-core/lib/ can handle
@@ -512,7 +514,6 @@ inline bool processOnly(crow::App& app, crow::Response& res,
     BMCWEB_LOG_DEBUG("setting completion handler on {}",
                      logPtr(&asyncResp->res));
     asyncResp->res.setCompleteRequestHandler(std::move(completionHandler));
-    asyncResp->res.setIsAliveHelper(res.releaseIsAliveHelper());
     app.handle(newReq, asyncResp);
     return true;
 }
@@ -522,7 +523,7 @@ struct ExpandNode
     nlohmann::json::json_pointer location;
     std::string uri;
 
-    inline bool operator==(const ExpandNode& other) const
+    bool operator==(const ExpandNode& other) const
     {
         return location == other.location && uri == other.uri;
     }
@@ -689,7 +690,7 @@ inline std::vector<ExpandNode>
 // Formats a query parameter string for the sub-query.
 // Returns std::nullopt on failures.
 // This function shall handle $select when it is added.
-// There is no need to handle parameters that's not campatible with $expand,
+// There is no need to handle parameters that's not compatible with $expand,
 // e.g., $only, since this function will only be called in side $expand handlers
 inline std::optional<std::string> formatQueryForExpand(const Query& query)
 {
@@ -716,6 +717,8 @@ inline std::optional<std::string> formatQueryForExpand(const Query& query)
             queryTypeExpected = true;
             str += '*';
             break;
+        default:
+            return std::nullopt;
     }
     if (!queryTypeExpected)
     {
@@ -727,7 +730,7 @@ inline std::optional<std::string> formatQueryForExpand(const Query& query)
     return str;
 }
 
-// Propogates the worst error code to the final response.
+// Propagates the worst error code to the final response.
 // The order of error code is (from high to low)
 // 500 Internal Server Error
 // 511 Network Authentication Required
@@ -741,7 +744,7 @@ inline std::optional<std::string> formatQueryForExpand(const Query& query)
 // 502 Bad Gateway
 // 501 Not Implemented
 // 401 Unauthorized
-// 451 - 409 Error codes (not listed explictly)
+// 451 - 409 Error codes (not listed explicitly)
 // 408 Request Timeout
 // 407 Proxy Authentication Required
 // 406 Not Acceptable
@@ -753,7 +756,7 @@ inline std::optional<std::string> formatQueryForExpand(const Query& query)
 inline unsigned propogateErrorCode(unsigned finalCode, unsigned subResponseCode)
 {
     // We keep a explicit list for error codes that this project often uses
-    // Higer priority codes are in lower indexes
+    // Higher priority codes are in lower indexes
     constexpr std::array<unsigned, 13> orderedCodes = {
         500, 507, 503, 502, 501, 401, 412, 409, 406, 405, 404, 403, 400};
     size_t finalCodeIndex = std::numeric_limits<size_t>::max();
@@ -790,7 +793,7 @@ inline unsigned propogateErrorCode(unsigned finalCode, unsigned subResponseCode)
     return std::max(finalCode, subResponseCode);
 }
 
-// Propogates all error messages into |finalResponse|
+// Propagates all error messages into |finalResponse|
 inline void propogateError(crow::Response& finalResponse,
                            crow::Response& subResponse)
 {

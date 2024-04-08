@@ -56,13 +56,10 @@ inline void addSecurityHeaders(const crow::Request& req [[maybe_unused]],
                                         "screen-wak-lock=(),"
                                         "web-share=(),"
                                         "xr-spatial-tracking=()");
-
     res.addHeader("X-Permitted-Cross-Domain-Policies", "none");
-
     res.addHeader("Cross-Origin-Embedder-Policy", "require-corp");
     res.addHeader("Cross-Origin-Opener-Policy", "same-origin");
     res.addHeader("Cross-Origin-Resource-Policy", "same-origin");
-
     if (bmcwebInsecureDisableXssPrevention == 0)
     {
         res.addHeader("Content-Security-Policy", "default-src 'none'; "
@@ -85,7 +82,7 @@ inline void addSecurityHeaders(const crow::Request& req [[maybe_unused]],
         // If XSS is disabled, we need to allow loading from addresses other
         // than self, as the BMC will be hosted elsewhere.
         res.addHeader("Content-Security-Policy", "default-src 'none'; "
-                                                 "img-src *; "
+                                                 "img-src * data:; "
                                                  "font-src *; "
                                                  "style-src *; "
                                                  "script-src *; "

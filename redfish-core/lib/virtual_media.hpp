@@ -98,8 +98,8 @@ inline void
     sdbusplus::message::object_path path("/xyz/openbmc_project/VirtualMedia");
     dbus::utility::getManagedObjects(
         service, path,
-        [service, resName, asyncResp,
-         handler](const boost::system::error_code& ec,
+        [service, resName, asyncResp, handler = std::move(handler)](
+            const boost::system::error_code& ec,
                   const dbus::utility::ManagedObjectType& subtree) {
         if (ec)
         {
