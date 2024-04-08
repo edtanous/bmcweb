@@ -28,10 +28,12 @@ inline void handleTelemetryServiceGet(
     asyncResp->res.jsonValue["Id"] = "TelemetryService";
     asyncResp->res.jsonValue["Name"] = "Telemetry Service";
 
+#ifndef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
     asyncResp->res.jsonValue["MetricReportDefinitions"]["@odata.id"] =
         "/redfish/v1/TelemetryService/MetricReportDefinitions";
     asyncResp->res.jsonValue["MetricReports"]["@odata.id"] =
         "/redfish/v1/TelemetryService/MetricReports";
+#endif
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Triggers"]["@odata.id"] =
         "/redfish/v1/TelemetryService/Triggers";

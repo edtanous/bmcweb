@@ -745,7 +745,10 @@ inline void
                 }
                 if (uuid != nullptr)
                 {
-                    asyncResp->res.jsonValue["UUID"] = *uuid;
+                    if (!(uuid->empty()))
+                    {
+                        asyncResp->res.jsonValue["UUID"] = *uuid;
+                    }
                 }
                 if (locationCode != nullptr)
                 {
