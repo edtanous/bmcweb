@@ -54,7 +54,6 @@ static constexpr const std::array<const char*, 11> supportedResourceTypes = {
     "Managers",     "CertificateService", "VirtualMedia"};
 #endif
 
-
 inline void requestRoutesEventService(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/")
@@ -237,7 +236,8 @@ inline void requestRoutesSubmitTestEvent(App& app)
         {
             if (event.setCustomMsg(*message, *messageArgs) != 0)
             {
-                BMCWEB_LOG_ERROR("Invalid message or message " "arguments.");
+                BMCWEB_LOG_ERROR("Invalid message or message "
+                                 "arguments.");
                 messages::actionParameterValueError(
                     asyncResp->res, "MessageArgs", "SubmitTestEvent");
                 return;
@@ -356,11 +356,11 @@ inline void requestRoutesEventDestinationCollection(App& app)
             [asyncResp](const boost::system::error_code& ec,
                         const dbus::utility::ManagedObjectType& resp) {
             doSubscriptionCollection(ec, asyncResp, resp);
-            },
+        },
             "xyz.openbmc_project.Network.SNMP",
             "/xyz/openbmc_project/network/snmp/manager",
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-        });
+    });
 
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/Subscriptions/")
         .privileges(redfish::privileges::postEventDestinationCollection)
@@ -861,13 +861,13 @@ inline void requestRoutesEventDestination(App& app)
         {
             subValue->customText = *context;
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
-                    // Send an event for property change
-                    Event event = redfish::EventUtil::getInstance()
-                                      .createEventPropertyModified(
-                                          "Context", *context, "EventService");
-                    redfish::EventServiceManager::getInstance()
-                        .sendEventWithOOC(std::string(req.target()), event);
-#endif            
+            // Send an event for property change
+            Event event =
+                redfish::EventUtil::getInstance().createEventPropertyModified(
+                    "Context", *context, "EventService");
+            redfish::EventServiceManager::getInstance().sendEventWithOOC(
+                std::string(req.target()), event);
+#endif
         }
 
         if (headers)
@@ -916,14 +916,13 @@ inline void requestRoutesEventDestination(App& app)
             }
             subValue->retryPolicy = *retryPolicy;
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
-                    // Send an event for property change
-                    Event event =
-                        redfish::EventUtil::getInstance()
-                            .createEventPropertyModified(
-                                "RetryPolicy", *retryPolicy, "EventService");
-                    redfish::EventServiceManager::getInstance()
-                        .sendEventWithOOC(std::string(req.target()), event);
-#endif            
+            // Send an event for property change
+            Event event =
+                redfish::EventUtil::getInstance().createEventPropertyModified(
+                    "RetryPolicy", *retryPolicy, "EventService");
+            redfish::EventServiceManager::getInstance().sendEventWithOOC(
+                std::string(req.target()), event);
+#endif
         }
 
         EventServiceManager::getInstance().updateSubscriptionData();
@@ -958,8 +957,7 @@ inline void requestRoutesEventDestination(App& app)
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
         // there will be no subscription after the deletion
         // stop redfish event listener
-        if (EventServiceManager::getInstance()
-                .getNumberOfSubscriptions() == 1)
+        if (EventServiceManager::getInstance().getNumberOfSubscriptions() == 1)
         {
             stopRedfishEventListener(*req.ioService);
         }

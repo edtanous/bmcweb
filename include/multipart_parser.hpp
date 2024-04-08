@@ -5,9 +5,9 @@
 #include <boost/beast/http/fields.hpp>
 
 #include <ranges>
+#include <regex>
 #include <string>
 #include <string_view>
-#include <regex>
 
 enum class ParserError
 {

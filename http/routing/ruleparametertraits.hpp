@@ -1,8 +1,9 @@
 #pragma once
 
 #include "sserule.hpp"
-#include "websocketrule.hpp"
 #include "streamingresponserule.hpp"
+#include "websocketrule.hpp"
+
 #include <boost/beast/http/verb.hpp>
 
 #include <initializer_list>

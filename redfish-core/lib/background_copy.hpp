@@ -38,10 +38,11 @@ inline void updateBackgroundCopyEnabled(
 
     auto responseCallback =
         [callback]([[maybe_unused]] const crow::Request& req,
-           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-           [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
-           [[maybe_unused]] const std::string& stdErr,
-           const boost::system::error_code& ec, int errorCode) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] uint32_t endpointId,
+                   const std::string& stdOut,
+                   [[maybe_unused]] const std::string& stdErr,
+                   const boost::system::error_code& ec, int errorCode) -> void {
         if (ec || errorCode)
         {
             redfish::messages::internalError(asyncResp->res);
@@ -91,10 +92,11 @@ inline void updateBackgroundCopyStatusPending(
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
     auto bgCopyQueryResponseCallback =
         [callback]([[maybe_unused]] const crow::Request& req,
-           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-           [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
-           [[maybe_unused]] const std::string& stdErr,
-           const boost::system::error_code& ec, int errorCode) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] uint32_t endpointId,
+                   const std::string& stdOut,
+                   [[maybe_unused]] const std::string& stdErr,
+                   const boost::system::error_code& ec, int errorCode) -> void {
         if (ec || errorCode)
         {
             redfish::messages::internalError(asyncResp->res);
@@ -145,10 +147,11 @@ inline void updateBackgroundCopyStatus(
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
     auto bgCopyQueryResponseCallback =
         [callback]([[maybe_unused]] const crow::Request& req,
-           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-           [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
-           [[maybe_unused]] const std::string& stdErr,
-           const boost::system::error_code& ec, int errorCode) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] uint32_t endpointId,
+                   const std::string& stdOut,
+                   [[maybe_unused]] const std::string& stdErr,
+                   const boost::system::error_code& ec, int errorCode) -> void {
         if (ec || errorCode)
         {
             redfish::messages::internalError(asyncResp->res);
@@ -173,7 +176,9 @@ inline void updateBackgroundCopyStatus(
         }
         else
         {
-            BMCWEB_LOG_ERROR("Invalid response for background_copy_query_progress: {}", stdOut);
+            BMCWEB_LOG_ERROR(
+                "Invalid response for background_copy_query_progress: {}",
+                stdOut);
         }
         return;
     };
@@ -286,7 +291,8 @@ inline void
             redfish::messages::success(asyncResp->res);
         }
     };
-    BMCWEB_LOG_INFO("Initializing background init for inventoryURI:{}", inventoryURI);
+    BMCWEB_LOG_INFO("Initializing background init for inventoryURI:{}",
+                    inventoryURI);
     mctpVdmUtilWrapper.run(MctpVdmUtilCommand::BACKGROUNDCOPY_INIT, req,
                            asyncResp, responseCallback);
     return;

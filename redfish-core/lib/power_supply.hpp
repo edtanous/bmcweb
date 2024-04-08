@@ -89,7 +89,7 @@ inline void
         }
 
         updatePowerSupplyList(asyncResp, chassisId, subtreePaths);
-        });
+    });
 }
 
 inline void handlePowerSupplyCollectionHead(
@@ -114,7 +114,7 @@ inline void handlePowerSupplyCollectionHead(
         asyncResp->res.addHeader(
             boost::beast::http::field::link,
             "</redfish/v1/JsonSchemas/PowerSupplyCollection/PowerSupplyCollection.json>; rel=describedby");
-        });
+    });
 }
 
 inline void handlePowerSupplyCollectionGet(
@@ -171,7 +171,9 @@ inline void getValidPowerSupplyPath(
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR( "DBUS response error for getAssociatedSubTreePaths{}", ec.value());
+                BMCWEB_LOG_ERROR(
+                    "DBUS response error for getAssociatedSubTreePaths{}",
+                    ec.value());
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -196,7 +198,7 @@ inline void getValidPowerSupplyPath(
                                        powerSupplyId);
             return;
         }
-        });
+    });
 }
 
 inline void
@@ -211,7 +213,8 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for State {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for State {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -221,7 +224,7 @@ inline void
         {
             asyncResp->res.jsonValue["Status"]["State"] = "Absent";
         }
-        });
+    });
 }
 
 inline void
@@ -236,7 +239,8 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Health {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Health {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -246,7 +250,7 @@ inline void
         {
             asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
         }
-        });
+    });
 }
 
 inline void
@@ -262,7 +266,8 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Asset {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Asset {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -310,7 +315,7 @@ inline void
         {
             asyncResp->res.jsonValue["SparePartNumber"] = *sparePartNumber;
         }
-        });
+    });
 }
 
 inline void getPowerSupplyFirmwareVersion(
@@ -326,13 +331,14 @@ inline void getPowerSupplyFirmwareVersion(
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for FirmwareVersion {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for FirmwareVersion {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
         }
         asyncResp->res.jsonValue["FirmwareVersion"] = value;
-        });
+    });
 }
 
 inline void
@@ -348,14 +354,15 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Location {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Location {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
         }
         asyncResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
             value;
-        });
+    });
 }
 
 inline void handleGetEfficiencyResponse(
@@ -366,7 +373,8 @@ inline void handleGetEfficiencyResponse(
     {
         if (ec.value() != EBADR)
         {
-            BMCWEB_LOG_ERROR("DBUS response error for DeratingFactor {}", ec.value());
+            BMCWEB_LOG_ERROR("DBUS response error for DeratingFactor {}",
+                             ec.value());
             messages::internalError(asyncResp->res);
         }
         return;
@@ -394,7 +402,8 @@ inline void handlePowerSupplyAttributesSubTreeResponse(
     {
         if (ec.value() != EBADR)
         {
-            BMCWEB_LOG_ERROR("DBUS response error for EfficiencyPercent {}", ec.value());
+            BMCWEB_LOG_ERROR("DBUS response error for EfficiencyPercent {}",
+                             ec.value());
             messages::internalError(asyncResp->res);
         }
         return;
@@ -408,7 +417,9 @@ inline void handlePowerSupplyAttributesSubTreeResponse(
 
     if (subtree.size() != 1)
     {
-        BMCWEB_LOG_ERROR( "Unexpected number of paths returned by getSubTree: {}", subtree.size());
+        BMCWEB_LOG_ERROR(
+            "Unexpected number of paths returned by getSubTree: {}",
+            subtree.size());
         messages::internalError(asyncResp->res);
         return;
     }
@@ -420,7 +431,7 @@ inline void handlePowerSupplyAttributesSubTreeResponse(
         "xyz.openbmc_project.Control.PowerSupplyAttributes", "DeratingFactor",
         [asyncResp](const boost::system::error_code& ec1, uint32_t value) {
         handleGetEfficiencyResponse(asyncResp, ec1, value);
-        });
+    });
 }
 
 inline void
@@ -434,7 +445,7 @@ inline void
         [asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
         handlePowerSupplyAttributesSubTreeResponse(asyncResp, ec, subtree);
-        });
+    });
 }
 
 inline void
@@ -488,7 +499,7 @@ inline void
                                           powerSupplyPath);
             getPowerSupplyLocation(asyncResp, object.begin()->first,
                                    powerSupplyPath);
-            });
+        });
 
         getEfficiencyPercent(asyncResp);
     });
@@ -522,7 +533,7 @@ inline void
                 boost::beast::http::field::link,
                 "</redfish/v1/JsonSchemas/PowerSupply/PowerSupply.json>; rel=describedby");
         });
-        });
+    });
 }
 
 inline void

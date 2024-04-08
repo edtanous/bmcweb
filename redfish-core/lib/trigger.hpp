@@ -235,8 +235,7 @@ struct Context
     std::vector<std::string> actions;
     std::vector<std::pair<sdbusplus::message::object_path, std::string>>
         sensors;
-    std::vector<std::pair<std::string, std::string>>
-        sensorNames;
+    std::vector<std::pair<std::string, std::string>> sensorNames;
     std::vector<sdbusplus::message::object_path> reports;
     TriggerThresholdParams thresholds;
 
@@ -930,40 +929,43 @@ inline void handleTriggerCollectionPost(
 
     crow::connections::systemBus->async_method_call(
         [ctx, asyncResp](const boost::system::error_code ec,
-              const std::vector<std::string>& objects) {
-                std::vector<std::pair<sdbusplus::message::object_path, std::string>> sensors;
-                if (ec)
+                         const std::vector<std::string>& objects) {
+        std::vector<std::pair<sdbusplus::message::object_path, std::string>>
+            sensors;
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("respHandler DBus error {}", ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        for (const std::string& object : objects)
+        {
+            for (const std::pair<std::string, std::string>& sensorName :
+                 ctx.sensorNames)
+            {
+                if (object.find(sensorName.first) != std::string::npos)
                 {
-                    BMCWEB_LOG_ERROR("respHandler DBus error {}", ec);
-                    messages::internalError(asyncResp->res);
-                    return;
+                    BMCWEB_LOG_DEBUG("Find sensor object path: {}", object);
+                    sensors.emplace_back(object, sensorName.second);
                 }
-                for (const std::string& object : objects)
-                {
-                    for (const std::pair<std::string, std::string>& sensorName : ctx.sensorNames) 
-                    {
-                        if (object.find(sensorName.first) != std::string::npos) {
-                            BMCWEB_LOG_DEBUG("Find sensor object path: {}", object);
-                            sensors.emplace_back(object, sensorName.second);
-                        }
-                    }
-                }
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, id = ctx.id](const boost::system::error_code& ec,
-                                            const std::string& dbusPath) {
-                    afterCreateTrigger(ec, dbusPath, asyncResp, id);
-                },
-                    service, "/xyz/openbmc_project/Telemetry/Triggers",
-                    "xyz.openbmc_project.Telemetry.TriggerManager", "AddTrigger",
-                    "TelemetryService/" + ctx.id, ctx.name, ctx.actions, sensors,
-                    ctx.reports, ctx.thresholds);
-                return;
-            },
-            "xyz.openbmc_project.ObjectMapper",
-            "/xyz/openbmc_project/object_mapper",
-            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-            "/xyz/openbmc_project/sensors", 0,
-            std::array<const char*, 1>{"xyz.openbmc_project.Sensor.Value"});
+            }
+        }
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, id = ctx.id](const boost::system::error_code& ec,
+                                     const std::string& dbusPath) {
+            afterCreateTrigger(ec, dbusPath, asyncResp, id);
+        },
+            service, "/xyz/openbmc_project/Telemetry/Triggers",
+            "xyz.openbmc_project.Telemetry.TriggerManager", "AddTrigger",
+            "TelemetryService/" + ctx.id, ctx.name, ctx.actions, sensors,
+            ctx.reports, ctx.thresholds);
+        return;
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+        "/xyz/openbmc_project/sensors", 0,
+        std::array<const char*, 1>{"xyz.openbmc_project.Sensor.Value"});
 }
 
 } // namespace telemetry
@@ -1066,9 +1068,8 @@ inline void requestRoutesTrigger(App& app)
             }
 
             asyncResp->res.result(boost::beast::http::status::no_content);
-        },
-            telemetry::service, triggerPath,
-            "xyz.openbmc_project.Object.Delete", "Delete");
+        }, telemetry::service, triggerPath, "xyz.openbmc_project.Object.Delete",
+            "Delete");
     });
 }
 

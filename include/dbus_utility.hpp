@@ -200,11 +200,11 @@ inline void systemdRestartUnit(const std::string_view unit, const char* mode)
 
     crow::connections::systemBus->call_noreply(method);
 }
-inline void
-    getSubTree(const std::string& path, int32_t depth,
-               std::span<const std::string_view> interfaces,
-               std::function<void(const boost::system::error_code&,
-                                  const MapperGetSubTreeResponse&)>&& callbackIn)
+inline void getSubTree(
+    const std::string& path, int32_t depth,
+    std::span<const std::string_view> interfaces,
+    std::function<void(const boost::system::error_code&,
+                       const MapperGetSubTreeResponse&)>&& callbackIn)
 {
     crow::connections::systemBus->async_method_call(
         [callback{std::move(callbackIn)}](
@@ -227,7 +227,7 @@ inline void getSubTreePaths(
             const boost::system::error_code& ec,
             const MapperGetSubTreePathsResponse& subtreePaths) {
         callback(ec, subtreePaths);
-        },
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", path, depth,
@@ -263,7 +263,7 @@ inline void getAssociatedSubTreePaths(
             const boost::system::error_code& ec,
             const MapperGetSubTreePathsResponse& subtreePaths) {
         callback(ec, subtreePaths);
-        },
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetAssociatedSubTreePaths",
@@ -278,9 +278,9 @@ inline void
 {
     crow::connections::systemBus->async_method_call(
         [callback{std::move(callbackIn)}](const boost::system::error_code& ec,
-                                        const MapperGetObject& object) {
+                                          const MapperGetObject& object) {
         callback(ec, object);
-        },
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", path, interfaces);
@@ -296,17 +296,16 @@ inline void getAssociationEndPoints(
         "xyz.openbmc_project.Association", "endpoints", std::move(callbackIn));
 }
 
-inline void
-    getManagedObjects(const std::string& service,
-                      const sdbusplus::message::object_path& path,
-                      std::function<void(const boost::system::error_code&,
-                                         const ManagedObjectType&)>&& callbackIn)
+inline void getManagedObjects(
+    const std::string& service, const sdbusplus::message::object_path& path,
+    std::function<void(const boost::system::error_code&,
+                       const ManagedObjectType&)>&& callbackIn)
 {
     crow::connections::systemBus->async_method_call(
         [callback{std::move(callbackIn)}](const boost::system::error_code& ec,
-                                        const ManagedObjectType& objects) {
+                                          const ManagedObjectType& objects) {
         callback(ec, objects);
-        },
+    },
         service, path, "org.freedesktop.DBus.ObjectManager",
         "GetManagedObjects");
 }

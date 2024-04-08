@@ -132,9 +132,8 @@ struct TaskData : std::enable_shared_from_this<TaskData>
         const std::string& matchIn, size_t idx,
         std::function<nlohmann::json(std::string_view, size_t)>&&
             getMsgHandler) :
-        status("OK"),
-        getMsgCallback(getMsgHandler), callback(std::move(handler)),
-        matchStr(matchIn), index(idx),
+        status("OK"), getMsgCallback(getMsgHandler),
+        callback(std::move(handler)), matchStr(matchIn), index(idx),
         startTime(std::chrono::system_clock::to_time_t(
             std::chrono::system_clock::now())),
         state("Running"), messages(nlohmann::json::array()),

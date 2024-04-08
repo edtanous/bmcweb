@@ -145,7 +145,7 @@ inline void
             "/redfish/v1/Systems/hypervisor/Actions/ComputerSystem.Reset";
         reset["@Redfish.ActionInfo"] =
             "/redfish/v1/Systems/hypervisor/ResetActionInfo";
-        });
+    });
 }
 
 inline bool extractHypervisorInterfaceData(
@@ -259,7 +259,9 @@ inline bool extractHypervisorInterfaceData(
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR( "Got extra property: {} on the {} object", property.first, objpath.first.str);
+                            BMCWEB_LOG_ERROR(
+                                "Got extra property: {} on the {} object",
+                                property.first, objpath.first.str);
                         }
                     }
                 }
@@ -331,7 +333,7 @@ void getHypervisorIfaceData(const std::string& ethIfaceId,
             BMCWEB_LOG_INFO("Hypervisor Interface not found");
         }
         callback(found, ethData, ipv4Data);
-        });
+    });
 }
 
 /**
@@ -347,7 +349,8 @@ inline void setHypervisorIPv4Address(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& ethIfaceId, const std::string& ipv4Address)
 {
-    BMCWEB_LOG_DEBUG("Setting the Hypervisor IPaddress : {} on Iface: {}", ipv4Address, ethIfaceId);
+    BMCWEB_LOG_DEBUG("Setting the Hypervisor IPaddress : {} on Iface: {}",
+                     ipv4Address, ethIfaceId);
     sdbusplus::asio::setProperty(
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor/" + ethIfaceId + "/ipv4/addr0",
@@ -359,7 +362,7 @@ inline void setHypervisorIPv4Address(
             return;
         }
         BMCWEB_LOG_DEBUG("Hypervisor IPaddress is Set");
-        });
+    });
 }
 
 /**
@@ -375,7 +378,8 @@ inline void
     setHypervisorIPv4Subnet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& ethIfaceId, const uint8_t subnet)
 {
-    BMCWEB_LOG_DEBUG("Setting the Hypervisor subnet : {} on Iface: {}", subnet, ethIfaceId);
+    BMCWEB_LOG_DEBUG("Setting the Hypervisor subnet : {} on Iface: {}", subnet,
+                     ethIfaceId);
 
     sdbusplus::asio::setProperty(
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
@@ -388,7 +392,7 @@ inline void
             return;
         }
         BMCWEB_LOG_DEBUG("SubnetMask is Set");
-        });
+    });
 }
 
 /**
@@ -404,20 +408,21 @@ inline void setHypervisorIPv4Gateway(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& gateway)
 {
-    BMCWEB_LOG_DEBUG( "Setting the DefaultGateway to the last configured gateway");
+    BMCWEB_LOG_DEBUG(
+        "Setting the DefaultGateway to the last configured gateway");
 
     sdbusplus::asio::setProperty(
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/network/hypervisor",
         "xyz.openbmc_project.Network.SystemConfiguration", "DefaultGateway",
         gateway, [asyncResp](const boost::system::error_code& ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("DBUS response error {}", ec);
-                return;
-            }
-            BMCWEB_LOG_DEBUG("Default Gateway is Set");
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
+            return;
+        }
+        BMCWEB_LOG_DEBUG("Default Gateway is Set");
+    });
 }
 
 /**
@@ -514,7 +519,7 @@ inline void setDHCPEnabled(const std::string& ifaceId, bool ipv4DHCPEnabled,
             messages::internalError(asyncResp->res);
             return;
         }
-        });
+    });
 
     // Set the IPv4 address origin to the DHCP / Static as per the new value
     // of the DHCPEnabled property
@@ -542,7 +547,7 @@ inline void setDHCPEnabled(const std::string& ifaceId, bool ipv4DHCPEnabled,
             return;
         }
         BMCWEB_LOG_DEBUG("Hypervisor IPaddress Origin is Set");
-        });
+    });
 }
 
 inline void handleHypervisorIPv4StaticPatch(
@@ -632,7 +637,8 @@ inline void handleHypervisorIPv4StaticPatch(
             return;
         }
 
-        BMCWEB_LOG_DEBUG("Calling createHypervisorIPv4 on : {},{}", ifaceId, *address);
+        BMCWEB_LOG_DEBUG("Calling createHypervisorIPv4 on : {},{}", ifaceId,
+                         *address);
         createHypervisorIPv4(ifaceId, prefixLength, *gateway, *address,
                              asyncResp);
         // Set the DHCPEnabled to false since the Static IPv4 is set
@@ -668,7 +674,7 @@ inline void handleHypervisorHostnamePatch(
         {
             messages::internalError(asyncResp->res);
         }
-        });
+    });
 }
 
 inline void
@@ -684,7 +690,7 @@ inline void
         {
             messages::internalError(asyncResp->res);
         }
-        });
+    });
 }
 
 inline void handleHypervisorEthernetInterfaceCollectionGet(
@@ -735,7 +741,7 @@ inline void handleHypervisorEthernetInterfaceCollectionGet(
             ifaceArray.emplace_back(std::move(ethIface));
         }
         asyncResp->res.jsonValue["Members@odata.count"] = ifaceArray.size();
-        });
+    });
 }
 
 inline void handleHypervisorEthernetInterfaceGet(
@@ -750,20 +756,20 @@ inline void handleHypervisorEthernetInterfaceGet(
         id, [asyncResp, ifaceId{std::string(id)}](
                 bool success, const EthernetInterfaceData& ethData,
                 const std::vector<IPv4AddressData>& ipv4Data) {
-            if (!success)
-            {
-                messages::resourceNotFound(asyncResp->res, "EthernetInterface",
-                                           ifaceId);
-                return;
-            }
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#EthernetInterface.v1_9_0.EthernetInterface";
-            asyncResp->res.jsonValue["Name"] = "Hypervisor Ethernet Interface";
-            asyncResp->res.jsonValue["Description"] =
-                "Hypervisor's Virtual Management Ethernet Interface";
-            parseInterfaceData(asyncResp->res.jsonValue, ifaceId, ethData,
-                               ipv4Data);
-        });
+        if (!success)
+        {
+            messages::resourceNotFound(asyncResp->res, "EthernetInterface",
+                                       ifaceId);
+            return;
+        }
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#EthernetInterface.v1_9_0.EthernetInterface";
+        asyncResp->res.jsonValue["Name"] = "Hypervisor Ethernet Interface";
+        asyncResp->res.jsonValue["Description"] =
+            "Hypervisor's Virtual Management Ethernet Interface";
+        parseInterfaceData(asyncResp->res.jsonValue, ifaceId, ethData,
+                           ipv4Data);
+    });
 }
 
 inline void handleHypervisorSystemGet(
@@ -800,7 +806,7 @@ inline void handleHypervisorSystemGet(
         getHypervisorState(asyncResp);
         getHypervisorActions(asyncResp);
         // TODO: Add "SystemType" : "hypervisor"
-        });
+    });
 }
 
 inline void handleHypervisorEthernetInterfacePatch(
@@ -842,12 +848,11 @@ inline void handleHypervisorEthernetInterfacePatch(
     }
 
     getHypervisorIfaceData(
-        ifaceId,
-        [asyncResp, ifaceId, hostName = std::move(hostName),
-         ipv4StaticAddresses = std::move(ipv4StaticAddresses), ipv4DHCPEnabled,
-         dhcpv4 = std::move(dhcpv4)](bool success,
-                                     const EthernetInterfaceData& ethData,
-                                     const std::vector<IPv4AddressData>&) {
+        ifaceId, [asyncResp, ifaceId, hostName = std::move(hostName),
+                  ipv4StaticAddresses = std::move(ipv4StaticAddresses),
+                  ipv4DHCPEnabled, dhcpv4 = std::move(dhcpv4)](
+                     bool success, const EthernetInterfaceData& ethData,
+                     const std::vector<IPv4AddressData>&) {
         if (!success)
         {
             messages::resourceNotFound(asyncResp->res, "EthernetInterface",
@@ -882,7 +887,8 @@ inline void handleHypervisorEthernetInterfacePatch(
             if ((ipv4Json.is_null()) &&
                 (translateDhcpEnabledToBool(ethData.dhcpEnabled, true)))
             {
-                BMCWEB_LOG_INFO("Ignoring the delete on ipv4StaticAddresses " "as the interface is DHCP enabled");
+                BMCWEB_LOG_INFO("Ignoring the delete on ipv4StaticAddresses "
+                                "as the interface is DHCP enabled");
             }
             else
             {
@@ -904,7 +910,7 @@ inline void handleHypervisorEthernetInterfacePatch(
         // to enabled/active by the pldm once the hypervisor
         // consumes the updated settings from the user.
         setIPv4InterfaceEnabled(ifaceId, false, asyncResp);
-        });
+    });
     asyncResp->res.result(boost::beast::http::status::accepted);
 }
 
@@ -963,7 +969,7 @@ inline void handleHypervisorResetActionGet(
         parameter["AllowableValues"] = std::move(allowed);
         parameters.emplace_back(std::move(parameter));
         asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
-        });
+    });
 }
 
 inline void handleHypervisorSystemResetPost(
@@ -1023,7 +1029,7 @@ inline void handleHypervisorSystemResetPost(
             return;
         }
         messages::success(asyncResp->res);
-        });
+    });
 }
 
 inline void requestRoutesHypervisorSystems(App& app)

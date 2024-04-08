@@ -110,7 +110,7 @@ inline void resolveRoT(const std::string& command,
             const dbus::utility::MapperGetSubTreeResponse& subtree) {
         hothGetSubtreeCallback(command, asyncResp, rotId, entityHandler, ec,
                                subtree);
-        });
+    });
 }
 
 inline void populateRootOfTrustEntity(
@@ -153,7 +153,8 @@ inline void
 {
     if (ec)
     {
-        BMCWEB_LOG_ERROR("RootOfTrust.Actions.SendCommand failed: {}", ec.message());
+        BMCWEB_LOG_ERROR("RootOfTrust.Actions.SendCommand failed: {}",
+                         ec.message());
         redfish::messages::internalError(asyncResp->res);
         return;
     }

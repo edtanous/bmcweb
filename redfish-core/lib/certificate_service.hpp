@@ -111,19 +111,22 @@ class CertificateFile
                                                    std::ofstream::trunc);
             out << certString;
             out.close();
-            BMCWEB_LOG_DEBUG("Creating certificate file{}", certificateFile.string());
+            BMCWEB_LOG_DEBUG("Creating certificate file{}",
+                             certificateFile.string());
         }
     }
     ~CertificateFile()
     {
         if (std::filesystem::exists(certDirectory))
         {
-            BMCWEB_LOG_DEBUG("Removing certificate file{}", certificateFile.string());
+            BMCWEB_LOG_DEBUG("Removing certificate file{}",
+                             certificateFile.string());
             std::error_code ec;
             std::filesystem::remove_all(certDirectory, ec);
             if (ec)
             {
-                BMCWEB_LOG_ERROR("Failed to remove temp directory{}", certDirectory.string());
+                BMCWEB_LOG_ERROR("Failed to remove temp directory{}",
+                                 certDirectory.string());
             }
         }
     }
@@ -246,7 +249,8 @@ static void
             if (objPath.parent_path() == certs::httpsObjectPath)
             {
                 certURL = boost::urls::format(
-                    "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",PLATFORMBMCID,certId);
+                    "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",
+                    PLATFORMBMCID, certId);
             }
             else if (objPath.parent_path() == certs::ldapObjectPath)
             {
@@ -255,8 +259,9 @@ static void
             }
             else if (objPath.parent_path() == certs::authorityObjectPath)
             {
-		certURL = boost::urls::format(
-                    "/redfish/v1/Managers/{}/Truststore/Certificates/{}",PLATFORMBMCID,certId);
+                certURL = boost::urls::format(
+                    "/redfish/v1/Managers/{}/Truststore/Certificates/{}",
+                    PLATFORMBMCID, certId);
             }
             else
             {
@@ -269,7 +274,7 @@ static void
         }
 
         asyncResp->res.jsonValue[countPtr] = links.size();
-        });
+    });
 }
 
 /**
@@ -289,7 +294,8 @@ static void getCertificateProperties(
     const std::string& certId, const boost::urls::url& certURL,
     const std::string& name)
 {
-    BMCWEB_LOG_DEBUG("getCertificateProperties Path={} certId={} certURl={}", objectPath, certId, certURL);
+    BMCWEB_LOG_DEBUG("getCertificateProperties Path={} certId={} certURl={}",
+                     objectPath, certId, certURL);
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objectPath, certs::certPropIntf,
         [asyncResp, certURL, certId,
@@ -564,8 +570,9 @@ inline void handleReplaceCertificateAction(
             return;
         }
         getCertificateProperties(asyncResp, objectPath, service, id, url, name);
-        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}", certFile->getCertFilePath());
-        },
+        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}",
+                         certFile->getCertFilePath());
+    },
         service, objectPath, certs::certReplaceIntf, "Replace",
         certFile->getCertFilePath());
 }
@@ -587,7 +594,8 @@ static void getCSR(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& certObjPath,
                    const std::string& csrObjPath)
 {
-    BMCWEB_LOG_DEBUG("getCSR CertObjectPath{} CSRObjectPath={} service={}", certObjPath, csrObjPath, service);
+    BMCWEB_LOG_DEBUG("getCSR CertObjectPath{} CSRObjectPath={} service={}",
+                     certObjPath, csrObjPath, service);
     crow::connections::systemBus->async_method_call(
         [asyncResp, certURI](const boost::system::error_code& ec,
                              const std::string& csr) {
@@ -833,8 +841,7 @@ inline void
             messages::internalError(asyncResp->res);
             return;
         }
-    },
-        service, objectPath, "xyz.openbmc_project.Certs.CSR.Create",
+    }, service, objectPath, "xyz.openbmc_project.Certs.CSR.Create",
         "GenerateCSR", *optAlternativeNames, *optChallengePassword, city,
         commonName, *optContactPerson, country, *optEmail, *optGivenName,
         *optInitials, *optKeyBitLength, *optKeyCurveId, *optKeyPairAlgorithm,
@@ -931,10 +938,12 @@ inline void handleHTTPSCertificateCollectionPost(
         std::string certId = path.filename();
 
         const boost::urls::url certURL = boost::urls::format(
-                    "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",PLATFORMBMCID,certId);	
+            "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",
+            PLATFORMBMCID, certId);
         getCertificateProperties(asyncResp, objectPath, certs::httpsServiceName,
                                  certId, certURL, "HTTPS Certificate");
-        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}", certFile->getCertFilePath());
+        BMCWEB_LOG_DEBUG("HTTPS certificate install file={}",
+                         certFile->getCertFilePath());
     },
         certs::httpsServiceName, certs::httpsObjectPath, certs::certInstallIntf,
         "Install", certFile->getCertFilePath());
@@ -951,7 +960,8 @@ inline void handleHTTPSCertificateGet(
 
     BMCWEB_LOG_DEBUG("HTTPS Certificate ID={}", id);
     const boost::urls::url certURL = boost::urls::format(
-                    "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",PLATFORMBMCID,id);
+        "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",
+        PLATFORMBMCID, id);
     std::string objPath =
         sdbusplus::message::object_path(certs::httpsObjectPath) / id;
     getCertificateProperties(asyncResp, objPath, certs::httpsServiceName, id,
@@ -1037,8 +1047,9 @@ inline void handleLDAPCertificateCollectionPost(
             "/redfish/v1/AccountService/LDAP/Certificates/{}", certId);
         getCertificateProperties(asyncResp, objectPath, certs::ldapServiceName,
                                  certId, certURL, "LDAP Certificate");
-        BMCWEB_LOG_DEBUG("LDAP certificate install file={}", certFile->getCertFilePath());
-        },
+        BMCWEB_LOG_DEBUG("LDAP certificate install file={}",
+                         certFile->getCertFilePath());
+    },
         certs::ldapServiceName, certs::ldapObjectPath, certs::certInstallIntf,
         "Install", certFile->getCertFilePath());
 }
@@ -1153,12 +1164,14 @@ inline void handleTrustStoreCertificateCollectionPost(
 
         sdbusplus::message::object_path path(objectPath);
         std::string certId = path.filename();
-	        const boost::urls::url certURL = boost::urls::format(
-                    "/redfish/v1/Managers/{}/Truststore/Certificates/{}",PLATFORMBMCID,certId);
+        const boost::urls::url certURL = boost::urls::format(
+            "/redfish/v1/Managers/{}/Truststore/Certificates/{}", PLATFORMBMCID,
+            certId);
         getCertificateProperties(asyncResp, objectPath,
                                  certs::authorityServiceName, certId, certURL,
                                  "TrustStore Certificate");
-        BMCWEB_LOG_DEBUG("TrustStore certificate install file={}", certFile->getCertFilePath());
+        BMCWEB_LOG_DEBUG("TrustStore certificate install file={}",
+                         certFile->getCertFilePath());
     },
         certs::authorityServiceName, certs::authorityObjectPath,
         certs::certInstallIntf, "Install", certFile->getCertFilePath());
@@ -1174,8 +1187,9 @@ inline void handleTrustStoreCertificateGet(
     }
 
     BMCWEB_LOG_DEBUG("Truststore Certificate ID={}", id);
-            const boost::urls::url certURL = boost::urls::format(
-                    "/redfish/v1/Managers/{}/Truststore/Certificates/{}",PLATFORMBMCID,id);
+    const boost::urls::url certURL = boost::urls::format(
+        "/redfish/v1/Managers/{}/Truststore/Certificates/{}", PLATFORMBMCID,
+        id);
     std::string objPath =
         sdbusplus::message::object_path(certs::authorityObjectPath) / id;
     getCertificateProperties(asyncResp, objPath, certs::authorityServiceName,

@@ -16,13 +16,13 @@
 #pragma once
 
 #include "bmcweb_config.h"
-//#include "task.hpp"
+// #include "task.hpp"
 
 #include "app.hpp"
 #include "dbus_utility.hpp"
 #include "generated/enums/drive.hpp"
 #include "generated/enums/protocol.hpp"
-//#include "health.hpp"
+// #include "health.hpp"
 #include "human_sort.hpp"
 #include "openbmc_dbus_rest.hpp"
 #include "query.hpp"
@@ -50,7 +50,6 @@ const std::array<const char*, 2> driveInterface = {
     "xyz.openbmc_project.Inventory.Item.Drive",
     "xyz.openbmc_project.Nvme.Operation"};
 
-
 inline void handleSystemsStorageCollectionGet(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -73,9 +72,8 @@ inline void handleSystemsStorageCollectionGet(
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
     asyncResp->res.jsonValue["Name"] = "Storage Collection";
 
-    constexpr std::array<std::string_view, 1> interface {
-        "xyz.openbmc_project.Inventory.Item.Storage"
-    };
+    constexpr std::array<std::string_view, 1> interface{
+        "xyz.openbmc_project.Inventory.Item.Storage"};
     collection_util::getCollectionMembers(
         asyncResp,
         boost::urls::format("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage"),
@@ -94,9 +92,8 @@ inline void handleStorageCollectionGet(
         "#StorageCollection.StorageCollection";
     asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Storage";
     asyncResp->res.jsonValue["Name"] = "Storage Collection";
-    constexpr std::array<std::string_view, 1> interface {
-        "xyz.openbmc_project.Inventory.Item.Storage"
-    };
+    constexpr std::array<std::string_view, 1> interface{
+        "xyz.openbmc_project.Inventory.Item.Storage"};
     collection_util::getCollectionMembers(
         asyncResp, boost::urls::format("/redfish/v1/Storage"), interface,
         "/xyz/openbmc_project/inventory");
@@ -116,8 +113,8 @@ inline void requestRoutesStorageCollection(App& app)
 
 inline void afterChassisDriveCollectionSubtree(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    //FIXME: Health Populate
-    //const std::shared_ptr<HealthPopulate>& health,
+    // FIXME: Health Populate
+    // const std::shared_ptr<HealthPopulate>& health,
     const boost::system::error_code& ec,
     const dbus::utility::MapperGetSubTreeResponse& ret)
 {
@@ -151,7 +148,7 @@ inline void afterChassisDriveCollectionSubtree(
             continue;
         }
         // FIXME: Health Populate
-        //if constexpr (bmcwebEnableHealthPopulate)
+        // if constexpr (bmcwebEnableHealthPopulate)
         //{
         //    health->inventory.insert(health->inventory.end(), path);
         //}
@@ -168,16 +165,16 @@ inline void afterChassisDriveCollectionSubtree(
 }
 
 inline void getDrives(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-                      // FIXME: Health Populate
-                      //const std::shared_ptr<HealthPopulate>& health)
+// FIXME: Health Populate
+// const std::shared_ptr<HealthPopulate>& health)
 {
     const std::array<std::string_view, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Drive"};
     dbus::utility::getSubTree(
         "/xyz/openbmc_project/inventory", 0, interfaces,
         std::bind_front(afterChassisDriveCollectionSubtree, asyncResp));
-        // FIXME: Health Populate 
-        //std::bind_front(afterChassisDriveCollectionSubtree, asyncResp, health));
+    // FIXME: Health Populate
+    // std::bind_front(afterChassisDriveCollectionSubtree, asyncResp, health));
 }
 
 inline void afterSystemsStorageGetSubtree(
@@ -198,7 +195,7 @@ inline void afterSystemsStorageGetSubtree(
                                      dbus::utility::MapperServiceMap>& object) {
         return sdbusplus::message::object_path(object.first).filename() ==
                storageId;
-        });
+    });
     if (storage == subtree.end())
     {
         messages::resourceNotFound(asyncResp->res, "#Storage.v1_13_0.Storage",
@@ -213,13 +210,13 @@ inline void afterSystemsStorageGetSubtree(
     asyncResp->res.jsonValue["Id"] = storageId;
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     // FIXME: HealthPopulate
-    //auto health = std::make_shared<HealthPopulate>(asyncResp);
-    //if constexpr (bmcwebEnableHealthPopulate)
+    // auto health = std::make_shared<HealthPopulate>(asyncResp);
+    // if constexpr (bmcwebEnableHealthPopulate)
     //{
     //    health->populate();
     //}
 
-    //getDrives(asyncResp, health);
+    // getDrives(asyncResp, health);
     getDrives(asyncResp);
     asyncResp->res.jsonValue["Controllers"]["@odata.id"] = boost::urls::format(
         "/redfish/v0/Systems/" PLATFORMSYSTEMID "/Storage/{}/Controllers",
@@ -269,7 +266,7 @@ inline void afterSubtree(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                      dbus::utility::MapperServiceMap>& object) {
         return sdbusplus::message::object_path(object.first).filename() ==
                storageId;
-        });
+    });
     if (storage == subtree.end())
     {
         messages::resourceNotFound(asyncResp->res, "#Storage.v1_13_0.Storage",
@@ -665,7 +662,8 @@ inline void
                     convertDriveType(*value);
                 if (!mediaType)
                 {
-                    BMCWEB_LOG_WARNING("UnknownDriveType Interface: {}", *value);
+                    BMCWEB_LOG_WARNING("UnknownDriveType Interface: {}",
+                                       *value);
                     continue;
                 }
                 if (*mediaType == drive::MediaType::Invalid)
@@ -709,7 +707,8 @@ inline void
                     convertDriveProtocol(*value);
                 if (!proto)
                 {
-                    BMCWEB_LOG_WARNING("Unknown DrivePrototype Interface: {}", *value);
+                    BMCWEB_LOG_WARNING("Unknown DrivePrototype Interface: {}",
+                                       *value);
                     continue;
                 }
                 if (*proto == protocol::Protocol::Invalid)
@@ -733,7 +732,8 @@ inline void
                     convertDriveFormFactor(*value);
                 if (!formFactor)
                 {
-                    BMCWEB_LOG_ERROR("Unsupported Drive FormFactor Interface: {}", *value);
+                    BMCWEB_LOG_ERROR(
+                        "Unsupported Drive FormFactor Interface: {}", *value);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -745,7 +745,8 @@ inline void
                     std::get_if<uint8_t>(&property.second);
                 if (lifeLeft == nullptr)
                 {
-                    BMCWEB_LOG_ERROR( "Illegal property: PredictedMediaLifeLeftPercent");
+                    BMCWEB_LOG_ERROR(
+                        "Illegal property: PredictedMediaLifeLeftPercent");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1033,7 +1034,7 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
 }
 
-//ToDo: get ChassisID vs. getMainChassisId
+// ToDo: get ChassisID vs. getMainChassisId
 inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::string& driveId)
 {
@@ -1085,94 +1086,97 @@ inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 inline void createSanitizeProgressTask(
     [[maybe_unused]] const crow::Request& req,
     [[maybe_unused]] const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    [[maybe_unused]] const std::string& service, [[maybe_unused]] const std::string& path,
+    [[maybe_unused]] const std::string& service,
+    [[maybe_unused]] const std::string& path,
     [[maybe_unused]] const std::string& driveId)
 {
-    //FIXME: Task 
-   // std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-   //     [service, path,
-   //      driveId](boost::system::error_code ec, sdbusplus::message_t& msg,
-   //               const std::shared_ptr<task::TaskData>& taskData) {
-   //     if (ec)
-   //     {
-   //         taskData->finishTask();
-   //         taskData->state = "Aborted";
-   //         taskData->messages.emplace_back(
-   //             messages::resourceErrorsDetectedFormatError("Drive SecureErase",
-   //                                                         ec.message()));
-   //         return task::completed;
-   //     }
+    // FIXME: Task
+    // std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+    //     [service, path,
+    //      driveId](boost::system::error_code ec, sdbusplus::message_t& msg,
+    //               const std::shared_ptr<task::TaskData>& taskData) {
+    //     if (ec)
+    //     {
+    //         taskData->finishTask();
+    //         taskData->state = "Aborted";
+    //         taskData->messages.emplace_back(
+    //             messages::resourceErrorsDetectedFormatError("Drive
+    //             SecureErase",
+    //                                                         ec.message()));
+    //         return task::completed;
+    //     }
 
-   //     std::string iface;
-   //     boost::container::flat_map<std::string, dbus::utility::DbusVariantType>
-   //         values;
+    //     std::string iface;
+    //     boost::container::flat_map<std::string,
+    //     dbus::utility::DbusVariantType>
+    //         values;
 
-   //     std::string index = std::to_string(taskData->index);
-   //     msg.read(iface, values);
+    //     std::string index = std::to_string(taskData->index);
+    //     msg.read(iface, values);
 
-   //     if (iface != "xyz.openbmc_project.Common.Progress")
-   //     {
-   //         return !task::completed;
-   //     }
-   //     auto findStatus = values.find("Status");
-   //     if (findStatus != values.end())
-   //     {
-   //         std::string* state =
-   //             std::get_if<std::string>(&(findStatus->second));
-   //         if (state == nullptr)
-   //         {
-   //             taskData->messages.emplace_back(messages::internalError());
-   //             return !task::completed;
-   //         }
+    //     if (iface != "xyz.openbmc_project.Common.Progress")
+    //     {
+    //         return !task::completed;
+    //     }
+    //     auto findStatus = values.find("Status");
+    //     if (findStatus != values.end())
+    //     {
+    //         std::string* state =
+    //             std::get_if<std::string>(&(findStatus->second));
+    //         if (state == nullptr)
+    //         {
+    //             taskData->messages.emplace_back(messages::internalError());
+    //             return !task::completed;
+    //         }
 
-   //         if (boost::ends_with(*state, "Aborted") ||
-   //             boost::ends_with(*state, "Failed"))
-   //         {
-   //             taskData->state = "Exception";
-   //             taskData->messages.emplace_back(messages::taskAborted(index));
-   //             return task::completed;
-   //         }
+    //         if (boost::ends_with(*state, "Aborted") ||
+    //             boost::ends_with(*state, "Failed"))
+    //         {
+    //             taskData->state = "Exception";
+    //             taskData->messages.emplace_back(messages::taskAborted(index));
+    //             return task::completed;
+    //         }
 
-   //         if (boost::ends_with(*state, "Completed"))
-   //         {
-   //             taskData->state = "Completed";
-   //             taskData->percentComplete = 100;
-   //             taskData->messages.emplace_back(
-   //                 messages::taskCompletedOK(index));
-   //             taskData->finishTask();
-   //             return task::completed;
-   //         }
-   //     }
+    //         if (boost::ends_with(*state, "Completed"))
+    //         {
+    //             taskData->state = "Completed";
+    //             taskData->percentComplete = 100;
+    //             taskData->messages.emplace_back(
+    //                 messages::taskCompletedOK(index));
+    //             taskData->finishTask();
+    //             return task::completed;
+    //         }
+    //     }
 
-   //     auto findProgress = values.find("Progress");
-   //     if (findProgress == values.end())
-   //     {
-   //         return !task::completed;
-   //     }
-   //     uint8_t* progress = std::get_if<uint8_t>(&(findProgress->second));
-   //     if (progress == nullptr)
-   //     {
-   //         taskData->messages.emplace_back(messages::internalError());
-   //         return task::completed;
-   //     }
-   //     taskData->percentComplete = static_cast<int>(*progress);
+    //     auto findProgress = values.find("Progress");
+    //     if (findProgress == values.end())
+    //     {
+    //         return !task::completed;
+    //     }
+    //     uint8_t* progress = std::get_if<uint8_t>(&(findProgress->second));
+    //     if (progress == nullptr)
+    //     {
+    //         taskData->messages.emplace_back(messages::internalError());
+    //         return task::completed;
+    //     }
+    //     taskData->percentComplete = static_cast<int>(*progress);
 
-   //     BMCWEB_LOG_ERROR("{}", taskData->percentComplete);
-   //     taskData->messages.emplace_back(messages::taskProgressChanged(
-   //         index, static_cast<size_t>(*progress)));
+    //     BMCWEB_LOG_ERROR("{}", taskData->percentComplete);
+    //     taskData->messages.emplace_back(messages::taskProgressChanged(
+    //         index, static_cast<size_t>(*progress)));
 
-   //     return !task::completed;
-   // },
-   //     "type='signal',interface='org.freedesktop.DBus.Properties',"
-   //     "member='PropertiesChanged',path='" +
-   //         path + "'");
-   // task->startTimer(std::chrono::seconds(60));
-   // task->payload.emplace(req);
-   // task->populateResp(asyncResp->res);
+    //     return !task::completed;
+    // },
+    //     "type='signal',interface='org.freedesktop.DBus.Properties',"
+    //     "member='PropertiesChanged',path='" +
+    //         path + "'");
+    // task->startTimer(std::chrono::seconds(60));
+    // task->payload.emplace(req);
+    // task->populateResp(asyncResp->res);
 
-   // taskUris.clear();
-   // taskUris.push_back("/redfish/v1/TaskService/Tasks/" +
-   //                    std::to_string(task->index));
+    // taskUris.clear();
+    // taskUris.push_back("/redfish/v1/TaskService/Tasks/" +
+    //                    std::to_string(task->index));
 }
 
 inline void
@@ -1241,7 +1245,8 @@ inline void
         const dbus::utility::MapperServiceMap& connNames = drive->second;
         if (connNames.size() != 1)
         {
-            BMCWEB_LOG_ERROR("Connection size {}, not equal to 1", connNames.size());
+            BMCWEB_LOG_ERROR("Connection size {}, not equal to 1",
+                             connNames.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1273,7 +1278,8 @@ inline void
                         "the sanitize operation once it is complete.";
                     redfish::messages::updateInProgressMsg(asyncResp->res,
                                                            resolution);
-                    BMCWEB_LOG_ERROR("Sanitize on drive{} already in progress.", driveId);
+                    BMCWEB_LOG_ERROR("Sanitize on drive{} already in progress.",
+                                     driveId);
                 }
                 if (ec)
                 {
@@ -1328,7 +1334,8 @@ inline void handleDriveSanitizetActionInfoGet(
         const dbus::utility::MapperServiceMap& connNames = drive->second;
         if (connNames.size() != 1)
         {
-            BMCWEB_LOG_ERROR("Connection size {}, not equal to 1", connNames.size());
+            BMCWEB_LOG_ERROR("Connection size {}, not equal to 1",
+                             connNames.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1443,7 +1450,7 @@ inline void afterGetSubtreeSystemsStorageDrive(
                                    dbus::utility::MapperServiceMap>& object) {
         return sdbusplus::message::object_path(object.first).filename() ==
                driveId;
-        });
+    });
 
     if (drive == subtree.end())
     {
@@ -1456,13 +1463,15 @@ inline void afterGetSubtreeSystemsStorageDrive(
 
     asyncResp->res.jsonValue["@odata.type"] = "#Drive.v1_7_0.Drive";
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/Storage/1/Drives/{}", driveId);
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/{}",
+        driveId);
     asyncResp->res.jsonValue["Name"] = driveId;
     asyncResp->res.jsonValue["Id"] = driveId;
 
     if (connectionNames.size() != 1)
     {
-        BMCWEB_LOG_ERROR("Connection size {}, not equal to 1", connectionNames.size());
+        BMCWEB_LOG_ERROR("Connection size {}, not equal to 1",
+                         connectionNames.size());
         messages::internalError(asyncResp->res);
         return;
     }
@@ -1478,7 +1487,7 @@ inline void afterGetSubtreeSystemsStorageDrive(
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
     // FIXME: HealthPopulate
-    //if constexpr (bmcwebEnableHealthPopulate)
+    // if constexpr (bmcwebEnableHealthPopulate)
     //{
     //    auto health = std::make_shared<HealthPopulate>(asyncResp);
     //    health->inventory.emplace_back(path);
@@ -1551,48 +1560,47 @@ inline void
     dbus::utility::getSubTree(
         "/xyz/openbmc_project/inventory", 0, interfaces,
         [asyncResp](const boost::system::error_code ec,
-                      const dbus::utility::MapperGetSubTreeResponse& subtree) {
-            if (ec)
+                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Drive mapper call error");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        nlohmann::json& members = asyncResp->res.jsonValue["Members"];
+        // important if array is empty
+        members = nlohmann::json::array();
+        nlohmann::json::object_t member;
+        for (const auto& [path, connNames] : subtree)
+        {
+            // EM also populate NVMe drives to Dbus
+            // We expect to have NVMe resource from nvme-manager so we
+            // filter out drive instances from EM by the number of Dbus
+            // interface.
+            sdbusplus::message::object_path objPath(path);
+            auto id = objPath.filename();
+            uint32_t num = 0;
+            for (const std::string& interface : connNames.begin()->second)
             {
-                BMCWEB_LOG_ERROR("Drive mapper call error");
-                messages::internalError(asyncResp->res);
-                return;
+                if (std::find_if(driveInterface.begin(), driveInterface.end(),
+                                 [interface](const std::string& possible) {
+                    return boost::starts_with(interface, possible);
+                }) != driveInterface.end())
+                {
+                    num++;
+                }
             }
-            nlohmann::json& members = asyncResp->res.jsonValue["Members"];
-            // important if array is empty
-            members = nlohmann::json::array();
-            nlohmann::json::object_t member;
-            for (const auto& [path, connNames] : subtree)
+            if (num != driveInterface.size())
             {
-                // EM also populate NVMe drives to Dbus 
-                // We expect to have NVMe resource from nvme-manager so we 
-                // filter out drive instances from EM by the number of Dbus
-                // interface.
-                sdbusplus::message::object_path objPath(path);
-                auto id =objPath.filename();
-                uint32_t num = 0;
-                for (const std::string& interface : connNames.begin()->second)
-                {
-                    if (std::find_if(
-                            driveInterface.begin(), driveInterface.end(),
-                            [interface](const std::string& possible) {
-                                 return boost::starts_with(interface, possible);
-                            }) != driveInterface.end())
-                    {
-                        num ++;
-                    }
-                }
-                if (num != driveInterface.size())
-                {
-                    continue;
-                }
-                member["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                      "/Storage/1/Drives/" +
-                                      id;
-                members.emplace_back(member);
+                continue;
             }
-            asyncResp->res.jsonValue["Members@odata.count"] = members.size();
-        });
+            member["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/Storage/1/Drives/" +
+                                  id;
+            members.emplace_back(member);
+        }
+        asyncResp->res.jsonValue["Members@odata.count"] = members.size();
+    });
 }
 
 inline void requestRoutesDrive(App& app)
@@ -1690,8 +1698,7 @@ inline void afterChassisDriveCollectionSubtreeGet(
                 // navigation links will be registered in next patch set
             }
             asyncResp->res.jsonValue["Members@odata.count"] = resp.size();
-            }); // end association lambda
-
+        }); // end association lambda
     }
 }
 /**
@@ -1763,11 +1770,11 @@ inline void buildDrive(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         // default it to Enabled
         asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
-        //FIXME: Health Populate
-        //auto health = std::make_shared<HealthPopulate>(asyncResp);
-        //health->inventory.emplace_back(path);
-        //health->selfPath = path;
-        //health->populate();
+        // FIXME: Health Populate
+        // auto health = std::make_shared<HealthPopulate>(asyncResp);
+        // health->inventory.emplace_back(path);
+        // health->selfPath = path;
+        // health->populate();
 
         nlohmann::json::object_t linkChassisNav;
         linkChassisNav["@odata.id"] =
@@ -1810,7 +1817,7 @@ inline void
                 const boost::system::error_code& ec,
                 const dbus::utility::MapperGetSubTreeResponse& subtree) {
             buildDrive(asyncResp, chassisId, driveName, ec, subtree);
-            });
+        });
     }
 }
 
@@ -1868,7 +1875,7 @@ inline void
             });
             break;
         }
-        });
+    });
 }
 
 /**
@@ -1970,7 +1977,7 @@ inline void populateStorageController(
         {
             asyncResp->res.jsonValue["Status"]["State"] = "Absent";
         }
-        });
+    });
 
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, connectionName, path,
@@ -1980,7 +1987,7 @@ inline void populateStorageController(
                         std::pair<std::string, dbus::utility::DbusVariantType>>&
                         propertiesList) {
         getStorageControllerAsset(asyncResp, ec, propertiesList);
-        });
+    });
 }
 
 inline void getStorageControllerHandler(
@@ -2011,7 +2018,8 @@ inline void getStorageControllerHandler(
 
         if (interfaceDict.size() != 1)
         {
-            BMCWEB_LOG_ERROR("Connection size {}, greater than 1", interfaceDict.size());
+            BMCWEB_LOG_ERROR("Connection size {}, greater than 1",
+                             interfaceDict.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -2046,7 +2054,8 @@ inline void populateStorageControllerCollection(
         }
         nlohmann::json::object_t member;
         member["@odata.id"] = boost::urls::format(
-            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Controllers/{}", id);
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Controllers/{}",
+            id);
         members.emplace_back(member);
     }
     asyncResp->res.jsonValue["Members@odata.count"] = members.size();
@@ -2060,7 +2069,8 @@ inline void handleSystemsStorageControllerCollectionGet(
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
-        BMCWEB_LOG_DEBUG( "Failed to setup Redfish Route for StorageController Collection");
+        BMCWEB_LOG_DEBUG(
+            "Failed to setup Redfish Route for StorageController Collection");
         return;
     }
     if (systemName != PLATFORMSYSTEMID)
@@ -2085,7 +2095,7 @@ inline void handleSystemsStorageControllerCollectionGet(
                     const dbus::utility::MapperGetSubTreePathsResponse&
                         controllerList) {
         populateStorageControllerCollection(asyncResp, ec, controllerList);
-        });
+    });
 }
 
 inline void handleSystemsStorageControllerGet(
@@ -2113,7 +2123,7 @@ inline void handleSystemsStorageControllerGet(
          controllerId](const boost::system::error_code& ec,
                        const dbus::utility::MapperGetSubTreeResponse& subtree) {
         getStorageControllerHandler(asyncResp, controllerId, ec, subtree);
-        });
+    });
 }
 
 inline void requestRoutesStorageControllerCollection(App& app)

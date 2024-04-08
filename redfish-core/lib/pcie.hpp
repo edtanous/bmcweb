@@ -16,9 +16,6 @@
 
 #pragma once
 
-#include <app.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/format.hpp>
 #include "app.hpp"
 #include "dbus_utility.hpp"
 #include "query.hpp"
@@ -27,6 +24,9 @@
 #include "utils/dbus_utils.hpp"
 #include "utils/pcie_util.hpp"
 
+#include <app.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/format.hpp>
 #include <boost/system/linux_error.hpp>
 #include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
@@ -52,7 +52,7 @@ static constexpr const char* pcieClockReferenceIntf =
     "xyz.openbmc_project.Inventory.Decorator.PCIeRefClock";
 static constexpr const char* nvlinkClockReferenceIntf =
     "com.nvidia.NVLink.NVLinkRefClock";
-static constexpr char const* pcieLtssmIntf =
+static constexpr const char* pcieLtssmIntf =
     "xyz.openbmc_project.PCIe.LTSSMState";
 
 static inline std::string getPCIeType(const std::string& pcieType)
@@ -146,7 +146,7 @@ static constexpr std::array<std::string_view, 1> pcieDeviceInterface = {
     "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
 static constexpr std::array<std::string_view, 1> pcieSlotInterface = {
     "xyz.openbmc_project.Inventory.Item.PCIeSlot"};
-static constexpr char const* pcieDeviceInterfaceNV =
+static constexpr const char* pcieDeviceInterfaceNV =
     "xyz.openbmc_project.PCIe.Device";
 
 static inline void handlePCIeDevicePath(
@@ -178,7 +178,7 @@ static inline void handlePCIeDevicePath(
                 return;
             }
             callback(pcieDevicePath, object.begin()->first);
-            });
+        });
         return;
     }
 
@@ -207,7 +207,7 @@ static inline void getValidPCIeDevicePath(
         handlePCIeDevicePath(pcieDeviceId, asyncResp, pcieDevicePaths,
                              callback);
         return;
-        });
+    });
 }
 
 static inline void handlePCIeDeviceCollectionGet(
@@ -332,7 +332,8 @@ static inline void
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error on getting PCIeDeviceclock reference OEM properties");
+            BMCWEB_LOG_DEBUG(
+                "DBUS response error on getting PCIeDeviceclock reference OEM properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -372,7 +373,8 @@ static inline void getPCIeDeviceNvLinkClkRefOem(
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error on getting PCIeDeviceNVLink Clock Reference OEM properties");
+            BMCWEB_LOG_DEBUG(
+                "DBUS response error on getting PCIeDeviceNVLink Clock Reference OEM properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -400,77 +402,82 @@ static inline void getPCIeDeviceNvLinkClkRefOem(
 }
 
 // PCIeDevice LTSSM State
-static inline void getPCIeLTssmState(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& device, const std::string& path,
-    const std::string& service)
+static inline void
+    getPCIeLTssmState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                      const std::string& device, const std::string& path,
+                      const std::string& service)
 {
-    BMCWEB_LOG_DEBUG ("FROM getPCIeLTssmState");
+    BMCWEB_LOG_DEBUG("FROM getPCIeLTssmState");
 
     std::string escapedPath = std::string(path) + "/" + device;
     dbus::utility::escapePathForDbus(escapedPath);
 
-	crow::connections::systemBus->async_method_call(
-			[asyncResp, service](const boost::system::error_code ec,
-				std::variant<std::vector<std::string>>& resp) {
-			if (ec)
-			{
-			    BMCWEB_LOG_ERROR("Failed to get connected_port");
-			    return; // no ports = no failures
-			}
-			std::vector<std::string>* data =
-			std::get_if<std::vector<std::string>>(&resp);
-			if (data == nullptr)
-			{
-			    return;
-			}
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, service](const boost::system::error_code ec,
+                             std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Failed to get connected_port");
+            return; // no ports = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
 
-			for (const std::string& portPath : *data)
-			{
+        for (const std::string& portPath : *data)
+        {
+            auto getPCIeLtssmCallback =
+                [asyncResp{asyncResp}](
+                    const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string, std::variant<std::string>>>&
+                        propertiesList) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR(
+                        "DBUS response error on getting PCIeDevice LTSSM State");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
 
-			auto getPCIeLtssmCallback =
-			[asyncResp{asyncResp}](
-					const boost::system::error_code ec,
-					const std::vector<std::pair<std::string, std::variant<std::string>>>&
-					propertiesList) {
-				if (ec)
-				{
-					BMCWEB_LOG_ERROR("DBUS response error on getting PCIeDevice LTSSM State");
-					messages::internalError(asyncResp->res);
-					return;
-				}
+                for (const std::pair<std::string, std::variant<std::string>>&
+                         property : propertiesList)
+                {
+                    const std::string& propertyName = property.first;
+                    if (propertyName == "LTSSMState")
+                    {
+                        const std::string* value =
+                            std::get_if<std::string>(&property.second);
+                        if (value != nullptr)
+                        {
+                            std::string val =
+                                redfish::dbus_utils::getRedfishLtssmState(
+                                    *value);
+                            if (val.empty())
+                                asyncResp->res
+                                    .jsonValue["Oem"]["Nvidia"][propertyName] =
+                                    nlohmann::json::value_t::null;
 
-				for (const std::pair<std::string, std::variant<std::string>>& property :
-						propertiesList)
-				{
-					const std::string& propertyName = property.first;
-					if (propertyName == "LTSSMState")
-					{
-						const std::string* value = std::get_if<std::string>(&property.second);
-						if (value != nullptr)
-						{
-							std::string val = redfish::dbus_utils::getRedfishLtssmState(*value);
-							if(val.empty())
-								asyncResp->res
-									.jsonValue["Oem"]["Nvidia"][propertyName] = nlohmann::json::value_t::null;
-
-							else
-							{
-								asyncResp->res
-									.jsonValue["Oem"]["Nvidia"][propertyName] = val;
-							}
-						}
-					}
-				}
-			};
-			crow::connections::systemBus->async_method_call(
-					std::move(getPCIeLtssmCallback), service, portPath,
-					"org.freedesktop.DBus.Properties", "GetAll", pcieLtssmIntf);
-			}
-			},
-			"xyz.openbmc_project.ObjectMapper", escapedPath + "/connected_port",
-			"org.freedesktop.DBus.Properties", "Get",
-			"xyz.openbmc_project.Association", "endpoints");
+                            else
+                            {
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                                        [propertyName] = val;
+                            }
+                        }
+                    }
+                }
+            };
+            crow::connections::systemBus->async_method_call(
+                std::move(getPCIeLtssmCallback), service, portPath,
+                "org.freedesktop.DBus.Properties", "GetAll", pcieLtssmIntf);
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper", escapedPath + "/connected_port",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
 }
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
@@ -583,9 +590,8 @@ inline std::optional<std::string>
     return std::nullopt;
 }
 
-
 // inline void requestRoutesSystemPCIeDeviceCollection(App& app)
-// {   
+// {
 //     /**
 //      * Functions triggers appropriate requests on DBus
 //      */
@@ -601,7 +607,8 @@ inline void addPCIeSlotProperties(
 {
     if (ec)
     {
-        BMCWEB_LOG_ERROR("DBUS response error for getAllProperties{}", ec.value());
+        BMCWEB_LOG_ERROR("DBUS response error for getAllProperties{}",
+                         ec.value());
         messages::internalError(res);
         return;
     }
@@ -678,13 +685,17 @@ inline void getPCIeDeviceSlotPath(
                 // Missing association is not an error
                 return;
             }
-            BMCWEB_LOG_ERROR( "DBUS response error for getAssociatedSubTreePaths {}", ec.value());
+            BMCWEB_LOG_ERROR(
+                "DBUS response error for getAssociatedSubTreePaths {}",
+                ec.value());
             messages::internalError(asyncResp->res);
             return;
         }
         if (endpoints.size() > 1)
         {
-            BMCWEB_LOG_ERROR( "PCIeDevice is associated with more than one PCIeSlot: {}", endpoints.size());
+            BMCWEB_LOG_ERROR(
+                "PCIeDevice is associated with more than one PCIeSlot: {}",
+                endpoints.size());
             messages::internalError(asyncResp->res);
             return;
         }
@@ -696,7 +707,7 @@ inline void getPCIeDeviceSlotPath(
             return;
         }
         callback(endpoints[0]);
-        });
+    });
 }
 
 static inline void
@@ -711,96 +722,95 @@ static inline void
                  const std::vector<
                      std::pair<std::string, std::variant<std::string, size_t>>>&
                      propertiesList) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {}: {}",
+                             ec.value(), ec.message());
+            if (ec.value() ==
+                boost::system::linux_error::bad_request_descriptor)
             {
-                BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {}: {}",  ec.value(), ec.message());
-                if (ec.value() ==
-                    boost::system::linux_error::bad_request_descriptor)
-                {
-                    messages::resourceNotFound(asyncResp->res, "PCIeDevice",
-                                               device);
-                }
-                else
-                {
-                    messages::internalError(asyncResp->res);
-                }
-                return;
+                messages::resourceNotFound(asyncResp->res, "PCIeDevice",
+                                           device);
             }
-
-            for (const std::pair<std::string,
-                                 std::variant<std::string, size_t>>& property :
-                 propertiesList)
+            else
             {
-                const std::string& propertyName = property.first;
-                if ((propertyName == "Manufacturer") ||
-                    (propertyName == "DeviceType"))
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+
+        for (const std::pair<std::string, std::variant<std::string, size_t>>&
+                 property : propertiesList)
+        {
+            const std::string& propertyName = property.first;
+            if ((propertyName == "Manufacturer") ||
+                (propertyName == "DeviceType"))
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
                 {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res.jsonValue[propertyName] = *value;
-                    }
+                    asyncResp->res.jsonValue[propertyName] = *value;
                 }
-                else if (propertyName == "MaxLanes")
+            }
+            else if (propertyName == "MaxLanes")
+            {
+                const size_t* value = std::get_if<size_t>(&property.second);
+                if (value != nullptr)
                 {
-                    const size_t* value = std::get_if<size_t>(&property.second);
-                    if (value != nullptr)
+                    asyncResp->res.jsonValue["PCIeInterface"][propertyName] =
+                        *value;
+                }
+            }
+            else if (propertyName == "LanesInUse")
+            {
+                const size_t* value = std::get_if<size_t>(&property.second);
+                if (value != nullptr)
+                {
+                    if (*value == INT_MAX)
+                    {
+                        asyncResp->res
+                            .jsonValue["PCIeInterface"][propertyName] = 0;
+                    }
+                    else
                     {
                         asyncResp->res
                             .jsonValue["PCIeInterface"][propertyName] = *value;
                     }
                 }
-                else if (propertyName == "LanesInUse")
+            }
+            else if ((propertyName == "PCIeType") ||
+                     (propertyName == "MaxPCIeType"))
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value != nullptr)
                 {
-                    const size_t* value = std::get_if<size_t>(&property.second);
-                    if (value != nullptr)
-                    {
-			if(*value == INT_MAX)
-			{
-                                asyncResp->res
-                                        .jsonValue["PCIeInterface"][propertyName] = 0;
-			}
-			else
-			{
-				asyncResp->res
-					.jsonValue["PCIeInterface"][propertyName] = *value;
-			}
-                    }
-                }
-                else if ((propertyName == "PCIeType") ||
-                         (propertyName == "MaxPCIeType"))
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    if (value != nullptr)
-                    {
-                        asyncResp->res
-                            .jsonValue["PCIeInterface"][propertyName] =
-                            getPCIeType(*value);
-                    }
-                }
-                else if (propertyName == "GenerationInUse")
-                {
-                    const std::string* value =
-                        std::get_if<std::string>(&property.second);
-                    std::optional<std::string> generationInUse =
-                        redfishPcieGenerationFromDbus(*value);
-                    if (!generationInUse)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    if (*generationInUse == "")
-                    {
-                        // unknown, no need to handle
-                        return;
-                    }
-                    asyncResp->res.jsonValue["PCIeInterface"]["PcieType"] =
-                        *generationInUse;
+                    asyncResp->res.jsonValue["PCIeInterface"][propertyName] =
+                        getPCIeType(*value);
                 }
             }
-        };
+            else if (propertyName == "GenerationInUse")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                std::optional<std::string> generationInUse =
+                    redfishPcieGenerationFromDbus(*value);
+                if (!generationInUse)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                if (*generationInUse == "")
+                {
+                    // unknown, no need to handle
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeInterface"]["PcieType"] =
+                    *generationInUse;
+            }
+        }
+    };
     std::string escapedPath = std::string(path) + "/" + device;
     dbus::utility::escapePathForDbus(escapedPath);
     crow::connections::systemBus->async_method_call(
@@ -815,7 +825,8 @@ inline void
 {
     if (ec || object.empty())
     {
-        BMCWEB_LOG_ERROR("DBUS response error for getDbusObject {}", ec.value());
+        BMCWEB_LOG_ERROR("DBUS response error for getDbusObject {}",
+                         ec.value());
         messages::internalError(asyncResp->res);
         return;
     }
@@ -826,7 +837,7 @@ inline void
             const boost::system::error_code& ec2,
             const dbus::utility::DBusPropertiesMap& pcieSlotProperties) {
         addPCIeSlotProperties(asyncResp->res, ec2, pcieSlotProperties);
-        });
+    });
 }
 
 inline void afterGetPCIeDeviceSlotPath(
@@ -839,7 +850,7 @@ inline void afterGetPCIeDeviceSlotPath(
          pcieDeviceSlot](const boost::system::error_code& ec,
                          const dbus::utility::MapperGetObject& object) {
         afterGetDbusObject(asyncResp, pcieDeviceSlot, ec, object);
-        });
+    });
 }
 
 inline void
@@ -855,7 +866,8 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Health {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Health {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -864,7 +876,7 @@ inline void
         {
             asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
         }
-        });
+    });
 }
 static inline void getPCIeDeviceFunctionsList(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -878,70 +890,68 @@ static inline void getPCIeDeviceFunctionsList(
             const boost::system::error_code ec,
             boost::container::flat_map<std::string, std::variant<std::string>>&
                 pcieDevProperties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {}: {} ",
+                             ec.value(), ec.message());
+
+            if (ec.value() ==
+                boost::system::linux_error::bad_request_descriptor)
             {
-                BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {}: {} ", ec.value(), ec.message());
-                    
-                if (ec.value() ==
-                    boost::system::linux_error::bad_request_descriptor)
+                messages::resourceNotFound(asyncResp->res, "PCIeDevice",
+                                           device);
+            }
+            else
+            {
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+
+        nlohmann::json& pcieFunctionList = asyncResp->res.jsonValue["Members"];
+        pcieFunctionList = nlohmann::json::array();
+        static constexpr const int maxPciFunctionNum = 8;
+        for (int functionNum = 0; functionNum < maxPciFunctionNum;
+             functionNum++)
+        {
+            // Check if this function exists by looking for a device
+            // ID
+            std::string devIDProperty =
+                "Function" + std::to_string(functionNum) + "DeviceId";
+            std::string* property =
+                std::get_if<std::string>(&pcieDevProperties[devIDProperty]);
+            if (property && !property->empty())
+            {
+                if (!chassisId.empty())
                 {
-                    messages::resourceNotFound(asyncResp->res, "PCIeDevice",
-                                               device);
+                    pcieFunctionList.push_back(
+                        {{"@odata.id",
+                          std::string("/redfish/v1/Chassis/")
+                              .append(chassisId)
+                              .append("/PCIeDevices/")
+                              .append(device)
+                              .append("/PCIeFunctions/")
+                              .append(std::to_string(functionNum))}});
                 }
                 else
                 {
-                    messages::internalError(asyncResp->res);
-                }
-                return;
-            }
-
-            nlohmann::json& pcieFunctionList =
-                asyncResp->res.jsonValue["Members"];
-            pcieFunctionList = nlohmann::json::array();
-            static constexpr const int maxPciFunctionNum = 8;
-            for (int functionNum = 0; functionNum < maxPciFunctionNum;
-                 functionNum++)
-            {
-                // Check if this function exists by looking for a device
-                // ID
-                std::string devIDProperty =
-                    "Function" + std::to_string(functionNum) + "DeviceId";
-                std::string* property =
-                    std::get_if<std::string>(&pcieDevProperties[devIDProperty]);
-                if (property && !property->empty())
-                {
-                    if (!chassisId.empty())
-                    {
-                        pcieFunctionList.push_back(
-                            {{"@odata.id",
-                              std::string("/redfish/v1/Chassis/")
-                                  .append(chassisId)
-                                  .append("/PCIeDevices/")
-                                  .append(device)
-                                  .append("/PCIeFunctions/")
-                                  .append(std::to_string(functionNum))}});
-                    }
-                    else
-                    {
-                        pcieFunctionList.push_back(
-                            {{"@odata.id",
-                              "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                              "/PCIeDevices/" +
-                                  device + "/PCIeFunctions/" +
-                                  std::to_string(functionNum)}});
-                    }
+                    pcieFunctionList.push_back(
+                        {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                       "/PCIeDevices/" +
+                                           device + "/PCIeFunctions/" +
+                                           std::to_string(functionNum)}});
                 }
             }
-            asyncResp->res.jsonValue["Members@odata.count"] =
-                pcieFunctionList.size();
-        };
+        }
+        asyncResp->res.jsonValue["Members@odata.count"] =
+            pcieFunctionList.size();
+    };
     std::string escapedPath = std::string(path) + "/" + device;
     dbus::utility::escapePathForDbus(escapedPath);
     crow::connections::systemBus->async_method_call(
         std::move(getPCIeDeviceCallback), service, escapedPath,
         "org.freedesktop.DBus.Properties", "GetAll", deviceIntf);
 }
-
 
 inline void
     getPCIeDeviceState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -965,7 +975,7 @@ inline void
         {
             asyncResp->res.jsonValue["Status"]["State"] = "Absent";
         }
-        });
+    });
 }
 
 static inline void
@@ -977,15 +987,15 @@ static inline void
                           const std::string& chassisId = std::string(),
                           const std::string& deviceIntf = pcieDeviceInterfaceNV)
 {
-    auto getPCIeDeviceCallback = [asyncResp{asyncResp}, device, function,
-                                  chassisId](const boost::system::error_code ec,
-                                             boost::container::flat_map<
-                                                 std::string,
-                                                 std::variant<std::string>>&
-                                                 pcieDevProperties) {
+    auto getPCIeDeviceCallback =
+        [asyncResp{asyncResp}, device, function, chassisId](
+            const boost::system::error_code ec,
+            boost::container::flat_map<std::string, std::variant<std::string>>&
+                pcieDevProperties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {} : {}" ,ec.value(), ec.message());
+            BMCWEB_LOG_DEBUG("failed to get PCIe Device properties ec: {} : {}",
+                             ec.value(), ec.message());
             if (ec.value() ==
                 boost::system::linux_error::bad_request_descriptor)
             {
@@ -1147,7 +1157,8 @@ inline void
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Properties{}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Properties{}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -1193,7 +1204,7 @@ inline void
         {
             asyncResp->res.jsonValue["SparePartNumber"] = *sparePartNumber;
         }
-        });
+    });
 }
 
 inline void addPCIeDeviceProperties(
@@ -1283,7 +1294,7 @@ inline void addPCIeDeviceProperties(
             "/redfish/v1/Systems/system/PCIeDevices/{}/PCIeFunctions",
             pcieDeviceId);
 }
-            
+
 inline void requestRoutesSystemPCIeDeviceCollection(App& app)
 {
     /**
@@ -1359,7 +1370,7 @@ inline void getPCIeDeviceProperties(
             return;
         }
         callback(pcieDevProperties);
-        });
+    });
 }
 
 inline void addPCIeDeviceCommonProperties(
@@ -1495,9 +1506,10 @@ inline void handlePCIeFunctionCollectionGet(
             "</redfish/v1/JsonSchemas/PCIeFunctionCollection/PCIeFunctionCollection.json>; rel=describedby");
         asyncResp->res.jsonValue["@odata.type"] =
             "#PCIeFunctionCollection.PCIeFunctionCollection";
-        asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
-            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/{}/PCIeFunctions",
-            pcieDeviceId);
+        asyncResp->res.jsonValue["@odata.id"] =
+            boost::urls::format("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/PCIeDevices/{}/PCIeFunctions",
+                                pcieDeviceId);
         asyncResp->res.jsonValue["Name"] = "PCIe Function Collection";
         asyncResp->res.jsonValue["Description"] =
             "Collection of PCIe Functions for PCIe Device " + pcieDeviceId;
@@ -1507,8 +1519,8 @@ inline void handlePCIeFunctionCollectionGet(
                 const dbus::utility::DBusPropertiesMap& pcieDevProperties) {
             addPCIeFunctionList(asyncResp->res, pcieDeviceId,
                                 pcieDevProperties);
-            });
         });
+    });
 }
 
 inline void requestRoutesSystemPCIeFunctionCollection(App& app)
@@ -1523,24 +1535,22 @@ inline void requestRoutesSystemPCIeFunctionCollection(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& device) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
 
-                asyncResp->res.jsonValue = {
-                    {"@odata.type",
-                     "#PCIeFunctionCollection.PCIeFunctionCollection"},
-                    {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                  "/PCIeDevices/" +
-                                      device + "/PCIeFunctions"},
-                    {"Name", "PCIe Function Collection"},
-                    {"Description",
-                     "Collection of PCIe Functions for PCIe Device " + device}};
-                getPCIeDeviceFunctionsList(asyncResp, device);
-            });
+        asyncResp->res.jsonValue = {
+            {"@odata.type", "#PCIeFunctionCollection.PCIeFunctionCollection"},
+            {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                          "/PCIeDevices/" +
+                              device + "/PCIeFunctions"},
+            {"Name", "PCIe Function Collection"},
+            {"Description",
+             "Collection of PCIe Functions for PCIe Device " + device}};
+        getPCIeDeviceFunctionsList(asyncResp, device);
+    });
 }
-
 
 inline bool validatePCIeFunctionId(
     uint64_t pcieFunctionId,
@@ -1560,7 +1570,6 @@ inline bool validatePCIeFunctionId(
     }
     return (devIdProperty != nullptr && !devIdProperty->empty());
 }
-
 
 inline void requestRoutesSystemPCIeFunction(App& app)
 {
@@ -1636,7 +1645,7 @@ inline void requestRoutesChassisPCIeDeviceCollection(App& app)
             "/xyz/openbmc_project/inventory", 0,
             std::array<const char*, 1>{
                 "xyz.openbmc_project.Inventory.Item.Chassis"});
-     });
+    });
 }
 inline void addPCIeFunctionProperties(
     crow::Response& resp, uint64_t pcieFunctionId,
@@ -1757,7 +1766,7 @@ inline void
                                             pcieFunctionId);
             addPCIeFunctionProperties(asyncResp->res, pcieFunctionId,
                                       pcieDevProperties);
-            });
+        });
     });
 }
 
@@ -1890,7 +1899,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                         }
 
                         getPCIeLTssmState(asyncResp, device, chassisPCIePath,
-                                            connectionName);
+                                          connectionName);
 
                         // Baseboard PCIeDevices nvlink Oem
                         // properties

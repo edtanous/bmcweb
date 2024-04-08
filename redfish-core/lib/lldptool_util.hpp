@@ -27,9 +27,9 @@
 
 namespace bp = boost::process;
 using LldpResponseCallback = std::function<void(
-    const std::shared_ptr<bmcweb::AsyncResp>&,
-    const std::string& /* stdOut*/, const std::string& /* stdErr*/, 
-    const boost::system::error_code& /* ec */, int /*errorCode */)>;
+    const std::shared_ptr<bmcweb::AsyncResp>&, const std::string& /* stdOut*/,
+    const std::string& /* stdErr*/, const boost::system::error_code& /* ec */,
+    int /*errorCode */)>;
 
 enum class LldpTlv
 {
@@ -58,16 +58,17 @@ class LldpToolUtil
   public:
     /**
      * @brief Execute lldptool commands
-     * @param ifName - The interface name 
+     * @param ifName - The interface name
      * @param lldpTlv - the Requested TLV type
      * @param lldpCommandType - The command type
-     * @param isReceived - is the command for received TLV or for transmitted TLV
+     * @param isReceived - is the command for received TLV or for transmitted
+     * TLV
      * @param asyncResp - Pointer to object holding response data.
      * @param responseCallback - callback function to handle the response.
      *
      * @return none.
      */
-    static void run(const std::string& ifName, LldpTlv lldpTlv, 
+    static void run(const std::string& ifName, LldpTlv lldpTlv,
                     LldpCommandType lldpCommandType, bool isReceived,
                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     LldpResponseCallback responseCallback);
@@ -75,33 +76,33 @@ class LldpToolUtil
   private:
     LldpToolUtil() = default;
     /**
-    * @brief Translate to lldptool command
-    * @param lldpTlv - the enum with commands available for lldptool tool.
-    * @param ifName - the interface name
-    * @param lldpCommandType - the command type
-    * @param isReceived - is the command for received TLV or for transmitted TLV
-    *
-    * @return string with the command to be executed.
-    */
-    static std::string translateOperationToCommand(const std::string& ifName, 
-                                                   LldpTlv lldpTlv, 
-                                                   LldpCommandType lldpCommandType,
-                                                   bool isReceived);
+     * @brief Translate to lldptool command
+     * @param lldpTlv - the enum with commands available for lldptool tool.
+     * @param ifName - the interface name
+     * @param lldpCommandType - the command type
+     * @param isReceived - is the command for received TLV or for transmitted
+     * TLV
+     *
+     * @return string with the command to be executed.
+     */
+    static std::string
+        translateOperationToCommand(const std::string& ifName, LldpTlv lldpTlv,
+                                    LldpCommandType lldpCommandType,
+                                    bool isReceived);
 };
 
 /**
-* @brief Translate to lldptool command
-* @param lldpTlv - the enum with commands available for lldptool tool.
-* @param ifName - the interface name
-* @param lldpCommandType - the command type
-* @param isReceived - is the command for received TLV or for transmitted TLV
-*
-* @return string with the command to be executed.
-*/
-std::string LldpToolUtil::translateOperationToCommand(const std::string& ifName, 
-                                                      LldpTlv lldpTlv, 
-                                                      LldpCommandType lldpCommandType,
-                                                      bool isReceived)
+ * @brief Translate to lldptool command
+ * @param lldpTlv - the enum with commands available for lldptool tool.
+ * @param ifName - the interface name
+ * @param lldpCommandType - the command type
+ * @param isReceived - is the command for received TLV or for transmitted TLV
+ *
+ * @return string with the command to be executed.
+ */
+std::string LldpToolUtil::translateOperationToCommand(
+    const std::string& ifName, LldpTlv lldpTlv, LldpCommandType lldpCommandType,
+    bool isReceived)
 {
     std::string command;
     std::string cmdAction{" set-tlv "};
@@ -119,10 +120,10 @@ std::string LldpToolUtil::translateOperationToCommand(const std::string& ifName,
             break;
         case LldpCommandType::GET_LLDP:
             cmdAction = " get-lldp ";
-            break;  
+            break;
         case LldpCommandType::SET_LLDP:
             cmdAction = " set-lldp ";
-            break;         
+            break;
     }
 
     switch (lldpTlv)
@@ -162,24 +163,25 @@ std::string LldpToolUtil::translateOperationToCommand(const std::string& ifName,
     {
         neighbor = " -n ";
     }
-    command = "lldptool " + cmdAction + neighbor + " -i " + ifName + tlvRequest + setRequest;
+    command = "lldptool " + cmdAction + neighbor + " -i " + ifName +
+              tlvRequest + setRequest;
     BMCWEB_LOG_DEBUG("lldptool command: {}", command);
     return command;
 }
 
-void LldpToolUtil::run(const std::string& ifName, LldpTlv lldpTlv,  
+void LldpToolUtil::run(const std::string& ifName, LldpTlv lldpTlv,
                        LldpCommandType lldpCommandType, bool isReceived,
                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        LldpResponseCallback responseCallback)
 {
-    std::string command = translateOperationToCommand(ifName, lldpTlv, lldpCommandType, isReceived);
+    std::string command = translateOperationToCommand(
+        ifName, lldpTlv, lldpCommandType, isReceived);
     auto dataOut = std::make_shared<boost::process::ipstream>();
     auto dataErr = std::make_shared<boost::process::ipstream>();
     auto exitCallback = [asyncResp, dataOut, dataErr,
                          respCallback = std::move(responseCallback),
-                         command]
-                         (const boost::system::error_code& ec,
-                            int errorCode) mutable {
+                         command](const boost::system::error_code& ec,
+                                  int errorCode) mutable {
         std::string stdOut;
         while (*dataOut)
         {

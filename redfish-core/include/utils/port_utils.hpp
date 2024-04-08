@@ -138,7 +138,8 @@ inline std::string getPortProtocol(const std::string& portProtocol)
         return "PCIe";
     }
 
-    // C2C is a non-standard protocol in DMTF. Use the standard port protocol for C2C
+    // C2C is a non-standard protocol in DMTF. Use the standard port protocol
+    // for C2C
     if (portProtocol ==
         "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.NVLink.C2C")
     {
@@ -238,7 +239,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for port type");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for port type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -251,7 +253,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for TXWidth");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for TXWidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -263,7 +266,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for RXWidth");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for RXWidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -280,7 +284,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         std::get_if<std::string>(&property.second);
                     if (value == nullptr)
                     {
-                        BMCWEB_LOG_DEBUG("Null value returned " "for protocol type");
+                        BMCWEB_LOG_DEBUG("Null value returned "
+                                         "for protocol type");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -290,8 +295,11 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         portProtocol.size() > nvlinkToken.size())
                     {
                         asyncResp->res.jsonValue["PortProtocol"] = nvlinkToken;
-                        std::string expandPortName = portProtocol.substr(nvlinkToken.size() + 1);
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["PortProtocol"] = expandPortName;
+                        std::string expandPortName =
+                            portProtocol.substr(nvlinkToken.size() + 1);
+                        asyncResp->res
+                            .jsonValue["Oem"]["Nvidia"]["PortProtocol"] =
+                            expandPortName;
                     }
                     else
                     {
@@ -307,7 +315,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for link status");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for link status");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -320,7 +329,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for link state");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for link state");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -331,7 +341,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for CurrentSpeed");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for CurrentSpeed");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -342,7 +353,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for MaxSpeed");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for MaxSpeed");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -354,7 +366,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for Width or ActiveWidth");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for Width or ActiveWidth");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -427,7 +440,8 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for port type");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for port type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -439,7 +453,8 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for protocol type");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for protocol type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -452,7 +467,8 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for link status");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for link status");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -476,7 +492,8 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for link state");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for link state");
                     messages::internalError(asyncResp->res);
                     return;
                 }

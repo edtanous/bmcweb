@@ -38,7 +38,8 @@ inline void
                         const crow::Response& resIn)
 {
     std::string computedEtag = resIn.computeEtag();
-    BMCWEB_LOG_DEBUG("User provided if-match etag {} computed etag {}", ifMatchHeader, computedEtag);
+    BMCWEB_LOG_DEBUG("User provided if-match etag {} computed etag {}",
+                     ifMatchHeader, computedEtag);
     if (computedEtag != ifMatchHeader)
     {
         messages::preconditionFailed(asyncResp->res);

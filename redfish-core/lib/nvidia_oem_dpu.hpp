@@ -131,20 +131,19 @@ class DpuGetProperties : virtual public DpuCommonProperties
                   const std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                   std::string name, const ObjectInfo& objectInfo) const
     {
-
         crow::connections::systemBus->async_method_call(
             [&, json, asyncResp,
              name](const boost::system::error_code ec,
                    const std::variant<std::string>& variant) {
-                if (ec)
-                {
-                    BMCWEB_LOG_DEBUG("DBUS response error for {}", name);
-                    return;
-                }
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("DBUS response error for {}", name);
+                return;
+            }
 
-                (*json)[name] =
-                    toRedfish(*std::get_if<std::string>(&variant), name);
-            },
+            (*json)[name] = toRedfish(*std::get_if<std::string>(&variant),
+                                      name);
+        },
             objectInfo.service, objectInfo.obj,
             "org.freedesktop.DBus.Properties", "Get",
             objectInfo.propertyInfo.intf, objectInfo.propertyInfo.prop);
@@ -167,9 +166,7 @@ class DpuActionSetProperties : virtual public DpuCommonProperties
   public:
     DpuActionSetProperties(
         const std::unordered_map<std::string, ObjectInfo>& objects,
-        const std::string target) :
-        DpuCommonProperties(objects),
-        target(target)
+        const std::string target) : DpuCommonProperties(objects), target(target)
     {}
     std::string getActionTarget()
     {
@@ -209,7 +206,6 @@ class DpuActionSetProperties : virtual public DpuCommonProperties
         if (!json_util::processJsonFromRequest(asyncResp->res, req,
                                                jsonRequest))
         {
-
             return;
         }
 
@@ -220,7 +216,6 @@ class DpuActionSetProperties : virtual public DpuCommonProperties
             std::optional<std::string> value;
             if (objectInfo.required && !jsonRequest.contains(name.c_str()))
             {
-
                 BMCWEB_LOG_DEBUG("Missing required param: {}", name);
                 messages::actionParameterMissing(asyncResp->res, name, target);
                 return;
@@ -258,16 +253,15 @@ class DpuActionSetProperties : virtual public DpuCommonProperties
             auto objectInfo = objects.find(name)->second;
             crow::connections::systemBus->async_method_call(
                 [asyncResp](const boost::system::error_code ec) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR("Set failed {}", ec);
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR("Set failed {}", ec);
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
 
-                    messages::success(asyncResp->res);
-                },
-                objectInfo.service, objectInfo.obj,
+                messages::success(asyncResp->res);
+            }, objectInfo.service, objectInfo.obj,
                 "org.freedesktop.DBus.Properties", "Set",
                 objectInfo.propertyInfo.intf, objectInfo.propertyInfo.prop,
                 std::variant<std::string>(toDbus(value, name)));
@@ -285,8 +279,8 @@ class DpuActionSetAndGetProp :
     DpuActionSetAndGetProp(
         const std::unordered_map<std::string, ObjectInfo>& objects,
         const std::string target) :
-        DpuCommonProperties(objects),
-        DpuActionSetProperties(objects, target), DpuGetProperties(objects)
+        DpuCommonProperties(objects), DpuActionSetProperties(objects, target),
+        DpuGetProperties(objects)
     {}
 };
 
@@ -294,41 +288,61 @@ const PropertyInfo modeInfo = {
     .intf = "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute",
     .prop = "NicAttribute",
     .dbusToRedfish =
-        {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled", "DpuMode"},
-         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled", "NicMode"},
-         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Invaild", "Invaild"}},
+        {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled",
+          "DpuMode"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled",
+          "NicMode"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Invaild",
+          "Invaild"}},
     .redfishToDbus = {
-        {"DpuMode", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled"},
+        {"DpuMode",
+         "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled"},
         {"NicMode",
          "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled"}}};
 
 const PropertyInfo nicAttributeInfo = {
     .intf = "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute",
     .prop = "NicAttribute",
-    .dbusToRedfish = {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled", "Enabled"},
-                {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled", "Disabled"},
-                {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Invaild", "Invaild"}},
-    .redfishToDbus = {{"Enabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled"},
-                {"Disabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled"}}};
+    .dbusToRedfish =
+        {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled",
+          "Enabled"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled",
+          "Disabled"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Invaild",
+          "Invaild"}},
+    .redfishToDbus = {
+        {"Enabled",
+         "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Enabled"},
+        {"Disabled",
+         "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicAttribute.Modes.Disabled"}}};
 
 const PropertyInfo nicTristateAttributeInfo = {
     .intf = "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute",
     .prop = "NicTristateAttribute",
-    .dbusToRedfish = {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Default", "Default"},
-                 {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Enabled", "Enabled"},
-                 {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Disabled", "Disabled"},
-                 {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Invaild", "Invaild"}},
-    .redfishToDbus = {{"Default", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Default"},
-                 {"Enabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Enabled"},
-                 {"Disabled", "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Disabled"}}};
+    .dbusToRedfish =
+        {{"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Default",
+          "Default"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Enabled",
+          "Enabled"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Disabled",
+          "Disabled"},
+         {"xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Invaild",
+          "Invaild"}},
+    .redfishToDbus = {
+        {"Default",
+         "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Default"},
+        {"Enabled",
+         "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Enabled"},
+        {"Disabled",
+         "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Disabled"}}};
 
 constexpr char hostRhimTarget[] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                   "/Oem/Nvidia/Actions/HostRshim.Set";
 
-constexpr char modeTarget[] =
-    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Actions/Mode.Set";
-	constexpr char dpuStrpOptionGet[] =
-    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Connectx/StrapOptions";
+constexpr char modeTarget[] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                              "/Oem/Nvidia/Actions/Mode.Set";
+constexpr char dpuStrpOptionGet[] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                    "/Oem/Nvidia/Connectx/StrapOptions";
 constexpr char dpuHostPrivGet[] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                   "/Oem/Nvidia/Connectx/ExternalHostPrivileges";
 constexpr char externalHostPrivilegeTarget[] =
@@ -505,7 +519,7 @@ DpuActionSetAndGetProp mode(
        .required = true}}},
     modeTarget);
 
-#endif //BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 inline void getIsOemNvidiaRshimEnable(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
@@ -529,7 +543,8 @@ inline void getIsOemNvidiaRshimEnable(
                     const std::string& rshimActiveState) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("DBUS response error for getIsOemNvidiaRshimEnable");
+            BMCWEB_LOG_ERROR(
+                "DBUS response error for getIsOemNvidiaRshimEnable");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -548,7 +563,8 @@ inline void
         "/org/freedesktop/systemd1/unit/rshim_2eservice";
     std::string method = bmcRshimEnabled ? "Start" : "Stop";
 
-    BMCWEB_LOG_DEBUG("requestOemNvidiaRshim: {} rshim interface", method.c_str());
+    BMCWEB_LOG_DEBUG("requestOemNvidiaRshim: {} rshim interface",
+                     method.c_str());
 
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec) {
@@ -558,8 +574,7 @@ inline void
             messages::internalError(asyncResp->res);
             return;
         }
-    },
-        systemdServiceBf, rshimSystemdObjBf, systemdUnitIntfBf, method.c_str(),
+    }, systemdServiceBf, rshimSystemdObjBf, systemdUnitIntfBf, method.c_str(),
         "replace");
 
     messages::success(asyncResp->res);
@@ -577,63 +592,65 @@ inline void getOemNvidiaSwitchStatus(
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec,
                     std::variant<std::string>& resp) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("DBUS response error for getting OOB status");
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            const std::string* strValue = std::get_if<std::string>(&resp);
-            if (strValue == nullptr)
-            {
-                return;
-            }
-            if (*strValue ==
-                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.All")
-            {
-                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = true;
-                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = true;
-                return;
-            }
-            if (*strValue ==
-                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.BMC")
-            {
-                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = true;
-                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
-                return;
-            }
-            if (*strValue ==
-                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.DPU")
-            {
-                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
-                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = true;
-                return;
-            }
-            if (*strValue ==
-                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.None")
-            {
-                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
-                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
-                return;
-            }
-            if (*strValue ==
-                "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.Disable")
-            {
-                asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
-                asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
-                return;
-            }
-        },
-        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface, "Get",
-        ctlBMCSwitchModeIntf, ctlBMCSwitchMode);
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error for getting OOB status");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        const std::string* strValue = std::get_if<std::string>(&resp);
+        if (strValue == nullptr)
+        {
+            return;
+        }
+        if (*strValue ==
+            "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.All")
+        {
+            asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = true;
+            asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = true;
+            return;
+        }
+        if (*strValue ==
+            "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.BMC")
+        {
+            asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = true;
+            asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
+            return;
+        }
+        if (*strValue ==
+            "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.DPU")
+        {
+            asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
+            asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = true;
+            return;
+        }
+        if (*strValue ==
+            "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.None")
+        {
+            asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
+            asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
+            return;
+        }
+        if (*strValue ==
+            "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.Disable")
+        {
+            asyncResp->res.jsonValue["TorSwitchMode"]["BmcOobEnabled"] = false;
+            asyncResp->res.jsonValue["TorSwitchMode"]["DpuOobEnabled"] = false;
+            return;
+        }
+    },
+        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface,
+        "Get", ctlBMCSwitchModeIntf, ctlBMCSwitchMode);
 }
 
 /**
  * @brief Modify switch port status from user requests
  *
  * @param[in] asyncResp Shared pointer to the response message
- * @param[in] bmcOobEnabled true when BMC OOB Port is enabled to access outside network
- * @param[in] dpuOobEnabled true when DPU OOB Port is enabled to access outside network
+ * @param[in] bmcOobEnabled true when BMC OOB Port is enabled to access outside
+ * network
+ * @param[in] dpuOobEnabled true when DPU OOB Port is enabled to access outside
+ * network
  * @return None
  */
 inline void
@@ -646,7 +663,8 @@ inline void
 
     // Only "dpuOobEnabled" take effect.
     // User can't use redfish to disable the BMC OOB Port.
-    // If user set BMC Port as disabled, it will return actionParameterValueError error.
+    // If user set BMC Port as disabled, it will return
+    // actionParameterValueError error.
     if (bmcOobEnabled == true && dpuOobEnabled == true)
     {
         strValue = "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.All";
@@ -657,7 +675,8 @@ inline void
     }
     else
     {
-        messages::actionParameterValueError(asyncResp->res, "bmcOobEnabled", "false");
+        messages::actionParameterValueError(asyncResp->res, "bmcOobEnabled",
+                                            "false");
         return;
     }
 
@@ -665,27 +684,27 @@ inline void
 
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR(
+                "DBUS response error for setting DPU OOB enable/disable");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        // Reload switch service to make the new configuration take effect
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code ec) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for setting DPU OOB enable/disable");
+                BMCWEB_LOG_ERROR(
+                    "DBUS response error for resetting switch mode service");
                 messages::internalError(asyncResp->res);
                 return;
             }
-            // Reload switch service to make the new configuration take effect
-            crow::connections::systemBus->async_method_call(
-            [asyncResp](const boost::system::error_code ec) {
-                if (ec)
-                {
-                    BMCWEB_LOG_ERROR("DBUS response error for resetting switch mode service");
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-            },
-            systemdServiceBf, switchModeSystemdObj, systemdUnitIntfBf, "Restart",
+        }, systemdServiceBf, switchModeSystemdObj, systemdUnitIntfBf, "Restart",
             "replace");
-        },
-        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface, "Set",
-        ctlBMCSwitchModeIntf, ctlBMCSwitchMode, variantValue);
+    }, ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface,
+        "Set", ctlBMCSwitchModeIntf, ctlBMCSwitchMode, variantValue);
 
     messages::success(asyncResp->res);
 }
@@ -700,7 +719,8 @@ inline void resetTorSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     try
     {
-        boost::process::child execProg("/usr/sbin/mlnx_bf_reset_control", "do_tor_eswitch_reset");
+        boost::process::child execProg("/usr/sbin/mlnx_bf_reset_control",
+                                       "do_tor_eswitch_reset");
         execProg.wait();
         if (!execProg.exit_code())
         {
@@ -709,22 +729,24 @@ inline void resetTorSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     }
     catch (const std::runtime_error& e)
     {
-        BMCWEB_LOG_ERROR("mlnx_bf_reset_control script failed with error: {}", e.what());
+        BMCWEB_LOG_ERROR("mlnx_bf_reset_control script failed with error: {}",
+                         e.what());
     }
 
     // Restore the Dbus property after the switch reset successful
-    std::variant<std::string> variantValue("xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.All");
+    std::variant<std::string> variantValue(
+        "xyz.openbmc_project.Control.TorSwitchPortsMode.Modes.All");
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("DBUS response error for setting DPU OOB enable/disable");
-                messages::internalError(asyncResp->res);
-                return;
-            }
-        },
-        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface, "Set",
-        ctlBMCSwitchModeIntf, ctlBMCSwitchMode, variantValue);
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR(
+                "DBUS response error for setting DPU OOB enable/disable");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+    }, ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface,
+        "Set", ctlBMCSwitchModeIntf, ctlBMCSwitchMode, variantValue);
 
     messages::success(asyncResp->res);
 }
@@ -737,8 +759,9 @@ inline void handleTruststoreCertificatesCollectionGet(
     {
         return;
     }
-    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                        "/Oem/Nvidia/Truststore/Certificates";
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+        "/Oem/Nvidia/Truststore/Certificates";
     asyncResp->res.jsonValue["@odata.type"] =
         "#CertificateCollection.CertificateCollection";
     asyncResp->res.jsonValue["Name"] = "TruststoreBios Certificate Collection";
@@ -780,8 +803,8 @@ inline void handleTruststoreCertificatesCollectionPost(
     std::string certType;
     std::optional<std::string> owner;
     if (!json_util::readJsonAction(req, asyncResp->res, "CertificateString",
-                                  certString, "CertificateType", certType,
-                                  "UefiSignatureOwner", owner))
+                                   certString, "CertificateType", certType,
+                                   "UefiSignatureOwner", owner))
     {
         return;
     }
@@ -801,73 +824,74 @@ inline void handleTruststoreCertificatesCollectionPost(
     }
 
     privilege_utils::isBiosPrivilege(
-        req, [req, asyncResp, certString, certType, owner]
-            (const boost::system::error_code ec, const bool isBios) {
+        req, [req, asyncResp, certString, certType,
+              owner](const boost::system::error_code ec, const bool isBios) {
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        if (isBios == false)
+        {
+            createPendingRequest(req, asyncResp);
+            return;
+        }
+
+        std::shared_ptr<CertificateFile> certFile =
+            std::make_shared<CertificateFile>(certString);
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, owner, certFile](const boost::system::error_code ec,
+                                         const std::string& objectPath) {
             if (ec)
             {
                 messages::internalError(asyncResp->res);
                 return;
             }
 
-            if (isBios == false)
+            sdbusplus::message::object_path path(objectPath);
+            std::string certId = path.filename();
+            messages::created(asyncResp->res);
+            asyncResp->res.addHeader(boost::beast::http::field::location,
+                                     "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                     "/Oem/Nvidia/Truststore/Certificates/" +
+                                         certId);
+
+            if (owner)
             {
-                createPendingRequest(req, asyncResp);
-                return;
-            }
-
-            std::shared_ptr<CertificateFile> certFile =
-                std::make_shared<CertificateFile>(certString);
-
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, owner, certFile]
-                (const boost::system::error_code ec,
-                const std::string& objectPath) {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code ec) {
                     if (ec)
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
-
-                    sdbusplus::message::object_path path(objectPath);
-                    std::string certId = path.filename();
-                    messages::created(asyncResp->res);
-                    asyncResp->res.addHeader(boost::beast::http::field::location,
-                                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                        "/Oem/Nvidia/Truststore/Certificates/" + certId);
-
-                    if (owner)
-                    {
-                        crow::connections::systemBus->async_method_call(
-                            [asyncResp](const boost::system::error_code ec) {
-                                if (ec)
-                                {
-                                    messages::internalError(asyncResp->res);
-                                    return;
-                                }
-                            },
-                            truststoreBiosService, objectPath,
-                            "org.freedesktop.DBus.Properties", "Set",
-                            "xyz.openbmc_project.Common.UUID", "UUID",
-                            dbus::utility::DbusVariantType(*owner));
-                    }
-                },
-                truststoreBiosService, truststoreBiosPath,
-                "xyz.openbmc_project.Certs.Install", "Install",
-                certFile->getCertFilePath());
-        });
+                }, truststoreBiosService, objectPath,
+                    "org.freedesktop.DBus.Properties", "Set",
+                    "xyz.openbmc_project.Common.UUID", "UUID",
+                    dbus::utility::DbusVariantType(*owner));
+            }
+        },
+            truststoreBiosService, truststoreBiosPath,
+            "xyz.openbmc_project.Certs.Install", "Install",
+            certFile->getCertFilePath());
+    });
 }
 
-inline void
-    handleTruststoreCertificatesGet(crow::App& app, const crow::Request& req,
-                                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                                    const std::string& certId)
+inline void handleTruststoreCertificatesGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& certId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
-    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                        "/Oem/Nvidia/Truststore/Certificates/" + certId;
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+        "/Oem/Nvidia/Truststore/Certificates/" +
+        certId;
     asyncResp->res.jsonValue["@odata.type"] = "#Certificate.v1_7_0.Certificate";
     asyncResp->res.jsonValue["Id"] = certId;
     asyncResp->res.jsonValue["Name"] = "TruststoreBios Certificate";
@@ -878,82 +902,82 @@ inline void
         [asyncResp,
          certId](const boost::system::error_code ec,
                  const dbus::utility::DBusPropertiesMap& propertiesList) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
-                messages::resourceNotFound(asyncResp->res, "Certificate", certId);
-                return;
-            }
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
+            messages::resourceNotFound(asyncResp->res, "Certificate", certId);
+            return;
+        }
 
-            const std::string* certificateString = nullptr;
-            const std::vector<std::string>* keyUsage = nullptr;
-            const std::string* issuer = nullptr;
-            const std::string* subject = nullptr;
-            const uint64_t* validNotAfter = nullptr;
-            const uint64_t* validNotBefore = nullptr;
-            const std::string* owner = nullptr;
+        const std::string* certificateString = nullptr;
+        const std::vector<std::string>* keyUsage = nullptr;
+        const std::string* issuer = nullptr;
+        const std::string* subject = nullptr;
+        const uint64_t* validNotAfter = nullptr;
+        const uint64_t* validNotBefore = nullptr;
+        const std::string* owner = nullptr;
 
-            const bool success = sdbusplus::unpackPropertiesNoThrow(
-                dbus_utils::UnpackErrorPrinter(), propertiesList,
-                "CertificateString", certificateString, "KeyUsage", keyUsage,
-                "Issuer", issuer, "Subject", subject, "ValidNotAfter",
-                validNotAfter, "ValidNotBefore", validNotBefore, "UUID", owner);
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), propertiesList,
+            "CertificateString", certificateString, "KeyUsage", keyUsage,
+            "Issuer", issuer, "Subject", subject, "ValidNotAfter",
+            validNotAfter, "ValidNotBefore", validNotBefore, "UUID", owner);
 
-            if (!success)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
+        if (!success)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
 
-            asyncResp->res.jsonValue["CertificateString"] = "";
-            asyncResp->res.jsonValue["KeyUsage"] = nlohmann::json::array();
+        asyncResp->res.jsonValue["CertificateString"] = "";
+        asyncResp->res.jsonValue["KeyUsage"] = nlohmann::json::array();
 
-            if (certificateString != nullptr)
-            {
-                asyncResp->res.jsonValue["CertificateString"] = *certificateString;
-                asyncResp->res.jsonValue["CertificateType"] = "PEM";
-            }
+        if (certificateString != nullptr)
+        {
+            asyncResp->res.jsonValue["CertificateString"] = *certificateString;
+            asyncResp->res.jsonValue["CertificateType"] = "PEM";
+        }
 
-            if (keyUsage != nullptr)
-            {
-                asyncResp->res.jsonValue["KeyUsage"] = *keyUsage;
-            }
+        if (keyUsage != nullptr)
+        {
+            asyncResp->res.jsonValue["KeyUsage"] = *keyUsage;
+        }
 
-            if (issuer != nullptr)
-            {
-                updateCertIssuerOrSubject(asyncResp->res.jsonValue["Issuer"],
-                                          *issuer);
-            }
+        if (issuer != nullptr)
+        {
+            updateCertIssuerOrSubject(asyncResp->res.jsonValue["Issuer"],
+                                      *issuer);
+        }
 
-            if (subject != nullptr)
-            {
-                updateCertIssuerOrSubject(asyncResp->res.jsonValue["Subject"],
-                                          *subject);
-            }
+        if (subject != nullptr)
+        {
+            updateCertIssuerOrSubject(asyncResp->res.jsonValue["Subject"],
+                                      *subject);
+        }
 
-            if (validNotAfter != nullptr)
-            {
-                asyncResp->res.jsonValue["ValidNotAfter"] =
-                    redfish::time_utils::getDateTimeUint(*validNotAfter);
-            }
+        if (validNotAfter != nullptr)
+        {
+            asyncResp->res.jsonValue["ValidNotAfter"] =
+                redfish::time_utils::getDateTimeUint(*validNotAfter);
+        }
 
-            if (validNotBefore != nullptr)
-            {
-                asyncResp->res.jsonValue["ValidNotBefore"] =
-                    redfish::time_utils::getDateTimeUint(*validNotBefore);
-            }
+        if (validNotBefore != nullptr)
+        {
+            asyncResp->res.jsonValue["ValidNotBefore"] =
+                redfish::time_utils::getDateTimeUint(*validNotBefore);
+        }
 
-            if (owner != nullptr)
-            {
-                asyncResp->res.jsonValue["UefiSignatureOwner"] = *owner;
-            }
-        });
+        if (owner != nullptr)
+        {
+            asyncResp->res.jsonValue["UefiSignatureOwner"] = *owner;
+        }
+    });
 }
 
-inline void
-    handleTruststoreCertificatesDelete(crow::App& app, const crow::Request& req,
-                                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                                       const std::string& certId)
+inline void handleTruststoreCertificatesDelete(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& certId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -961,40 +985,39 @@ inline void
     }
 
     privilege_utils::isBiosPrivilege(
-        req, [req, asyncResp, certId]
-        (const boost::system::error_code ec, const bool isBios) {
+        req, [req, asyncResp, certId](const boost::system::error_code ec,
+                                      const bool isBios) {
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        if (isBios == false)
+        {
+            createPendingRequest(req, asyncResp);
+            return;
+        }
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, certId](const boost::system::error_code ec) {
+            if (ec.value() == EBADR)
+            {
+                messages::resourceNotFound(asyncResp->res, "certId", certId);
+                return;
+            }
             if (ec)
             {
                 messages::internalError(asyncResp->res);
                 return;
             }
-            if (isBios == false)
-            {
-                createPendingRequest(req, asyncResp);
-                return;
-            }
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, certId](const boost::system::error_code ec) {
-                    if (ec.value() == EBADR)
-                    {
-                        messages::resourceNotFound(asyncResp->res, "certId", certId);
-                        return;
-                    }
-                    if (ec)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.result(boost::beast::http::status::no_content);
-                },
-                truststoreBiosService, truststoreBiosPath + "/" + certId,
-                "xyz.openbmc_project.Object.Delete", "Delete");
-        });
+            asyncResp->res.result(boost::beast::http::status::no_content);
+        }, truststoreBiosService, truststoreBiosPath + "/" + certId,
+            "xyz.openbmc_project.Object.Delete", "Delete");
+    });
 }
 
-inline void
-    handleTruststoreCertificatesResetKeys(crow::App& app, const crow::Request& req,
-                                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void handleTruststoreCertificatesResetKeys(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1002,7 +1025,8 @@ inline void
     }
 
     std::string resetKeysType;
-    if (!json_util::readJsonAction(req, asyncResp->res, "ResetKeysType", resetKeysType))
+    if (!json_util::readJsonAction(req, asyncResp->res, "ResetKeysType",
+                                   resetKeysType))
     {
         return;
     }
@@ -1010,36 +1034,37 @@ inline void
     if (resetKeysType != "DeleteAllKeys")
     {
         messages::propertyValueNotInList(asyncResp->res, resetKeysType,
-                                        "ResetKeysType");
+                                         "ResetKeysType");
         return;
     }
 
     privilege_utils::isBiosPrivilege(
         req, [req, asyncResp](const boost::system::error_code ec,
-                                    const bool isBios) {
-            if (ec)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            if (isBios == false)
-            {
-                // UEFI requires the "Action" target to be under "Truststore/Certificates"
-                // in order to identify the source of this action.
-                // Since the action is placed under the general "Action" section,
-                // The request is being edited with the required TargetUri
-                crow::Request reqFixedTar(req);
-                reqFixedTar.target("/redfish/v1/Systems/" PLATFORMSYSTEMID
-                "/Oem/Nvidia/Truststore/Certificates/Actions/TruststoreCertificates.ResetKeys");
-                createPendingRequest(reqFixedTar, asyncResp);
-                return;
-            }
-
-            // BIOS does use action. It DELETE and POST certificates and
-            // signatures
-            messages::actionNotSupported(asyncResp->res, "ResetKeys");
+                              const bool isBios) {
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
             return;
-        });
+        }
+        if (isBios == false)
+        {
+            // UEFI requires the "Action" target to be under
+            // "Truststore/Certificates" in order to identify the source of this
+            // action. Since the action is placed under the general "Action"
+            // section, The request is being edited with the required TargetUri
+            crow::Request reqFixedTar(req);
+            reqFixedTar.target(
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/Oem/Nvidia/Truststore/Certificates/Actions/TruststoreCertificates.ResetKeys");
+            createPendingRequest(reqFixedTar, asyncResp);
+            return;
+        }
+
+        // BIOS does use action. It DELETE and POST certificates and
+        // signatures
+        messages::actionNotSupported(asyncResp->res, "ResetKeys");
+        return;
+    });
 }
 
 } // namespace bluefield
@@ -1070,7 +1095,10 @@ inline void requestRoutesNvidiaOemBf(App& app)
         if (!redfish::json_util::readJsonPatch(req, asyncResp->res, "BmcRShim",
                                                bmcRshim))
         {
-            BMCWEB_LOG_ERROR("Illegal Property {}", asyncResp->res.jsonValue.dump( 2, ' ', true, nlohmann::json::error_handler_t::replace));
+            BMCWEB_LOG_ERROR(
+                "Illegal Property {}",
+                asyncResp->res.jsonValue.dump(
+                    2, ' ', true, nlohmann::json::error_handler_t::replace));
             return;
         }
         if (bmcRshim)
@@ -1080,102 +1108,114 @@ inline void requestRoutesNvidiaOemBf(App& app)
                                               "BmcRShimEnabled",
                                               bmcRshimEnabled))
             {
-                BMCWEB_LOG_ERROR("Illegal Property {}", asyncResp->res.jsonValue.dump( 2, ' ', true, nlohmann::json::error_handler_t::replace));
+                BMCWEB_LOG_ERROR("Illegal Property {}",
+                                 asyncResp->res.jsonValue.dump(
+                                     2, ' ', true,
+                                     nlohmann::json::error_handler_t::replace));
                 return;
             }
 
             bluefield::requestOemNvidiaRshim(asyncResp, *bmcRshimEnabled);
         }
     });
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch")
         .privileges(redfish::privileges::getSwitch)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                bluefield::getOemNvidiaSwitchStatus(asyncResp);
-            });
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch")
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        bluefield::getOemNvidiaSwitchStatus(asyncResp);
+    });
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch")
         .privileges(redfish::privileges::patchSwitch)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                std::optional<nlohmann::json> torSwitchMode;
-                if (!redfish::json_util::readJsonPatch(req, asyncResp->res,
-                                                  "TorSwitchMode", torSwitchMode))
-                {
-                    BMCWEB_LOG_ERROR(
-                        "Illegal Property {}",
-                        asyncResp->res.jsonValue.dump(
-                            2, ' ', true,
-                            nlohmann::json::error_handler_t::replace));
-                    return;
-                }
-                if (torSwitchMode)
-                {
-                    std::optional<bool> bmcOobEnabled;
-                    std::optional<bool> dpuOobEnabled;
-                    if (!redfish::json_util::readJson(
-                            *torSwitchMode, asyncResp->res, "BmcOobEnabled",
-                            bmcOobEnabled, "DpuOobEnabled", dpuOobEnabled))
-                    {
-                        BMCWEB_LOG_ERROR(
-                            "Illegal Property {}",
-                            asyncResp->res.jsonValue.dump(
-                                2, ' ', true,
-                                nlohmann::json::error_handler_t::replace));
-                        return;
-                    }
-                    bluefield::requestOemNvidiaSwitch(asyncResp, *bmcOobEnabled, *dpuOobEnabled);
-                }
-            });
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Switch.Reset")
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        std::optional<nlohmann::json> torSwitchMode;
+        if (!redfish::json_util::readJsonPatch(req, asyncResp->res,
+                                               "TorSwitchMode", torSwitchMode))
+        {
+            BMCWEB_LOG_ERROR(
+                "Illegal Property {}",
+                asyncResp->res.jsonValue.dump(
+                    2, ' ', true, nlohmann::json::error_handler_t::replace));
+            return;
+        }
+        if (torSwitchMode)
+        {
+            std::optional<bool> bmcOobEnabled;
+            std::optional<bool> dpuOobEnabled;
+            if (!redfish::json_util::readJson(*torSwitchMode, asyncResp->res,
+                                              "BmcOobEnabled", bmcOobEnabled,
+                                              "DpuOobEnabled", dpuOobEnabled))
+            {
+                BMCWEB_LOG_ERROR("Illegal Property {}",
+                                 asyncResp->res.jsonValue.dump(
+                                     2, ' ', true,
+                                     nlohmann::json::error_handler_t::replace));
+                return;
+            }
+            bluefield::requestOemNvidiaSwitch(asyncResp, *bmcOobEnabled,
+                                              *dpuOobEnabled);
+        }
+    });
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Oem/Nvidia/Switch.Reset")
         .privileges(redfish::privileges::postSwitch)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-            if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-            {
-                return;
-            }
-            bluefield::resetTorSwitch(asyncResp);
-        });
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        bluefield::resetTorSwitch(asyncResp);
+    });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Truststore/Certificates")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Oem/Nvidia/Truststore/Certificates")
         .privileges(redfish::privileges::getComputerSystem)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(bluefield::handleTruststoreCertificatesCollectionGet, std::ref(app)));
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            bluefield::handleTruststoreCertificatesCollectionGet,
+            std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Truststore/Certificates")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Oem/Nvidia/Truststore/Certificates")
         .privileges(redfish::privileges::patchComputerSystem)
-        .methods(boost::beast::http::verb::post)(
-            std::bind_front(bluefield::handleTruststoreCertificatesCollectionPost, std::ref(app)));
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            bluefield::handleTruststoreCertificatesCollectionPost,
+            std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/Oem/Nvidia/Truststore/Certificates/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Oem/Nvidia/Truststore/Certificates/<str>")
         .privileges(redfish::privileges::getComputerSystem)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(bluefield::handleTruststoreCertificatesGet, std::ref(app)));
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            bluefield::handleTruststoreCertificatesGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/Oem/Nvidia/Truststore/Certificates/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Oem/Nvidia/Truststore/Certificates/<str>")
         .privileges(redfish::privileges::patchComputerSystem)
-        .methods(boost::beast::http::verb::delete_)(
-            std::bind_front(bluefield::handleTruststoreCertificatesDelete, std::ref(app)));
+        .methods(boost::beast::http::verb::delete_)(std::bind_front(
+            bluefield::handleTruststoreCertificatesDelete, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/Actions/TruststoreCertificates.ResetKeys")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Oem/Nvidia/Actions/TruststoreCertificates.ResetKeys")
         .privileges(redfish::privileges::patchComputerSystem)
-        .methods(boost::beast::http::verb::post)(
-            std::bind_front(bluefield::handleTruststoreCertificatesResetKeys, std::ref(app)));
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            bluefield::handleTruststoreCertificatesResetKeys, std::ref(app)));
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 
-	BMCWEB_ROUTE(app, bluefield::hostRhimTarget)
+    BMCWEB_ROUTE(app, bluefield::hostRhimTarget)
         .privileges(redfish::privileges::postComputerSystem)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
@@ -1186,7 +1226,6 @@ inline void requestRoutesNvidiaOemBf(App& app)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
                             &bluefield::mode, std::ref(app)));
-
 
     BMCWEB_ROUTE(app, bluefield::externalHostPrivilegeTarget)
         .privileges(redfish::privileges::postComputerSystem)
@@ -1200,117 +1239,112 @@ inline void requestRoutesNvidiaOemBf(App& app)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
-                auto& nvidia = asyncResp->res.jsonValue;
-                auto& connectx = nvidia["Connectx"];
-                auto& actions = nvidia["Actions"];
-                auto& hostRshimAction = actions["#HostRshim.Set"];
-                auto& modeAction = actions["#Mode.Set"];
+        auto& nvidia = asyncResp->res.jsonValue;
+        auto& connectx = nvidia["Connectx"];
+        auto& actions = nvidia["Actions"];
+        auto& hostRshimAction = actions["#HostRshim.Set"];
+        auto& modeAction = actions["#Mode.Set"];
 
-                bluefield::mode.getProperty(&nvidia, asyncResp);
-                bluefield::hostRshim.getProperty(&nvidia, asyncResp);
-                connectx["StrapOptions"]["@odata.id"] = bluefield::dpuStrpOptionGet;
-                connectx["ExternalHostPrivilege"]["@odata.id"] = bluefield::dpuHostPrivGet;
-                bluefield::mode.getActionInfo(&modeAction);
-				bluefield::hostRshim.getActionInfo(&hostRshimAction);
+        bluefield::mode.getProperty(&nvidia, asyncResp);
+        bluefield::hostRshim.getProperty(&nvidia, asyncResp);
+        connectx["StrapOptions"]["@odata.id"] = bluefield::dpuStrpOptionGet;
+        connectx["ExternalHostPrivilege"]["@odata.id"] =
+            bluefield::dpuHostPrivGet;
+        bluefield::mode.getActionInfo(&modeAction);
+        bluefield::hostRshim.getActionInfo(&hostRshimAction);
 
-                nvidia["Truststore"]["Certificates"]["@odata.id"] =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                "/Oem/Nvidia/Truststore/Certificates";
+        nvidia["Truststore"]["Certificates"]["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+            "/Oem/Nvidia/Truststore/Certificates";
 
-                actions["#TruststoreCertificates.ResetKeys"]["target"] =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                "/Oem/Nvidia/Actions/TruststoreCertificates.ResetKeys";
+        actions["#TruststoreCertificates.ResetKeys"]["target"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+            "/Oem/Nvidia/Actions/TruststoreCertificates.ResetKeys";
 
-                actions["#TruststoreCertificates.ResetKeys"]
-                ["ResetKeysType@Redfish.AllowableValues"] = {"DeleteAllKeys"};
+        actions["#TruststoreCertificates.ResetKeys"]
+               ["ResetKeysType@Redfish.AllowableValues"] = {"DeleteAllKeys"};
 #endif
-                sdbusplus::asio::getAllProperties(
-                    *crow::connections::systemBus, bluefield::dpuFruObj, bluefield::dpuFruPath, "xyz.openbmc_project.Inventory.Host.BfFruInfo",
-                    [asyncResp](const boost::system::error_code ec,
-                                        const dbus::utility::DBusPropertiesMap&
-                                            propertiesList) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
-                            return;
-                        }
+        sdbusplus::asio::getAllProperties(
+            *crow::connections::systemBus, bluefield::dpuFruObj,
+            bluefield::dpuFruPath,
+            "xyz.openbmc_project.Inventory.Host.BfFruInfo",
+            [asyncResp](
+                const boost::system::error_code ec,
+                const dbus::utility::DBusPropertiesMap& propertiesList) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
+                return;
+            }
 
-                        const std::string* baseMac = nullptr;
-                        const std::string* baseGuid = nullptr;
-                        const std::string* description = nullptr;
+            const std::string* baseMac = nullptr;
+            const std::string* baseGuid = nullptr;
+            const std::string* description = nullptr;
 
-                        const bool success = sdbusplus::unpackPropertiesNoThrow(
-                            dbus_utils::UnpackErrorPrinter(), propertiesList,
-                            "Description", description, "BaseGUID",
-                            baseGuid, "BaseMAC", baseMac);
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), propertiesList, "Description",
+                description, "BaseGUID", baseGuid, "BaseMAC", baseMac);
 
-                        if (!success)
-                        {
-                            return;
-                        }
+            if (!success)
+            {
+                return;
+            }
 
-                        if (description != nullptr)
-                        {
-                            asyncResp->res.jsonValue["Description"] =
-                                *description;
-                        }
+            if (description != nullptr)
+            {
+                asyncResp->res.jsonValue["Description"] = *description;
+            }
 
-                        if (baseGuid != nullptr)
-                        {
-                            asyncResp->res.jsonValue["BaseGUID"] =
-                                *baseGuid;
-                        }
+            if (baseGuid != nullptr)
+            {
+                asyncResp->res.jsonValue["BaseGUID"] = *baseGuid;
+            }
 
-                        if (baseMac != nullptr)
-                        {
-                            asyncResp->res.jsonValue["BaseMAC"] =
-                                *baseMac;
-                        }
-                    });
-
-            });
+            if (baseMac != nullptr)
+            {
+                asyncResp->res.jsonValue["BaseMAC"] = *baseMac;
+            }
+        });
+    });
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
     BMCWEB_ROUTE(app, bluefield::dpuStrpOptionGet)
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                auto& strapOptionsJson =
-                    asyncResp->res.jsonValue["StrapOptions"];
-                auto& mask = asyncResp->res.jsonValue["Mask"];
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        auto& strapOptionsJson = asyncResp->res.jsonValue["StrapOptions"];
+        auto& mask = asyncResp->res.jsonValue["Mask"];
 
-                bluefield::starpOptions.getProperty(&strapOptionsJson, asyncResp);
-                bluefield::starpOptionsMask.getProperty(&mask, asyncResp);
-            });
+        bluefield::starpOptions.getProperty(&strapOptionsJson, asyncResp);
+        bluefield::starpOptionsMask.getProperty(&mask, asyncResp);
+    });
 
     BMCWEB_ROUTE(app, bluefield::dpuHostPrivGet)
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                auto& hostPriv =
-                    asyncResp->res.jsonValue["ExternalHostPrivilege"];
-                auto& actions =
-                    asyncResp->res
-                        .jsonValue["Actions"]["#ExternalHostPrivilege.Set"];
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        auto& hostPriv = asyncResp->res.jsonValue["ExternalHostPrivilege"];
+        auto& actions =
+            asyncResp->res.jsonValue["Actions"]["#ExternalHostPrivilege.Set"];
 
-                bluefield::externalHostPrivilege.getProperty(&hostPriv, asyncResp);
-                bluefield::externalHostPrivilege.getActionInfo(&actions);
-            });
-			#endif //BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
+        bluefield::externalHostPrivilege.getProperty(&hostPriv, asyncResp);
+        bluefield::externalHostPrivilege.getActionInfo(&actions);
+    });
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 }
 
 } // namespace redfish

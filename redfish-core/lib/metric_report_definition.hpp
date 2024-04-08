@@ -6,12 +6,12 @@
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
 #include "sensors.hpp"
-#include "utils/metric_report_utils.hpp"
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
+#include "utils/metric_report_definition_utils.hpp"
+#include "utils/metric_report_utils.hpp"
 #include "utils/telemetry_utils.hpp"
 #include "utils/time_utils.hpp"
-#include "utils/metric_report_definition_utils.hpp"
 
 #include <boost/container/flat_map.hpp>
 #include <boost/regex.hpp>
@@ -226,14 +226,16 @@ inline std::optional<nlohmann::json::array_t> getLinkedTriggers(
         if (path.parent_path() !=
             "/xyz/openbmc_project/Telemetry/Triggers/TelemetryService")
         {
-            BMCWEB_LOG_ERROR("Property Triggers contains invalid value: {}", path.str);
+            BMCWEB_LOG_ERROR("Property Triggers contains invalid value: {}",
+                             path.str);
             return std::nullopt;
         }
 
         std::string id = path.filename();
         if (id.empty())
         {
-            BMCWEB_LOG_ERROR("Property Triggers contains invalid value: {}", path.str);
+            BMCWEB_LOG_ERROR("Property Triggers contains invalid value: {}",
+                             path.str);
             return std::nullopt;
         }
         nlohmann::json::object_t trigger;
@@ -661,8 +663,7 @@ class AddReport
   public:
     AddReport(AddReportArgs argsIn,
               const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        asyncResp(asyncRespIn),
-        args(std::move(argsIn))
+        asyncResp(asyncRespIn), args(std::move(argsIn))
     {}
 
     ~AddReport()
@@ -698,7 +699,9 @@ class AddReport
                 auto el = uriToDbus.find(uri);
                 if (el == uriToDbus.end())
                 {
-                    BMCWEB_LOG_ERROR( "Failed to find DBus sensor corresponding to URI {}", uri);
+                    BMCWEB_LOG_ERROR(
+                        "Failed to find DBus sensor corresponding to URI {}",
+                        uri);
                     messages::propertyValueNotInList(asyncResp->res, uri,
                                                      "MetricProperties/" +
                                                          std::to_string(i));
@@ -747,7 +750,7 @@ class AddReport
             }
 
             messages::created(asyncResp->res);
-            },
+        },
             telemetry::service, "/xyz/openbmc_project/Telemetry/Reports",
             "xyz.openbmc_project.Telemetry.ReportManager", "AddReport",
             "TelemetryService/" + args.id, args.name, args.reportingType,
@@ -776,8 +779,7 @@ class UpdateMetrics
   public:
     UpdateMetrics(std::string_view idIn,
                   const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        id(idIn),
-        asyncResp(asyncRespIn)
+        id(idIn), asyncResp(asyncRespIn)
     {}
 
     ~UpdateMetrics()
@@ -854,7 +856,7 @@ class UpdateMetrics
             {
                 return;
             }
-            },
+        },
             "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
             "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.Telemetry.Report", "ReadingParameters",
@@ -899,8 +901,7 @@ inline void
         {
             return;
         }
-        },
-        "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
+    }, "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Telemetry.Report", "Enabled",
         dbus::utility::DbusVariantType{enabled});
@@ -916,8 +917,7 @@ inline void setReportTypeAndInterval(
         {
             return;
         }
-        },
-        "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
+    }, "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
         "xyz.openbmc_project.Telemetry.Report", "SetReportingProperties",
         reportingType, recurrenceInterval);
 }
@@ -932,8 +932,7 @@ inline void
         {
             return;
         }
-        },
-        "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
+    }, "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Telemetry.Report", "ReportUpdates",
         dbus::utility::DbusVariantType{reportUpdates});
@@ -950,8 +949,7 @@ inline void
         {
             return;
         }
-        },
-        "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
+    }, "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Telemetry.Report", "ReportActions",
         dbus::utility::DbusVariantType{dbusReportActions});
@@ -1044,11 +1042,13 @@ inline void
                     const std::map<std::string, std::string>& uriToDbus) {
                 if (status != boost::beast::http::status::ok)
                 {
-                    BMCWEB_LOG_ERROR( "Failed to retrieve URI to dbus sensors map with err {}", static_cast<unsigned>(status));
+                    BMCWEB_LOG_ERROR(
+                        "Failed to retrieve URI to dbus sensors map with err {}",
+                        static_cast<unsigned>(status));
                     return;
                 }
                 updateMetricsReq->insert(uriToDbus);
-                });
+            });
         }
     });
 }
@@ -1085,7 +1085,8 @@ inline void handleMetricReportDefinitionCollectionGet(
         "/redfish/v1/TelemetryService/MetricReportDefinitions";
     asyncResp->res.jsonValue["Name"] = "Metric Definition Collection";
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
-    redfish::nvidia_metric_report_def_utils::getMetricReportCollection(asyncResp);
+    redfish::nvidia_metric_report_def_utils::getMetricReportCollection(
+        asyncResp);
     return;
 #endif
     constexpr std::array<std::string_view, 1> interfaces{
@@ -1220,7 +1221,7 @@ inline void
             BMCWEB_LOG_ERROR("getAllChassisSensors DBUS error: {}", ec);
         }
         asyncResp->res.result(boost::beast::http::status::no_content);
-        },
+    },
         service, reportPath, "xyz.openbmc_project.Object.Delete", "Delete");
 }
 } // namespace telemetry
@@ -1259,11 +1260,13 @@ inline void handleMetricReportDefinitionsPost(
                 const std::map<std::string, std::string>& uriToDbus) {
             if (status != boost::beast::http::status::ok)
             {
-                BMCWEB_LOG_ERROR( "Failed to retrieve URI to dbus sensors map with err {}", static_cast<unsigned>(status));
+                BMCWEB_LOG_ERROR(
+                    "Failed to retrieve URI to dbus sensors map with err {}",
+                    static_cast<unsigned>(status));
                 return;
             }
             addReportReq->insert(uriToDbus);
-            });
+        });
     }
 }
 
@@ -1294,7 +1297,8 @@ inline void
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/MetricReport/MetricReport.json>; rel=describedby");
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
-    redfish::nvidia_metric_report_def_utils::validateAndGetMetricReportDefinition(asyncResp, id);
+    redfish::nvidia_metric_report_def_utils::
+        validateAndGetMetricReportDefinition(asyncResp, id);
 #else
 
     sdbusplus::asio::getAllProperties(
@@ -1308,7 +1312,7 @@ inline void
         }
 
         telemetry::fillReportDefinition(asyncResp, id, properties);
-        });
+    });
 #endif
 }
 
@@ -1345,8 +1349,7 @@ inline void handleMetricReportDelete(
         }
 
         asyncResp->res.result(boost::beast::http::status::no_content);
-        },
-        telemetry::service, reportPath, "xyz.openbmc_project.Object.Delete",
+    }, telemetry::service, reportPath, "xyz.openbmc_project.Object.Delete",
         "Delete");
 }
 

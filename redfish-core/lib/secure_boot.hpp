@@ -42,7 +42,8 @@ inline void handleSecureBootGet(crow::App& app, const crow::Request& req,
                 const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("DBUS response error on SecureBoot GetAll: {}", ec);
+            BMCWEB_LOG_ERROR("DBUS response error on SecureBoot GetAll: {}",
+                             ec);
             messages::internalError(aResp->res);
             return;
         }
@@ -214,8 +215,7 @@ inline void
                     messages::internalError(aResp->res);
                     return;
                 }
-            },
-                "xyz.openbmc_project.BIOSConfigManager",
+            }, "xyz.openbmc_project.BIOSConfigManager",
                 "/xyz/openbmc_project/bios_config/manager",
                 "org.freedesktop.DBus.Properties", "Set",
                 "xyz.openbmc_project.BIOSConfig.SecureBoot", "CurrentBoot",
@@ -232,8 +232,7 @@ inline void
                     messages::internalError(aResp->res);
                     return;
                 }
-            },
-                "xyz.openbmc_project.BIOSConfigManager",
+            }, "xyz.openbmc_project.BIOSConfigManager",
                 "/xyz/openbmc_project/bios_config/manager",
                 "org.freedesktop.DBus.Properties", "Set",
                 "xyz.openbmc_project.BIOSConfig.SecureBoot", "Enable",
@@ -250,8 +249,7 @@ inline void
                     messages::internalError(aResp->res);
                     return;
                 }
-            },
-                "xyz.openbmc_project.BIOSConfigManager",
+            }, "xyz.openbmc_project.BIOSConfigManager",
                 "/xyz/openbmc_project/bios_config/manager",
                 "org.freedesktop.DBus.Properties", "Set",
                 "xyz.openbmc_project.BIOSConfig.SecureBoot", "Mode",

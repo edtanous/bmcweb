@@ -197,7 +197,9 @@ inline void processSensorsValue(
                                 // difference between requestTimestamp and
                                 // lastUpdateTime stamp should be within
                                 // staleSensorUpperLimitms for fresh metric
-                                BMCWEB_LOG_DEBUG("Stalesensor upper limit is:{}", staleSensorUpperLimitms);
+                                BMCWEB_LOG_DEBUG(
+                                    "Stalesensor upper limit is:{}",
+                                    staleSensorUpperLimitms);
                                 if (requestTimestamp - *metricUpdatetimestamp <=
                                     staleSensorUpperLimitms)
                                 {
@@ -260,7 +262,9 @@ inline void processChassisSensors(
                                   variantEndpoints) {
                 if (ec)
                 {
-                    BMCWEB_LOG_DEBUG("getAllChassisSensors DBUS error on chassis path{}: {}", objectPath, ec);
+                    BMCWEB_LOG_DEBUG(
+                        "getAllChassisSensors DBUS error on chassis path{}: {}",
+                        objectPath, ec);
                     return;
                 }
                 const std::vector<std::string>* sensorPaths =
@@ -301,7 +305,9 @@ inline void getServiceRootManagedObjects(
                       ManagedObjectsVectorType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("getServiceRootManagedObjects for connection:{} error: {}", connection, ec);
+            BMCWEB_LOG_ERROR(
+                "getServiceRootManagedObjects for connection:{} error: {}",
+                connection, ec);
             return;
         }
         std::sort(resp.begin(), resp.end());
@@ -324,7 +330,9 @@ inline void getServiceManagedObjects(
                       ManagedObjectsVectorType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("GetManagedObjects is not at sensor path for connection:{}", connection);
+            BMCWEB_LOG_DEBUG(
+                "GetManagedObjects is not at sensor path for connection:{}",
+                connection);
             // Check managed objects on service root
             getServiceRootManagedObjects(asyncResp, connection, chassisPath,
                                          metricsType, sensingInterval,
@@ -355,7 +363,8 @@ inline void processSensorServices(
                                        const GetSubTreeType& subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("processSensorServices: Error in getting DBUS sensors: {}", ec);
+            BMCWEB_LOG_ERROR(
+                "processSensorServices: Error in getting DBUS sensors: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -372,7 +381,8 @@ inline void processSensorServices(
         {
             if (serviceMap.size() < 1)
             {
-                BMCWEB_LOG_DEBUG("Got 0 service names for sensorpath:{}", objectPath);
+                BMCWEB_LOG_DEBUG("Got 0 service names for sensorpath:{}",
+                                 objectPath);
                 continue;
             }
             sensorServices.insert(serviceMap[0].first);
@@ -415,7 +425,8 @@ inline void requestRoutesThermalMetrics(App& app)
                                const std::vector<std::string>& chassisPaths) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("thermal metrics respHandler DBUS error: {}", ec);
+                BMCWEB_LOG_ERROR("thermal metrics respHandler DBUS error: {}",
+                                 ec);
                 messages::internalError(asyncResp->res);
                 return;
             }

@@ -25,12 +25,12 @@
 #include "registries/privilege_registry.hpp"
 #include "utils/systemd_utils.hpp"
 
+#include <managers.hpp>
 #include <nlohmann/json.hpp>
 #include <persistent_data.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/systemd_utils.hpp>
-#include <managers.hpp>
 
 namespace redfish
 {
@@ -117,8 +117,9 @@ inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
     // GetSubTree on all interfaces which provide info about BMC
     crow::connections::systemBus->async_method_call(
-        [asyncResp](boost::system::error_code ec,
-                    const dbus::utility::MapperGetSubTreeResponse& subtree) mutable {
+        [asyncResp](
+            boost::system::error_code ec,
+            const dbus::utility::MapperGetSubTreeResponse& subtree) mutable {
         if (ec)
         {
             BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
@@ -169,12 +170,12 @@ inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
             return;
         }
     },
-    "xyz.openbmc_project.ObjectMapper",
-    "/xyz/openbmc_project/object_mapper",
-    "xyz.openbmc_project.ObjectMapper", 
-    "GetSubTree",
-    "/xyz/openbmc_project/inventory", 0,
-    std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Decorator.Asset"});
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Inventory.Decorator.Asset"});
 }
 
 inline void handleServiceRootGetImpl(
@@ -193,10 +194,10 @@ inline void handleServiceRootGetImpl(
     asyncResp->res.jsonValue["RedfishVersion"] = "1.17.0";
     if (persistent_data::getConfig().isTLSAuthEnabled())
     {
-    asyncResp->res.jsonValue["Links"]["Sessions"]["@odata.id"] =
-        "/redfish/v1/SessionService/Sessions";
-    asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
-        "/redfish/v1/AccountService";
+        asyncResp->res.jsonValue["Links"]["Sessions"]["@odata.id"] =
+            "/redfish/v1/SessionService/Sessions";
+        asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
+            "/redfish/v1/AccountService";
     }
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
@@ -239,8 +240,6 @@ inline void handleServiceRootGetImpl(
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Cables"]["@odata.id"] = "/redfish/v1/Cables";
 #endif
-
-
 
     nlohmann::json& protocolFeatures =
         asyncResp->res.jsonValue["ProtocolFeaturesSupported"];

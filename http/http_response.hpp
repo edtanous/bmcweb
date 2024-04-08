@@ -69,7 +69,8 @@ struct Response
 
     Response& operator=(Response&& r) noexcept
     {
-        BMCWEB_LOG_DEBUG("Moving response containers; this: {}; other: {}", logPtr(this), logPtr(&r));
+        BMCWEB_LOG_DEBUG("Moving response containers; this: {}; other: {}",
+                         logPtr(this), logPtr(&r));
         if (this == &r)
         {
             return *this;
@@ -168,7 +169,9 @@ struct Response
                 (is1XXReturn || stringResponse.result() == status::no_content ||
                  stringResponse.result() == status::not_modified))
             {
-                BMCWEB_LOG_CRITICAL( "{} Response content provided but code was no-content or not_modified, which aren't allowed to have a body", logPtr(this));
+                BMCWEB_LOG_CRITICAL(
+                    "{} Response content provided but code was no-content or not_modified, which aren't allowed to have a body",
+                    logPtr(this));
                 pSize = 0;
                 body().clear();
             }
@@ -244,7 +247,8 @@ struct Response
 
     std::function<void(Response&)> releaseCompleteRequestHandler()
     {
-        BMCWEB_LOG_DEBUG("{} releasing completion handler{}", logPtr(this), static_cast<bool>(completeRequestHandler));
+        BMCWEB_LOG_DEBUG("{} releasing completion handler{}", logPtr(this),
+                         static_cast<bool>(completeRequestHandler));
         std::function<void(Response&)> ret = completeRequestHandler;
         completeRequestHandler = nullptr;
         completed = true;

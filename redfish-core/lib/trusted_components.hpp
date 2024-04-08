@@ -43,7 +43,8 @@ inline void trustedComponentGetAllProperties(
                         propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("DBUS response error for trustedComponent properties");
+            BMCWEB_LOG_ERROR(
+                "DBUS response error for trustedComponent properties");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -99,7 +100,7 @@ inline void handleTrustedComponentsCollectionGet(
         asyncResp->res.jsonValue["Name"] = "Trusted Component Collection";
         asyncResp->res.jsonValue["@odata.id"] = collectionPath;
         constexpr std::array<std::string_view, 1> interfaces{
-        "xyz.openbmc_project.Inventory.Item.Tpm"};
+            "xyz.openbmc_project.Inventory.Item.Tpm"};
         redfish::collection_util::getCollectionMembers(
             asyncResp, boost::urls::url(collectionPath), interfaces,
             validChassisPath->c_str());

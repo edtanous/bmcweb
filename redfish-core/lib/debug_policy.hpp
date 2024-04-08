@@ -222,15 +222,14 @@ inline void debugCapabilitiesProcess(
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, method, caps](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", method, ec);
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            messages::success(asyncResp->res, method);
-        },
-        svc, path, "xyz.openbmc_project.Control.Processor.RemoteDebug", method,
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", method, ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        messages::success(asyncResp->res, method);
+    }, svc, path, "xyz.openbmc_project.Control.Processor.RemoteDebug", method,
         caps);
 }
 
@@ -241,15 +240,14 @@ inline void
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, prop](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", prop, ec);
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            messages::success(asyncResp->res, prop);
-        },
-        svc, path, "org.freedesktop.DBus.Properties", "Set",
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error: Set {} {}", prop, ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        messages::success(asyncResp->res, prop);
+    }, svc, path, "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Processor.RemoteDebug", prop,
         dbus::utility::DbusVariantType(value));
 }
@@ -345,26 +343,26 @@ inline void handleDebugPolicyPatchReq(
         [capsToEnable, capsToDisable,
          timeout](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                   const std::string& svc, const std::string& path) {
-            if (path.empty())
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            if (!capsToEnable.empty())
-            {
-                debugCapabilitiesProcess(asyncResp, svc, path, "Enable"s,
-                                         capsToEnable);
-            }
-            if (!capsToDisable.empty())
-            {
-                debugCapabilitiesProcess(asyncResp, svc, path, "Disable"s,
-                                         capsToDisable);
-            }
-            if (timeout)
-            {
-                debugPropertySet(asyncResp, svc, path, "Timeout", *timeout);
-            }
-        };
+        if (path.empty())
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        if (!capsToEnable.empty())
+        {
+            debugCapabilitiesProcess(asyncResp, svc, path, "Enable"s,
+                                     capsToEnable);
+        }
+        if (!capsToDisable.empty())
+        {
+            debugCapabilitiesProcess(asyncResp, svc, path, "Disable"s,
+                                     capsToDisable);
+        }
+        if (timeout)
+        {
+            debugPropertySet(asyncResp, svc, path, "Timeout", *timeout);
+        }
+    };
 
     findDebugInterface(asyncResp, propSetCallback);
 }

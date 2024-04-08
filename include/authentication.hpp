@@ -1,12 +1,12 @@
 #pragma once
 
-#include "persistent_data.hpp"
 #include "common.hpp"
 #include "forward_unauthorized.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
 #include "http_utility.hpp"
 #include "pam_authenticate.hpp"
+#include "persistent_data.hpp"
 #include "webroutes.hpp"
 
 #include <boost/container/flat_set.hpp>
@@ -68,7 +68,8 @@ static std::shared_ptr<persistent_data::UserSession>
     std::string pass = authData.substr(separator);
 
     BMCWEB_LOG_DEBUG("[AuthMiddleware] Authenticating user: {}", user);
-    BMCWEB_LOG_DEBUG("[AuthMiddleware] User IPAddress: {}", clientIp.to_string());
+    BMCWEB_LOG_DEBUG("[AuthMiddleware] User IPAddress: {}",
+                     clientIp.to_string());
 
     int pamrc = pamAuthenticateUser(user, pass);
     bool isConfigureSelfOnly = pamrc == PAM_NEW_AUTHTOK_REQD;
@@ -195,7 +196,8 @@ static std::shared_ptr<persistent_data::UserSession>
         // set cookie only if this is req from the browser.
         if (reqHeader["User-Agent"].empty())
         {
-            BMCWEB_LOG_DEBUG(" TLS session: {} will be used for this request.", sp->uniqueId);
+            BMCWEB_LOG_DEBUG(" TLS session: {} will be used for this request.",
+                             sp->uniqueId);
             return sp;
         }
         // TODO: change this to not switch to cookie auth
@@ -207,7 +209,9 @@ static std::shared_ptr<persistent_data::UserSession>
                           "; SameSite=Strict; Secure; HttpOnly");
         res.addHeader(boost::beast::http::field::set_cookie,
                       "IsAuthenticated=true; Secure");
-        BMCWEB_LOG_DEBUG( " TLS session: {} with cookie will be used for this request.", sp->uniqueId);
+        BMCWEB_LOG_DEBUG(
+            " TLS session: {} with cookie will be used for this request.",
+            sp->uniqueId);
         return sp;
     }
     return nullptr;

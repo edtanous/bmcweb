@@ -68,13 +68,15 @@ inline void getFanPaths(
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR( "DBUS response error for getAssociatedSubTreePaths {}", ec.value());
+                BMCWEB_LOG_ERROR(
+                    "DBUS response error for getAssociatedSubTreePaths {}",
+                    ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
         }
         callback(subtreePaths);
-        });
+    });
 }
 
 inline void doFanCollection(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -125,7 +127,7 @@ inline void
         asyncResp->res.addHeader(
             boost::beast::http::field::link,
             "</redfish/v1/JsonSchemas/FanCollection/FanCollection.json>; rel=describedby");
-        });
+    });
 }
 
 inline void
@@ -183,12 +185,13 @@ static inline void handleFanPath(
                        const dbus::utility::MapperGetObject& object) {
             if (ec || object.empty())
             {
-                BMCWEB_LOG_ERROR("DBUS response error on getDbusObject {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error on getDbusObject {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
                 return;
             }
             callback(fanPath, object.begin()->first);
-            });
+        });
 
         return;
     }
@@ -207,7 +210,7 @@ inline void getValidFanPath(
         [fanId, asyncResp, callback](
             const dbus::utility::MapperGetSubTreePathsResponse& fanPaths) {
         handleFanPath(fanId, asyncResp, fanPaths, callback);
-        });
+    });
 }
 
 inline void addFanCommonProperties(crow::Response& resp,
@@ -236,7 +239,8 @@ inline void getFanHealth(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Health {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Health {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -246,7 +250,7 @@ inline void getFanHealth(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
         }
-        });
+    });
 }
 
 inline void getFanState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -260,7 +264,8 @@ inline void getFanState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for State {}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for State {}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -270,7 +275,7 @@ inline void getFanState(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             asyncResp->res.jsonValue["Status"]["State"] = "Absent";
         }
-        });
+    });
 }
 
 inline void getFanAsset(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -286,7 +291,8 @@ inline void getFanAsset(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Properties{}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Properties{}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
@@ -326,7 +332,7 @@ inline void getFanAsset(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             asyncResp->res.jsonValue["SparePartNumber"] = *sparePartNumber;
         }
-        });
+    });
 }
 
 inline void getFanLocation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -342,14 +348,15 @@ inline void getFanLocation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             if (ec.value() != EBADR)
             {
-                BMCWEB_LOG_ERROR("DBUS response error for Location{}", ec.value());
+                BMCWEB_LOG_ERROR("DBUS response error for Location{}",
+                                 ec.value());
                 messages::internalError(asyncResp->res);
             }
             return;
         }
         asyncResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
             property;
-        });
+    });
 }
 
 inline void
@@ -404,7 +411,7 @@ inline void handleFanHead(App& app, const crow::Request& req,
                 boost::beast::http::field::link,
                 "</redfish/v1/JsonSchemas/Fan/Fan.json>; rel=describedby");
         });
-        });
+    });
 }
 
 inline void handleFanGet(App& app, const crow::Request& req,

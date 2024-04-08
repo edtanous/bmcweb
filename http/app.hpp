@@ -131,22 +131,22 @@ class App
             }
             sslServer->run();
         }
-	else
+        else
 #endif
-         {
-             BMCWEB_LOG_DEBUG("HTTP RUN");
-             if (-1 == socketFd)
-             {
-                 server = std::make_unique<server_t>(this, bindaddrStr,
-                                                     portUint, nullptr, io);
-             }
-             else
-             {
-                 server = std::make_unique<server_t>(this, socketFd, nullptr,
-                                                     io);
-             }
-             server->run();
-         }
+        {
+            BMCWEB_LOG_DEBUG("HTTP RUN");
+            if (-1 == socketFd)
+            {
+                server = std::make_unique<server_t>(this, bindaddrStr, portUint,
+                                                    nullptr, io);
+            }
+            else
+            {
+                server = std::make_unique<server_t>(this, socketFd, nullptr,
+                                                    io);
+            }
+            server->run();
+        }
     }
 
     void stop()
@@ -174,7 +174,8 @@ class App
     App& ssl(std::shared_ptr<boost::asio::ssl::context>&& ctx)
     {
         sslContext = std::move(ctx);
-        BMCWEB_LOG_INFO("app::ssl context use_count={}", sslContext.use_count());
+        BMCWEB_LOG_INFO("app::ssl context use_count={}",
+                        sslContext.use_count());
         return *this;
     }
 

@@ -94,7 +94,8 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for asset properties");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for asset properties");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -106,7 +107,8 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for manufacturer");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for manufacturer");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -118,7 +120,8 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for build date");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for build date");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -130,7 +133,8 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for LocationType");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for LocationType");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -143,7 +147,8 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for PhysicalContext");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for PhysicalContext");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -167,8 +172,8 @@ inline void requestAssemblyRoutes(App& app)
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisId) {
         BMCWEB_LOG_DEBUG("Assembly doGet enter");
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {

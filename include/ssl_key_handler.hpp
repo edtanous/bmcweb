@@ -24,7 +24,7 @@ extern "C"
 #include <boost/asio/ssl/context.hpp>
 #include <logging.hpp>
 #include <lsp.hpp>
-//#include <random.hpp>
+// #include <random.hpp>
 
 #include <optional>
 #include <random>
@@ -90,14 +90,17 @@ inline bool validateCertificate(X509* const cert)
         X509_STORE_free(x509Store);
         if (isTrustChainError(errCode))
         {
-            BMCWEB_LOG_DEBUG("Ignoring Trust Chain error. Reason: {}", X509_verify_cert_error_string(errCode));
+            BMCWEB_LOG_DEBUG("Ignoring Trust Chain error. Reason: {}",
+                             X509_verify_cert_error_string(errCode));
             return true;
         }
-        BMCWEB_LOG_ERROR("Certificate verification failed. Reason: {}", X509_verify_cert_error_string(errCode));
+        BMCWEB_LOG_ERROR("Certificate verification failed. Reason: {}",
+                         X509_verify_cert_error_string(errCode));
         return false;
     }
 
-    BMCWEB_LOG_ERROR( "Error occurred during X509_verify_cert call. ErrorCode: {}", errCode);
+    BMCWEB_LOG_ERROR(
+        "Error occurred during X509_verify_cert call. ErrorCode: {}", errCode);
     X509_STORE_CTX_free(storeCtx);
     X509_STORE_free(x509Store);
     return false;
@@ -207,21 +210,24 @@ inline X509* loadCert(const std::string& filePath)
     BIO* certFileBio = BIO_new_file(filePath.c_str(), "rb");
     if (certFileBio == nullptr)
     {
-        BMCWEB_LOG_ERROR("Error occured during BIO_new_file call, FILE= {}", filePath);
+        BMCWEB_LOG_ERROR("Error occured during BIO_new_file call, FILE= {}",
+                         filePath);
         return nullptr;
     }
 
     X509* cert = X509_new();
     if (cert == nullptr)
     {
-        BMCWEB_LOG_ERROR("Error occured during X509_new call, {}", ERR_get_error());
+        BMCWEB_LOG_ERROR("Error occured during X509_new call, {}",
+                         ERR_get_error());
         BIO_free(certFileBio);
         return nullptr;
     }
 
     if (PEM_read_bio_X509(certFileBio, &cert, nullptr, nullptr) == nullptr)
     {
-        BMCWEB_LOG_ERROR( "Error occured during PEM_read_bio_X509 call, FILE= {}", filePath);
+        BMCWEB_LOG_ERROR(
+            "Error occured during PEM_read_bio_X509 call, FILE= {}", filePath);
 
         BIO_free(certFileBio);
         X509_free(cert);
@@ -480,7 +486,8 @@ inline void ensureOpensslKeyPresentEncryptedAndValid(
     }
     else if (ret < -1)
     {
-        BMCWEB_LOG_ERROR("Error while determining if private key is encrypted.");
+        BMCWEB_LOG_ERROR(
+            "Error while determining if private key is encrypted.");
     }
     else if (!pkeyIsEncrypted)
     {

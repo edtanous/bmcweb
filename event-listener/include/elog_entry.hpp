@@ -20,7 +20,6 @@ class evtEntry :
     public std::enable_shared_from_this<evtEntry>
 {
   public:
-
     /** @brief Constructor to put object onto bus at a dbus path.
      *         Defer signal registration (pass true for deferSignal to the
      *         base class) until after the properties are set.
@@ -33,7 +32,9 @@ class evtEntry :
      *  @param[in] additionalDataErr - The error metadata.
      */
     evtEntry(sdbusplus::bus::bus& bus, const std::string& path, uint32_t id,
-             uint64_t timestamp, Level severity, std::string&& msg,std::string&& resolution, std::vector<std::string>&& additionalData);
+             uint64_t timestamp, Level severity, std::string&& msg,
+             std::string&& resolution,
+             std::vector<std::string>&& additionalData);
     ~evtEntry();
 
     /**
@@ -41,8 +42,8 @@ class evtEntry :
      * @return unix_fd - File descriptor to the Entry file.
      */
     sdbusplus::message::unix_fd getEntry()
-    { 
-      return 0;
+    {
+        return 0;
     };
 };
 

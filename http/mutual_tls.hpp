@@ -52,7 +52,9 @@ inline std::shared_ptr<persistent_data::UserSession>
     if (depth != 0)
 
     {
-        BMCWEB_LOG_DEBUG( "Certificate verification in progress (depth {}), waiting to reach final depth", depth);
+        BMCWEB_LOG_DEBUG(
+            "Certificate verification in progress (depth {}), waiting to reach final depth",
+            depth);
         return nullptr;
     }
 
@@ -87,7 +89,9 @@ inline std::shared_ptr<persistent_data::UserSession>
 
     if (!isKeyUsageDigitalSignature || !isKeyUsageKeyAgreement)
     {
-        BMCWEB_LOG_DEBUG("Certificate ExtendedKeyUsage does " "not allow provided certificate to " "be used for user authentication");
+        BMCWEB_LOG_DEBUG("Certificate ExtendedKeyUsage does "
+                         "not allow provided certificate to "
+                         "be used for user authentication");
         return nullptr;
     }
 
@@ -118,7 +122,9 @@ inline std::shared_ptr<persistent_data::UserSession>
     // Certificate has to have proper key usages set
     if (!isExKeyUsageClientAuth)
     {
-        BMCWEB_LOG_DEBUG("Certificate ExtendedKeyUsage does " "not allow provided certificate to " "be used for user authentication");
+        BMCWEB_LOG_DEBUG("Certificate ExtendedKeyUsage does "
+                         "not allow provided certificate to "
+                         "be used for user authentication");
         return nullptr;
     }
     std::string sslUser;

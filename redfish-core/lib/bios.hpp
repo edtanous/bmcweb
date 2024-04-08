@@ -38,19 +38,21 @@ const std::string BiosRegistryJsonFileName =
  */
 using BaseBIOSTable = boost::container::flat_map<
     std::string,
-    std::tuple<std::string, bool, std::string, std::string, std::string,
-               std::variant<int64_t, std::string, bool>,
-               std::variant<int64_t, std::string, bool>,
-               std::vector<std::tuple<std::string,
-                                      std::variant<int64_t, std::string>, std::string>>>>;
+    std::tuple<
+        std::string, bool, std::string, std::string, std::string,
+        std::variant<int64_t, std::string, bool>,
+        std::variant<int64_t, std::string, bool>,
+        std::vector<std::tuple<std::string, std::variant<int64_t, std::string>,
+                               std::string>>>>;
 
 using BaseBIOSTableItem = std::pair<
     std::string,
-    std::tuple<std::string, bool, std::string, std::string, std::string,
-               std::variant<int64_t, std::string, bool>,
-               std::variant<int64_t, std::string, bool>,
-               std::vector<std::tuple<std::string,
-                                      std::variant<int64_t, std::string>, std::string>>>>;
+    std::tuple<
+        std::string, bool, std::string, std::string, std::string,
+        std::variant<int64_t, std::string, bool>,
+        std::variant<int64_t, std::string, bool>,
+        std::vector<std::tuple<std::string, std::variant<int64_t, std::string>,
+                               std::string>>>>;
 
 using PendingAttrType = boost::container::flat_map<
     std::string,
@@ -296,15 +298,15 @@ static std::string getBiosDefaultSettingsMode(const std::string& biosMode)
             [asyncResp](const boost::system::error_code ec2) {
             if (ec2)
             {
-                BMCWEB_LOG_DEBUG("DBUS response error for " "Set Reset BIOS setting to default status.");
+                BMCWEB_LOG_DEBUG("DBUS response error for "
+                                 "Set Reset BIOS setting to default status.");
                 messages::internalError(asyncResp->res);
                 return;
             }
 
             messages::success(asyncResp->res);
-        },
-            biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
-            "Set", biosConfigIface, "ResetBIOSSettings",
+        }, biosService, biosConfigObj, "org.freedesktop.DBus.Properties", "Set",
+            biosConfigIface, "ResetBIOSSettings",
             std::variant<std::string>(biosMode));
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -341,7 +343,8 @@ static void
                 const std::variant<std::string>& resetBiosSettingsMode) {
             if (ec2)
             {
-                BMCWEB_LOG_DEBUG("DBUS response error for " "Get Reset BIOS setting to default status.");
+                BMCWEB_LOG_DEBUG("DBUS response error for "
+                                 "Get Reset BIOS setting to default status.");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -349,7 +352,8 @@ static void
                 std::get_if<std::string>(&resetBiosSettingsMode);
             if (value == nullptr)
             {
-                BMCWEB_LOG_DEBUG("Null value returned for Reset BIOS Settings status");
+                BMCWEB_LOG_DEBUG(
+                    "Null value returned for Reset BIOS Settings status");
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -407,7 +411,8 @@ static void
                         const std::variant<BaseBIOSTable>& baseBiosTableResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}", ec2);
+                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}",
+                                 ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -694,7 +699,8 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         std::string attrMenuPath;
         std::string attrType;
         bool attrReadOnly = false;
-        std::vector<std::tuple<std::string, std::variant<int64_t, std::string>, std::string>>
+        std::vector<std::tuple<std::string, std::variant<int64_t, std::string>,
+                               std::string>>
             attrValues;
 
         attr = attrJson["AttributeName"].get<std::string>();
@@ -828,8 +834,7 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
 
         messages::success(asyncResp->res);
-    },
-        "xyz.openbmc_project.BIOSConfigManager",
+    }, "xyz.openbmc_project.BIOSConfigManager",
         "/xyz/openbmc_project/bios_config/manager",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.BIOSConfig.Manager", "BaseBIOSTable",
@@ -862,7 +867,8 @@ static void
                         const std::variant<PendingAttrType>& pendingAttrsResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR("Get PendingAttributes DBus response error{}", ec2);
+                BMCWEB_LOG_ERROR("Get PendingAttributes DBus response error{}",
+                                 ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -993,7 +999,8 @@ static void setBiosCurrentOrPendingAttr(
                        const std::variant<BaseBIOSTable>& baseBiosTableResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}", ec2);
+                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}",
+                                 ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1014,7 +1021,8 @@ static void setBiosCurrentOrPendingAttr(
                 auto attrIt = baseBiosTable->find(pendingAttrIt.key());
                 if (attrIt == baseBiosTable->end())
                 {
-                    BMCWEB_LOG_ERROR("Not Found Attribute {}", pendingAttrIt.key());
+                    BMCWEB_LOG_ERROR("Not Found Attribute {}",
+                                     pendingAttrIt.key());
                     messages::propertyValueNotInList(
                         asyncResp->res, pendingAttrIt.key(), "Attributes");
                     return;
@@ -1083,7 +1091,8 @@ static void setBiosCurrentOrPendingAttr(
 
                         if (!found)
                         {
-                            BMCWEB_LOG_ERROR("Requested Attribute Value invalid");
+                            BMCWEB_LOG_ERROR(
+                                "Requested Attribute Value invalid");
                             messages::internalError(asyncResp->res);
                             return;
                         }
@@ -1149,7 +1158,8 @@ static void setBiosCurrentOrPendingAttr(
 
                         if (!valid)
                         {
-                            BMCWEB_LOG_ERROR("Requested Attribute Value invalid");
+                            BMCWEB_LOG_ERROR(
+                                "Requested Attribute Value invalid");
                             messages::propertyValueOutOfRange(
                                 asyncResp->res, attrReqVal,
                                 pendingAttrIt.key());
@@ -1230,7 +1240,8 @@ static void setBiosCurrentOrPendingAttr(
                      baseBiosTable](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG("Error occurred in setting BaseBIOSTable");
+                        BMCWEB_LOG_DEBUG(
+                            "Error occurred in setting BaseBIOSTable");
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -1253,8 +1264,7 @@ static void setBiosCurrentOrPendingAttr(
                 }
 
                 messages::success(asyncResp->res);
-            },
-                biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            }, biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
                 "Set", biosConfigIface, "PendingAttributes",
                 std::variant<PendingAttrType>(pendingAttrs));
         },
@@ -1325,7 +1335,8 @@ static void setBiosServicCurrentAttr(
                         const std::variant<BaseBIOSTable>& baseBiosTableResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}", ec2);
+                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}",
+                                 ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -1672,7 +1683,8 @@ static void
                         const std::variant<BaseBIOSTable>& baseBiosTableResp) {
             if (ec2)
             {
-                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}", ec2);
+                BMCWEB_LOG_ERROR("Get BaseBIOSTable DBus response error{}",
+                                 ec2);
                 messages::internalError(asyncResp->res);
                 return;
             }
@@ -2040,8 +2052,7 @@ inline void
             messages::internalError(asyncResp->res);
             return;
         }
-    },
-        "org.open_power.Software.Host.Updater", "/xyz/openbmc_project/software",
+    }, "org.open_power.Software.Host.Updater", "/xyz/openbmc_project/software",
         "xyz.openbmc_project.Common.FactoryReset", "Reset");
 }
 
@@ -2106,7 +2117,9 @@ inline void handleClearSecureStateSubtree(
     {
         if (clearServices.size() != 1)
         {
-            BMCWEB_LOG_ERROR("Number of ClearNonVolatileVariables provider is not 1. size={}", clearServices.size());
+            BMCWEB_LOG_ERROR(
+                "Number of ClearNonVolatileVariables provider is not 1. size={}",
+                clearServices.size());
             messages::internalError(aResp->res);
             return;
         }
@@ -2236,8 +2249,7 @@ inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             return;
         }
         BMCWEB_LOG_DEBUG("Boot override CMOSClear update done.");
-    },
-        "xyz.openbmc_project.Settings",
+    }, "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/control/host0/boot",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Boot.Flags", "CMOSClear",
@@ -2252,8 +2264,7 @@ inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             return;
         }
         BMCWEB_LOG_DEBUG("Boot override enable update done.");
-    },
-        "xyz.openbmc_project.Settings",
+    }, "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/control/host0/boot",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Object.Enable", "Enabled",
@@ -2349,7 +2360,8 @@ inline void handleBiosChangePasswordPost(
                         error,
                         "xyz.openbmc_project.BIOSConfig.Common.Error.InvalidCurrentPassword"))
                 {
-                    BMCWEB_LOG_ERROR("Failed to change password message: {}", error->name);
+                    BMCWEB_LOG_ERROR("Failed to change password message: {}",
+                                     error->name);
                     messages::actionParameterValueError(
                         asyncResp->res, "OldPassword", "ChangePassword");
                     return;
@@ -2396,7 +2408,8 @@ inline void handleBiosAttrRegistryGet(
     std::ifstream inputFile(redfish::bios::BiosRegistryJsonFileName);
     if (!inputFile.is_open())
     {
-        BMCWEB_LOG_DEBUG("Can't opening file for reading: {}", redfish::bios::BiosRegistryJsonFileName);
+        BMCWEB_LOG_DEBUG("Can't opening file for reading: {}",
+                         redfish::bios::BiosRegistryJsonFileName);
 
         // Return empty json object if file not found
         redfish::bios::BiosRegistryJson = nlohmann::json();
@@ -2495,7 +2508,8 @@ inline void handleBiosAttrRegistryPut(
                                  std::ios::trunc);
         if (!outputFile.is_open())
         {
-            BMCWEB_LOG_ERROR("Error opening file for writing: {}", redfish::bios::BiosRegistryJsonFileName);
+            BMCWEB_LOG_ERROR("Error opening file for writing: {}",
+                             redfish::bios::BiosRegistryJsonFileName);
             return;
         }
         outputFile << redfish::bios::BiosRegistryJson.dump();

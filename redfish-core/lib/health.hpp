@@ -42,8 +42,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
     // By default populate status to "/Status" of |asyncResp->res.jsonValue|.
     explicit HealthPopulate(
         const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        asyncResp(asyncRespIn),
-        statusPtr("/Status")
+        asyncResp(asyncRespIn), statusPtr("/Status")
     {}
 
     // Takes a JSON pointer rather than a reference. This is pretty useful when
@@ -51,8 +50,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
     // array.
     HealthPopulate(const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn,
                    const nlohmann::json::json_pointer& ptr) :
-        asyncResp(asyncRespIn),
-        statusPtr(ptr)
+        asyncResp(asyncRespIn), statusPtr(ptr)
     {}
 
     HealthPopulate(const HealthPopulate&) = delete;
@@ -122,7 +120,8 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                                 std::get_if<std::vector<std::string>>(&value);
                             if (endpoints == nullptr)
                             {
-                                BMCWEB_LOG_ERROR("Illegal association at {}", path.str);
+                                BMCWEB_LOG_ERROR("Illegal association at {}",
+                                                 path.str);
                                 continue;
                             }
                             bool containsChild = false;
@@ -212,7 +211,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                 return;
             }
             self->globalInventoryPath = resp[0];
-            });
+        });
     }
 
     void getAllStatusAssociations()
@@ -238,7 +237,7 @@ struct HealthPopulate : std::enable_shared_from_this<HealthPopulate>
                 }
                 it = self->statuses.erase(it);
             }
-            });
+        });
     }
 
     std::shared_ptr<bmcweb::AsyncResp> asyncResp;
@@ -604,8 +603,8 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                  // 'critical' value used as an issue exposure
                  const health_state::Type* assumedHealthWhenMissing =
                      &health_state::ok) :
-        rootHealth(&health_state::ok),
-        globalHealth(&health_state::ok), state(INITIALIZED), devicesToVisit(),
+        rootHealth(&health_state::ok), globalHealth(&health_state::ok),
+        state(INITIALIZED), devicesToVisit(),
         assumedHealthWhenMissing(assumedHealthWhenMissing),
         rootObject(rootObject), finishCallback(std::move(finishCallback))
     {}
@@ -918,17 +917,23 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
         ServiceQueryingResult nextMove = SERVICE_ERROR_STOP;
         if (ec)
         {
-            BMCWEB_LOG_WARNING("Failed to get manager service for object path '{}' implementing the interface '{}'", objPath, interface);
+            BMCWEB_LOG_WARNING(
+                "Failed to get manager service for object path '{}' implementing the interface '{}'",
+                objPath, interface);
             nextMove = SERVICE_ERROR_SKIP;
         }
         else if (result.size() == 0)
         {
-            BMCWEB_LOG_WARNING("No managers found for object path '{}' implementing the interface '{}'", objPath, interface);
+            BMCWEB_LOG_WARNING(
+                "No managers found for object path '{}' implementing the interface '{}'",
+                objPath, interface);
             nextMove = SERVICE_ERROR_SKIP;
         }
         else if (result.size() > 1)
         {
-            BMCWEB_LOG_ERROR("Multiple managers found ({}) for object path '{}' implementing the interface '{}'", result.size(), objPath, interface);
+            BMCWEB_LOG_ERROR(
+                "Multiple managers found ({}) for object path '{}' implementing the interface '{}'",
+                result.size(), objPath, interface);
             nextMove = SERVICE_ERROR_STOP;
         }
         else
@@ -1076,7 +1081,9 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
             if (nextMove == SERVICE_OK_CONTINUE)
             {
                 auto manager = result.cbegin()->first;
-                BMCWEB_LOG_INFO("Found manager service for object path '{}' implementing the interface '{}': '{}'", objPath, interface, manager);
+                BMCWEB_LOG_INFO(
+                    "Found manager service for object path '{}' implementing the interface '{}': '{}'",
+                    objPath, interface, manager);
                 if (self->state == ROOT_Q_HEALTH_SERVICE)
                 {
                     self->state = ROOT_Q_HEALTH;
@@ -1154,7 +1161,8 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                 if (!health_state::dbusNameMapHealthState.contains(
                         *dbusHealthState))
                 {
-                    BMCWEB_LOG_ERROR("Unrecognized health value: '{}'", *dbusHealthState);
+                    BMCWEB_LOG_ERROR("Unrecognized health value: '{}'",
+                                     *dbusHealthState);
                     nodeHealth = nullptr;
                 }
                 else
@@ -1162,7 +1170,8 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                     nodeHealth = health_state::dbusNameMapHealthState.at(
                         *dbusHealthState);
                     // TODO: debug
-                    BMCWEB_LOG_INFO("Health of '{}': '{}'", objPath, nodeHealth->jsonHealthName);
+                    BMCWEB_LOG_INFO("Health of '{}': '{}'", objPath,
+                                    nodeHealth->jsonHealthName);
                 }
             }
         }
@@ -1354,7 +1363,8 @@ class HealthRollup : public std::enable_shared_from_this<HealthRollup>
                               const std::string& interface,
                               const std::string& property)
     {
-        BMCWEB_LOG_ERROR("'{}' (service: '{}', object: '{}', interface: '{}')", property, service, object, interface);
+        BMCWEB_LOG_ERROR("'{}' (service: '{}', object: '{}', interface: '{}')",
+                         property, service, object, interface);
     }
 
     static void getPropertyFailFeedback(const std::string& service,

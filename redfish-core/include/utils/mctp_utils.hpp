@@ -31,8 +31,7 @@ class MctpEndpoint
 {
   public:
     MctpEndpoint(const std::string& spdmObject,
-                 const AssociationCallback& callback) :
-        spdmObj(spdmObject)
+                 const AssociationCallback& callback) : spdmObj(spdmObject)
     {
         BMCWEB_LOG_DEBUG("Finding associations for {}", spdmObject);
         dbus::utility::findAssociations(
@@ -40,44 +39,43 @@ class MctpEndpoint
             [this, spdmObject,
              callback](const boost::system::error_code ec,
                        std::variant<std::vector<std::string>>& association) {
-                BMCWEB_LOG_DEBUG("findAssociations callback for {}", spdmObject);
-                if (ec)
+            BMCWEB_LOG_DEBUG("findAssociations callback for {}", spdmObject);
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("{} : {}", spdmObject, ec.message());
+                callback(false, ec.message());
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&association);
+            if (data == nullptr || data->empty())
+            {
+                callback(false, spdmObj + ": no SPDM / MCTP association found");
+                return;
+            }
+            mctpObj = data->front();
+            if (mctpObj.rfind(mctpObjectPrefix, 0) == 0)
+            {
+                std::vector<std::string> v;
+                boost::split(v, mctpObj, boost::is_any_of("/"));
+                if (v.size() == 0)
                 {
-                    BMCWEB_LOG_ERROR("{} : {}", spdmObject, ec.message());
-                    callback(false, ec.message());
+                    callback(false, "invalid MCTP object path: " + mctpObj);
                     return;
                 }
-                std::vector<std::string>* data =
-                    std::get_if<std::vector<std::string>>(&association);
-                if (data == nullptr || data->empty())
+                try
                 {
-                    callback(false,
-                             spdmObj + ": no SPDM / MCTP association found");
-                    return;
+                    mctpEid = std::stoi(v.back());
+                    getDbusMctpMessageTypes(callback);
                 }
-                mctpObj = data->front();
-                if (mctpObj.rfind(mctpObjectPrefix, 0) == 0)
+                catch (const std::invalid_argument&)
                 {
-                    std::vector<std::string> v;
-                    boost::split(v, mctpObj, boost::is_any_of("/"));
-                    if (v.size() == 0)
-                    {
-                        callback(false, "invalid MCTP object path: " + mctpObj);
-                        return;
-                    }
-                    try
-                    {
-                        mctpEid = std::stoi(v.back());
-                        getDbusMctpMessageTypes(callback);
-                    }
-                    catch (std::invalid_argument const&)
-                    {
-                        callback(false, "invalid MCTP object path: " + mctpObj);
-                    }
-                    return;
+                    callback(false, "invalid MCTP object path: " + mctpObj);
                 }
-                callback(false, "invalid MCTP object path: " + mctpObj);
-            });
+                return;
+            }
+            callback(false, "invalid MCTP object path: " + mctpObj);
+        });
     }
 
     int getMctpEid() const
@@ -106,40 +104,40 @@ class MctpEndpoint
         crow::connections::systemBus->async_method_call(
             [this, callback](const boost::system::error_code ec,
                              const GetObjectType& response) {
-                if (ec || response.empty())
-                {
-                    callback(false, "GetObject failure for: " + mctpObj);
-                    return;
-                }
-                for (const auto& elem : response)
-                {
-                    const std::string& service = elem.first;
-                    if (service.rfind(mctpBusPrefix, 0) == 0)
-                    {
-                        sdbusplus::asio::getProperty<std::vector<uint8_t>>(
-                            *crow::connections::systemBus, service, mctpObj,
-                            "xyz.openbmc_project.MCTP.Endpoint",
-                            "SupportedMessageTypes",
-                            [this, callback](const boost::system::error_code ec,
-                                             const std::vector<uint8_t>& resp) {
-                                if (ec)
-                                {
-                                    callback(
-                                        false,
-                                        "Failed to get supported message types for: " +
-                                            mctpObj);
-                                    return;
-                                }
-                                mctpMessageTypes = resp;
-                                callback(true, mctpObj);
-                                return;
-                            });
-                        return;
-                    }
-                }
+            if (ec || response.empty())
+            {
                 callback(false, "GetObject failure for: " + mctpObj);
                 return;
-            },
+            }
+            for (const auto& elem : response)
+            {
+                const std::string& service = elem.first;
+                if (service.rfind(mctpBusPrefix, 0) == 0)
+                {
+                    sdbusplus::asio::getProperty<std::vector<uint8_t>>(
+                        *crow::connections::systemBus, service, mctpObj,
+                        "xyz.openbmc_project.MCTP.Endpoint",
+                        "SupportedMessageTypes",
+                        [this, callback](const boost::system::error_code ec,
+                                         const std::vector<uint8_t>& resp) {
+                        if (ec)
+                        {
+                            callback(
+                                false,
+                                "Failed to get supported message types for: " +
+                                    mctpObj);
+                            return;
+                        }
+                        mctpMessageTypes = resp;
+                        callback(true, mctpObj);
+                        return;
+                    });
+                    return;
+                }
+            }
+            callback(false, "GetObject failure for: " + mctpObj);
+            return;
+        },
             dbus_utils::mapperBusName, dbus_utils::mapperObjectPath,
             dbus_utils::mapperIntf, "GetObject", mctpObj,
             std::array<const char*, 0>());

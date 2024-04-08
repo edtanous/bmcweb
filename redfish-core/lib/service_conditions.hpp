@@ -1,9 +1,10 @@
 #pragma once
 
+#include "logging.hpp"
+
 #include <app.hpp>
 #include <registries/privilege_registry.hpp>
 #include <utils/conditions_utils.hpp>
-#include "logging.hpp"
 namespace redfish
 {
 

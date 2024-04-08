@@ -38,7 +38,7 @@ struct FileWatcherEvent
 class InotifyFileWatcher
 {
   public:
-    InotifyFileWatcher() : io(nullptr), sd(nullptr), buf(), watchedDirs(){}
+    InotifyFileWatcher() : io(nullptr), sd(nullptr), buf(), watchedDirs() {}
 
     ~InotifyFileWatcher()
     {

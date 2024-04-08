@@ -8,8 +8,8 @@
 #include "http_response.hpp"
 #include "http_utility.hpp"
 #include "logging.hpp"
-#include "persistent_data.hpp"
 #include "mutual_tls.hpp"
+#include "persistent_data.hpp"
 #include "ssl_key_handler.hpp"
 #include "utility.hpp"
 
@@ -60,9 +60,8 @@ class Connection :
     Connection(Handler* handlerIn, boost::asio::steady_timer&& timerIn,
                std::function<std::string()>& getCachedDateStrF,
                Adaptor adaptorIn) :
-        adaptor(std::move(adaptorIn)),
-        handler(handlerIn), timer(std::move(timerIn)),
-        getCachedDateStr(getCachedDateStrF)
+        adaptor(std::move(adaptorIn)), handler(handlerIn),
+        timer(std::move(timerIn)), getCachedDateStr(getCachedDateStrF)
     {
         parser.emplace(std::piecewise_construct, std::make_tuple());
         parser->body_limit(httpReqBodyLimit);
@@ -79,7 +78,8 @@ class Connection :
 
         connectionCount++;
 
-        BMCWEB_LOG_DEBUG("{} Connection open, total {}", logPtr(this), connectionCount);
+        BMCWEB_LOG_DEBUG("{} Connection open, total {}", logPtr(this),
+                         connectionCount);
     }
 
     ~Connection()
@@ -88,7 +88,8 @@ class Connection :
         cancelDeadlineTimer();
 
         connectionCount--;
-        BMCWEB_LOG_DEBUG("{} Connection closed, total {}", logPtr(this), connectionCount);
+        BMCWEB_LOG_DEBUG("{} Connection closed, total {}", logPtr(this),
+                         connectionCount);
     }
 
     Connection(const Connection&) = delete;
@@ -112,7 +113,8 @@ class Connection :
             mtlsSession = verifyMtlsUser(ipAddress, ctx);
             if (mtlsSession)
             {
-                BMCWEB_LOG_DEBUG("{} Generating TLS session: {}", logPtr(this), mtlsSession->uniqueId);
+                BMCWEB_LOG_DEBUG("{} Generating TLS session: {}", logPtr(this),
+                                 mtlsSession->uniqueId);
             }
         }
         return true;
@@ -156,7 +158,8 @@ class Connection :
     {
         if (connectionCount >= 100)
         {
-            BMCWEB_LOG_CRITICAL("{}Max connection count exceeded.", logPtr(this));
+            BMCWEB_LOG_CRITICAL("{}Max connection count exceeded.",
+                                logPtr(this));
             return;
         }
 
@@ -196,7 +199,8 @@ class Connection :
             {
                 std::string_view selectedProtocol(
                     std::bit_cast<const char*>(alpn), alpnlen);
-                BMCWEB_LOG_DEBUG("ALPN selected protocol \"{}\" len: {}", selectedProtocol, alpnlen);
+                BMCWEB_LOG_DEBUG("ALPN selected protocol \"{}\" len: {}",
+                                 selectedProtocol, alpnlen);
                 if (selectedProtocol == "h2")
                 {
                     auto http2 =
@@ -242,7 +246,10 @@ class Connection :
             }
         }
 
-        BMCWEB_LOG_INFO("Request:  {} HTTP/{}.{} {} {} {}", logPtr(this), thisReq.version() / 10, thisReq.version() % 10, thisReq.methodString(), thisReq.target(), thisReq.ipAddress.to_string());
+        BMCWEB_LOG_INFO("Request:  {} HTTP/{}.{} {} {} {}", logPtr(this),
+                        thisReq.version() / 10, thisReq.version() % 10,
+                        thisReq.methodString(), thisReq.target(),
+                        thisReq.ipAddress.to_string());
 
         res.isAliveHelper = [this]() -> bool { return isAlive(); };
 
@@ -258,12 +265,14 @@ class Connection :
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
-            if (!crow::authentication::isOnAllowlist(req->url().path(), req->method()) &&
+            if (!crow::authentication::isOnAllowlist(req->url().path(),
+                                                     req->method()) &&
                 thisReq.session == nullptr)
             {
                 BMCWEB_LOG_WARNING("Authentication failed");
                 forward_unauthorized::sendUnauthorized(
-                    req->url().encoded_path(), req->getHeaderValue("X-Requested-With"),
+                    req->url().encoded_path(),
+                    req->getHeaderValue("X-Requested-With"),
                     req->getHeaderValue("Accept"), res);
 
                 std::string user = getUser(*req);
@@ -321,7 +330,7 @@ class Connection :
         }
 
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
-        
+
         if (dumpPos == std::string::npos)
         {
             dumpPos = url.rfind("FaultLog");
@@ -343,7 +352,8 @@ class Connection :
 #endif
 
         if ((dumpPos != std::string::npos) &&
-            (attachmentPos != std::string::npos) && (satellitesPos == std::string::npos))
+            (attachmentPos != std::string::npos) &&
+            (satellitesPos == std::string::npos))
         {
             BMCWEB_LOG_DEBUG("upgrade stream connection");
             handler->handleUpgrade(thisReq, asyncResp, std::move(adaptor));
@@ -380,7 +390,8 @@ class Connection :
             if (mtlsSession != nullptr)
 #endif
             {
-                BMCWEB_LOG_DEBUG("{} Removing TLS session: {}", logPtr(this), mtlsSession->uniqueId);
+                BMCWEB_LOG_DEBUG("{} Removing TLS session: {}", logPtr(this),
+                                 mtlsSession->uniqueId);
                 persistent_data::SessionStore::getInstance().removeSession(
                     mtlsSession);
             }
@@ -441,7 +452,8 @@ class Connection :
         {
             // If remote endpoint fails keep going. "ClientOriginIPAddress"
             // will be empty.
-            BMCWEB_LOG_ERROR("Failed to get the client's IP Address. ec : {}", ec);
+            BMCWEB_LOG_ERROR("Failed to get the client's IP Address. ec : {}",
+                             ec);
             return ec;
         }
         ip = endpoint.address();
@@ -462,18 +474,21 @@ class Connection :
             [this,
              self(shared_from_this())](const boost::system::error_code& ec,
                                        std::size_t bytesTransferred) {
-            BMCWEB_LOG_DEBUG("{} async_read_header {} Bytes", logPtr(this), bytesTransferred);
+            BMCWEB_LOG_DEBUG("{} async_read_header {} Bytes", logPtr(this),
+                             bytesTransferred);
             bool errorWhileReading = false;
             if (ec)
             {
                 errorWhileReading = true;
                 if (ec == boost::beast::http::error::end_of_stream)
                 {
-                    BMCWEB_LOG_WARNING("{} Error while reading: {}", logPtr(this), ec.message());
+                    BMCWEB_LOG_WARNING("{} Error while reading: {}",
+                                       logPtr(this), ec.message());
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR("{} Error while reading: {}", logPtr(this), ec.message());
+                    BMCWEB_LOG_ERROR("{} Error while reading: {}", logPtr(this),
+                                     ec.message());
                 }
             }
             else
@@ -506,19 +521,20 @@ class Connection :
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
             if (persistent_data::getConfig().isTLSAuthEnabled())
             {
-            boost::beast::http::verb method = parser->get().method();
-            userSession = crow::authentication::authenticate(
-                ip, res, method, parser->get().base(), mtlsSession);
+                boost::beast::http::verb method = parser->get().method();
+                userSession = crow::authentication::authenticate(
+                    ip, res, method, parser->get().base(), mtlsSession);
 
-            bool loggedIn = userSession != nullptr;
-            if (!loggedIn)
-            {
+                bool loggedIn = userSession != nullptr;
+                if (!loggedIn)
+                {
                     const boost::optional<uint64_t> contentLength =
                         parser->content_length();
                     if (contentLength &&
                         *contentLength > loggedOutPostBodyLimit)
                     {
-                        BMCWEB_LOG_DEBUG("Content length greater than limit {}", *contentLength);
+                        BMCWEB_LOG_DEBUG("Content length greater than limit {}",
+                                         *contentLength);
                         close();
                         return;
                     }
@@ -551,11 +567,13 @@ class Connection :
             [this,
              self(shared_from_this())](const boost::system::error_code& ec,
                                        std::size_t bytesTransferred) {
-            BMCWEB_LOG_DEBUG("{} async_read_some {} Bytes", logPtr(this), bytesTransferred);
+            BMCWEB_LOG_DEBUG("{} async_read_some {} Bytes", logPtr(this),
+                             bytesTransferred);
 
             if (ec)
             {
-                BMCWEB_LOG_ERROR("{} Error while reading: {}", logPtr(this), ec.message());
+                BMCWEB_LOG_ERROR("{} Error while reading: {}", logPtr(this),
+                                 ec.message());
                 close();
                 BMCWEB_LOG_DEBUG("{} from read(1)", logPtr(this));
                 return;
@@ -576,7 +594,7 @@ class Connection :
 
             cancelDeadlineTimer();
             handle();
-            });
+        });
     }
 
     void doWrite(crow::Response& thisRes)
@@ -589,7 +607,8 @@ class Connection :
                                         [this, self(shared_from_this())](
                                             const boost::system::error_code& ec,
                                             std::size_t bytesTransferred) {
-            BMCWEB_LOG_DEBUG("{} async_write {} bytes", logPtr(this), bytesTransferred);
+            BMCWEB_LOG_DEBUG("{} async_write {} bytes", logPtr(this),
+                             bytesTransferred);
 
             cancelDeadlineTimer();
 
@@ -647,7 +666,8 @@ class Connection :
                 weakSelf.lock();
             if (!self)
             {
-                BMCWEB_LOG_CRITICAL("{} Failed to capture connection", logPtr(self.get()));
+                BMCWEB_LOG_CRITICAL("{} Failed to capture connection",
+                                    logPtr(self.get()));
                 return;
             }
 
@@ -660,10 +680,12 @@ class Connection :
             }
             if (ec)
             {
-                BMCWEB_LOG_CRITICAL("{} timer failed {}", logPtr(self.get()), ec);
+                BMCWEB_LOG_CRITICAL("{} timer failed {}", logPtr(self.get()),
+                                    ec);
             }
 
-            BMCWEB_LOG_WARNING("{}Connection timed out, closing", logPtr(self.get()));
+            BMCWEB_LOG_WARNING("{}Connection timed out, closing",
+                               logPtr(self.get()));
 
             self->close();
         });

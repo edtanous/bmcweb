@@ -285,7 +285,9 @@ inline void Lock::releaseLock(const std::string& sessionId)
                 // given
                 if (std::get<0>(it->second[0]) == sessionId)
                 {
-                    BMCWEB_LOG_DEBUG("Remove the lock from the locktable " "having sessionID={}", sessionId);
+                    BMCWEB_LOG_DEBUG("Remove the lock from the locktable "
+                                     "having sessionID={}",
+                                     sessionId);
                     BMCWEB_LOG_DEBUG("TransactionID ={}", it->first);
                     it = lockTable.erase(it);
                 }
@@ -317,11 +319,14 @@ inline RcRelaseLock Lock::isItMyLock(const ListOfTransactionIds& refRids,
             // remove the lock
             if (lockTable.erase(id) != 0U)
             {
-                BMCWEB_LOG_DEBUG("Removing the locks with transaction ID : {}", id);
+                BMCWEB_LOG_DEBUG("Removing the locks with transaction ID : {}",
+                                 id);
             }
             else
             {
-                BMCWEB_LOG_ERROR("Removing the locks from the lock table " "failed, transaction ID: {}", id);
+                BMCWEB_LOG_ERROR("Removing the locks from the lock table "
+                                 "failed, transaction ID: {}",
+                                 id);
             }
         }
         else
@@ -346,7 +351,8 @@ inline bool Lock::validateRids(const ListOfTransactionIds& refRids)
         }
         else
         {
-            BMCWEB_LOG_ERROR("validateRids: At least 1 inValid Request id: {}", id);
+            BMCWEB_LOG_ERROR("validateRids: At least 1 inValid Request id: {}",
+                             id);
             return false;
         }
     }
@@ -373,7 +379,8 @@ inline bool Lock::isValidLockRequest(const LockRequest& refLockRecord)
         (static_cast<int>(std::get<4>(refLockRecord).size()) < 2))
     {
         BMCWEB_LOG_DEBUG("Validation of Number of Segments Failed");
-        BMCWEB_LOG_DEBUG("Number of Segments provied : {}", std::get<4>(refLockRecord).size());
+        BMCWEB_LOG_DEBUG("Number of Segments provied : {}",
+                         std::get<4>(refLockRecord).size());
         return false;
     }
 
@@ -431,7 +438,8 @@ inline Rc Lock::isConflictWithTable(const LockRequests& refLockRequestStructure)
 
         return std::make_pair(false, thisTransactionId);
     }
-    BMCWEB_LOG_DEBUG( "Lock table is not empty, check for conflict with lock table");
+    BMCWEB_LOG_DEBUG(
+        "Lock table is not empty, check for conflict with lock table");
     // Lock table is not empty, compare the lockrequest entries with
     // the entries in the lock table
 
@@ -476,7 +484,8 @@ inline bool Lock::isConflictRequest(const LockRequests& refLockRequestStructure)
         return false;
     }
 
-    BMCWEB_LOG_DEBUG( "There are multiple lock requests coming in a single request");
+    BMCWEB_LOG_DEBUG(
+        "There are multiple lock requests coming in a single request");
 
     // There are multiple requests a part of one request
 
@@ -540,7 +549,9 @@ inline bool Lock::isConflictRecord(const LockRequest& refLockRecord1,
         if (boost::equals(p.first, "LockAll") ||
             boost::equals(std::get<4>(refLockRecord2)[i].first, "LockAll"))
         {
-            BMCWEB_LOG_DEBUG( "Either of the Comparing locks are trying to lock all " "resources under the current resource level");
+            BMCWEB_LOG_DEBUG(
+                "Either of the Comparing locks are trying to lock all "
+                "resources under the current resource level");
             return true;
         }
 
@@ -560,7 +571,8 @@ inline bool Lock::isConflictRecord(const LockRequest& refLockRecord1,
         {
             BMCWEB_LOG_DEBUG("Segment lengths are not same");
             BMCWEB_LOG_DEBUG("Segment 1 length : {}", p.second);
-            BMCWEB_LOG_DEBUG("Segment 2 length : {}", std::get<4>(refLockRecord2)[i].second);
+            BMCWEB_LOG_DEBUG("Segment 2 length : {}",
+                             std::get<4>(refLockRecord2)[i].second);
             return false;
         }
 

@@ -21,12 +21,12 @@
 #include "error_messages.hpp"
 #include "generated/enums/processor.hpp"
 #include "health.hpp"
+#include "pcie.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"
-#include "pcie.hpp"
 
 #include <boost/container/flat_map.hpp>
 #include <boost/system/error_code.hpp>
@@ -40,14 +40,13 @@
 #include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/nvidia_processor_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
-#include <utils/nvidia_processor_utils.hpp>
 #include <utils/time_utils.hpp>
 
-#include <filesystem>
-
 #include <array>
+#include <filesystem>
 #include <limits>
 #include <ranges>
 #include <string_view>
@@ -169,69 +168,65 @@ inline void getSystemPCIeInterfaceProperties(
             return;
         }
         if (objInfo.empty())
+        {
+            BMCWEB_LOG_ERROR("Empty Object Size");
+            if (asyncResp)
             {
-                BMCWEB_LOG_ERROR("Empty Object Size");
-                if (asyncResp)
-                {
-                    messages::internalError(asyncResp->res);
-                }
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+        // Get all properties
+        sdbusplus::asio::getAllProperties(
+            *crow::connections::systemBus, objInfo[0].first, objPath, "",
+            [objPath,
+             asyncResp](const boost::system::error_code ec,
+                        const dbus::utility::DBusPropertiesMap& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("error_code = ", ec);
+                BMCWEB_LOG_ERROR("error msg = ", ec.message());
+                messages::internalError(asyncResp->res);
                 return;
             }
-            // Get all properties
-            sdbusplus::asio::getAllProperties(
-                *crow::connections::systemBus, objInfo[0].first, objPath, "",
-                [objPath, asyncResp](
-                    const boost::system::error_code ec,
-                    const dbus::utility::DBusPropertiesMap& properties) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR("error_code = ", ec);
-                        BMCWEB_LOG_ERROR("error msg = ", ec.message());
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
 
-                    const double* currentSpeed = nullptr;
-                    const size_t* activeWidth = nullptr;
+            const double* currentSpeed = nullptr;
+            const size_t* activeWidth = nullptr;
 
-                    const bool success = sdbusplus::unpackPropertiesNoThrow(
-                        dbus_utils::UnpackErrorPrinter(), properties,
-                        "CurrentSpeed", currentSpeed, "ActiveWidth",
-                        activeWidth);
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), properties, "CurrentSpeed",
+                currentSpeed, "ActiveWidth", activeWidth);
 
+            asyncResp->res.jsonValue["SystemInterface"]["InterfaceType"] =
+                "PCIe";
+
+            if (!success)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            if ((currentSpeed != nullptr) && (activeWidth != nullptr))
+            {
+                asyncResp->res
+                    .jsonValue["SystemInterface"]["PCIe"]["PCIeType"] =
+                    redfish::port_utils::getLinkSpeedGeneration(*currentSpeed);
+            }
+            if (activeWidth != nullptr)
+            {
+                if (*activeWidth == INT_MAX)
+                {
                     asyncResp->res
-                        .jsonValue["SystemInterface"]["InterfaceType"] = "PCIe";
-
-                    if (!success)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    if ((currentSpeed != nullptr) && (activeWidth != nullptr))
-                    {
-                        asyncResp->res
-                            .jsonValue["SystemInterface"]["PCIe"]["PCIeType"] =
-                            redfish::port_utils::getLinkSpeedGeneration(
-                                *currentSpeed);
-                    }
-                    if (activeWidth != nullptr)
-                    {
-                        if (*activeWidth == INT_MAX)
-                        {
-                            asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
-                                                    ["LanesInUse"] = 0;
-                        }
-                        else
-                        {
-                            asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
-                                                    ["LanesInUse"] =
-                                *activeWidth;
-                        }
-                    }
-                });
-
-        },
+                        .jsonValue["SystemInterface"]["PCIe"]["LanesInUse"] = 0;
+                }
+                else
+                {
+                    asyncResp->res.jsonValue["SystemInterface"]["PCIe"]
+                                            ["LanesInUse"] = *activeWidth;
+                }
+            }
+        });
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
@@ -260,7 +255,7 @@ inline void getProcessorUUID(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
             return;
         }
         asyncResp->res.jsonValue["UUID"] = property;
-        });
+    });
 }
 
 inline void getCpuDataByInterface(
@@ -423,74 +418,72 @@ inline void getFPGAPCIeInterfaceProperties(
             const boost::system::error_code errorCode,
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
                 objInfo) mutable {
-            if (errorCode)
+        if (errorCode)
+        {
+            BMCWEB_LOG_ERROR("error_code = ", errorCode);
+            BMCWEB_LOG_ERROR("error msg = ", errorCode.message());
+            if (asyncResp)
             {
-                BMCWEB_LOG_ERROR("error_code = ", errorCode);
-                BMCWEB_LOG_ERROR("error msg = " ,errorCode.message());
-                if (asyncResp)
-                {
-                    messages::internalError(asyncResp->res);
-                }
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+        if (objInfo.empty())
+        {
+            BMCWEB_LOG_ERROR("Empty Object Size");
+            if (asyncResp)
+            {
+                messages::internalError(asyncResp->res);
+            }
+            return;
+        }
+        // Get all properties
+        sdbusplus::asio::getAllProperties(
+            *crow::connections::systemBus, objInfo[0].first, objPath, "",
+            [objPath,
+             asyncResp](const boost::system::error_code ec,
+                        const dbus::utility::DBusPropertiesMap& properties) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("error_code = ", ec);
+                BMCWEB_LOG_ERROR("error msg = ", ec.message());
+                messages::internalError(asyncResp->res);
                 return;
             }
-            if (objInfo.empty())
+            std::string speed;
+            size_t width = 0;
+
+            const double* currentSpeed = nullptr;
+            const size_t* activeWidth = nullptr;
+
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), properties, "CurrentSpeed",
+                currentSpeed, "ActiveWidth", activeWidth);
+
+            if (!success)
             {
-                BMCWEB_LOG_ERROR("Empty Object Size");
-                if (asyncResp)
-                {
-                    messages::internalError(asyncResp->res);
-                }
+                messages::internalError(asyncResp->res);
                 return;
             }
-            // Get all properties
-            sdbusplus::asio::getAllProperties(
-                *crow::connections::systemBus, objInfo[0].first, objPath, "",
-                [objPath, asyncResp](
-                    const boost::system::error_code ec,
-                    const dbus::utility::DBusPropertiesMap& properties) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR("error_code = ", ec);
-                        BMCWEB_LOG_ERROR("error msg = ", ec.message());
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    std::string speed;
-                    size_t width = 0;
 
-                    const double* currentSpeed = nullptr;
-                    const size_t* activeWidth = nullptr;
-
-                    const bool success = sdbusplus::unpackPropertiesNoThrow(
-                        dbus_utils::UnpackErrorPrinter(), properties,
-                        "CurrentSpeed", currentSpeed, "ActiveWidth",
-                        activeWidth);
-
-                    if (!success)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-
-                    if ((currentSpeed != nullptr) && (activeWidth != nullptr))
-                    {
-                        speed = redfish::port_utils::getLinkSpeedGeneration(
-                            *currentSpeed);
-                    }
-                    if ((activeWidth != nullptr) && (*activeWidth != INT_MAX))
-                    {
-                        width = *activeWidth;
-                    }
-                    nlohmann::json& fpgaIfaceArray =
-                        asyncResp->res.jsonValue["FPGA"]["ExternalInterfaces"];
-                    fpgaIfaceArray = nlohmann::json::array();
-                    fpgaIfaceArray.push_back(
-                        {{"InterfaceType", "PCIe"},
-                         {"PCIe",
-                          {{"PCIeType", speed}, {"LanesInUse", width}}}});
-                    return;
-                });
-        },
+            if ((currentSpeed != nullptr) && (activeWidth != nullptr))
+            {
+                speed =
+                    redfish::port_utils::getLinkSpeedGeneration(*currentSpeed);
+            }
+            if ((activeWidth != nullptr) && (*activeWidth != INT_MAX))
+            {
+                width = *activeWidth;
+            }
+            nlohmann::json& fpgaIfaceArray =
+                asyncResp->res.jsonValue["FPGA"]["ExternalInterfaces"];
+            fpgaIfaceArray = nlohmann::json::array();
+            fpgaIfaceArray.push_back(
+                {{"InterfaceType", "PCIe"},
+                 {"PCIe", {{"PCIeType", speed}, {"LanesInUse", width}}}});
+            return;
+        });
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", objPath,
@@ -555,7 +548,7 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         asyncResp->res.jsonValue["Name"] = "Processor";
         asyncResp->res.jsonValue["ProcessorType"] = "CPU";
 
-         bool slotPresent = false;
+        bool slotPresent = false;
         std::string corePath = objPath + "/core";
         size_t totalCores = 0;
         for (const auto& object : dbusData)
@@ -604,7 +597,7 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
             asyncResp->res.jsonValue["TotalCores"] = totalCores;
         }
         return;
-        });
+    });
 }
 
 /**
@@ -790,58 +783,58 @@ inline void getParentChassisPCIeDeviceLink(
         if (data == nullptr && data->size() > 1)
         {
             // Chassis must have single parent chassis
-                return;
-            }
-            const std::string& parentChassisPath = data->front();
-            sdbusplus::message::object_path objectPath(parentChassisPath);
-            std::string parentChassisName = objectPath.filename();
-            if (parentChassisName.empty())
+            return;
+        }
+        const std::string& parentChassisPath = data->front();
+        sdbusplus::message::object_path objectPath(parentChassisPath);
+        std::string parentChassisName = objectPath.filename();
+        if (parentChassisName.empty())
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+        crow::connections::systemBus->async_method_call(
+            [aResp, chassisName,
+             parentChassisName](const boost::system::error_code ec1,
+                                const MapperGetSubTreeResponse& subtree) {
+            if (ec1)
             {
                 messages::internalError(aResp->res);
                 return;
             }
-            crow::connections::systemBus->async_method_call(
-                [aResp, chassisName,
-                 parentChassisName](const boost::system::error_code ec1,
-                                    const MapperGetSubTreeResponse& subtree) {
-                    if (ec1)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    for (const auto& [objectPath1, serviceMap] : subtree)
-                    {
-                        // Process same device
-                        if (!boost::ends_with(objectPath1, chassisName))
-                        {
-                            continue;
-                        }
-                        std::string pcieDeviceLink = "/redfish/v1/Chassis/";
-                        pcieDeviceLink += parentChassisName;
-                        pcieDeviceLink += "/PCIeDevices/";
-                        pcieDeviceLink += chassisName;
-                        aResp->res.jsonValue["Links"]["PCIeDevice"] = {
-                            {"@odata.id", pcieDeviceLink}};
-                        if (serviceMap.size() < 1)
-                        {
-                            BMCWEB_LOG_ERROR("Got 0 service "
-                                                "names");
-                            messages::internalError(aResp->res);
-                            return;
-                        }
-                        const std::string& serviceName = serviceMap[0].first;
-                        // Get PCIeFunctions Link
-                        getProcessorPCIeFunctionsLinks(
-                            aResp, serviceName, objectPath1, pcieDeviceLink);
-                    }
-                },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                parentChassisPath, 0,
-                std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item."
-                                           "PCIeDevice"});
+            for (const auto& [objectPath1, serviceMap] : subtree)
+            {
+                // Process same device
+                if (!boost::ends_with(objectPath1, chassisName))
+                {
+                    continue;
+                }
+                std::string pcieDeviceLink = "/redfish/v1/Chassis/";
+                pcieDeviceLink += parentChassisName;
+                pcieDeviceLink += "/PCIeDevices/";
+                pcieDeviceLink += chassisName;
+                aResp->res.jsonValue["Links"]["PCIeDevice"] = {
+                    {"@odata.id", pcieDeviceLink}};
+                if (serviceMap.size() < 1)
+                {
+                    BMCWEB_LOG_ERROR("Got 0 service "
+                                     "names");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                const std::string& serviceName = serviceMap[0].first;
+                // Get PCIeFunctions Link
+                getProcessorPCIeFunctionsLinks(aResp, serviceName, objectPath1,
+                                               pcieDeviceLink);
+            }
         },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree", parentChassisPath,
+            0,
+            std::array<const char*, 1>{"xyz.openbmc_project.Inventory.Item."
+                                       "PCIeDevice"});
+    },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
@@ -938,7 +931,7 @@ inline void
         [asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::DBusPropertiesMap& properties) {
         readThrottleProperties(asyncResp, ec, properties);
-        });
+    });
 }
 
 inline void getCpuAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
@@ -956,7 +949,7 @@ inline void getCpuAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         {
             BMCWEB_LOG_DEBUG("DBUS response error");
             messages::internalError(asyncResp->res);
-             return;
+            return;
         }
 
         const std::string* serialNumber = nullptr;
@@ -1012,9 +1005,9 @@ inline void getCpuAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         {
             asyncResp->res.jsonValue["SparePartNumber"] = *sparePartNumber;
         }
-        });
+    });
 }
-         
+
 // TODO: move to new file
 /**
  * @brief Fill out links association to parent chassis by
@@ -1120,15 +1113,15 @@ inline void getFpgaTypeData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Inventory.Decorator.FpgaType", "FpgaType",
         [objPath, aResp{std::move(aResp)}](const boost::system::error_code ec,
                                            const std::string& property) {
-                                              if (ec)
-            {
-                BMCWEB_LOG_DEBUG("DBUS response error");
-                messages::internalError(aResp->res);
-                return;
-            }
-            std::string fpgaType = getProcessorFpgaType(property);
-            aResp->res.jsonValue["FPGA"]["FpgaType"] = fpgaType;
-        });
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("DBUS response error");
+            messages::internalError(aResp->res);
+            return;
+        }
+        std::string fpgaType = getProcessorFpgaType(property);
+        aResp->res.jsonValue["FPGA"]["FpgaType"] = fpgaType;
+    });
 }
 
 inline void getCpuRevisionData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
@@ -1164,9 +1157,9 @@ inline void getCpuRevisionData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         {
             asyncResp->res.jsonValue["Version"] = *version;
         }
-        });
+    });
 }
-       
+
 /**
  * @brief Fill out firmware version info of a accelerator by
  * requesting data from the given D-Bus object.
@@ -1186,7 +1179,8 @@ inline void
                                   const std::variant<std::string>& property) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error for " "Processor firmware version");
+            BMCWEB_LOG_DEBUG("DBUS response error for "
+                             "Processor firmware version");
             messages::internalError(aResp->res);
             return;
         }
@@ -1943,7 +1937,8 @@ inline void
                 const uint64_t* val = std::get_if<uint64_t>(&property.second);
                 if (val == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Get  power/thermal duration property failed");
+                    BMCWEB_LOG_DEBUG(
+                        "Get  power/thermal duration property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2056,7 +2051,8 @@ inline void getGPUNvlinkMetricsData(
         }
         else
         {
-            BMCWEB_LOG_ERROR("Null value returned " "for NVLinkRawTxBandwidthGbps");
+            BMCWEB_LOG_ERROR("Null value returned "
+                             "for NVLinkRawTxBandwidthGbps");
         }
 
         if (nvlinkRawRxBandwidthGbps != nullptr)
@@ -2066,7 +2062,8 @@ inline void getGPUNvlinkMetricsData(
         }
         else
         {
-            BMCWEB_LOG_ERROR("Null value returned " "for NVLinkRawRxBandwidthGbps");
+            BMCWEB_LOG_ERROR("Null value returned "
+                             "for NVLinkRawRxBandwidthGbps");
         }
 
         if (nvlinkDataTxBandwidthGbps != nullptr)
@@ -2076,7 +2073,8 @@ inline void getGPUNvlinkMetricsData(
         }
         else
         {
-            BMCWEB_LOG_ERROR("Null value returned " "for NVLinkDataTxBandwidthGbps");
+            BMCWEB_LOG_ERROR("Null value returned "
+                             "for NVLinkDataTxBandwidthGbps");
         }
 
         if (nvlinkDataRxBandwidthGbps != nullptr)
@@ -2086,7 +2084,8 @@ inline void getGPUNvlinkMetricsData(
         }
         else
         {
-            BMCWEB_LOG_ERROR("Null value returned " "for NVLinkDataRxBandwidthGbps");
+            BMCWEB_LOG_ERROR("Null value returned "
+                             "for NVLinkDataRxBandwidthGbps");
         }
     });
 }
@@ -2116,7 +2115,8 @@ inline void
                     std::get_if<std::string>(&property.second);
                 if (state == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Get PowerSystemInputs Status property failed");
+                    BMCWEB_LOG_DEBUG(
+                        "Get PowerSystemInputs Status property failed");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -2147,7 +2147,8 @@ inline void getMemorySpareChannelPresenceData(
         const bool* memorySpareChannelPresence = std::get_if<bool>(&property);
         if (memorySpareChannelPresence == nullptr)
         {
-            BMCWEB_LOG_ERROR("Null value returned for memorySpareChannelPresence");
+            BMCWEB_LOG_ERROR(
+                "Null value returned for memorySpareChannelPresence");
             messages::internalError(aResp->res);
             return;
         }
@@ -2179,7 +2180,8 @@ inline void getMemoryPageRetirementCountData(
             std::get_if<uint32_t>(&property);
         if (memoryPageRetirementCount == nullptr)
         {
-            BMCWEB_LOG_ERROR("Null value returned for MemoryPageRetirementCount");
+            BMCWEB_LOG_ERROR(
+                "Null value returned for MemoryPageRetirementCount");
             messages::internalError(aResp->res);
             return;
         }
@@ -2235,12 +2237,14 @@ inline void getProcessorMigModeData(
     getMigModeData(aResp, cpuId, service, objPath);
 }
 
-inline void getProcessorCCModeData(
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
-    const std::string& service, const std::string& objPath)
+inline void
+    getProcessorCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& cpuId, const std::string& service,
+                           const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG(" get GpuCCMode data");
-    redfish::nvidia_processor_utils::getCCModeData(aResp, cpuId, service, objPath);
+    redfish::nvidia_processor_utils::getCCModeData(aResp, cpuId, service,
+                                                   objPath);
 }
 
 inline void getProcessorRemoteDebugState(
@@ -2350,7 +2354,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 const dbus::utility::DBusPropertiesMap& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("GetPIDValues: Can't get GPM Metrics Iface properties ");
+            BMCWEB_LOG_ERROR(
+                "GetPIDValues: Can't get GPM Metrics Iface properties ");
             return;
         }
 
@@ -2406,7 +2411,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for GraphicsEngineActivityPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for GraphicsEngineActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2417,7 +2423,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for SMActivityPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for SMActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2428,7 +2435,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for SMOccupancyPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for SMOccupancyPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2440,7 +2448,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for TensorCoreActivityPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for TensorCoreActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2451,7 +2460,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for FP64ActivityPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for FP64ActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2462,7 +2472,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for FP32ActivityPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for FP32ActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2473,7 +2484,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for FP16ActivityPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for FP16ActivityPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2485,7 +2497,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for PCIeRawTxBandwidthGbps");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for PCIeRawTxBandwidthGbps");
             messages::internalError(aResp->res);
             return;
         }
@@ -2497,7 +2510,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for PCIeRawRxBandwidthGbps");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for PCIeRawRxBandwidthGbps");
             messages::internalError(aResp->res);
             return;
         }
@@ -2509,7 +2523,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for NVDecUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for NVDecUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2521,7 +2536,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for NVJpgUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for NVJpgUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2533,7 +2549,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for NVOfaUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for NVOfaUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2544,7 +2561,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for IntergerActivityUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for IntergerActivityUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2554,7 +2572,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for DMMAUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for DMMAUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2564,7 +2583,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for HMMAUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for HMMAUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2574,7 +2594,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for IMMAUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for IMMAUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2590,7 +2611,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for NVDecInstanceUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for NVDecInstanceUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2607,7 +2629,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Null value returned " "for NVJpgUtilizationPercent");
+            BMCWEB_LOG_DEBUG("Null value returned "
+                             "for NVJpgUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2709,7 +2732,7 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             else if (interface == "com.nvidia.CCMode")
             {
                 getProcessorCCModeData(aResp, processorId, serviceName,
-                                        objectPath);
+                                       objectPath);
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         }
@@ -2786,7 +2809,8 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             return;
         }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set MIG Mode  property failed: {}", processorId, ec);
+        BMCWEB_LOG_DEBUG("CPU:{} set MIG Mode  property failed: {}",
+                         processorId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -2893,7 +2917,8 @@ inline void patchRemoteDebug(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const bool remoteDebugEnabled,
                              const std::string& cpuObjectPath)
 {
-    BMCWEB_LOG_DEBUG("Set Remote Debug {} on CPU: {}", std::to_string(remoteDebugEnabled), processorId);
+    BMCWEB_LOG_DEBUG("Set Remote Debug {} on CPU: {}",
+                     std::to_string(remoteDebugEnabled), processorId);
 
     // Find remote debug effecters from all effecters attached to "all_controls"
     crow::connections::systemBus->async_method_call(
@@ -3003,7 +3028,8 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             return;
         }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set speed config property failed: {}", processorId, ec);
+        BMCWEB_LOG_DEBUG("CPU:{} set speed config property failed: {}",
+                         processorId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -3341,13 +3367,14 @@ inline void requestRoutesOperatingConfigCollection(App& app)
 
                 // Use the common search routine to construct the
                 // Collection of all Config objects under this CPU.
-                std::string operationConfiguuri ="/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/"+cpuName+"/OperatingConfigs";
-                constexpr std::array<std::string_view, 1> interfaces{"xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"};
+                std::string operationConfiguuri =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
+                    cpuName + "/OperatingConfigs";
+                constexpr std::array<std::string_view, 1> interfaces{
+                    "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"};
                 collection_util::getCollectionMembers(
-                    asyncResp,
-                     boost::urls::url(operationConfiguuri),
-                    interfaces,
-                    object.c_str());
+                    asyncResp, boost::urls::url(operationConfiguuri),
+                    interfaces, object.c_str());
                 return;
             }
         },
@@ -3449,8 +3476,10 @@ inline void requestRoutesProcessorCollection(App& app)
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors";
 
         collection_util::getCollectionMembers(
-            asyncResp,  boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors"),
-            processorInterfaces,"/xyz/openbmc_project/inventory");
+            asyncResp,
+            boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                             "/Processors"),
+            processorInterfaces, "/xyz/openbmc_project/inventory");
     });
 }
 
@@ -3713,22 +3742,20 @@ inline void getProcessorMemoryECCData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                     ["UncorrectableECCErrorCount"] = *value;
             }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                else if (property.first == "isThresholdExceeded")
+            else if (property.first == "isThresholdExceeded")
+            {
+                const bool* value = std::get_if<bool>(&property.second);
+                if (value == nullptr)
                 {
-                    const bool* value =
-                        std::get_if<bool>(&property.second);
-                    if (value == nullptr)
-                    {
-	                    BMCWEB_LOG_ERROR("NULL Value returned for isThresholdExceeded Property");
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    aResp->res
-                        .jsonValue["Oem"]["Nvidia"]["SRAMECCErrorThresholdExceeded"] =
-                        *value;
+                    BMCWEB_LOG_ERROR(
+                        "NULL Value returned for isThresholdExceeded Property");
+                    messages::internalError(aResp->res);
+                    return;
                 }
+                aResp->res.jsonValue["Oem"]["Nvidia"]
+                                    ["SRAMECCErrorThresholdExceeded"] = *value;
+            }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
@@ -3831,7 +3858,8 @@ inline void getSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                                         boost::is_any_of("/"));
                 if (split.size() < 6)
                 {
-                    BMCWEB_LOG_ERROR("Got path that isn't long enough {}", objPath);
+                    BMCWEB_LOG_ERROR("Got path that isn't long enough {}",
+                                     objPath);
                     continue;
                 }
                 const std::string& sensorType = split[4];
@@ -3894,7 +3922,8 @@ inline void
             }
             for (const std::string& sensorpath : *data)
             {
-                BMCWEB_LOG_DEBUG("proc module state sensor object path {}", sensorpath);
+                BMCWEB_LOG_DEBUG("proc module state sensor object path {}",
+                                 sensorpath);
 
                 const std::array<const char*, 1> sensorinterfaces = {
                     "xyz.openbmc_project.State.ProcessorPerformance"};
@@ -4448,7 +4477,8 @@ inline void getProcessorMemoryMetricsData(
                             const OperatingConfigProperties& properties) {
                         if (ec)
                         {
-                            BMCWEB_LOG_DEBUG("DBUS response error for processor memory metrics");
+                            BMCWEB_LOG_DEBUG(
+                                "DBUS response error for processor memory metrics");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -4562,10 +4592,10 @@ inline void
                 }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 if (std::find(interfaces.begin(), interfaces.end(),
-                                  "com.nvidia.CCMode") !=
-                    interfaces.end())
+                              "com.nvidia.CCMode") != interfaces.end())
                 {
-                    redfish::nvidia_processor_utils::getCCModePendingData(aResp, processorId, service, path);
+                    redfish::nvidia_processor_utils::getCCModePendingData(
+                        aResp, processorId, service, path);
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 if (std::find(interfaces.begin(), interfaces.end(),
@@ -4651,7 +4681,8 @@ inline void patchEccMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             return;
         }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set eccModeEnabled property failed: {}", processorId, ec);
+        BMCWEB_LOG_DEBUG("CPU:{} set eccModeEnabled property failed: {}",
+                         processorId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -4722,8 +4753,8 @@ inline void requestRoutesProcessorSettings(App& app)
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& processorId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -4757,17 +4788,17 @@ inline void requestRoutesProcessorSettings(App& app)
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         // Update ccMode
         std::optional<nlohmann::json> oemNvidiaObject;
-        
+
         if (oemObject &&
-            redfish::json_util::readJson(*oemObject, asyncResp->res,
-                                        "Nvidia", oemNvidiaObject))
+            redfish::json_util::readJson(*oemObject, asyncResp->res, "Nvidia",
+                                         oemNvidiaObject))
         {
             std::optional<bool> ccMode;
             std::optional<bool> ccDevMode;
-            if (oemNvidiaObject && redfish::json_util::readJson(
-                                    *oemNvidiaObject, asyncResp->res,
-                                    "CCModeEnabled", ccMode,
-                                    "CCDevModeEnabled", ccDevMode))
+            if (oemNvidiaObject &&
+                redfish::json_util::readJson(*oemNvidiaObject, asyncResp->res,
+                                             "CCModeEnabled", ccMode,
+                                             "CCDevModeEnabled", ccDevMode))
             {
                 if (ccMode && ccDevMode)
                 {
@@ -4780,26 +4811,28 @@ inline void requestRoutesProcessorSettings(App& app)
                     redfish::processor_utils::getProcessorObject(
                         asyncResp, processorId,
                         [ccMode](const std::shared_ptr<bmcweb::AsyncResp>&
-                                    asyncResp1,
-                                const std::string& processorId1,
-                                const std::string& objectPath,
-                                const MapperServiceMap& serviceMap) {
-                            redfish::nvidia_processor_utils::patchCCMode(asyncResp1, processorId1, *ccMode,
-                                        objectPath, serviceMap);
-                        });
+                                     asyncResp1,
+                                 const std::string& processorId1,
+                                 const std::string& objectPath,
+                                 const MapperServiceMap& serviceMap) {
+                        redfish::nvidia_processor_utils::patchCCMode(
+                            asyncResp1, processorId1, *ccMode, objectPath,
+                            serviceMap);
+                    });
                 }
                 if (ccDevMode)
                 {
                     redfish::processor_utils::getProcessorObject(
                         asyncResp, processorId,
                         [ccDevMode](const std::shared_ptr<bmcweb::AsyncResp>&
-                                    asyncResp1,
-                                const std::string& processorId1,
-                                const std::string& objectPath,
-                                const MapperServiceMap& serviceMap) {
-                            redfish::nvidia_processor_utils::patchCCDevMode(asyncResp1, processorId1, *ccDevMode,
-                                        objectPath, serviceMap);
-                        });
+                                        asyncResp1,
+                                    const std::string& processorId1,
+                                    const std::string& objectPath,
+                                    const MapperServiceMap& serviceMap) {
+                        redfish::nvidia_processor_utils::patchCCDevMode(
+                            asyncResp1, processorId1, *ccDevMode, objectPath,
+                            serviceMap);
+                    });
                 }
             }
         }
@@ -4887,8 +4920,8 @@ inline void requestRoutesProcessorReset(App& app)
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& processorId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -4980,12 +5013,14 @@ inline void requestRoutesProcessorPortCollection(App& app)
                             "xyz.openbmc_project.Inventory.Item.Accelerator") !=
                         interfacesList.end())
                     {
-                        std::string portURI="/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" + processorId + "/Ports";
-                        constexpr std::array<std::string_view, 1> interfaces{"xyz.openbmc_project.Inventory.Item.Port"};
+                        std::string portURI =
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/Processors/" +
+                            processorId + "/Ports";
+                        constexpr std::array<std::string_view, 1> interfaces{
+                            "xyz.openbmc_project.Inventory.Item.Port"};
                         collection_util::getCollectionMembers(
-                            asyncResp,
-                            boost::urls::url(portURI),
-                            interfaces,
+                            asyncResp, boost::urls::url(portURI), interfaces,
                             path.c_str());
                     }
                 }
@@ -5111,7 +5146,8 @@ inline void getConnectedProcessorPorts(
                     std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("Get connected processor ports failed on: {}", portPath);
+            BMCWEB_LOG_DEBUG("Get connected processor ports failed on: {}",
+                             portPath);
             return;
         }
         std::vector<std::string>* data =
@@ -5135,7 +5171,8 @@ inline void getConnectedProcessorPorts(
                 std::string processorName = connectedProcessorPath.filename();
                 if (processorName.empty())
                 {
-                    BMCWEB_LOG_DEBUG("Get connected processor path failed on: {}", portPath);
+                    BMCWEB_LOG_DEBUG(
+                        "Get connected processor path failed on: {}", portPath);
                     return;
                 }
 
@@ -5212,7 +5249,8 @@ inline void
                std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("Get associated processor ports failed on: {}", port);
+            BMCWEB_LOG_DEBUG("Get associated processor ports failed on: {}",
+                             port);
             return;
         }
         std::vector<std::string>* data =
@@ -5272,7 +5310,8 @@ inline void getProcessorPortData(
         for (const std::string& sensorpath : *data)
         {
             // Check Interface in Object or not
-            BMCWEB_LOG_DEBUG("processor state sensor object path {}", sensorpath);
+            BMCWEB_LOG_DEBUG("processor state sensor object path {}",
+                             sensorpath);
             crow::connections::systemBus->async_method_call(
                 [aResp, sensorpath, processorId,
                  portId](const boost::system::error_code ec,
@@ -5480,7 +5519,8 @@ inline void getProcessorPortMetricsData(
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for TX/RX bytes");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for TX/RX bytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -5493,7 +5533,8 @@ inline void getProcessorPortMetricsData(
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for RXNoProtocolBytes");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for RXNoProtocolBytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -5507,7 +5548,8 @@ inline void getProcessorPortMetricsData(
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for TXNoProtocolBytes");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for TXNoProtocolBytes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -5519,7 +5561,8 @@ inline void getProcessorPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for DataCRCCount");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for DataCRCCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -5531,7 +5574,8 @@ inline void getProcessorPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for FlitCRCCount");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for FlitCRCCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -5543,7 +5587,8 @@ inline void getProcessorPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for RecoveryCount");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for RecoveryCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -5555,7 +5600,8 @@ inline void getProcessorPortMetricsData(
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for ReplayCount");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for ReplayCount");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -5607,7 +5653,8 @@ inline void getProcessorPortMetricsData(
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for NVLinkDataRxBandwidthGbps");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for NVLinkDataRxBandwidthGbps");
                 }
                 else
                 {
@@ -5621,7 +5668,8 @@ inline void getProcessorPortMetricsData(
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for NVLinkDataTxBandwidthGbps");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for NVLinkDataTxBandwidthGbps");
                 }
                 else
                 {
@@ -5635,7 +5683,8 @@ inline void getProcessorPortMetricsData(
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for NVLinkRawRxBandwidthGbps");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for NVLinkRawRxBandwidthGbps");
                 }
                 else
                 {
@@ -5649,7 +5698,8 @@ inline void getProcessorPortMetricsData(
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for NVLinkRawTxBandwidthGbps");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for NVLinkRawTxBandwidthGbps");
                 }
                 else
                 {

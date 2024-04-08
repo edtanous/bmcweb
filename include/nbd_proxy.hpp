@@ -42,8 +42,7 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
     NbdProxyServer(crow::websocket::Connection& connIn,
                    const std::string& socketIdIn,
                    const std::string& endpointIdIn, const std::string& pathIn) :
-        socketId(socketIdIn),
-        endpointId(endpointIdIn), path(pathIn),
+        socketId(socketIdIn), endpointId(endpointIdIn), path(pathIn),
 
         peerSocket(connIn.getIoContext()),
         acceptor(connIn.getIoContext(), stream_protocol::endpoint(socketId)),
@@ -83,7 +82,8 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
                                      stream_protocol::socket socket) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("UNIX socket: async_accept error = {}", ec.message());
+                BMCWEB_LOG_ERROR("UNIX socket: async_accept error = {}",
+                                 ec.message());
                 return;
             }
 
@@ -109,7 +109,8 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
             }
             if (ec)
             {
-                BMCWEB_LOG_ERROR("DBus error: cannot call mount method = {}", ec.message());
+                BMCWEB_LOG_ERROR("DBus error: cannot call mount method = {}",
+                                 ec.message());
 
                 self->connection.close("Failed to mount media");
                 return;
@@ -140,7 +141,8 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
                                      size_t bytesRead) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("UNIX socket: async_read_some error = {}", ec.message());
+                BMCWEB_LOG_ERROR("UNIX socket: async_read_some error = {}",
+                                 ec.message());
                 return;
             }
             std::shared_ptr<NbdProxyServer> self = weak.lock();
@@ -161,8 +163,8 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
                     self2->ux2wsBuf.consume(self2->ux2wsBuf.size());
                     self2->doRead();
                 }
-                });
             });
+        });
     }
 
     void doWrite(std::function<void()>&& onDone)
@@ -208,7 +210,7 @@ struct NbdProxyServer : std::enable_shared_from_this<NbdProxyServer>
                 return;
             }
             onDone();
-            });
+        });
     }
 
     // Keeps UNIX socket endpoint file path
@@ -329,7 +331,7 @@ inline void onOpen(crow::websocket::Connection& conn)
         [&conn](const boost::system::error_code& ec,
                 const dbus::utility::ManagedObjectType& objects) {
         afterGetManagedObjects(conn, ec, objects);
-        });
+    });
 
     // We need to wait for dbus and the websockets to hook up before data is
     // sent/received.  Tell the core to hold off messages until the sockets are

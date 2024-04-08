@@ -27,7 +27,6 @@ namespace details
 constexpr intmax_t dayDuration = static_cast<intmax_t>(24 * 60 * 60);
 using Days = std::chrono::duration<long long, std::ratio<dayDuration>>;
 
-
 // Creates a string from an integer in the most efficient way possible without
 // using std::locale.  Adds an exact zero pad based on the pad input parameter.
 // Does not handle negative numbers.

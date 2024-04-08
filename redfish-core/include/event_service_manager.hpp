@@ -24,9 +24,9 @@
 #include "registries.hpp"
 #include "registries_selector.hpp"
 #include "str_utility.hpp"
+#include "subscriber.hpp"
 #include "utility.hpp"
 #include "utils/json_utils.hpp"
-#include "subscriber.hpp"
 
 #include <sys/inotify.h>
 
@@ -38,15 +38,14 @@
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/write.hpp>
 #include <boost/container/flat_map.hpp>
+#include <boost/url/format.hpp>
 #include <dbus_singleton.hpp>
 #include <sdbusplus/bus/match.hpp>
 #include <utils/dbus_log_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/log_services_util.hpp>
 #include <utils/origin_utils.hpp>
 #include <utils/registry_utils.hpp>
-#include <boost/url/format.hpp>
-#include <sdbusplus/bus/match.hpp>
-#include <utils/log_services_util.hpp>
 
 #include <algorithm>
 #include <cstdlib>
@@ -288,7 +287,8 @@ class Event
         registryMsg = redfish::registries::getMessage(messageId);
         if (registryMsg == nullptr)
         {
-            BMCWEB_LOG_ERROR("{}", "Message not found in registry with ID: " + messageId);
+            BMCWEB_LOG_ERROR("{}", "Message not found in registry with ID: " +
+                                       messageId);
             valid = false;
             return;
         }
@@ -453,8 +453,10 @@ class Event
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
             if (!satBMCLogEntryUrl.empty())
             {
-                // the URL is from the satellite BMC so URL fixup will be performed. 
-                addPrefixToStringItem(satBMCLogEntryUrl, redfishAggregationPrefix);
+                // the URL is from the satellite BMC so URL fixup will be
+                // performed.
+                addPrefixToStringItem(satBMCLogEntryUrl,
+                                      redfishAggregationPrefix);
                 eventLogEntry["LogEntry"]["@odata.id"] = satBMCLogEntryUrl;
             }
             else
@@ -548,13 +550,13 @@ class EventUtil
     EventUtil() = default;
     // CI throwing build errors for using capital letters
     // PROPERTY_MODIFIED,RESORCE_CREATED RESOURCE_DELETED and REBOOT_REASON
-    static constexpr char const* propertyModified =
+    static constexpr const char* propertyModified =
         "Base.1.15.PropertyValueModified";
-    static constexpr char const* resorceCreated =
+    static constexpr const char* resorceCreated =
         "ResourceEvent.1.2.ResourceCreated";
-    static constexpr char const* resourceDeleted =
+    static constexpr const char* resourceDeleted =
         "ResourceEvent.1.2.ResourceRemoved";
-    static constexpr char const* rebootReason = "OpenBMC.0.4.BMCRebootReason";
+    static constexpr const char* rebootReason = "OpenBMC.0.4.BMCRebootReason";
 };
 
 inline bool isFilterQuerySpecialChar(char c)
@@ -606,7 +608,8 @@ inline bool
             // SSE supports only "or" and "and" in query params.
             if ((separator != "or") && (separator != "and"))
             {
-                BMCWEB_LOG_ERROR( "Invalid group operator in SSE query parameters");
+                BMCWEB_LOG_ERROR(
+                    "Invalid group operator in SSE query parameters");
                 return false;
             }
         }
@@ -614,7 +617,8 @@ inline bool
         // SSE supports only "eq" as per spec.
         if (op != "eq")
         {
-            BMCWEB_LOG_ERROR( "Invalid assignment operator in SSE query parameters");
+            BMCWEB_LOG_ERROR(
+                "Invalid assignment operator in SSE query parameters");
             return false;
         }
 
@@ -681,8 +685,8 @@ class Subscription : public persistent_data::UserSubscription
         if (client)
         {
             client->sendData(std::move(msg), destinationUrl, httpHeaders,
-                        boost::beast::http::verb::post);
-        return true;
+                             boost::beast::http::verb::post);
+            return true;
         }
 
         if (sseConn != nullptr)
@@ -777,9 +781,9 @@ class Subscription : public persistent_data::UserSubscription
             if (!this->resourceTypes.empty() && !event.resourceType.empty())
             {
                 // ResourceType filtering
-                auto obj =
-                    std::find(this->resourceTypes.begin(),
-                              this->resourceTypes.end(), event.resourceType);
+                auto obj = std::find(this->resourceTypes.begin(),
+                                     this->resourceTypes.end(),
+                                     event.resourceType);
 
                 if (obj == this->resourceTypes.end())
                 {
@@ -803,7 +807,7 @@ class Subscription : public persistent_data::UserSubscription
                 BMCWEB_LOG_ERROR("Failed to format the event log entry");
             }
 
-            nlohmann::json eventsArray =  nlohmann::json::array();
+            nlohmann::json eventsArray = nlohmann::json::array();
             eventsArray.push_back(logEntry);
             nlohmann::json msg = {{"@odata.type", "#Event.v1_9_0.Event"},
                                   {"Id", std::to_string(eventSeqNum)},
@@ -905,7 +909,9 @@ class Subscription : public persistent_data::UserSubscription
         nlohmann::json msg;
         if (!telemetry::fillReport(msg, reportId, var))
         {
-            BMCWEB_LOG_ERROR("Failed to fill the MetricReport for DBus " "Report with id {}", reportId);
+            BMCWEB_LOG_ERROR("Failed to fill the MetricReport for DBus "
+                             "Report with id {}",
+                             reportId);
             return;
         }
 
@@ -963,7 +969,8 @@ class Subscription : public persistent_data::UserSubscription
     // policy.  2XX is considered acceptable
     static boost::system::error_code retryRespHandler(unsigned int respCode)
     {
-        BMCWEB_LOG_DEBUG( "Checking response code validity for SubscriptionEvent");
+        BMCWEB_LOG_DEBUG(
+            "Checking response code validity for SubscriptionEvent");
         if ((respCode < 200) || (respCode >= 300))
         {
             return boost::system::errc::make_error_code(
@@ -1038,7 +1045,8 @@ class EventServiceManager
 
             if (!url)
             {
-                BMCWEB_LOG_ERROR( "Failed to validate and split destination url");
+                BMCWEB_LOG_ERROR(
+                    "Failed to validate and split destination url");
                 continue;
             }
             std::shared_ptr<Subscription> subValue =
@@ -1126,7 +1134,8 @@ class EventServiceManager
                                                                         true);
                     if (newSubscription == nullptr)
                     {
-                        BMCWEB_LOG_ERROR("Problem reading subscription " "from old persistent store");
+                        BMCWEB_LOG_ERROR("Problem reading subscription "
+                                         "from old persistent store");
                         continue;
                     }
 
@@ -1158,7 +1167,9 @@ class EventServiceManager
 
                     if (retry <= 0)
                     {
-                        BMCWEB_LOG_ERROR( "Failed to generate random number from old " "persistent store");
+                        BMCWEB_LOG_ERROR(
+                            "Failed to generate random number from old "
+                            "persistent store");
                         continue;
                     }
                 }
@@ -1440,7 +1451,7 @@ class EventServiceManager
             [](const std::pair<std::string, std::shared_ptr<Subscription>>&
                    entry) {
             return (entry.second->subscriptionType == subscriptionTypeSSE);
-            });
+        });
         return static_cast<size_t>(size);
     }
 
@@ -1506,7 +1517,9 @@ class EventServiceManager
                 {
                     if (resType == resource)
                     {
-                        BMCWEB_LOG_INFO( "ResourceType {} found in the subscribed list", resource);
+                        BMCWEB_LOG_INFO(
+                            "ResourceType {} found in the subscribed list",
+                            resource);
                         isSubscribed = true;
                         break;
                     }
@@ -1715,12 +1728,16 @@ class EventServiceManager
                         continue;
                     }
 
-                    BMCWEB_LOG_DEBUG( "Redfish log file created/deleted. event.name: {}", fileName);
+                    BMCWEB_LOG_DEBUG(
+                        "Redfish log file created/deleted. event.name: {}",
+                        fileName);
                     if (event.mask == IN_CREATE)
                     {
                         if (fileWatchDesc != -1)
                         {
-                            BMCWEB_LOG_DEBUG( "Remove and Add inotify watcher on " "redfish event log file");
+                            BMCWEB_LOG_DEBUG(
+                                "Remove and Add inotify watcher on "
+                                "redfish event log file");
                             // Remove existing inotify watcher and add
                             // with new redfish event log file.
                             inotify_rm_watch(inotifyFd, fileWatchDesc);
@@ -1731,7 +1748,8 @@ class EventServiceManager
                             inotifyFd, redfishEventLogFile, IN_MODIFY);
                         if (fileWatchDesc == -1)
                         {
-                            BMCWEB_LOG_ERROR("inotify_add_watch failed for " "redfish log file.");
+                            BMCWEB_LOG_ERROR("inotify_add_watch failed for "
+                                             "redfish log file.");
                             return;
                         }
 
@@ -1781,7 +1799,8 @@ class EventServiceManager
                                          IN_CREATE | IN_MOVED_TO | IN_DELETE);
         if (dirWatchDesc == -1)
         {
-            BMCWEB_LOG_ERROR( "inotify_add_watch failed for event log directory.");
+            BMCWEB_LOG_ERROR(
+                "inotify_add_watch failed for event log directory.");
             return -1;
         }
 
@@ -1923,8 +1942,8 @@ class EventServiceManager
         "/VirtualMedia/USB2/Actions/VirtualMedia.";
     const std::string sessionServiceServicePrefix = "/redfish/v1/";
     const std::string networkPrefixDbus = "/xyz/openbmc_project/network/";
-    const std::string networkPrefix =
-        "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/";
+    const std::string networkPrefix = "/redfish/v1/Managers/" PLATFORMBMCID
+                                      "/EthernetInterfaces/";
     const std::string ldapCertificateDbusPrefix =
         "/xyz/openbmc_project/certs/client/ldap/";
     const std::string ldapCertificatePrefix =
@@ -1943,8 +1962,8 @@ class EventServiceManager
     const std::string updateServicePrefix = "/redfish/v1/UpdateService/";
     const std::string managerResetDbusPrefix =
         "/xyz/openbmc_project/state/bmc0/";
-    const std::string managerResetPrefix =
-        "/redfish/v1/Managers/" PLATFORMBMCID "/Actions/";
+    const std::string managerResetPrefix = "/redfish/v1/Managers/" PLATFORMBMCID
+                                           "/Actions/";
     const std::string ledGroupsDbusPrefix =
         "/xyz/openbmc_project/led/groups/enclosure_identify";
     const std::string ledPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
@@ -2125,7 +2144,7 @@ class EventServiceManager
             const std::vector<std::string>* additionalDataPtr;
 
             msg.read(objPath, properties);
-            for (auto const& [key, val] :
+            for (const auto& [key, val] :
                  properties["xyz.openbmc_project.Logging.Entry"])
             {
                 if (key == "AdditionalData")
@@ -2171,26 +2190,35 @@ class EventServiceManager
                                     }
                                     else
                                     {
-                                        BMCWEB_LOG_ERROR("property mapping not found for {}", messageArgs[0]);
+                                        BMCWEB_LOG_ERROR(
+                                            "property mapping not found for {}",
+                                            messageArgs[0]);
                                     }
                                 }
                             }
                             else if (additional.count("REDFISH_MESSAGE_ARGS") >
                                      0)
                             {
-                                BMCWEB_LOG_ERROR("Multiple " "REDFISH_MESSAGE_ARGS in the Dbus " "signal message.");
+                                BMCWEB_LOG_ERROR(
+                                    "Multiple "
+                                    "REDFISH_MESSAGE_ARGS in the Dbus "
+                                    "signal message.");
                                 return;
                             }
                         }
                         else
                         {
-                            BMCWEB_LOG_ERROR ("There should be exactly one MessageId in the Dbus signal message. Found ", std::to_string(additional.count( "REDFISH_MESSAGE_ID"))); 
+                            BMCWEB_LOG_ERROR(
+                                "There should be exactly one MessageId in the Dbus signal message. Found ",
+                                std::to_string(
+                                    additional.count("REDFISH_MESSAGE_ID")));
                             return;
                         }
                     }
                     else
                     {
-                        BMCWEB_LOG_ERROR("Invalid type of AdditionalData " "property.");
+                        BMCWEB_LOG_ERROR("Invalid type of AdditionalData "
+                                         "property.");
                         return;
                     }
                 }
@@ -2232,7 +2260,8 @@ class EventServiceManager
                     }
                     else
                     {
-                        BMCWEB_LOG_ERROR("Invalid type of Resolution property.");
+                        BMCWEB_LOG_ERROR(
+                            "Invalid type of Resolution property.");
                         return;
                     }
                 }
@@ -2247,7 +2276,8 @@ class EventServiceManager
                     }
                     else
                     {
-                        BMCWEB_LOG_ERROR("Invalid type of Severity " "property.");
+                        BMCWEB_LOG_ERROR("Invalid type of Severity "
+                                         "property.");
                         return;
                     }
                 }
@@ -2265,7 +2295,8 @@ class EventServiceManager
                     }
                     else
                     {
-                        BMCWEB_LOG_ERROR("Invalid type of Timestamp " "property.");
+                        BMCWEB_LOG_ERROR("Invalid type of Timestamp "
+                                         "property.");
                         return;
                     }
                 }
@@ -2293,18 +2324,12 @@ class EventServiceManager
                 event.setRegistryMsg(messageArgs);
                 event.messageArgs = messageArgs;
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                event.oem =
-                {
-                    {
-                        "Oem", {
-                            {"Nvidia", {
-                                {"@odata.type", "#NvidiaEvent.v1_0_0.EventRecord"},
-                                {"Device", deviceName},
-                                {"ErrorId", eventId}}
-                            }
-                        }
-                    }
-                };
+                event.oem = {
+                    {"Oem",
+                     {{"Nvidia",
+                       {{"@odata.type", "#NvidiaEvent.v1_0_0.EventRecord"},
+                        {"Device", deviceName},
+                        {"ErrorId", eventId}}}}}};
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 event.eventResolution = resolution;
                 event.logEntryId = logEntryId;
@@ -2382,7 +2407,9 @@ class EventServiceManager
             }
         }
 
-        BMCWEB_LOG_ERROR("No Matching prefix found for OriginOfCondition Object Path: '{}' sending empty OriginOfCondition", path);
+        BMCWEB_LOG_ERROR(
+            "No Matching prefix found for OriginOfCondition Object Path: '{}' sending empty OriginOfCondition",
+            path);
 
         sendEventWithOOC(std::string{""}, event);
     }

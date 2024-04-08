@@ -116,7 +116,7 @@ void getEthernetIfaceData(CallbackFunc&& callback)
         extractNTPServersAndDomainNamesData(dbusData, ntpServers, domainNames);
 
         callback(true, ntpServers, domainNames);
-        });
+    });
 }
 
 inline void afterNetworkPortRequest(
@@ -162,7 +162,8 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
 #else
     // This log added to satishfy compiler error : unused variable req
-    BMCWEB_LOG_ERROR("getNetworkData session is null for request {}", req.methodString());
+    BMCWEB_LOG_ERROR("getNetworkData session is null for request {}",
+                     req.methodString());
 #endif
     asyncResp->res.addHeader(
         boost::beast::http::field::link,
@@ -287,11 +288,11 @@ inline void handleNTPProtocolEnabled(
         "/xyz/openbmc_project/time/sync_method",
         "xyz.openbmc_project.Time.Synchronization", "TimeSyncMethod",
         timeSyncMethod, [asyncResp](const boost::system::error_code& ec) {
-            if (ec)
-            {
-                messages::internalError(asyncResp->res);
-            }
-        });
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+        }
+    });
 }
 
 inline void
@@ -407,11 +408,11 @@ inline void
                             messages::internalError(asyncResp->res);
                             return;
                         }
-                        });
+                    });
                 }
             }
         }
-        });
+    });
 }
 
 inline void
@@ -447,7 +448,7 @@ inline void
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    });
+                });
                 sdbusplus::asio::setProperty(
                     *crow::connections::systemBus, entry.second.begin()->first,
                     entry.first,
@@ -459,10 +460,10 @@ inline void
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    });
+                });
             }
         }
-        });
+    });
 }
 
 inline std::string getHostName()

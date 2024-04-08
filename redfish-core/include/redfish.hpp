@@ -18,7 +18,6 @@
 #include "account_service.hpp"
 #include "aggregation_service.hpp"
 #include "assembly.hpp"
-#include "aggregation_service.hpp"
 #include "bios.hpp"
 #include "boot_options.hpp"
 #include "cable.hpp"
@@ -26,15 +25,15 @@
 #include "chassis.hpp"
 #include "component_integrity.hpp"
 #include "control.hpp"
-#include "erot_chassis.hpp"
-#include "fabric.hpp"
-#include "host_interface.hpp"
 #include "environment_metrics.hpp"
+#include "erot_chassis.hpp"
 #include "ethernet.hpp"
 #include "event_service.hpp"
 #include "eventservice_sse.hpp"
+#include "fabric.hpp"
 #include "fabric_adapters.hpp"
 #include "fan.hpp"
+#include "host_interface.hpp"
 #include "hypervisor_system.hpp"
 #include "log_services.hpp"
 #include "manager_diagnostic_data.hpp"
@@ -60,8 +59,8 @@
 #include "network_protocol.hpp"
 #include "nvidia_oem_dpu.hpp"
 #include "pcie.hpp"
-#include "pcieslots.hpp"
 #include "pcie_slots.hpp"
+#include "pcieslots.hpp"
 #include "power.hpp"
 #include "power_subsystem.hpp"
 #include "power_supply.hpp"
@@ -70,7 +69,7 @@
 #include "redfish_v1.hpp"
 #include "roles.hpp"
 #include "secure_boot.hpp"
-#include "secure_boot_database.hpp"  
+#include "secure_boot_database.hpp"
 #include "sensors.hpp"
 #include "service_conditions.hpp"
 #include "service_root.hpp"
@@ -106,15 +105,15 @@ class RedfishService
         requestPcieSlotsRoutes(app);
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
-         requestAccountServiceRoutes(app);
-	}
+            requestAccountServiceRoutes(app);
+        }
 
         if (persistent_data::getConfig().isTLSAuthEnabled())
-	{
+        {
             requestRoutesRoles(app);
             requestRoutesRoleCollection(app);
         }
-        
+
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
         requestRoutesAggregationService(app);
         requestRoutesAggregationSourceCollection(app);
@@ -138,9 +137,9 @@ class RedfishService
 #endif
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
-         requestRoutesNetworkAdapters(app);
-         requestRoutesNetworkDeviceFunctions(app);
-         requestRoutesACDPort(app);
+        requestRoutesNetworkAdapters(app);
+        requestRoutesNetworkDeviceFunctions(app);
+        requestRoutesACDPort(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
@@ -148,7 +147,7 @@ class RedfishService
 #endif
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
-         requestRoutesNetworkAdapters(app);
+        requestRoutesNetworkAdapters(app);
 #endif
 
 #ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
@@ -194,39 +193,40 @@ class RedfishService
         requestRoutesStorageControllerCollection(app);
         requestRoutesStorageController(app);
         requestRoutesDrive(app);
-// #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+        // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesCable(app);
         requestRoutesCableCollection(app);
 // #endif
-#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||  defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
         requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
         requestRoutesSoftwareInventoryCollection(app);
         requestRoutesSoftwareInventory(app);
         requestRoutesInventorySoftwareCollection(app);
         requestRoutesInventorySoftware(app);
-           requestRoutesSystemLogServiceCollection(app);
+        requestRoutesSystemLogServiceCollection(app);
 #ifdef BMCWEB_ENABLE_MFG_TEST_API
-           requestRoutesEventLogDiagnosticDataCollect(app);
-           requestRoutesEventLogDiagnosticDataEntry(app);
+        requestRoutesEventLogDiagnosticDataCollect(app);
+        requestRoutesEventLogDiagnosticDataEntry(app);
 #endif
-           requestRoutesEventLogService(app);
-           requestRoutesSELLogService(app);
-           requestRoutesChassisLogServiceCollection(app);
+        requestRoutesEventLogService(app);
+        requestRoutesSELLogService(app);
+        requestRoutesChassisLogServiceCollection(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
-           requestRoutesChassisXIDLogService(app);
-           requestRoutesChassisXIDLogEntryCollection(app);
+        requestRoutesChassisXIDLogService(app);
+        requestRoutesChassisXIDLogEntryCollection(app);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
 
-           requestRoutesPostCodesEntryAdditionalData(app);
+        requestRoutesPostCodesEntryAdditionalData(app);
 
-           requestRoutesPostCodesLogService(app);
-           requestRoutesPostCodesClear(app);
-           requestRoutesPostCodesEntry(app);
-           requestRoutesPostCodesEntryCollection(app);
-           requestRoutesDebugToken(app);
-           requestRoutesDebugTokenServiceDiagnosticDataCollect(app);
-           requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(app);
+        requestRoutesPostCodesLogService(app);
+        requestRoutesPostCodesClear(app);
+        requestRoutesPostCodesEntry(app);
+        requestRoutesPostCodesEntryCollection(app);
+        requestRoutesDebugToken(app);
+        requestRoutesDebugTokenServiceDiagnosticDataCollect(app);
+        requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(app);
 
 #ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
         requestRoutesSystemDumpService(app);
@@ -253,31 +253,31 @@ class RedfishService
 #endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
 
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
-         requestRoutesSystemFaultLogService(app);
-         requestRoutesSystemFaultLogEntryCollection(app);
-         requestRoutesSystemFaultLogEntry(app);
-	 requestRoutesSystemFaultLogClear(app);
- #endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
+        requestRoutesSystemFaultLogService(app);
+        requestRoutesSystemFaultLogEntryCollection(app);
+        requestRoutesSystemFaultLogEntry(app);
+        requestRoutesSystemFaultLogClear(app);
+#endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
 
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
-         requestRoutesJournalEventLogEntryCollection(app);
-         requestRoutesJournalEventLogEntry(app);
-	 requestRoutesJournalEventLogClear(app);
+        requestRoutesJournalEventLogEntryCollection(app);
+        requestRoutesJournalEventLogEntry(app);
+        requestRoutesJournalEventLogClear(app);
 #endif
-         requestRoutesBMCLogServiceCollection(app);
+        requestRoutesBMCLogServiceCollection(app);
 #ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
-         requestRoutesBMCJournalLogService(app);
-         requestRoutesBMCJournalLogEntryCollection(app);
-         requestRoutesBMCJournalLogEntry(app);
+        requestRoutesBMCJournalLogService(app);
+        requestRoutesBMCJournalLogEntryCollection(app);
+        requestRoutesBMCJournalLogEntry(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_CPU_LOG
-         requestRoutesCrashdumpService(app);
-         requestRoutesCrashdumpEntryCollection(app);
-         requestRoutesCrashdumpEntry(app);
-         requestRoutesCrashdumpFile(app);
-         requestRoutesCrashdumpClear(app);
-         requestRoutesCrashdumpCollect(app);
+        requestRoutesCrashdumpService(app);
+        requestRoutesCrashdumpEntryCollection(app);
+        requestRoutesCrashdumpEntry(app);
+        requestRoutesCrashdumpFile(app);
+        requestRoutesCrashdumpClear(app);
+        requestRoutesCrashdumpCollect(app);
 #endif // BMCWEB_ENABLE_REDFISH_CPU_LOG
 
         requestRoutesProcessorCollection(app);
@@ -307,18 +307,19 @@ class RedfishService
         requestRoutesMemoryMetrics(app);
 
         requestRoutesSystems(app);
-       // The routes requestRoutesSystemActionsReset(app); and requestRoutesSystemResetActionInfo(app)
-       // are enabled in requestRoutesSystems(app) function as per upstream sync
-       // threfore removed from here
+        // The routes requestRoutesSystemActionsReset(app); and
+        // requestRoutesSystemResetActionInfo(app) are enabled in
+        // requestRoutesSystems(app) function as per upstream sync threfore
+        // removed from here
 #ifdef BMCWEB_ENABLE_BIOS
-         requestRoutesBiosService(app);
-         requestRoutesBiosSettings(app);
-         requestRoutesBiosReset(app);
-         requestRoutesBiosChangePassword(app);
-         requestRoutesBiosAttrRegistryService(app);
-         requestRoutesBootOptions(app);
-         requestRoutesSecureBoot(app);
-         requestRoutesSecureBootDatabase(app);
+        requestRoutesBiosService(app);
+        requestRoutesBiosSettings(app);
+        requestRoutesBiosReset(app);
+        requestRoutesBiosChangePassword(app);
+        requestRoutesBiosAttrRegistryService(app);
+        requestRoutesBootOptions(app);
+        requestRoutesSecureBoot(app);
+        requestRoutesSecureBootDatabase(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_HOST_IFACE
@@ -330,40 +331,40 @@ class RedfishService
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
-         requestRoutesDBusLogServiceActionsClear(app);
-         requestRoutesDBusEventLogEntryCollection(app);
-         requestRoutesDBusEventLogEntry(app);
-         requestRoutesDBusEventLogEntryDownload(app);
-         requestRoutesDBusSELLogEntryCollection(app);
-         requestRoutesDBusSELLogEntry(app);
-         requestRoutesDBusSELLogServiceActionsClear(app);
+        requestRoutesDBusLogServiceActionsClear(app);
+        requestRoutesDBusEventLogEntryCollection(app);
+        requestRoutesDBusEventLogEntry(app);
+        requestRoutesDBusEventLogEntryDownload(app);
+        requestRoutesDBusSELLogEntryCollection(app);
+        requestRoutesDBusSELLogEntry(app);
+        requestRoutesDBusSELLogServiceActionsClear(app);
 
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_HOST_LOGGER
-         requestRoutesSystemHostLogger(app);
-         requestRoutesSystemHostLoggerCollection(app);
-         requestRoutesSystemHostLoggerLogEntry(app);
+        requestRoutesSystemHostLogger(app);
+        requestRoutesSystemHostLoggerCollection(app);
+        requestRoutesSystemHostLoggerLogEntry(app);
 #endif
 
-         requestRoutesMessageRegistryFileCollection(app);
-	 requestRoutesMessageRegistryFile(app);
-         requestRoutesMessageRegistry(app);
-         if (persistent_data::getConfig().isTLSAuthEnabled())
-         {
-             requestRoutesCertificateService(app);
-             requestRoutesHTTPSCertificate(app);
-             requestRoutesLDAPCertificate(app);
-             requestRoutesTrustStoreCertificate(app);
-         }
-         requestRoutesSystemPCIeFunctionCollection(app);
-         requestRoutesSystemPCIeFunction(app);
-         requestRoutesSystemPCIeDeviceCollection(app);
-         requestRoutesSystemPCIeDevice(app);
-         requestRoutesChassisPCIeFunctionCollection(app);
-         requestRoutesChassisPCIeFunction(app);
-         requestRoutesChassisPCIeDeviceCollection(app);
-         requestRoutesChassisPCIeDevice(app);
+        requestRoutesMessageRegistryFileCollection(app);
+        requestRoutesMessageRegistryFile(app);
+        requestRoutesMessageRegistry(app);
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            requestRoutesCertificateService(app);
+            requestRoutesHTTPSCertificate(app);
+            requestRoutesLDAPCertificate(app);
+            requestRoutesTrustStoreCertificate(app);
+        }
+        requestRoutesSystemPCIeFunctionCollection(app);
+        requestRoutesSystemPCIeFunction(app);
+        requestRoutesSystemPCIeDeviceCollection(app);
+        requestRoutesSystemPCIeDevice(app);
+        requestRoutesChassisPCIeFunctionCollection(app);
+        requestRoutesChassisPCIeFunction(app);
+        requestRoutesChassisPCIeDeviceCollection(app);
+        requestRoutesChassisPCIeDevice(app);
 
         requestRoutesSensorCollection(app);
         requestRoutesSensor(app);
@@ -377,8 +378,8 @@ class RedfishService
         requestRoutesEventServiceSse(app);
 #endif
         requestRoutesEventDestinationCollection(app);
-	requestRoutesEventDestination(app);
-	requestRoutesFabricAdapters(app);
+        requestRoutesEventDestination(app);
+        requestRoutesFabricAdapters(app);
         requestRoutesFabricAdapterCollection(app);
         requestRoutesSubmitTestEvent(app);
 
@@ -407,7 +408,7 @@ class RedfishService
         requestRoutesTriggerCollection(app);
         requestRoutesTrigger(app);
 #endif
-	requestRoutesEROTChassisCertificate(app);
+        requestRoutesEROTChassisCertificate(app);
 #ifdef BMCWEB_ENABLE_DOT
         requestRoutesEROTChassisDOT(app);
 #endif
@@ -418,7 +419,7 @@ class RedfishService
         requestRoutesServiceConditions(app);
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
-       requestRoutesUpdateServiceCommitImage(app);
+        requestRoutesUpdateServiceCommitImage(app);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
         requestRoutesNvidiaOemBf(app);

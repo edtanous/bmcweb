@@ -36,8 +36,7 @@ class Server
                adaptorCtxIn,
            std::shared_ptr<boost::asio::io_context> io =
                std::make_shared<boost::asio::io_context>()) :
-        ioService(std::move(io)),
-        acceptor(std::move(acceptorIn)),
+        ioService(std::move(io)), acceptor(std::move(acceptorIn)),
         signals(*ioService, SIGINT, SIGTERM, SIGHUP), timer(*ioService),
         fileWatcher(), handler(handlerIn), adaptorCtx(std::move(adaptorCtxIn))
     {}
@@ -95,7 +94,8 @@ class Server
             return dateStr;
         };
 
-        BMCWEB_LOG_INFO("bmcweb server is running, local endpoint {}", acceptor->local_endpoint().address().to_string());
+        BMCWEB_LOG_INFO("bmcweb server is running, local endpoint {}",
+                        acceptor->local_endpoint().address().to_string());
         startAsyncWaitForSignal();
         doAccept();
     }
@@ -196,7 +196,9 @@ class Server
                     acceptor->cancel(ec2);
                     if (ec2)
                     {
-                        BMCWEB_LOG_ERROR( "Error while canceling async operations:{}", ec2.message());
+                        BMCWEB_LOG_ERROR(
+                            "Error while canceling async operations:{}",
+                            ec2.message());
                     }
                     startAsyncWaitForSignal();
                 }

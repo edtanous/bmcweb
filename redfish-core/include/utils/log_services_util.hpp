@@ -27,10 +27,11 @@
 namespace redfish
 {
 
-inline static std::string  getLogEntryDataId(const std::string& id)
+inline static std::string getLogEntryDataId(const std::string& id)
 {
     return std::string{"/redfish/v1/Systems/" PLATFORMSYSTEMID
-                "/LogServices/EventLog/Entries/" + id};
+                       "/LogServices/EventLog/Entries/" +
+                       id};
 }
 
 inline static std::string getLogEntryAdditionalDataURI(const std::string& id)

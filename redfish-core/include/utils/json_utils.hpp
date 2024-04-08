@@ -102,12 +102,14 @@ bool checkRange(const FromType& from, std::string_view key)
 {
     if (from > std::numeric_limits<ToType>::max())
     {
-        BMCWEB_LOG_DEBUG("Value for key {} was greater than max: {}", key, __PRETTY_FUNCTION__);
+        BMCWEB_LOG_DEBUG("Value for key {} was greater than max: {}", key,
+                         __PRETTY_FUNCTION__);
         return false;
     }
     if (from < std::numeric_limits<ToType>::lowest())
     {
-        BMCWEB_LOG_DEBUG("Value for key {} was less than min: {}", key, __PRETTY_FUNCTION__);
+        BMCWEB_LOG_DEBUG("Value for key {} was less than min: {}", key,
+                         __PRETTY_FUNCTION__);
         return false;
     }
     if constexpr (std::is_floating_point_v<ToType>)
@@ -167,8 +169,8 @@ UnpackErrorCode unpackValueWithErrorCode(nlohmann::json& jsonValue,
         value = static_cast<Type>(*jsonPtr);
     }
 
-    else if constexpr ((std::is_unsigned_v<Type>)&&(
-                           !std::is_same_v<bool, Type>))
+    else if constexpr ((std::is_unsigned_v<Type>) &&
+                       (!std::is_same_v<bool, Type>))
     {
         uint64_t* jsonPtr = jsonValue.get_ptr<uint64_t*>();
         if (jsonPtr == nullptr)
@@ -192,7 +194,8 @@ UnpackErrorCode unpackValueWithErrorCode(nlohmann::json& jsonValue,
         JsonType jsonPtr = jsonValue.get_ptr<JsonType>();
         if (jsonPtr == nullptr)
         {
-            BMCWEB_LOG_DEBUG("Value for key {} was incorrect type: {}", key, jsonValue.type_name());
+            BMCWEB_LOG_DEBUG("Value for key {} was incorrect type: {}", key,
+                             jsonValue.type_name());
             return UnpackErrorCode::invalidType;
         }
         value = std::move(*jsonPtr);
@@ -449,8 +452,7 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
                     std::remove_pointer_t<std::decay_t<decltype(val)>>;
                 return details::unpackValue<ContainedT>(
                     item.second, unpackSpec.key, res, *val);
-                         },
-                         unpackSpec.value) &&
+            }, unpackSpec.value) &&
                      result;
 
             unpackSpec.complete = true;
@@ -468,13 +470,11 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
     {
         if (!perUnpack.complete)
         {
-            bool isOptional = std::visit(
-                [](auto&& val) {
+            bool isOptional = std::visit([](auto&& val) {
                 using ContainedType =
                     std::remove_pointer_t<std::decay_t<decltype(val)>>;
                 return details::IsOptional<ContainedType>::value;
-            },
-                perUnpack.value);
+            }, perUnpack.value);
             if (isOptional)
             {
                 continue;

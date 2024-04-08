@@ -31,7 +31,8 @@ inline void isRedfishHostInterfaceUser(const std::string& username,
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR("isRedfishHostInterfaceUser respHandler DBUS error: {}", ec);
+            BMCWEB_LOG_ERROR(
+                "isRedfishHostInterfaceUser respHandler DBUS error: {}", ec);
             callback(ec, false);
             return;
         }

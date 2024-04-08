@@ -2,11 +2,11 @@
 
 #include "bmcweb_config.h"
 
-#include "thermal_metrics.hpp"
 #include "app.hpp"
 #include "dbus_utility.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
+#include "thermal_metrics.hpp"
 #include "utils/collection.hpp"
 #include "utils/metric_report_utils.hpp"
 #include "utils/telemetry_utils.hpp"
@@ -15,8 +15,8 @@
 #include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
 
-#include <chrono>
 #include <array>
+#include <chrono>
 #include <string_view>
 
 #ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
@@ -164,7 +164,7 @@ inline void requestRoutesMetricReportCollection(App& app)
         .privileges(redfish::privileges::getMetricReportCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -318,7 +318,8 @@ inline void
                            const std::vector<std::string>& chassisPaths) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("getPlatformMetrics respHandler DBUS error: {}", ec);
+            BMCWEB_LOG_ERROR("getPlatformMetrics respHandler DBUS error: {}",
+                             ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -428,7 +429,7 @@ inline void getAggregatedSubDeviceMetrics(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& deviceType, const std::string& deviceName,
     const std::string& subDeviceName, const std::string& devicePath,
-    const dbus::utility::DBusInterfacesMap &portInterfacesProperties)
+    const dbus::utility::DBusInterfacesMap& portInterfacesProperties)
 {
     if (deviceType != "ProcessorPortMetrics" &&
         deviceType != "NVSwitchPortMetrics" &&
@@ -717,17 +718,18 @@ inline void requestRoutesMetricReport(App& app)
             return;
         }
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
-                const uint64_t requestTimestamp = static_cast<uint64_t>(
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::steady_clock::now().time_since_epoch())
-                        .count());
-                BMCWEB_LOG_DEBUG("Request submitted at {}", requestTimestamp);
+        const uint64_t requestTimestamp = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        BMCWEB_LOG_DEBUG("Request submitted at {}", requestTimestamp);
 #ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
-                redfish::shmem::getShmemPlatformMetrics(asyncResp, id, requestTimestamp);
+        redfish::shmem::getShmemPlatformMetrics(asyncResp, id,
+                                                requestTimestamp);
 #else
-                getPlatforMetrics(asyncResp, id, requestTimestamp);
+        getPlatforMetrics(asyncResp, id, requestTimestamp);
 #endif
-                return;
+        return;
 #else
         const std::string reportPath = telemetry::getDbusReportPath(id);
         crow::connections::systemBus->async_method_call(
@@ -759,8 +761,7 @@ inline void requestRoutesMetricReport(App& app)
 
                 telemetry::fillReport(asyncResp->res.jsonValue, id, ret);
             });
-        },
-            telemetry::service, reportPath, telemetry::reportInterface,
+        }, telemetry::service, reportPath, telemetry::reportInterface,
             "Update");
 #endif
     });

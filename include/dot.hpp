@@ -50,8 +50,7 @@ class DotCommandHandler
                       const std::vector<uint8_t>& data,
                       ResultCallback&& resultCallback,
                       ErrorCallback&& errorCallback, int timeoutSec = 3) :
-        resCallback(resultCallback),
-        errCallback(errorCallback)
+        resCallback(resultCallback), errCallback(errorCallback)
     {
         mctp_utils::enumerateMctpEndpoints(
             [this, command, data, timeoutSec](

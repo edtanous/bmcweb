@@ -64,9 +64,8 @@ class ConnectionImpl : public Connection
             messageExHandlerIn,
         std::function<void(Connection&, const std::string&)> closeHandlerIn,
         std::function<void(Connection&)> errorHandlerIn) :
-        Connection(reqIn),
-        uri(urlViewIn), ws(std::move(adaptorIn)), inBuffer(inString, 131088),
-        openHandler(std::move(openHandlerIn)),
+        Connection(reqIn), uri(urlViewIn), ws(std::move(adaptorIn)),
+        inBuffer(inString, 131088), openHandler(std::move(openHandlerIn)),
         messageHandler(std::move(messageHandlerIn)),
         messageExHandler(std::move(messageExHandlerIn)),
         closeHandler(std::move(closeHandlerIn)),
@@ -151,7 +150,8 @@ class ConnectionImpl : public Connection
     {
         if (doingWrite)
         {
-            BMCWEB_LOG_CRITICAL( "Cannot mix sendEx usage with sendBinary or sendText");
+            BMCWEB_LOG_CRITICAL(
+                "Cannot mix sendEx usage with sendBinary or sendText");
             onDone();
             return;
         }

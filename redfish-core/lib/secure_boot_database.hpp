@@ -321,12 +321,16 @@ inline void handleCertificateCollectionGet(
         "#CertificateCollection.CertificateCollection";
     aResp->res.jsonValue["Name"] = "Certificate Collection";
     aResp->res.jsonValue["@Redfish.SupportedCertificates"] = {"PEM"};
-    std::string certURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/SecureBoot/SecureBootDatabases/" + databaseId + "/Certificates";
-    constexpr std::array<std::string_view, 1> interfaces{"xyz.openbmc_project.Certs.Certificate"};
-    collection_util::getCollectionMembers(aResp, boost::urls::url(certURI),
-        interfaces,
+    std::string certURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                          "/SecureBoot/SecureBootDatabases/" +
+                          databaseId + "/Certificates";
+    constexpr std::array<std::string_view, 1> interfaces{
+        "xyz.openbmc_project.Certs.Certificate"};
+    collection_util::getCollectionMembers(
+        aResp, boost::urls::url(certURI), interfaces,
         std::string("/xyz/openbmc_project/secureBootDatabase/" + databaseId +
-                    "/certs").c_str());
+                    "/certs")
+            .c_str());
 }
 
 inline void handleCertificateCollectionPost(
@@ -415,8 +419,7 @@ inline void handleCertificateCollectionPost(
                         messages::internalError(aResp->res);
                         return;
                     }
-                },
-                    getServiceName(databaseId), objectPath,
+                }, getServiceName(databaseId), objectPath,
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.Common.UUID", "UUID",
                     dbus::utility::DbusVariantType(*owner));
@@ -560,8 +563,7 @@ inline void
                 return;
             }
             aResp->res.result(boost::beast::http::status::no_content);
-        },
-            getServiceName(databaseId), getCertObjectPath(databaseId, certId),
+        }, getServiceName(databaseId), getCertObjectPath(databaseId, certId),
             "xyz.openbmc_project.Object.Delete", "Delete");
     });
 }
@@ -588,12 +590,13 @@ inline void handleSignatureCollectionGet(
         "#SignatureCollection.SignatureCollection";
     aResp->res.jsonValue["Name"] = "Signature Collection";
 
-    std::string signatureURL =  "/redfish/v1/Systems/" PLATFORMSYSTEMID  "/SecureBoot/SecureBootDatabases/" + databaseId + "/Signatures";
-    constexpr std::array<std::string_view, 1> interfaces{"xyz.openbmc_project.BIOSConfig.SecureBootDatabase.Signature"};
+    std::string signatureURL = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                               "/SecureBoot/SecureBootDatabases/" +
+                               databaseId + "/Signatures";
+    constexpr std::array<std::string_view, 1> interfaces{
+        "xyz.openbmc_project.BIOSConfig.SecureBootDatabase.Signature"};
     collection_util::getCollectionMembers(
-        aResp,
-	boost::urls::url(signatureURL),
-        interfaces,
+        aResp, boost::urls::url(signatureURL), interfaces,
         std::string("/xyz/openbmc_project/secureBootDatabase/" + databaseId +
                     "/signature")
             .c_str());
@@ -696,8 +699,7 @@ inline void handleSignatureCollectionPost(
                         messages::internalError(aResp->res);
                         return;
                     }
-                },
-                    getServiceName(databaseId), objectPath,
+                }, getServiceName(databaseId), objectPath,
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.Common.UUID", "UUID",
                     dbus::utility::DbusVariantType(*owner));
@@ -821,8 +823,7 @@ inline void
                 return;
             }
             aResp->res.result(boost::beast::http::status::no_content);
-        },
-            getServiceName(databaseId), getSigObjectPath(databaseId, sigId),
+        }, getServiceName(databaseId), getSigObjectPath(databaseId, sigId),
             "xyz.openbmc_project.Object.Delete", "Delete");
     });
 }

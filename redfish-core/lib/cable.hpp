@@ -1,7 +1,5 @@
 #pragma once
 
-#include <dbus_utility.hpp>
-#include <query.hpp>
 #include "dbus_utility.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
@@ -11,6 +9,8 @@
 
 #include <boost/system/error_code.hpp>
 #include <boost/url/format.hpp>
+#include <dbus_utility.hpp>
+#include <query.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 
@@ -100,7 +100,7 @@ inline void
                         const boost::system::error_code& ec,
                         const dbus::utility::DBusPropertiesMap& properties) {
                     fillCableProperties(asyncResp->res, ec, properties);
-                    });
+                });
             }
             else if (interface == "xyz.openbmc_project.Inventory.Item")
             {
@@ -111,7 +111,9 @@ inline void
                         const boost::system::error_code& ec, bool present) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG( "get presence failed for Cable {} with error {}", cableObjectPath, ec);
+                        BMCWEB_LOG_DEBUG(
+                            "get presence failed for Cable {} with error {}",
+                            cableObjectPath, ec);
                         if (ec.value() != EBADR)
                         {
                             messages::internalError(asyncResp->res);
@@ -123,7 +125,7 @@ inline void
                     {
                         asyncResp->res.jsonValue["Status"]["State"] = "Absent";
                     }
-                    });
+                });
             }
         }
     }
@@ -184,8 +186,8 @@ inline void requestRoutesCable(App& app)
                 return;
             }
             messages::resourceNotFound(asyncResp->res, "Cable", cableId);
-            });
         });
+    });
 }
 
 /**
@@ -212,7 +214,7 @@ inline void requestRoutesCableCollection(App& app)
         collection_util::getCollectionMembers(
             asyncResp, boost::urls::url("/redfish/v1/Cables"), interfaces,
             "/xyz/openbmc_project/inventory");
-        });
+    });
 }
 
 } // namespace redfish

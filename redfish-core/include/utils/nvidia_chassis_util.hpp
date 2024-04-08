@@ -173,7 +173,6 @@ inline void getChassisFabricSwitchesLinks(
         "xyz.openbmc_project.Association", "endpoints");
 }
 
-
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 /**
  * @brief Fill out chassis nvidia specific info by
@@ -213,7 +212,8 @@ inline void
                           std::string, std::vector<std::string>>>& objects) {
             if (ec || objects.size() <= 0)
             {
-                BMCWEB_LOG_DEBUG("Null value returned " "for serial number");
+                BMCWEB_LOG_DEBUG("Null value returned "
+                                 "for serial number");
                 messages::internalError(aResp->res);
                 return;
             }
@@ -238,7 +238,8 @@ inline void
                             std::get_if<std::string>(&property.second);
                         if (value == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG("Null value returned " "Part number");
+                            BMCWEB_LOG_DEBUG("Null value returned "
+                                             "Part number");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -251,7 +252,8 @@ inline void
                             std::get_if<std::string>(&property.second);
                         if (value == nullptr)
                         {
-                            BMCWEB_LOG_DEBUG("Null value returned " "for serial number");
+                            BMCWEB_LOG_DEBUG("Null value returned "
+                                             "for serial number");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -317,16 +319,16 @@ inline void setOemBaseboardChassisAssert(
                     [aResp](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG("DBUS response error: Set CHASSIS_PART_NUMBER{}", ec);
+                        BMCWEB_LOG_DEBUG(
+                            "DBUS response error: Set CHASSIS_PART_NUMBER{}",
+                            ec);
                         messages::internalError(aResp->res);
                         return;
                     }
                     messages::success(aResp->res);
                     BMCWEB_LOG_DEBUG("Set CHASSIS_PART_NUMBER done.");
-                },
-                    fruObject, fruPath, "org.freedesktop.DBus.Properties",
-                    "Set", "xyz.openbmc_project.FruDevice",
-                    "CHASSIS_PART_NUMBER",
+                }, fruObject, fruPath, "org.freedesktop.DBus.Properties", "Set",
+                    "xyz.openbmc_project.FruDevice", "CHASSIS_PART_NUMBER",
                     dbus::utility::DbusVariantType(value));
             }
             else if (prop == "SerialNumber")
@@ -335,16 +337,16 @@ inline void setOemBaseboardChassisAssert(
                     [aResp](const boost::system::error_code ec) {
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG("DBUS response error: Set CHASSIS_SERIAL_NUMBER{}", ec);
+                        BMCWEB_LOG_DEBUG(
+                            "DBUS response error: Set CHASSIS_SERIAL_NUMBER{}",
+                            ec);
                         messages::internalError(aResp->res);
                         return;
                     }
                     messages::success(aResp->res);
                     BMCWEB_LOG_DEBUG("Set CHASSIS_SERIAL_NUMBER done.");
-                },
-                    fruObject, fruPath, "org.freedesktop.DBus.Properties",
-                    "Set", "xyz.openbmc_project.FruDevice",
-                    "CHASSIS_SERIAL_NUMBER",
+                }, fruObject, fruPath, "org.freedesktop.DBus.Properties", "Set",
+                    "xyz.openbmc_project.FruDevice", "CHASSIS_SERIAL_NUMBER",
                     dbus::utility::DbusVariantType(value));
             }
         },
@@ -376,7 +378,8 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error for " "Baseboard Hardware write protect info");
+            BMCWEB_LOG_DEBUG("DBUS response error for "
+                             "Baseboard Hardware write protect info");
             messages::internalError(aResp->res);
             return;
         }
@@ -388,7 +391,8 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for hardware write protected");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for hardware write protected");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -401,7 +405,8 @@ inline void getOemHdwWriteProtectInfo(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const bool* value = std::get_if<bool>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for hardware write protected control");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for hardware write protected control");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -436,7 +441,8 @@ inline void
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error for " "Baseboard PCIeReference clock count");
+            BMCWEB_LOG_DEBUG("DBUS response error for "
+                             "Baseboard PCIeReference clock count");
             messages::internalError(aResp->res);
             return;
         }
@@ -448,7 +454,8 @@ inline void
                 const uint64_t* value = std::get_if<uint64_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for pcie refernce clock count");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for pcie refernce clock count");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -481,7 +488,8 @@ inline void getChassisPowerLimits(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 propertiesList) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error for " "Chassis power limits");
+            BMCWEB_LOG_DEBUG("DBUS response error for "
+                             "Chassis power limits");
             messages::internalError(aResp->res);
             return;
         }
@@ -495,7 +503,8 @@ inline void getChassisPowerLimits(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for power limits");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for power limits");
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -533,7 +542,8 @@ inline void setStaticPowerHintByObjPath(
                         propertiesList) {
                 if (errorno)
                 {
-                    BMCWEB_LOG_ERROR("Properties::GetAll failed:{}objPath:{}", errorno, objPath);
+                    BMCWEB_LOG_ERROR("Properties::GetAll failed:{}objPath:{}",
+                                     errorno, objPath);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -611,7 +621,8 @@ inline void setStaticPowerHintByObjPath(
                      objPath](const boost::system::error_code errorno) {
                     if (errorno)
                     {
-                        BMCWEB_LOG_ERROR("StaticPowerHint::Estimate failed:{}", errorno);
+                        BMCWEB_LOG_ERROR("StaticPowerHint::Estimate failed:{}",
+                                         errorno);
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -681,7 +692,8 @@ inline void getStaticPowerHintByObjPath(
                         propertiesList) {
                 if (errorno)
                 {
-                    BMCWEB_LOG_ERROR("Properties::GetAll failed:{}objPath:{}", errorno, objPath);
+                    BMCWEB_LOG_ERROR("Properties::GetAll failed:{}objPath:{}",
+                                     errorno, objPath);
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -822,25 +834,24 @@ inline void
         [asyncResp, chassisId(std::string(chassisId))](
             const boost::system::error_code ec,
             const crow::openbmc_mapper::GetSubTreeType& subtree) {
-            if (ec)
-            {
-                return;
-            }
+        if (ec)
+        {
+            return;
+        }
 
-            if (subtree.size() == 0)
-            {
-                return;
-            }
-            asyncResp->res.jsonValue["NetworkAdapters"] = {
-                {"@odata.id",
-                 "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
-        },
+        if (subtree.size() == 0)
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["NetworkAdapters"] = {
+            {"@odata.id",
+             "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
+    },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree", objPath, 0,
         networkInterfaces);
 }
 
-
-} // nvidia_chassis_utils
+} // namespace nvidia_chassis_utils
 } // namespace redfish

@@ -21,9 +21,9 @@ using OperatingConfigProperties =
  * @param[in]       serviceMap      Service map for CPU object.
  */
 inline void patchCCMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
-                         const std::string& processorId, const bool ccMode,
-                         const std::string& cpuObjectPath,
-                         const MapperServiceMap& serviceMap)
+                        const std::string& processorId, const bool ccMode,
+                        const std::string& cpuObjectPath,
+                        const MapperServiceMap& serviceMap)
 {
     // Check that the property even exists by checking for the interface
     const std::string* inventoryService = nullptr;
@@ -46,33 +46,34 @@ inline void patchCCMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
     // Set the property, with handler to check error responses
     crow::connections::systemBus->async_method_call(
         [resp, processorId, ccMode](boost::system::error_code ec,
-                                     sdbusplus::message::message& msg) {
-            if (!ec)
-            {
-                BMCWEB_LOG_DEBUG("Set CC Mode property succeeded");
-                return;
-            }
-            BMCWEB_LOG_DEBUG("CPU:{} set CC Mode  property failed: {}", processorId, ec);
+                                    sdbusplus::message::message& msg) {
+        if (!ec)
+        {
+            BMCWEB_LOG_DEBUG("Set CC Mode property succeeded");
+            return;
+        }
+        BMCWEB_LOG_DEBUG("CPU:{} set CC Mode  property failed: {}", processorId,
+                         ec);
 
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
-                messages::internalError(resp->res);
-                return;
-            }
+        // Read and convert dbus error message to redfish error
+        const sd_bus_error* dbusError = msg.get_error();
+        if (dbusError == nullptr)
+        {
+            messages::internalError(resp->res);
+            return;
+        }
 
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(resp->res);
-            }
-            else
-            {
-                messages::internalError(resp->res);
-            }
-        },
+        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+        {
+            // Service failed to change the config
+            messages::operationFailed(resp->res);
+        }
+        else
+        {
+            messages::internalError(resp->res);
+        }
+    },
         *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
         "Set", "com.nvidia.CCMode", "CCModeEnabled",
         std::variant<bool>(ccMode));
@@ -89,9 +90,9 @@ inline void patchCCMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
  * @param[in]       serviceMap      Service map for CPU object.
  */
 inline void patchCCDevMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
-                         const std::string& processorId, const bool ccDevMode,
-                         const std::string& cpuObjectPath,
-                         const MapperServiceMap& serviceMap)
+                           const std::string& processorId, const bool ccDevMode,
+                           const std::string& cpuObjectPath,
+                           const MapperServiceMap& serviceMap)
 {
     // Check that the property even exists by checking for the interface
     const std::string* inventoryService = nullptr;
@@ -114,33 +115,34 @@ inline void patchCCDevMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
     // Set the property, with handler to check error responses
     crow::connections::systemBus->async_method_call(
         [resp, processorId, ccDevMode](boost::system::error_code ec,
-                                     sdbusplus::message::message& msg) {
-            if (!ec)
-            {
-                BMCWEB_LOG_DEBUG("Set CC Dev Mode property succeeded");
-                return;
-            }
+                                       sdbusplus::message::message& msg) {
+        if (!ec)
+        {
+            BMCWEB_LOG_DEBUG("Set CC Dev Mode property succeeded");
+            return;
+        }
 
-            BMCWEB_LOG_DEBUG("CPU:{} set CC Dev Mode  property failed: {}", processorId, ec);
-            // Read and convert dbus error message to redfish error
-            const sd_bus_error* dbusError = msg.get_error();
-            if (dbusError == nullptr)
-            {
-                messages::internalError(resp->res);
-                return;
-            }
+        BMCWEB_LOG_DEBUG("CPU:{} set CC Dev Mode  property failed: {}",
+                         processorId, ec);
+        // Read and convert dbus error message to redfish error
+        const sd_bus_error* dbusError = msg.get_error();
+        if (dbusError == nullptr)
+        {
+            messages::internalError(resp->res);
+            return;
+        }
 
-            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                        "Device.Error.WriteFailure") == 0)
-            {
-                // Service failed to change the config
-                messages::operationFailed(resp->res);
-            }
-            else
-            {
-                messages::internalError(resp->res);
-            }
-        },
+        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+        {
+            // Service failed to change the config
+            messages::operationFailed(resp->res);
+        }
+        else
+        {
+            messages::internalError(resp->res);
+        }
+    },
         *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
         "Set", "com.nvidia.CCMode", "CCDevModeEnabled",
         std::variant<bool>(ccDevMode));
@@ -156,48 +158,47 @@ inline void patchCCDevMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
  * @param[in]       objPath     D-Bus object to query.
  */
 
-inline void getCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp, 
-                           const std::string& cpuId, const std::string& service,
-                           const std::string& objPath)
+inline void getCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          const std::string& cpuId, const std::string& service,
+                          const std::string& objPath)
 {
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](const boost::system::error_code ec,
                        const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            json["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+            if (property.first == "CCModeEnabled")
             {
-                BMCWEB_LOG_ERROR("DBUS response error");
-                messages::internalError(aResp->res);
-                return;
+                const bool* ccModeEnabled = std::get_if<bool>(&property.second);
+                if (ccModeEnabled == nullptr)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                json["Oem"]["Nvidia"]["CCModeEnabled"] = *ccModeEnabled;
             }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
+            else if (property.first == "CCDevModeEnabled")
             {
-                json["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
-                if (property.first == "CCModeEnabled")
+                const bool* ccDevModeEnabled =
+                    std::get_if<bool>(&property.second);
+                if (ccDevModeEnabled == nullptr)
                 {
-                    const bool* ccModeEnabled =
-                        std::get_if<bool>(&property.second);
-                    if (ccModeEnabled == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["CCModeEnabled"] = *ccModeEnabled;
+                    messages::internalError(aResp->res);
+                    return;
                 }
-                else if (property.first == "CCDevModeEnabled")
-                {
-                    const bool* ccDevModeEnabled =
-                        std::get_if<bool>(&property.second);
-                    if (ccDevModeEnabled == nullptr)
-                    {
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["CCDevModeEnabled"] = *ccDevModeEnabled;
-                }
+                json["Oem"]["Nvidia"]["CCDevModeEnabled"] = *ccDevModeEnabled;
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "com.nvidia.CCMode");
 }
@@ -212,58 +213,60 @@ inline void getCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  * @param[in]       objPath     D-Bus object to query.
  */
 
-inline void getCCModePendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp, 
-                           const std::string& cpuId, const std::string& service,
-                           const std::string& objPath)
+inline void
+    getCCModePendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& cpuId, const std::string& service,
+                         const std::string& objPath)
 
 {
     crow::connections::systemBus->async_method_call(
         [aResp, cpuId](const boost::system::error_code ec,
                        const OperatingConfigProperties& properties) {
-            if (ec)
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            if (property.first == "PendingCCModeState")
             {
-                BMCWEB_LOG_ERROR("DBUS response error");
-                messages::internalError(aResp->res);
-                return;
+                const bool* pendingCCState =
+                    std::get_if<bool>(&property.second);
+                if (pendingCCState == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Get PendingCCModeState property failed");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                json["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+                json["Oem"]["Nvidia"]["CCModeEnabled"] = *pendingCCState;
             }
-            nlohmann::json& json = aResp->res.jsonValue;
-            for (const auto& property : properties)
+            else if (property.first == "PendingCCDevModeState")
             {
-                if (property.first == "PendingCCModeState")
+                const bool* pendingCCDevState =
+                    std::get_if<bool>(&property.second);
+                if (pendingCCDevState == nullptr)
                 {
-                    const bool* pendingCCState =
-                        std::get_if<bool>(&property.second);
-                    if (pendingCCState == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR("Get PendingCCModeState property failed");
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
-                    json["Oem"]["Nvidia"]["CCModeEnabled"]  = *pendingCCState;
+                    BMCWEB_LOG_ERROR(
+                        "Get PendingCCDevModeState property failed");
+                    messages::internalError(aResp->res);
+                    return;
                 }
-                else if (property.first == "PendingCCDevModeState")
-                {
-                    const bool* pendingCCDevState =
-                        std::get_if<bool>(&property.second);
-                    if (pendingCCDevState == nullptr)
-                    {
-                        BMCWEB_LOG_ERROR("Get PendingCCDevModeState property failed");
-                        messages::internalError(aResp->res);
-                        return;
-                    }
-                    json["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
-                    json["Oem"]["Nvidia"]["CCDevModeEnabled"]  = *pendingCCDevState;
-                }
+                json["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+                json["Oem"]["Nvidia"]["CCDevModeEnabled"] = *pendingCCDevState;
             }
-        },
+        }
+    },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "com.nvidia.CCMode");
 }
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-} // nvidia_processor_utils
+} // namespace nvidia_processor_utils
 } // namespace redfish

@@ -1,5 +1,6 @@
 #pragma once
 #include "tal.hpp"
+
 #include <nlohmann/json.hpp>
 
 namespace redfish
@@ -12,11 +13,11 @@ inline void
                             const std::string& metricId,
                             const uint64_t& requestTimestamp = 0)
 {
-    BMCWEB_LOG_DEBUG("getShmemPlatformMetrics :{} Requested at : {}", metricId, requestTimestamp);
+    BMCWEB_LOG_DEBUG("getShmemPlatformMetrics :{} Requested at : {}", metricId,
+                     requestTimestamp);
     try
     {
-        const auto& values =
-            tal::TelemetryAggregator::getAllMrds(metricId);
+        const auto& values = tal::TelemetryAggregator::getAllMrds(metricId);
         asyncResp->res.jsonValue["@odata.type"] =
             "#MetricReport.v1_4_2.MetricReport";
         std::string metricUri = "/redfish/v1/TelemetryService/MetricReports/";
@@ -57,7 +58,7 @@ inline void
                         thisMetric["Oem"]["Nvidia"]["MetricValueStale"] = false;
                     }
                     // enable this line for sensor age calculation
-                    //thisMetric["Oem"]["Nvidia"]["FreshnessInms"] = freshness;
+                    // thisMetric["Oem"]["Nvidia"]["FreshnessInms"] = freshness;
                 }
                 resArray.push_back(thisMetric);
             }
@@ -73,7 +74,7 @@ inline void
             }
         }
     }
-    catch (std::exception const& e)
+    catch (const std::exception& e)
     {
         BMCWEB_LOG_ERROR("Exception while getting MRD values: {}", e.what());
         messages::resourceNotFound(asyncResp->res, "MetricReport", metricId);

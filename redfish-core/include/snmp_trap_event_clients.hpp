@@ -83,7 +83,7 @@ inline void
         [asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::DBusPropertiesMap& properties) {
         afterGetSnmpTrapClientdata(asyncResp, ec, properties);
-        });
+    });
 }
 
 inline void
@@ -95,7 +95,8 @@ inline void
                         dbus::utility::ManagedObjectType& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("D-Bus response error on GetManagedObjects {}", ec);
+            BMCWEB_LOG_ERROR("D-Bus response error on GetManagedObjects {}",
+                             ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -122,7 +123,7 @@ inline void
 
         messages::resourceNotFound(asyncResp->res, "Subscriptions", id);
         EventServiceManager::getInstance().deleteSubscription(id);
-        },
+    },
         "xyz.openbmc_project.Network.SNMP",
         "/xyz/openbmc_project/network/snmp/manager",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
@@ -170,7 +171,7 @@ inline void
         [asyncResp](const boost::system::error_code& ec,
                     const std::string& dbusSNMPid) {
         afterSnmpClientCreate(asyncResp, ec, dbusSNMPid);
-        },
+    },
         "xyz.openbmc_project.Network.SNMP",
         "/xyz/openbmc_project/network/snmp/manager",
         "xyz.openbmc_project.Network.Client.Create", "Client", host,
@@ -223,8 +224,7 @@ inline void
             return;
         }
         messages::success(asyncResp->res);
-        },
-        "xyz.openbmc_project.Network.SNMP", static_cast<std::string>(snmpPath),
+    }, "xyz.openbmc_project.Network.SNMP", static_cast<std::string>(snmpPath),
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 

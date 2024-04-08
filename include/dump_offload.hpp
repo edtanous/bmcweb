@@ -36,8 +36,7 @@ class Handler : public std::enable_shared_from_this<Handler>
     Handler(boost::asio::io_context& ios, const std::string& entryIDIn,
             const std::string& dumpTypeIn,
             const std::string& unixSocketPathIn) :
-        entryID(entryIDIn),
-        dumpType(dumpTypeIn),
+        entryID(entryIDIn), dumpType(dumpTypeIn),
         outputBuffer(boost::beast::flat_static_buffer<socketBufferSize>()),
         unixSocketPath(unixSocketPathIn), unixSocket(ios), dumpSize(0),
         waitTimer(ios), connectRetryCount(0)
@@ -63,11 +62,13 @@ class Handler : public std::enable_shared_from_this<Handler>
                 if (ec == boost::system::errc::no_such_file_or_directory ||
                     ec == boost::system::errc::connection_refused)
                 {
-                    BMCWEB_LOG_DEBUG("UNIX Socket: async_connect {}{}", ec.message(), ec);
+                    BMCWEB_LOG_DEBUG("UNIX Socket: async_connect {}{}",
+                                     ec.message(), ec);
                     retrySocketConnect();
                     return;
                 }
-                BMCWEB_LOG_ERROR("UNIX Socket: async_connect error {}{}", ec.message(), ec);
+                BMCWEB_LOG_ERROR("UNIX Socket: async_connect error {}{}",
+                                 ec.message(), ec);
                 waitTimer.cancel();
                 this->connection->sendStreamErrorStatus(
                     boost::beast::http::status::internal_server_error);
@@ -126,13 +127,17 @@ class Handler : public std::enable_shared_from_this<Handler>
 
             if (connectRetryCount < maxConnectRetryCount)
             {
-                BMCWEB_LOG_DEBUG("Calling doConnect() by checking retry count: {}", connectRetryCount);
+                BMCWEB_LOG_DEBUG(
+                    "Calling doConnect() by checking retry count: {}",
+                    connectRetryCount);
                 connectRetryCount++;
                 doConnect();
             }
             else
             {
-                BMCWEB_LOG_ERROR("Failed to connect, reached max retry count: {}", connectRetryCount);
+                BMCWEB_LOG_ERROR(
+                    "Failed to connect, reached max retry count: {}",
+                    connectRetryCount);
                 waitTimer.cancel();
                 this->connection->sendStreamErrorStatus(
                     boost::beast::http::status::internal_server_error);
@@ -150,7 +155,8 @@ class Handler : public std::enable_shared_from_this<Handler>
                                        const std::variant<uint64_t>& size) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("DBUS response error: Unable to get the dump size {}", ec);
+                BMCWEB_LOG_ERROR(
+                    "DBUS response error: Unable to get the dump size {}", ec);
                 this->connection->sendStreamErrorStatus(
                     boost::beast::http::status::internal_server_error);
                 this->connection->close();
@@ -234,8 +240,6 @@ inline void requestRoutes(App& app)
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
-
-
         std::string url(conn.req.target());
         std::filesystem::path dumpIdPath(
             url.substr(0, url.find("/attachment")));
@@ -250,8 +254,6 @@ inline void requestRoutes(App& app)
                                                     unixSocketPath);
         handlers[&conn]->connection = conn.getSharedReference();
         handlers[&conn]->getDumpSize(dumpId, dumpType);
-
-
     }).onclose([](crow::streaming_response::Connection& conn) {
         auto handler = handlers.find(&conn);
         if (handler == handlers.end())
@@ -268,62 +270,60 @@ inline void requestRoutes(App& app)
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
-            std::string url(conn.req.target());
-            std::filesystem::path dumpIdPath(
-                url.substr(0, url.find("/attachment")));
-            std::string dumpId = dumpIdPath.filename();
-            std::string dumpType = "system";
-            boost::asio::io_context* ioCon = conn.getIoContext();
+        std::string url(conn.req.target());
+        std::filesystem::path dumpIdPath(
+            url.substr(0, url.find("/attachment")));
+        std::string dumpId = dumpIdPath.filename();
+        std::string dumpType = "system";
+        boost::asio::io_context* ioCon = conn.getIoContext();
 
-            std::string unixSocketPath =
-                unixSocketPathDir + dumpType + "_dump_" + dumpId;
+        std::string unixSocketPath = unixSocketPathDir + dumpType + "_dump_" +
+                                     dumpId;
 
-            handlers[&conn] = std::make_shared<Handler>(
-                *ioCon, dumpId, dumpType, unixSocketPath);
-            handlers[&conn]->connection = conn.getSharedReference();
-            handlers[&conn]->getDumpSize(dumpId, dumpType);
-        })
-        .onclose([](crow::streaming_response::Connection& conn) {
-            auto handler = handlers.find(&conn);
-            if (handler == handlers.end())
-            {
-                BMCWEB_LOG_DEBUG("No handler to cleanup");
-                return;
-            }
-            handlers.erase(handler);
-            handler->second->outputBuffer.clear();
-        });
+        handlers[&conn] = std::make_shared<Handler>(*ioCon, dumpId, dumpType,
+                                                    unixSocketPath);
+        handlers[&conn]->connection = conn.getSharedReference();
+        handlers[&conn]->getDumpSize(dumpId, dumpType);
+    }).onclose([](crow::streaming_response::Connection& conn) {
+        auto handler = handlers.find(&conn);
+        if (handler == handlers.end())
+        {
+            BMCWEB_LOG_DEBUG("No handler to cleanup");
+            return;
+        }
+        handlers.erase(handler);
+        handler->second->outputBuffer.clear();
+    });
 #ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/FDR/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
-            std::string url(conn.req.target());
-            std::filesystem::path dumpIdPath(
-                url.substr(0, url.find("/attachment")));
-            std::string dumpId = dumpIdPath.filename();
-            std::string dumpType = "fdr";
-            boost::asio::io_context* ioCon = conn.getIoContext();
+        std::string url(conn.req.target());
+        std::filesystem::path dumpIdPath(
+            url.substr(0, url.find("/attachment")));
+        std::string dumpId = dumpIdPath.filename();
+        std::string dumpType = "fdr";
+        boost::asio::io_context* ioCon = conn.getIoContext();
 
-            std::string unixSocketPath =
-                unixSocketPathDir + dumpType + "_dump_" + dumpId;
+        std::string unixSocketPath = unixSocketPathDir + dumpType + "_dump_" +
+                                     dumpId;
 
-            handlers[&conn] = std::make_shared<Handler>(
-                *ioCon, dumpId, dumpType, unixSocketPath);
-            handlers[&conn]->connection = conn.getSharedReference();
-            handlers[&conn]->getDumpSize(dumpId, dumpType);
-        })
-        .onclose([](crow::streaming_response::Connection& conn) {
-            auto handler = handlers.find(&conn);
-            if (handler == handlers.end())
-            {
-                BMCWEB_LOG_DEBUG("No handler to cleanup");
-                return;
-            }
-            handlers.erase(handler);
-            handler->second->outputBuffer.clear();
-        });
+        handlers[&conn] = std::make_shared<Handler>(*ioCon, dumpId, dumpType,
+                                                    unixSocketPath);
+        handlers[&conn]->connection = conn.getSharedReference();
+        handlers[&conn]->getDumpSize(dumpId, dumpType);
+    }).onclose([](crow::streaming_response::Connection& conn) {
+        auto handler = handlers.find(&conn);
+        if (handler == handlers.end())
+        {
+            BMCWEB_LOG_DEBUG("No handler to cleanup");
+            return;
+        }
+        handlers.erase(handler);
+        handler->second->outputBuffer.clear();
+    });
 #endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID

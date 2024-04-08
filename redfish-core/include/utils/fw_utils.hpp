@@ -162,7 +162,8 @@ inline void
                         std::get_if<std::string>(&it->second);
                     if (swInvPurpose == nullptr)
                     {
-                        BMCWEB_LOG_ERROR("wrong types for " "property \"Purpose\"!");
+                        BMCWEB_LOG_ERROR("wrong types for "
+                                         "property \"Purpose\"!");
                         messages::internalError(aResp->res);
                         return;
                     }
@@ -207,7 +208,8 @@ inline void
                         it = propertiesList.find("Version");
                         if (it == propertiesList.end())
                         {
-                            BMCWEB_LOG_ERROR("Can't find property " "\"Version\"!");
+                            BMCWEB_LOG_ERROR("Can't find property "
+                                             "\"Version\"!");
                             messages::internalError(aResp->res);
                             return;
                         }
@@ -364,7 +366,8 @@ inline void getFwWriteProtectedStatus(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::shared_ptr<std::string>& swId, const std::string& dbusSvc)
 {
-    BMCWEB_LOG_DEBUG("getFwWriteProtectedStatus: swId {} serviceName {}", *swId, dbusSvc);
+    BMCWEB_LOG_DEBUG("getFwWriteProtectedStatus: swId {} serviceName {}", *swId,
+                     dbusSvc);
 
     crow::connections::systemBus->async_method_call(
         [asyncResp, swId](
@@ -415,7 +418,8 @@ inline void patchFwWriteProtectedStatus(
     const std::shared_ptr<std::string>& swId, const std::string& dbusSvc,
     const bool writeProtected)
 {
-    BMCWEB_LOG_DEBUG("patchFwWriteProtectedStatus: swId {} serviceName {}", *swId, dbusSvc);
+    BMCWEB_LOG_DEBUG("patchFwWriteProtectedStatus: swId {} serviceName {}",
+                     *swId, dbusSvc);
     crow::connections::systemBus->async_method_call(
         [asyncResp, swId](const boost::system::error_code ec,
                           sdbusplus::message::message& msg) {
@@ -426,7 +430,8 @@ inline void patchFwWriteProtectedStatus(
             return;
         }
 
-        BMCWEB_LOG_DEBUG("SWInventory:{} set writeprotect property failed: {}", *swId, ec);
+        BMCWEB_LOG_DEBUG("SWInventory:{} set writeprotect property failed: {}",
+                         *swId, ec);
         // Read and convert dbus error message to redfish error
         const sd_bus_error* dbusError = msg.get_error();
         if (dbusError == nullptr)
@@ -486,7 +491,8 @@ inline void
                         const std::vector<std::string>& objPaths) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG(" error_code = {} error msg =  {}", ec, ec.message());
+            BMCWEB_LOG_DEBUG(" error_code = {} error msg =  {}", ec,
+                             ec.message());
             // System can exist with no updateable firmware,
             // so don't throw error here.
             return;

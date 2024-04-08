@@ -19,12 +19,12 @@
 #include "query.hpp"
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
+#include "registries/bios_attribute_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
 #include "registries/privilege_registry.hpp"
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
 #include "registries/update_event_message_registry.hpp"
-#include "registries/bios_attribute_registry.hpp"
 
 #include <boost/url/format.hpp>
 
@@ -147,7 +147,6 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     locationMembers.emplace_back(std::move(location));
     asyncResp->res.jsonValue["Location@odata.count"] = locationMembers.size();
     asyncResp->res.jsonValue["Location"] = std::move(locationMembers);
-
 }
 
 inline void requestRoutesMessageRegistryFile(App& app)

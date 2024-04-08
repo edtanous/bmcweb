@@ -693,8 +693,7 @@ inline void getMetricValue(const std::string& deviceType,
         }
         else if (const uint32_t* reading = std::get_if<uint32_t>(&value))
         {
-                thisMetric["MetricValue"] = std::to_string(*reading);
-
+            thisMetric["MetricValue"] = std::to_string(*reading);
         }
         else if (const uint64_t* reading = std::get_if<uint64_t>(&value))
         {
@@ -708,8 +707,8 @@ inline void getMetricValue(const std::string& deviceType,
             }
             else
             {
-                std::string val =
-                    translateThrottleDuration(metricName, *reading);
+                std::string val = translateThrottleDuration(metricName,
+                                                            *reading);
                 thisMetric["MetricValue"] = val;
             }
         }

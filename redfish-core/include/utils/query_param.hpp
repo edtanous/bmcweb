@@ -474,7 +474,9 @@ inline bool processOnly(crow::App& app, crow::Response& res,
     auto itMemBegin = itMembers->begin();
     if (itMemBegin == itMembers->end() || itMembers->size() != 1)
     {
-        BMCWEB_LOG_DEBUG( "Members contains {} element, returning full collection.", itMembers->size());
+        BMCWEB_LOG_DEBUG(
+            "Members contains {} element, returning full collection.",
+            itMembers->size());
         completionHandler(res);
         return false;
     }
@@ -507,7 +509,8 @@ inline bool processOnly(crow::App& app, crow::Response& res,
     }
 
     auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
-    BMCWEB_LOG_DEBUG("setting completion handler on {}", logPtr(&asyncResp->res));
+    BMCWEB_LOG_DEBUG("setting completion handler on {}",
+                     logPtr(&asyncResp->res));
     asyncResp->res.setCompleteRequestHandler(std::move(completionHandler));
     asyncResp->res.setIsAliveHelper(res.releaseIsAliveHelper());
     app.handle(newReq, asyncResp);
@@ -811,8 +814,7 @@ class MultiAsyncResp : public std::enable_shared_from_this<MultiAsyncResp>
     // class manages the final "merge" of the json resources.
     MultiAsyncResp(crow::App& appIn,
                    std::shared_ptr<bmcweb::AsyncResp> finalResIn) :
-        app(appIn),
-        finalRes(std::move(finalResIn))
+        app(appIn), finalRes(std::move(finalResIn))
     {}
 
     void addAwaitingResponse(
@@ -864,7 +866,8 @@ class MultiAsyncResp : public std::enable_shared_from_this<MultiAsyncResp>
             }
 
             auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
-            BMCWEB_LOG_DEBUG("setting completion handler on {}", logPtr(&asyncResp->res));
+            BMCWEB_LOG_DEBUG("setting completion handler on {}",
+                             logPtr(&asyncResp->res));
 
             addAwaitingResponse(asyncResp, node.location);
             app.handle(newReq, asyncResp);

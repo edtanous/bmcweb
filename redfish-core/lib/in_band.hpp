@@ -33,15 +33,17 @@
 inline void
     updateInBandEnabled(const crow::Request& req,
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        uint32_t endpointId, const std::function<void()>& callback = {})
+                        uint32_t endpointId,
+                        const std::function<void()>& callback = {})
 {
     MctpVdmUtil mctpVdmUtilWrapper(endpointId);
     auto responseCallback =
         [callback]([[maybe_unused]] const crow::Request& req,
-           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-           [[maybe_unused]] uint32_t endpointId, const std::string& stdOut,
-           [[maybe_unused]] const std::string& stdErr,
-           const boost::system::error_code& ec, int errorCode) -> void {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] uint32_t endpointId,
+                   const std::string& stdOut,
+                   [[maybe_unused]] const std::string& stdErr,
+                   const boost::system::error_code& ec, int errorCode) -> void {
         if (ec || errorCode)
         {
             redfish::messages::internalError(asyncResp->res);

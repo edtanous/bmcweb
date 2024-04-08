@@ -17,7 +17,6 @@
 
 #include "bmcweb_config.h"
 
-#include <boost/container/flat_map.hpp>
 #include "app.hpp"
 #include "dbus_utility.hpp"
 #include "health.hpp"
@@ -28,6 +27,7 @@
 #include "utils/hex_utils.hpp"
 #include "utils/json_utils.hpp"
 
+#include <boost/container/flat_map.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/url/format.hpp>
 #include <nlohmann/json.hpp>
@@ -612,7 +612,7 @@ inline void
     if (locationCode != nullptr)
     {
         asyncResp->res.jsonValue[jsonPtr]["Location"]["PartLocation"]
-                            ["ServiceLabel"] = *locationCode;
+                                ["ServiceLabel"] = *locationCode;
     }
     if (locationType != nullptr)
     {
@@ -623,12 +623,14 @@ inline void
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     if (rowMappingFailureState != nullptr)
     {
-        asyncResp->res.jsonValue[jsonPtr]["Oem"]["Nvidia"]["RowRemappingFailed"] =
+        asyncResp->res
+            .jsonValue[jsonPtr]["Oem"]["Nvidia"]["RowRemappingFailed"] =
             *rowMappingFailureState;
     }
     if (rowMappingPendingState != nullptr)
     {
-        asyncResp->res.jsonValue[jsonPtr]["Oem"]["Nvidia"]["RowRemappingPending"] =
+        asyncResp->res
+            .jsonValue[jsonPtr]["Oem"]["Nvidia"]["RowRemappingPending"] =
             *rowMappingPendingState;
     }
     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
@@ -673,7 +675,7 @@ inline void getDimmDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
             return;
         }
         assembleDimmProperties(dimmId, asyncResp, properties, ""_json_pointer);
-        });
+    });
 }
 
 inline void assembleDimmPartitionData(
@@ -748,7 +750,7 @@ inline void getDimmPartitionData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         }
         nlohmann::json::json_pointer regionPtr = "/Regions"_json_pointer;
         assembleDimmPartitionData(asyncResp, properties, regionPtr);
-        }
+    }
 
     );
 }
@@ -958,9 +960,10 @@ inline void requestRoutesMemoryCollection(App& app)
         constexpr std::array<std::string_view, 1> interfaces{
             "xyz.openbmc_project.Inventory.Item.Dimm"};
         collection_util::getCollectionMembers(
-            asyncResp, boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory"),
+            asyncResp,
+            boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory"),
             interfaces, "/xyz/openbmc_project/inventory");
-        });
+    });
 }
 
 inline void requestRoutesMemory(App& app)

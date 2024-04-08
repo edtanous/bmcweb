@@ -128,7 +128,8 @@ class ServerSentEvents : public std::enable_shared_from_this<ServerSentEvents>
                 self->checkQueue();
                 return;
             }
-            BMCWEB_LOG_DEBUG("async_write_some() bytes transferred: {}", bytesTransferred);
+            BMCWEB_LOG_DEBUG("async_write_some() bytes transferred: {}",
+                             bytesTransferred);
 
             self->doWrite();
         });

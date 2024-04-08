@@ -32,7 +32,8 @@ void getValidNetworkAdapterPath(
                                networkAdapterPaths) mutable {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("getValidNetworkAdapterPath respHandler DBUS error: {}", ec);
+            BMCWEB_LOG_ERROR(
+                "getValidNetworkAdapterPath respHandler DBUS error: {}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -177,7 +178,8 @@ inline void getHealthData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR("Null value returned " "for port type");
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for port type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -341,10 +343,12 @@ inline void
     asyncResp->res.jsonValue["Name"] = networkAdapterId;
     asyncResp->res.jsonValue["Id"] = networkAdapterId;
 
-    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}", chassisId, chassisId);
-        
+    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/NetworkAdapters/{}", chassisId, chassisId);
+
     asyncResp->res.jsonValue["Ports"]["@odata.id"] =
-        boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports", chassisId, chassisId);
+        boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports",
+                            chassisId, chassisId);
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     getAssetData(asyncResp, *validNetworkAdapterPath, networkAdapterId);
     getHealthByAssociation(asyncResp, *validNetworkAdapterPath,
@@ -366,7 +370,9 @@ inline void
 
     asyncResp->res.jsonValue["@odata.type"] = "#PortCollection.PortCollection";
     asyncResp->res.jsonValue["Name"] = "Port Collection";
-    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports", chassisId, networkAdapterId);
+    asyncResp->res.jsonValue["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports",
+                            chassisId, networkAdapterId);
 
     crow::connections::systemBus->async_method_call(
         [chassisId, networkAdapterId, asyncResp{std::move(asyncResp)}](
@@ -491,7 +497,9 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["Id"] = portId;
     asyncResp->res.jsonValue["Name"] = "Port";
     asyncResp->res.jsonValue["LinkNetworkTechnology"] = "Ethernet";
-    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports/{}", chassisId, networkAdapterId, portId);
+    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports/{}", chassisId,
+        networkAdapterId, portId);
 
     using PropertiesMap =
         boost::container::flat_map<std::string,
@@ -515,7 +523,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR("Null value returned " "for port type");
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for port type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -527,7 +536,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const size_t* value = std::get_if<size_t>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR("Null value returned " "for current speed");
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for current speed");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -539,7 +549,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR("Null value returned " "for protocol type");
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for protocol type");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -552,7 +563,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR("Null value returned " "for link status");
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for link status");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -576,7 +588,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_ERROR("Null value returned " "for link state");
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for link state");
                     messages::internalError(asyncResp->res);
                     return;
                 }

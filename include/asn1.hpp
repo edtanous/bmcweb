@@ -276,7 +276,9 @@ inline int pemPkeyIsEncrypted(const std::string& filename, bool* encrypted)
     str = static_cast<const unsigned char*>(static_cast<void*>(buf->data));
     if ((ret = asn1::hasPbesPbkdf(&str, len, 0, &pbes, &pbkdf)) < 0)
     {
-        BMCWEB_LOG_ERROR("Error while processing ASN.1 structures at {} return value: {}", filename, ret);
+        BMCWEB_LOG_ERROR(
+            "Error while processing ASN.1 structures at {} return value: {}",
+            filename, ret);
         BIO_free(inB64);
         BUF_MEM_free(buf);
         BIO_free(in);

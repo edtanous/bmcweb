@@ -68,8 +68,8 @@ inline void
         m.read(path, interfaces);
 
         if (std::ranges::find_if(interfaces, [](const auto& i) {
-                return i.first == "xyz.openbmc_project.Software.Version";
-            }) != interfaces.end())
+            return i.first == "xyz.openbmc_project.Software.Version";
+        }) != interfaces.end())
         {
             timeout.cancel();
             std::string leaf = path.filename();

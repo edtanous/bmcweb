@@ -169,7 +169,7 @@ inline void requestRoutes(App& app)
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .websocket()
         .onopen([](crow::websocket::Connection& conn) {
-            BMCWEB_LOG_DEBUG("Connection {} opened", logPtr(&conn));
+        BMCWEB_LOG_DEBUG("Connection {} opened", logPtr(&conn));
 
         if (session != nullptr)
         {
@@ -206,13 +206,14 @@ inline void requestRoutes(App& app)
     })
         .onmessage([](crow::websocket::Connection& conn,
                       const std::string& data, bool) {
-            if (data.length() >
-                handler->inputBuffer->capacity() - handler->inputBuffer->size())
-            {
-                BMCWEB_LOG_ERROR("Buffer overrun when writing {} bytes", data.length());
-                conn.close("Buffer overrun");
-                return;
-            }
+        if (data.length() >
+            handler->inputBuffer->capacity() - handler->inputBuffer->size())
+        {
+            BMCWEB_LOG_ERROR("Buffer overrun when writing {} bytes",
+                             data.length());
+            conn.close("Buffer overrun");
+            return;
+        }
 
         boost::asio::buffer_copy(handler->inputBuffer->prepare(data.size()),
                                  boost::asio::buffer(data));

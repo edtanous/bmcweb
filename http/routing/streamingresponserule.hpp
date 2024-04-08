@@ -1,6 +1,7 @@
 #pragma once
 #include "baserule.hpp"
 #include "dynamicrule.hpp"
+
 #include <boost/beast/http/verb.hpp>
 
 #include <memory>
@@ -15,11 +16,9 @@ class StreamingResponseRule : public BaseRule
     using self_t = StreamingResponseRule;
 
   public:
-    StreamingResponseRule(const std::string& ruleIn) : BaseRule(ruleIn)
-    {}
+    StreamingResponseRule(const std::string& ruleIn) : BaseRule(ruleIn) {}
 
-    void validate() override
-    {}
+    void validate() override {}
 
     void handle(const Request&,
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -38,15 +37,15 @@ class StreamingResponseRule : public BaseRule
                 std::make_shared<crow::streaming_response::ConnectionImpl<
                     boost::asio::ip::tcp::socket>>(req, std::move(adaptor),
                                                    openHandler, messageHandler,
-                                                   closeHandler, errorHandler);   
-        asyncResp->res.setCompleteRequestHandler(nullptr);                                     
+                                                   closeHandler, errorHandler);
+        asyncResp->res.setCompleteRequestHandler(nullptr);
         myConnection->start();
     }
 
     void handleUpgrade(const Request& req,
                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        boost::beast::ssl_stream<boost::asio::ip::tcp::socket>&&
-                         adaptor) override
+                           adaptor) override
     {
         std::shared_ptr<crow::streaming_response::ConnectionImpl<
             boost::beast::ssl_stream<boost::asio::ip::tcp::socket>>>
@@ -96,4 +95,4 @@ class StreamingResponseRule : public BaseRule
     std::function<void(crow::streaming_response::Connection&)> errorHandler;
 };
 
-}//namespace crow
+} // namespace crow

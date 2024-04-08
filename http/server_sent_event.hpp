@@ -45,8 +45,8 @@ class ConnectionImpl : public Connection
     ConnectionImpl(Adaptor&& adaptorIn,
                    std::function<void(Connection&)> openHandlerIn,
                    std::function<void(Connection&)> closeHandlerIn) :
-        adaptor(std::move(adaptorIn)),
-        timer(ioc), openHandler(std::move(openHandlerIn)),
+        adaptor(std::move(adaptorIn)), timer(ioc),
+        openHandler(std::move(openHandlerIn)),
         closeHandler(std::move(closeHandlerIn))
     {
         BMCWEB_LOG_DEBUG("SseConnectionImpl: SSE constructor {}", logPtr(this));
@@ -190,7 +190,8 @@ class ConnectionImpl : public Connection
             close("async_write_some failed");
             return;
         }
-        BMCWEB_LOG_DEBUG("async_write_some() bytes transferred: {}", bytesTransferred);
+        BMCWEB_LOG_DEBUG("async_write_some() bytes transferred: {}",
+                         bytesTransferred);
 
         doWrite();
     }
@@ -248,7 +249,8 @@ class ConnectionImpl : public Connection
         std::shared_ptr<Connection> self = weakSelf.lock();
         if (!self)
         {
-            BMCWEB_LOG_CRITICAL("{} Failed to capture connection", logPtr(self.get()));
+            BMCWEB_LOG_CRITICAL("{} Failed to capture connection",
+                                logPtr(self.get()));
             return;
         }
 
@@ -263,7 +265,8 @@ class ConnectionImpl : public Connection
             BMCWEB_LOG_CRITICAL("{} timer failed {}", logPtr(self.get()), ec);
         }
 
-        BMCWEB_LOG_WARNING("{}Connection timed out, closing", logPtr(self.get()));
+        BMCWEB_LOG_WARNING("{}Connection timed out, closing",
+                           logPtr(self.get()));
 
         self->close("closing connection");
     }

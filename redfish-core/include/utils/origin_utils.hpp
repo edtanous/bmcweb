@@ -5,9 +5,11 @@
 
 #pragma once
 
+#include "registries.hpp"
+
 #include <boost/algorithm/string.hpp>
 #include <dbus_utility.hpp>
-#include "registries.hpp"
+
 #include <algorithm>
 #include <chrono>
 
@@ -99,12 +101,12 @@ static void oocUtilServiceConditions(
 {
     nlohmann::json j;
     BMCWEB_LOG_DEBUG("Generating MessageRegistry for [{}]", messageId);
-    const registries::Message* msg =
-       registries::getMessage(messageId);
+    const registries::Message* msg = registries::getMessage(messageId);
 
     if (msg == nullptr)
     {
-        BMCWEB_LOG_ERROR("Failed to lookup the message for MessageId[{}]", messageId);
+        BMCWEB_LOG_ERROR("Failed to lookup the message for MessageId[{}]",
+                         messageId);
         return;
     }
 
@@ -229,7 +231,9 @@ inline void convertDbusObjectToOriginOfCondition(
     }
     oocUtil(asyncResp, logEntry, id, std::string(""), severity, messageArgs,
             timestamp, messageId);
-    BMCWEB_LOG_ERROR("No Matching prefix found for OriginOfCondition DBus object Path: {}", path);
+    BMCWEB_LOG_ERROR(
+        "No Matching prefix found for OriginOfCondition DBus object Path: {}",
+        path);
     return;
 }
 

@@ -1,18 +1,17 @@
 #pragma once
-#include "background_copy.hpp"
-#include "in_band.hpp"
-
 #include "async_resp.hpp"
+#include "background_copy.hpp"
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
-
-#include <array>
-#include <string_view>
+#include "in_band.hpp"
 
 #include <async_resp.hpp>
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <utils/dbus_utils.hpp>
+
+#include <array>
+#include <string_view>
 namespace redfish
 {
 
@@ -85,22 +84,21 @@ inline void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp](boost::system::error_code ec1, const int retValue) {
-            if (!ec1)
+        if (!ec1)
+        {
+            if (retValue != 0)
             {
-                if (retValue != 0)
-                {
-                    BMCWEB_LOG_ERROR("resetPowerLimit error {}", retValue);
-                    messages::internalError(asyncResp->res);
-                }
-                BMCWEB_LOG_DEBUG("PowerLimit Reset Succeeded");
-                messages::success(asyncResp->res);
-                return;
+                BMCWEB_LOG_ERROR("resetPowerLimit error {}", retValue);
+                messages::internalError(asyncResp->res);
             }
-            BMCWEB_LOG_DEBUG("PowerLimit Reset error {}",ec1);
-            messages::internalError(asyncResp->res);
+            BMCWEB_LOG_DEBUG("PowerLimit Reset Succeeded");
+            messages::success(asyncResp->res);
             return;
-        },
-        connection, path, "xyz.openbmc_project.Control.Power.Cap",
+        }
+        BMCWEB_LOG_DEBUG("PowerLimit Reset error {}", ec1);
+        messages::internalError(asyncResp->res);
+        return;
+    }, connection, path, "xyz.openbmc_project.Control.Power.Cap",
         "ClearPowerCap");
 }
 
@@ -110,7 +108,8 @@ inline std::string getFeatureReadyStateType(const std::string& stateType)
     {
         return "Enabled";
     }
-    if (stateType == "xyz.openbmc_project.State.FeatureReady.States.StandbyOffline")
+    if (stateType ==
+        "xyz.openbmc_project.State.FeatureReady.States.StandbyOffline")
     {
         return "StandbyOffline";
     }
@@ -182,7 +181,8 @@ void getValidChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         BMCWEB_LOG_DEBUG("getValidChassisID respHandler enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR("getValidChassisID respHandler DBUS error: {}", ec);
+            BMCWEB_LOG_ERROR("getValidChassisID respHandler DBUS error: {}",
+                             ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -240,7 +240,8 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         BMCWEB_LOG_DEBUG("getValidChassisPath respHandler enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR("getValidChassisPath respHandler DBUS error: {}", ec);
+            BMCWEB_LOG_ERROR("getValidChassisPath respHandler DBUS error: {}",
+                             ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -262,7 +263,7 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
         }
         callback(chassisPath);
-        });
+    });
     BMCWEB_LOG_DEBUG("checkChassisId exit");
 }
 
@@ -344,9 +345,9 @@ inline void
         aResp->res.jsonValue["Links"]["ContainedBy"] = {
             {"@odata.id", "/redfish/v1/Chassis/" + chassisName}};
     },
-    "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
-    "org.freedesktop.DBus.Properties", "Get",
-    "xyz.openbmc_project.Association", "endpoints");
+        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
 }
 
 inline void
@@ -502,9 +503,12 @@ inline void setBackgroundCopyEnabled(
             }
             else
             {
-                BMCWEB_LOG_DEBUG("Can not find relevant MCTP endpoint for chassis {}", chassisId);
+                BMCWEB_LOG_DEBUG(
+                    "Can not find relevant MCTP endpoint for chassis {}",
+                    chassisId);
                 messages::resourceMissingAtURI(
-                    asyncResp->res, boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
+                    asyncResp->res,
+                    boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
 
                 return;
             }
@@ -615,9 +619,12 @@ inline void
             }
             else
             {
-                BMCWEB_LOG_DEBUG("Can not find relevant MCTP endpoint for chassis {}", chassisId);
+                BMCWEB_LOG_DEBUG(
+                    "Can not find relevant MCTP endpoint for chassis {}",
+                    chassisId);
                 messages::resourceMissingAtURI(
-                    asyncResp->res, boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
+                    asyncResp->res,
+                    boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
                 return;
             }
         }
@@ -710,48 +717,46 @@ inline void getBackgroundCopyAndInBandInfo(
             }
         }
 
-            if (foundEID)
-            {
-                nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
-                oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
+        if (foundEID)
+        {
+            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+            oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
 
-                // Calling the following methods, updateInBandEnabled,
-                // updateBackgroundCopyEnabled, and updateBackgroundCopyStatus
-                // asynchronously, may cause unpredictable behavior. These
-                // methods use 'mctp-vdm-util', which is not designed to handle
-                // more than one request at the same time. Running more than one
-                // command simultaneously may result in output from a previous
-                // (or another) request. The fix addresses this issue by
-                // changing the way the functions are called, simulating
-                // synchronous execution by invoking each command sequentially
-                // instead of simultaneously.
+            // Calling the following methods, updateInBandEnabled,
+            // updateBackgroundCopyEnabled, and updateBackgroundCopyStatus
+            // asynchronously, may cause unpredictable behavior. These
+            // methods use 'mctp-vdm-util', which is not designed to handle
+            // more than one request at the same time. Running more than one
+            // command simultaneously may result in output from a previous
+            // (or another) request. The fix addresses this issue by
+            // changing the way the functions are called, simulating
+            // synchronous execution by invoking each command sequentially
+            // instead of simultaneously.
 
-                uint32_t endpointId = *eid;
-                updateInBandEnabled(req, asyncResp, endpointId,
-                                    [req, asyncResp, endpointId]() {
-                                        updateBackgroundCopyEnabled(
-                                            req, asyncResp, endpointId,
+            uint32_t endpointId = *eid;
+            updateInBandEnabled(req, asyncResp, endpointId,
+                                [req, asyncResp, endpointId]() {
+                updateBackgroundCopyEnabled(req, asyncResp, endpointId,
                                             [req, asyncResp, endpointId]() {
-                                                updateBackgroundCopyStatus(
-                                                    req, asyncResp, endpointId);
-                                            });
-                                    });
+                    updateBackgroundCopyStatus(req, asyncResp, endpointId);
+                });
+            });
+        }
+        else
+        {
+            if (isPCIe)
+            {
+                getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID,
+                                               false);
             }
             else
             {
-                if (isPCIe)
-                {
-                    getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID,
-                                                   false);
-                }
-                else
-                {
-                    BMCWEB_LOG_DEBUG(
-                        "Can not find relevant MCTP endpoint for chassis {}",
-                        chassisUUID);
-                }
+                BMCWEB_LOG_DEBUG(
+                    "Can not find relevant MCTP endpoint for chassis {}",
+                    chassisUUID);
             }
-        },
+        }
+    },
         serviceName, "/xyz/openbmc_project/mctp",
         "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 }
@@ -937,7 +942,11 @@ inline void getAssociationEndpoint(const std::string& objPath,
                             std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("D-Bus responses error: {} (busctl call {} {} {} Get ss {} endpoints)", ec, dbus_utils::mapperBusName, objPath, dbus_utils::propertyInterface, dbus_utils::associationInterface);
+            BMCWEB_LOG_ERROR(
+                "D-Bus responses error: {} (busctl call {} {} {} Get ss {} endpoints)",
+                ec, dbus_utils::mapperBusName, objPath,
+                dbus_utils::propertyInterface,
+                dbus_utils::associationInterface);
             callback(false, std::string(""));
             return; // should have associated inventory object.
         }
@@ -945,7 +954,12 @@ inline void getAssociationEndpoint(const std::string& objPath,
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr || data->size() == 0)
         {
-            BMCWEB_LOG_ERROR("{}(busctl call {} {} {} Get ss {} endpoints)", ((data == nullptr) ? "Data is null. " : "Data is empty"), dbus_utils::mapperBusName, objPath, dbus_utils::propertyInterface, dbus_utils::associationInterface);
+            BMCWEB_LOG_ERROR(
+                "{}(busctl call {} {} {} Get ss {} endpoints)",
+                ((data == nullptr) ? "Data is null. " : "Data is empty"),
+                dbus_utils::mapperBusName, objPath,
+                dbus_utils::propertyInterface,
+                dbus_utils::associationInterface);
             /*
                             Object must have associated inventory object.
                             Exemplary test on hardware:
@@ -981,7 +995,8 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
         std::string url;
         if (ec || resp.empty())
         {
-            BMCWEB_LOG_ERROR("DBUS response error during getting of service name: {}", ec);
+            BMCWEB_LOG_ERROR(
+                "DBUS response error during getting of service name: {}", ec);
             callback(false, url);
             return;
         }
@@ -1017,7 +1032,8 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                     url = std::string("/redfish/v1/Systems/" PLATFORMSYSTEMID
                                       "/Processors/") +
                           invObjPath.filename().string();
-                    BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface, url);
+                    BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface,
+                                     url);
                     callback(true, url);
                     return;
                 }
@@ -1035,7 +1051,9 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                     // This is NVSwitch or PCIeSwitch
                     std::string switchID = invObjPath.filename();
                     // Now get the fabric ID
-                    BMCWEB_LOG_DEBUG("DBUS resp: {} {} => getAssociationEndpoint({}/fabrics, CALLBACK)", service, interface, invObjPath.string());
+                    BMCWEB_LOG_DEBUG(
+                        "DBUS resp: {} {} => getAssociationEndpoint({}/fabrics, CALLBACK)",
+                        service, interface, invObjPath.string());
                     getAssociationEndpoint(
                         invObjPath.string() + "/fabrics",
                         [switchID, callback](const bool& status,
@@ -1043,7 +1061,8 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                         std::string url;
                         if (!status)
                         {
-                            BMCWEB_LOG_DEBUG("Unable to get the association endpoint");
+                            BMCWEB_LOG_DEBUG(
+                                "Unable to get the association endpoint");
 
                             callback(false, url);
                             return;
@@ -1064,12 +1083,14 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                 if (interface == bmcInvInterf)
                 {
                     url = std::string("/redfish/v1/Managers/" PLATFORMBMCID);
-                    BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface, url);
+                    BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface,
+                                     url);
                     callback(true, url);
                     return;
                 }
             }
-            BMCWEB_LOG_DEBUG("Not found proper interface for service {}", service);
+            BMCWEB_LOG_DEBUG("Not found proper interface for service {}",
+                             service);
         }
         BMCWEB_LOG_ERROR("Failed to find proper URL");
         callback(false, url);

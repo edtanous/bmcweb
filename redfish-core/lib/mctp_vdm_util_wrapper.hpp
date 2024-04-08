@@ -183,11 +183,14 @@ void MctpVdmUtil::run(MctpVdmUtilCommand mctpVdmUtilcommand,
         dataErr->close();
         if (ec || errorCode)
         {
-            BMCWEB_LOG_ERROR("Error while executing command: {} Error Code: {}", command, errorCode);
+            BMCWEB_LOG_ERROR("Error while executing command: {} Error Code: {}",
+                             command, errorCode);
             BMCWEB_LOG_ERROR("MCTP VDM Error Response: {}", stdErr);
             if (ec)
             {
-                BMCWEB_LOG_ERROR("Error while executing command: {} Message: {}", command, ec.message());
+                BMCWEB_LOG_ERROR(
+                    "Error while executing command: {} Message: {}", command,
+                    ec.message());
             }
         }
         respCallback(req, asyncResp, endpointId, stdOut, stdErr, ec, errorCode);

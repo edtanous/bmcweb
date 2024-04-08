@@ -199,7 +199,7 @@ inline nlohmann::json resourceErrorsDetected(const std::string& arg1,
 }
 
 inline nlohmann::json componentUpdateSkipped(const std::string& arg1,
-                                                    const std::string& arg2)
+                                             const std::string& arg2)
 {
     return nlohmann::json{
         {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},

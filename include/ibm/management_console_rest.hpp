@@ -55,9 +55,11 @@ inline void handleFilePut(const crow::Request& req,
         asyncResp->res.jsonValue["Description"] = contentNotAcceptableMsg;
         return;
     }
-    BMCWEB_LOG_DEBUG( "File upload in application/octet-stream format. Continue..");
+    BMCWEB_LOG_DEBUG(
+        "File upload in application/octet-stream format. Continue..");
 
-    BMCWEB_LOG_DEBUG( "handleIbmPut: Request to create/update the save-area file");
+    BMCWEB_LOG_DEBUG(
+        "handleIbmPut: Request to create/update the save-area file");
     std::string_view path =
         "/var/lib/bmcweb/ibm-management-console/configfiles";
     if (!crow::ibm_utils::createDirectory(path))
@@ -78,7 +80,9 @@ inline void handleFilePut(const crow::Request& req,
         asyncResp->res.result(
             boost::beast::http::status::internal_server_error);
         asyncResp->res.jsonValue["Description"] = internalServerError;
-        BMCWEB_LOG_DEBUG("handleIbmPut: Failed to prepare save-area " "directory iterator. ec : {}", ec.message());
+        BMCWEB_LOG_DEBUG("handleIbmPut: Failed to prepare save-area "
+                         "directory iterator. ec : {}",
+                         ec.message());
         return;
     }
     std::uintmax_t saveAreaDirSize = 0;
@@ -91,7 +95,9 @@ inline void handleFilePut(const crow::Request& req,
                 asyncResp->res.result(
                     boost::beast::http::status::internal_server_error);
                 asyncResp->res.jsonValue["Description"] = internalServerError;
-                BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find save-area " "directory . ec : {}", ec.message());
+                BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find save-area "
+                                 "directory . ec : {}",
+                                 ec.message());
                 return;
             }
             std::uintmax_t fileSize = std::filesystem::file_size(it, ec);
@@ -100,7 +106,9 @@ inline void handleFilePut(const crow::Request& req,
                 asyncResp->res.result(
                     boost::beast::http::status::internal_server_error);
                 asyncResp->res.jsonValue["Description"] = internalServerError;
-                BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find save-area " "file size inside the directory . ec : {}", ec.message());
+                BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find save-area "
+                                 "file size inside the directory . ec : {}",
+                                 ec.message());
                 return;
             }
             saveAreaDirSize += fileSize;
@@ -138,7 +146,8 @@ inline void handleFilePut(const crow::Request& req,
         asyncResp->res.result(
             boost::beast::http::status::internal_server_error);
         asyncResp->res.jsonValue["Description"] = internalServerError;
-        BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find if file exists. ec : {}", ec.message());
+        BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find if file exists. ec : {}",
+                         ec.message());
         return;
     }
 
@@ -152,7 +161,8 @@ inline void handleFilePut(const crow::Request& req,
             asyncResp->res.result(
                 boost::beast::http::status::internal_server_error);
             asyncResp->res.jsonValue["Description"] = internalServerError;
-            BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find file size. ec : {}", ec.message());
+            BMCWEB_LOG_DEBUG("handleIbmPut: Failed to find file size. ec : {}",
+                             ec.message());
             return;
         }
         // Calculate the difference in the file size.
@@ -261,7 +271,9 @@ inline void
             asyncResp->res.result(
                 boost::beast::http::status::internal_server_error);
             asyncResp->res.jsonValue["Description"] = internalServerError;
-            BMCWEB_LOG_DEBUG("deleteConfigFiles: Failed to delete the " "config files directory. ec : {}", ec.message());
+            BMCWEB_LOG_DEBUG("deleteConfigFiles: Failed to delete the "
+                             "config files directory. ec : {}",
+                             ec.message());
         }
     }
 }
@@ -654,7 +666,9 @@ inline bool isValidConfigFileName(const std::string& fileName,
     // Check the filename length
     if (fileName.length() > 20)
     {
-        BMCWEB_LOG_ERROR("Name must be maximum 20 characters. " "Input filename length is: {}", fileName.length());
+        BMCWEB_LOG_ERROR("Name must be maximum 20 characters. "
+                         "Input filename length is: {}",
+                         fileName.length());
         res.jsonValue["Description"] = "Filename must be maximum 20 characters";
         return false;
     }

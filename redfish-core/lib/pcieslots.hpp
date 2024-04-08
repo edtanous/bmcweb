@@ -451,7 +451,8 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for Generation ");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for Generation ");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -473,7 +474,8 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for SlotType");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for SlotType");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -506,7 +508,8 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR("Null value returned " "for Lanes");
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for Lanes");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -517,7 +520,8 @@ inline void updatePCIeSlots(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned " "for LocationCode");
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for LocationCode");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -576,8 +580,8 @@ inline void requestPcieSlotsRoutes(App& app)
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& chassisId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisId) {
         BMCWEB_LOG_DEBUG("PCIeSlot doGet enter");
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {

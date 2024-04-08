@@ -90,8 +90,7 @@ void setBootOption(const std::string& id,
                 holdTask->ec = ec;
                 BMCWEB_LOG_DEBUG(" setBootOption D-BUS error");
             }
-        },
-            "xyz.openbmc_project.BIOSConfigManager", path,
+        }, "xyz.openbmc_project.BIOSConfigManager", path,
             "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.BIOSConfig.BootOption", propertyName,
             propertyVariant);
@@ -113,9 +112,11 @@ inline void handleBootOptionCollectionGet(
                                         "/BootOptions";
     aResp->res.jsonValue["Name"] = "Boot Option Collection";
     constexpr std::array<std::string_view, 1> interfaces{
-            "xyz.openbmc_project.BIOSConfig.BootOption"};
+        "xyz.openbmc_project.BIOSConfig.BootOption"};
     collection_util::getCollectionMembers(
-        aResp, boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/BootOptions"),
+        aResp,
+        boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                         "/BootOptions"),
         interfaces, "/xyz/openbmc_project/");
 }
 

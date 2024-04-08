@@ -23,14 +23,16 @@ static void
                     const std::variant<bool>& nicStatus) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error for " "Get NICEnabled Status for the host interface.");
+            BMCWEB_LOG_DEBUG("DBUS response error for "
+                             "Get NICEnabled Status for the host interface.");
             messages::internalError(asyncResp->res);
             return;
         }
         const bool* nicEnabled = std::get_if<bool>(&nicStatus);
         if (nicEnabled == nullptr)
         {
-            BMCWEB_LOG_DEBUG("Error reading NICEnabled Status for the host interface.");
+            BMCWEB_LOG_DEBUG(
+                "Error reading NICEnabled Status for the host interface.");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -81,7 +83,8 @@ static void
                     const GetObjectType& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_ERROR("GetObject for path {}", redfish::bios::biosConfigObj);
+            BMCWEB_LOG_ERROR("GetObject for path {}",
+                             redfish::bios::biosConfigObj);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -157,7 +160,8 @@ static void
                                     const GetObjectType& objType) {
         if (ec || objType.empty())
         {
-            BMCWEB_LOG_ERROR("GetObject for path {}", redfish::bios::biosConfigObj);
+            BMCWEB_LOG_ERROR("GetObject for path {}",
+                             redfish::bios::biosConfigObj);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -172,8 +176,7 @@ static void
                 messages::internalError(asyncResp->res);
                 return;
             }
-        },
-            biosService, redfish::bios::biosConfigObj,
+        }, biosService, redfish::bios::biosConfigObj,
             "org.freedesktop.DBus.Properties", "Set",
             redfish::bios::biosConfigIface, property, std::variant<bool>(flag));
     },
@@ -197,9 +200,7 @@ static void
             messages::internalError(asyncResp->res);
             return;
         }
-    },
-        "xyz.openbmc_project.Network",
-        "/xyz/openbmc_project/network/" + ifaceId,
+    }, "xyz.openbmc_project.Network", "/xyz/openbmc_project/network/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.EthernetInterface", "NICEnabled",
         std::variant<bool>(interfaceEnabled));
@@ -314,8 +315,8 @@ inline void requestHostInterfacesRoutes(App& app)
         .privileges(redfish::privileges::patchHostInterface)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string& ifaceId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& ifaceId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;

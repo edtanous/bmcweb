@@ -8,6 +8,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/beast/core/span.hpp>
 #include <registries.hpp>
+
 #include <array>
 #include <cstddef>
 #include <cstring>
@@ -28,7 +29,8 @@ inline std::string getPrefix(const std::string& messageID)
 
 inline bool isMessageIdValid(const std::string_view messageId)
 {
-    const redfish::registries::Message* msg = redfish::registries::getMessage(messageId);
+    const redfish::registries::Message* msg =
+        redfish::registries::getMessage(messageId);
     (void)msg;
     return msg != nullptr;
 }
