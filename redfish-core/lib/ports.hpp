@@ -57,11 +57,11 @@ inline void getLldpStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     {
                        if (stdOut.find("disabled") != std::string::npos) 
                        {
-                            asyncResp->res.jsonValue["Ports"]["EthernetProperties"]["LLDPEnabled"] = false;
+                            asyncResp->res.jsonValue["Ethernet"]["LLDPEnabled"] = false;
                         }
                         else
                         {
-                            asyncResp->res.jsonValue["Ports"]["EthernetProperties"]["LLDPEnabled"] = true;
+                            asyncResp->res.jsonValue["Ethernet"]["LLDPEnabled"] = true;
                           
                        }
                     }
@@ -322,7 +322,7 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     }
                     std::string idStr;
                     std::string lldpType = isReceived ? lldpReceive : lldpTransmit;
-                    nlohmann::json& jsonSchema =  asyncResp->res.jsonValue["Ports"]["EthernetProperties"][lldpType];
+                    nlohmann::json& jsonSchema =  asyncResp->res.jsonValue["Ethernet"][lldpType];
                     idStr = getTlvString(stdOut, "Chassis ID TLV");
                     if (!idStr.empty())
                     {
@@ -331,7 +331,8 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     }
                     else if (lldpType == lldpTransmit)
                     {
-                        jsonSchema["ChassisId"] = "NotTransmitted";
+                        jsonSchema["ChassisId"] = "";
+                        jsonSchema["ChassisIdSubtype"] = "NotTransmitted";
                     }
 
                     idStr = getTlvString(stdOut, "Port ID TLV");
@@ -342,7 +343,8 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     }
                     else if (lldpType == lldpTransmit)
                     {
-                        jsonSchema["PortId"] = "NotTransmitted";
+                        jsonSchema["PortId"] = "";
+                        jsonSchema["PortIdSubtype"] = "NotTransmitted";
                     }
 
                     idStr = getTlvString(stdOut, "System Capabilities TLV");
@@ -355,7 +357,7 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             jsonSchema["SystemCapabilities"] = capabilities;
                         }
                     }
-                    
+
                     idStr = getTlvString(stdOut, "System Description TLV");
                     setLldpTlvProperty(jsonSchema, "SystemDescription", idStr, lldpType);
 
@@ -470,6 +472,12 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
                 {
                     return;
                 }
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#Port.v1_9_0.Port";
+                asyncResp->res.jsonValue["@odata.id"] =
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts/" + entryIdx;
+                asyncResp->res.jsonValue["Name"] = "Manager Dedicated Network Port";
+                asyncResp->res.jsonValue["Id"] = entryIdx;
                 getEthernetIfaceList(
                     [asyncResp, entryIdx](const bool& success,
                                 const std::vector<std::string>&
@@ -482,6 +490,8 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
                         int entryIdxInt = std::stoi(entryIdx);
                         int count = 1;
                         std::string tag = "vlan";
+                        nlohmann::json& ifaceArray =
+                            asyncResp->res.jsonValue["Links"]["EthernetInterfaces"];
                         for (const std::string& ifaceItem : ifaceList)
                         {
                             // take only none vlan interfaces
@@ -491,8 +501,10 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
                                 if (count == entryIdxInt)
                                 {
                                     getLldpInformation(asyncResp, ifaceItem);
-                                    asyncResp->res.jsonValue["Ports"]["EthernetInterfaces"]["@odata.id"] =
-                                    "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" + ifaceItem;
+                                    nlohmann::json::object_t iface;
+                                    iface["@odata.id"] =
+                                        "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/" + ifaceItem;
+                                    ifaceArray.push_back(std::move(iface));
                                     return;
                                 }
                                 ++count;  
