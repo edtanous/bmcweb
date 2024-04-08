@@ -38,4 +38,13 @@ inline static std::string getLogEntryAdditionalDataURI(const std::string& id)
     return getLogEntryDataId(id) + "/attachment";
 }
 
+inline static std::string convertEventSeverity(const std::string& severity)
+{
+    if (severity == "Informational")
+    {
+        return "OK";
+    }
+    return severity;
+}
+
 } // namespace redfish

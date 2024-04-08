@@ -889,7 +889,7 @@ inline void parseDumpEntryFromDbusObject(
 
             if (severityPtr != nullptr)
             {
-                severity = *severityPtr;
+                severity = convertEventSeverity(*severityPtr);
             }
 
             if (nvipSignaturePtr != nullptr)
