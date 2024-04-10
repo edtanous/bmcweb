@@ -24,7 +24,7 @@
 #include "registries/privilege_registry.hpp"
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
-#include "registries/update_event_message_registry.hpp"
+#include "registries/update_message_registry.hpp"
 
 #include <boost/url/format.hpp>
 
@@ -105,10 +105,11 @@ inline void handleMessageRoutesMessageRegistryFileGet(
         header = &registries::resource_event::header;
         url = registries::resource_event::url;
     }
-    else if (registry == "UpdateEvent")
+    else if (registry == "Update" ||
+             registry == "UpdateEvent")
     {
-        header = &registries::update_event::header;
-        url = registries::update_event::url;
+        header = &registries::update::header;
+        url = registries::update::url;
     }
     else if (registry == "BiosAttributeRegistry")
     {
@@ -204,11 +205,12 @@ inline void handleMessageRegistryGet(
             registryEntries.emplace_back(&entry);
         }
     }
-    else if (registry == "UpdateEvent")
+    else if (registry == "Update" ||
+             registry == "UpdateEvent")
     {
-        header = &registries::update_event::header;
+        header = &registries::update::header;
         for (const registries::MessageEntry& entry :
-             registries::update_event::registry)
+             registries::update::registry)
         {
             registryEntries.emplace_back(&entry);
         }

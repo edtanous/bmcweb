@@ -15,21 +15,21 @@
 
 // clang-format off
 
-namespace redfish::registries::update_event
+namespace redfish::registries::update
 {
 const Header header = {
-    "Copyright 2014-2020 DMTF. All rights reserved.",
-    "#MessageRegistry.v1_4_1.MessageRegistry",
-    "Update.1.0.1",
+    "Copyright 2014-2023 DMTF. All rights reserved.",
+    "#MessageRegistry.v1_6_2.MessageRegistry",
+    "Update.1.0.2",
     "Update Message Registry",
     "en",
     "This registry defines the update status and error messages.",
     "Update",
-    "1.0.1",
+    "1.0.2",
     "DMTF",
 };
 constexpr const char* url =
-    "https://redfish.dmtf.org/registries/Update.1.0.1.json";
+    "https://redfish.dmtf.org/registries/Update.1.0.2.json";
 
 constexpr std::array registry =
 {
@@ -49,8 +49,8 @@ constexpr std::array registry =
     MessageEntry{
         "AllTargetsDetermined",
         {
-            "Indicates that all target resources or devices for an update operation have been determined by the service.",
-            "All the target device to be updated have been determined.",
+            "Indicates that all target resources or devices for an update operation were determined by the service.",
+            "All the target devices to be updated were determined.",
             "OK",
             0,
             {},
@@ -85,7 +85,7 @@ constexpr std::array registry =
     MessageEntry{
         "AwaitToActivate",
         {
-            "Indicates that the resource or device is awaiting for an action to proceed with activating an image.",
+            "Indicates that the resource or device is waiting for an action to proceed with activating an image.",
             "Awaiting for an action to proceed with activating image '%1' on '%2'.",
             "OK",
             2,
@@ -98,7 +98,7 @@ constexpr std::array registry =
     MessageEntry{
         "AwaitToUpdate",
         {
-            "Indicates that the resource or device is awaiting for an action to proceed with installing an image.",
+            "Indicates that the resource or device is waiting for an action to proceed with installing an image.",
             "Awaiting for an action to proceed with installing image '%1' on '%2'.",
             "OK",
             2,
@@ -136,7 +136,7 @@ constexpr std::array registry =
     MessageEntry{
         "TargetDetermined",
         {
-            "Indicates that a target resource or device for a image has been determined for update.",
+            "Indicates that a target resource or device for an image was determined for update.",
             "The target device '%1' will be updated with image '%2'.",
             "OK",
             2,
@@ -242,4 +242,4 @@ enum class Index
     verificationFailed = 13,
     verifyingAtComponent = 14,
 };
-} // namespace redfish::registries::update_event
+} // namespace redfish::registries::update
