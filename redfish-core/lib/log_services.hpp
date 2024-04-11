@@ -5338,13 +5338,11 @@ void inline requestRoutesSystemFDRClear(App& app)
                         return;
                     }
 
-                    std::vector<std::pair<std::string, std::string>>
-                        createDumpParamVec;
+                    std::vector<std::pair<std::string,
+                        std::variant<std::string, uint64_t>>> createDumpParamVec;
 
-                    createDumpParamVec.emplace_back(
-                        std::make_pair("DiagnosticType", "FDR"));
-                    createDumpParamVec.emplace_back(
-                        std::make_pair("Action", "Clean"));
+                    createDumpParamVec.emplace_back("DiagnosticType", "FDR");
+                    createDumpParamVec.emplace_back("Action", "Clean");
 
                     crow::connections::systemBus->async_method_call(
                         [asyncResp](const boost::system::error_code ec,
