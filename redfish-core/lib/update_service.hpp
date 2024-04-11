@@ -3111,6 +3111,7 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaSoftwareInventory.v1_1_0.NvidiaSoftwareInventory";
 
             for (const auto& property : propertiesList)
             {
@@ -3124,14 +3125,14 @@ inline void
                         {
                             asyncResp->res
                                 .jsonValue["Oem"]["Nvidia"]
-                                          ["FirmwareDigestHashingAlgorithm"] =
+                                          ["FirmwareDigestHashAlgorithm"] =
                                 *algorithm;
                         }
                         else
                         {
                             asyncResp->res
                                 .jsonValue["Oem"]["Nvidia"]
-                                          ["FirmwareDigestHashingAlgorithm"] =
+                                          ["FirmwareDigestHashAlgorithm"] =
                                 nlohmann::detail::value_t::null;
                         }
                     }
@@ -3139,7 +3140,7 @@ inline void
                     else
                     {
                         BMCWEB_LOG_ERROR
-                            ("FirmwareDigestHashingAlgorithm is not of string type ");
+                            ("FirmwareDigestHashAlgorithm is not of string type ");
                     }
                 }
                 else if (property.first == "Digest")
