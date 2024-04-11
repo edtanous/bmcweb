@@ -795,7 +795,7 @@ inline void
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 // default oem data
                 nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
-                oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
+                oem["@odata.type"] = "#NvidiaChassis.v1_1_0.NvidiaChassis";
 
                 if (writeProtected != nullptr)
                 {
