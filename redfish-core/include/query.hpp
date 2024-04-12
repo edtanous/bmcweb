@@ -83,8 +83,9 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
     boost::system::error_code ec;
 
     // Try to GET the same resource
-    crow::Request newReq(
-        {boost::beast::http::verb::get, req.url().encoded_path(), 11}, ec);
+    boost::beast::http::request<boost::beast::http::string_body> reqIn(
+        boost::beast::http::verb::get, req.url().encoded_path(), 11);
+    auto newReqPtr = std::make_shared<crow::Request>(reqIn, ec);
 
     if (ec)
     {
@@ -93,17 +94,30 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
     }
 
     // New request has the same credentials as the old request
-    newReq.session = req.session;
+    newReqPtr->session = req.session;
 
     // Construct a new response object to fill in, and check the hash of before
     // we modify the Resource.
     std::shared_ptr<bmcweb::AsyncResp> getReqAsyncResp =
         std::make_shared<bmcweb::AsyncResp>();
 
-    getReqAsyncResp->res.setCompleteRequestHandler(std::bind_front(
-        afterIfMatchRequest, std::ref(app), asyncResp, req, ifMatch));
+    // Need to capture newReqPtr as it need to stay alive till 
+    // completion handler is invoked
+    auto afterIfMatchHandler =
+        [newReqPtr](crow::App& app,
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    crow::Request& req, const std::string& ifMatch,
+                    const crow::Response& resIn) {
+        BMCWEB_LOG_DEBUG("afterIfMatchHandler invoked");
+        return afterIfMatchRequest(app, asyncResp, req, ifMatch, resIn);
+    };
 
-    app.handle(newReq, getReqAsyncResp);
+    getReqAsyncResp->res.setCompleteRequestHandler(
+        std::bind(afterIfMatchHandler, std::ref(app), asyncResp,
+                  std::ref(const_cast<crow::Request&>(req)), ifMatch,
+                  std::placeholders::_1));
+
+    app.handle(*newReqPtr, getReqAsyncResp);
     return false;
 }
 
