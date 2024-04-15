@@ -1,6 +1,10 @@
 #pragma once
 #include <boost/regex.hpp>
 
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+#include "shmem_utils.hpp"
+#endif
+
 namespace redfish
 {
 namespace nvidia_metric_report_def_utils
@@ -931,88 +935,98 @@ inline std::string getProcessorPortMetricURIDef(std::string &propertyName)
         propURI +=
             "/Processors/" + gpuPrefix + "{GpuId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/DataCRCCount";
     }
+    else if (propertyName == "MaxSpeedGbps")
+    {
+        propURI += "/Processors/" + gpuPrefix +
+                   "{GpuId}/Ports/NVLink_{NvlinkId}#/MaxSpeedGbps";
+    }
+    else if (propertyName == "TXWidth")
+    {
+        propURI += "/Processors/" + gpuPrefix +
+                   "{GpuId}/Ports/NVLink_{NvlinkId}#/Oem/Nvidia/TXWidth";
+    }
+    else if (propertyName == "RXWidth")
+    {
+        propURI += "/Processors/" + gpuPrefix +
+                   "{GpuId}/Ports/NVLink_{NvlinkId}#/Oem/Nvidia/RXWidth";
+    }
+    else if (propertyName == "LinkStatus")
+    {
+        propURI += "/Processors/" + gpuPrefix +
+                   "{GpuId}/Ports/NVLink_{NvlinkId}#/LinkStatus";
+    }
     return propURI;
 }
 
-inline std::string getNVSwitchPortMetricURIDef(std::string &propertyName)
+inline std::string getNVSwitchPortMetricURIDef(std::string &propertyName,
+                                               const std::string& switchType)
 {
     std::string propURI = "/redfish/v1/Fabrics/";
     propURI += PLATFORMDEVICEPREFIX;
     propURI += "NVLinkFabric_0";
+    propURI += "/Switches/NVSwitch_{NVSwitch_Type_" + switchType +
+               "}/Ports/NVLink_{NVLink_Type_" + switchType + "}";
+
     if (propertyName == "CurrentSpeedGbps")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/CurrentSpeedGbps";
+        propURI += "#/CurrentSpeedGbps";
     }
     else if (propertyName == "MaxSpeedGbps")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/MaxSpeedGbps";
+        propURI += "#/MaxSpeedGbps";
     }
     else if (propertyName == "TXWidth")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/Oem/Nvidia/TXWidth";
+        propURI += "#/Oem/Nvidia/TXWidth";
     }
     else if (propertyName == "RXWidth")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/Oem/Nvidia/RXWidth";
+        propURI += "#/Oem/Nvidia/RXWidth";
     }
     else if (propertyName == "LinkStatus")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}#/LinkStatus";
+        propURI += "#/LinkStatus";
     }
     else if (propertyName == "TXBytes")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/TXBytes";
+        propURI += "/Metrics#/TXBytes";
+
     }
     else if (propertyName == "RXBytes")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/RXBytes";
+        propURI += "/Metrics#/RXBytes";
     }
     else if (propertyName == "TXNoProtocolBytes")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/TXNoProtocolBytes";
+        propURI += "/Metrics#/Oem/Nvidia/TXNoProtocolBytes";
     }
     else if (propertyName == "RXNoProtocolBytes")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/RXNoProtocolBytes";
+        propURI += "/Metrics#/Oem/Nvidia/RXNoProtocolBytes";
     }
     else if (propertyName == "RuntimeError")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RuntimeError";
+        propURI += "/Metrics#/Oem/Nvidia/NVLinkErrors/RuntimeErrors";
     }
     else if (propertyName == "TrainingError")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/TrainingError";
+        propURI += "/Metrics#/Oem/Nvidia/NVLinkErrors/TrainingError";
     }
     else if (propertyName == "ReplayCount")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/ReplayCount";
+        propURI += "/Metrics#/Oem/Nvidia/NVLinkErrors/ReplayCount";
     }
     else if (propertyName == "RecoveryCount")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/RecoveryCount";
+        propURI += "/Metrics#/Oem/Nvidia/NVLinkErrors/RecoveryCount";
     }
     else if (propertyName == "FlitCRCCount")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/FlitCRCCount";
+        propURI += "/Metrics#/Oem/Nvidia/NVLinkErrors/FlitCRCCount";
     }
     else if (propertyName == "DataCRCCount")
     {
-        propURI +=
-            "/Switches/NVSwitch_{NVSwitchId}/Ports/NVLink_{NvlinkId}/Metrics#/Oem/Nvidia/NVLinkErrors/DataCRCCount";
+        propURI += "/Metrics#/Oem/Nvidia/NVLinkErrors/DataCRCCount";
     }
     return propURI;
 }
@@ -1054,6 +1068,9 @@ inline void populateMetricProperties(
         metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
 
         propName = "MaxLanes";
+        metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
+
+        propName = "LanesInUse";
         metricPropertiesAray.push_back(getProcessorMetricURIDef(propName));
 
         propName = "OperatingSpeedMHz";
@@ -1159,84 +1176,101 @@ inline void populateMetricProperties(
         std::string propName = "CurrentSpeedGbps";
         metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
-        propName = "TXBytes";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "RXBytes";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "TXNoProtocolBytes";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "RXNoProtocolBytes";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "RuntimeError";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "TrainingError";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "ReplayCount";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "RecoveryCount";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "FlitCRCCount";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-
-        propName = "DataCRCCount";
-        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
-    }
-    else if (deviceType == "NVSwitchPortMetrics")
-    {
-        std::string propName = "CurrentSpeedGbps";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
-
         propName = "MaxSpeedGbps";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "TXWidth";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "RXWidth";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "LinkStatus";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
+
 
         propName = "TXBytes";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "RXBytes";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "TXNoProtocolBytes";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "RXNoProtocolBytes";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "RuntimeError";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "TrainingError";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "ReplayCount";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "RecoveryCount";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "FlitCRCCount";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
 
         propName = "DataCRCCount";
-        metricPropertiesAray.push_back(getNVSwitchPortMetricURIDef(propName));
+        metricPropertiesAray.push_back(getProcessorPortMetricURIDef(propName));
     }
     asyncResp->res.jsonValue["MetricProperties"] = metricPropertiesAray;
+}
+
+inline void
+    populateNVSwitchPortMetricProperties(nlohmann::json& metricPropertiesAray,
+                                         const std::string& switchType)
+{
+    std::string propName = "CurrentSpeedGbps";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "MaxSpeedGbps";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "TXWidth";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "RXWidth";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "LinkStatus";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "TXBytes";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "RXBytes";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "TXNoProtocolBytes";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "RXNoProtocolBytes";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "RuntimeError";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+   propName = "TrainingError";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "ReplayCount";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "RecoveryCount";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "FlitCRCCount";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
+    propName = "DataCRCCount";
+    metricPropertiesAray.push_back(
+        getNVSwitchPortMetricURIDef(propName, switchType));
 }
 
 inline std::string getWildCardDevId(const std::string& deviceType)
@@ -1256,6 +1290,36 @@ inline std::string getWildCardDevId(const std::string& deviceType)
     }
     return wildCardId;
 }
+
+inline bool insertSwitch(std::vector<std::string>& switchNames,
+                         const std::string& nvswitch)
+{
+    // Check if a switch exists in the vector
+    auto it = std::find(switchNames.begin(), switchNames.end(), nvswitch);
+
+    // Insert the switch if it doesn't exist
+    if (it == switchNames.end())
+    {
+        switchNames.push_back(nvswitch);
+        return true;
+    }
+
+    return false;
+}
+
+inline int getSwitchId(const std::string& key)
+{
+    // Use regular expressions to extract the numeric part after "NVSwitch_"
+    std::regex pattern("NVSwitch_(\\d+)");
+    std::smatch match;
+    int swithId = -1;
+    if (std::regex_search(key, match, pattern))
+    {
+        swithId = std::stoi(match[1].str());
+    }
+    return swithId;
+}
+
 inline std::string getWildCardSubDevId(const std::string& deviceType)
 {
     std::string wildCardId;
@@ -1291,6 +1355,11 @@ inline void populateMetricPropertiesAndWildcards(
             {
                 populateMetricProperties(asyncResp, deviceType);
             }
+            std::map<std::string, int>
+                nvswitchDevMap; // map of nvswitch and corresponding nvlinkcount
+            std::vector<std::string> switchNames;
+            bool isNewSwitch = false;
+
 
             nlohmann::json wildCards = nlohmann::json::array();
             int wildCardMinForDevice = -1;
@@ -1301,6 +1370,8 @@ inline void populateMetricPropertiesAndWildcards(
             std::string deviceIdentifier;
             std::string wildCardDeviceId = getWildCardDevId(deviceType);
             std::string wildCardSubDeviceId = getWildCardSubDevId(deviceType);
+            std::string gpuPath;
+
             for (const std::string& object : objPaths)
             {
                 sdbusplus::message::object_path path(object);
@@ -1310,6 +1381,18 @@ inline void populateMetricPropertiesAndWildcards(
                     path.parent_path().parent_path().filename();
                 const std::string& devTypeOnDbus =
                     path.parent_path().parent_path().parent_path().filename();
+                std::string gpuobjPath(platformGpuNamePrefix);
+                gpuobjPath += std::to_string(gpuIndexStart);
+
+                // std::string gpuprefix(platformGpuNamePrefix);
+                // std::string gpuobjPath = gpuprefix +
+                // std::to_string(gpuIndexStart);
+
+                if (deviceName == gpuobjPath)
+                {
+                    gpuPath = object;
+                }
+
                 if (parentName == "memory" )
                 {
                     if (deviceType == "MemoryMetrics")
@@ -1387,6 +1470,19 @@ inline void populateMetricPropertiesAndWildcards(
                     else if (devTypeOnDbus == "Switches" &&
                              deviceType == "NVSwitchPortMetrics")
                     {
+                        if (deviceType == "NVSwitchPortMetrics")
+                        {
+                            isNewSwitch =
+                                insertSwitch(switchNames, grandParentName);
+
+                            if (isNewSwitch)
+                            {
+                                nvswitchDevMap[grandParentName] = 0;
+                                wildCardMinForSubDevice = -1;
+                                wildCardMaxForSubDevice = -1;
+                            }
+                        }
+
                         if (wildCardMinForSubDevice == -1)
                         {
                             // Index start with 0 for NVSwitch NVLink devices
@@ -1398,21 +1494,32 @@ inline void populateMetricPropertiesAndWildcards(
                         {
                             // Count sub devices on a particular device
                             wildCardMaxForSubDevice++;
+                            if (deviceType == "NVSwitchPortMetrics")
+                            {
+                                nvswitchDevMap[grandParentName] =
+                                    wildCardMaxForSubDevice;
+                            }
                         }
                     }
                 }
             }
-            nlohmann::json devCount = nlohmann::json::array();
-            for (int i = wildCardMinForDevice; i <= wildCardMaxForDevice; i++)
+            if ((deviceType != "NVSwitchPortMetrics") &&
+                (deviceType != "ProcessorGpmMetrics"))
             {
-                devCount.push_back(std::to_string(i));
+                nlohmann::json devCount = nlohmann::json::array();
+                for (int i = wildCardMinForDevice; i <= wildCardMaxForDevice;
+                     i++)
+                {
+                    devCount.push_back(std::to_string(i));
+                }
+
+                wildCards.push_back({
+                    {"Name", wildCardDeviceId},
+                    {"Values", devCount},
+                });
             }
-            wildCards.push_back({
-                {"Name", wildCardDeviceId},
-                {"Values", devCount},
-            });
+
             if (deviceType == "ProcessorPortMetrics" ||
-                deviceType == "NVSwitchPortMetrics" ||
                 deviceType == "ProcessorPortGpmMetrics")
             {
                 nlohmann::json subDevCount = nlohmann::json::array();
@@ -1425,6 +1532,104 @@ inline void populateMetricPropertiesAndWildcards(
                     {"Name", wildCardSubDeviceId},
                     {"Values", subDevCount},
                 });
+            }
+            else if (deviceType == "NVSwitchPortMetrics")
+            {
+                // Map to store NVlink count with the nvswitch values
+                std::map<int, std::vector<int>> nvlinkNvswitchMap;
+
+                // Iterate through the original map and organize keys by their
+                // nvlink count values
+                for (const auto& pair : nvswitchDevMap)
+                {
+                    nvlinkNvswitchMap[pair.second].push_back(
+                        getSwitchId(pair.first));
+                }
+
+                nlohmann::json nvswitchMetricPropertiesAray =
+                    nlohmann::json::array();
+                int typeIndex = 1;
+                // wildcards for nvswitch ports
+                for (const auto& pair : nvlinkNvswitchMap)
+                {
+                    populateNVSwitchPortMetricProperties(
+                        nvswitchMetricPropertiesAray,
+                        std::to_string(typeIndex));
+
+                    nlohmann::json nvswitchDevCount = nlohmann::json::array();
+                    for (auto& switchDevId : pair.second)
+                    {
+                        nvswitchDevCount.push_back(std::to_string(switchDevId));
+                    }
+
+                    wildCards.push_back({
+                        {"Name", "NVSwitch_Type_" + std::to_string(typeIndex)},
+                        {"Values", nvswitchDevCount},
+                    });
+
+                    nlohmann::json nvlinkDevCount = nlohmann::json::array();
+                    for (int i = wildCardMinForSubDevice; i <= pair.first; i++)
+                    {
+                        nvlinkDevCount.push_back(std::to_string(i));
+                    }
+                    wildCards.push_back({
+                        {"Name", "NVLink_Type_" + std::to_string(typeIndex)},
+                        {"Values", nvlinkDevCount},
+                    });
+                    typeIndex++;
+                }
+                asyncResp->res.jsonValue["MetricProperties"] =
+                    nvswitchMetricPropertiesAray;
+            }
+
+            if (deviceType == "ProcessorGpmMetrics")
+            {
+                std::string gpmIface = "com.nvidia.GPMMetrics";
+                std::string nvdecInstanceProperty =
+                    "NVDecInstanceUtilizationPercent";
+                // Get NVjpg/dec Insatnce count
+                sdbusplus::asio::getProperty<std::vector<double>>(
+                    *crow::connections::systemBus, "xyz.openbmc_project.GpuMgr",
+                    gpuPath, gpmIface, nvdecInstanceProperty,
+                    [asyncResp, wildCardMinForDevice, wildCardMaxForDevice,
+                     wildCardDeviceId](const boost::system::error_code ec,
+                                       const std::vector<double>& property) {
+                        nlohmann::json gpmWildCards = nlohmann::json::array();
+                        nlohmann::json devCount = nlohmann::json::array();
+                        nlohmann::json instanceDevCount =
+                            nlohmann::json::array();
+
+                        for (int i = wildCardMinForDevice;
+                             i <= wildCardMaxForDevice; i++)
+                        {
+                            devCount.push_back(std::to_string(i));
+                        }
+                        // wildcards for gpuids
+                        gpmWildCards.push_back({
+                            {"Name", wildCardDeviceId},
+                            {"Values", devCount},
+                        });
+
+                        if (ec)
+                        {
+                            BMCWEB_LOG_DEBUG("DBUS response error for Location {}", ec);
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        auto instanceCount = property.size();
+                        for (size_t i = 0; i < instanceCount; i++)
+                        {
+                            instanceDevCount.push_back(std::to_string(i));
+                        }
+                        // wildcards for nvdec/jpg Instances
+                        gpmWildCards.push_back({
+                            {"Name", "InstanceId"},
+                            {"Values", instanceDevCount},
+                        });
+
+                        asyncResp->res.jsonValue["Wildcards"] = gpmWildCards;
+                        return;
+                    });
             }
             asyncResp->res.jsonValue["Wildcards"] = wildCards;
         },
@@ -1461,6 +1666,25 @@ inline void getMetricReportDefForAggregatedMetrics(
     asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
     asyncResp->res.jsonValue["ReportUpdates"] = "Overwrite";
     asyncResp->res.jsonValue["MetricReport"]["@odata.id"] = metricReportUri + std::string("/") + id;
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+    if (deviceType == "ProcessorGpmMetrics" ||
+        deviceType == "ProcessorPortGpmMetrics")
+    {
+        populateGpmMetricProperties(asyncResp, deviceType);
+    }
+    else if(deviceType == "NVSwitchPortMetrics"){
+        nlohmann::json nvswitchMetricPropertiesAray = nlohmann::json::array();
+        populateNVSwitchPortMetricProperties(nvswitchMetricPropertiesAray, "1");
+        populateNVSwitchPortMetricProperties(nvswitchMetricPropertiesAray, "2");
+        asyncResp->res.jsonValue["MetricProperties"] = nvswitchMetricPropertiesAray;
+    }
+    else
+    {
+        populateMetricProperties(asyncResp, deviceType);
+    }
+    redfish::shmem::getShmemMetricsDefinition(asyncResp, id, deviceType);
+return;
+#endif
     populateMetricPropertiesAndWildcards(asyncResp, deviceType);
 }
 
@@ -1468,6 +1692,71 @@ inline void getMetricReportDefForAggregatedMetrics(
 inline void validateAndGetMetricReportDefinition(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
 {
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+    bool validMetricId = false;
+    std::string deviceType;
+    std::string memoryMetricId = PLATFORMDEVICEPREFIX "MemoryMetrics_0";
+    std::string processorMetricId = PLATFORMDEVICEPREFIX "ProcessorMetrics_0";
+    std::string processorPortMetricId = PLATFORMDEVICEPREFIX "ProcessorPortMetrics_0";
+    std::string processorPortGpmMetricId = PLATFORMDEVICEPREFIX "ProcessorPortGPMMetrics_0";
+    std::string processorGpmMetricId = PLATFORMDEVICEPREFIX "ProcessorGPMMetrics_0";
+    std::string nvSwitchMetricId = PLATFORMDEVICEPREFIX "NVSwitchMetrics_0";
+    std::string nvSwitchPortMetricId = PLATFORMDEVICEPREFIX "NVSwitchPortMetrics_0";  
+    if (id == PLATFORMMETRICSID)
+    {
+        deviceType = "PlatformEnvironmentMetrics";
+        validMetricId = true;
+    }
+    else if(id == memoryMetricId ) {
+        validMetricId = true;
+        deviceType = "MemoryMetrics";
+    }
+    else if (id == processorMetricId)
+    {
+        validMetricId = true;
+        deviceType = "ProcessorMetrics";
+    }
+    else if (id == processorPortMetricId)
+    {
+        validMetricId = true;
+        deviceType = "ProcessorPortMetrics";
+    }
+    else if (id == processorGpmMetricId)
+    {
+        validMetricId = true;
+        deviceType = "ProcessorGpmMetrics";
+    }
+    else if (id == processorPortGpmMetricId)
+    {
+        validMetricId = true;
+        deviceType = "ProcessorPortGpmMetrics";
+    }
+    else if (id == nvSwitchMetricId)
+    {
+        validMetricId = true;
+        deviceType = "NVSwitchMetrics";
+    }
+    else if (id == nvSwitchPortMetricId)
+    {
+        validMetricId = true;
+        deviceType = "NVSwitchPortMetrics";
+    }
+    if (!validMetricId)
+    {
+        messages::resourceNotFound(asyncResp->res,
+                                    "MetricReportDefinition", id);
+    }
+    if (id == PLATFORMMETRICSID)
+    {
+        redfish::shmem::getShmemMetricsDefinition(asyncResp, id, deviceType);
+    }
+    else
+    {
+        getMetricReportDefForAggregatedMetrics(asyncResp, id,
+                                                deviceType);
+    }
+return;
+#endif
     using MapperServiceMap =
         std::vector<std::pair<std::string, std::vector<std::string>>>;
 
