@@ -216,6 +216,15 @@
             "Resolution": "None.",
             "Severity": "OK"
         },
+        "BMCSystemTimeUpdated": {
+            "Description": "Indicates that the BMC system time has been updated.",
+            "Message": "The BMC system time has been updated to %1.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
         "CPLDFirmwarePanicReason": {
             "Description": "Indicates the reason for CPLD firmware panic.",
             "Message": "CPLD firmware panic occurred due to %1.",
@@ -1831,7 +1840,6 @@
             "Resolution": "None.",
             "Severity": "Critical"
         }
-
     },
     "Name": "OpenBMC Message Registry",
     "OwningEntity": "OpenBMC",
