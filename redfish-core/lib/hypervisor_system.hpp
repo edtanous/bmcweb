@@ -4,7 +4,7 @@
 #include "dbus_singleton.hpp"
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
-#include "ethernet.hpp"
+#include "ethernet_structs.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/ip_utils.hpp"
