@@ -20,7 +20,7 @@
 #include "dbus_utility.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
-#include "sensors.hpp"
+#include "sensors_common.hpp"
 #include "utils/chassis_utils.hpp"
 #include "utils/json_utils.hpp"
 

@@ -5,7 +5,7 @@
 #include "generated/enums/triggers.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
-#include "sensors.hpp"
+#include "sensors_common.hpp"
 #include "utility.hpp"
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"

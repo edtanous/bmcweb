@@ -5,7 +5,7 @@
 #include "generated/enums/metric_report_definition.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
-#include "sensors.hpp"
+#include "sensors_common.hpp"
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"

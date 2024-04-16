@@ -1,4 +1,4 @@
-#include "sensors.hpp"
+#include "sensors_common.hpp"
 
 #include <gmock/gmock.h> // IWYU pragma: keep
 #include <gtest/gtest.h> // IWYU pragma: keep
