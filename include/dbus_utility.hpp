@@ -151,14 +151,10 @@ inline bool getNthStringFromPath(const std::string& path, int index,
 }
 
 template <typename Callback>
-inline void checkDbusPathExists(const std::string& path, Callback&& callbackIn)
+inline void checkDbusPathExists(const std::string& path, Callback&& callback)
 {
     crow::connections::systemBus->async_method_call(
-<<<<<<< HEAD
-        [callback{std::forward<Callback>(callbackIn)}](
-=======
-        [callback = std::forward<Callback>(callback)](
->>>>>>> master
+        [callback{std::forward<Callback>(callback)}](
             const boost::system::error_code& ec,
             const dbus::utility::MapperGetObject& objectNames) {
         callback(!ec && !objectNames.empty());

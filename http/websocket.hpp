@@ -65,14 +65,9 @@ class ConnectionImpl : public Connection
             messageExHandlerIn,
         std::function<void(Connection&, const std::string&)> closeHandlerIn,
         std::function<void(Connection&)> errorHandlerIn) :
-<<<<<<< HEAD
-        Connection(reqIn), uri(urlViewIn), ws(std::move(adaptorIn)),
-        inBuffer(inString, 131088), openHandler(std::move(openHandlerIn)),
-=======
         uri(urlViewIn),
         ws(std::move(adaptorIn)), inBuffer(inString, 131088),
         openHandler(std::move(openHandlerIn)),
->>>>>>> master
         messageHandler(std::move(messageHandlerIn)),
         messageExHandler(std::move(messageExHandlerIn)),
         closeHandler(std::move(closeHandlerIn)),

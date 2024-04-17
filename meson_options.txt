@@ -160,7 +160,6 @@ option(
 )
 option('redfish-dbus-event', type : 'feature', value : 'disabled', description : 'Enable Redfish event service pushes based on DBUS signals of DBUS log service transactions.')
 option(
-<<<<<<< HEAD
     'redfish-enable-proccessor-memory-status',
     type: 'feature',
     value: 'enabled',
@@ -171,8 +170,6 @@ option(
 )
 
 option(
-=======
->>>>>>> master
     'redfish-provisioning-feature',
     type: 'feature',
     value: 'disabled',
@@ -309,7 +306,6 @@ option(
 )
 
 option(
-<<<<<<< HEAD
     'redfish-health-populate',
     type: 'feature',
     value: 'enabled',
@@ -318,8 +314,6 @@ option(
 )
 
 option(
-=======
->>>>>>> master
     'https_port',
     type: 'integer',
     min: 1,

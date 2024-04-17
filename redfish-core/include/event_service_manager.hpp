@@ -30,11 +30,8 @@
 
 #include <sys/inotify.h>
 
-<<<<<<< HEAD
 #include <async_resp.hpp>
 #include <boost/algorithm/string/classification.hpp>
-=======
->>>>>>> master
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/beast/http/parser.hpp>

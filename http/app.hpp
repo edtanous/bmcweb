@@ -33,10 +33,6 @@ class App
   public:
     using ssl_socket_t = boost::beast::ssl_stream<boost::asio::ip::tcp::socket>;
     using ssl_server_t = Server<App, ssl_socket_t>;
-<<<<<<< HEAD
-#endif
-=======
->>>>>>> master
     using socket_t = boost::asio::ip::tcp::socket;
     using server_t = Server<App, socket_t>;
 
@@ -178,12 +174,7 @@ class App
   private:
     std::shared_ptr<boost::asio::io_context> io;
     uint16_t portUint = 80;
-<<<<<<< HEAD
-
-    std::string bindaddrStr = "0.0.0.0";
-=======
 #endif
->>>>>>> master
     int socketFd = -1;
     Router router;
 

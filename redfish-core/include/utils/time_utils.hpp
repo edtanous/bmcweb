@@ -497,7 +497,6 @@ inline std::pair<std::string, std::string> getDateTimeOffsetNow()
     return std::make_pair(dateTime, timeOffset);
 }
 
-<<<<<<< HEAD
 inline std::time_t getTimestamp(uint64_t millisTimeStamp)
 {
     // Retrieve Created property with format:
@@ -508,10 +507,7 @@ inline std::time_t getTimestamp(uint64_t millisTimeStamp)
         .count();
 }
 
-using usSinceEpoch = std::chrono::duration<uint64_t, std::micro>;
-=======
 using usSinceEpoch = std::chrono::duration<int64_t, std::micro>;
->>>>>>> master
 std::optional<usSinceEpoch> dateStringToEpoch(std::string_view datetime);
 } // namespace time_utils
 } // namespace redfish

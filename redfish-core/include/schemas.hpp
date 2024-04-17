@@ -97,15 +97,12 @@ namespace redfish
         "Privileges",
         "Processor",
         "ProcessorCollection",
-<<<<<<< HEAD
         "ProcessorMetrics",
-=======
         "Protocol",
         "redfish-error",
         "redfish-payload-annotations",
         "redfish-schema",
         "redfish-schema-v1",
->>>>>>> master
         "Redundancy",
         "Resource",
         "Role",

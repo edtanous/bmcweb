@@ -2991,7 +2991,6 @@
     <edmx:Reference Uri="/redfish/v1/schema/ProcessorCollection_v1.xml">
         <edmx:Include Namespace="ProcessorCollection"/>
     </edmx:Reference>
-<<<<<<< HEAD
     <edmx:Reference Uri="/redfish/v1/schema/ProcessorMetrics_v1.xml">
         <edmx:Include Namespace="ProcessorMetrics"/>
         <edmx:Include Namespace="ProcessorMetrics.v1_0_0"/>
@@ -3018,10 +3017,8 @@
         <edmx:Include Namespace="ProcessorMetrics.v1_5_0"/>
         <edmx:Include Namespace="ProcessorMetrics.v1_6_0"/>
         <edmx:Include Namespace="ProcessorMetrics.v1_6_1"/>
-=======
     <edmx:Reference Uri="/redfish/v1/schema/Protocol_v1.xml">
         <edmx:Include Namespace="Protocol"/>
->>>>>>> master
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/RedfishError_v1.xml">
         <edmx:Include Namespace="RedfishError.v1_0_0"/>

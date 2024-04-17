@@ -41,13 +41,9 @@ class ConnectionImpl : public Connection
     ConnectionImpl(Adaptor&& adaptorIn,
                    std::function<void(Connection&)> openHandlerIn,
                    std::function<void(Connection&)> closeHandlerIn) :
-<<<<<<< HEAD
-        adaptor(std::move(adaptorIn)), timer(ioc),
-=======
         adaptor(std::move(adaptorIn)),
         timer(static_cast<boost::asio::io_context&>(
             adaptor.get_executor().context())),
->>>>>>> master
         openHandler(std::move(openHandlerIn)),
         closeHandler(std::move(closeHandlerIn))
 

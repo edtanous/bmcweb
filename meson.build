@@ -193,26 +193,6 @@ if (cxx.get_id() == 'clang')
     error('This project requires clang-17 or higher')
   endif
 add_project_arguments(
-<<<<<<< HEAD
-  cxx.get_supported_arguments([
-  '-Wcast-align',
-  '-Wconversion',
-  '-Wformat=2',
-  '-Wold-style-cast',
-  '-Woverloaded-virtual',
-  '-Wsign-conversion',
-  '-Wunused',
-  '-Wno-attributes',
-  '-Wno-error=deprecated-declarations',
-  ]),
-  language: 'cpp'
-)
-
-if (cxx.get_id() == 'clang' and cxx.version().version_compare('>9.0'))
-add_project_arguments(
-  cxx.get_supported_arguments([
-=======
->>>>>>> master
     '-Weverything',
     '-Wformat=2',
     '-Wno-c++98-compat-pedantic',
@@ -229,6 +209,7 @@ add_project_arguments(
     '-Wno-switch-enum',
     '-Wno-unused-macros',
     '-Wno-covered-switch-default',
+    '-Wno-error=deprecated-declarations',
   language:'cpp')
 endif
 
@@ -250,16 +231,9 @@ if (cxx.get_id() == 'gcc')
      '-Wnull-dereference',
      '-Wunused-parameter',
      '-Wdouble-promotion',
-<<<<<<< HEAD
-     #TODO: Enable this flags
-     #'-Wshadow',
-     #'-Wno-psabi',
-     ]),
-=======
-    '-Wshadow',
-    '-Wno-psabi',
+   # '-Wshadow',
+   # '-Wno-psabi',
     '-Wno-attributes',
->>>>>>> master
     language:'cpp')
 endif
 
@@ -339,14 +313,6 @@ bmcweb_dependencies = []
 
 pam = cxx.find_library('pam', required: true)
 atomic =  cxx.find_library('atomic', required: true)
-<<<<<<< HEAD
-openssl = dependency('openssl', required : true)
-bmcweb_dependencies += [pam, atomic, openssl]
-if get_option('shmem-platform-metrics').enabled()
-  nvtal = dependency('nvidia-tal', required : true)
-  bmcweb_dependencies += nvtal
-endif
-=======
 bmcweb_dependencies += [pam, atomic]
 
 openssl = dependency('openssl', required : false, version: '>=3.0.0')
@@ -365,7 +331,11 @@ else
   add_project_arguments('-Wold-style-cast', language: 'cpp')
 endif
 bmcweb_dependencies += [openssl]
->>>>>>> master
+
+if get_option('shmem-platform-metrics').enabled()
+  nvtal = dependency('nvidia-tal', required : true)
+  bmcweb_dependencies += nvtal
+endif
 
 nghttp2 = dependency('libnghttp2', version: '>=1.52.0', required : false)
 if not nghttp2.found()
@@ -514,14 +484,10 @@ executable(
 )
 
 srcfiles_unittest = files(
-<<<<<<< HEAD
   #'test/http/crow_getroutes_test.cpp',
-=======
-  'test/http/crow_getroutes_test.cpp',
   'test/http/http2_connection_test.cpp',
   'test/http/http_connection_test.cpp',
   'test/http/mutual_tls.cpp',
->>>>>>> master
   'test/http/router_test.cpp',
   'test/http/parsing_test.cpp',
   'test/http/http_response_test.cpp',
@@ -560,35 +526,6 @@ srcfiles_unittest = files(
   #'test/redfish-core/lib/thermal_subsystem_test.cpp',
   #'test/redfish-core/lib/power_subsystem_test.cpp',
   'test/redfish-core/lib/sensors_test.cpp',
-<<<<<<< HEAD
-)
-
-# if(get_option('tests').enabled())
-#     # generate the test executable
-#     foreach test_src : srcfiles_unittest
-#       test_bin = executable(
-#         fs.stem(test_src),
-#         srcfiles_bmcweb + test_src,
-#         include_directories : incdir,
-#         install_dir: bindir,
-#         dependencies: bmcweb_dependencies + [
-#           gtest,
-#           gmock,
-#         ]
-#       )
-#       test(fs.stem(test_src), test_bin)
-#     endforeach
-# endif
-
-if(get_option('tests').enabled())
-    # ut_incdir = include_directories(
-    #     'include',
-    #     'include/ut/',
-    #     'redfish-core/include',
-    #     'redfish-core/lib',
-    #     'http'
-    # )
-=======
   'test/redfish-core/lib/system_test.cpp',
   'test/redfish-core/lib/log_services_dump_test.cpp',
   'test/redfish-core/lib/log_services_test.cpp',
@@ -601,7 +538,6 @@ if(get_option('tests').enabled())
 
 
 if(get_option('tests').allowed())
->>>>>>> master
     # generate the test executable
     ut_bin = executable(
       'bmcweb_unit_test',

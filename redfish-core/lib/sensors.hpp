@@ -27,7 +27,6 @@
 #include "utils/json_utils.hpp"
 #include "utils/query_param.hpp"
 
-<<<<<<< HEAD
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/find.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -35,8 +34,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/format.hpp>
 #include <boost/range/algorithm/replace_copy_if.hpp>
-=======
->>>>>>> master
 #include <boost/system/error_code.hpp>
 #include <boost/url/format.hpp>
 #include <dbus_singleton.hpp>
@@ -2104,11 +2101,7 @@ void getPowerSupplyAttributesData(
 
     // Response handler for Get DeratingFactor property
     auto respHandler = [sensorsAsyncResp, inventoryItems,
-<<<<<<< HEAD
                         callback{std::forward<Callback>(callback)}](
-=======
-                        callback = std::forward<Callback>(callback)](
->>>>>>> master
                            const boost::system::error_code& ec,
                            const uint32_t value) {
         BMCWEB_LOG_DEBUG("getPowerSupplyAttributesData respHandler enter");

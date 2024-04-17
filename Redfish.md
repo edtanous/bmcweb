@@ -338,12 +338,6 @@ Fields common to all schemas
 #### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/ThermalMetrics/
 
 ##### ThermalMetrics
-<<<<<<< HEAD
-
-- TemperatureReadingsCelsius
-
-=======
->>>>>>> master
 
 #### /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Fans
 
