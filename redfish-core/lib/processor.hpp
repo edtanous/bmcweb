@@ -20,11 +20,8 @@
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "generated/enums/processor.hpp"
-<<<<<<< HEAD
 #include "health.hpp"
 #include "pcie.hpp"
-=======
->>>>>>> master
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
@@ -3371,14 +3368,10 @@ inline void requestRoutesOperatingConfigCollection(App& app)
 
                 // Use the common search routine to construct the
                 // Collection of all Config objects under this CPU.
-<<<<<<< HEAD
                 std::string operationConfiguuri =
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
                     cpuName + "/OperatingConfigs";
-                constexpr std::array<std::string_view, 1> interfaces{
-=======
                 constexpr std::array<std::string_view, 1> interface{
->>>>>>> master
                     "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"};
                 collection_util::getCollectionMembers(
                     asyncResp, boost::urls::url(operationConfiguuri),
@@ -3552,24 +3545,17 @@ inline void requestRoutesProcessor(App& app)
             return;
         }
 
-<<<<<<< HEAD
         std::optional<int> speedLimit;
         std::optional<bool> speedLocked;
         std::optional<nlohmann::json> oemObject;
-        std::optional<nlohmann::json> appliedConfigJson;
+        std::optional<std::string> appliedConfigUri;
         if (!redfish::json_util::readJsonAction(
                 req, asyncResp->res, "SpeedLimitMHz", speedLimit, "SpeedLocked",
-                speedLocked, "AppliedOperatingConfig", appliedConfigJson, "Oem",
-                oemObject))
-=======
-        std::optional<std::string> appliedConfigUri;
-        if (!json_util::readJsonPatch(req, asyncResp->res,
-                                      "AppliedOperatingConfig/@odata.id",
-                                      appliedConfigUri))
->>>>>>> master
-        {
-            return;
-        }
+                speedLocked, "AppliedOperatingConfig/@odata.id",
+                appliedConfigJson, "Oem", oemObject))
+            {
+                return;
+            }
         // speedlimit is required property for patching speedlocked
         if (!speedLimit && speedLocked)
         {
@@ -3577,13 +3563,6 @@ inline void requestRoutesProcessor(App& app)
             messages::propertyMissing(asyncResp->res, "SpeedLimit");
         }
 
-<<<<<<< HEAD
-        // speedlocked is required property for patching speedlimit
-        else if (!speedLocked && speedLimit)
-        {
-            BMCWEB_LOG_ERROR("SpeedLocked value required ");
-            messages::propertyMissing(asyncResp->res, "SpeedLocked");
-        }
         // Update speed limit
         else if (speedLimit && speedLocked)
         {
@@ -3649,36 +3628,14 @@ inline void requestRoutesProcessor(App& app)
         }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-        std::string appliedConfigUri;
-        if (appliedConfigJson)
-        {
-            if (!redfish::json_util::readJson(*appliedConfigJson,
-                                              asyncResp->res, "@odata.id",
-                                              appliedConfigUri))
-            {
-                return;
-            }
-=======
         if (appliedConfigUri)
         {
->>>>>>> master
             // Check for 404 and find matching D-Bus object, then run
             // property patch handlers if that all succeeds.
             redfish::processor_utils::getProcessorObject(
-                asyncResp, processorId,
-<<<<<<< HEAD
-                [appliedConfigUri = std::move(appliedConfigUri)](
-                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
-                    const std::string& processorId1,
-                    const std::string& objectPath,
-                    const MapperServiceMap& serviceMap) {
-                patchAppliedOperatingConfig(asyncResp1, processorId1,
-                                            appliedConfigUri, objectPath,
-                                            serviceMap);
-            });
-=======
+                asyncResp, processorId, std::bind_front(patchAppliedOperatingConfig,
+                                               asyncResp, processorId,                                               
                                                *appliedConfigUri));
->>>>>>> master
         }
     });
 }

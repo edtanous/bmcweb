@@ -355,6 +355,10 @@ inline void afterGetUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         BMCWEB_LOG_DEBUG("UUID = {}", valueStr);
         asyncResp->res.jsonValue["UUID"] = valueStr;
     }
+#ifdef BMCWEB_ENABLE_BIOS
+    // UUID from smbios if exist
+    sw_util::getSwBIOSUUID(asyncResp);
+#endif
 }
 
 inline void
@@ -406,15 +410,26 @@ inline void
     {
         asyncResp->res.jsonValue["Model"] = *model;
     }
+    else
+    {
+        // Schema defaults for interop validator
+        asyncResp->res.jsonValue["Model"] = "";
+    }
 
     if (subModel != nullptr)
     {
         asyncResp->res.jsonValue["SubModel"] = *subModel;
     }
 
+    // Schema defaults for interop validator
+    asyncResp->res.jsonValue["BiosVersion"] = "";
+    asyncResp->res.jsonValue["AssetTag"] = "";
+
+#ifdef BMCWEB_ENABLE_BIOS
     // Grab the bios version
     sw_util::populateSoftwareInformation(asyncResp, sw_util::biosPurpose,
                                          "BiosVersion", false);
+#endif
 }
 
 inline void
@@ -488,49 +503,7 @@ inline void afterSystemGetSubTree(
                             [asyncResp](const boost::system::error_code& ec3,
                                         const dbus::utility::DBusPropertiesMap&
                                             properties) {
-<<<<<<< HEAD
-                            if (ec3)
-                            {
-                                BMCWEB_LOG_ERROR("DBUS response error {}", ec3);
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            BMCWEB_LOG_DEBUG("Got {} UUID properties.",
-                                             properties.size());
-
-                            const std::string* uUID = nullptr;
-
-                            const bool success =
-                                sdbusplus::unpackPropertiesNoThrow(
-                                    dbus_utils::UnpackErrorPrinter(),
-                                    properties, "UUID", uUID);
-
-                            if (!success)
-                            {
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-
-                            if (uUID != nullptr)
-                            {
-                                std::string valueStr = *uUID;
-                                if (valueStr.size() == 32)
-                                {
-                                    valueStr.insert(8, 1, '-');
-                                    valueStr.insert(13, 1, '-');
-                                    valueStr.insert(18, 1, '-');
-                                    valueStr.insert(23, 1, '-');
-                                }
-                                BMCWEB_LOG_DEBUG("UUID = {}", valueStr);
-                                asyncResp->res.jsonValue["UUID"] = valueStr;
-                            }
-#ifdef BMCWEB_ENABLE_BIOS
-                            // UUID from smbios if exist
-                            sw_util::getSwBIOSUUID(asyncResp);
-#endif
-=======
                         afterGetUUID(asyncResp, ec3, properties);
->>>>>>> master
                         });
                     }
                     else if (interfaceName ==
@@ -541,85 +514,8 @@ inline void afterSystemGetSubTree(
                             "xyz.openbmc_project.Inventory.Decorator.Asset",
                         [asyncResp](const boost::system::error_code& ec3,
                                         const dbus::utility::DBusPropertiesMap&
-<<<<<<< HEAD
-                                            propertiesList) {
-                            if (ec2)
-                            {
-                                // doesn't have to include this
-                                // interface
-                                return;
-                            }
-                            BMCWEB_LOG_DEBUG("Got {} properties for system",
-                                             propertiesList.size());
-
-                            const std::string* partNumber = nullptr;
-                            const std::string* serialNumber = nullptr;
-                            const std::string* manufacturer = nullptr;
-                            const std::string* model = nullptr;
-                            const std::string* subModel = nullptr;
-
-                            const bool success =
-                                sdbusplus::unpackPropertiesNoThrow(
-                                    dbus_utils::UnpackErrorPrinter(),
-                                    propertiesList, "PartNumber", partNumber,
-                                    "SerialNumber", serialNumber,
-                                    "Manufacturer", manufacturer, "Model",
-                                    model, "SubModel", subModel);
-
-                            if (!success)
-                            {
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-
-                            if (partNumber != nullptr)
-                            {
-                                asyncResp->res.jsonValue["PartNumber"] =
-                                    *partNumber;
-                            }
-
-                            if (serialNumber != nullptr)
-                            {
-                                asyncResp->res.jsonValue["SerialNumber"] =
-                                    *serialNumber;
-                            }
-
-                            if (manufacturer != nullptr)
-                            {
-                                asyncResp->res.jsonValue["Manufacturer"] =
-                                    *manufacturer;
-                            }
-
-                            if (model != nullptr)
-                            {
-                                asyncResp->res.jsonValue["Model"] = *model;
-                            }
-                            else
-                            {
-                                // Schema defaults for interop validator
-                                asyncResp->res.jsonValue["Model"] = "";
-                            }
-
-                            if (subModel != nullptr)
-                            {
-                                asyncResp->res.jsonValue["SubModel"] =
-                                    *subModel;
-                            }
-
-                            // Schema defaults for interop validator
-                            asyncResp->res.jsonValue["BiosVersion"] = "";
-                            asyncResp->res.jsonValue["AssetTag"] = "";
-
-#ifdef BMCWEB_ENABLE_BIOS
-                            // Grab the bios version
-                            sw_util::populateSoftwareInformation(
-                                asyncResp, sw_util::biosPurpose, "BiosVersion",
-                                false);
-#endif
-=======
                                         properties) {
                         afterGetInventory(asyncResp, ec3, properties);
->>>>>>> master
                         });
 
                         sdbusplus::asio::getProperty<std::string>(
@@ -4115,30 +4011,14 @@ inline void
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
     asyncResp->res.jsonValue["@odata.type"] =
-<<<<<<< HEAD
-        "#ComputerSystem.v1_17_0.ComputerSystem";
+        "#ComputerSystem.v1_22_0.ComputerSystem";
     asyncResp->res.jsonValue["Name"] = PLATFORMSYSTEMID;
     asyncResp->res.jsonValue["Id"] = PLATFORMSYSTEMID;
-=======
-        "#ComputerSystem.v1_22_0.ComputerSystem";
-    asyncResp->res.jsonValue["Name"] = "system";
-    asyncResp->res.jsonValue["Id"] = "system";
->>>>>>> master
     asyncResp->res.jsonValue["SystemType"] = "Physical";
     asyncResp->res.jsonValue["Description"] = PLATFORMSYSTEMDESCRIPTION;
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["ProcessorSummary"]["Count"] = 0;
-<<<<<<< HEAD
 #endif // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-    if constexpr (bmcwebEnableProcMemStatus)
-    {
-        asyncResp->res.jsonValue["ProcessorSummary"]["Status"]["State"] =
-            "Disabled";
-        asyncResp->res.jsonValue["MemorySummary"]["Status"]["State"] =
-            "Disabled";
-    }
-=======
->>>>>>> master
     asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] =
         double(0);
     asyncResp->res.jsonValue["@odata.id"] =
@@ -4233,15 +4113,11 @@ inline void
     getBootProperties(asyncResp);
     getBootProgress(asyncResp);
     getBootProgressLastStateTime(asyncResp);
-<<<<<<< HEAD
     getBootOrder(asyncResp);
     getSecureBoot(asyncResp);
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
-    getPCIeDeviceList(asyncResp, "PCIeDevices");
-=======
     pcie_util::getPCIeDeviceList(asyncResp,
                                  nlohmann::json::json_pointer("/PCIeDevices"));
->>>>>>> master
     getHostWatchdogTimer(asyncResp);
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     getPowerRestorePolicy(asyncResp);
@@ -4644,6 +4520,7 @@ inline void afterGetAllowedHostTransitions(
     nlohmann::json::array_t parameters;
     parameters.emplace_back(std::move(parameter));
     asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+    redfish::nvidia_systems_utils::getChassisNMIStatus(asyncResp);
 }
 
 inline void handleSystemCollectionResetActionGet(
@@ -4681,53 +4558,11 @@ inline void handleSystemCollectionResetActionGet(
         "</redfish/v1/JsonSchemas/ActionInfo/ActionInfo.json>; rel=describedby");
 
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/system/ResetActionInfo";
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
     asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
     asyncResp->res.jsonValue["Name"] = "Reset Action Info";
     asyncResp->res.jsonValue["Id"] = "ResetActionInfo";
 
-<<<<<<< HEAD
-    nlohmann::json::array_t parameters;
-    nlohmann::json::object_t parameter;
-
-    parameter["Name"] = "ResetType";
-    parameter["Required"] = true;
-    parameter["DataType"] = "String";
-    nlohmann::json::array_t allowableValues;
-    allowableValues.emplace_back("On");
-    allowableValues.emplace_back("ForceOff");
-    allowableValues.emplace_back("ForceOn");
-    allowableValues.emplace_back("ForceRestart");
-    allowableValues.emplace_back("GracefulRestart");
-    allowableValues.emplace_back("GracefulShutdown");
-    allowableValues.emplace_back("PowerCycle");
-    allowableValues.emplace_back("Nmi");
-    parameter["AllowableValues"] = std::move(allowableValues);
-    parameters.emplace_back(std::move(parameter));
-
-    asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
-
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code& ec,
-                    const std::variant<bool>& resp) {
-        if (ec)
-        {
-            BMCWEB_LOG_DEBUG("DBUS response error, {}", ec);
-            return;
-        }
-
-        bool enabledNmi = std::get<bool>(resp);
-        if (enabledNmi == true)
-        {
-            asyncResp->res.jsonValue["Parameters"][0]["AllowableValues"]
-                .emplace_back("Nmi");
-        }
-    },
-        "xyz.openbmc_project.Settings",
-        "/xyz/openbmc_project/Control/ChassisCapabilities",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Control.ChassisCapabilities", "ChassisNMIEnabled");
-=======
     // Look to see if system defines AllowedHostTransitions
     sdbusplus::asio::getProperty<std::vector<std::string>>(
         *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
@@ -4737,7 +4572,6 @@ inline void handleSystemCollectionResetActionGet(
                     const std::vector<std::string>& allowedHostTransitions) {
         afterGetAllowedHostTransitions(asyncResp, ec, allowedHostTransitions);
     });
->>>>>>> master
 }
 /**
  * SystemResetActionInfo derived class for delivering Computer Systems

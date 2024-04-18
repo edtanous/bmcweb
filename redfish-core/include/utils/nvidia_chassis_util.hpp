@@ -853,5 +853,302 @@ inline void
         networkInterfaces);
 }
 
+/**
+ * @brief Fill out chassis physical dimensions info by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                 const std::string& service,
+                                 const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG("Get chassis dimensions");
+    crow::connections::systemBus->async_method_call(
+        [aResp{std::move(aResp)}](
+            const boost::system::error_code ec,
+            const std::vector<std::pair<
+                std::string, dbus::utility::DbusVariantType>>& propertiesList) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("DBUS response error for "
+                             "Chassis dimensions");
+            messages::internalError(aResp->res);
+            return;
+        }
+        for (const std::pair<std::string, dbus::utility::DbusVariantType>&
+                 property : propertiesList)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "Height")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for Height");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["HeightMm"] = *value;
+            }
+            else if (propertyName == "Width")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for Width");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["WidthMm"] = *value;
+            }
+            else if (propertyName == "Depth")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for Depth");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["DepthMm"] = *value;
+            }
+        }
+    },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Decorator.Dimension");
+}
+
+inline void handleChassisGetAllProperties(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId, const std::string& path,
+    const dbus::utility::DBusPropertiesMap& propertiesList,
+    const bool operationalStatusPresent)
+{
+    const std::string* partNumber = nullptr;
+    const std::string* serialNumber = nullptr;
+    const std::string* manufacturer = nullptr;
+    const std::string* model = nullptr;
+    const std::string* sparePartNumber = nullptr;
+
+    const std::string* sku = nullptr;
+    const std::string* uuid = nullptr;
+    const std::string* locationCode = nullptr;
+    const std::string* locationType = nullptr;
+    const std::string* prettyName = nullptr;
+    const std::string* type = nullptr;
+    const double* height = nullptr;
+    const double* width = nullptr;
+    const double* depth = nullptr;
+    const size_t* minPowerWatts = nullptr;
+    const size_t* maxPowerWatts = nullptr;
+    const std::string* assetTag = nullptr;
+    const bool* writeProtected = nullptr;
+    const bool* writeProtectedControl = nullptr;
+    const uint64_t* pCIeReferenceClockCount = nullptr;
+    const std::string* state = nullptr;
+
+    const bool success = sdbusplus::unpackPropertiesNoThrow(
+        dbus_utils::UnpackErrorPrinter(), propertiesList, "PartNumber",
+        partNumber, "SerialNumber", serialNumber, "Manufacturer", manufacturer,
+        "Model", model, "SparePartNumber", sparePartNumber, "SKU", sku, "UUID",
+        uuid, "LocationCode", locationCode, "LocationType", locationType,
+        "PrettyName", prettyName, "Type", type, "Height", height, "Width",
+        width, "Depth", depth, "MinPowerWatts", minPowerWatts, "MaxPowerWatts",
+        maxPowerWatts, "AssetTag", assetTag, "WriteProtected", writeProtected,
+        "WriteProtectedControl", writeProtectedControl,
+        "PCIeReferenceClockCount", pCIeReferenceClockCount, "State", state);
+
+    if (!success)
+    {
+        messages::internalError(asyncResp->res);
+        return;
+    }
+
+    if (partNumber != nullptr)
+    {
+        asyncResp->res.jsonValue["PartNumber"] = *partNumber;
+    }
+
+    if (serialNumber != nullptr)
+    {
+        asyncResp->res.jsonValue["SerialNumber"] = *serialNumber;
+    }
+
+    if (manufacturer != nullptr)
+    {
+        asyncResp->res.jsonValue["Manufacturer"] = *manufacturer;
+    }
+
+    if (model != nullptr)
+    {
+        asyncResp->res.jsonValue["Model"] = *model;
+    }
+
+    // SparePartNumber is optional on D-Bus
+    // so skip if it is empty
+    if (sparePartNumber != nullptr && !sparePartNumber->empty())
+    {
+        asyncResp->res.jsonValue["SparePartNumber"] = *sparePartNumber;
+    }
+
+    if (sku != nullptr)
+    {
+        asyncResp->res.jsonValue["SKU"] = *sku;
+    }
+    if (uuid != nullptr)
+    {
+        if (!(uuid->empty()))
+        {
+            asyncResp->res.jsonValue["UUID"] = *uuid;
+        }
+    }
+    if (locationCode != nullptr)
+    {
+        asyncResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
+            *locationCode;
+    }
+    if (locationType != nullptr)
+    {
+        asyncResp->res.jsonValue["Location"]["PartLocation"]["LocationType"] =
+            redfish::dbus_utils::toLocationType(*locationType);
+    }
+    if (prettyName != nullptr)
+    {
+        asyncResp->res.jsonValue["Name"] = *prettyName;
+    }
+    if (type != nullptr)
+    {
+        // asyncResp->res.jsonValue["Type"] = *type;
+        asyncResp->res.jsonValue["ChassisType"] =
+            redfish::chassis_utils::getChassisType(*type);
+    }
+    if (height != nullptr)
+    {
+        asyncResp->res.jsonValue["HeightMm"] = *height;
+    }
+    if (width != nullptr)
+    {
+        asyncResp->res.jsonValue["WidthMm"] = *width;
+    }
+    if (depth != nullptr)
+    {
+        asyncResp->res.jsonValue["DepthMm"] = *depth;
+    }
+    if (minPowerWatts != nullptr)
+    {
+        asyncResp->res.jsonValue["MinPowerWatts"] = *minPowerWatts;
+    }
+    if (maxPowerWatts != nullptr)
+    {
+        asyncResp->res.jsonValue["MaxPowerWatts"] = *maxPowerWatts;
+    }
+    if (assetTag != nullptr)
+    {
+        asyncResp->res.jsonValue["AssetTag"] = *assetTag;
+    }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    // default oem data
+    nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+    oem["@odata.type"] = "#NvidiaChassis.v1_1_0.NvidiaChassis";
+
+    if (writeProtected != nullptr)
+    {
+        asyncResp->res.jsonValue["Oem"]["Nvidia"]["HardwareWriteProtected"] =
+            *writeProtected;
+    }
+
+    if (writeProtectedControl != nullptr)
+    {
+        asyncResp->res
+            .jsonValue["Oem"]["Nvidia"]["HardwareWriteProtectedControl"] =
+            *writeProtectedControl;
+    }
+
+    if (pCIeReferenceClockCount != nullptr)
+    {
+        asyncResp->res.jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockCount"] =
+            *pCIeReferenceClockCount;
+    }
+    if (state != nullptr && operationalStatusPresent)
+    {
+        asyncResp->res.jsonValue["Status"]["State"] =
+            redfish::chassis_utils::getPowerStateType(*state);
+    }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    asyncResp->res.jsonValue["Name"] = chassisId;
+    asyncResp->res.jsonValue["Id"] = chassisId;
+#ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+    asyncResp->res.jsonValue["Thermal"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/Thermal", chassisId);
+
+    // Power object
+    asyncResp->res.jsonValue["Power"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/Power", chassisId);
+#endif
+#endif
+#ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
+    asyncResp->res.jsonValue["ThermalSubsystem"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/ThermalSubsystem",
+                            chassisId);
+    asyncResp->res.jsonValue["PowerSubsystem"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/PowerSubsystem", chassisId);
+    asyncResp->res.jsonValue["EnvironmentMetrics"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/EnvironmentMetrics",
+                            chassisId);
+#endif
+    // SensorCollection
+    asyncResp->res.jsonValue["Sensors"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/Sensors", chassisId);
+    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+
+    // Assembly collection
+    asyncResp->res.jsonValue["Assembly"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/Assembly", chassisId);
+
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
+    // NetworkAdapters collection
+    asyncResp->res.jsonValue["NetworkAdapters"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters",
+                            chassisId);
+#endif
+    // PCIeSlots collection
+    asyncResp->res.jsonValue["PCIeSlots"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/PCIeSlots", chassisId);
+
+    // TrustedComponent collection
+    asyncResp->res.jsonValue["TrustedComponents"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Chassis/{}/TrustedComponents",
+                            chassisId);
+
+    // Controls Collection
+    asyncResp->res.jsonValue["Controls"] = {
+        {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/Controls"}};
+
+    nlohmann::json::array_t computerSystems;
+    nlohmann::json::object_t system;
+    system["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    computerSystems.emplace_back(std::move(system));
+    asyncResp->res.jsonValue["Links"]["ComputerSystems"] =
+        std::move(computerSystems);
+
+    nlohmann::json::array_t managedBy;
+    nlohmann::json::object_t manager;
+    manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
+    managedBy.emplace_back(std::move(manager));
+    asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
+    if (!operationalStatusPresent)
+    {
+        getChassisState(asyncResp);
+    }
+    getStorageLink(asyncResp, path);
+}
+
 } // namespace nvidia_chassis_utils
 } // namespace redfish
