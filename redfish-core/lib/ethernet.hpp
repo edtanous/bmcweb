@@ -19,11 +19,8 @@
 #include "dbus_singleton.hpp"
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
-<<<<<<< HEAD
 #include "generated/enums/ip_addresses.hpp"
 #include "health.hpp"
-=======
->>>>>>> master
 #include "human_sort.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
@@ -885,12 +882,9 @@ inline void createIPv6(const std::string& ifaceId, uint8_t prefixLength,
                        const std::string& address,
                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-<<<<<<< HEAD
-=======
     sdbusplus::message::object_path path("/xyz/openbmc_project/network");
     path /= ifaceId;
 
->>>>>>> master
     auto createIpHandler = [asyncResp,
                             address](const boost::system::error_code& ec) {
         if (ec)
@@ -1332,7 +1326,6 @@ inline void
                           const std::string& macAddress,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-<<<<<<< HEAD
     if (macAddress.size() > MAC_STRING_SIZE)
     {
         messages::propertyValueFormatError(asyncResp->res, macAddress,
@@ -1340,40 +1333,12 @@ inline void
         return;
     }
 
-    static constexpr std::string_view dbusNotAllowedError =
-        "xyz.openbmc_project.Common.Error.NotAllowed";
-
-    sdbusplus::asio::setProperty(
-        *crow::connections::systemBus, "xyz.openbmc_project.Network",
-        "/xyz/openbmc_project/network/" + ifaceId,
-        "xyz.openbmc_project.Network.MACAddress", "MACAddress", macAddress,
-        [asyncResp](const boost::system::error_code& ec,
-                    const sdbusplus::message_t& msg) {
-        if (ec)
-        {
-            const sd_bus_error* err = msg.get_error();
-            if (err == nullptr)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            if (err->name == dbusNotAllowedError)
-            {
-                messages::propertyNotWritable(asyncResp->res, "MACAddress");
-                return;
-            }
-            messages::internalError(asyncResp->res);
-            return;
-        }
-    });
-=======
     setDbusProperty(
         asyncResp, "xyz.openbmc_project.Network",
         sdbusplus::message::object_path("/xyz/openbmc_project/network") /
             ifaceId,
         "xyz.openbmc_project.Network.MACAddress", "MACAddress", "MACAddress",
         macAddress);
->>>>>>> master
 }
 
 inline void setDHCPEnabled(const std::string& ifaceId,
@@ -1819,13 +1784,10 @@ inline void parseInterfaceData(
     const std::string& ifaceId, const EthernetInterfaceData& ethData,
     const std::vector<IPv4AddressData>& ipv4Data,
     const std::vector<IPv6AddressData>& ipv6Data,
-<<<<<<< HEAD
+    const std::vector<StaticGatewayData>& ipv6GatewayData,    
     const std::string& route = "/redfish/v1/Managers/" PLATFORMBMCID
                                "/EthernetInterfaces/",
     const bool& vlans = true)
-=======
-                       const std::vector<StaticGatewayData>& ipv6GatewayData)
->>>>>>> master
 {
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
     jsonResponse["Id"] = ifaceId;
@@ -2290,44 +2252,13 @@ inline void requestEthernetInterfacesRoutes(App& app)
             return;
         }
         //clang-format on
-<<<<<<< HEAD
-        if (dhcpv4)
+#ifndef BMCWEB_DHCP_CONFIGURATION_UPDATE
+        if (v4dhcpParms.dhcpv4Enabled)
         {
-#ifdef BMCWEB_DHCP_CONFIGURATION_UPDATE
-            if (!json_util::readJson(*dhcpv4, asyncResp->res, "DHCPEnabled",
-                                     v4dhcpParms.dhcpv4Enabled, "UseDNSServers",
-                                     v4dhcpParms.useDnsServers, "UseNTPServers",
-                                     v4dhcpParms.useNtpServers, "UseDomainName",
-                                     v4dhcpParms.useDomainName))
-            {
-                return;
-            }
-#else
             messages::propertyNotWritable(asyncResp->res, "DHCPv4");
             return;
-#endif
         }
-
-        if (dhcpv6)
-        {
-#ifdef BMCWEB_DHCP_CONFIGURATION_UPDATE
-            if (!json_util::readJson(*dhcpv6, asyncResp->res, "OperatingMode",
-                                     v6dhcpParms.dhcpv6OperatingMode,
-                                     "UseDNSServers", v6dhcpParms.useDnsServers,
-                                     "UseNTPServers", v6dhcpParms.useNtpServers,
-                                     "UseDomainName",
-                                     v6dhcpParms.useDomainName))
-            {
-                return;
-            }
-#else
-            messages::propertyNotWritable(asyncResp->res, "DHCPv6");
-            return;
 #endif
-        }
-=======
->>>>>>> master
-
         // Get single eth interface data, and call the below callback
         // for JSON preparation
         getEthernetIfaceData(
@@ -2411,16 +2342,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
             if (interfaceEnabled)
             {
-<<<<<<< HEAD
 #ifdef BMCWEB_NIC_CONFIGURATION_UPDATE
-                setEthernetInterfaceBoolProperty(ifaceId, "NICEnabled",
-                                                 *interfaceEnabled, asyncResp);
-#else
-                messages::propertyNotWritable(asyncResp->res,
-                                              "InterfaceEnabled");
-                return;
-#endif
-=======
                 setDbusProperty(asyncResp, "xyz.openbmc_project.Network",
                                 sdbusplus::message::object_path(
                                     "/xyz/openbmc_project/network") /
@@ -2428,7 +2350,11 @@ inline void requestEthernetInterfacesRoutes(App& app)
                                 "xyz.openbmc_project.Network.EthernetInterface",
                                 "NICEnabled", "InterfaceEnabled",
                                 *interfaceEnabled);
->>>>>>> master
+#else
+                messages::propertyNotWritable(asyncResp->res,
+                                              "InterfaceEnabled");
+                return;
+#endif
             }
 
             if (mtuSize)

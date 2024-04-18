@@ -37,15 +37,12 @@
 #include <tinyxml2.h>
 #include <unistd.h>
 
-<<<<<<< HEAD
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/asio.hpp>
 #include <boost/beast/http.hpp>
-=======
->>>>>>> master
 #include <boost/beast/http/verb.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/process.hpp>
@@ -72,11 +69,8 @@
 
 #include <array>
 #include <charconv>
-<<<<<<< HEAD
 #include <chrono>
-=======
 #include <cstddef>
->>>>>>> master
 #include <filesystem>
 #include <iterator>
 #include <optional>
@@ -290,60 +284,7 @@ inline int getJournalMetadata(sd_journal* journal, std::string_view field,
     return ret;
 }
 
-<<<<<<< HEAD
-// static bool getSkipParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-//                          const crow::Request& req, uint64_t& skip)
-// {
-//     boost::urls::query_params_view::iterator it =
-//     req.urlParams.find("$skip"); if (it != req.urlParams.end())
-//     {
-//         std::string skipParam = it->value();
-//         char* ptr = nullptr;
-//         skip = std::strtoul(skipParam.c_str(), &ptr, 10);
-//         if (skipParam.empty() || *ptr != '\0')
-//         {
-
-//             messages::queryParameterValueTypeError(
-//                 asyncResp->res, std::string(skipParam), "$skip");
-//             return false;
-//         }
-//     }
-//     return true;
-// }
-
-// static constexpr const uint64_t maxEntriesPerPage = 1000;
-// static bool getTopParam(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-//                         const crow::Request& req, uint64_t& top)
-// {
-//     boost::urls::query_params_view::iterator it = req.urlParams.find("$top");
-//     if (it != req.urlParams.end())
-//     {
-//         std::string topParam = it->value();
-//         char* ptr = nullptr;
-//         top = std::strtoul(topParam.c_str(), &ptr, 10);
-//         if (topParam.empty() || *ptr != '\0')
-//         {
-//             messages::queryParameterValueTypeError(
-//                 asyncResp->res, std::string(topParam), "$top");
-//             return false;
-//         }
-//         if (top < 1U || top > maxEntriesPerPage)
-//         {
-
-//             messages::queryParameterOutOfRange(
-//                 asyncResp->res, std::to_string(top), "$top",
-//                 "1-" + std::to_string(maxEntriesPerPage));
-//             return false;
-//         }
-//     }
-//     return true;
-// }
-
-inline static bool getEntryTimestamp(sd_journal* journal,
-                                     std::string& entryTimestamp)
-=======
 inline bool getEntryTimestamp(sd_journal* journal, std::string& entryTimestamp)
->>>>>>> master
 {
     int ret = 0;
     uint64_t timestamp = 0;
@@ -450,15 +391,9 @@ static bool getUniqueEntryID(const std::string& logEntry, std::string& entryID,
 }
 
 // Entry is formed like "BootID_timestamp" or "BootID_timestamp_index"
-<<<<<<< HEAD
-inline static bool
-    getTimestampFromID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                       const std::string& entryID, sd_id128_t& bootID,
-=======
 inline bool
     getTimestampFromID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        std::string_view entryIDStrView, sd_id128_t& bootID,
->>>>>>> master
                        uint64_t& timestamp, uint64_t& index)
 {
     // Convert the unique ID back to a bootID + timestamp to find the entry
@@ -470,27 +405,6 @@ inline bool
         return false;
     }
 
-<<<<<<< HEAD
-    // Convert the unique ID back to a bootID + timestamp to find the entry
-    std::string_view entryIDStrView(entryID);
-    auto underscore1Pos = entryIDStrView.find('_');
-    if (underscore1Pos == std::string_view::npos)
-    {
-        // EntryID has no bootID or timestamp
-        messages::resourceNotFound(asyncResp->res, "LogEntry", entryID);
-        return false;
-    }
-
-    // EntryID has bootID + timestamp
-
-    // Convert entryIDViewString to BootID
-    // NOTE: bootID string which needs to be null-terminated for
-    // sd_id128_from_string()
-    std::string bootIDStr(entryID, 0, underscore1Pos);
-    if (sd_id128_from_string(bootIDStr.c_str(), &bootID) < 0)
-    {
-        messages::resourceNotFound(asyncResp->res, "LogEntry", entryID);
-=======
     // EntryID has bootID + timestamp
 
     // Convert entryIDViewString to BootID
@@ -500,38 +414,10 @@ inline bool
     if (sd_id128_from_string(bootIDStr.c_str(), &bootID) < 0)
     {
         messages::resourceNotFound(asyncResp->res, "LogEntry", entryIDStrView);
->>>>>>> master
         return false;
     }
 
     // Get the timestamp from entryID
-<<<<<<< HEAD
-    std::string_view timestampStrView = entryIDStrView;
-    timestampStrView.remove_prefix(underscore1Pos + 1);
-
-    // Check the index in timestamp
-    auto underscore2Pos = timestampStrView.find('_');
-    if (underscore2Pos != std::string_view::npos)
-    {
-        // Timestamp has an index
-        timestampStrView.remove_suffix(timestampStrView.size() -
-                                       underscore2Pos);
-        std::string_view indexStr(timestampStrView);
-        indexStr.remove_prefix(underscore2Pos + 1);
-        auto [ptr, ec] = std::from_chars(indexStr.begin(), indexStr.end(),
-                                         index);
-        if (ec != std::errc())
-        {
-            return false;
-        }
-    }
-
-    // Now timestamp has no index
-    auto [ptr, ec] = std::from_chars(timestampStrView.begin(),
-                                     timestampStrView.end(), timestamp);
-    if (ec != std::errc())
-    {
-=======
     entryIDStrView.remove_prefix(underscore1Pos + 1);
 
     auto [timestampEnd, tstampEc] = std::from_chars(
@@ -562,7 +448,6 @@ inline bool
     if (indexEc != std::errc() || ptr != entryIDStrView.end())
     {
         messages::resourceNotFound(asyncResp->res, "LogEntry", entryIDStrView);
->>>>>>> master
         return false;
     }
     return true;
@@ -2213,13 +2098,8 @@ inline void clearDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             messages::internalError(asyncResp->res);
             return;
         }
-<<<<<<< HEAD
-    }, "xyz.openbmc_project.Dump.Manager",
-        "/xyz/openbmc_project/dump/" + dumpTypeLowerCopy,
-=======
     },
         "xyz.openbmc_project.Dump.Manager", getDumpPath(dumpType),
->>>>>>> master
         "xyz.openbmc_project.Collection.DeleteAll", "DeleteAll");
 }
 
@@ -3413,107 +3293,6 @@ inline void requestRoutesDBusEventLogEntry(App& app)
     });
 }
 
-<<<<<<< HEAD
-inline void requestRoutesDBusEventLogEntryDownload(App& app)
-{
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/LogServices/EventLog/Entries/<str>/attachment")
-        .privileges(redfish::privileges::getLogEntry)
-        .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                   const std::string& param) {
-        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-        {
-            return;
-        }
-        if (!http_helpers::isContentTypeAllowed(
-                req.getHeaderValue("Accept"),
-                http_helpers::ContentType::OctetStream, true))
-        {
-            asyncResp->res.result(boost::beast::http::status::bad_request);
-            return;
-        }
-        if constexpr (bmcwebEnableMultiHost)
-        {
-            // Option currently returns no systems.  TBD
-            messages::resourceNotFound(asyncResp->res, "ComputerSystem",
-                                       PLATFORMSYSTEMID);
-            return;
-        }
-
-        std::string entryID = param;
-        dbus::utility::escapePathForDbus(entryID);
-
-        crow::connections::systemBus->async_method_call(
-            [asyncResp, entryID](const boost::system::error_code& ec,
-                                 const sdbusplus::message::unix_fd& unixfd) {
-            if (ec.value() == EBADR)
-            {
-                messages::resourceNotFound(asyncResp->res, "EventLogAttachment",
-                                           entryID);
-                return;
-            }
-            if (ec)
-            {
-                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
-                messages::internalError(asyncResp->res);
-                return;
-            }
-
-            int fd = -1;
-            fd = dup(unixfd);
-            if (fd == -1)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-
-            long long int size = lseek(fd, 0, SEEK_END);
-            if (size == -1)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-
-            // Arbitrary max size of 64kb
-            constexpr int maxFileSize = 65536;
-            if (size > maxFileSize)
-            {
-                BMCWEB_LOG_ERROR("File size exceeds maximum allowed size of {}",
-                                 maxFileSize);
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            std::vector<char> data(static_cast<size_t>(size));
-            long long int rc = lseek(fd, 0, SEEK_SET);
-            if (rc == -1)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            rc = read(fd, data.data(), data.size());
-            if ((rc == -1) || (rc != size))
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            close(fd);
-
-            std::string_view strData(data.data(), data.size());
-            std::string output = crow::utility::base64encode(strData);
-
-            asyncResp->res.addHeader(boost::beast::http::field::content_type,
-                                     "application/octet-stream");
-            asyncResp->res.addHeader(
-                boost::beast::http::field::content_transfer_encoding, "Base64");
-            asyncResp->res.body() = std::move(output);
-        },
-            "xyz.openbmc_project.Logging",
-            "/xyz/openbmc_project/logging/entry/" + entryID,
-            "xyz.openbmc_project.Logging.Entry", "GetEntry");
-    });
-}
 
 inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
                                     nlohmann::json& thisEntry)
@@ -3944,8 +3723,6 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
     });
 }
 
-=======
->>>>>>> master
 constexpr const char* hostLoggerFolderPath = "/var/log/console";
 
 inline bool
@@ -4490,12 +4267,7 @@ inline void requestRoutesBMCJournalLogEntry(App& app)
         {
             return;
         }
-<<<<<<< HEAD
-        // Convert the unique ID back to a timestamp to find the
-        // entry
-=======
         // Convert the unique ID back to a timestamp to find the entry
->>>>>>> master
         sd_id128_t bootID{};
         uint64_t ts = 0;
         uint64_t index = 0;
@@ -6906,14 +6678,9 @@ inline void requestRoutesPostCodesEntryAdditionalData(App& app)
 
             asyncResp->res.addHeader("Content-Type",
                                      "application/octet-stream");
-<<<<<<< HEAD
-            asyncResp->res.addHeader("Content-Transfer-Encoding", "Base64");
-            asyncResp->res.body() = crow::utility::base64encode(strData);
-=======
             asyncResp->res.addHeader(
                 boost::beast::http::field::content_transfer_encoding, "Base64");
             asyncResp->res.write(crow::utility::base64encode(strData));
->>>>>>> master
         },
             "xyz.openbmc_project.State.Boot.PostCode0",
             "/xyz/openbmc_project/State/Boot/PostCode0",

@@ -5,13 +5,10 @@
 #include "error_messages.hpp"
 #include "logging.hpp"
 
-<<<<<<< HEAD
 #include <sdbusplus/server.hpp>
-=======
 #include <nlohmann/json.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/message.hpp>
->>>>>>> master
 #include <sdbusplus/unpack_properties.hpp>
 
 #include <memory>

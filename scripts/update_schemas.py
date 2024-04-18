@@ -120,11 +120,8 @@ include_list = [
     "Privileges",  # Used in Role
     "Processor",
     "ProcessorCollection",
-<<<<<<< HEAD
     "ProcessorMetrics",
-=======
     "Protocol",
->>>>>>> master
     "RedfishError",
     "RedfishExtensions",
     "Redundancy",

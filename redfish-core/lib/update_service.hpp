@@ -39,12 +39,8 @@
 #include "utils/dbus_utils.hpp"
 #include "utils/sw_utils.hpp"
 
-<<<<<<< HEAD
 #include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/case_conv.hpp>
 #include <boost/container/flat_map.hpp>
-=======
->>>>>>> master
 #include <boost/system/error_code.hpp>
 #include <boost/url/format.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -58,12 +54,9 @@
 #include <utils/fw_utils.hpp>
 
 #include <array>
-<<<<<<< HEAD
-=======
 #include <filesystem>
 #include <optional>
 #include <string>
->>>>>>> master
 #include <string_view>
 
 namespace redfish
@@ -116,19 +109,15 @@ inline void cleanUp()
     fwUpdateMatcher = nullptr;
 }
 
-<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-inline static void cleanUpStageObjects()
+inline void cleanUpStageObjects()
 {
     fwImageIsStaging = false;
 }
 #endif
 
-inline static void activateImage(const std::string& objPath,
-=======
 inline void activateImage(const std::string& objPath,
->>>>>>> master
-                                 const std::string& service)
+                          const std::string& service)
 {
     BMCWEB_LOG_DEBUG("Activate image for {} {}", objPath, service);
     sdbusplus::asio::setProperty(
@@ -519,6 +508,11 @@ static void monitorForSoftwareAvailable(
     int timeoutTimeSeconds = fwObjectCreationDefaultTimeout,
     const std::string& imagePath = {})
 {
+    if (req.ioService == nullptr)
+    {
+        messages::internalError(asyncResp->res);
+        return;
+    }
     fwAvailableTimer =
         std::make_unique<boost::asio::steady_timer>(*req.ioService);
 
@@ -654,7 +648,6 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
             BMCWEB_LOG_DEBUG("Missing ImageURI");
             return;
         }
-<<<<<<< HEAD
 
         if (!transferProtocol)
         {
@@ -735,16 +728,6 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
         std::string server = imageURI.substr(0, separator);
         std::string fwFile = imageURI.substr(separator + 1);
         BMCWEB_LOG_DEBUG("Server: {} File: {}", server, fwFile);
-=======
-        std::optional<TftpUrl> ret = parseTftpUrl(imageURI, transferProtocol,
-                                                  asyncResp->res);
-        if (!ret)
-        {
-            return;
-        }
-
-        BMCWEB_LOG_DEBUG("Server: {} File: {}", ret->tftpServer, ret->fwFile);
->>>>>>> master
 
         // Allow only one operation at a time
         if (fwUpdateInProgress != false)
@@ -891,7 +874,6 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                         "xyz.openbmc_project.Common.SCP", "DownloadViaSCP",
                         server, *username, fwFile, *targetPath);
                 },
-<<<<<<< HEAD
                     objInfo[0].first, objName,
                     "org.freedesktop.DBus.Properties", "Get",
                     "xyz.openbmc_project.Common.FilePath", "Path");
@@ -903,11 +885,6 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                     "xyz.openbmc_project.Software.Version",
                     "xyz.openbmc_project.Common.FilePath"});
         }
-=======
-            "xyz.openbmc_project.Software.Download",
-            "/xyz/openbmc_project/software", "xyz.openbmc_project.Common.TFTP",
-            "DownloadViaTFTP", ret->fwFile, ret->tftpServer);
->>>>>>> master
 
         BMCWEB_LOG_DEBUG("Exit UpdateService.SimpleUpdate doPost");
     });
@@ -947,7 +924,6 @@ inline void uploadImageFile(const crow::Request& req,
         return;
     }
 
-<<<<<<< HEAD
     bool hasUpdateFile = false;
 
     for (const FormPart& formpart : parser.mime_fields)
@@ -1220,13 +1196,6 @@ inline void
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
         "/xyz/openbmc_project/software/", static_cast<int32_t>(0),
         std::array<std::string, 1>{"xyz.openbmc_project.Software.Version"});
-=======
-    setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
-                    sdbusplus::message::object_path(
-                        "/xyz/openbmc_project/software/apply_time"),
-                    "xyz.openbmc_project.Software.ApplyTime",
-                    "RequestedApplyTime", "ApplyTime", applyTimeNewVal);
->>>>>>> master
 }
 
 /**
@@ -1288,7 +1257,6 @@ inline bool
                 {
                     nlohmann::json content =
                         nlohmann::json::parse(formpart.content);
-<<<<<<< HEAD
 
                     json_util::readJson(content, asyncResp->res, "Targets",
                                         targets, "@Redfish.OperationApplyTime",
@@ -1439,8 +1407,8 @@ void handleSatBMCResponse(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // The resp will not have a json component
     // We need to create a json from resp's stringResponse
     std::string_view contentType = resp.getHeaderValue("Content-Type");
-    if (boost::iequals(contentType, "application/json") ||
-        boost::iequals(contentType, "application/json; charset=utf-8"))
+    if (bmcweb::asciiIEquals(contentType, "application/json") ||
+        bmcweb::asciiIEquals(contentType, "application/json; charset=utf-8"))
     {
         nlohmann::json jsonVal = nlohmann::json::parse(resp.body(), nullptr,
                                                        false);
@@ -1763,43 +1731,6 @@ inline void processMultipartFormData(
     {
         return;
     }
-=======
-                nlohmann::json::object_t* obj =
-                    content.get_ptr<nlohmann::json::object_t*>();
-                if (obj == nullptr)
-                {
-                    messages::propertyValueFormatError(asyncResp->res, targets,
-                                                       "UpdateParameters");
-                    return;
-                }
-
-                if (!json_util::readJsonObject(
-                        *obj, asyncResp->res, "Targets", targets,
-                        "@Redfish.OperationApplyTime", applyTime))
-                {
-                    return;
-                }
-                if (targets.size() != 1)
-                {
-                    messages::propertyValueFormatError(asyncResp->res, targets,
-                                                       "Targets");
-                    return;
-                }
-                if (targets[0] != "/redfish/v1/Managers/bmc")
-                {
-                    messages::propertyValueNotInList(asyncResp->res, targets[0],
-                                                     "Targets/0");
-                    return;
-                }
-                targetFound = true;
-            }
-            else if (param.second == "UpdateFile")
-            {
-                uploadData = &(formpart.content);
-            }
-        }
-    }
->>>>>>> master
 
     if (!validateUpdateFileFormData(asyncResp, hasFile))
     {
@@ -2002,15 +1933,7 @@ inline void
     BMCWEB_LOG_DEBUG(
         "Execute HTTP POST method '/redfish/v1/UpdateService/update/'");
 
-<<<<<<< HEAD
     if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
-=======
-    BMCWEB_LOG_DEBUG("doPost: contentType={}", contentType);
-
-    // Make sure that content type is application/octet-stream or
-    // multipart/form-data
-    if (bmcweb::asciiIEquals(contentType, "application/octet-stream"))
->>>>>>> master
     {
         return;
     }
@@ -2335,7 +2258,6 @@ inline void requestRoutesUpdateService(App& app)
         }
         BMCWEB_LOG_DEBUG("doPatch...");
 
-<<<<<<< HEAD
         std::optional<nlohmann::json> pushUriOptions;
         std::optional<std::vector<std::string>> imgTargets;
         if (!json_util::readJsonPatch(req, asyncResp->res, "HttpPushUriOptions",
@@ -2359,8 +2281,6 @@ inline void requestRoutesUpdateService(App& app)
 
             if (pushUriApplyTime)
             {
-=======
->>>>>>> master
                 std::optional<std::string> applyTime;
         if (!json_util::readJsonPatch(
                 req, asyncResp->res,
@@ -2377,7 +2297,6 @@ inline void requestRoutesUpdateService(App& app)
                         applyTimeNewVal =
                             "xyz.openbmc_project.Software.ApplyTime.RequestedApplyTimes.Immediate";
                     }
-<<<<<<< HEAD
                     else if (applyTime == "OnReset")
                     {
                         applyTimeNewVal =
@@ -2391,26 +2310,13 @@ inline void requestRoutesUpdateService(App& app)
                             asyncResp->res, *applyTime, "ApplyTime");
                         return;
                     }
-=======
-    });
->>>>>>> master
 
-                    // Set the requested image apply time value
-                    sdbusplus::asio::setProperty(
-                        *crow::connections::systemBus,
-                        "xyz.openbmc_project.Settings",
-                        "/xyz/openbmc_project/software/apply_time",
+                    setDbusProperty(
+                        asyncResp, "xyz.openbmc_project.Settings",
+                        sdbusplus::message::object_path(
+                            "/xyz/openbmc_project/software/apply_time"),
                         "xyz.openbmc_project.Software.ApplyTime",
-                        "RequestedApplyTime", applyTimeNewVal,
-                        [asyncResp](const boost::system::error_code& ec) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        messages::success(asyncResp->res);
-                    });
+                        "RequestedApplyTime", "ApplyTime", applyTimeNewVal);
                 }
             }
 
@@ -5164,7 +5070,7 @@ inline void initiateStagedFirmwareUpdate(
                 // allow them time to complete the
                 // update (probably cycle the
                 // system) if this expires then
-                // task will be cancelled
+                // task will be canceled
                 taskData->extendTimer(std::chrono::hours(5));
                 fwUpdateInProgress = true;
                 return !task::completed;
@@ -5457,6 +5363,11 @@ inline void initiateFirmwarePackage(
 
         if (found)
         {
+            if (req.ioService == nullptr)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
             fwAvailableTimer =
                 std::make_unique<boost::asio::steady_timer>(*req.ioService);
 

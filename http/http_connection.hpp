@@ -273,12 +273,11 @@ class Connection :
         if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
         {
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
-<<<<<<< HEAD
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
             if (!crow::authentication::isOnAllowlist(req->url().path(),
                                                      req->method()) &&
-                thisReq.session == nullptr)
+                req.session == nullptr)
             {
                 BMCWEB_LOG_WARNING("Authentication failed");
                 forward_unauthorized::sendUnauthorized(
@@ -295,18 +294,6 @@ class Connection :
                     self->completeRequest(thisRes);
                 });
                 redfish::handleAccountLocked(user, asyncResp, *req);
-=======
-            if (!crow::authentication::isOnAllowlist(req.url().path(),
-                                                     req.method()) &&
-                req.session == nullptr)
-            {
-                BMCWEB_LOG_WARNING("Authentication failed");
-                forward_unauthorized::sendUnauthorized(
-                    req.url().encoded_path(),
-                    req.getHeaderValue("X-Requested-With"),
-                    req.getHeaderValue("Accept"), res);
-                completeRequest(res);
->>>>>>> master
                 return;
             }
         }
@@ -344,7 +331,7 @@ class Connection :
             handler->handleUpgrade(req, asyncResp, std::move(adaptor));
             return;
         }
-        std::string url(thisReq.target());
+        std::string url(req.target());
         std::size_t dumpPos = url.rfind("Dump");
         std::string_view expected =
             req.getHeaderValue(boost::beast::http::field::if_none_match);
@@ -352,7 +339,6 @@ class Connection :
         {
             res.setExpectedHash(expected);
         }
-<<<<<<< HEAD
 
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
 
@@ -381,14 +367,11 @@ class Connection :
             (satellitesPos == std::string::npos))
         {
             BMCWEB_LOG_DEBUG("upgrade stream connection");
-            handler->handleUpgrade(thisReq, asyncResp, std::move(adaptor));
+            handler->handleUpgrade(req, asyncResp, std::move(adaptor));
             return;
         }
 
-        handler->handle(thisReq, asyncResp);
-=======
         handler->handle(req, asyncResp);
->>>>>>> master
     }
 
     void close()

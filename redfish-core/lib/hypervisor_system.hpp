@@ -756,19 +756,11 @@ inline void handleHypervisorEthernetInterfacePatch(
     }
 
     getHypervisorIfaceData(
-<<<<<<< HEAD
-        ifaceId, [asyncResp, ifaceId, hostName = std::move(hostName),
-                  ipv4StaticAddresses = std::move(ipv4StaticAddresses),
-                  ipv4DHCPEnabled, dhcpv4 = std::move(dhcpv4)](
-                     bool success, const EthernetInterfaceData& ethData,
-                     const std::vector<IPv4AddressData>&) {
-=======
         ifaceId,
         [asyncResp, ifaceId, hostName = std::move(hostName),
          ipv4StaticAddresses = std::move(ipv4StaticAddresses),
          ipv4DHCPEnabled](bool success, const EthernetInterfaceData& ethData,
                           const std::vector<IPv4AddressData>&) mutable {
->>>>>>> master
         if (!success)
         {
             messages::resourceNotFound(asyncResp->res, "EthernetInterface",

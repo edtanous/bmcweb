@@ -1,9 +1,6 @@
 #pragma once
-<<<<<<< HEAD
 #include "http_request.hpp"
-=======
 #include "http_body.hpp"
->>>>>>> master
 #include "logging.hpp"
 #include "utils/hex_utils.hpp"
 
@@ -15,12 +12,9 @@
 
 #include <optional>
 #include <string>
-<<<<<<< HEAD
 
-=======
 #include <string_view>
 #include <utility>
->>>>>>> master
 namespace crow
 {
 

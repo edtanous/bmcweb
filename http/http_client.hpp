@@ -415,13 +415,9 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
 
         // Copy the response into a Response object so that it can be
         // processed by the callback function.
-<<<<<<< HEAD
-        res.stringResponse = parser->release();
+        res.response = parser->release();
         if (callback != nullptr)
         {
-=======
-        res.response = parser->release();
->>>>>>> master
             callback(parser->keep_alive(), connId, res);
         }
         else
@@ -645,17 +641,7 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
         }
     }
 
-<<<<<<< HEAD
-  public:
-    explicit ConnectionInfo(
-        boost::asio::io_context& iocIn, const std::string& idIn,
-        const std::shared_ptr<ConnectionPolicy>& connPolicyIn,
-        boost::urls::url_view hostIn, unsigned int connIdIn) :
-        subId(idIn), connPolicy(connPolicyIn), host(hostIn), connId(connIdIn),
-        resolver(iocIn), conn(iocIn), timer(iocIn)
-=======
     void initializeConnection(bool ssl)
->>>>>>> master
     {
         conn = boost::asio::ip::tcp::socket(ioc);
         if (ssl)

@@ -248,8 +248,9 @@ inline void requestHostEthernetInterfacesRoutes(App& app)
             asyncResp->res.jsonValue["Name"] = "Host Ethernet Interface";
             asyncResp->res.jsonValue["Description"] =
                 "Host Network Interface for port " + ifaceId;
-
+            const std::vector<StaticGatewayData> ipv6GatewayData;
             parseInterfaceData(asyncResp, ifaceId, ethData, ipv4Data, ipv6Data,
+                               ipv6GatewayData,
                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                "/EthernetInterfaces/",
                                false);
