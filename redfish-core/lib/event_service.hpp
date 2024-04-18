@@ -44,15 +44,10 @@ static constexpr const std::array<const char*, 4> supportedRegPrefixes = {
 static constexpr const std::array<const char*, 3> supportedRetryPolicies = {
     "TerminateAfterRetries", "SuspendRetries", "RetryForever"};
 
-#ifdef BMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE
-static constexpr const std::array<const char*, 2> supportedResourceTypes = {
-    "IBMConfigFile", "Task"};
-#else
 static constexpr const std::array<const char*, 11> supportedResourceTypes = {
     "Task",         "AccountService",     "ManagerAccount", "SessionService",
     "EventService", "UpdateService",      "Chassis",        "Systems",
     "Managers",     "CertificateService", "VirtualMedia"};
-#endif
 
 inline void requestRoutesEventService(App& app)
 {
@@ -71,10 +66,9 @@ inline void requestRoutesEventService(App& app)
             "#EventService.v1_7_2.EventService";
         asyncResp->res.jsonValue["Id"] = "EventService";
         asyncResp->res.jsonValue["Name"] = "Event Service";
-#ifdef BMCWEB_ENABLE_SSE
         asyncResp->res.jsonValue["ServerSentEventUri"] =
             "/redfish/v1/EventService/SSE";
-#endif
+
         asyncResp->res.jsonValue["Subscriptions"]["@odata.id"] =
             "/redfish/v1/EventService/Subscriptions";
         asyncResp->res
@@ -96,16 +90,16 @@ inline void requestRoutesEventService(App& app)
         asyncResp->res.jsonValue["RegistryPrefixes"] = supportedRegPrefixes;
         asyncResp->res.jsonValue["ResourceTypes"] = supportedResourceTypes;
 
-        nlohmann::json supportedSSEFilters = {
-            {"EventFormatType", true},        {"MessageId", true},
-            {"MetricReportDefinition", true}, {"RegistryPrefix", true},
-            {"OriginResource", false},        {"ResourceType", false}};
+        nlohmann::json::object_t supportedSSEFilters;
+        supportedSSEFilters["EventFormatType"] = true;
+        supportedSSEFilters["MessageId"] = true;
+        supportedSSEFilters["MetricReportDefinition"] = true;
+        supportedSSEFilters["RegistryPrefix"] = true;
+        supportedSSEFilters["OriginResource"] = false;
+        supportedSSEFilters["ResourceType"] = false;
 
         asyncResp->res.jsonValue["SSEFilterPropertiesSupported"] =
             std::move(supportedSSEFilters);
-
-        asyncResp->res.jsonValue["SubordinateResourcesSupported"] = false;
-        asyncResp->res.jsonValue["IncludeOriginOfConditionSupported"] = true;
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/EventService/")
@@ -190,100 +184,12 @@ inline void requestRoutesSubmitTestEvent(App& app)
         {
             return;
         }
-        std::string messageId;
-        std::optional<int64_t> eventGroupId;
-        std::optional<std::string> eventId;
-        std::optional<std::string> eventTimestamp;
-        std::optional<std::string> message;
-        std::optional<std::vector<std::string>> messageArgs;
-        std::optional<std::string> originOfCondition;
-        std::optional<std::string> severity;
-        // deprecated
-        std::optional<std::string> eventType;
-        (void)eventType;
-
-        if (!json_util::readJsonPatch(
-                req, asyncResp->res, "MessageId", messageId, "EventGroupId",
-                eventGroupId, "EventId", eventId, "EventTimestamp",
-                eventTimestamp, "Message", message, "MessageArgs", messageArgs,
-                "OriginOfCondition", originOfCondition, "Severity", severity,
-                "EventType", eventType))
-        {
-            return;
-        }
-
-        if (!redfish::message_registries::isMessageIdValid(messageId))
-        {
-            messages::propertyValueNotInList(asyncResp->res, messageId,
-                                             "MessageId");
-            return;
-        }
-
-        Event event(messageId);
-        if (eventGroupId)
-        {
-            event.eventGroupId = *eventGroupId;
-        }
-        if (eventId)
-        {
-            event.eventId = *eventId;
-        }
-        if (eventTimestamp)
-        {
-            event.eventTimestamp = *eventTimestamp;
-        }
-        if (message)
-        {
-            if (event.setCustomMsg(*message, *messageArgs) != 0)
-            {
-                BMCWEB_LOG_ERROR("Invalid message or message "
-                                 "arguments.");
-                messages::actionParameterValueError(
-                    asyncResp->res, "MessageArgs", "SubmitTestEvent");
-                return;
-            }
-        }
-        else if (messageArgs)
-        {
-            if (event.setRegistryMsg(*messageArgs) != 0)
-            {
-                BMCWEB_LOG_ERROR("Invalid message arguments.");
-                messages::actionParameterValueError(
-                    asyncResp->res, "MessageArgs", "SubmitTestEvent");
-                return;
-            }
-        }
-        else
-        {
-            std::vector<std::string> noArgs = {};
-            if (event.setRegistryMsg(noArgs) != 0)
-            {
-                BMCWEB_LOG_ERROR("Invalid message arguments.");
-                messages::actionParameterValueError(
-                    asyncResp->res, "MessageArgs", "SubmitTestEvent");
-                return;
-            }
-        }
-
-        if (originOfCondition)
-        {
-            event.originOfCondition = *originOfCondition;
-        }
-        if (severity)
-        {
-            event.messageSeverity = *severity;
-        }
-
-        if (!persistent_data::EventServiceStore::getInstance()
-                 .getEventServiceConfig()
-                 .enabled)
+        if (!EventServiceManager::getInstance().sendTestEventLog())
         {
             messages::serviceDisabled(asyncResp->res,
                                       "/redfish/v1/EventService/");
             return;
         }
-
-        EventServiceManager::getInstance().sendEvent(event);
         asyncResp->res.result(boost::beast::http::status::no_content);
     });
 }
@@ -386,18 +292,8 @@ inline void requestRoutesEventDestinationCollection(App& app)
         std::optional<std::vector<std::string>> msgIds;
         std::optional<std::vector<std::string>> regPrefixes;
         std::optional<std::vector<std::string>> resTypes;
-<<<<<<< HEAD
-        std::optional<std::vector<nlohmann::json>> headers;
-        std::optional<std::vector<nlohmann::json>> mrdJsonArray;
-        std::optional<std::vector<std::string>> originResources;
-        std::optional<bool> includeOriginOfCondition;
-        // deprecated
-        std::optional<std::vector<std::string>> eventTypes;
-        (void)eventTypes;
-=======
         std::optional<std::vector<nlohmann::json::object_t>> headers;
         std::optional<std::vector<nlohmann::json::object_t>> mrdJsonArray;
->>>>>>> master
 
         if (!json_util::readJsonPatch(
                 req, asyncResp->res, "Destination", destUrl, "Context", context,
@@ -405,8 +301,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 "EventFormatType", eventFormatType2, "HttpHeaders", headers,
                 "RegistryPrefixes", regPrefixes, "MessageIds", msgIds,
                 "DeliveryRetryPolicy", retryPolicy, "MetricReportDefinitions",
-                mrdJsonArray, "ResourceTypes", resTypes, "OriginResources",
-                originResources, "EventTypes", eventTypes))
+                mrdJsonArray, "ResourceTypes", resTypes))
         {
             return;
         }
@@ -422,10 +317,10 @@ inline void requestRoutesEventDestinationCollection(App& app)
 
         if (regPrefixes && msgIds)
         {
-            if (regPrefixes->size() && msgIds->size())
+            if (!regPrefixes->empty() && !msgIds->empty())
             {
-                messages::mutualExclusiveProperties(
-                    asyncResp->res, "RegistryPrefixes", "MessageIds");
+                messages::propertyValueConflict(asyncResp->res, "MessageIds",
+                                                "RegistryPrefixes");
                 return;
             }
         }
@@ -597,14 +492,14 @@ inline void requestRoutesEventDestinationCollection(App& app)
                     // the colon and space between. example:
                     // "key": "value"
                     cumulativeLen += item.first.size() + value->size() + 6;
-                // This value is selected to mirror http_connection.hpp
-                constexpr const uint16_t maxHeaderSizeED = 8096;
-                if (cumulativeLen > maxHeaderSizeED)
-                {
+                    // This value is selected to mirror http_connection.hpp
+                    constexpr const uint16_t maxHeaderSizeED = 8096;
+                    if (cumulativeLen > maxHeaderSizeED)
+                    {
                         messages::arraySizeTooLong(
                             asyncResp->res, "HttpHeaders", maxHeaderSizeED);
-                    return;
-                }
+                        return;
+                    }
                     subValue->httpHeaders.set(item.first, *value);
                 }
             }
@@ -671,7 +566,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
                             registry,
                             [&id](const redfish::registries::MessageEntry&
                                       messageEntry) {
-                        return !id.compare(messageEntry.first);
+                        return id == messageEntry.first;
                     }))
                     {
                         validId = true;
@@ -712,52 +607,15 @@ inline void requestRoutesEventDestinationCollection(App& app)
             for (nlohmann::json::object_t& mrdObj : *mrdJsonArray)
             {
                 std::string mrdUri;
-<<<<<<< HEAD
-                if (json_util::getValueFromJsonObject(mrdObj, "@odata.id",
-                                                      mrdUri))
-=======
 
                 if (!json_util::readJsonObject(mrdObj, asyncResp->res,
                                                "@odata.id", mrdUri))
 
->>>>>>> master
                 {
-                    subValue->metricReportDefinitions.emplace_back(mrdUri);
-                }
-                else
-                {
-                    messages::propertyValueFormatError(
-                        asyncResp->res,
-                        mrdObj.dump(2, ' ', true,
-                                    nlohmann::json::error_handler_t::replace),
-                        "MetricReportDefinitions");
                     return;
                 }
+                subValue->metricReportDefinitions.emplace_back(mrdUri);
             }
-        }
-
-        if (originResources)
-        {
-            for (const std::string& it : *originResources)
-            {
-                // TODO Check for each origin resource.
-                if (it.empty())
-                {
-                    messages::propertyValueNotInList(asyncResp->res, it,
-                                                     "OriginResources");
-                    return;
-                }
-            }
-            subValue->originResources = *originResources;
-        }
-
-        if (includeOriginOfCondition)
-        {
-            subValue->includeOriginOfCondition = *includeOriginOfCondition;
-        }
-        else
-        {
-            subValue->includeOriginOfCondition = true;
         }
 
         std::string id =
@@ -826,14 +684,13 @@ inline void requestRoutesEventDestination(App& app)
         asyncResp->res.jsonValue["ResourceTypes"] = subValue->resourceTypes;
         asyncResp->res.jsonValue["MessageIds"] = subValue->registryMsgIds;
         asyncResp->res.jsonValue["DeliveryRetryPolicy"] = subValue->retryPolicy;
-        asyncResp->res.jsonValue["OriginResources"] = subValue->originResources;
-        asyncResp->res.jsonValue["IncludeOriginOfCondition"] =
-            subValue->includeOriginOfCondition;
 
-        std::vector<nlohmann::json> mrdJsonArray;
+        nlohmann::json::array_t mrdJsonArray;
         for (const auto& mdrUri : subValue->metricReportDefinitions)
         {
-            mrdJsonArray.push_back({{"@odata.id", mdrUri}});
+            nlohmann::json::object_t mdr;
+            mdr["@odata.id"] = mdrUri;
+            mrdJsonArray.emplace_back(std::move(mdr));
         }
         asyncResp->res.jsonValue["MetricReportDefinitions"] = mrdJsonArray;
     });
@@ -900,15 +757,14 @@ inline void requestRoutesEventDestination(App& app)
                             "HttpHeaders/" + it.first);
                         return;
                     }
-<<<<<<< HEAD
-                    fields.set(it.key(), *value);
+                    fields.set(it.first, *value);
                     keyValues += it.key();
                     keyValues.push_back(':');
                     keyValues += *value;
                     keyValues.push_back(' ');
                 }
             }
-            subValue->httpHeaders = fields;
+            subValue->httpHeaders = std::move(fields);
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
             // Send an event for property change
             Event event =
@@ -917,12 +773,6 @@ inline void requestRoutesEventDestination(App& app)
             redfish::EventServiceManager::getInstance().sendEventWithOOC(
                 std::string(req.target()), event);
 #endif
-=======
-                    fields.set(it.first, *value);
-                }
-            }
-            subValue->httpHeaders = std::move(fields);
->>>>>>> master
         }
 
         if (retryPolicy)
