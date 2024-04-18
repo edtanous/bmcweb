@@ -434,7 +434,6 @@ inline void encryptCredentials(const std::string& filename,
     auto fp = fopen(filename.c_str(), "r");
     if (fp == nullptr)
     {
-<<<<<<< HEAD
         BMCWEB_LOG_ERROR("Cannot open filename for reading: {}", filename);
         return;
     }
@@ -504,10 +503,6 @@ inline void ensureOpensslKeyPresentEncryptedAndValid(
     {
         BMCWEB_LOG_ERROR("Error in verifying signature, regenerating");
         generateSslCertificate(filepath, "testhost", pwd);
-=======
-        BMCWEB_LOG_WARNING("Error in verifying signature, regenerating");
-        generateSslCertificate(filepath, "testhost");
->>>>>>> master
     }
 }
 
