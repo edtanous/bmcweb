@@ -256,7 +256,7 @@ inline void requestHostEthernetInterfacesRoutes(App& app)
 
                         parseInterfaceData(asyncResp, ifaceId, ethData,
                                            ipv4Data, ipv6Data, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                            "/EthernetInterfaces/", false);
+                                            "/EthernetInterfaces/");
                     });
             });
 }
