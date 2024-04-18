@@ -455,6 +455,7 @@ inline void doMountVmLegacy(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 {
     int fd = -1;
     std::shared_ptr<CredentialsPipe> secretPipe;
+    dbus::utility::DbusVariantType unixFd = -1;
     if (!userName.empty() || !password.empty())
     {
         // Payload must contain data + NULL delimiters
@@ -470,6 +471,7 @@ inline void doMountVmLegacy(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         secretPipe = std::make_shared<CredentialsPipe>(
             crow::connections::systemBus->get_io_context());
         fd = secretPipe->fd();
+        unixFd = static_cast<sdbusplus::message::unix_fd>(fd);
 
         // Pass secret over pipe
         secretPipe->asyncWrite(
@@ -483,9 +485,6 @@ inline void doMountVmLegacy(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
             });
     }
-
-    dbus::utility::DbusVariantType unixFd(
-        std::in_place_type<sdbusplus::message::unix_fd>, fd);
 
     sdbusplus::message::object_path path(
         "/xyz/openbmc_project/VirtualMedia/Legacy");
@@ -701,7 +700,7 @@ inline void handleManagersVirtualMediaActionInsertPost(
     }
 
     constexpr std::string_view action = "VirtualMedia.InsertMedia";
-    if (name != "bmc")
+    if (name != PLATFORMBMCID)
     {
         messages::resourceNotFound(asyncResp->res, action, resName);
 
@@ -779,7 +778,7 @@ inline void handleManagersVirtualMediaActionEject(
     }
 
     constexpr std::string_view action = "VirtualMedia.EjectMedia";
-    if (managerName != "bmc")
+    if (managerName != PLATFORMBMCID)
     {
         messages::resourceNotFound(asyncResp->res, action, resName);
 
