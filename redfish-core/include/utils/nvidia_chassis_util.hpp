@@ -1143,11 +1143,6 @@ inline void handleChassisGetAllProperties(
     manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
     managedBy.emplace_back(std::move(manager));
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
-    // if (!operationalStatusPresent)
-    // {
-    //     getChassisState(asyncResp);
-    // }
-    // getStorageLink(asyncResp, path);
 }
 
 inline void getIntrusionByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,

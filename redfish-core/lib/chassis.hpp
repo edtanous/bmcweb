@@ -676,6 +676,11 @@ inline void handleChassisGetSubTree(
             redfish::nvidia_chassis_utils::handleChassisGetAllProperties(
                 asyncResp, chassisId, path, propertiesList,
                 operationalStatusPresent);
+            if (!operationalStatusPresent)
+            {
+                getChassisState(asyncResp);
+            }
+            getStorageLink(asyncResp, path);
         });
 
         for (const auto& interface : interfaces2)
