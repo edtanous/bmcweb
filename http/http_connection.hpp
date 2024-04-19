@@ -275,15 +275,15 @@ class Connection :
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
-            if (!crow::authentication::isOnAllowlist(req->url().path(),
-                                                     req->method()) &&
+            if (!crow::authentication::isOnAllowlist(req.url().path(),
+                                                     req.method()) &&
                 req.session == nullptr)
             {
                 BMCWEB_LOG_WARNING("Authentication failed");
                 forward_unauthorized::sendUnauthorized(
-                    req->url().encoded_path(),
-                    req->getHeaderValue("X-Requested-With"),
-                    req->getHeaderValue("Accept"), res);
+                    req.url().encoded_path(),
+                    req.getHeaderValue("X-Requested-With"),
+                    req.getHeaderValue("Accept"), res);
 
                 std::string user = getUser(*req);
                 auto asyncResp =
@@ -293,7 +293,7 @@ class Connection :
                     [self(shared_from_this())](crow::Response& thisRes) {
                     self->completeRequest(thisRes);
                 });
-                redfish::handleAccountLocked(user, asyncResp, *req);
+                redfish::handleAccountLocked(user, asyncResp, req);
                 return;
             }
         }

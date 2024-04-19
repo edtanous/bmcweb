@@ -174,7 +174,6 @@ class App
   private:
     std::shared_ptr<boost::asio::io_context> io;
     uint16_t portUint = 80;
-#endif
     int socketFd = -1;
     Router router;
 
