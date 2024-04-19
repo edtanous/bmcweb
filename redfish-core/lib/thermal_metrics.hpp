@@ -1,7 +1,6 @@
 #pragma once
-<<<<<<< HEAD
-#include "bmcweb_config.h"
 
+#include "bmcweb_config.h"
 #include "sensors.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/time_utils.hpp"
@@ -401,20 +400,8 @@ inline void processSensorServices(
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
         "/xyz/openbmc_project/sensors", 2, sensorInterface);
-=======
+}
 
-#include "app.hpp"
-#include "query.hpp"
-#include "registries/privilege_registry.hpp"
-#include "utils/chassis_utils.hpp"
-
-#include <functional>
-#include <memory>
-#include <optional>
-#include <string>
-
-namespace redfish
-{
 inline void
     doThermalMetrics(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& chassisId,
@@ -475,14 +462,18 @@ inline void
     redfish::chassis_utils::getValidChassisPath(
         asyncResp, chassisId,
         std::bind_front(doThermalMetrics, asyncResp, chassisId));
->>>>>>> master
 }
 
 inline void requestRoutesThermalMetrics(App& app)
 {
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Chassis/<str>/ThermalSubsystem/ThermalMetrics/")
-<<<<<<< HEAD
+        .privileges(redfish::privileges::headThermalMetrics)
+        .methods(boost::beast::http::verb::head)(
+            std::bind_front(handleThermalMetricsHead, std::ref(app)));
+
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Chassis/<str>/ThermalSubsystem/ThermalMetrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -522,6 +513,10 @@ inline void requestRoutesThermalMetrics(App& app)
                     continue;
                 }
                 // Process response
+
+                asyncResp->res.addHeader(
+                    boost::beast::http::field::link,
+                    "</redfish/v1/JsonSchemas/ThermalMetrics/ThermalMetrics.json>; rel=describedby");
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#ThermalMetrics.v1_0_0.ThermalMetrics";
                 asyncResp->res.jsonValue["@odata.id"] =
@@ -545,16 +540,5 @@ inline void requestRoutesThermalMetrics(App& app)
             "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
             "/xyz/openbmc_project/inventory", 0, interface);
     });
-=======
-        .privileges(redfish::privileges::headThermalMetrics)
-        .methods(boost::beast::http::verb::head)(
-            std::bind_front(handleThermalMetricsHead, std::ref(app)));
-
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Chassis/<str>/ThermalSubsystem/ThermalMetrics/")
-        .privileges(redfish::privileges::getThermalMetrics)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(handleThermalMetricsGet, std::ref(app)));
->>>>>>> master
 }
 } // namespace redfish
