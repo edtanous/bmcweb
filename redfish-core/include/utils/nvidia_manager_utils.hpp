@@ -90,8 +90,8 @@ inline void
                 subtree) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("Error while getting manager service state");
-            messages::internalError(asyncResp->res);
+            // if platform doesn't support FeatureReady iface then report state
+            // based on upstream only no failure reported
             return;
         }
         if (!subtree.empty())

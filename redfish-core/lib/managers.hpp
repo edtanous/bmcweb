@@ -20,12 +20,9 @@
 
 #include "app.hpp"
 #include "dbus_utility.hpp"
-<<<<<<< HEAD
 #include "health.hpp"
 #include "persistentstorage_util.hpp"
-=======
 #include "query.hpp"
->>>>>>> master
 #include "redfish_util.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"
@@ -335,21 +332,14 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
         }
         BMCWEB_LOG_DEBUG("Post ResetToDefaults.");
 
-<<<<<<< HEAD
-        std::string resetType;
         std::string ifnameFactoryReset =
             "xyz.openbmc_project.Common.FactoryReset";
-
-        if (!redfish::json_util::readJsonAction(
-                req, asyncResp->res, "ResetToDefaultsType", resetType))
-=======
         std::optional<std::string> resetType;
         std::optional<std::string> resetToDefaultsType;
 
         if (!json_util::readJsonAction(req, asyncResp->res, "ResetType",
                                        resetType, "ResetToDefaultsType",
                                        resetToDefaultsType))
->>>>>>> master
         {
             BMCWEB_LOG_DEBUG("Missing property ResetType.");
 
@@ -2275,29 +2265,6 @@ struct GetPIDValues : std::enable_shared_from_this<GetPIDValues>
 
 struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
 {
-<<<<<<< HEAD
-    SetPIDValues(const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn,
-                 nlohmann::json& data) : asyncResp(asyncRespIn)
-    {
-        std::optional<nlohmann::json> pidControllers;
-        std::optional<nlohmann::json> fanControllers;
-        std::optional<nlohmann::json> fanZones;
-        std::optional<nlohmann::json> stepwiseControllers;
-
-        if (!redfish::json_util::readJson(
-                data, asyncResp->res, "PidControllers", pidControllers,
-                "FanControllers", fanControllers, "FanZones", fanZones,
-                "StepwiseControllers", stepwiseControllers, "Profile", profile))
-        {
-            return;
-        }
-        configuration.emplace_back("PidControllers", std::move(pidControllers));
-        configuration.emplace_back("FanControllers", std::move(fanControllers));
-        configuration.emplace_back("FanZones", std::move(fanZones));
-        configuration.emplace_back("StepwiseControllers",
-                                   std::move(stepwiseControllers));
-    }
-=======
     SetPIDValues(
         const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn,
         std::vector<
@@ -2308,7 +2275,6 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
         configuration(std::move(configurationsIn)),
         profile(std::move(profileIn))
     {}
->>>>>>> master
 
     SetPIDValues(const SetPIDValues&) = delete;
     SetPIDValues(SetPIDValues&&) = delete;
@@ -2922,7 +2888,6 @@ inline void
     });
 }
 
-<<<<<<< HEAD
 inline void setServiceIdentification(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                      std::string sysId)
 {
@@ -2960,9 +2925,6 @@ inline void getServiceIdentification(
     });
 }
 
-inline void setDateTime(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
-                        std::string datetime)
-=======
 inline void
     afterSetDateTime(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const boost::system::error_code& ec,
@@ -2994,7 +2956,6 @@ inline void
 
 inline void setDateTime(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::string& datetime)
->>>>>>> master
 {
     BMCWEB_LOG_DEBUG("Set date time: {}", datetime);
 
@@ -3381,8 +3342,6 @@ inline void requestRoutesManager(App& app)
         asyncResp->res.jsonValue["Description"] =
             "Baseboard Management Controller";
         asyncResp->res.jsonValue["PowerState"] = "On";
-        // get BMC manager state
-        sw_util::getBmcState(asyncResp);
         asyncResp->res.jsonValue["Status"]["State"] = "Starting";
         asyncResp->res.jsonValue["Status"]["Health"] = "OK";
 
@@ -3917,13 +3876,8 @@ inline void requestRoutesManager(App& app)
         }
         std::optional<std::string> activeSoftwareImageOdataId;
         std::optional<std::string> datetime;
-<<<<<<< HEAD
+        std::optional<nlohmann::json> oem;
         std::optional<std::string> serviceIdentification;
-
-        if (!redfish::json_util::readJsonPatch(
-                req, asyncResp->res, "Oem", oem, "DateTime", datetime, "Links",
-                links, "ServiceIdentification", serviceIdentification))
-=======
         std::optional<nlohmann::json::object_t> pidControllers;
         std::optional<nlohmann::json::object_t> fanControllers;
         std::optional<nlohmann::json::object_t> fanZones;
@@ -3938,49 +3892,33 @@ inline void requestRoutesManager(App& app)
               "Oem/OpenBmc/Fan/FanZones", fanZones,
               "Oem/OpenBmc/Fan/PidControllers", pidControllers,
               "Oem/OpenBmc/Fan/Profile", profile,
-              "Oem/OpenBmc/Fan/StepwiseControllers", stepwiseControllers
+              "Oem/OpenBmc/Fan/StepwiseControllers", stepwiseControllers,
+              "Oem", oem, "DateTime", datetime, "ServiceIdentification", serviceIdentification
         ))
->>>>>>> master
         {
             return;
         }
         // clang-format on
-
+        
         if (pidControllers || fanControllers || fanZones ||
             stepwiseControllers || profile)
         {
-<<<<<<< HEAD
-            std::optional<nlohmann::json> openbmc;
-            std::optional<nlohmann::json> nvidia;
-            if (!redfish::json_util::readJson(*oem, asyncResp->res, "OpenBmc",
-                                              openbmc, "Nvidia", nvidia))
-=======
 #ifdef BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
             std::vector<
                 std::pair<std::string, std::optional<nlohmann::json::object_t>>>
                 configuration;
             if (pidControllers)
->>>>>>> master
             {
                 configuration.emplace_back("PidControllers",
                                            std::move(pidControllers));
             }
             if (fanControllers)
             {
-<<<<<<< HEAD
-#ifdef BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
-                std::optional<nlohmann::json> fan;
-                if (!redfish::json_util::readJson(*openbmc, asyncResp->res,
-                                                  "Fan", fan))
-                {
-                    return;
-=======
                 configuration.emplace_back("FanControllers",
                                            std::move(fanControllers));
->>>>>>> master
-                }
+            }
             if (fanZones)
-                {
+            {
                 configuration.emplace_back("FanZones", std::move(fanZones));
             }
             if (stepwiseControllers)
@@ -3991,20 +3929,43 @@ inline void requestRoutesManager(App& app)
             auto pid = std::make_shared<SetPIDValues>(
                 asyncResp, std::move(configuration), profile);
                     pid->run();
-<<<<<<< HEAD
-                }
+#else
+            messages::propertyUnknown(asyncResp->res, "Oem");
+            return;
 #endif
+        }
+
+        if (activeSoftwareImageOdataId)
+        {
+            setActiveFirmwareImage(asyncResp, *activeSoftwareImageOdataId);
+        }
+
+        if (datetime)
+        {
+            setDateTime(asyncResp, *datetime);
+        }
+        if (serviceIdentification)
+        {
+            setServiceIdentification(asyncResp,
+                                     std::move(*serviceIdentification));
+        }
+
+        if (oem)
+        {
+            std::optional<nlohmann::json> nvidia;
+            if (!redfish::json_util::readJson(*oem, asyncResp->res, "Nvidia",
+                                              nvidia))
+            {
+                return;
             }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             if (nvidia)
             {
                 std::optional<std::string> privilege;
                 std::optional<bool> tlsAuth;
-                std::optional<nlohmann::json> persistentStorageSettings;
                 if (!redfish::json_util::readJson(
                         *nvidia, asyncResp->res, "AuthenticationTLSRequired",
-                        tlsAuth, "SMBPBIFencingPrivilege", privilege,
-                        "PersistentStorageSettings", persistentStorageSettings))
+                        tlsAuth, "SMBPBIFencingPrivilege", privilege))
                 {
                     BMCWEB_LOG_ERROR(
                         "Illegal Property {}",
@@ -4077,54 +4038,10 @@ inline void requestRoutesManager(App& app)
                     }
                 }
 #endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
-                if (persistentStorageSettings)
-                {
-                    handleUpdateServicePersistentStoragePatch(req, true,
-                                                              asyncResp);
-                }
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         }
 
-        if (links)
-        {
-            std::optional<nlohmann::json> activeSoftwareImage;
-            if (!redfish::json_util::readJson(*links, asyncResp->res,
-                                              "ActiveSoftwareImage",
-                                              activeSoftwareImage))
-            {
-                return;
-            }
-            if (activeSoftwareImage)
-            {
-                std::optional<std::string> odataId;
-                if (!redfish::json_util::readJson(*activeSoftwareImage,
-                                                  asyncResp->res, "@odata.id",
-                                                  odataId))
-                {
-                    return;
-=======
-#else
-            messages::propertyUnknown(asyncResp->res, "Oem");
-            return;
-#endif
-        }
-
-        if (activeSoftwareImageOdataId)
-        {
-            setActiveFirmwareImage(asyncResp, *activeSoftwareImageOdataId);
->>>>>>> master
-                }
-
-        if (datetime)
-        {
-            setDateTime(asyncResp, *datetime);
-        }
-        if (serviceIdentification)
-        {
-            setServiceIdentification(asyncResp,
-                                     std::move(*serviceIdentification));
-        }
     });
 }
 
