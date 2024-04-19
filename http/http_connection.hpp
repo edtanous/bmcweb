@@ -285,7 +285,7 @@ class Connection :
                     req.getHeaderValue("X-Requested-With"),
                     req.getHeaderValue("Accept"), res);
 
-                std::string user = getUser(*req);
+                std::string user = getUser(req);
                 auto asyncResp =
                     std::make_shared<bmcweb::AsyncResp>(std::move(res));
                 BMCWEB_LOG_DEBUG("Setting completion handler");

@@ -7626,7 +7626,8 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
 
         asyncResp->res.addHeader("Content-Type", "application/octet-stream");
         asyncResp->res.addHeader("Content-Transfer-Encoding", "Binary");
-        asyncResp->res.body() = debugTokenData[id];
+        std::string data = debugTokenData[id];
+        asyncResp->res.write(std::move(data));
     });
 }
 

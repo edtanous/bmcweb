@@ -926,7 +926,7 @@ inline void getChassisDimensions(std::shared_ptr<bmcweb::AsyncResp> aResp,
 
 inline void handleChassisGetAllProperties(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisId, const std::string& path,
+    const std::string& chassisId, const std::string& /*path*/,
     const dbus::utility::DBusPropertiesMap& propertiesList,
     const bool operationalStatusPresent)
 {
@@ -1143,11 +1143,69 @@ inline void handleChassisGetAllProperties(
     manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
     managedBy.emplace_back(std::move(manager));
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
-    if (!operationalStatusPresent)
-    {
-        getChassisState(asyncResp);
-    }
-    getStorageLink(asyncResp, path);
+    // if (!operationalStatusPresent)
+    // {
+    //     getChassisState(asyncResp);
+    // }
+    // getStorageLink(asyncResp, path);
+}
+
+inline void getIntrusionByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
+                                  const std::string& service,
+                                  const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG("Get intrusion status by service ");
+
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, service, objPath,
+        "xyz.openbmc_project.Chassis.Intrusion", "Status",
+        [asyncResp{std::move(asyncResp)}](const boost::system::error_code& ec,
+                                          const std::string& value) {
+        if (ec)
+        {
+            // do not add err msg in redfish response, because this is not
+            //     mandatory property
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
+            return;
+        }
+
+        asyncResp->res.jsonValue["PhysicalSecurity"]["IntrusionSensorNumber"] =
+            1;
+        asyncResp->res.jsonValue["PhysicalSecurity"]["IntrusionSensor"] = value;
+        });
+}
+
+/**
+ * Retrieves physical security properties over dbus
+ */
+inline void
+    getPhysicalSecurityData(std::shared_ptr<bmcweb::AsyncResp> asyncResp)
+{
+    constexpr std::array<std::string_view, 1> interfaces = {
+        "xyz.openbmc_project.Chassis.Intrusion"};
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project", 0, interfaces,
+        [asyncResp{std::move(asyncResp)}](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetSubTreeResponse& subtree) {
+        if (ec)
+        {
+            // do not add err msg in redfish response, because this is not
+            //     mandatory property
+            BMCWEB_LOG_INFO("DBUS error: no matched iface {}", ec);
+            return;
+        }
+        // Iterate over all retrieved ObjectPaths.
+        for (const auto& object : subtree)
+        {
+            if (!object.second.empty())
+            {
+                const auto service = object.second.front();
+                getIntrusionByService(asyncResp, service.first, object.first);
+                return;
+            }
+        }
+        });
 }
 
 } // namespace nvidia_chassis_utils

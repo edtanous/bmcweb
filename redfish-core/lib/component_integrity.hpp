@@ -25,7 +25,7 @@
 #include <utils/chassis_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/stl_utils.hpp>
-
+#include <boost/format.hpp>
 namespace redfish
 {
 

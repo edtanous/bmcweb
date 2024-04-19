@@ -3375,7 +3375,7 @@ inline void requestRoutesOperatingConfigCollection(App& app)
                     "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"};
                 collection_util::getCollectionMembers(
                     asyncResp, boost::urls::url(operationConfiguuri),
-                    interfaces, object.c_str());
+                    interface, object.c_str());
                 return;
             }
         },
@@ -3552,7 +3552,7 @@ inline void requestRoutesProcessor(App& app)
         if (!redfish::json_util::readJsonAction(
                 req, asyncResp->res, "SpeedLimitMHz", speedLimit, "SpeedLocked",
                 speedLocked, "AppliedOperatingConfig/@odata.id",
-                appliedConfigJson, "Oem", oemObject))
+                appliedConfigUri, "Oem", oemObject))
             {
                 return;
             }
@@ -3633,9 +3633,16 @@ inline void requestRoutesProcessor(App& app)
             // Check for 404 and find matching D-Bus object, then run
             // property patch handlers if that all succeeds.
             redfish::processor_utils::getProcessorObject(
-                asyncResp, processorId, std::bind_front(patchAppliedOperatingConfig,
-                                               asyncResp, processorId,                                               
-                                               *appliedConfigUri));
+                asyncResp, processorId,
+                [appliedConfigUri = std::move(appliedConfigUri)](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& processorId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                patchAppliedOperatingConfig(asyncResp1, processorId1,
+                                            *appliedConfigUri, objectPath,
+                                            serviceMap);
+            });
         }
     });
 }

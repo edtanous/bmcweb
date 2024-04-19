@@ -1525,7 +1525,7 @@ inline void processAfterCreateUser(
                     3 + (0.09 * static_cast<double>(strlen(password.c_str()))));
             }
             std::string resolution =
-                "Password should be " + std::to_string(minPassLength) +
+                "Password should be " + std::to_string(minPasswordLength) +
                 " character long including " +
                 std::to_string(minUcaseCharacters) + " uppercase character, " +
                 std::to_string(minLcaseCharacters) + " lower case character, " +

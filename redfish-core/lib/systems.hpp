@@ -45,6 +45,7 @@
 #include <utils/istmode_utils.hpp>
 #include <utils/privilege_utils.hpp>
 #include <utils/sw_utils.hpp>
+#include <utils/nvidia_systems_util.hpp>
 
 #include <array>
 #include <memory>

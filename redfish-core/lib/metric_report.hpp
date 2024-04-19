@@ -6,7 +6,7 @@
 #include "dbus_utility.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
-//#include "thermal_metrics.hpp"
+#include "thermal_metrics.hpp"
 #include "utils/collection.hpp"
 #include "utils/metric_report_utils.hpp"
 #include "utils/telemetry_utils.hpp"

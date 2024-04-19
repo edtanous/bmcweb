@@ -714,7 +714,7 @@ inline void handleChassisGetSubTree(
             // Link association to parent chassis
             redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
                                                                objPath);
-            getPhysicalSecurityData(asyncResp);
+            redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
             return;
     }
 

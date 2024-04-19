@@ -742,7 +742,7 @@ inline void requestRoutesEventDestination(App& app)
 
         if (headers)
         {
-            std::string keyValues;
+            std::string keyValues;            
             boost::beast::http::fields fields;
             for (const nlohmann::json::object_t& headerChunk : *headers)
             {
@@ -758,10 +758,10 @@ inline void requestRoutesEventDestination(App& app)
                         return;
                     }
                     fields.set(it.first, *value);
-                    keyValues += it.key();
+                    keyValues += it.first;
                     keyValues.push_back(':');
                     keyValues += *value;
-                    keyValues.push_back(' ');
+                    keyValues.push_back(' ');                    
                 }
             }
             subValue->httpHeaders = std::move(fields);

@@ -212,6 +212,7 @@ add_project_arguments(
     '-Wno-error=deprecated-declarations',
     '-Wno-attributes',
     '-Wno-error=deprecated-declarations',    
+    '-Wno-comment',
   language:'cpp')
 endif
 
@@ -236,6 +237,8 @@ if (cxx.get_id() == 'gcc')
    # '-Wshadow',
    # '-Wno-psabi',
     '-Wno-attributes',
+    '-Wno-error=deprecated-declarations',      
+    '-Wno-comment',
     language:'cpp')
 endif
 

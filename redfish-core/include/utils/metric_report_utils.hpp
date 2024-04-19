@@ -2,6 +2,7 @@
 #include <utils/chassis_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/port_utils.hpp>
+#include "utils/time_utils.hpp"
 
 // Inline function to check if a key-value pair json object already exists in
 // the JSON array
