@@ -210,6 +210,8 @@ add_project_arguments(
     '-Wno-unused-macros',
     '-Wno-covered-switch-default',
     '-Wno-error=deprecated-declarations',
+    '-Wno-attributes',
+    '-Wno-error=deprecated-declarations',    
   language:'cpp')
 endif
 
