@@ -44,16 +44,13 @@ inline void doThermalSubsystemCollection(
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Fans"]["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans", chassisId);
-<<<<<<< HEAD
 #endif
-=======
 
     asyncResp->res.jsonValue["ThermalMetrics"]["@odata.id"] =
         boost::urls::format(
             "/redfish/v1/Chassis/{}/ThermalSubsystem/ThermalMetrics",
             chassisId);
 
->>>>>>> master
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
 #ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
