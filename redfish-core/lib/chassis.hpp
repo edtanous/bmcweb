@@ -486,24 +486,6 @@ inline void handleChassisGetSubTree(
 #endif // BMCWEB_DISABLE_HEALTH_ROLLUP
         });
         health->start();
-#else
-        auto health = std::make_shared<HealthPopulate>(asyncResp);
-
-        if constexpr (bmcwebEnableHealthPopulate)
-        {
-            dbus::utility::getAssociationEndPoints(
-                path + "/all_sensors",
-                [health](const boost::system::error_code& ec2,
-                         const dbus::utility::MapperEndPoints& resp) {
-                if (ec2)
-                {
-                    return; // no sensors = no failures
-                }
-                health->inventory = resp;
-            });
-
-            health->populate();
-        }
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
         if (connectionNames.empty())

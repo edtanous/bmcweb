@@ -928,7 +928,7 @@ inline void handleChassisGetAllProperties(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisId, const std::string& /*path*/,
     const dbus::utility::DBusPropertiesMap& propertiesList,
-    const bool operationalStatusPresent)
+    [[maybe_unused]] const bool operationalStatusPresent)
 {
     const std::string* partNumber = nullptr;
     const std::string* serialNumber = nullptr;

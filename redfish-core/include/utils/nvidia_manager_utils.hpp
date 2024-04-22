@@ -1,6 +1,7 @@
 
 #include <async_resp.hpp>
 #include <sdbusplus/asio/connection.hpp>
+#include <utils/chassis_utils.hpp>
 namespace redfish
 {
 

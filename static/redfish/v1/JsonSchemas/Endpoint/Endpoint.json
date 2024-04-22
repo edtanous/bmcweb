@@ -1,8 +1,8 @@
 {
-    "$id": "http://redfish.dmtf.org/schemas/v1/Endpoint.v1_8_0.json",
+    "$id": "http://redfish.dmtf.org/schemas/v1/Endpoint.v1_8_1.json",
     "$ref": "#/definitions/Endpoint",
     "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
-    "copyright": "Copyright 2014-2022 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
+    "copyright": "Copyright 2014-2023 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
     "definitions": {
         "Actions": {
             "additionalProperties": false,
@@ -319,7 +319,7 @@
             ],
             "enumDescriptions": {
                 "AccelerationFunction": "The entity is an acceleration function realized through a device, such as an FPGA.",
-                "Bridge": "The entity is a PCI(e) bridge.",
+                "Bridge": "The entity is a PCIe bridge.",
                 "CXLDevice": "The entity is a CXL logical device.",
                 "DisplayController": "The entity is a display controller.",
                 "Drive": "The entity is a drive.",
@@ -330,7 +330,7 @@
                 "MemoryChunk": "The entity is a memory chunk.",
                 "NetworkController": "The entity is a network controller.",
                 "Processor": "The entity is a processor.",
-                "RootComplex": "The entity is a PCI(e) root complex.",
+                "RootComplex": "The entity is a PCIe root complex.",
                 "StorageExpander": "The entity is a storage expander.",
                 "StorageInitiator": "The entity is a storage initiator.",
                 "StorageSubsystem": "The entity is a storage subsystem.",
@@ -339,7 +339,7 @@
             },
             "enumLongDescriptions": {
                 "AccelerationFunction": "This value shall indicate the entity this endpoint represents is an acceleration function.  The EntityLink property, if present, should be of type AccelerationFunction.",
-                "Bridge": "This value shall indicate the entity this endpoint represents is a PCI(e) bridge.",
+                "Bridge": "This value shall indicate the entity this endpoint represents is a PCIe bridge.",
                 "CXLDevice": "This value shall indicate the entity this endpoint represents is a CXL logical device.  The EntityLink property, if present, should be of type CXLLogicalDevice.",
                 "DisplayController": "This value shall indicate the entity this endpoint represents is a display controller.",
                 "Drive": "This value shall indicate the entity this endpoint represents is a drive.  The EntityLink property, if present, should be of type Drive.",
@@ -350,7 +350,7 @@
                 "MemoryChunk": "This value shall indicate the entity this endpoint represents is a memory chunk.  The EntityLink property, if present, should be of type MemoryChunk.",
                 "NetworkController": "This value shall indicate the entity this endpoint represents is a network controller.  The EntityLink property, if present, should be of type NetworkDeviceFunction or EthernetInterface.",
                 "Processor": "This value shall indicate the entity this endpoint represents is a processor.  The EntityLink property, if present, should be of type Processor.",
-                "RootComplex": "This value shall indicate the entity this endpoint represents is a PCI(e) root complex.  The EntityLink property, if present, should be of type ComputerSystem.",
+                "RootComplex": "This value shall indicate the entity this endpoint represents is a PCIe root complex.  The EntityLink property, if present, should be of type ComputerSystem.",
                 "StorageExpander": "This value shall indicate the entity this endpoint represents is a storage expander.  The EntityLink property, if present, should be of type Chassis.",
                 "StorageInitiator": "This value shall indicate the entity this endpoint represents is a storage initiator.  The EntityLink property, if present, should be of type StorageController.",
                 "StorageSubsystem": "This value shall indicate the entity this endpoint represents is a storage subsystem.  The EntityLink property, if present, should be of type Storage.",
@@ -509,11 +509,11 @@
                 },
                 "Port": {
                     "description": "The UDP or TCP port number used by the endpoint.",
-                    "longDescription": "This property shall contain an specify UDP or TCP port number used for communication with the endpoint.",
+                    "longDescription": "This property shall contain a specified UDP or TCP port number used for communication with the endpoint.",
                     "maximum": 65535,
                     "minimum": 0,
                     "readonly": true,
-                    "type": "number",
+                    "type": "integer",
                     "versionAdded": "v1_1_0"
                 },
                 "TransportProtocol": {
@@ -764,5 +764,5 @@
     },
     "owningEntity": "DMTF",
     "release": "2022.3",
-    "title": "#Endpoint.v1_8_0.Endpoint"
+    "title": "#Endpoint.v1_8_1.Endpoint"
 }

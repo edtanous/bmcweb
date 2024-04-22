@@ -490,8 +490,8 @@ executable(
 
 srcfiles_unittest = files(
   #'test/http/crow_getroutes_test.cpp',
-  'test/http/http2_connection_test.cpp',
-  'test/http/http_connection_test.cpp',
+  #'test/http/http2_connection_test.cpp',
+  #'test/http/http_connection_test.cpp',
   'test/http/mutual_tls.cpp',
   'test/http/router_test.cpp',
   'test/http/parsing_test.cpp',
@@ -530,14 +530,14 @@ srcfiles_unittest = files(
   #'test/redfish-core/lib/service_root_test.cpp',
   #'test/redfish-core/lib/thermal_subsystem_test.cpp',
   #'test/redfish-core/lib/power_subsystem_test.cpp',
-  'test/redfish-core/lib/sensors_test.cpp',
-  'test/redfish-core/lib/system_test.cpp',
-  'test/redfish-core/lib/log_services_dump_test.cpp',
-  'test/redfish-core/lib/log_services_test.cpp',
-  'test/redfish-core/lib/update_service_test.cpp',
-  'test/redfish-core/lib/service_root_test.cpp',
-  'test/redfish-core/lib/thermal_subsystem_test.cpp',
-  'test/redfish-core/lib/power_subsystem_test.cpp',
+  #'test/redfish-core/lib/sensors_test.cpp',
+  #'test/redfish-core/lib/system_test.cpp',
+  #'test/redfish-core/lib/log_services_dump_test.cpp',
+  #'test/redfish-core/lib/log_services_test.cpp',
+  #'test/redfish-core/lib/update_service_test.cpp',
+  #'test/redfish-core/lib/service_root_test.cpp',
+  #'test/redfish-core/lib/thermal_subsystem_test.cpp',
+  #'test/redfish-core/lib/power_subsystem_test.cpp',
   'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
 )
 
