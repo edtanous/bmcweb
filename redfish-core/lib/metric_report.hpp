@@ -175,7 +175,11 @@ inline void requestRoutesMetricReportCollection(App& app)
             "/redfish/v1/TelemetryService/MetricReports";
         asyncResp->res.jsonValue["Name"] = "Metric Report Collection";
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+        redfish::shmem::getShmemMetricsReportCollection(asyncResp);
+#else
         addMetricReportMembers(asyncResp);
+#endif
         return;
 #endif
         constexpr std::array<std::string_view, 1> interfaces{

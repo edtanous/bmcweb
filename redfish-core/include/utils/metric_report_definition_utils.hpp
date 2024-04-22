@@ -1902,6 +1902,10 @@ return;
 
 inline void getMetricReportCollection(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+    redfish::shmem::getShmemMetricsReportCollection(asyncResp);
+    return;
+#endif
      BMCWEB_LOG_DEBUG("getMetricReportCollection");
      crow::connections::systemBus->async_method_call(
         [asyncResp](boost::system::error_code ec,

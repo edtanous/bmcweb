@@ -485,5 +485,24 @@ getShmemMetricsDefinition(const std::shared_ptr<bmcweb::AsyncResp> &asyncResp,
   }
 }
 
+inline void getShmemMetricsReportCollection(
+    const std::shared_ptr<bmcweb::AsyncResp> &asyncResp) {
+  BMCWEB_LOG_ERROR("Exception while getShmemMetricsReportDefinition");
+  try {
+    const auto &values = tal::TelemetryAggregator::getMrdNamespaces();
+    nlohmann::json &addMembers = asyncResp->res.jsonValue["Members"];
+    for (std::string memoryMetricId : values) {
+      // Get the metric object
+      std::string metricReportDefUriPath =
+        "/redfish/v1/TelemetryService/MetricReportDefinitions/";
+      std::string uripath = metricReportDefUriPath + memoryMetricId;
+      addMembers.push_back({{"@odata.id", uripath}});
+    }
+    asyncResp->res.jsonValue["Members@odata.count"] = addMembers.size();
+  } catch (std::exception const &e) {
+    BMCWEB_LOG_ERROR("Exception while getting MRD: {}", e.what());
+  }
+}
+
 } // namespace shmem
 } // namespace redfish
