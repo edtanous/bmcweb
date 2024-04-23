@@ -65,7 +65,7 @@ void handleGetSubscriptionResp(crow::Response& resp, Callback&& handler)
     if (boost::iequals(contentType, "application/json") ||
         boost::iequals(contentType, "application/json; charset=utf-8"))
     {
-        nlohmann::json jsonVal = nlohmann::json::parse(resp.body(), nullptr,
+        nlohmann::json jsonVal = nlohmann::json::parse(*resp.body(), nullptr,
                                                        false);
         if (jsonVal.is_discarded())
         {

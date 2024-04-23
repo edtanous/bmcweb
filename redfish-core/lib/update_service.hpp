@@ -1400,7 +1400,7 @@ void handleSatBMCResponse(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         static_cast<unsigned>(boost::beast::http::status::accepted))
     {
         asyncResp->res.result(resp.result());
-        asyncResp->res.body() = resp.body();
+        asyncResp->res.copyBody(resp);
         return;
     }
 
@@ -1410,8 +1410,7 @@ void handleSatBMCResponse(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (bmcweb::asciiIEquals(contentType, "application/json") ||
         bmcweb::asciiIEquals(contentType, "application/json; charset=utf-8"))
     {
-        nlohmann::json jsonVal = nlohmann::json::parse(resp.body(), nullptr,
-                                                       false);
+        nlohmann::json jsonVal = nlohmann::json::parse(*resp.body(), nullptr, false);
         if (jsonVal.is_discarded())
         {
             BMCWEB_LOG_ERROR("Error parsing satellite response as JSON");
