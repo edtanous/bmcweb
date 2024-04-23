@@ -160,7 +160,6 @@ class RedfishService
         requestRoutesPowerSupplyCollection(app);
         requestRoutesThermalMetrics(app);
         requestRoutesThermalSubsystem(app);
-        requestRoutesThermalMetrics(app);
         requestRoutesFan(app);
         requestRoutesFanCollection(app);
 #endif
