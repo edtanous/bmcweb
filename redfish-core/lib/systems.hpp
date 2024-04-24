@@ -4147,6 +4147,10 @@ inline void
     getBootProgressLastStateTime(asyncResp);
     getBootOrder(asyncResp);
     getSecureBoot(asyncResp);
+    populateFromEntityManger(asyncResp);
+    getUefiPropertySettingsHost(asyncResp, true);
+    asyncResp->res.jsonValue["Boot"]["BootOrderPropertySelection"] = "BootOrder";
+    asyncResp->res.jsonValue["Boot"]["BootSourceOverrideEnabled@Redfish.AllowableValues"] = {"Once", "Continuous", "Disabled"};
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
     getPCIeDeviceList(asyncResp, "PCIeDevices");
     getHostWatchdogTimer(asyncResp);
@@ -4164,10 +4168,6 @@ inline void
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
     getPowerMode(asyncResp);
     getIdlePowerSaver(asyncResp);
-	populateFromEntityManger(asyncResp);
-    getUefiPropertySettingsHost(asyncResp, true);
-    asyncResp->res.jsonValue["Boot"]["BootOrderPropertySelection"] = "BootOrder";
-    asyncResp->res.jsonValue["Boot"]["BootSourceOverrideEnabled@Redfish.AllowableValues"] = {"Once", "Continuous", "Disabled"};
 #ifdef BMCWEB_ENABLE_DEBUG_INTERFACE
     handleDebugPolicyGet(asyncResp);
 #endif
