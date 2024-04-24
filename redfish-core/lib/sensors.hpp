@@ -950,6 +950,8 @@ inline void objectPropertiesToJson(
         properties.emplace_back(
             "xyz.openbmc_project.Sensor.Threshold.HardShutdown",
             "HardShutdownLow", "/Thresholds/LowerFatal/Reading"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Time.EpochTime", "Elapsed",
+                                "/ReadingTime"_json_pointer);
     }
     else if (sensorType != "power")
     {
@@ -1037,6 +1039,7 @@ inline void objectPropertiesToJson(
             const double* doubleValue = std::get_if<double>(&valueVariant);
             const std::string* stringValue =
                 std::get_if<std::string>(&valueVariant);
+            const uint64_t* uint64Value = std::get_if<uint64_t>(&valueVariant);
             if (doubleValue != nullptr)
             {
                 if (valueName == "MaxAllowableValue" ||
@@ -1090,10 +1093,23 @@ inline void objectPropertiesToJson(
                     sensorJson[key] = value;
                 }
             }
+            else if (uint64Value != nullptr)
+            {
+                if (valueName == "Elapsed")
+                {
+                    static constexpr size_t timeSize{100};
+                    std::array<char, timeSize> time{};
+                    auto stime = static_cast<std::time_t>(*uint64Value);
+                    std::strftime(time.data(), timeSize, "%FT%T%z",
+                                  std::localtime(&stime));
+
+                    sensorJson[key] = time.data();
+                }
+            }
             else
             {
                 BMCWEB_LOG_ERROR(
-                    "Got value interface that wasn't string or double");
+                    "Got value interface that wasn't string, double, or uint64");
                 continue;
             }
         }

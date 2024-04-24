@@ -226,6 +226,8 @@ class RedfishService
         requestRoutesPostCodesEntry(app);
         requestRoutesPostCodesEntryCollection(app);
         requestRoutesDebugToken(app);
+           requestRoutesDebugTokenServiceEntry(app);
+           requestRoutesDebugTokenServiceEntryCollection(app);
         requestRoutesDebugTokenServiceDiagnosticDataCollect(app);
         requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(app);
 

@@ -51,15 +51,15 @@ inline uint8_t hexCharToInt(char ch)
 {
     if (ch >= '0' && ch <= '9')
     {
-        return static_cast<uint8_t>(ch) - '0';
+        return static_cast<uint8_t>(ch - '0');
     }
     if (ch >= 'A' && ch <= 'F')
     {
-        return static_cast<uint8_t>(ch) - 'A' + 10;
+        return static_cast<uint8_t>(ch - 'A' + 10);
     }
     if (ch >= 'a' && ch <= 'f')
     {
-        return static_cast<uint8_t>(ch) - 'a' + 10;
+        return static_cast<uint8_t>(ch - 'a' + 10);
     }
     throw std::invalid_argument("Invalid character for hex");
 }

@@ -162,12 +162,11 @@ inline void getProcessorProperties(
 {
     BMCWEB_LOG_DEBUG("Got {} Cpu properties.", properties.size());
 
-    // TODO: Get Model
-
+    const std::string* family = nullptr;
     const uint16_t* coreCount = nullptr;
 
     const bool success = sdbusplus::unpackPropertiesNoThrow(
-        dbus_utils::UnpackErrorPrinter(), properties, "CoreCount", coreCount);
+        dbus_utils::UnpackErrorPrinter(), properties, "CoreCount", coreCount, "Family", family);
 
     if (!success)
     {
@@ -189,6 +188,11 @@ inline void getProcessorProperties(
         {
             *coreCountJsonPtr += *coreCount;
         }
+    }
+
+    if (family != nullptr)
+    {
+        asyncResp->res.jsonValue["ProcessorSummary"]["Model"] = *family;
     }
 }
 

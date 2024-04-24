@@ -1514,8 +1514,8 @@ class EventServiceManager
             std::shared_ptr<Subscription> entry = it.second;
             bool isSubscribed = false;
             // Search the resourceTypes list for the subscription.
-            // If resourceTypes list is empty, don't filter events
-            // send everything.
+            // If resourceTypes, registryprefix, originResources, registryMsgIds
+            // list is empty, don't filter events send everything.
             if (!entry->resourceTypes.empty())
             {
                 for (const auto& resource : entry->resourceTypes)
@@ -1525,6 +1525,62 @@ class EventServiceManager
                         BMCWEB_LOG_INFO(
                             "ResourceType {} found in the subscribed list",
                             resource);
+                        isSubscribed = true;
+                        break;
+                    }
+                }
+            }
+            else if (!entry->registryPrefixes.empty())
+            {
+                if (eventMessage.contains("MessageId"))
+                {
+                    const std::string& messageId = eventMessage["MessageId"];
+                    std::size_t pos = messageId.find('.');
+                    if (pos != std::string::npos)
+                    {
+                        std::string regiPrefix = messageId.substr(0, pos);
+                        for (const auto& registryPrefix :
+                             entry->registryPrefixes)
+                        {
+                            if (regiPrefix == registryPrefix)
+                            {
+                                BMCWEB_LOG_INFO(
+                                    "RegistryPrefix {} found in the subscribed list",
+                                    registryPrefix);
+                                isSubscribed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (!entry->registryMsgIds.empty())
+            {
+                if (eventMessage.contains("MessageId"))
+                {
+                    const std::string& messageId = eventMessage["MessageId"];
+                    for (const std::string& msgId : entry->registryMsgIds)
+                    {
+                        if (messageId.find(msgId) != std::string::npos)
+                        {
+                            BMCWEB_LOG_INFO(
+                                "registryMsgIds {} found in the subscribed list",
+                                msgId);
+                            isSubscribed = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            else if (!entry->originResources.empty())
+            {
+                for (const auto& originIt : entry->originResources)
+                {
+                    if (originIt == origin)
+                    {
+                        BMCWEB_LOG_INFO(
+                            "originResources {} found in the subscribed list",
+                            origin);
                         isSubscribed = true;
                         break;
                     }

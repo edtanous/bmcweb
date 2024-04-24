@@ -286,6 +286,11 @@ class Connection :
                     req.getHeaderValue("Accept"), res);
 
                 std::string user = getUser(req);
+                if (user.empty())
+                {
+                    completeRequest(res);
+                    return;
+                }                
                 auto asyncResp =
                     std::make_shared<bmcweb::AsyncResp>(std::move(res));
                 BMCWEB_LOG_DEBUG("Setting completion handler");

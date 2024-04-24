@@ -22,6 +22,7 @@ inline void bootModeQuery(const crow::Request& req,
         {
             BMCWEB_LOG_ERROR("Endpoint ID for {} not found", chassisId);
             nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                oem["@odata.type"] = "#NvidiaChassis.v1_1_0.NvidiaChassis";
             oem["ManualBootModeEnabled"] = nullptr;
             messages::resourceErrorsDetectedFormatError(
                 asyncResp->res, "Oem/Nvidia/ManualBootModeEnabled",
@@ -38,6 +39,7 @@ inline void bootModeQuery(const crow::Request& req,
                         uint32_t, const std::string& stdOut, const std::string&,
                         const boost::system::error_code& ec, int errorCode) {
             nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+            oem["@odata.type"] = "#NvidiaChassis.v1_1_0.NvidiaChassis";
             if (ec || errorCode)
             {
                 oem["ManualBootModeEnabled"] = nullptr;

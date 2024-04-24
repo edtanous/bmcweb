@@ -425,6 +425,28 @@ inline void doNDF(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
                 asyncResp->res.jsonValue["Ethernet"]["MACAddress"] = *value;
             }
+            if (propertyName == "InterfaceName")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Cannot read InterfaceName property");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                if (value->find("oob") != 0)
+                {
+                    auto& capabilitiesArray =
+                            asyncResp->res.jsonValue["NetDevFuncCapabilities"];
+                        if (std::find(capabilitiesArray.begin(),
+                                    capabilitiesArray.end(),
+                                    "InfiniBand") == capabilitiesArray.end())
+                        {
+                            capabilitiesArray.push_back("InfiniBand");
+                        }
+                }
+            }
             if (propertyName == "LinkType")
             {
                 const std::string* value =
@@ -434,14 +456,6 @@ inline void doNDF(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     BMCWEB_LOG_ERROR("Cannot read LinkType property");
                     messages::internalError(asyncResp->res);
                     return;
-                }
-                auto& capabilitiesArray =
-                    asyncResp->res.jsonValue["NetDevFuncCapabilities"];
-                if (std::find(capabilitiesArray.begin(),
-                              capabilitiesArray.end(),
-                              "InfiniBand") == capabilitiesArray.end())
-                {
-                    capabilitiesArray.push_back("InfiniBand");
                 }
                 if (value->find("InfiniBand") != std::string::npos)
                     asyncResp->res.jsonValue["NetDevFuncType"] = "InfiniBand";

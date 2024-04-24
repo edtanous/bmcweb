@@ -3401,7 +3401,7 @@ inline void requestRoutesManager(App& app)
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
-        oem["UptimeSeconds"] = [asyncResp]() -> double {
+            oem["Nvidia"]["UptimeSeconds"] = [asyncResp]()->double {
             double uptime = 0;
             auto ifs = std::ifstream("/proc/uptime", std::ifstream::in);
             if (ifs.good())
@@ -3506,7 +3506,7 @@ inline void requestRoutesManager(App& app)
             persistent_data::getConfig().isTLSAuthEnabled();
 #endif
 
-        populatePersistentStorageSettingStatus(req, asyncResp);
+            populatePersistentStorageSettingStatus(asyncResp);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         // Manager.Reset (an action) can be many values, OpenBMC only

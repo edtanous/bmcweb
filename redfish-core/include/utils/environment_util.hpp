@@ -970,7 +970,7 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 inline void getSensorDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& chassisId, const std::string& objPath,
-    const std::string& resourceType)
+    const std::string& resourceType, bool isSupportPowerLimit = false)
 {
     BMCWEB_LOG_DEBUG("Get sensor data.");
     using PropertyType =
@@ -978,7 +978,7 @@ inline void getSensorDataByService(
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     crow::connections::systemBus->async_method_call(
         [aResp, chassisId, resourceType,
-         objPath](const boost::system::error_code ec,
+         objPath, isSupportPowerLimit](const boost::system::error_code ec,
                   const PropertiesMap& properties) {
         if (ec)
         {
@@ -1035,10 +1035,11 @@ inline void getSensorDataByService(
                         {"Reading", *attributeValue},
                         {"DataSourceUri", sensorURI},
                     };
-                    // TODO: section as pick reading from sensor
-                    // association.
+                    if (isSupportPowerLimit == true)
+                    {
                     aResp->res.jsonValue["PowerLimitWatts"]["Reading"] =
                         *attributeValue;
+                }
                 }
                 else if (sensorType == "energy")
                 {
@@ -1096,13 +1097,14 @@ inline void getSensorDataService(
 
 inline void getEnvironmentMetricsDataByService(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
-    const std::string& objPath, const std::string& resourceType)
+    const std::string& objPath, const std::string& resourceType,
+    bool isSupportPowerLimit = false)
 {
     BMCWEB_LOG_DEBUG("Get environment metrics data.");
     // Get parent chassis for sensors URI
     crow::connections::systemBus->async_method_call(
         [aResp, service, resourceType,
-         objPath](const boost::system::error_code ec,
+         objPath, isSupportPowerLimit](const boost::system::error_code ec,
                   std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
@@ -1126,7 +1128,7 @@ inline void getEnvironmentMetricsDataByService(
         const std::string& chassisId = chassisName;
         crow::connections::systemBus->async_method_call(
             [aResp, service, resourceType,
-             chassisId](const boost::system::error_code& e,
+             chassisId, isSupportPowerLimit](const boost::system::error_code& e,
                         std::variant<std::vector<std::string>>& resp) {
             if (e)
             {
@@ -1142,7 +1144,7 @@ inline void getEnvironmentMetricsDataByService(
             for (const std::string& sensorPath : *data)
             {
                 getSensorDataByService(aResp, service, chassisId, sensorPath,
-                                       resourceType);
+                                       resourceType, isSupportPowerLimit);
             }
         },
             "xyz.openbmc_project.ObjectMapper", chassisPath + "/all_sensors",
@@ -1354,6 +1356,10 @@ inline void
                     interfaces.end())
                 {
                     getPowerLimits(aResp, service, path);
+                    // Set the PowerLimit support flag as true to get Power sensor reading by
+                    // getEnvironmentMetricsDataByService()
+                    getEnvironmentMetricsDataByService(aResp, service, path,
+                                                       resourceType, true);
                 }
                 if (std::find(interfaces.begin(), interfaces.end(),
                               "xyz.openbmc_project.Control.Power.Cap") !=

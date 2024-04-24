@@ -821,7 +821,17 @@ class RedfishAggregator
             url.set_path(thisReq.url().path());
             if (thisReq.url().has_query())
             {
-                url.set_query(thisReq.url().query());
+                for (auto v : thisReq.url().params())
+                {
+                    // the parameter, only, can't be passed to
+                    // satBMC. bmcweb will examine the final response
+                    // and check if there is the only one member.
+                    if (v.key == "only")
+                    {
+                        continue;
+                    }
+                    url.params().append({v.key, v.value});
+                }
             }
             std::string data = thisReq.body();
             client.sendDataWithCallback(std::move(data), url, thisReq.fields(),
