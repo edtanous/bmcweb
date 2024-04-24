@@ -182,7 +182,7 @@ inline void
     // https://redmine.mellanox.com/issues/3461424
     asyncResp->res.jsonValue["Name"] = PLATFORMNETWORKADAPTER;
     asyncResp->res.jsonValue["Manufacturer"] = "Nvidia";
-    asyncResp->res.jsonValue["Id"] = "NetworkAdapter";
+    asyncResp->res.jsonValue["Id"] = PLATFORMNETWORKADAPTER;
 
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/NetworkAdapters/" PLATFORMNETWORKADAPTER,

@@ -3336,7 +3336,7 @@ inline void requestRoutesManager(App& app)
         // Process BMC manager
         asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/Managers/" PLATFORMBMCID;
-        asyncResp->res.jsonValue["@odata.type"] = "#Manager.v1_14_0.Manager";
+        asyncResp->res.jsonValue["@odata.type"] = "#Manager.v1_16_0.Manager";
         asyncResp->res.jsonValue["Id"] = PLATFORMBMCID;
         asyncResp->res.jsonValue["Name"] = "OpenBmc Manager";
         asyncResp->res.jsonValue["Description"] =
