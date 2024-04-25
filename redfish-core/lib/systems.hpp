@@ -4025,7 +4025,7 @@ inline void
     asyncResp->res.jsonValue["ProcessorSummary"]["Count"] = 0;
 #endif // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] =
-        double(0);
+        int(0);
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID;
 
