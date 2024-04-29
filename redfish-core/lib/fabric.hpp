@@ -1019,6 +1019,41 @@ inline void getManagerLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 }
 
 /**
+ * @brief Fill the health by association
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getHealthByAssociatedChassis(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath,
+    const std::string& objId)
+{
+    BMCWEB_LOG_DEBUG("Get health by association");
+    crow::connections::systemBus->async_method_call(
+        [aResp, objId](const boost::system::error_code ec,
+                       std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            return; // no managed_by association = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        for (const std::string& path : *data)
+        {
+            redfish::nvidia_chassis_utils::getHealthByAssociation(
+                aResp, path, "all_states", objId);
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+/**
  * @brief Fill out links association to parent chassis by
  * requesting data from the given D-Bus association object.
  *
@@ -1161,6 +1196,8 @@ inline void requestRoutesSwitch(App& app)
                         getSwitchEndpointsLink(asyncResp, path, fabricId);
                         // Link association to manager
                         getManagerLink(asyncResp, path);
+                        //get health by association
+                        getHealthByAssociatedChassis(asyncResp, path, switchId);
 
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                         redfish::conditions_utils::populateServiceConditions(

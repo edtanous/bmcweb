@@ -64,6 +64,118 @@ inline void
         "xyz.openbmc_project.Association", "endpoints");
 }
 
+inline void
+    getHealthByAssociation(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& objPath,
+                           const std::string& association,
+                           const std::string& objId)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, objId](const boost::system::error_code& ec,
+                    std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            // no state sensors attached.
+            return;
+        }
+
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        for (const std::string& sensorPath : *data)
+        {
+            if (!boost::ends_with(sensorPath, objId))
+            {
+                continue;
+            }
+            // Check Interface in Object or not
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, sensorPath](
+                    const boost::system::error_code ec,
+                    const std::vector<std::pair<
+                        std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    // the path does not implement Decorator Health
+                    // interfaces
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                using PropertiesMap = boost::container::flat_map<
+                    std::string, std::variant<std::string, size_t>>;
+                // Get interface properties
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code ec,
+                                const PropertiesMap& properties) {
+                    if (ec)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+
+                    for (const auto& property : properties)
+                    {
+                        const std::string& propertyName = property.first;
+                        if (propertyName == "Health")
+                        {
+                            const std::string* value =
+                                std::get_if<std::string>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_ERROR("Null value returned Health");
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+                            if (*value ==
+                                "xyz.openbmc_project.State.Decorator.Health.HealthType.OK")
+                            {
+                                asyncResp->res.jsonValue["Status"]["Health"] =
+                                    "OK";
+                            }
+                            else if (
+                                *value ==
+                                "xyz.openbmc_project.State.Decorator.Health.HealthType.Warning")
+                            {
+                                asyncResp->res.jsonValue["Status"]["Health"] =
+                                    "Warning";
+                            }
+                            else if (
+                                *value ==
+                                "xyz.openbmc_project.State.Decorator.Health.HealthType.Critical")
+                            {
+                                asyncResp->res.jsonValue["Status"]["Health"] =
+                                    "Critical";
+                            }
+                            else
+                            {
+                                asyncResp->res.jsonValue["Status"]["Health"] =
+                                    "";
+                            }
+                        }
+                    }
+                },
+                    object.front().first, sensorPath,
+                    "org.freedesktop.DBus.Properties", "GetAll",
+                    "xyz.openbmc_project.State.Decorator.Health");
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                std::array<std::string, 1>(
+                    {"xyz.openbmc_project.State.Decorator.Health"}));
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/" + association,
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 /**
  * @brief Fill out processor links association by
  * requesting data from the given D-Bus association object.
@@ -183,6 +295,9 @@ inline void getChassisFabricSwitchesLinks(
             "xyz.openbmc_project.ObjectMapper", objPath + "/all_switches",
             "org.freedesktop.DBus.Properties", "Get",
             "xyz.openbmc_project.Association", "endpoints");
+
+        // get health for switch by association
+        getHealthByAssociation(aResp, objPath, "all_states", fabricId);
     },
         "xyz.openbmc_project.ObjectMapper", objPath + "/fabrics",
         "org.freedesktop.DBus.Properties", "Get",
@@ -839,6 +954,10 @@ inline void
         asyncResp->res.jsonValue["NetworkAdapters"] = {
             {"@odata.id",
              "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
+
+        // get health for network adapter
+        getHealthByAssociation(asyncResp, objPath, "all_states", chassisId);
+
         return;
     }
 
@@ -847,7 +966,7 @@ inline void
     BMCWEB_LOG_ERROR("test networkInterface: {}", objPath);
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, chassisId(std::string(chassisId))](
+        [asyncResp, objPath, chassisId(std::string(chassisId))](
             const boost::system::error_code ec,
             const crow::openbmc_mapper::GetSubTreeType& subtree) {
         if (ec)
@@ -862,6 +981,9 @@ inline void
         asyncResp->res.jsonValue["NetworkAdapters"] = {
             {"@odata.id",
              "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
+
+        // get health for network adapter
+        getHealthByAssociation(asyncResp, objPath, "all_states", chassisId);
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",

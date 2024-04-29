@@ -546,9 +546,9 @@ inline void handleChassisGetSubTree(
             asyncResp->res.jsonValue["Drives"] = std::move(reference);
         });
 
-        const std::string& connectionName = connectionNames[0].first;
+        for (const auto& [connectionName, interfaces2] : connectionNames)
+        {
 
-        const std::vector<std::string>& interfaces2 = connectionNames[0].second;
         const std::array<const char*, 3> hasIndicatorLed = {
             "xyz.openbmc_project.Inventory.Item.Chassis",
             "xyz.openbmc_project.Inventory.Item.Panel",
@@ -634,9 +634,6 @@ inline void handleChassisGetSubTree(
             }
         }
 
-        redfish::nvidia_chassis_utils::getNetworkAdapters(
-            asyncResp, path, interfaces2, chassisId);
-
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         const std::string itemSystemInterface =
             "xyz.openbmc_project.Inventory.Item.System";
@@ -702,7 +699,11 @@ inline void handleChassisGetSubTree(
             redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
                                                                objPath);
             redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
-            return;
+            // get network adapter and its health
+            redfish::nvidia_chassis_utils::getNetworkAdapters(asyncResp, path, interfaces2,
+                                           chassisId);
+        }
+        return;
     }
 
         // Couldn't find an object with that name.  return an error

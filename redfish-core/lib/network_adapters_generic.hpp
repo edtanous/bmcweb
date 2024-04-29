@@ -233,6 +233,10 @@ inline void
 
         for (const std::string& sensorPath : *data)
         {
+            if (!boost::ends_with(sensorPath, networkAdapterId))
+            {
+                continue;
+            }
             // Check Interface in Object or not
             crow::connections::systemBus->async_method_call(
                 [asyncResp, sensorPath, networkAdapterId](
@@ -317,7 +321,7 @@ inline void getAssetData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         std::get_if<std::string>(&property.second);
                     if (value != nullptr)
                     {
-                        asyncResp->res.jsonValue["SerialNumber"] = *value;
+                        asyncResp->res.jsonValue["PartNumber"] = *value;
                     }
                 }
                 else if (propertyName == "Model")
