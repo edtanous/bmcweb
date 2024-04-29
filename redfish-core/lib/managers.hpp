@@ -3330,9 +3330,9 @@ inline void requestRoutesManager(App& app)
              "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
 #endif
 
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         // default oem data
         nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
-#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         nlohmann::json& oemOpenbmc = oem["OpenBmc"];
         oem["@odata.type"] = "#OemManager.Oem";
         oem["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID "#/Oem";

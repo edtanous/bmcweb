@@ -348,7 +348,7 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
     {
         if (metricName == "State")
         {
-            suffix = "/Status/State";
+            suffix = "#/Status/State";
         }
     }
     else
