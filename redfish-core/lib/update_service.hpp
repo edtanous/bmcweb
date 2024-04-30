@@ -1368,7 +1368,7 @@ inline boost::system::error_code
 
 inline crow::ConnectionPolicy getPostAggregationPolicy()
 {
-    return {.maxRetryAttempts = 1,
+    return {.maxRetryAttempts = 0,
             .requestByteLimit = firmwareImageLimitBytes,
             .maxConnections = 20,
             .retryPolicyAction = "TerminateAfterRetries",
