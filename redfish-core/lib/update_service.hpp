@@ -901,7 +901,8 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
 inline void uploadImageFile(const crow::Request& req,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    std::filesystem::path filepath("/tmp/images/" + bmcweb::getRandomUUID());
+    std::filesystem::path filepath(updateServiceImageLocation +
+                                   bmcweb::getRandomUUID());
 
     monitorForSoftwareAvailable(asyncResp, req, fwObjectCreationDefaultTimeout,
                                 filepath);
