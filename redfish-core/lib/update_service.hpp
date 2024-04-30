@@ -1165,7 +1165,7 @@ inline void areTargetsUpdateableCallback(
  * @return None
  */
 inline void
-    areTargetsUpdateable(const crow::Request& req,
+    areTargetsUpdateable(const std::shared_ptr<const crow::Request>& req,
                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::vector<std::string>& uriTargets)
 {
@@ -1187,7 +1187,7 @@ inline void
             [req, asyncResp, uriTargets,
              swInvPaths](const boost::system::error_code ec,
                          const std::vector<std::string>& objPaths) {
-            areTargetsUpdateableCallback(ec, objPaths, req, asyncResp,
+            areTargetsUpdateableCallback(ec, objPaths, *req, asyncResp,
                                          uriTargets, swInvPaths);
         });
     },
@@ -1806,10 +1806,12 @@ inline void processMultipartFormData(
     }
 #endif
 
+    auto sharedReq = std::make_shared<const crow::Request>(req);
+
     setForceUpdate(asyncResp, "/xyz/openbmc_project/software",
                    forceUpdate.value_or(false),
-                   [&req, asyncResp, uriTargets]() {
-        areTargetsUpdateable(req, asyncResp, uriTargets);
+                   [sharedReq, asyncResp, uriTargets]() {
+        areTargetsUpdateable(sharedReq, asyncResp, uriTargets);
     });
 }
 
