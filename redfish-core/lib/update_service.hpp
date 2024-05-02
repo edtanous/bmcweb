@@ -5781,6 +5781,36 @@ inline void
  */
 inline void requestRoutesSplitUpdateService(App& app)
 {
+    BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/")
+        .privileges(redfish::privileges::getUpdateService)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#NvidiaPersistentStorage.v1_0_0.NvidiaPersistentStorage";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage";
+        asyncResp->res.jsonValue["Id"] = "PersistentStorage";
+        asyncResp->res.jsonValue["Name"] = "Persistent Storage Resource";
+        asyncResp->res.jsonValue["StageFirmwarePackageHttpPushUri"] =
+            "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/stage-firmware-package";
+        asyncResp->res.jsonValue["MaxFirmwarePackages"] = 1;
+        asyncResp->res.jsonValue["FirmwarePackages"] = {
+            {"@odata.id",
+             "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/FirmwarePackages"}};
+        asyncResp->res
+            .jsonValue["Actions"]
+                      ["#NvidiaPersistentStorage.InitiateFirmwareUpdate"] = {
+            {"target",
+             "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/Actions/NvidiaPersistentStorage.InitiateFirmwareUpdate"},
+            {"@Redfish.ActionInfo",
+             "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/InitiateFirmwareUpdateActionInfo"}};
+    });
+
     BMCWEB_ROUTE(
         app,
         "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage/stage-firmware-package/")

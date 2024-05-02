@@ -2219,6 +2219,16 @@ class EventServiceManager
                         {
                             deviceName = additional["DEVICE_NAME"];
                         }
+                        //convert SEL SENSOR_PATH to RF OriginOfCondition
+                        if (additional.count("SENSOR_PATH") == 1)
+                        {
+                            originOfCondition = additional["SENSOR_PATH"];
+                        }
+                        if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
+                        {
+                            originOfCondition =
+                                additional["REDFISH_ORIGIN_OF_CONDITION"];
+                        }
                         if (additional.count("REDFISH_LOGENTRY") == 1)
                         {
                             satBMCLogEntryUrl = additional["REDFISH_LOGENTRY"];
@@ -2395,13 +2405,11 @@ class EventServiceManager
                 event.eventResolution = resolution;
                 event.logEntryId = logEntryId;
                 event.satBMCLogEntryUrl = satBMCLogEntryUrl;
-                AdditionalData additional(*additionalDataPtr);
-                if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
+                if (!originOfCondition.empty())
                 {
-                    std::string ooc = additional["REDFISH_ORIGIN_OF_CONDITION"];
                     for (auto& it : dBusToResourceType)
                     {
-                        if (ooc.find(it.first) != std::string::npos)
+                        if (originOfCondition.find(it.first) != std::string::npos)
                         {
                             resourceType = it.second;
                             break;
@@ -2410,8 +2418,13 @@ class EventServiceManager
                     // resourceType empty error case not handled because it will
                     // impact existing resourceErrordetected error messages
                     event.resourceType = resourceType;
-                    eventServiceOOC(additional["REDFISH_ORIGIN_OF_CONDITION"],
-                                    deviceName, event);
+                    eventServiceOOC(originOfCondition, deviceName, event);
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR(
+                        "no OriginOfCondition in event log. MsgId: ", messageId);
+                    sendEventWithOOC(std::string{""}, event);
                 }
             }
         };
