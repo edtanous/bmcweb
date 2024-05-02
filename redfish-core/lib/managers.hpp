@@ -3330,6 +3330,7 @@ inline void requestRoutesManager(App& app)
              "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
 #endif
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         // default oem data
         nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
@@ -3347,11 +3348,10 @@ inline void requestRoutesManager(App& app)
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
         oem["Nvidia"]["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
                                      "/Oem/Nvidia";
-#endif
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
 
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
             oem["Nvidia"]["UptimeSeconds"] = [asyncResp]()->double {
