@@ -3410,7 +3410,7 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
                     // byte sensor data, bb is second byte sensor data, cc is
                     // third byte sensor data
                     messageId = hexCodeEventDir.str() + sensorData;
-                    BMCWEB_LOG_DEBUG("RedFish MessageId: [{}]", messageId);
+                    BMCWEB_LOG_DEBUG("SEL MessageId: [{}]", messageId);
                 }
                 if (additional.count("REDFISH_ORIGIN_OF_CONDITION") > 0)
                 {
