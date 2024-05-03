@@ -199,7 +199,8 @@ class RedfishService
         requestRoutesCableCollection(app);
 // #endif
 #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
-    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)           ||                  \
+    defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
         requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
         requestRoutesSoftwareInventoryCollection(app);

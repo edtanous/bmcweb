@@ -686,6 +686,11 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
         supportedProtocols.push_back("SCP");
 #endif
+#ifdef BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE
+        supportedProtocols.push_back("HTTP");
+        supportedProtocols.push_back("HTTPS");
+#endif
+
         // OpenBMC currently only supports TFTP and SCP
         if (std::find(supportedProtocols.begin(), supportedProtocols.end(),
                       *transferProtocol) == supportedProtocols.end())
@@ -698,7 +703,10 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
             return;
         }
 
-        if ((*transferProtocol == "SCP") && (!targets))
+        if (((*transferProtocol == "SCP") ||
+             (*transferProtocol == "HTTP") ||
+             (*transferProtocol == "HTTPS")) &&
+            (!targets))
         {
             messages::createFailedMissingReqProperties(asyncResp->res,
                                                        "Targets");
@@ -728,7 +736,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
 
         std::string server = imageURI.substr(0, separator);
         std::string fwFile = imageURI.substr(separator + 1);
-        BMCWEB_LOG_DEBUG("Server: {} File: {}", server, fwFile);
+        BMCWEB_LOG_DEBUG("Server: {} File: {} Protocol: {}", server, fwFile, *transferProtocol);
 
         // Allow only one operation at a time
         if (fwUpdateInProgress != false)
@@ -775,7 +783,9 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                 "xyz.openbmc_project.Common.TFTP", "DownloadViaTFTP", fwFile,
                 server);
         }
-        else if (*transferProtocol == "SCP")
+        else if ((*transferProtocol == "SCP") ||
+                 (*transferProtocol == "HTTP") ||
+                 (*transferProtocol == "HTTPS"))
         {
             // Take the first target as only one target is supported
             std::string targetURI = targets.value()[0];
@@ -792,7 +802,8 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
 
             // Search for the version object related to the given target URI
             crow::connections::systemBus->async_method_call(
-                [req, asyncResp, objName, fwFile, server, username](
+                [req, asyncResp, objName, fwFile, server, transferProtocol,
+                 username](
                     const boost::system::error_code ec,
                     const std::vector<std::pair<
                         std::string, std::vector<std::string>>>& objInfo) {
@@ -818,7 +829,7 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                 // Read the version object's FilePath property which holds
                 // the local path used for the update procedure
                 crow::connections::systemBus->async_method_call(
-                    [req, asyncResp, fwFile, server,
+                    [req, asyncResp, fwFile, server, transferProtocol,
                      username](const boost::system::error_code ecPath,
                                const std::variant<std::string>& property) {
                     if (ecPath)
@@ -857,25 +868,49 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                     // Give SCP 10 minutes to detect new software
                     monitorForSoftwareAvailable(asyncResp, req, 600);
 
-                    // Call SCP service. As key-based authentication is used,
-                    // user password is not necessary
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp](const boost::system::error_code ecSCP) {
-                        if (ecSCP)
-                        {
-                            messages::internalError(asyncResp->res);
-                            BMCWEB_LOG_ERROR("error_code = {} error msg = {}",
-                                             ecSCP, ecSCP.message());
-                        }
-                        else
-                        {
-                            BMCWEB_LOG_DEBUG("Call to DownloadViaSCP Success");
-                        }
-                    },
-                        "xyz.openbmc_project.Software.Download",
-                        "/xyz/openbmc_project/software",
-                        "xyz.openbmc_project.Common.SCP", "DownloadViaSCP",
-                        server, *username, fwFile, *targetPath);
+                    if (*transferProtocol == "SCP")
+                    {
+                        // Call SCP service. As passwordless authentication is used,
+                        // user password is not necessary
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp](const boost::system::error_code ecSCP) {
+                            if (ecSCP)
+                            {
+                                messages::internalError(asyncResp->res);
+                                BMCWEB_LOG_ERROR("error_code = {} error msg = {}",
+                                                 ecSCP, ecSCP.message());
+                            }
+                            else
+                            {
+                                BMCWEB_LOG_DEBUG("Call to DownloadViaSCP Success");
+                            }
+                        }, "xyz.openbmc_project.Software.Download",
+                            "/xyz/openbmc_project/software",
+                            "xyz.openbmc_project.Common.SCP", "DownloadViaSCP",
+                            server, *username, fwFile, *targetPath);
+                    }
+		    else if ((*transferProtocol == "HTTP") ||
+                             (*transferProtocol == "HTTPS"))
+                    {
+                        // Call HTTP/HTTPS service
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp](const boost::system::error_code ecH) {
+                            if (ecH)
+                            {
+                                messages::internalError(asyncResp->res);
+                                BMCWEB_LOG_ERROR("error_code = {} error msg = {}",
+                                                 ecH, ecH.message());
+                            }
+                            else
+                            {
+                                BMCWEB_LOG_DEBUG("Call to DownloadViaHTTP Success");
+                            }
+                        }, "xyz.openbmc_project.Software.Download",
+                            "/xyz/openbmc_project/software",
+                            "xyz.openbmc_project.Common.HTTP", "DownloadViaHTTP",
+                            server, (*transferProtocol == "HTTPS"),
+                            fwFile, *targetPath);
+                    }
                 },
                     objInfo[0].first, objName,
                     "org.freedesktop.DBus.Properties", "Get",
@@ -2079,7 +2114,8 @@ inline void requestRoutesUpdateService(App& app)
              "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys"}};
 
 #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
-    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)           ||                  \
+    defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
         // Update Actions object.
         nlohmann::json& updateSvcSimpleUpdate =
             asyncResp->res.jsonValue["Actions"]["#UpdateService.SimpleUpdate"];
@@ -2093,6 +2129,12 @@ inline void requestRoutesUpdateService(App& app)
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
         updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] +=
             "SCP";
+#endif
+#ifdef BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE
+        updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] +=
+            "HTTP";
+        updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] +=
+            "HTTPS";
 #endif
 #endif
         // Get the current ApplyTime value

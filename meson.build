@@ -80,6 +80,7 @@ feature_map = {
   'insecure-push-style-notification'            : '-DBMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING',
   'insecure-tftp-update'                        : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
   'scp-update'                                  : '-DBMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE',
+  'redfish-updateservice-http-pull'             : '-DBMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE',
   'insecure-ignore-content-type'                : '-DBMCWEB_INSECURE_IGNORE_CONTENT_TYPE',
   'kvm'                                         : '-DBMCWEB_ENABLE_KVM' ,
   'mutual-tls-auth'                             : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
