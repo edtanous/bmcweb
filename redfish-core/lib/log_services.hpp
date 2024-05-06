@@ -4879,6 +4879,8 @@ inline void requestRoutesSystemDumpServiceActionInfo(App& app)
             "DiagnosticType=RetLTSSM");
         OEMDiagnosticDataType_allowableValues.push_back(
             "DiagnosticType=RetRegister");
+        OEMDiagnosticDataType_allowableValues.push_back(
+            "DiagnosticType=FirmwareAttributes");
         parameter_OEMDiagnosticDataType["AllowableValues"] =
             std::move(OEMDiagnosticDataType_allowableValues);
 
