@@ -1191,52 +1191,68 @@ inline void handleOemChassisResetActionInfoPost(
         return;
     }
 
-    if (resetType != "AuxPowerCycle")
+    if (resetType != "AuxPowerCycle" && resetType != "AuxPowerCycleForce")
     {
         messages::actionParameterValueError(asyncResp->res, "ResetType",
                                             "NvidiaChassis.AuxPowerReset");
         return;
     }
 
-    // check power status
-    sdbusplus::asio::getProperty<std::string>(
-        *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
-        "/xyz/openbmc_project/state/host0", "xyz.openbmc_project.State.Host",
-        "CurrentHostState",
-        [asyncResp](const boost::system::error_code& ec,
-                    const std::string& hostState) {
-        if (ec)
-        {
-            if (ec == boost::system::errc::host_unreachable)
+    if (resetType == "AuxPowerCycle")
+    {
+        // check power status
+        sdbusplus::asio::getProperty<std::string>(
+            *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
+            "/xyz/openbmc_project/state/host0", "xyz.openbmc_project.State.Host",
+            "CurrentHostState",
+            [asyncResp](const boost::system::error_code& ec,
+                        const std::string& hostState) {
+            if (ec)
             {
-                // Service not available, no error, just don't
-                // return host state info
-                BMCWEB_LOG_DEBUG("Service not available {}", ec);
-                return;
-            }
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        if (hostState == "xyz.openbmc_project.State.Host.HostState.Off")
-        {
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code& ec) {
-                if (ec)
+                if (ec == boost::system::errc::host_unreachable)
                 {
-                    BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
-                    messages::internalError(asyncResp->res);
+                    // Service not available, no error, just don't
+                    // return host state info
+                    BMCWEB_LOG_DEBUG("Service not available {}", ec);
                     return;
                 }
-            },
-                "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-                "org.freedesktop.systemd1.Manager", "StartUnit",
-                "nvidia-aux-power.service", "replace");
-        }
-        else
-        {
-            messages::chassisPowerStateOffRequired(asyncResp->res, "0");
-        }
-    });
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (hostState == "xyz.openbmc_project.State.Host.HostState.Off")
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code& ec) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                   "org.freedesktop.systemd1.Manager", "StartUnit",
+                   "nvidia-aux-power.service", "replace");
+            }
+            else
+            {
+                messages::chassisPowerStateOffRequired(asyncResp->res, "0");
+            }
+        });
+    }
+    else
+    {
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code& ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+        }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+           "org.freedesktop.systemd1.Manager", "StartUnit",
+           "nvidia-aux-power-force.service", "replace");
+    }
 }
 #endif
 
