@@ -1110,6 +1110,14 @@ inline void
                                                  "/attachment";
                 thisEntry["AdditionalDataSizeBytes"] = size;
             }
+            else if (dumpType == "FDR")
+            {
+                thisEntry["DiagnosticDataType"] = "OEM";
+                thisEntry["OEMDiagnosticDataType"] = "FDR";
+                thisEntry["AdditionalDataURI"] =
+                    boost::urls::format("{}{}/attachment", entriesPath, entryID);
+                thisEntry["AdditionalDataSizeBytes"] = size;
+            }
             else if (dumpType == "FaultLog")
             {
                 thisEntry["DiagnosticDataType"] = faultLogDiagnosticDataType;
@@ -1487,6 +1495,14 @@ inline void
                             pcieSlotNumber;
                     }
                 }
+                else if (dumpType == "FDR")
+                {
+                    asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
+                    asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
+                    asyncResp->res.jsonValue["AdditionalDataURI"] = boost::urls::format(
+                        "/redfish/v1/Systems/{}/LogServices/FDR/Entries/{}/attachment",
+                        PLATFORMSYSTEMID, entryID);
+                }
             }
         }
 
@@ -1538,8 +1554,13 @@ inline bool checkSizeLimit(int fd, crow::Response& res)
         return false;
     }
 
+#ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
+    // "The maximum size of FDR dump is 1.5GB
+    constexpr long long int maxFileSize = 1500 * 1024LL * 1024LL;
+#else
     // Arbitrary max size of 20MB to accommodate BMC dumps
     constexpr long long int maxFileSize = 20LL * 1024LL * 1024LL;
+#endif // #ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
     if (size > maxFileSize)
     {
         BMCWEB_LOG_ERROR("File size {} exceeds maximum allowed size of {}",
@@ -1576,11 +1597,12 @@ inline void
     }
 
     // Make sure we know how to process the retrieved entry attachment
-    if ((downloadEntryType != "BMC") && (downloadEntryType != "System"))
+    if ((downloadEntryType != "BMC") && (downloadEntryType != "System") && (downloadEntryType != "FDR"))
     {
         BMCWEB_LOG_ERROR("downloadEntryCallback() invalid entry type: {}",
                          downloadEntryType);
         messages::internalError(asyncResp->res);
+        return;
     }
 
     int fd = -1;
@@ -1606,6 +1628,16 @@ inline void
         }
         asyncResp->res.addHeader(
             boost::beast::http::field::content_transfer_encoding, "Base64");
+        return;
+    } else if (downloadEntryType == "FDR")
+    {
+        if (!asyncResp->res.openFd(fd, bmcweb::EncodingType::Raw))
+        {
+            messages::internalError(asyncResp->res);
+            close(fd);
+            return;
+        }
+
         return;
     }
     if (!asyncResp->res.openFd(fd))
@@ -5297,6 +5329,37 @@ inline void requestRoutesSystemFDREntry(App& app)
             return;
         }
         deleteDumpEntry(asyncResp, param, "FDR");
+    });
+}
+
+inline void requestRoutesSystemFDREntryDownload(App &app)
+{
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/LogServices/FDR/Entries/<str>/attachment/")
+        .privileges(redfish::privileges::getLogEntry)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& entryID) {
+
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+
+        auto downloadDumpEntryHandler =
+            [asyncResp, entryID](const boost::system::error_code& ec,
+                       const sdbusplus::message::unix_fd& unixfd) {
+            downloadEntryCallback(asyncResp, entryID, "FDR", ec, unixfd);
+        };
+
+        sdbusplus::message::object_path entry("/xyz/openbmc_project/dump/fdr/entry");
+        entry /= entryID;
+        crow::connections::systemBus->async_method_call(
+            std::move(downloadDumpEntryHandler), 
+            "xyz.openbmc_project.Dump.Manager",
+            entry,
+            "xyz.openbmc_project.Dump.Entry", "GetFileHandle");
     });
 }
 

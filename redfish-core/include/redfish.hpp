@@ -252,6 +252,7 @@ class RedfishService
         requestRoutesSystemFDRService(app);
         requestRoutesSystemFDREntryCollection(app);
         requestRoutesSystemFDREntry(app);
+        requestRoutesSystemFDREntryDownload(app);
         requestRoutesSystemFDRCreate(app);
         requestRoutesSystemFDRClear(app);
 #endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
