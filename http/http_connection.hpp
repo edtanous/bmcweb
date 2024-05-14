@@ -381,15 +381,19 @@ class Connection :
 #ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
             if (persistent_data::getConfig().isTLSAuthEnabled() &&
                 userSession != nullptr)
+	    {
+		//do not remove user session
+                BMCWEB_LOG_DEBUG("Closing connection");
+	    }
 #else
             if (mtlsSession != nullptr)
-#endif
             {
                 BMCWEB_LOG_DEBUG("{} Removing TLS session: {}", logPtr(this),
                                  mtlsSession->uniqueId);
                 persistent_data::SessionStore::getInstance().removeSession(
                     mtlsSession);
             }
+#endif
         }
         else
         {
