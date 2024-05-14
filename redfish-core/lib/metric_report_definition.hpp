@@ -10,6 +10,7 @@
 #include "utils/dbus_utils.hpp"
 #include "utils/metric_report_definition_utils.hpp"
 #include "utils/metric_report_utils.hpp"
+#include "utils/json_utils.hpp"
 #include "utils/telemetry_utils.hpp"
 #include "utils/time_utils.hpp"
 
@@ -655,7 +656,7 @@ inline bool getChassisSensorNodeFromMetrics(
 class AddReport
 {
   public:
-    AddReport(AddReportArgs argsIn,
+    AddReport(AddReportArgs&& argsIn,
               const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
         asyncResp(asyncRespIn), args(std::move(argsIn))
     {}

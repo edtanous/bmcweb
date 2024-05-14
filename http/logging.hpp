@@ -2,12 +2,6 @@
 
 #include "bmcweb_config.h"
 
-#include <boost/system/error_code.hpp>
-#include <boost/url/pct_string_view.hpp>
-#include <boost/url/string_view.hpp>
-#include <boost/url/url.hpp>
-#include <nlohmann/json.hpp>
-
 #include <bit>
 #include <format>
 #include <iostream>
@@ -15,76 +9,7 @@
 #include <string_view>
 #include <system_error>
 
-// Clang-tidy would rather these be static, but using static causes the template
-// specialization to not function.  Ignore the warning.
 // NOLINTBEGIN(readability-convert-member-functions-to-static, cert-dcl58-cpp)
-template <>
-struct std::formatter<boost::system::error_code>
-{
-    constexpr auto parse(std::format_parse_context& ctx)
-    {
-        return ctx.begin();
-    }
-
-    auto format(const boost::system::error_code& ec, auto& ctx) const
-    {
-        return std::format_to(ctx.out(), "{}", ec.what());
-    }
-};
-
-template <>
-struct std::formatter<boost::urls::pct_string_view>
-{
-    constexpr auto parse(std::format_parse_context& ctx)
-    {
-        return ctx.begin();
-    }
-    auto format(const boost::urls::pct_string_view& msg, auto& ctx) const
-    {
-        return std::format_to(ctx.out(), "{}",
-                              std::string_view(msg.data(), msg.size()));
-    }
-};
-
-template <>
-struct std::formatter<boost::urls::url_view>
-{
-    constexpr auto parse(std::format_parse_context& ctx)
-    {
-        return ctx.begin();
-    }
-    auto format(const boost::urls::url& msg, auto& ctx) const
-    {
-        return std::format_to(ctx.out(), "{}", std::string_view(msg.buffer()));
-    }
-};
-
-template <>
-struct std::formatter<boost::urls::url>
-{
-    constexpr auto parse(std::format_parse_context& ctx)
-    {
-        return ctx.begin();
-    }
-    auto format(const boost::urls::url& msg, auto& ctx) const
-    {
-        return std::format_to(ctx.out(), "{}", std::string_view(msg.buffer()));
-    }
-};
-
-template <>
-struct std::formatter<boost::core::string_view>
-{
-    constexpr auto parse(std::format_parse_context& ctx)
-    {
-        return ctx.begin();
-    }
-    auto format(const boost::core::string_view& msg, auto& ctx) const
-    {
-        return std::format_to(ctx.out(), "{}", std::string_view(msg));
-    }
-};
-
 template <>
 struct std::formatter<void*>
 {
@@ -96,35 +21,6 @@ struct std::formatter<void*>
     {
         return std::format_to(ctx.out(), "{}",
                               std::to_string(std::bit_cast<size_t>(ptr)));
-    }
-};
-
-template <>
-struct std::formatter<nlohmann::json::json_pointer>
-{
-    constexpr auto parse(std::format_parse_context& ctx)
-    {
-        return ctx.begin();
-    }
-    auto format(const nlohmann::json::json_pointer& ptr, auto& ctx) const
-    {
-        return std::format_to(ctx.out(), "{}", ptr.to_string());
-    }
-};
-
-template <>
-struct std::formatter<nlohmann::json>
-{
-    static constexpr auto parse(std::format_parse_context& ctx)
-    {
-        return ctx.begin();
-    }
-    auto format(const nlohmann::json& json, auto& ctx) const
-    {
-        return std::format_to(
-            ctx.out(), "{}",
-            json.dump(-1, ' ', false,
-                      nlohmann::json::error_handler_t::replace));
     }
 };
 // NOLINTEND(readability-convert-member-functions-to-static, cert-dcl58-cpp)
@@ -158,20 +54,7 @@ constexpr crow::LogLevel getLogLevelFromName(std::string_view name)
 
 // configured bmcweb LogLevel
 constexpr crow::LogLevel bmcwebCurrentLoggingLevel =
-    getLogLevelFromName(bmcwebLoggingLevel);
-
-struct FormatString
-{
-    std::string_view str;
-    std::source_location loc;
-
-    // NOLINTNEXTLINE(google-explicit-constructor)
-    FormatString(const char* stringIn, const std::source_location& locIn =
-                                        std::source_location::current()) :
-        str(stringIn),
-        loc(locIn)
-    {}
-};
+    getLogLevelFromName(BMCWEB_LOGGING_LEVEL);
 
 template <typename T>
 const void* logPtr(T p)
@@ -181,8 +64,9 @@ const void* logPtr(T p)
     return std::bit_cast<const void*>(p);
 }
 
-template <LogLevel level>
-inline void vlog(const FormatString& format, const std::format_args& args)
+template <LogLevel level, typename... Args>
+inline void vlog(std::format_string<Args...>&& format, Args&&... args,
+                 const std::source_location& loc) noexcept
 {
     if constexpr (bmcwebCurrentLoggingLevel < level)
     {
@@ -192,47 +76,114 @@ inline void vlog(const FormatString& format, const std::format_args& args)
     static_assert(stringIndex < mapLogLevelFromName.size(),
                   "Missing string for level");
     constexpr std::string_view levelString = mapLogLevelFromName[stringIndex];
-    std::string_view filename = format.loc.file_name();
+    std::string_view filename = loc.file_name();
     filename = filename.substr(filename.rfind('/') + 1);
-    std::cout << std::format("[{} {}:{}] ", levelString, filename,
-                             format.loc.line())
-              << std::vformat(format.str, args) << '\n'
-              << std::flush;
+    std::string logLocation;
+    try
+    {
+        // TODO, multiple static analysis tools flag that this could potentially
+        // throw Based on the documentation, it shouldn't throw, so long as none
+        // of the formatters throw, so unclear at this point why this try/catch
+        // is required, but add it to silence the static analysis tools.
+        logLocation = std::format("[{} {}:{}] ", levelString, filename,
+                                  loc.line());
+        logLocation += std::format(std::move(format),
+                                   std::forward<Args>(args)...);
+    }
+    catch (const std::format_error& /*error*/)
+    {
+        logLocation += "Failed to format";
+        // Nothing more we can do here if logging is broken.
+    }
+    logLocation += '\n';
+    // Intentionally ignore error return.
+    fwrite(logLocation.data(), sizeof(std::string::value_type),
+           logLocation.size(), stdout);
+    fflush(stdout);
 }
 } // namespace crow
 
 template <typename... Args>
-inline void BMCWEB_LOG_CRITICAL(const crow::FormatString& format,
-                                Args&&... args)
+struct BMCWEB_LOG_CRITICAL
 {
-    crow::vlog<crow::LogLevel::Critical>(
-        format, std::make_format_args(std::forward<Args>(args)...));
-}
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    BMCWEB_LOG_CRITICAL(std::format_string<Args...> format, Args&&... args,
+                        const std::source_location& loc =
+                            std::source_location::current()) noexcept
+    {
+        crow::vlog<crow::LogLevel::Critical, Args...>(
+            std::move(format), std::forward<Args>(args)..., loc);
+    }
+};
 
 template <typename... Args>
-inline void BMCWEB_LOG_ERROR(const crow::FormatString& format, Args&&... args)
+struct BMCWEB_LOG_ERROR
 {
-    crow::vlog<crow::LogLevel::Error>(
-        format, std::make_format_args(std::forward<Args>(args)...));
-}
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    BMCWEB_LOG_ERROR(std::format_string<Args...> format, Args&&... args,
+                     const std::source_location& loc =
+                         std::source_location::current()) noexcept
+    {
+        crow::vlog<crow::LogLevel::Error, Args...>(
+            std::move(format), std::forward<Args>(args)..., loc);
+    }
+};
 
 template <typename... Args>
-inline void BMCWEB_LOG_WARNING(const crow::FormatString& format, Args&&... args)
+struct BMCWEB_LOG_WARNING
 {
-    crow::vlog<crow::LogLevel::Warning>(
-        format, std::make_format_args(std::forward<Args>(args)...));
-}
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    BMCWEB_LOG_WARNING(std::format_string<Args...> format, Args&&... args,
+                       const std::source_location& loc =
+                           std::source_location::current()) noexcept
+    {
+        crow::vlog<crow::LogLevel::Warning, Args...>(
+            std::move(format), std::forward<Args>(args)..., loc);
+    }
+};
 
 template <typename... Args>
-inline void BMCWEB_LOG_INFO(const crow::FormatString& format, Args&&... args)
+struct BMCWEB_LOG_INFO
 {
-    crow::vlog<crow::LogLevel::Info>(
-        format, std::make_format_args(std::forward<Args>(args)...));
-}
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    BMCWEB_LOG_INFO(std::format_string<Args...> format, Args&&... args,
+                    const std::source_location& loc =
+                        std::source_location::current()) noexcept
+    {
+        crow::vlog<crow::LogLevel::Info, Args...>(
+            std::move(format), std::forward<Args>(args)..., loc);
+    }
+};
 
 template <typename... Args>
-inline void BMCWEB_LOG_DEBUG(const crow::FormatString& format, Args&&... args)
+struct BMCWEB_LOG_DEBUG
 {
-    crow::vlog<crow::LogLevel::Debug>(
-        format, std::make_format_args(std::forward<Args>(args)...));
-}
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    BMCWEB_LOG_DEBUG(std::format_string<Args...> format, Args&&... args,
+                     const std::source_location& loc =
+                         std::source_location::current()) noexcept
+    {
+        crow::vlog<crow::LogLevel::Debug, Args...>(
+            std::move(format), std::forward<Args>(args)..., loc);
+    }
+};
+
+template <typename... Args>
+BMCWEB_LOG_CRITICAL(std::format_string<Args...>, Args&&...)
+    -> BMCWEB_LOG_CRITICAL<Args...>;
+
+template <typename... Args>
+BMCWEB_LOG_ERROR(std::format_string<Args...>, Args&&...)
+    -> BMCWEB_LOG_ERROR<Args...>;
+
+template <typename... Args>
+BMCWEB_LOG_WARNING(std::format_string<Args...>, Args&&...)
+    -> BMCWEB_LOG_WARNING<Args...>;
+
+template <typename... Args>
+BMCWEB_LOG_INFO(std::format_string<Args...>, Args&&...)
+    -> BMCWEB_LOG_INFO<Args...>;
+
+template <typename... Args>
+BMCWEB_LOG_DEBUG(std::format_string<Args...>, Args&&...)
+    -> BMCWEB_LOG_DEBUG<Args...>;

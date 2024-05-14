@@ -9,10 +9,12 @@
 #include "routing.hpp"
 #include "utility.hpp"
 
+#include <systemd/sd-daemon.h>
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
-#include <boost/beast/ssl/ssl_stream.hpp>
+#include <boost/asio/ssl/stream.hpp>
 
 #include <chrono>
 #include <cstdint>
@@ -31,10 +33,12 @@ namespace crow
 class App
 {
   public:
-    using ssl_socket_t = boost::beast::ssl_stream<boost::asio::ip::tcp::socket>;
-    using ssl_server_t = Server<App, ssl_socket_t>;
-    using socket_t = boost::asio::ip::tcp::socket;
-    using server_t = Server<App, socket_t>;
+    using ssl_socket_t = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
+    using raw_socket_t = boost::asio::ip::tcp::socket;
+
+    using socket_type = std::conditional_t<BMCWEB_INSECURE_DISABLE_SSL,
+                                           raw_socket_t, ssl_socket_t>;
+    using server_type = Server<App, socket_type>;
 
     explicit App(std::shared_ptr<boost::asio::io_context> ioIn =
                      std::make_shared<boost::asio::io_context>()) :
@@ -58,14 +62,14 @@ class App
     App& operator=(const App&&) = delete;
 
     template <typename Adaptor>
-    void handleUpgrade(Request& req,
+    void handleUpgrade(const std::shared_ptr<Request>& req,
                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        Adaptor&& adaptor)
     {
         router.handleUpgrade(req, asyncResp, std::forward<Adaptor>(adaptor));
     }
 
-    void handle(Request& req,
+    void handle(const std::shared_ptr<Request>& req,
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
         router.handle(req, asyncResp);
@@ -82,40 +86,50 @@ class App
         return router.newRuleTagged<Tag>(std::move(rule));
     }
 
-    App& socket(int existingSocket)
-    {
-        socketFd = existingSocket;
-        return *this;
-    }
-
-    App& port(std::uint16_t port)
-    {
-        portUint = port;
-        return *this;
-    }
-
     void validate()
     {
         router.validate();
     }
 
-    void run()
+    std::optional<boost::asio::ip::tcp::acceptor> setupSocket()
     {
+<<<<<<< HEAD
         validate();
 #ifdef BMCWEB_ENABLE_SSL
         if (persistent_data::getConfig().isTLSAuthEnabled())
         {
             BMCWEB_LOG_DEBUG("TLS RUN");
             if (-1 == socketFd)
+=======
+        if (io == nullptr)
+>>>>>>> master
             {
-            sslServer = std::make_unique<ssl_server_t>(this, portUint,
-                                                       sslContext, io);
+            BMCWEB_LOG_CRITICAL("IO was nullptr?");
+            return std::nullopt;
             }
-            else
+        constexpr int defaultPort = 18080;
+        int listenFd = sd_listen_fds(0);
+        if (listenFd == 1)
             {
-                sslServer = std::make_unique<ssl_server_t>(this, socketFd,
-                                                           sslContext, io);
+            BMCWEB_LOG_INFO("attempting systemd socket activation");
+            if (sd_is_socket_inet(SD_LISTEN_FDS_START, AF_UNSPEC, SOCK_STREAM,
+                                  1, 0) != 0)
+            {
+                BMCWEB_LOG_INFO("Starting webserver on socket handle {}",
+                                SD_LISTEN_FDS_START);
+                return boost::asio::ip::tcp::acceptor(
+                    *io, boost::asio::ip::tcp::v6(), SD_LISTEN_FDS_START);
             }
+            BMCWEB_LOG_ERROR(
+                "bad incoming socket, starting webserver on port {}",
+                defaultPort);
+        }
+        BMCWEB_LOG_INFO("Starting webserver on port {}", defaultPort);
+        return boost::asio::ip::tcp::acceptor(
+            *io, boost::asio::ip::tcp::endpoint(
+                     boost::asio::ip::make_address("0.0.0.0"), defaultPort));
+            }
+<<<<<<< HEAD
             sslServer->run();
         }
         else
@@ -123,16 +137,30 @@ class App
         {
             BMCWEB_LOG_DEBUG("HTTP RUN");
             if (-1 == socketFd)
+=======
+
+    void run()
+>>>>>>> master
             {
-            server = std::make_unique<server_t>(this, portUint, nullptr, io);
-            }
-            else
+        validate();
+
+        std::optional<boost::asio::ip::tcp::acceptor> acceptor = setupSocket();
+        if (!acceptor)
             {
+<<<<<<< HEAD
                 server = std::make_unique<server_t>(this, socketFd, nullptr,
                                                     io);
+=======
+            BMCWEB_LOG_CRITICAL("Couldn't start server");
+            return;
+>>>>>>> master
             }
+        server.emplace(this, std::move(*acceptor), sslContext, io);
             server->run();
+<<<<<<< HEAD
         }
+=======
+>>>>>>> master
     }
 
     void stop()
@@ -173,6 +201,7 @@ class App
 
   private:
     std::shared_ptr<boost::asio::io_context> io;
+<<<<<<< HEAD
     uint16_t portUint = 80;
     int socketFd = -1;
     Router router;
@@ -181,6 +210,12 @@ class App
     std::unique_ptr<ssl_server_t> sslServer;
 #endif
     std::unique_ptr<server_t> server;
+=======
+
+    std::optional<server_type> server;
+
+    Router router;
+>>>>>>> master
 };
 } // namespace crow
 using App = crow::App;

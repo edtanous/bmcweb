@@ -120,8 +120,8 @@ class ConnectionImpl : public Connection
         // SSE stream header sent, So let us setup monitor.
         // Any read data on this stream will be error in case of SSE.
         adaptor.async_read_some(boost::asio::buffer(buffer),
-                           std::bind_front(&ConnectionImpl::afterReadError,
-                                           this, shared_from_this()));
+                                std::bind_front(&ConnectionImpl::afterReadError,
+                                                this, shared_from_this()));
     }
 
     void afterReadError(const std::shared_ptr<Connection>& /*self*/,
@@ -228,9 +228,9 @@ class ConnectionImpl : public Connection
         }
         rawData += "\n\n";
 
-        boost::asio::buffer_copy(inputBuffer.prepare(rawData.size()),
-                                 boost::asio::buffer(rawData));
-        inputBuffer.commit(rawData.size());
+        size_t copied = boost::asio::buffer_copy(
+            inputBuffer.prepare(rawData.size()), boost::asio::buffer(rawData));
+        inputBuffer.commit(copied);
     }
 
     void startTimeout()
@@ -263,7 +263,7 @@ class ConnectionImpl : public Connection
             BMCWEB_LOG_CRITICAL("{} timer failed {}", logPtr(self.get()), ec);
         }
 
-        BMCWEB_LOG_WARNING("{}Connection timed out, closing",
+        BMCWEB_LOG_WARNING("{} Connection timed out, closing",
                            logPtr(self.get()));
 
         self->close("closing connection");

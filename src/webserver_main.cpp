@@ -1,5 +1,5 @@
-#include "bmcweb_config.h"
 
+<<<<<<< HEAD
 #include "app.hpp"
 #include "cors_preflight.hpp"
 #include "dbus_monitor.hpp"
@@ -192,6 +192,13 @@ static int run()
 
     return 0;
 }
+=======
+
+#include "logging.hpp"
+#include "webserver_run.hpp"
+
+#include <exception>
+>>>>>>> master
 
 int main(int /*argc*/, char** /*argv*/)
 {

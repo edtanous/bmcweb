@@ -14,7 +14,6 @@
 // limitations under the License.
 */
 #pragma once
-#ifndef BMCWEB_ENABLE_REDFISH_ONE_CHASSIS
 
 // #include <dbus_utility.hpp>
 // #include <error_messages.hpp>
@@ -482,4 +481,3 @@ inline void
 }
 
 } // namespace redfish
-#endif

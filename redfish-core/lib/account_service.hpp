@@ -16,6 +16,7 @@
 #pragma once
 
 #include "app.hpp"
+#include "certificate_service.hpp"
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "generated/enums/account_service.hpp"
@@ -23,14 +24,18 @@
 #include "persistent_data.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
+#include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"
 
+#include <boost/url/format.hpp>
+#include <boost/url/url.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 #include <utils/registry_utils.hpp>
 
 #include <array>
+#include <memory>
 #include <optional>
 #include <ranges>
 #include <string>
@@ -830,56 +835,62 @@ inline void
 
     if (auth.basicAuth)
     {
-#ifndef BMCWEB_ENABLE_BASIC_AUTHENTICATION
+        if constexpr (!BMCWEB_BASIC_AUTH)
+        {
         messages::actionNotSupported(
             asyncResp->res,
             "Setting BasicAuth when basic-auth feature is disabled");
         return;
-#endif
+        }
+
         authMethodsConfig.basic = *auth.basicAuth;
     }
 
     if (auth.cookie)
     {
-#ifndef BMCWEB_ENABLE_COOKIE_AUTHENTICATION
+        if constexpr (!BMCWEB_COOKIE_AUTH)
+        {
         messages::actionNotSupported(
             asyncResp->res,
             "Setting Cookie when cookie-auth feature is disabled");
         return;
-#endif
+        }
         authMethodsConfig.cookie = *auth.cookie;
     }
 
     if (auth.sessionToken)
     {
-#ifndef BMCWEB_ENABLE_SESSION_AUTHENTICATION
+        if constexpr (!BMCWEB_SESSION_AUTH)
+        {
         messages::actionNotSupported(
             asyncResp->res,
             "Setting SessionToken when session-auth feature is disabled");
         return;
-#endif
+        }
         authMethodsConfig.sessionToken = *auth.sessionToken;
     }
 
     if (auth.xToken)
     {
-#ifndef BMCWEB_ENABLE_XTOKEN_AUTHENTICATION
+        if constexpr (!BMCWEB_XTOKEN_AUTH)
+        {
         messages::actionNotSupported(
             asyncResp->res,
             "Setting XToken when xtoken-auth feature is disabled");
         return;
-#endif
+        }
         authMethodsConfig.xtoken = *auth.xToken;
     }
 
     if (auth.tls)
     {
-#ifndef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
+        if constexpr (!BMCWEB_MUTUAL_TLS_AUTH)
+        {
         messages::actionNotSupported(
             asyncResp->res,
             "Setting TLS when mutual-tls-auth feature is disabled");
         return;
-#endif
+        }
         authMethodsConfig.tls = *auth.tls;
     }
 
@@ -909,7 +920,22 @@ inline void
  * @param serverType Type of LDAP server(openLDAP/ActiveDirectory)
  */
 
-inline void handleLDAPPatch(nlohmann::json::object_t& input,
+struct LdapPatchParams
+{
+    std::optional<std::string> authType;
+    std::optional<std::vector<std::string>> serviceAddressList;
+    std::optional<bool> serviceEnabled;
+    std::optional<std::vector<std::string>> baseDNList;
+    std::optional<std::string> userNameAttribute;
+    std::optional<std::string> groupsAttribute;
+    std::optional<std::string> userName;
+    std::optional<std::string> password;
+    std::optional<
+        std::vector<std::variant<nlohmann::json::object_t, std::nullptr_t>>>
+        remoteRoleMapData;
+};
+
+inline void handleLDAPPatch(LdapPatchParams&& input,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& serverType)
 {
@@ -924,77 +950,52 @@ inline void handleLDAPPatch(nlohmann::json::object_t& input,
     }
     else
     {
+        BMCWEB_LOG_ERROR("serverType wasn't AD or LDAP but was {}????",
+                         serverType);
         return;
     }
 
-    std::optional<std::string> authType;
-    std::optional<std::vector<std::string>> serviceAddressList;
-    std::optional<bool> serviceEnabled;
-    std::optional<std::vector<std::string>> baseDNList;
-    std::optional<std::string> userNameAttribute;
-    std::optional<std::string> groupsAttribute;
-    std::optional<std::string> userName;
-    std::optional<std::string> password;
-    std::optional<
-        std::vector<std::variant<nlohmann::json::object_t, std::nullptr_t>>>
-        remoteRoleMapData;
-    // clang-format off
-    if (!json_util::readJsonObject(input, asyncResp->res,
-          "Authentication/AuthenticationType", authType,
-          "Authentication/Username", userName,
-          "Authentication/Password", password,
-          "LDAPService/SearchSettings/BaseDistinguishedNames", baseDNList,
-          "LDAPService/SearchSettings/UsernameAttribute", userNameAttribute,
-          "LDAPService/SearchSettings/GroupsAttribute", groupsAttribute,
-          "ServiceAddresses", serviceAddressList,
-          "ServiceEnabled", serviceEnabled,
-          "RemoteRoleMapping", remoteRoleMapData))
+    if (input.authType && *input.authType != "UsernameAndPassword")
     {
-        return;
-    }
-    // clang-format on
-
-    if (authType && *authType != "UsernameAndPassword")
-    {
-        messages::propertyValueNotInList(asyncResp->res, *authType,
+        messages::propertyValueNotInList(asyncResp->res, *input.authType,
                                          "AuthenticationType");
         return;
     }
 
-    if (serviceAddressList)
+    if (input.serviceAddressList)
     {
-        if (serviceAddressList->empty())
+        if (input.serviceAddressList->empty())
         {
             messages::propertyValueNotInList(
-                asyncResp->res, *serviceAddressList, "ServiceAddress");
+                asyncResp->res, *input.serviceAddressList, "ServiceAddress");
             return;
         }
     }
-    if (baseDNList)
+    if (input.baseDNList)
     {
-        if (baseDNList->empty())
+        if (input.baseDNList->empty())
         {
-            messages::propertyValueNotInList(asyncResp->res, *baseDNList,
+            messages::propertyValueNotInList(asyncResp->res, *input.baseDNList,
                                              "BaseDistinguishedNames");
             return;
         }
     }
 
     // nothing to update, then return
-    if (!userName && !password && !serviceAddressList && !baseDNList &&
-        !userNameAttribute && !groupsAttribute && !serviceEnabled &&
-        !remoteRoleMapData)
+    if (!input.userName && !input.password && !input.serviceAddressList &&
+        !input.baseDNList && !input.userNameAttribute &&
+        !input.groupsAttribute && !input.serviceEnabled &&
+        !input.remoteRoleMapData)
     {
         return;
     }
 
     // Get the existing resource first then keep modifying
     // whenever any property gets updated.
-    getLDAPConfigData(
-        serverType,
-        [asyncResp, userName, password, baseDNList, userNameAttribute,
-         groupsAttribute, serviceAddressList, serviceEnabled, dbusObjectPath,
-         remoteRoleMapData](bool success, const LDAPConfigData& confData,
+    getLDAPConfigData(serverType,
+                      [asyncResp, input = std::move(input),
+                       dbusObjectPath = std::move(dbusObjectPath)](
+                          bool success, const LDAPConfigData& confData,
                             const std::string& serverT) mutable {
         if (!success)
         {
@@ -1009,43 +1010,46 @@ inline void handleLDAPPatch(nlohmann::json::object_t& input,
             handleServiceEnablePatch(false, asyncResp, serverT, dbusObjectPath);
         }
 
-        if (serviceAddressList)
+        if (input.serviceAddressList)
         {
-            handleServiceAddressPatch(*serviceAddressList, asyncResp, serverT,
-                                      dbusObjectPath);
+            handleServiceAddressPatch(*input.serviceAddressList, asyncResp,
+                                      serverT, dbusObjectPath);
         }
-        if (userName)
+        if (input.userName)
         {
-            handleUserNamePatch(*userName, asyncResp, serverT, dbusObjectPath);
+            handleUserNamePatch(*input.userName, asyncResp, serverT,
+                                dbusObjectPath);
         }
-        if (password)
+        if (input.password)
         {
-            handlePasswordPatch(*password, asyncResp, serverT, dbusObjectPath);
+            handlePasswordPatch(*input.password, asyncResp, serverT,
+                                dbusObjectPath);
         }
 
-        if (baseDNList)
+        if (input.baseDNList)
         {
-            handleBaseDNPatch(*baseDNList, asyncResp, serverT, dbusObjectPath);
+            handleBaseDNPatch(*input.baseDNList, asyncResp, serverT,
+                              dbusObjectPath);
         }
-        if (userNameAttribute)
+        if (input.userNameAttribute)
         {
-            handleUserNameAttrPatch(*userNameAttribute, asyncResp, serverT,
-                                    dbusObjectPath);
+            handleUserNameAttrPatch(*input.userNameAttribute, asyncResp,
+                                    serverT, dbusObjectPath);
         }
-        if (groupsAttribute)
+        if (input.groupsAttribute)
         {
-            handleGroupNameAttrPatch(*groupsAttribute, asyncResp, serverT,
+            handleGroupNameAttrPatch(*input.groupsAttribute, asyncResp, serverT,
                                      dbusObjectPath);
         }
-        if (serviceEnabled)
+        if (input.serviceEnabled)
         {
             // if user has given the value as true then enable
             // the service. if user has given false then no-op
             // as service is already stopped.
-            if (*serviceEnabled)
+            if (*input.serviceEnabled)
             {
-                handleServiceEnablePatch(*serviceEnabled, asyncResp, serverT,
-                                         dbusObjectPath);
+                handleServiceEnablePatch(*input.serviceEnabled, asyncResp,
+                                         serverT, dbusObjectPath);
             }
         }
         else
@@ -1057,10 +1061,10 @@ inline void handleLDAPPatch(nlohmann::json::object_t& input,
                                      serverT, dbusObjectPath);
         }
 
-        if (remoteRoleMapData)
+        if (input.remoteRoleMapData)
         {
             handleRoleMapPatch(asyncResp, confData.groupRoleList, serverT,
-                               *remoteRoleMapData);
+                               *input.remoteRoleMapData);
         }
     });
 }
@@ -1200,6 +1204,80 @@ inline void handleAccountServiceHead(
 }
 
 inline void
+    getClientCertificates(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const nlohmann::json::json_pointer& keyLocation)
+{
+    boost::urls::url url(
+        "/redfish/v1/AccountService/MultiFactorAuth/ClientCertificate/Certificates");
+    std::array<std::string_view, 1> interfaces = {
+        "xyz.openbmc_project.Certs.Certificate"};
+    std::string path = "/xyz/openbmc_project/certs/authority/truststore";
+
+    collection_util::getCollectionToKey(asyncResp, url, interfaces, path,
+                                        keyLocation);
+}
+
+inline void handleAccountServiceClientCertificatesInstanceHead(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& /*id*/)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/Certificate/Certificate.json>; rel=describedby");
+}
+
+inline void handleAccountServiceClientCertificatesInstanceGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    BMCWEB_LOG_DEBUG("ClientCertificate Certificate ID={}", id);
+    const boost::urls::url certURL = boost::urls::format(
+        "/redfish/v1/AccountService/MultiFactorAuth/ClientCertificate/Certificates/{}",
+        id);
+    std::string objPath =
+        sdbusplus::message::object_path(certs::authorityObjectPath) / id;
+    getCertificateProperties(
+        asyncResp, objPath,
+        "xyz.openbmc_project.Certs.Manager.Authority.Truststore", id, certURL,
+        "Client Certificate");
+}
+
+inline void handleAccountServiceClientCertificatesHead(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/CertificateCollection/CertificateCollection.json>; rel=describedby");
+}
+
+inline void handleAccountServiceClientCertificatesGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    getClientCertificates(asyncResp, "/Members"_json_pointer);
+}
+
+inline void
     handleAccountServiceGet(App& app, const crow::Request& req,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
@@ -1223,8 +1301,7 @@ inline void
 
     nlohmann::json& json = asyncResp->res.jsonValue;
     json["@odata.id"] = "/redfish/v1/AccountService";
-    json["@odata.type"] = "#AccountService."
-                          "v1_10_0.AccountService";
+    json["@odata.type"] = "#AccountService.v1_15_0.AccountService";
     json["Id"] = "AccountService";
     json["Name"] = "Account Service";
     json["Description"] = "Account Service";
@@ -1232,6 +1309,32 @@ inline void
     json["MaxPasswordLength"] = 20;
     json["Accounts"]["@odata.id"] = "/redfish/v1/AccountService/Accounts";
     json["Roles"]["@odata.id"] = "/redfish/v1/AccountService/Roles";
+    json["HTTPBasicAuth"] = authMethodsConfig.basic
+                                ? account_service::BasicAuthState::Enabled
+                                : account_service::BasicAuthState::Disabled;
+
+    nlohmann::json::array_t allowed;
+    allowed.emplace_back(account_service::BasicAuthState::Enabled);
+    allowed.emplace_back(account_service::BasicAuthState::Disabled);
+    json["HTTPBasicAuth@AllowableValues"] = std::move(allowed);
+
+    nlohmann::json::object_t clientCertificate;
+    clientCertificate["Enabled"] = authMethodsConfig.tls;
+    clientCertificate["RespondToUnauthenticatedClients"] = true;
+    clientCertificate["CertificateMappingAttribute"] =
+        account_service::CertificateMappingAttribute::CommonName;
+    nlohmann::json::object_t certificates;
+    certificates["@odata.id"] =
+        "/redfish/v1/AccountService/MultiFactorAuth/ClientCertificate/Certificates";
+    certificates["@odata.type"] =
+        "#CertificateCollection.CertificateCollection";
+    clientCertificate["Certificates"] = std::move(certificates);
+    json["MultiFactorAuth"]["ClientCertificate"] = std::move(clientCertificate);
+
+    getClientCertificates(
+        asyncResp,
+        "/MultiFactorAuth/ClientCertificate/Certificates/Members"_json_pointer);
+
     json["Oem"]["OpenBMC"]["@odata.type"] =
         "#OpenBMCAccountService.v1_0_0.AccountService";
     json["Oem"]["OpenBMC"]["@odata.id"] =
@@ -1329,27 +1432,62 @@ inline void handleAccountServicePatch(
     std::optional<uint16_t> lockoutThreshold;
     std::optional<uint8_t> minPasswordLength;
     std::optional<uint16_t> maxPasswordLength;
-    std::optional<nlohmann::json::object_t> ldapObject;
-    std::optional<nlohmann::json::object_t> activeDirectoryObject;
+    LdapPatchParams ldapObject;
+    LdapPatchParams activeDirectoryObject;
     AuthMethods auth;
+    std::optional<std::string> httpBasicAuth;
     // clang-format off
     if (!json_util::readJsonPatch(
             req, asyncResp->res,
             "AccountLockoutDuration", unlockTimeout,
             "AccountLockoutThreshold", lockoutThreshold,
+            "ActiveDirectory/Authentication/AuthenticationType", activeDirectoryObject.authType,
+            "ActiveDirectory/Authentication/Password", activeDirectoryObject.password,
+            "ActiveDirectory/Authentication/Username", activeDirectoryObject.userName,
+            "ActiveDirectory/LDAPService/SearchSettings/BaseDistinguishedNames", activeDirectoryObject.baseDNList,
+            "ActiveDirectory/LDAPService/SearchSettings/GroupsAttribute", activeDirectoryObject.groupsAttribute,
+            "ActiveDirectory/LDAPService/SearchSettings/UsernameAttribute", activeDirectoryObject.userNameAttribute,
+            "ActiveDirectory/RemoteRoleMapping", activeDirectoryObject.remoteRoleMapData,
+            "ActiveDirectory/ServiceAddresses", activeDirectoryObject.serviceAddressList,
+            "ActiveDirectory/ServiceEnabled", activeDirectoryObject.serviceEnabled,
+            "LDAP/Authentication/AuthenticationType", ldapObject.authType,
+            "LDAP/Authentication/Password", ldapObject.password,
+            "LDAP/Authentication/Username", ldapObject.userName,
+            "LDAP/LDAPService/SearchSettings/BaseDistinguishedNames", ldapObject.baseDNList,
+            "LDAP/LDAPService/SearchSettings/GroupsAttribute", ldapObject.groupsAttribute,
+            "LDAP/LDAPService/SearchSettings/UsernameAttribute", ldapObject.userNameAttribute,
+            "LDAP/RemoteRoleMapping", ldapObject.remoteRoleMapData,
+            "LDAP/ServiceAddresses", ldapObject.serviceAddressList,
+            "LDAP/ServiceEnabled", ldapObject.serviceEnabled,
             "MaxPasswordLength", maxPasswordLength,
             "MinPasswordLength", minPasswordLength,
-            "LDAP", ldapObject,
-            "ActiveDirectory", activeDirectoryObject,
             "Oem/OpenBMC/AuthMethods/BasicAuth", auth.basicAuth,
             "Oem/OpenBMC/AuthMethods/Cookie", auth.cookie,
             "Oem/OpenBMC/AuthMethods/SessionToken", auth.sessionToken,
+            "Oem/OpenBMC/AuthMethods/TLS", auth.tls,
             "Oem/OpenBMC/AuthMethods/XToken", auth.xToken,
-            "Oem/OpenBMC/AuthMethods/TLS", auth.tls))
+            "HTTPBasicAuth", httpBasicAuth))
     {
         return;
     }
     // clang-format on
+
+    if (httpBasicAuth)
+    {
+        if (*httpBasicAuth == "Enabled")
+        {
+            auth.basicAuth = true;
+        }
+        else if (*httpBasicAuth == "Disabled")
+        {
+            auth.basicAuth = false;
+        }
+        else
+        {
+            messages::propertyValueNotInList(asyncResp->res, "HttpBasicAuth",
+                                             *httpBasicAuth);
+        }
+    }
 
     if (minPasswordLength)
     {
@@ -1365,17 +1503,11 @@ inline void handleAccountServicePatch(
         messages::propertyNotWritable(asyncResp->res, "MaxPasswordLength");
     }
 
-    if (ldapObject)
-    {
-        handleLDAPPatch(*ldapObject, asyncResp, "LDAP");
-    }
+    handleLDAPPatch(std::move(activeDirectoryObject), asyncResp,
+                    "ActiveDirectory");
+    handleLDAPPatch(std::move(ldapObject), asyncResp, "LDAP");
 
     handleAuthMethodsPatch(asyncResp, auth);
-
-    if (activeDirectoryObject)
-    {
-        handleLDAPPatch(*activeDirectoryObject, asyncResp, "ActiveDirectory");
-    }
 
     if (unlockTimeout)
     {
@@ -1735,11 +1867,13 @@ inline void
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/ManagerAccount/ManagerAccount.json>; rel=describedby");
 
-#ifdef BMCWEB_INSECURE_DISABLE_AUTHENTICATION
+    if constexpr (BMCWEB_INSECURE_DISABLE_AUTH)
+    {
     // If authentication is disabled, there are no user accounts
-    messages::resourceNotFound(asyncResp->res, "ManagerAccount", accountName);
+        messages::resourceNotFound(asyncResp->res, "ManagerAccount",
+                                   accountName);
     return;
-#endif // BMCWEB_INSECURE_DISABLE_AUTHENTICATION
+    }
 
     if (req.session == nullptr)
     {
@@ -1912,12 +2046,12 @@ inline void
         return;
     }
 
-#ifdef BMCWEB_INSECURE_DISABLE_AUTHENTICATION
+    if constexpr (BMCWEB_INSECURE_DISABLE_AUTH)
+    {
     // If authentication is disabled, there are no user accounts
     messages::resourceNotFound(asyncResp->res, "ManagerAccount", username);
     return;
-
-#endif // BMCWEB_INSECURE_DISABLE_AUTHENTICATION
+    }
     sdbusplus::message::object_path tempObjPath(rootUserDbusPath);
     tempObjPath /= username;
     const std::string userPath(tempObjPath);
@@ -1971,12 +2105,12 @@ inline void
     {
         return;
     }
-#ifdef BMCWEB_INSECURE_DISABLE_AUTHENTICATION
+    if constexpr (BMCWEB_INSECURE_DISABLE_AUTH)
+    {
     // If authentication is disabled, there are no user accounts
     messages::resourceNotFound(asyncResp->res, "ManagerAccount", username);
     return;
-
-#endif // BMCWEB_INSECURE_DISABLE_AUTHENTICATION
+    }
     std::optional<std::string> newUserName;
     std::optional<std::string> password;
     std::optional<bool> enabled;
@@ -2072,6 +2206,34 @@ inline void requestAccountServiceRoutes(App& app)
         .privileges(redfish::privileges::patchAccountService)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleAccountServicePatch, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/AccountService/MultiFactorAuth/ClientCertificate/Certificates")
+        .privileges(redfish::privileges::headCertificateCollection)
+        .methods(boost::beast::http::verb::head)(std::bind_front(
+            handleAccountServiceClientCertificatesHead, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/AccountService/MultiFactorAuth/ClientCertificate/Certificates")
+        .privileges(redfish::privileges::getCertificateCollection)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleAccountServiceClientCertificatesGet, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/AccountService/MultiFactorAuth/ClientCertificate/Certificates/<str>")
+        .privileges(redfish::privileges::headCertificate)
+        .methods(boost::beast::http::verb::head)(std::bind_front(
+            handleAccountServiceClientCertificatesInstanceHead, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/AccountService/MultiFactorAuth/ClientCertificate/Certificates/<str>/")
+        .privileges(redfish::privileges::getCertificate)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleAccountServiceClientCertificatesInstanceGet, std::ref(app)));
 
     BMCWEB_ROUTE(app, "/redfish/v1/AccountService/Accounts/")
         .privileges(redfish::privileges::headManagerAccountCollection)

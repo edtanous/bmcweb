@@ -159,7 +159,7 @@ inline void handlePhysicalSecurityGetSubTree(
         {
             if (!object.second.empty())
             {
-                const auto service = object.second.front();
+            const auto& service = object.second.front();
 
             BMCWEB_LOG_DEBUG("Get intrusion status by service ");
 
@@ -409,23 +409,28 @@ inline void handleDecoratorAssetProperties(
 
     asyncResp->res.jsonValue["Name"] = chassisId;
     asyncResp->res.jsonValue["Id"] = chassisId;
-#ifdef BMCWEB_ALLOW_DEPRECATED_POWER_THERMAL
+
+    if constexpr (BMCWEB_REDFISH_ALLOW_DEPRECATED_POWER_THERMAL)
+    {
     asyncResp->res.jsonValue["Thermal"]["@odata.id"] =
         boost::urls::format("/redfish/v1/Chassis/{}/Thermal", chassisId);
     // Power object
     asyncResp->res.jsonValue["Power"]["@odata.id"] =
         boost::urls::format("/redfish/v1/Chassis/{}/Power", chassisId);
-#endif
-#ifdef BMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM
+    }
+
+    if constexpr (BMCWEB_REDFISH_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM)
+    {
     asyncResp->res.jsonValue["ThermalSubsystem"]["@odata.id"] =
         boost::urls::format("/redfish/v1/Chassis/{}/ThermalSubsystem",
                             chassisId);
     asyncResp->res.jsonValue["PowerSubsystem"]["@odata.id"] =
-        boost::urls::format("/redfish/v1/Chassis/{}/PowerSubsystem", chassisId);
+            boost::urls::format("/redfish/v1/Chassis/{}/PowerSubsystem",
+                                chassisId);
     asyncResp->res.jsonValue["EnvironmentMetrics"]["@odata.id"] =
         boost::urls::format("/redfish/v1/Chassis/{}/EnvironmentMetrics",
                             chassisId);
-#endif
+    }
     // SensorCollection
     asyncResp->res.jsonValue["Sensors"]["@odata.id"] =
         boost::urls::format("/redfish/v1/Chassis/{}/Sensors", chassisId);

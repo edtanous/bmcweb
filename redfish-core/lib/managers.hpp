@@ -3371,11 +3371,19 @@ inline void requestRoutesManager(App& app)
              "/redfish/v1/Managers/" PLATFORMBMCID "/HostInterfaces"}};
 #endif
 
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_RMEDIA
         asyncResp->res.jsonValue["VirtualMedia"] = {
             {"@odata.id",
              "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
 #endif
+=======
+        if constexpr (BMCWEB_VM_NBDPROXY)
+        {
+            asyncResp->res.jsonValue["VirtualMedia"]["@odata.id"] =
+                "/redfish/v1/Managers/bmc/VirtualMedia";
+        }
+>>>>>>> master
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         // default oem data
@@ -3569,6 +3577,7 @@ inline void requestRoutesManager(App& app)
         // Fill in SerialConsole info
         asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
         asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] = 15;
+<<<<<<< HEAD
         asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] = {
             "IPMI", "SSH"};
 #ifdef BMCWEB_ENABLE_KVM
@@ -3580,6 +3589,22 @@ inline void requestRoutesManager(App& app)
             .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] = {"KVMIP"};
 #endif // BMCWEB_ENABLE_KVM
         if constexpr (!bmcwebEnableMultiHost)
+=======
+        asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
+            nlohmann::json::array_t({"IPMI", "SSH"});
+        if constexpr (BMCWEB_KVM)
+        {
+            // Fill in GraphicalConsole info
+            asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
+                true;
+            asyncResp->res
+                .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
+            asyncResp->res
+                .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
+                nlohmann::json::array_t({"KVMIP"});
+        }
+        if constexpr (!BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+>>>>>>> master
         {
             asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] =
                 1;
@@ -3622,10 +3647,11 @@ inline void requestRoutesManager(App& app)
         // managerDiagnosticData["@odata.id"] =
         //     "/redfish/v1/Managers/" PLATFORMBMCID "/ManagerDiagnosticData";
 
-#ifdef BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
+        if constexpr (BMCWEB_REDFISH_OEM_MANAGER_FAN_DATA)
+        {
         auto pids = std::make_shared<GetPIDValues>(asyncResp);
         pids->run();
-#endif
+        }
 
         getMainChassisId(asyncResp,
                          [](const std::string& chassisId,
@@ -3903,9 +3929,10 @@ inline void requestRoutesManager(App& app)
         if (pidControllers || fanControllers || fanZones ||
             stepwiseControllers || profile)
         {
-#ifdef BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
-            std::vector<
-                std::pair<std::string, std::optional<nlohmann::json::object_t>>>
+            if constexpr (BMCWEB_REDFISH_OEM_MANAGER_FAN_DATA)
+            {
+                std::vector<std::pair<std::string,
+                                      std::optional<nlohmann::json::object_t>>>
                 configuration;
             if (pidControllers)
             {
@@ -3929,10 +3956,12 @@ inline void requestRoutesManager(App& app)
             auto pid = std::make_shared<SetPIDValues>(
                 asyncResp, std::move(configuration), profile);
                     pid->run();
-#else
+            }
+            else
+            {
             messages::propertyUnknown(asyncResp->res, "Oem");
             return;
-#endif
+            }
         }
 
         if (activeSoftwareImageOdataId)

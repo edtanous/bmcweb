@@ -27,6 +27,7 @@
 #include "subscriber.hpp"
 #include "utility.hpp"
 #include "utils/json_utils.hpp"
+#include "utils/time_utils.hpp"
 
 #include <sys/inotify.h>
 
@@ -39,7 +40,11 @@
 #include <boost/beast/http/write.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/url/format.hpp>
+<<<<<<< HEAD
 #include <dbus_singleton.hpp>
+=======
+#include <boost/url/url_view_base.hpp>
+>>>>>>> master
 #include <sdbusplus/bus/match.hpp>
 #include <utils/dbus_log_utils.hpp>
 #include <utils/json_utils.hpp>
@@ -74,7 +79,6 @@ static constexpr const char* eventServiceFile =
 static constexpr const uint8_t maxNoOfSubscriptions = 20;
 static constexpr const uint8_t maxNoOfSSESubscriptions = 10;
 
-#ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::optional<boost::asio::posix::stream_descriptor> inotifyConn;
 static constexpr const char* redfishEventLogDir = "/var/log";
@@ -233,7 +237,6 @@ inline int formatEventLogEntry(const std::string& logEntryID,
 }
 
 } // namespace event_log
-#endif
 
 enum redfish_bool
 {
@@ -656,7 +659,8 @@ class Subscription : public persistent_data::UserSubscription
     Subscription(Subscription&&) = delete;
     Subscription& operator=(Subscription&&) = delete;
 
-    Subscription(boost::urls::url_view url, boost::asio::io_context& ioc) :
+    Subscription(const boost::urls::url_view_base& url,
+                 boost::asio::io_context& ioc) :
         policy(std::make_shared<crow::ConnectionPolicy>())
     {
         destinationUrl = url;
@@ -724,6 +728,7 @@ class Subscription : public persistent_data::UserSubscription
         return sendEvent(std::move(strMsg));
     }
 
+<<<<<<< HEAD
     /*!
      * @brief   Send the event if this subscription does not filter it out.
      * @param[in] event   The event to be sent.
@@ -822,6 +827,8 @@ class Subscription : public persistent_data::UserSubscription
     }
 
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
+=======
+>>>>>>> master
     void filterAndSendEventLogs(
         const std::vector<EventLogObjectsType>& eventRecords)
     {
@@ -887,7 +894,6 @@ class Subscription : public persistent_data::UserSubscription
         sendEvent(std::move(strMsg));
         eventSeqNum++;
     }
-#endif
 
     void filterAndSendReports(const std::string& reportId,
                               const telemetry::TimestampReadings& var)
@@ -1081,11 +1087,11 @@ class EventServiceManager
 
             updateNoOfSubscribersCount();
 
-#ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
-
+            if constexpr (!BMCWEB_REDFISH_DBUS_LOG)
+            {
             cacheRedfishLogFile();
+            }
 
-#endif
             // Update retry configuration.
             subValue->updateRetryConfig(retryAttempts, retryTimeoutInterval);
         }
@@ -1181,9 +1187,18 @@ class EventServiceManager
             }
 
             persistent_data::getConfig().writeData();
-            std::remove(eventServiceFile);
+            std::error_code ec;
+            std::filesystem::remove(eventServiceFile, ec);
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG(
+                    "Failed to remove old event service file.  Ignoring");
+            }
+            else
+            {
             BMCWEB_LOG_DEBUG("Remove old eventservice config");
         }
+    }
     }
 
     void updateSubscriptionData() const
@@ -1393,12 +1408,13 @@ class EventServiceManager
             updateSubscriptionData();
         }
 
-#ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
+        if constexpr (!BMCWEB_REDFISH_DBUS_LOG)
+        {
         if (redfishLogFilePosition != 0)
         {
             cacheRedfishLogFile();
         }
-#endif
+        }
         // Update retry configuration.
         subValue->updateRetryConfig(retryAttempts, retryTimeoutInterval);
 
@@ -1643,8 +1659,6 @@ class EventServiceManager
         eventId++; // increament the eventId
     }
 
-#ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
-
     void resetRedfishFilePosition()
     {
         // Control would be here when Redfish file is created.
@@ -1882,7 +1896,6 @@ class EventServiceManager
         return 0;
     }
 
-#endif
     static void getReadingsForReport(sdbusplus::message_t& msg)
     {
         if (msg.is_method_error())

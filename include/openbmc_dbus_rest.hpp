@@ -15,10 +15,12 @@
 #pragma once
 #include "app.hpp"
 #include "async_resp.hpp"
+#include "boost_formatters.hpp"
 #include "dbus_singleton.hpp"
 #include "dbus_utility.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
+#include "json_formatters.hpp"
 #include "logging.hpp"
 #include "parsing.hpp"
 #include "routing.hpp"
@@ -32,7 +34,6 @@
 #include <boost/beast/http/verb.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/vector.hpp>
-#include <boost/iterator/iterator_facade.hpp>
 #include <boost/system/error_code.hpp>
 #include <nlohmann/json.hpp>
 #include <sdbusplus/asio/connection.hpp>
@@ -817,7 +818,11 @@ inline int convertJsonToDbus(sd_bus_message* m, const std::string& argType,
             {
                 return -ERANGE;
             }
-            sd_bus_message_append_basic(m, argCode[0], doubleValue);
+            r = sd_bus_message_append_basic(m, argCode[0], doubleValue);
+            if (r < 0)
+            {
+                return r;
+            }
         }
         else if (argCode.starts_with("a"))
         {
@@ -2369,7 +2374,11 @@ inline void
                             return;
                         }
 
-                        convertDBusToJSON("v", msg, propertyItem);
+                        int r = convertDBusToJSON("v", msg, propertyItem);
+                        if (r < 0)
+                        {
+                            BMCWEB_LOG_ERROR("Couldn't convert vector to json");
+                        }
                     });
                 }
                 property = property->NextSiblingElement("property");

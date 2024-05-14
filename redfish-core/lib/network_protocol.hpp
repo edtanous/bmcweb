@@ -269,43 +269,50 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          std::bind_front(afterNetworkPortRequest, asyncResp));
 } // namespace redfish
 
-inline void handleNTPProtocolEnabled(
-    const bool& ntpEnabled, const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void afterSetNTP(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const boost::system::error_code& ec)
 {
-    std::string timeSyncMethod;
-    if (ntpEnabled)
+    if (ec)
     {
-        timeSyncMethod = "xyz.openbmc_project.Time.Synchronization.Method.NTP";
+        BMCWEB_LOG_DEBUG("Failed to set elapsed time. DBUS response error {}",
+                         ec);
+        messages::internalError(asyncResp->res);
+        return;
     }
-    else
-    {
-        timeSyncMethod =
-            "xyz.openbmc_project.Time.Synchronization.Method.Manual";
+    asyncResp->res.result(boost::beast::http::status::no_content);
     }
 
-    sdbusplus::asio::setProperty(
-        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
-        "/xyz/openbmc_project/time/sync_method",
-        "xyz.openbmc_project.Time.Synchronization", "TimeSyncMethod",
-        timeSyncMethod, [asyncResp](const boost::system::error_code& ec) {
-        if (ec)
+inline void handleNTPProtocolEnabled(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, bool ntpEnabled)
         {
-            messages::internalError(asyncResp->res);
-        }
-    });
+    bool interactive = false;
+    auto callback = [asyncResp](const boost::system::error_code& ec) {
+        afterSetNTP(asyncResp, ec);
+    };
+    crow::connections::systemBus->async_method_call(
+        std::move(callback), "org.freedesktop.timedate1",
+        "/org/freedesktop/timedate1", "org.freedesktop.timedate1", "SetNTP",
+        ntpEnabled, interactive);
 }
+
+// Redfish states that ip addresses can be
+// string, to set a value
+// null, to delete the value
+// object_t, empty json object, to ignore the value
+using IpAddress =
+    std::variant<std::string, nlohmann::json::object_t, std::nullptr_t>;
 
 inline void
     handleNTPServersPatch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                          const std::vector<nlohmann::json>& ntpServerObjects,
+                          const std::vector<IpAddress>& ntpServerObjects,
                           std::vector<std::string> currentNtpServers)
 {
     std::vector<std::string>::iterator currentNtpServer =
         currentNtpServers.begin();
     for (size_t index = 0; index < ntpServerObjects.size(); index++)
     {
-        const nlohmann::json& ntpServer = ntpServerObjects[index];
-        if (ntpServer.is_null())
+        const IpAddress& ntpServer = ntpServerObjects[index];
+        if (std::holds_alternative<std::nullptr_t>(ntpServer))
         {
             // Can't delete an item that doesn't exist
             if (currentNtpServer == currentNtpServers.end())
@@ -320,22 +327,22 @@ inline void
             continue;
         }
         const nlohmann::json::object_t* ntpServerObject =
-            ntpServer.get_ptr<const nlohmann::json::object_t*>();
+            std::get_if<nlohmann::json::object_t>(&ntpServer);
         if (ntpServerObject != nullptr)
         {
             if (!ntpServerObject->empty())
             {
-                messages::propertyValueNotInList(asyncResp->res, ntpServer,
-                                                 "NTP/NTPServers/" +
-                                                     std::to_string(index));
+                messages::propertyValueNotInList(
+                    asyncResp->res, *ntpServerObject,
+                    "NTP/NTPServers/" + std::to_string(index));
                 return;
             }
             // Can't retain an item that doesn't exist
             if (currentNtpServer == currentNtpServers.end())
             {
-                messages::propertyValueOutOfRange(asyncResp->res, ntpServer,
-                                                  "NTP/NTPServers/" +
-                                                      std::to_string(index));
+                messages::propertyValueOutOfRange(
+                    asyncResp->res, *ntpServerObject,
+                    "NTP/NTPServers/" + std::to_string(index));
 
                 return;
             }
@@ -344,13 +351,10 @@ inline void
             continue;
         }
 
-        const std::string* ntpServerStr =
-            ntpServer.get_ptr<const std::string*>();
+        const std::string* ntpServerStr = std::get_if<std::string>(&ntpServer);
         if (ntpServerStr == nullptr)
         {
-            messages::propertyValueTypeError(asyncResp->res, ntpServer,
-                                             "NTP/NTPServers/" +
-                                                 std::to_string(index));
+            messages::internalError(asyncResp->res);
             return;
         }
         if (currentNtpServer == currentNtpServers.end())
@@ -393,16 +397,9 @@ inline void
                         continue;
                     }
 
-                    sdbusplus::asio::setProperty(
-                        *crow::connections::systemBus, service, objectPath,
-                        interface, "StaticNTPServers", currentNtpServers,
-                        [asyncResp](const boost::system::error_code& ec2) {
-                        if (ec2)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                    });
+                    setDbusProperty(asyncResp, service, objectPath, interface,
+                                    "StaticNTPServers", "NTP/NTPServers/",
+                                    currentNtpServers);
                 }
             }
         }
@@ -431,30 +428,14 @@ inline void
         {
             if (entry.first.starts_with(netBasePath))
             {
-                sdbusplus::asio::setProperty(
-                    *crow::connections::systemBus, entry.second.begin()->first,
-                    entry.first,
+                setDbusProperty(
+                    asyncResp, entry.second.begin()->first, entry.first,
                     "xyz.openbmc_project.Control.Service.Attributes", "Running",
-                    protocolEnabled,
-                    [asyncResp](const boost::system::error_code& ec2) {
-                    if (ec2)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                });
-                sdbusplus::asio::setProperty(
-                    *crow::connections::systemBus, entry.second.begin()->first,
-                    entry.first,
+                    "IPMI/ProtocolEnabled", protocolEnabled);
+                setDbusProperty(
+                    asyncResp, entry.second.begin()->first, entry.first,
                     "xyz.openbmc_project.Control.Service.Attributes", "Enabled",
-                    protocolEnabled,
-                    [asyncResp](const boost::system::error_code& ec2) {
-                    if (ec2)
-                    {
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                });
+                    "IPMI/ProtocolEnabled", protocolEnabled);
             }
         }
     });
@@ -475,27 +456,18 @@ inline std::string getHostName()
 inline void
     getNTPProtocolEnabled(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    sdbusplus::asio::getProperty<std::string>(
-        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
-        "/xyz/openbmc_project/time/sync_method",
-        "xyz.openbmc_project.Time.Synchronization", "TimeSyncMethod",
-        [asyncResp](const boost::system::error_code& ec,
-                    const std::string& timeSyncMethod) {
+    sdbusplus::asio::getProperty<bool>(
+        *crow::connections::systemBus, "org.freedesktop.timedate1",
+        "/org/freedesktop/timedate1", "org.freedesktop.timedate1", "NTP",
+        [asyncResp](const boost::system::error_code& ec, bool enabled) {
         if (ec)
         {
+            BMCWEB_LOG_WARNING(
+                "Failed to get NTP status, assuming not supported");
             return;
         }
 
-        if (timeSyncMethod ==
-            "xyz.openbmc_project.Time.Synchronization.Method.NTP")
-        {
-            asyncResp->res.jsonValue["NTP"]["ProtocolEnabled"] = true;
-        }
-        else if (timeSyncMethod == "xyz.openbmc_project.Time.Synchronization."
-                                   "Method.Manual")
-        {
-            asyncResp->res.jsonValue["NTP"]["ProtocolEnabled"] = false;
-        }
+        asyncResp->res.jsonValue["NTP"]["ProtocolEnabled"] = enabled;
     });
 }
 
@@ -529,7 +501,8 @@ inline void handleManagersNetworkProtocolPatch(
         return;
     }
     std::optional<std::string> newHostName;
-    std::optional<std::vector<nlohmann::json>> ntpServerObjects;
+
+    std::optional<std::vector<IpAddress>> ntpServerObjects;
     std::optional<bool> ntpEnabled;
     std::optional<bool> ipmiEnabled;
     std::optional<bool> sshEnabled;
@@ -567,7 +540,7 @@ inline void handleManagersNetworkProtocolPatch(
 
     if (ntpEnabled)
     {
-        handleNTPProtocolEnabled(*ntpEnabled, asyncResp);
+        handleNTPProtocolEnabled(asyncResp, *ntpEnabled);
     }
     if (ntpServerObjects)
     {

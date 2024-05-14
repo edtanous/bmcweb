@@ -538,46 +538,46 @@ inline void handleHypervisorIPv4StaticPatch(
     {
         return;
     }
-        // For the error string
-        std::string pathString = "IPv4StaticAddresses/1";
+    // For the error string
+    std::string pathString = "IPv4StaticAddresses/1";
     std::string address;
     std::string subnetMask;
     std::string gateway;
     if (!json_util::readJsonObject(*obj, asyncResp->res, "Address", address,
                                    "SubnetMask", subnetMask, "Gateway",
-                                 gateway))
-        {
-            return;
-        }
-
-        uint8_t prefixLength = 0;
-    if (!ip_util::ipv4VerifyIpAndGetBitcount(address))
-        {
-        messages::propertyValueFormatError(asyncResp->res, address,
-                                                   pathString + "/Address");
+                                   gateway))
+    {
         return;
-        }
+    }
+
+    uint8_t prefixLength = 0;
+    if (!ip_util::ipv4VerifyIpAndGetBitcount(address))
+    {
+        messages::propertyValueFormatError(asyncResp->res, address,
+                                           pathString + "/Address");
+        return;
+    }
 
     if (!ip_util::ipv4VerifyIpAndGetBitcount(subnetMask, &prefixLength))
-        {
+    {
         messages::propertyValueFormatError(asyncResp->res, subnetMask,
-                                                   pathString + "/SubnetMask");
+                                           pathString + "/SubnetMask");
         return;
-        }
+    }
 
     if (!ip_util::ipv4VerifyIpAndGetBitcount(gateway))
-        {
+    {
         messages::propertyValueFormatError(asyncResp->res, gateway,
-                                                   pathString + "/Gateway");
-            return;
-        }
+                                           pathString + "/Gateway");
+        return;
+    }
 
-        BMCWEB_LOG_DEBUG("Calling createHypervisorIPv4 on : {},{}", ifaceId,
+    BMCWEB_LOG_DEBUG("Calling createHypervisorIPv4 on : {},{}", ifaceId,
                      address);
     createHypervisorIPv4(ifaceId, prefixLength, gateway, address, asyncResp);
-        // Set the DHCPEnabled to false since the Static IPv4 is set
-        setDHCPEnabled(ifaceId, false, asyncResp);
-    }
+    // Set the DHCPEnabled to false since the Static IPv4 is set
+    setDHCPEnabled(ifaceId, false, asyncResp);
+}
 
 inline void handleHypervisorHostnamePatch(
     const std::string& hostName,
@@ -915,32 +915,12 @@ inline void handleHypervisorSystemResetPost(
 
     std::string command = "xyz.openbmc_project.State.Host.Transition.On";
 
-    sdbusplus::asio::setProperty(
-        *crow::connections::systemBus, "xyz.openbmc_project.State.Hypervisor",
-        "/xyz/openbmc_project/state/hypervisor0",
-        "xyz.openbmc_project.State.Host", "RequestedHostTransition", command,
-        [asyncResp, resetType](const boost::system::error_code& ec) {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR("D-Bus responses error: {}", ec);
-            if (ec.value() == boost::asio::error::invalid_argument)
-            {
-                messages::actionParameterNotSupported(asyncResp->res,
-                                                      *resetType, "Reset");
-                return;
-            }
-
-            if (ec.value() == boost::asio::error::host_unreachable)
-            {
-                messages::resourceNotFound(asyncResp->res, "Actions", "Reset");
-                return;
-            }
-
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        messages::success(asyncResp->res);
-    });
+    setDbusPropertyAction(asyncResp, "xyz.openbmc_project.State.Hypervisor",
+                          sdbusplus::message::object_path(
+                              "/xyz/openbmc_project/state/hypervisor0"),
+                          "xyz.openbmc_project.State.Host",
+                          "RequestedHostTransition", "ResetType",
+                          "ComputerSystem.Reset", command);
 }
 
 inline void requestRoutesHypervisorSystems(App& app)

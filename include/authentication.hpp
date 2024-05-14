@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common.hpp"
 #include "forward_unauthorized.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
@@ -34,8 +33,7 @@ inline void cleanupTempSession(const Request& req)
     }
 }
 
-#ifdef BMCWEB_ENABLE_BASIC_AUTHENTICATION
-static std::shared_ptr<persistent_data::UserSession>
+inline std::shared_ptr<persistent_data::UserSession>
     performBasicAuth(const boost::asio::ip::address& clientIp,
                      std::string_view authHeader)
 {
@@ -88,10 +86,8 @@ static std::shared_ptr<persistent_data::UserSession>
         user, clientIp, std::nullopt,
         persistent_data::PersistenceType::SINGLE_REQUEST, isConfigureSelfOnly);
 }
-#endif
 
-#ifdef BMCWEB_ENABLE_SESSION_AUTHENTICATION
-static std::shared_ptr<persistent_data::UserSession>
+inline std::shared_ptr<persistent_data::UserSession>
     performTokenAuth(std::string_view authHeader)
 {
     BMCWEB_LOG_DEBUG("[AuthMiddleware] Token authentication");
@@ -104,10 +100,8 @@ static std::shared_ptr<persistent_data::UserSession>
         persistent_data::SessionStore::getInstance().loginSessionByToken(token);
     return sessionOut;
 }
-#endif
 
-#ifdef BMCWEB_ENABLE_XTOKEN_AUTHENTICATION
-static std::shared_ptr<persistent_data::UserSession>
+inline std::shared_ptr<persistent_data::UserSession>
     performXtokenAuth(const boost::beast::http::header<true>& reqHeader)
 {
     BMCWEB_LOG_DEBUG("[AuthMiddleware] X-Auth-Token authentication");
@@ -121,25 +115,26 @@ static std::shared_ptr<persistent_data::UserSession>
         persistent_data::SessionStore::getInstance().loginSessionByToken(token);
     return sessionOut;
 }
-#endif
 
-#ifdef BMCWEB_ENABLE_COOKIE_AUTHENTICATION
-static std::shared_ptr<persistent_data::UserSession>
+inline std::shared_ptr<persistent_data::UserSession>
     performCookieAuth(boost::beast::http::verb method [[maybe_unused]],
                       const boost::beast::http::header<true>& reqHeader)
 {
-    BMCWEB_LOG_DEBUG("[AuthMiddleware] Cookie authentication");
+    using headers = boost::beast::http::header<true>;
+    std::pair<headers::const_iterator, headers::const_iterator> cookies =
+        reqHeader.equal_range(boost::beast::http::field::cookie);
 
-    std::string_view cookieValue = reqHeader["Cookie"];
-    if (cookieValue.empty())
+    for (auto it = cookies.first; it != cookies.second; it++)
     {
-        return nullptr;
-    }
-
+        std::string_view cookieValue = it->value();
+        BMCWEB_LOG_DEBUG("Checking cookie {}", cookieValue);
     auto startIndex = cookieValue.find("SESSION=");
     if (startIndex == std::string::npos)
     {
-        return nullptr;
+            BMCWEB_LOG_DEBUG(
+                "Cookie was present, but didn't look like a session {}",
+                cookieValue);
+            continue;
     }
     startIndex += sizeof("SESSION=") - 1;
     auto endIndex = cookieValue.find(';', startIndex);
@@ -158,7 +153,9 @@ static std::shared_ptr<persistent_data::UserSession>
         return nullptr;
     }
     sessionOut->cookieAuth = true;
-#ifndef BMCWEB_INSECURE_DISABLE_CSRF_PREVENTION
+
+        if constexpr (!BMCWEB_INSECURE_DISABLE_CSRF)
+        {
     // RFC7231 defines methods that need csrf protection
     if (method != boost::beast::http::verb::get)
     {
@@ -174,19 +171,19 @@ static std::shared_ptr<persistent_data::UserSession>
             return nullptr;
         }
         // Reject if csrf token not available
-        if (!crow::utility::constantTimeStringCompare(csrf,
-                                                      sessionOut->csrfToken))
+                if (!crow::utility::constantTimeStringCompare(
+                        csrf, sessionOut->csrfToken))
         {
             return nullptr;
         }
     }
-#endif
+        }
     return sessionOut;
 }
-#endif
+    return nullptr;
+}
 
-#ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-static std::shared_ptr<persistent_data::UserSession>
+inline std::shared_ptr<persistent_data::UserSession>
     performTLSAuth(Response& res,
                    const boost::beast::http::header<true>& reqHeader,
                    const std::weak_ptr<persistent_data::UserSession>& session)
@@ -216,11 +213,9 @@ static std::shared_ptr<persistent_data::UserSession>
     }
     return nullptr;
 }
-#endif
 
 // checks if request can be forwarded without authentication
-[[maybe_unused]] static bool isOnAllowlist(std::string_view url,
-                                           boost::beast::http::verb method)
+inline bool isOnAllowlist(std::string_view url, boost::beast::http::verb method)
 {
     if (boost::beast::http::verb::get == method)
     {
@@ -254,8 +249,7 @@ static std::shared_ptr<persistent_data::UserSession>
     return false;
 }
 
-[[maybe_unused]] static std::shared_ptr<persistent_data::UserSession>
-    authenticate(
+inline std::shared_ptr<persistent_data::UserSession> authenticate(
         const boost::asio::ip::address& ipAddress [[maybe_unused]],
         Response& res [[maybe_unused]],
         boost::beast::http::verb method [[maybe_unused]],
@@ -267,39 +261,48 @@ static std::shared_ptr<persistent_data::UserSession>
         persistent_data::SessionStore::getInstance().getAuthMethodsConfig();
 
     std::shared_ptr<persistent_data::UserSession> sessionOut = nullptr;
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
     if (persistent_data::getConfig().isTLSAuthEnabled() &&
         authMethodsConfig.tls)
+=======
+    if constexpr (BMCWEB_MUTUAL_TLS_AUTH)
+    {
+        if (authMethodsConfig.tls)
+>>>>>>> master
     {
         sessionOut = performTLSAuth(res, reqHeader, session);
     }
-#endif
-#ifdef BMCWEB_ENABLE_XTOKEN_AUTHENTICATION
+    }
+    if constexpr (BMCWEB_XTOKEN_AUTH)
+    {
     if (sessionOut == nullptr && authMethodsConfig.xtoken)
     {
         sessionOut = performXtokenAuth(reqHeader);
     }
-#endif
-#ifdef BMCWEB_ENABLE_COOKIE_AUTHENTICATION
+    }
+    if constexpr (BMCWEB_COOKIE_AUTH)
+    {
     if (sessionOut == nullptr && authMethodsConfig.cookie)
     {
         sessionOut = performCookieAuth(method, reqHeader);
     }
-#endif
+    }
     std::string_view authHeader = reqHeader["Authorization"];
     BMCWEB_LOG_DEBUG("authHeader={}", authHeader);
-
+    if constexpr (BMCWEB_SESSION_AUTH)
+    {
     if (sessionOut == nullptr && authMethodsConfig.sessionToken)
     {
-#ifdef BMCWEB_ENABLE_SESSION_AUTHENTICATION
         sessionOut = performTokenAuth(authHeader);
-#endif
     }
+    }
+    if constexpr (BMCWEB_BASIC_AUTH)
+    {
     if (sessionOut == nullptr && authMethodsConfig.basic)
     {
-#ifdef BMCWEB_ENABLE_BASIC_AUTHENTICATION
         sessionOut = performBasicAuth(ipAddress, authHeader);
-#endif
+        }
     }
     if (sessionOut != nullptr)
     {

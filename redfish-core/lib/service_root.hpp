@@ -198,6 +198,7 @@ inline void handleServiceRootGetImpl(
             "/redfish/v1/SessionService/Sessions";
         asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
             "/redfish/v1/AccountService";
+<<<<<<< HEAD
     }
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
@@ -205,6 +206,13 @@ inline void handleServiceRootGetImpl(
 #endif
     asyncResp->res.jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
         "/redfish/v1/Managers/" PLATFORMBMCID;
+=======
+    if constexpr (BMCWEB_REDFISH_AGGREGATION)
+    {
+        asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
+            "/redfish/v1/AggregationService";
+    }
+>>>>>>> master
     asyncResp->res.jsonValue["Chassis"]["@odata.id"] = "/redfish/v1/Chassis";
 #ifndef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
     asyncResp->res.jsonValue["ComponentIntegrity"]["@odata.id"] =
@@ -248,16 +256,18 @@ inline void handleServiceRootGetImpl(
     protocolFeatures["ExcerptQuery"] = false;
 
     protocolFeatures["ExpandQuery"]["ExpandAll"] =
-        bmcwebInsecureEnableQueryParams;
+        BMCWEB_INSECURE_ENABLE_REDFISH_QUERY;
     // This is the maximum level defined in ServiceRoot.v1_13_0.json
-    if (bmcwebInsecureEnableQueryParams)
+    if constexpr (BMCWEB_INSECURE_ENABLE_REDFISH_QUERY)
     {
         protocolFeatures["ExpandQuery"]["MaxLevels"] = 6;
     }
-    protocolFeatures["ExpandQuery"]["Levels"] = bmcwebInsecureEnableQueryParams;
-    protocolFeatures["ExpandQuery"]["Links"] = bmcwebInsecureEnableQueryParams;
+    protocolFeatures["ExpandQuery"]["Levels"] =
+        BMCWEB_INSECURE_ENABLE_REDFISH_QUERY;
+    protocolFeatures["ExpandQuery"]["Links"] =
+        BMCWEB_INSECURE_ENABLE_REDFISH_QUERY;
     protocolFeatures["ExpandQuery"]["NoLinks"] =
-        bmcwebInsecureEnableQueryParams;
+        BMCWEB_INSECURE_ENABLE_REDFISH_QUERY;
     protocolFeatures["FilterQuery"] = false;
     protocolFeatures["OnlyMemberQuery"] = true;
     protocolFeatures["SelectQuery"] = true;

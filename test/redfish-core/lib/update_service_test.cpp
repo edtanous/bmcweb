@@ -2,6 +2,8 @@
 #include "http_response.hpp"
 #include "update_service.hpp"
 
+#include <boost/url/url.hpp>
+
 #include <optional>
 
 #include <gtest/gtest.h>
@@ -16,38 +18,99 @@ TEST(UpdateService, ParseTFTPPostitive)
     crow::Response res;
     {
         // No protocol, schema on url
-        std::optional<TftpUrl> ret = parseTftpUrl("tftp://1.1.1.1/path",
-                                                  std::nullopt, res);
+        std::optional<boost::urls::url> ret =
+            parseSimpleUpdateUrl("tftp://1.1.1.1/path", std::nullopt, res);
         ASSERT_TRUE(ret);
         if (!ret)
         {
             return;
         }
-        EXPECT_EQ(ret->tftpServer, "1.1.1.1");
-        EXPECT_EQ(ret->fwFile, "path");
+        EXPECT_EQ(ret->encoded_host_and_port(), "1.1.1.1");
+        EXPECT_EQ(ret->encoded_path(), "/path");
+        EXPECT_EQ(ret->scheme(), "tftp");
     }
     {
         // Protocol, no schema on url
-        std::optional<TftpUrl> ret = parseTftpUrl("1.1.1.1/path", "TFTP", res);
+        std::optional<boost::urls::url> ret =
+            parseSimpleUpdateUrl("1.1.1.1/path", "TFTP", res);
         ASSERT_TRUE(ret);
         if (!ret)
         {
             return;
         }
-        EXPECT_EQ(ret->tftpServer, "1.1.1.1");
-        EXPECT_EQ(ret->fwFile, "path");
+        EXPECT_EQ(ret->encoded_host_and_port(), "1.1.1.1");
+        EXPECT_EQ(ret->encoded_path(), "/path");
+        EXPECT_EQ(ret->scheme(), "tftp");
     }
     {
-        // Both protocl and schema on url
-        std::optional<TftpUrl> ret = parseTftpUrl("tftp://1.1.1.1/path", "TFTP",
-                                                  res);
+        // Both protocol and schema on url
+        std::optional<boost::urls::url> ret =
+            parseSimpleUpdateUrl("tftp://1.1.1.1/path", "TFTP", res);
         ASSERT_TRUE(ret);
         if (!ret)
         {
             return;
         }
-        EXPECT_EQ(ret->tftpServer, "1.1.1.1");
-        EXPECT_EQ(ret->fwFile, "path");
+        EXPECT_EQ(ret->encoded_host_and_port(), "1.1.1.1");
+        EXPECT_EQ(ret->encoded_path(), "/path");
+        EXPECT_EQ(ret->scheme(), "tftp");
+    }
+}
+
+TEST(UpdateService, ParseHTTPSPostitive)
+{
+    crow::Response res;
+    {
+        // No protocol, schema on url
+        std::optional<boost::urls::url> ret =
+            parseSimpleUpdateUrl("https://1.1.1.1/path", std::nullopt, res);
+        ASSERT_TRUE(ret);
+        if (!ret)
+        {
+            return;
+        }
+        EXPECT_EQ(ret->encoded_host_and_port(), "1.1.1.1");
+        EXPECT_EQ(ret->encoded_path(), "/path");
+        EXPECT_EQ(ret->scheme(), "https");
+    }
+    {
+        // Protocol, no schema on url
+        std::optional<boost::urls::url> ret =
+            parseSimpleUpdateUrl("1.1.1.1/path", "HTTPS", res);
+        ASSERT_TRUE(ret);
+        if (!ret)
+        {
+            return;
+        }
+        EXPECT_EQ(ret->encoded_host_and_port(), "1.1.1.1");
+        EXPECT_EQ(ret->encoded_path(), "/path");
+        EXPECT_EQ(ret->scheme(), "https");
+    }
+    {
+        // Both protocol and schema on url with path
+        std::optional<boost::urls::url> ret =
+            parseSimpleUpdateUrl("https://1.1.1.1/path", "HTTPS", res);
+        ASSERT_TRUE(ret);
+        if (!ret)
+        {
+            return;
+        }
+        EXPECT_EQ(ret->encoded_host_and_port(), "1.1.1.1");
+        EXPECT_EQ(ret->encoded_path(), "/path");
+        EXPECT_EQ(ret->scheme(), "https");
+    }
+    {
+        // Both protocol and schema on url without path
+        std::optional<boost::urls::url> ret =
+            parseSimpleUpdateUrl("https://1.1.1.1", "HTTPS", res);
+        ASSERT_TRUE(ret);
+        if (!ret)
+        {
+            return;
+        }
+        EXPECT_EQ(ret->encoded_host_and_port(), "1.1.1.1");
+        EXPECT_EQ(ret->encoded_path(), "/");
+        EXPECT_EQ(ret->scheme(), "https");
     }
 }
 
@@ -55,16 +118,19 @@ TEST(UpdateService, ParseTFTPNegative)
 {
     crow::Response res;
     // No protocol, no schema
-    ASSERT_EQ(parseTftpUrl("1.1.1.1/path", std::nullopt, res), std::nullopt);
+    ASSERT_EQ(parseSimpleUpdateUrl("1.1.1.1/path", std::nullopt, res),
+              std::nullopt);
     // No host
-    ASSERT_EQ(parseTftpUrl("/path", "TFTP", res), std::nullopt);
+    ASSERT_EQ(parseSimpleUpdateUrl("/path", "TFTP", res), std::nullopt);
 
     // No host
-    ASSERT_EQ(parseTftpUrl("path", "TFTP", res), std::nullopt);
+    ASSERT_EQ(parseSimpleUpdateUrl("path", "TFTP", res), std::nullopt);
 
     // No path
-    ASSERT_EQ(parseTftpUrl("tftp://1.1.1.1", "TFTP", res), std::nullopt);
-    ASSERT_EQ(parseTftpUrl("tftp://1.1.1.1/", "TFTP", res), std::nullopt);
+    ASSERT_EQ(parseSimpleUpdateUrl("tftp://1.1.1.1", "TFTP", res),
+              std::nullopt);
+    ASSERT_EQ(parseSimpleUpdateUrl("tftp://1.1.1.1/", "TFTP", res),
+              std::nullopt);
 }
 } // namespace
 } // namespace redfish

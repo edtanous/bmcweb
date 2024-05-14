@@ -589,12 +589,6 @@ inline void getCpuDataByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         // count is zero, then it has a higher precedence.
         if (slotPresent)
         {
-            if (totalCores == 0)
-            {
-                // Slot is not populated, set status end return
-                asyncResp->res.jsonValue["Status"]["State"] = "Absent";
-                asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-            }
             asyncResp->res.jsonValue["TotalCores"] = totalCores;
         }
         return;
@@ -1656,6 +1650,7 @@ inline void
 }
 
 /**
+<<<<<<< HEAD
  * Request all the properties for the given D-Bus object and fill out the
  * related entries in the Redfish processor response.
  *
@@ -3256,6 +3251,8 @@ inline void
 }
 
 /**
+=======
+>>>>>>> master
  * Handle the PATCH operation of the AppliedOperatingConfig property. Do basic
  * validation of the input data, and then set the D-Bus property.
  *
@@ -3270,6 +3267,7 @@ inline void patchAppliedOperatingConfig(
     const std::string& processorId, const std::string& appliedConfigUri,
     const std::string& cpuObjectPath,
     const dbus::utility::MapperServiceMap& serviceMap)
+<<<<<<< HEAD
 {
     // Check that the property even exists by checking for the interface
     const std::string* controlService = nullptr;
@@ -5126,6 +5124,8 @@ inline void
 inline void getConnectedProcessorPorts(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& portPath, std::vector<std::string>& portNames)
+=======
+>>>>>>> master
 {
     // This is for when the ports are connected to another processor
     crow::connections::systemBus->async_method_call(
@@ -5237,6 +5237,7 @@ inline void
                std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
+<<<<<<< HEAD
             BMCWEB_LOG_DEBUG("Get associated processor ports failed on: {}",
                              port);
             return;
@@ -5258,6 +5259,10 @@ inline void
             if (portName.empty())
             {
                 messages::internalError(asyncResp->res);
+=======
+        messages::propertyValueIncorrect(resp->res, "AppliedOperatingConfig",
+                                         appliedConfigUri);
+>>>>>>> master
                 return;
             }
 
@@ -5287,6 +5292,7 @@ inline void getProcessorPortData(
             return;
         }
 
+<<<<<<< HEAD
         std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
@@ -5481,6 +5487,13 @@ inline void requestRoutesProcessorPort(App& app)
                 "xyz.openbmc_project.Inventory.Item.Cpu",
                 "xyz.openbmc_project.Inventory.Item.Accelerator"});
     });
+=======
+    // Set the property, with handler to check error responses
+    setDbusProperty(
+        resp, *controlService, cpuObjectPath,
+        "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig",
+        "AppliedConfig", "AppliedOperatingConfig", configPath);
+>>>>>>> master
 }
 
 inline void getProcessorPortMetricsData(
@@ -5605,7 +5618,12 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
+<<<<<<< HEAD
                 if (*value != 0)
+=======
+
+        if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+>>>>>>> master
                 {
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
                                             ["RuntimeError"] = true;
@@ -5706,10 +5724,14 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
+<<<<<<< HEAD
                 asyncResp->res
                     .jsonValue["PCIeErrors"]["CorrectableErrorCount"] = *value;
             }
             else if (property.first == "nonfeCount")
+=======
+        if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+>>>>>>> master
             {
                 const int64_t* value = std::get_if<int64_t>(&property.second);
                 if (value == nullptr)
@@ -5760,10 +5782,14 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
+<<<<<<< HEAD
                 asyncResp->res.jsonValue["PCIeErrors"]["ReplayRolloverCount"] =
                     *value;
             }
             else if (property.first == "NAKSentCount")
+=======
+        if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+>>>>>>> master
             {
                 const int64_t* value = std::get_if<int64_t>(&property.second);
                 if (value == nullptr)
@@ -5806,6 +5832,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
         {
             return;
         }
+<<<<<<< HEAD
         BMCWEB_LOG_DEBUG("Get available system processor resource");
         crow::connections::systemBus->async_method_call(
             [processorId, port, asyncResp](
@@ -5815,6 +5842,9 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                      std::string, std::vector<std::string>>>&
                     subtree) {
             if (ec)
+=======
+        if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+>>>>>>> master
             {
                 BMCWEB_LOG_DEBUG("DBUS response error");
                 messages::internalError(asyncResp->res);
@@ -5827,6 +5857,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                 {
                     continue;
                 }
+<<<<<<< HEAD
                 crow::connections::systemBus->async_method_call(
                     [processorId, port,
                      asyncResp](const boost::system::error_code ec1,
@@ -5836,6 +5867,9 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                         std::string, std::vector<std::string>>>&
                                     subtree1) {
                     if (ec1)
+=======
+        if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+>>>>>>> master
                     {
                         BMCWEB_LOG_DEBUG("DBUS response error");
                         messages::internalError(asyncResp->res);

@@ -1,4 +1,6 @@
-project('bmcweb', 'cpp',
+project(
+    'bmcweb',
+    'cpp',
         version : '1.0',
         meson_version: '>=0.63.0',
         default_options: [
@@ -11,7 +13,8 @@ project('bmcweb', 'cpp',
             'cpp_std=c++20',
             'warning_level=3',
             'werror=true',
-           ])
+    ],
+)
 
 # Project related links
 
@@ -34,8 +37,11 @@ optimization = get_option('optimization')
 summary('Build Type',build, section : 'Build Info')
 summary('Optimization',optimization, section : 'Build Info')
 
+<<<<<<< HEAD
 package_datadir = join_paths(get_option('prefix'), get_option('datadir'), meson.project_name())
 
+=======
+>>>>>>> master
 # remove debug information for minsize buildtype
 if(get_option('buildtype') == 'minsize')
   add_project_arguments(['-fdata-sections', '-ffunction-sections'], language : 'cpp')
@@ -54,6 +60,7 @@ endif
 
 # Include Directories
 
+<<<<<<< HEAD
 incdir = include_directories(
   'include',
   'redfish-core/include',
@@ -181,9 +188,12 @@ foreach option_key,option_value : feature_map
       endif
   endif
 endforeach
+=======
+incdir = include_directories('include', 'redfish-core/include', 'redfish-core/lib', 'http')
+>>>>>>> master
 
 if(get_option('tests').allowed())
-  summary('unittest','NA', section : 'Enabled Features')
+    summary('unittest', 'NA', section: 'Features')
 endif
 
 # Add compiler arguments
@@ -209,11 +219,16 @@ add_project_arguments(
     '-Wno-switch-enum',
     '-Wno-unused-macros',
     '-Wno-covered-switch-default',
+<<<<<<< HEAD
     '-Wno-error=deprecated-declarations',
     '-Wno-attributes',
     '-Wno-error=deprecated-declarations',    
     '-Wno-comment',
   language:'cpp')
+=======
+        language: 'cpp',
+    )
+>>>>>>> master
 endif
 
 if (cxx.get_id() == 'gcc')
@@ -237,9 +252,14 @@ if (cxx.get_id() == 'gcc')
    # '-Wshadow',
    # '-Wno-psabi',
     '-Wno-attributes',
+<<<<<<< HEAD
     '-Wno-error=deprecated-declarations',      
     '-Wno-comment',
     language:'cpp')
+=======
+        language: 'cpp',
+    )
+>>>>>>> master
 endif
 
 if (get_option('buildtype') != 'plain')
@@ -248,29 +268,21 @@ if (get_option('buildtype') != 'plain')
     # dynamic symbol table entries
 
     add_project_arguments(
-     cxx.get_supported_arguments([
+            cxx.get_supported_arguments(
+                [
      '-fno-fat-lto-objects',
      '-fvisibility=hidden',
-     '-fvisibility-inlines-hidden'
-     ]),
-     language: 'cpp')
+                    '-fvisibility-inlines-hidden',
+                ],
+            ),
+            language: 'cpp',
+        )
 
     if cxx.has_link_argument('-Wl,--exclude-libs,ALL')
       add_project_link_arguments('-Wl,--exclude-libs,ALL', language: 'cpp')
     endif
   endif
 endif
-
-if( get_option('bmcweb-logging') != 'disabled' or \
-    get_option('buildtype').startswith('debug'))
- add_project_arguments([
-   '-DBMCWEB_ENABLE_DEBUG'
-   ],
-  language : 'cpp')
-
-  summary('debug', '-DBMCWEB_ENABLE_DEBUG', section : 'Enabled Features')
-endif
-
 # Set Compiler Security flags
 
 security_flags = [
@@ -279,23 +291,23 @@ security_flags = [
   '-fPIC',
   '-D_FORTIFY_SOURCE=2',
   '-Wformat',
-  '-Wformat-security'
+    '-Wformat-security',
 ]
 
 ## Add security flags for builds of type 'release','debugoptimized' and 'minsize'
 
-if not (get_option('buildtype') == 'plain' or get_option('buildtype').startswith('debug'))
-  add_project_arguments(
-   cxx.get_supported_arguments([
-    security_flags
-  ]),
-  language: 'cpp')
+if not (
+    get_option('buildtype') == 'plain'
+    or get_option('buildtype').startswith('debug')
+)
+    add_project_arguments(cxx.get_supported_arguments([security_flags]), language: 'cpp')
 endif
 
 # Boost dependency configuration
 
 add_project_arguments(
-cxx.get_supported_arguments([
+    cxx.get_supported_arguments(
+        [
   '-DBOOST_ASIO_DISABLE_CONCEPTS',
   '-DBOOST_ALL_NO_LIB',
   '-DBOOST_ALLOW_DEPRECATED_HEADERS',
@@ -309,8 +321,10 @@ cxx.get_supported_arguments([
   '-DJSON_NOEXCEPTION',
   '-DOPENSSL_NO_FILENAMES',
   '-DSDBUSPLUS_DISABLE_BOOST_COROUTINES',
-]),
-language : 'cpp')
+        ],
+    ),
+    language: 'cpp',
+)
 
 # Find the dependency modules, if not found use meson wrap to get them
 # automatically during the configure step
@@ -325,15 +339,10 @@ if not openssl.found() or get_option('b_sanitize') != 'none'
   openssl_proj = subproject(
     'openssl',
     required: true,
-    default_options: ['warning_level=0', 'werror=false']
+        default_options: ['warning_level=0', 'werror=false'],
   )
   openssl = openssl_proj.get_variable('openssl_dep')
   openssl = openssl.as_system('system')
-else
-  # When we build openssl as a subproject, the warnings analyzer starts
-  # flagging all the C macros as old style casts, so only enable the
-  # warning for non subprojects.
-  add_project_arguments('-Wold-style-cast', language: 'cpp')
 endif
 bmcweb_dependencies += [openssl]
 
@@ -346,12 +355,14 @@ nghttp2 = dependency('libnghttp2', version: '>=1.52.0', required : false)
 if not nghttp2.found()
   cmake = import('cmake')
   opt_var = cmake.subproject_options()
-  opt_var.add_cmake_defines({
+    opt_var.add_cmake_defines(
+        {
     'ENABLE_LIB_ONLY': true,
-    'ENABLE_STATIC_LIB': true
-  })
+            'ENABLE_STATIC_LIB': true,
+        },
+    )
   nghttp2_ex = cmake.subproject('nghttp2', options: opt_var)
-  nghttp2 = nghttp2_ex.dependency('nghttp2_static')
+    nghttp2 = nghttp2_ex.dependency('nghttp2')
 endif
 bmcweb_dependencies += nghttp2
 
@@ -390,17 +401,19 @@ boost = dependency(
     ],
   version : '>=1.84.0',
   required : false,
-  include_type: 'system'
+    include_type: 'system',
 )
 if boost.found()
   bmcweb_dependencies += [boost]
 else
   cmake = import('cmake')
   opt = cmake.subproject_options()
-  opt.add_cmake_defines({
+    opt.add_cmake_defines(
+        {
     'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;headers;process;type_index;url;uuid',
     'BUILD_SHARED_LIBS': 'OFF',
-  })
+        },
+    )
 
   boost = cmake.subproject('boost', required: true, options: opt)
   boost_asio = boost.dependency('boost_asio').as_system()
@@ -419,12 +432,18 @@ else
     boost_process,
     boost_type_index,
     boost_url,
-    boost_uuid
+        boost_uuid,
   ]
 endif
 
 if get_option('tests').allowed()
-  gtest = dependency('gtest', main: true, version: '>=1.14.0', disabler: true, required : false)
+    gtest = dependency(
+        'gtest',
+        main: true,
+        version: '>=1.14.0',
+        disabler: true,
+        required: false,
+    )
   gmock = dependency('gmock', required : false)
   if not gtest.found() and get_option('tests').allowed()
     gtest_proj = subproject('gtest', required: true)
@@ -439,11 +458,14 @@ systemd_system_unit_dir = systemd.get_variable('systemdsystemunitdir')
 
 bindir = get_option('prefix') + '/' +get_option('bindir')
 
-summary({
+summary(
+    {
           'prefix' : get_option('prefix'),
           'bindir' : bindir,
-          'systemd unit directory' : systemd_system_unit_dir
-        }, section : 'Directories')
+        'systemd unit directory': systemd_system_unit_dir,
+    },
+    section: 'Directories',
+)
 
 install_subdir('static', install_dir : 'share/www', strip_directory : true)
 
@@ -456,17 +478,22 @@ bmcweb_dependencies += conf_h_dep
 fs = import('fs')
 
 srcfiles_bmcweb = files(
+    # end large files
+
   'redfish-core/src/error_messages.cpp',
+    # Begin large files, should be at the beginning
+    'redfish-core/src/redfish.cpp',
   'redfish-core/src/registries.cpp',
   'redfish-core/src/utils/dbus_utils.cpp',
-  'redfish-core/src/utils/time_utils.cpp',
   'redfish-core/src/utils/json_utils.cpp',
-  'src/boost_asio_ssl.cpp',
+    'redfish-core/src/utils/time_utils.cpp',
   'src/boost_asio.cpp',
+    'src/boost_asio_ssl.cpp',
   'src/boost_beast.cpp',
   'src/dbus_singleton.cpp',
   'src/json_html_serializer.cpp',
   'src/ossl_random.cpp',
+    'src/webserver_run.cpp',
 )
 
 bmcweblib = static_library(
@@ -485,23 +512,32 @@ executable(
   link_with: bmcweblib,
   link_args: '-Wl,--gc-sections',
   install: true,
-  install_dir:bindir
+    install_dir: bindir,
 )
 
 srcfiles_unittest = files(
+<<<<<<< HEAD
   #'test/http/crow_getroutes_test.cpp',
   #'test/http/http2_connection_test.cpp',
   #'test/http/http_connection_test.cpp',
+=======
+    'test/http/crow_getroutes_test.cpp',
+    'test/http/http2_connection_test.cpp',
+    'test/http/http_body_test.cpp',
+    'test/http/http_connection_test.cpp',
+    'test/http/http_response_test.cpp',
+>>>>>>> master
   'test/http/mutual_tls.cpp',
-  'test/http/router_test.cpp',
+    'test/http/mutual_tls_meta.cpp',
   'test/http/parsing_test.cpp',
-  'test/http/http_response_test.cpp',
+    'test/http/router_test.cpp',
+    'test/http/server_sent_event_test.cpp',
   'test/http/utility_test.cpp',
   'test/http/verb_test.cpp',
-  'test/http/server_sent_event_test.cpp',
-  'test/http/mutual_tls_meta.cpp',
-  'test/http/http_body_test.cpp',
+    'test/include/async_resolve_test.cpp',
+    'test/include/credential_pipe_test.cpp',
   'test/include/dbus_utility_test.cpp',
+<<<<<<< HEAD
   #'test/include/google/google_service_root_test.cpp',
   'test/include/json_html_serializer.cpp',
   'test/include/http_utility_test.cpp',
@@ -510,20 +546,28 @@ srcfiles_unittest = files(
   'test/include/credential_pipe_test.cpp',
   #'test/include/ibm/configfile_test.cpp',
   'test/include/ibm/lock_test.cpp',
+=======
+    'test/include/google/google_service_root_test.cpp',
+    'test/include/http_utility_test.cpp',
+    'test/include/human_sort_test.cpp',
+    'test/include/ibm/configfile_test.cpp',
+    'test/include/json_html_serializer.cpp',
+>>>>>>> master
   'test/include/multipart_test.cpp',
   'test/include/openbmc_dbus_rest_test.cpp',
-  'test/include/str_utility_test.cpp',
   'test/include/ossl_random.cpp',
+    'test/include/str_utility_test.cpp',
   'test/redfish-core/include/privileges_test.cpp',
   'test/redfish-core/include/redfish_aggregator_test.cpp',
   'test/redfish-core/include/registries_test.cpp',
-  'test/redfish-core/include/utils/hex_utils_test.cpp',
   'test/redfish-core/include/utils/dbus_utils.cpp',
+    'test/redfish-core/include/utils/hex_utils_test.cpp',
   'test/redfish-core/include/utils/ip_utils_test.cpp',
   'test/redfish-core/include/utils/json_utils_test.cpp',
   'test/redfish-core/include/utils/query_param_test.cpp',
   #'test/redfish-core/include/utils/stl_utils_test.cpp',
   'test/redfish-core/include/utils/time_utils_test.cpp',
+<<<<<<< HEAD
   #'test/redfish-core/lib/chassis_test.cpp',
   'test/redfish-core/lib/log_services_test.cpp',
   #'test/redfish-core/lib/log_services_dump_test.cpp',
@@ -539,8 +583,19 @@ srcfiles_unittest = files(
   #'test/redfish-core/lib/thermal_subsystem_test.cpp',
   #'test/redfish-core/lib/power_subsystem_test.cpp',
   'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
+=======
+    'test/redfish-core/lib/chassis_test.cpp',
+    'test/redfish-core/lib/log_services_dump_test.cpp',
+    'test/redfish-core/lib/log_services_test.cpp',
+    'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
+    'test/redfish-core/lib/power_subsystem_test.cpp',
+    'test/redfish-core/lib/sensors_test.cpp',
+    'test/redfish-core/lib/service_root_test.cpp',
+    'test/redfish-core/lib/system_test.cpp',
+    'test/redfish-core/lib/thermal_subsystem_test.cpp',
+    'test/redfish-core/lib/update_service_test.cpp',
+>>>>>>> master
 )
-
 
 if(get_option('tests').allowed())
     # generate the test executable
@@ -549,10 +604,11 @@ if(get_option('tests').allowed())
       srcfiles_unittest + srcfiles_bmcweb,
       include_directories : incdir,
       install_dir: bindir,
-      dependencies: bmcweb_dependencies + [
+            dependencies: bmcweb_dependencies
+            + [
         gtest,
         gmock,
-      ]
+            ],
     )
     test('bmcweb_unit_test', ut_bin)
     # foreach test_src : srcfiles_unittest

@@ -6,6 +6,7 @@
 #include "error_messages.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
+#include "json_formatters.hpp"
 #include "logging.hpp"
 #include "str_utility.hpp"
 #include "redfish_aggregator.hpp"
@@ -206,7 +207,7 @@ struct QueryCapabilities
 // handlers so that handlers don't need to query again.
 inline Query delegate(const QueryCapabilities& queryCapabilities, Query& query)
 {
-    Query delegated;
+    Query delegated{};
     // delegate only
     if (query.isOnly && queryCapabilities.canDelegateOnly)
     {
@@ -377,7 +378,7 @@ inline bool getSelectParam(std::string_view value, Query& query)
 inline std::optional<Query> parseParameters(boost::urls::params_view urlParams,
                                             crow::Response& res)
 {
-    Query ret;
+    Query ret{};
     for (const boost::urls::params_view::value_type& it : urlParams)
     {
         if (it.key == "only")
@@ -389,7 +390,7 @@ inline std::optional<Query> parseParameters(boost::urls::params_view urlParams,
             }
             ret.isOnly = true;
         }
-        else if (it.key == "$expand" && bmcwebInsecureEnableQueryParams)
+        else if (it.key == "$expand" && BMCWEB_INSECURE_ENABLE_REDFISH_QUERY)
         {
             if (!getExpandType(it.value, ret))
             {
@@ -503,7 +504,8 @@ inline bool processOnly(crow::App& app, crow::Response& res,
     // TODO(Ed) copy request headers?
     // newReq.session = req.session;
     std::error_code ec;
-    crow::Request newReq({boost::beast::http::verb::get, *url, 11}, ec);
+    auto newReq = std::make_shared<crow::Request>(
+        crow::Request::Body{boost::beast::http::verb::get, *url, 11}, ec);
     if (ec)
     {
         messages::internalError(res);
@@ -711,29 +713,21 @@ inline std::optional<std::string> formatQueryForExpand(const Query& query)
         return "";
     }
     std::string str = "?$expand=";
-    bool queryTypeExpected = false;
     switch (query.expandType)
     {
-        case ExpandType::None:
-            return "";
         case ExpandType::Links:
-            queryTypeExpected = true;
             str += '~';
             break;
         case ExpandType::NotLinks:
-            queryTypeExpected = true;
             str += '.';
             break;
         case ExpandType::Both:
-            queryTypeExpected = true;
             str += '*';
             break;
+        case ExpandType::None:
+            return "";
         default:
             return std::nullopt;
-    }
-    if (!queryTypeExpected)
-    {
-        return std::nullopt;
     }
     str += "($levels=";
     str += std::to_string(query.expandLevel - 1);
@@ -871,7 +865,9 @@ class MultiAsyncResp : public std::enable_shared_from_this<MultiAsyncResp>
             const std::string subQuery = node.uri + *queryStr;
             BMCWEB_LOG_DEBUG("URL of subquery:  {}", subQuery);
             std::error_code ec;
-            crow::Request newReq({boost::beast::http::verb::get, subQuery, 11},
+            auto newReq = std::make_shared<crow::Request>(
+                crow::Request::Body{boost::beast::http::verb::get, subQuery,
+                                    11},
                                  ec);
             if (ec)
             {

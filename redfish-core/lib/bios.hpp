@@ -1980,9 +1980,13 @@ inline void
     {
         return;
     }
+<<<<<<< HEAD
     nlohmann::json pendingAttrJson;
     if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Attributes",
                                             pendingAttrJson))
+=======
+    if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+>>>>>>> master
     {
         BMCWEB_LOG_ERROR("No 'Attributes' found");
         messages::unrecognizedRequestBody(asyncResp->res);
@@ -2044,6 +2048,7 @@ inline void
         return;
     }
 
+<<<<<<< HEAD
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code& ec) {
         if (ec)
@@ -2184,6 +2189,9 @@ inline void handleClearNonVolatileVariablesSubtree(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     const SecureSelector secure, const bool requestToClear,
     const dbus::utility::MapperGetSubTreeResponse clearSubtree)
+=======
+    if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+>>>>>>> master
 {
     if (secure == SecureSelector::both)
     {

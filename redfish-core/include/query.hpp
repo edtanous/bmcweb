@@ -16,7 +16,6 @@
 
 #include <functional>
 #include <memory>
-#include <new>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -31,10 +30,9 @@
 
 namespace redfish
 {
-inline void
-    afterIfMatchRequest(crow::App& app,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        crow::Request& req, const std::string& ifMatchHeader,
+inline void afterIfMatchRequest(
+    crow::App& app, const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::shared_ptr<crow::Request>& req, const std::string& ifMatchHeader,
                         const crow::Response& resIn)
 {
     std::string computedEtag = resIn.computeEtag();
@@ -46,7 +44,7 @@ inline void
         return;
     }
     // Restart the request without if-match
-    req.clearHeader(boost::beast::http::field::if_match);
+    req->clearHeader(boost::beast::http::field::if_match);
     BMCWEB_LOG_DEBUG("Restarting request");
     app.handle(req, asyncResp);
 }
@@ -84,9 +82,16 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
     boost::system::error_code ec;
 
     // Try to GET the same resource
+<<<<<<< HEAD
     boost::beast::http::request<bmcweb::HttpBody> reqIn(
         boost::beast::http::verb::get, req.url().encoded_path(), 11);
     auto newReqPtr = std::make_shared<crow::Request>(reqIn, ec);
+=======
+    auto getReq = std::make_shared<crow::Request>(
+        crow::Request::Body{boost::beast::http::verb::get,
+                            req.url().encoded_path(), 11},
+        ec);
+>>>>>>> master
 
     if (ec)
     {
@@ -95,13 +100,18 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
     }
 
     // New request has the same credentials as the old request
+<<<<<<< HEAD
     newReqPtr->session = req.session;
+=======
+    getReq->session = req.session;
+>>>>>>> master
 
     // Construct a new response object to fill in, and check the hash of before
     // we modify the Resource.
     std::shared_ptr<bmcweb::AsyncResp> getReqAsyncResp =
         std::make_shared<bmcweb::AsyncResp>();
 
+<<<<<<< HEAD
     // Need to capture newReqPtr as it need to stay alive till 
     // completion handler is invoked
     auto afterIfMatchHandler =
@@ -119,6 +129,16 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
                   std::placeholders::_1));
 
     app.handle(*newReqPtr, getReqAsyncResp);
+=======
+    // Ideally we would have a shared_ptr to the original Request which we could
+    // modify to remove the If-Match and restart it. But instead we have to make
+    // a full copy to restart it.
+    getReqAsyncResp->res.setCompleteRequestHandler(std::bind_front(
+        afterIfMatchRequest, std::ref(app), asyncResp,
+        std::make_shared<crow::Request>(req), std::move(ifMatch)));
+
+    app.handle(getReq, getReqAsyncResp);
+>>>>>>> master
     return false;
 }
 
@@ -161,13 +181,15 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
 
     bool needToCallHandlers = true;
 
-#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
-    needToCallHandlers = RedfishAggregator::beginAggregation(req, asyncResp) ==
-                         Result::LocalHandle;
+    if constexpr (BMCWEB_REDFISH_AGGREGATION)
+    {
+        needToCallHandlers = RedfishAggregator::beginAggregation(
+                                 req, asyncResp) == Result::LocalHandle;
 
-    // If the request should be forwarded to a satellite BMC then we don't want
-    // to write anything to the asyncResp since it will get overwritten later.
-#endif
+        // If the request should be forwarded to a satellite BMC then we don't
+        // want to write anything to the asyncResp since it will get overwritten
+        // later.
+    }
 
     // If this isn't a get, no need to do anything with parameters
     if (req.method() != boost::beast::http::verb::get)

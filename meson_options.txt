@@ -24,7 +24,7 @@ option(
     'vm-websocket',
     type: 'feature',
     value: 'enabled',
-    description: '''Enable the Virtual Media WebSocket. Path is /vm/0/0 to
+    description: '''Enable the Virtual Media WebSocket. Path is /vm/0/0 and /nbd/<id> to
                     open the websocket. See
                     https://github.com/openbmc/jsnbd/blob/master/README.'''
 )
@@ -61,7 +61,8 @@ option(
 # opportunity to upstream their backend implementation
 #option(
 #    'vm-nbdproxy',
-#    type: 'feature', value: 'disabled',
+#    type: 'feature',
+#    value: 'disabled',
 #    description: 'Enable the Virtual Media WebSocket.'
 #)
 
@@ -306,11 +307,25 @@ option(
 )
 
 option(
+<<<<<<< HEAD
     'redfish-health-populate',
     type: 'feature',
     value: 'enabled',
     description: '''Enables HealthPopulate and generate the Status property for
                     the resource. This option will be removed Q1 2024'''
+=======
+    'redfish-updateservice-use-dbus',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enables xyz.openbmc_project.Software.Update D-Bus interface
+                    to propagate UpdateService requests to the corresponding
+                    updater daemons instead of moving files to /tmp/images dir.
+                    This option is temporary, should not be enabled on any
+                    production systems. The code will be moved to the normal
+                    code update flow and the option will be removed at the end
+                    of Q3 2024.
+                '''
+>>>>>>> master
 )
 
 option(
@@ -426,13 +441,6 @@ option(
     value: 'disabled',
     description: '''Disable authentication and authoriztion on all ports.
                     Should be set to false for production systems.'''
-)
-
-option(
-    'insecure-disable-xss',
-    type: 'feature',
-    value: 'disabled',
-    description: 'Disable XSS preventions'
 )
 
 option(
