@@ -1831,7 +1831,7 @@ inline void processMultipartFormData(
  */
 inline bool preCheckMultipartUpdateServiceReq(
     const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, bool enableFWInProgCheck)
 {
     if (req.body().size() > firmwareImageLimitBytes)
     {
@@ -1848,9 +1848,8 @@ inline bool preCheckMultipartUpdateServiceReq(
         return false;
     }
 
-#ifndef BMCWEB_ENABLE_REDFISH_AGGREGATION
     // Only allow one FW update at a time
-    if (fwUpdateInProgress != false)
+    if (enableFWInProgCheck && fwUpdateInProgress != false)
     {
         if (asyncResp)
         {
@@ -1863,7 +1862,6 @@ inline bool preCheckMultipartUpdateServiceReq(
         }
         return false;
     }
-#endif
 
     std::error_code spaceInfoError;
     const std::filesystem::space_info spaceInfo =
@@ -1905,7 +1903,14 @@ inline void handleMultipartUpdateServicePost(
     BMCWEB_LOG_DEBUG(
         "Execute HTTP POST method '/redfish/v1/UpdateService/update-multipart/'");
 
-    if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
+    bool enableFWInProgCheck = true;
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    // This is the flag to check BMC firmware update. 
+    // Parse the multipart payload and then learn satBMC or BMC firmware update
+    // So UpdateInProgress will be checking at the later stage.
+    enableFWInProgCheck = false;
+#endif
+    if (!preCheckMultipartUpdateServiceReq(req, asyncResp, enableFWInProgCheck))
     {
         return;
     }
@@ -1940,7 +1945,7 @@ inline void
     BMCWEB_LOG_DEBUG(
         "Execute HTTP POST method '/redfish/v1/UpdateService/update/'");
 
-    if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
+    if (!preCheckMultipartUpdateServiceReq(req, asyncResp, true))
     {
         return;
     }
