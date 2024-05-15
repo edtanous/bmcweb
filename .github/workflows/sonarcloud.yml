@@ -1,0 +1,53 @@
+name: SonarCloud
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
+
+jobs:
+  Analysis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Disabling shallow clone is recommended for improving relevancy of reporting
+          fetch-depth: 0
+
+      - name: Install meson
+        run: sudo pip3 install --break-system-packages -U meson inflection mako
+
+      - name: Install systemd-dev
+        run: sudo apt update && sudo apt install libsystemd-dev libpam-dev ninja-build cmake
+
+      - name: Install sonar-scanner and build-wrapper
+        uses: SonarSource/sonarcloud-github-c-cpp@v3
+
+      - name: Configure bmcweb
+        run: CXX=g++-13 CC=gcc-13 meson setup builddir -Dtests=disabled
+
+      - name: Run build-wrapper
+        run: |
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} ninja -C builddir
+
+      - name: Run sonar-scanner
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+        run: |
+          sonar-scanner  \
+          -Dsonar.verbose=true \
+          -Dsonar.projectVersion="${{ github.sha }}" \
+          -Dsonar.projectKey=edtanous_bmcweb \
+          -Dsonar.organization=edtanous \
+          -Dsonar.python.version=3.12 \
+          -Dsonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
+
