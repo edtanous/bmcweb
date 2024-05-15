@@ -1,0 +1,30 @@
+name: Rebase to upstream
+
+on:
+  schedule:
+  # Every Monday at 1AM PST
+  - cron: "0 5 * * 1"   
+  workflow_dispatch:
+
+permissions: 
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git User
+        run: |
+          git config user.name "GitHub Action Rebase"
+          git config user.email "ed@tanous.net"
+
+      - name: Update From Upstream Branch
+        run: |
+          git checkout master
+          git pull --rebase https://github.com/openbmc/bmcweb.git master
+          git push -f origin master
