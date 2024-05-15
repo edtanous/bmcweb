@@ -1,0 +1,31 @@
+name: Coverity
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  Coverity:
+
+    runs-on: ubuntu-24.04
+    steps:
+  
+    - uses: actions/checkout@v4
+
+    - name: Install meson
+      run: sudo pip3 install --break-system-packages -U meson inflection mako
+
+    - name: Install systemd-dev
+      run: sudo apt update && sudo apt install libsystemd-dev libpam-dev ninja-build cmake
+      
+    - name: Configure bmcweb
+      run: meson setup builddir -Dtests=disabled
+      
+    - uses: vapier/coverity-scan-action@v1
+      with:
+        email: ${{ secrets.COVERITY_SCAN_EMAIL }}
+        token: ${{ secrets.COVERITY_SCAN_TOKEN }}
+        build_language: 'cxx'
+        project: 'openbmc/bmcweb'
+        command: 'ninja -C builddir bmcweb'
+        description: 'github action triggered build'
