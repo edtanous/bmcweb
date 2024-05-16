@@ -175,7 +175,7 @@ inline void getCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+                "#NvidiaProcessor.v1_2_0.NvidiaGPU";
             if (property.first == "CCModeEnabled")
             {
                 const bool* ccModeEnabled = std::get_if<bool>(&property.second);
@@ -229,6 +229,8 @@ inline void
             return;
         }
         nlohmann::json& json = aResp->res.jsonValue;
+        json["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessor.v1_2_0.NvidiaGPU";
         for (const auto& property : properties)
         {
             if (property.first == "PendingCCModeState")
@@ -241,8 +243,6 @@ inline void
                     messages::internalError(aResp->res);
                     return;
                 }
-                json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
                 json["Oem"]["Nvidia"]["CCModeEnabled"] = *pendingCCState;
             }
             else if (property.first == "PendingCCDevModeState")
@@ -256,8 +256,6 @@ inline void
                     messages::internalError(aResp->res);
                     return;
                 }
-                json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
                 json["Oem"]["Nvidia"]["CCDevModeEnabled"] = *pendingCCDevState;
             }
         }

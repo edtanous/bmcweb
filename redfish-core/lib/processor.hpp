@@ -2222,7 +2222,7 @@ inline void getMigModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     return;
                 }
                 json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+                    "#NvidiaProcessor.v1_2_0.NvidiaGPU";
                 json["Oem"]["Nvidia"]["MIGModeEnabled"] = *migModeEnabled;
             }
         }
