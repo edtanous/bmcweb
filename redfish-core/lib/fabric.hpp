@@ -759,13 +759,10 @@ inline void requestRoutesSwitchCollection(App& app)
                 {
                     continue;
                 }
-                constexpr std::array<std::string_view, 1> interface{
-                    "xyz.openbmc_project.Inventory.Item.Switch"};
-                collection_util::getCollectionMembers(
-                    asyncResp,
-                    boost::urls::format("/redfish/v1/Fabrics/" + fabricId +
-                                        "/Switches"),
-                    interface, object.c_str());
+                collection_util::getCollectionMembersByAssociation(
+                    asyncResp, "/redfish/v1/Fabrics/" + fabricId + "/Switches",
+                    object + "/all_switches",
+                    {"xyz.openbmc_project.Inventory.Item.Switch"});
                 return;
             }
             // Couldn't find an object with that name. Return an
@@ -1130,36 +1127,30 @@ inline void requestRoutesSwitch(App& app)
                     continue;
                 }
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp, fabricId, switchId](
-                        const boost::system::error_code ec,
-                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                    [asyncResp, fabricId,
+                     switchId](const boost::system::error_code ec,
+                               std::variant<std::vector<std::string>>& resp) {
                     if (ec)
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    // Iterate over all retrieved ObjectPaths.
-                    for (const std::pair<
-                             std::string,
-                             std::vector<std::pair<std::string,
-                                                   std::vector<std::string>>>>&
-                             object : subtree)
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr)
                     {
-                        // Get the switchId object
-                        const std::string& path = object.first;
-                        const std::vector<
-                            std::pair<std::string, std::vector<std::string>>>&
-                            connectionNames = object.second;
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    // Iterate over all retrieved ObjectPaths.
+                    for (const std::string& path : *data)
+                    {
                         sdbusplus::message::object_path objPath(path);
                         if (objPath.filename() != switchId)
                         {
                             continue;
                         }
-                        if (connectionNames.size() < 1)
-                        {
-                            BMCWEB_LOG_ERROR("Got 0 Connection names");
-                            continue;
-                        }
+
                         std::string switchURI = "/redfish/v1/Fabrics/";
                         switchURI += fabricId;
                         switchURI += "/Switches/";
@@ -1187,9 +1178,30 @@ inline void requestRoutesSwitch(App& app)
                             {"target", switchResetURI},
                             {"ResetType@Redfish.AllowableValues",
                              {"ForceRestart"}}};
-                        const std::string& connectionName =
-                            connectionNames[0].first;
-                        updateSwitchData(asyncResp, connectionName, path);
+
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp,
+                             path](const boost::system::error_code ec,
+                                   const std::vector<std::pair<
+                                       std::string, std::vector<std::string>>>&
+                                       object) {
+                            if (ec)
+                            {
+                                // the path does not implement Item Switch
+                                // interfaces
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            updateSwitchData(asyncResp, object.front().first,
+                                             path);
+                        },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetObject",
+                            path,
+                            std::array<std::string, 1>(
+                                {"xyz.openbmc_project.Inventory.Item.Switch"}));
+
                         // Link association to parent chassis
                         getSwitchChassisLink(asyncResp, path);
                         // Link association to endpoints
@@ -1211,10 +1223,8 @@ inline void requestRoutesSwitch(App& app)
                         asyncResp->res, "#Switch.v1_8_0.Switch", switchId);
                 },
                     "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree", object, 0,
-                    std::array<const char*, 1>{
-                        "xyz.openbmc_project.Inventory.Item.Switch"});
+                    object + "/all_switches", "org.freedesktop.DBus.Properties",
+                    "Get", "xyz.openbmc_project.Association", "endpoints");
                 return;
             }
             // Couldn't find an object with that name. Return an error

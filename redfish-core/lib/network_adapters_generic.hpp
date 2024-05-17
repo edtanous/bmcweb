@@ -364,11 +364,11 @@ inline void
     asyncResp->res.jsonValue["Id"] = networkAdapterId;
 
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Chassis/{}/NetworkAdapters/{}", chassisId, chassisId);
+        "/redfish/v1/Chassis/{}/NetworkAdapters/{}", chassisId, networkAdapterId);
 
     asyncResp->res.jsonValue["Ports"]["@odata.id"] =
         boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports",
-                            chassisId, chassisId);
+                            chassisId, networkAdapterId);
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     getAssetData(asyncResp, *validNetworkAdapterPath, networkAdapterId);
     getHealthByAssociation(asyncResp, *validNetworkAdapterPath,
