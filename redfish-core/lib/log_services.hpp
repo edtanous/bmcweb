@@ -632,7 +632,7 @@ inline log_entry::OriginatorTypes
 inline void parseDumpEntryFromDbusObject(
     const dbus::utility::ManagedObjectType::value_type& object,
     std::string& dumpStatus, uint64_t& size, uint64_t& timestampUs,
-    std::string& faultLogDiagnosticDataType, std::string& sectionType,
+    std::string& faultLogDiagnosticDataType, std::string& notificationType, std::string& sectionType,
     std::string& fruid, std::string& severity, std::string& nvipSignature,
     std::string& nvSeverity, std::string& nvSocketNumber,
     std::string& pcieVendorID, std::string& pcieDeviceID,
@@ -746,6 +746,7 @@ inline void parseDumpEntryFromDbusObject(
         else if (interfaceMap.first ==
                  "xyz.openbmc_project.Dump.Entry.CPERDecode")
         {
+            const std::string* notificationTypePtr = nullptr;
             const std::string* sectionTypePtr = nullptr;
             const std::string* fruidPtr = nullptr;
             const std::string* severityPtr = nullptr;
@@ -833,6 +834,11 @@ inline void parseDumpEntryFromDbusObject(
                     sectionTypePtr =
                         std::get_if<std::string>(&propertyMap.second);
                 }
+                else if (propertyMap.first == "Notification_Type")
+                {
+                    notificationTypePtr =
+                        std::get_if<std::string>(&propertyMap.second);
+                }
                 else if (propertyMap.first == "Severity")
                 {
                     severityPtr = std::get_if<std::string>(&propertyMap.second);
@@ -842,6 +848,11 @@ inline void parseDumpEntryFromDbusObject(
             if (fruidPtr != nullptr)
             {
                 fruid = *fruidPtr;
+            }
+
+            if (notificationTypePtr != nullptr)
+            {
+                notificationType = *notificationTypePtr;
             }
 
             if (sectionTypePtr != nullptr)
@@ -1048,6 +1059,7 @@ inline void
                 log_entry::OriginatorTypes::Internal;
             nlohmann::json::object_t thisEntry;
             std::string faultLogDiagnosticDataType;
+            std::string notificationType;
             std::string sectionType;
             std::string fruid;
             std::string severity;
@@ -1072,7 +1084,7 @@ inline void
 
             parseDumpEntryFromDbusObject(
                 object, dumpStatus, size, timestampUs,
-                faultLogDiagnosticDataType, sectionType, fruid, severity,
+                faultLogDiagnosticDataType, notificationType, sectionType, fruid, severity,
                 nvipSignature, nvSeverity, nvSocketNumber, pcieVendorID,
                 pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
@@ -1143,6 +1155,10 @@ inline void
                 thisEntry["AdditionalDataSizeBytes"] = size;
 
                 // CPER Properties
+                if (notificationType != "NA")
+                {
+                    thisEntry["CPER"]["NotificationType"] = notificationType;
+                }
                 if (sectionType != "NA")
                 {
                     thisEntry["CPER"]["Oem"]["SectionType"] = sectionType;
@@ -1304,6 +1320,7 @@ inline void
             uint64_t size = 0;
             std::string dumpStatus;
             std::string faultLogDiagnosticDataType;
+            std::string notificationType;
             std::string sectionType;
             std::string fruid;
             std::string severity;
@@ -1325,7 +1342,7 @@ inline void
 
             parseDumpEntryFromDbusObject(
                 objectPath, dumpStatus, size, timestampUs,
-                faultLogDiagnosticDataType, sectionType, fruid, severity,
+                faultLogDiagnosticDataType, notificationType, sectionType, fruid, severity,
                 nvipSignature, nvSeverity, nvSocketNumber, pcieVendorID,
                 pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
@@ -1392,6 +1409,11 @@ inline void
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID
                     "/LogServices/FaultLog/Entries/" +
                     entryID + "/attachment";
+                if (notificationType != "NA")
+                {
+                    asyncResp->res.jsonValue["CPER"]["NotificationType"] =
+                        notificationType;
+                }
                 if (sectionType != "NA")
                 {
                     asyncResp->res.jsonValue["CPER"]["Oem"]["SectionType"] =
@@ -1439,6 +1461,11 @@ inline void
                         "/redfish/v1/Systems/" PLATFORMSYSTEMID
                         "/LogServices/FaultLog/Entries/" +
                         entryID + "/attachment";
+                    if (notificationType != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["NotificationType"] =
+                            notificationType;
+                    }
                     if (sectionType != "NA")
                     {
                         asyncResp->res.jsonValue["CPER"]["Oem"]["SectionType"] =
