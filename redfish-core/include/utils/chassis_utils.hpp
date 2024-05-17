@@ -36,6 +36,8 @@ using GetSubTreeType = std::vector<
 using GetObjectType =
     std::vector<std::pair<std::string, std::vector<std::string>>>;
 
+static constexpr uint8_t mctpTypeVDMIANA = 0x7f;
+
 inline std::string getPowerStateType(const std::string& stateType)
 {
     if (stateType == "xyz.openbmc_project.State.Decorator.OperationalStatus."
@@ -527,6 +529,7 @@ inline void
 
                 const uint32_t* eid = nullptr;
                 const std::string* uuid = nullptr;
+                const std::vector<uint8_t>* supportedMsgTypes = nullptr;
                 bool foundEID = false;
 
                 for (auto& objectPath : resp)
@@ -556,14 +559,27 @@ inline void
                                     eid = std::get_if<uint32_t>(
                                         &propertyMap.second);
                                 }
+                                else if (propertyMap.first ==
+                                         "SupportedMessageTypes")
+                                {
+                                    supportedMsgTypes =
+                                        std::get_if<std::vector<uint8_t>>(
+                                            &propertyMap.second);
+                                }
                             }
                         }
                     }
 
-                    if ((*uuid) == chassisUUID)
+                    if ((*uuid) == chassisUUID && supportedMsgTypes)
                     {
-                        foundEID = true;
-                        break;
+                        if (std::find(supportedMsgTypes->begin(),
+                                      supportedMsgTypes->end(),
+                                      mctpTypeVDMIANA) !=
+                            supportedMsgTypes->end())
+                        {
+                            foundEID = true;
+                            break;
+                        }
                     }
                 }
 
