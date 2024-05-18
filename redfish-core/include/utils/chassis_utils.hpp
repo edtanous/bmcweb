@@ -403,6 +403,163 @@ inline std::string getPowerModeType(const std::string& dbusAction)
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
+enum class InBandOption
+{
+    BackgroundCopyStatus,
+    setBackgroundCopyEnabled,
+    setInBandEnabled,
+};
+
+/**
+ *@brief handles all calls to ERoT mctp UUID for
+ *      setBackgroundCopyEnabled, setInBandEnabled,
+ *      and getBackgroundCopyAndInBandInfo
+ *
+ * @param req   Pointer to object holding request data
+ * @param asyncResp   Pointer to object holding response data
+ * @param chassisUUID  Chassis UUID
+ * @param option Determines which method will be called
+ * @param enabled Enable or disable the background copy
+ * @param chassisID  Chassis ID
+
+ *
+ * @return None.
+ */
+
+inline void
+    handleMctpInBandActions(const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& chassisUUID,
+                            const InBandOption option, bool enabled = false,
+                            const std::string& chassisId = "")
+{
+    constexpr std::array<std::string_view, 1> interfaces = {
+        "org.freedesktop.DBus.ObjectManager"};
+
+    dbus::utility::getDbusObject(
+        "/xyz/openbmc_project/mctp", interfaces,
+        [req, asyncResp, chassisId, chassisUUID, option,
+         enabled](const boost::system::error_code& ec,
+                  const dbus::utility::MapperGetObject& resp) mutable {
+        if (ec || resp.empty())
+        {
+            BMCWEB_LOG_WARNING(
+                "DBUS response error during getting of service name: {}", ec);
+            return;
+        }
+        for (auto it = resp.begin(); it != resp.end(); ++it)
+        {
+            std::string serviceName = it->first;
+            crow::connections::systemBus->async_method_call(
+                [req, asyncResp, chassisUUID, serviceName, option, enabled,
+                 chassisId](const boost::system::error_code& ec,
+                            const dbus::utility::ManagedObjectType& resp) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                const uint32_t* eid = nullptr;
+                const std::string* uuid = nullptr;
+                bool foundEID = false;
+
+                for (auto& objectPath : resp)
+                {
+                    for (auto& interfaceMap : objectPath.second)
+                    {
+                        if (interfaceMap.first ==
+                            "xyz.openbmc_project.Common.UUID")
+                        {
+                            for (auto& propertyMap : interfaceMap.second)
+                            {
+                                if (propertyMap.first == "UUID")
+                                {
+                                    uuid = std::get_if<std::string>(
+                                        &propertyMap.second);
+                                }
+                            }
+                        }
+
+                        if (interfaceMap.first ==
+                            "xyz.openbmc_project.MCTP.Endpoint")
+                        {
+                            for (auto& propertyMap : interfaceMap.second)
+                            {
+                                if (propertyMap.first == "EID")
+                                {
+                                    eid = std::get_if<uint32_t>(
+                                        &propertyMap.second);
+                                }
+                            }
+                        }
+                    }
+
+                    if ((*uuid) == chassisUUID)
+                    {
+                        foundEID = true;
+                        break;
+                    }
+                }
+
+                if (foundEID)
+                {
+                    switch (option)
+                    {
+                        case InBandOption::BackgroundCopyStatus:
+                        {
+                            nlohmann::json& oem =
+                                asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                            oem["@odata.type"] =
+                                "#NvidiaChassis.v1_0_0.NvidiaChassis";
+
+                            // Calling the following methods,
+                            // updateInBandEnabled, updateBackgroundCopyEnabled,
+                            // and updateBackgroundCopyStatus asynchronously,
+                            // may cause unpredictable behavior. These methods
+                            // use 'mctp-vdm-util', which is not designed to
+                            // handle more than one request at the same time.
+                            // Running more than one command simultaneously may
+                            // result in output from a previous (or another)
+                            // request. The fix addresses this issue by changing
+                            // the way the functions are called, simulating
+                            // synchronous execution by invoking each command
+                            // sequentially instead of simultaneously.
+
+                            uint32_t endpointId = *eid;
+                            updateInBandEnabled(req, asyncResp, endpointId,
+                                                [req, asyncResp, endpointId]() {
+                                updateBackgroundCopyEnabled(
+                                    req, asyncResp, endpointId,
+                                    [req, asyncResp, endpointId]() {
+                                    updateBackgroundCopyStatus(req, asyncResp,
+                                                               endpointId);
+                                });
+                            });
+                            break;
+                        }
+                        case InBandOption::setBackgroundCopyEnabled:
+                            enableBackgroundCopy(req, asyncResp, *eid, enabled,
+                                                 chassisId);
+                            break;
+                        case InBandOption::setInBandEnabled:
+                            enableInBand(req, asyncResp, *eid, enabled,
+                                         chassisId);
+                            break;
+                        default:
+                            BMCWEB_LOG_DEBUG(
+                                "Invalid enum provided for inNand mctp access");
+                            break;
+                    }
+                }
+            },
+                serviceName, "/xyz/openbmc_project/mctp",
+                "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        }
+    });
+}
+
 /**
  *@brief Sets the background copy for particular chassis
  *
@@ -410,112 +567,17 @@ inline std::string getPowerModeType(const std::string& dbusAction)
  * @param asyncResp   Pointer to object holding response data
  * @param chassisUUID  Chassis ID
  * @param enabled Enable or disable the background copy
- * @param isPCIe If true then sets service name on PCIe
- * If false then sets status name on SPI.
- * The service name is used to get EID connected
- * to chassis which id is delivered in the parameter.
- *
- * If relevant EID cannot be found, the proper error message
- * is added to the response (asyncResp).
  *
  * @return None.
  */
 inline void setBackgroundCopyEnabled(
     const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisId, const std::string& chassisUUID, bool enabled,
-    bool isPCIe = true)
+    const std::string& chassisId, const std::string& chassisUUID, bool enabled)
 {
-    std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
-    if (!isPCIe)
-    {
-        serviceName = "xyz.openbmc_project.MCTP.Control.SPI";
-    }
-
-    crow::connections::systemBus->async_method_call(
-        [req, asyncResp, chassisId, chassisUUID, enabled, isPCIe,
-         serviceName](const boost::system::error_code ec,
-                      const dbus::utility::ManagedObjectType& resp) {
-        if (ec)
-        {
-            BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
-            if (serviceName == "xyz.openbmc_project.MCTP.Control.PCIe")
-            {
-                setBackgroundCopyEnabled(req, asyncResp, chassisId, chassisUUID,
-                                         enabled, false);
-            }
-            else
-            {
-                messages::internalError(asyncResp->res);
-            }
-            return;
-        }
-
-        const uint32_t* eid = nullptr;
-        const std::string* uuid = nullptr;
-        bool foundEID = false;
-
-        for (auto& objectPath : resp)
-        {
-            for (auto& interfaceMap : objectPath.second)
-            {
-                if (interfaceMap.first == "xyz.openbmc_project.Common.UUID")
-                {
-                    for (auto& propertyMap : interfaceMap.second)
-                    {
-                        if (propertyMap.first == "UUID")
-                        {
-                            uuid =
-                                std::get_if<std::string>(&propertyMap.second);
-                        }
-                    }
-                }
-
-                if (interfaceMap.first == "xyz.openbmc_project.MCTP.Endpoint")
-                {
-                    for (auto& propertyMap : interfaceMap.second)
-                    {
-                        if (propertyMap.first == "EID")
-                        {
-                            eid = std::get_if<uint32_t>(&propertyMap.second);
-                        }
-                    }
-                }
-            }
-
-            if ((*uuid) == chassisUUID)
-            {
-                foundEID = true;
-                break;
-            }
-        }
-
-        if (foundEID)
-        {
-            enableBackgroundCopy(req, asyncResp, *eid, enabled, chassisId);
-        }
-        else
-        {
-            if (isPCIe)
-            {
-                setBackgroundCopyEnabled(req, asyncResp, chassisId, chassisUUID,
-                                         enabled, false);
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG(
-                    "Can not find relevant MCTP endpoint for chassis {}",
-                    chassisId);
-                messages::resourceMissingAtURI(
-                    asyncResp->res,
-                    boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
-
-                return;
-            }
-        }
-    },
-        serviceName, "/xyz/openbmc_project/mctp",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    handleMctpInBandActions(req, asyncResp, chassisUUID,
+                            InBandOption::setBackgroundCopyEnabled, enabled,
+                            chassisId);
 }
 
 /**
@@ -524,14 +586,6 @@ inline void setBackgroundCopyEnabled(
  * @param req   Pointer to object holding request data
  * @param asyncResp   Pointer to object holding response data
  * @param chassisUUID  Chassis ID
- * @param enabled Enable or disable the in-band
- * @param isPCIe If true then sets service name on PCIe
- * If false then sets status name on SPI.
- * The service name is used to get EID connected
- * to chassis which id is delivered in the parameter.
- *
- * If relevant EID cannot be found, the proper error message
- * is added to the response (asyncResp).
  *
  * @return None.
  */
@@ -539,98 +593,10 @@ inline void
     setInBandEnabled(const crow::Request& req,
                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& chassisId,
-                     const std::string& chassisUUID, bool enabled,
-                     bool isPCIe = true)
+                     const std::string& chassisUUID, bool enabled)
 {
-    std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
-    if (!isPCIe)
-    {
-        serviceName = "xyz.openbmc_project.MCTP.Control.SPI";
-    }
-
-    crow::connections::systemBus->async_method_call(
-        [req, asyncResp, chassisId, chassisUUID, enabled, isPCIe,
-         serviceName](const boost::system::error_code ec,
-                      const dbus::utility::ManagedObjectType& resp) {
-        if (ec)
-        {
-            BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
-            if (serviceName == "xyz.openbmc_project.MCTP.Control.PCIe")
-            {
-                setInBandEnabled(req, asyncResp, chassisId, chassisUUID,
-                                 enabled, false);
-            }
-            else
-            {
-                messages::internalError(asyncResp->res);
-            }
-            return;
-        }
-
-        const uint32_t* eid = nullptr;
-        const std::string* uuid = nullptr;
-        bool foundEID = false;
-
-        for (auto& objectPath : resp)
-        {
-            for (auto& interfaceMap : objectPath.second)
-            {
-                if (interfaceMap.first == "xyz.openbmc_project.Common.UUID")
-                {
-                    for (auto& propertyMap : interfaceMap.second)
-                    {
-                        if (propertyMap.first == "UUID")
-                        {
-                            uuid =
-                                std::get_if<std::string>(&propertyMap.second);
-                        }
-                    }
-                }
-
-                if (interfaceMap.first == "xyz.openbmc_project.MCTP.Endpoint")
-                {
-                    for (auto& propertyMap : interfaceMap.second)
-                    {
-                        if (propertyMap.first == "EID")
-                        {
-                            eid = std::get_if<uint32_t>(&propertyMap.second);
-                        }
-                    }
-                }
-            }
-
-            if ((*uuid) == chassisUUID)
-            {
-                foundEID = true;
-                break;
-            }
-        }
-
-        if (foundEID)
-        {
-            enableInBand(req, asyncResp, *eid, enabled, chassisId);
-        }
-        else
-        {
-            if (isPCIe)
-            {
-                setInBandEnabled(req, asyncResp, chassisId, chassisUUID,
-                                 enabled, false);
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG(
-                    "Can not find relevant MCTP endpoint for chassis {}",
-                    chassisId);
-                messages::resourceMissingAtURI(
-                    asyncResp->res,
-                    boost::urls::format("/redfish/v1/Chassis/{}", chassisId));
-                return;
-            }
-        }
-    },
-        serviceName, "/xyz/openbmc_project/mctp",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    handleMctpInBandActions(req, asyncResp, chassisUUID,
+                            InBandOption::setInBandEnabled, enabled, chassisId);
 }
 
 /**
@@ -639,126 +605,16 @@ inline void
  * @param req   Pointer to object holding request data
  * @param asyncResp   Pointer to object holding response data
  * @param chassisUUID  Chassis ID
- * @param isPCIe If true then sets service name on PCIe
- * If false then sets status name on SPI.
- * The service name is used to get EID connected
- * to chassis which id is delivered in the parameter.
- *
- * If relevant EID cannot be found, the proper error message
- * is added to the response (asyncResp).
  *
  * @return None.
  */
 inline void getBackgroundCopyAndInBandInfo(
     const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisUUID, bool isPCIe = true)
+    const std::string& chassisUUID)
 {
-    std::string serviceName = "xyz.openbmc_project.MCTP.Control.PCIe";
-    if (!isPCIe)
-    {
-        serviceName = "xyz.openbmc_project.MCTP.Control.SPI";
-    }
-    crow::connections::systemBus->async_method_call(
-        [req, asyncResp, chassisUUID, isPCIe,
-         serviceName](const boost::system::error_code ec,
-                      const dbus::utility::ManagedObjectType& resp) {
-        if (ec)
-        {
-            BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
-            if (serviceName == "xyz.openbmc_project.MCTP.Control.PCIe")
-            {
-                getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID,
-                                               false);
-            }
-            else
-            {
-                messages::internalError(asyncResp->res);
-            }
-            return;
-        }
-
-        const uint32_t* eid = nullptr;
-        const std::string* uuid = nullptr;
-        bool foundEID = false;
-
-        for (auto& objectPath : resp)
-        {
-            for (auto& interfaceMap : objectPath.second)
-            {
-                if (interfaceMap.first == "xyz.openbmc_project.Common.UUID")
-                {
-                    for (auto& propertyMap : interfaceMap.second)
-                    {
-                        if (propertyMap.first == "UUID")
-                        {
-                            uuid =
-                                std::get_if<std::string>(&propertyMap.second);
-                        }
-                    }
-                }
-
-                if (interfaceMap.first == "xyz.openbmc_project.MCTP.Endpoint")
-                {
-                    for (auto& propertyMap : interfaceMap.second)
-                    {
-                        if (propertyMap.first == "EID")
-                        {
-                            eid = std::get_if<uint32_t>(&propertyMap.second);
-                        }
-                    }
-                }
-            }
-
-            if ((*uuid) == chassisUUID)
-            {
-                foundEID = true;
-                break;
-            }
-        }
-
-        if (foundEID)
-        {
-            nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
-            oem["@odata.type"] = "#NvidiaChassis.v1_0_0.NvidiaChassis";
-
-            // Calling the following methods, updateInBandEnabled,
-            // updateBackgroundCopyEnabled, and updateBackgroundCopyStatus
-            // asynchronously, may cause unpredictable behavior. These
-            // methods use 'mctp-vdm-util', which is not designed to handle
-            // more than one request at the same time. Running more than one
-            // command simultaneously may result in output from a previous
-            // (or another) request. The fix addresses this issue by
-            // changing the way the functions are called, simulating
-            // synchronous execution by invoking each command sequentially
-            // instead of simultaneously.
-
-            uint32_t endpointId = *eid;
-            updateInBandEnabled(req, asyncResp, endpointId,
-                                [req, asyncResp, endpointId]() {
-                updateBackgroundCopyEnabled(req, asyncResp, endpointId,
-                                            [req, asyncResp, endpointId]() {
-                    updateBackgroundCopyStatus(req, asyncResp, endpointId);
-                });
-            });
-        }
-        else
-        {
-            if (isPCIe)
-            {
-                getBackgroundCopyAndInBandInfo(req, asyncResp, chassisUUID,
-                                               false);
-            }
-            else
-            {
-                BMCWEB_LOG_DEBUG(
-                    "Can not find relevant MCTP endpoint for chassis {}",
-                    chassisUUID);
-            }
-        }
-    },
-        serviceName, "/xyz/openbmc_project/mctp",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    handleMctpInBandActions(req, asyncResp, chassisUUID,
+                            InBandOption::BackgroundCopyStatus);
 }
 
 /**
