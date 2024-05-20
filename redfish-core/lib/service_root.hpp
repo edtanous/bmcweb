@@ -198,21 +198,17 @@ inline void handleServiceRootGetImpl(
             "/redfish/v1/SessionService/Sessions";
         asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
             "/redfish/v1/AccountService";
-<<<<<<< HEAD
-    }
-#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
-    asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
-        "/redfish/v1/AggregationService";
-#endif
-    asyncResp->res.jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
-        "/redfish/v1/Managers/" PLATFORMBMCID;
-=======
     if constexpr (BMCWEB_REDFISH_AGGREGATION)
     {
         asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
             "/redfish/v1/AggregationService";
     }
->>>>>>> master
+    else
+    {
+        asyncResp->res
+            .jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
+            "/redfish/v1/Managers/" PLATFORMBMCID;
+    }
     asyncResp->res.jsonValue["Chassis"]["@odata.id"] = "/redfish/v1/Chassis";
 #ifndef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
     asyncResp->res.jsonValue["ComponentIntegrity"]["@odata.id"] =

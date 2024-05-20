@@ -37,11 +37,8 @@ optimization = get_option('optimization')
 summary('Build Type',build, section : 'Build Info')
 summary('Optimization',optimization, section : 'Build Info')
 
-<<<<<<< HEAD
 package_datadir = join_paths(get_option('prefix'), get_option('datadir'), meson.project_name())
 
-=======
->>>>>>> master
 # remove debug information for minsize buildtype
 if(get_option('buildtype') == 'minsize')
   add_project_arguments(['-fdata-sections', '-ffunction-sections'], language : 'cpp')
@@ -60,13 +57,7 @@ endif
 
 # Include Directories
 
-<<<<<<< HEAD
-incdir = include_directories(
-  'include',
-  'redfish-core/include',
-  'redfish-core/lib',
-  'http'
-)
+incdir = include_directories('include', 'redfish-core/include', 'redfish-core/lib', 'http')
 
 # Get the options and enable the respective features
 ## create a MAP of  "options : feature_flag"
@@ -188,9 +179,6 @@ foreach option_key,option_value : feature_map
       endif
   endif
 endforeach
-=======
-incdir = include_directories('include', 'redfish-core/include', 'redfish-core/lib', 'http')
->>>>>>> master
 
 if(get_option('tests').allowed())
     summary('unittest', 'NA', section: 'Features')
@@ -219,16 +207,11 @@ add_project_arguments(
     '-Wno-switch-enum',
     '-Wno-unused-macros',
     '-Wno-covered-switch-default',
-<<<<<<< HEAD
     '-Wno-error=deprecated-declarations',
     '-Wno-attributes',
     '-Wno-error=deprecated-declarations',    
     '-Wno-comment',
   language:'cpp')
-=======
-        language: 'cpp',
-    )
->>>>>>> master
 endif
 
 if (cxx.get_id() == 'gcc')
@@ -252,14 +235,9 @@ if (cxx.get_id() == 'gcc')
    # '-Wshadow',
    # '-Wno-psabi',
     '-Wno-attributes',
-<<<<<<< HEAD
     '-Wno-error=deprecated-declarations',      
     '-Wno-comment',
     language:'cpp')
-=======
-        language: 'cpp',
-    )
->>>>>>> master
 endif
 
 if (get_option('buildtype') != 'plain')
@@ -516,85 +494,50 @@ executable(
 )
 
 srcfiles_unittest = files(
-<<<<<<< HEAD
   #'test/http/crow_getroutes_test.cpp',
   #'test/http/http2_connection_test.cpp',
+  'test/http/http_body_test.cpp',
   #'test/http/http_connection_test.cpp',
-=======
-    'test/http/crow_getroutes_test.cpp',
-    'test/http/http2_connection_test.cpp',
-    'test/http/http_body_test.cpp',
-    'test/http/http_connection_test.cpp',
-    'test/http/http_response_test.cpp',
->>>>>>> master
+  'test/http/http_response_test.cpp',
   'test/http/mutual_tls.cpp',
-    'test/http/mutual_tls_meta.cpp',
+  'test/http/mutual_tls_meta.cpp',
   'test/http/parsing_test.cpp',
-    'test/http/router_test.cpp',
-    'test/http/server_sent_event_test.cpp',
+  'test/http/router_test.cpp',
+  'test/http/server_sent_event_test.cpp',
   'test/http/utility_test.cpp',
   'test/http/verb_test.cpp',
-    'test/include/async_resolve_test.cpp',
-    'test/include/credential_pipe_test.cpp',
-  'test/include/dbus_utility_test.cpp',
-<<<<<<< HEAD
-  #'test/include/google/google_service_root_test.cpp',
-  'test/include/json_html_serializer.cpp',
-  'test/include/http_utility_test.cpp',
-  'test/include/human_sort_test.cpp',
   'test/include/async_resolve_test.cpp',
   'test/include/credential_pipe_test.cpp',
+  'test/include/dbus_utility_test.cpp',
+  #'test/include/google/google_service_root_test.cpp',
+  'test/include/http_utility_test.cpp',
+  'test/include/human_sort_test.cpp',
   #'test/include/ibm/configfile_test.cpp',
-  'test/include/ibm/lock_test.cpp',
-=======
-    'test/include/google/google_service_root_test.cpp',
-    'test/include/http_utility_test.cpp',
-    'test/include/human_sort_test.cpp',
-    'test/include/ibm/configfile_test.cpp',
-    'test/include/json_html_serializer.cpp',
->>>>>>> master
+  'test/include/json_html_serializer.cpp',
   'test/include/multipart_test.cpp',
   'test/include/openbmc_dbus_rest_test.cpp',
   'test/include/ossl_random.cpp',
-    'test/include/str_utility_test.cpp',
+  'test/include/str_utility_test.cpp',
   'test/redfish-core/include/privileges_test.cpp',
   'test/redfish-core/include/redfish_aggregator_test.cpp',
   'test/redfish-core/include/registries_test.cpp',
   'test/redfish-core/include/utils/dbus_utils.cpp',
-    'test/redfish-core/include/utils/hex_utils_test.cpp',
+  'test/redfish-core/include/utils/hex_utils_test.cpp',
   'test/redfish-core/include/utils/ip_utils_test.cpp',
   'test/redfish-core/include/utils/json_utils_test.cpp',
   'test/redfish-core/include/utils/query_param_test.cpp',
   #'test/redfish-core/include/utils/stl_utils_test.cpp',
   'test/redfish-core/include/utils/time_utils_test.cpp',
-<<<<<<< HEAD
-  #'test/redfish-core/lib/chassis_test.cpp',
-  'test/redfish-core/lib/log_services_test.cpp',
+  'test/redfish-core/lib/chassis_test.cpp',
   #'test/redfish-core/lib/log_services_dump_test.cpp',
-  #'test/redfish-core/lib/service_root_test.cpp',
-  #'test/redfish-core/lib/thermal_subsystem_test.cpp',
+  'test/redfish-core/lib/log_services_test.cpp',
+  'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
   #'test/redfish-core/lib/power_subsystem_test.cpp',
   #'test/redfish-core/lib/sensors_test.cpp',
-  #'test/redfish-core/lib/system_test.cpp',
-  #'test/redfish-core/lib/log_services_dump_test.cpp',
-  #'test/redfish-core/lib/log_services_test.cpp',
-  #'test/redfish-core/lib/update_service_test.cpp',
   #'test/redfish-core/lib/service_root_test.cpp',
+  #'test/redfish-core/lib/system_test.cpp',
   #'test/redfish-core/lib/thermal_subsystem_test.cpp',
-  #'test/redfish-core/lib/power_subsystem_test.cpp',
-  'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
-=======
-    'test/redfish-core/lib/chassis_test.cpp',
-    'test/redfish-core/lib/log_services_dump_test.cpp',
-    'test/redfish-core/lib/log_services_test.cpp',
-    'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
-    'test/redfish-core/lib/power_subsystem_test.cpp',
-    'test/redfish-core/lib/sensors_test.cpp',
-    'test/redfish-core/lib/service_root_test.cpp',
-    'test/redfish-core/lib/system_test.cpp',
-    'test/redfish-core/lib/thermal_subsystem_test.cpp',
-    'test/redfish-core/lib/update_service_test.cpp',
->>>>>>> master
+  #'test/redfish-core/lib/update_service_test.cpp',
 )
 
 if(get_option('tests').allowed())

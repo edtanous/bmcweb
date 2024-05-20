@@ -1,8 +1,7 @@
 # Gather the Configuration data
 
 conf_data = configuration_data()
-<<<<<<< HEAD
-conf_data.set('BMCWEB_HTTP_REQ_BODY_LIMIT_MB', get_option('http-body-limit'))
+
 if get_option('firmware-image-limit') > get_option('http-body-limit')
   error('Firmware image size limit should be lesser than http body limit.')
 else
@@ -10,14 +9,6 @@ else
 endif
 xss_enabled = get_option('insecure-disable-xss')
 conf_data.set10('BMCWEB_INSECURE_DISABLE_XSS_PREVENTION', xss_enabled.allowed())
-enable_redfish_query = get_option('insecure-enable-redfish-query')
-conf_data.set10('BMCWEB_INSECURE_ENABLE_QUERY_PARAMS', enable_redfish_query.allowed())
-# enable_redfish_aggregation = get_option('redfish-aggregation')
-# conf_data.set10('BMCWEB_ENABLE_REDFISH_AGGREGATION', enable_redfish_aggregation.allowed())
-insecure_push_style_notification = get_option('insecure-push-style-notification')
-conf_data.set10('BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING', insecure_push_style_notification.allowed())
-conf_data.set('MESON_INSTALL_PREFIX', get_option('prefix'))
-conf_data.set('HTTPS_PORT', get_option('https_port'))
 conf_data.set('STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND', get_option('stalesensor-upper-limit-milisecond'))
 conf_data.set('PLATFORM_METRICS_SENSING_INTERVAL', get_option('platform-metrics-sensing-interval'))
 conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-location'))
@@ -54,12 +45,6 @@ enable_health_populate = get_option('redfish-health-populate')
 conf_data.set10('BMCWEB_ENABLE_HEALTH_POPULATE', enable_health_populate.enabled())
 enable_proc_mem_status = get_option('redfish-enable-proccessor-memory-status')
 conf_data.set10('BMCWEB_ENABLE_PROC_MEM_STATUS', enable_proc_mem_status.enabled())
-enable_multi_host = get_option('experimental-redfish-multi-computer-system')
-conf_data.set10('BMCWEB_ENABLE_MULTI_HOST', enable_multi_host.allowed())
-enable_http2 = get_option('experimental-http2')
-conf_data.set10('BMCWEB_ENABLE_HTTP2', enable_http2.allowed())
-conf_data.set10('BMCWEB_ENABLE_MTLS_COMMON_NAME_PARSING_META', get_option('mutual-tls-common-name-parsing') == 'meta')
-=======
 
 feature_options = [
     'basic-auth',
@@ -129,7 +114,6 @@ foreach option_key : feature_options
 endforeach
 
 conf_data.set('MESON_INSTALL_PREFIX', get_option('prefix'))
->>>>>>> master
 
 conf_data.set10('BMCWEB_VIRTUAL_MEDIA_VM', get_option('vm-websocket').allowed())
 conf_data.set10('BMCWEB_VIRTUAL_MEDIA_NBD', false)

@@ -307,13 +307,6 @@ option(
 )
 
 option(
-<<<<<<< HEAD
-    'redfish-health-populate',
-    type: 'feature',
-    value: 'enabled',
-    description: '''Enables HealthPopulate and generate the Status property for
-                    the resource. This option will be removed Q1 2024'''
-=======
     'redfish-updateservice-use-dbus',
     type: 'feature',
     value: 'disabled',
@@ -325,7 +318,14 @@ option(
                     code update flow and the option will be removed at the end
                     of Q3 2024.
                 '''
->>>>>>> master
+)
+
+option(
+    'redfish-health-populate',
+    type: 'feature',
+    value: 'enabled',
+    description: '''Enables HealthPopulate and generate the Status property for
+                    the resource. This option will be removed Q1 2024'''
 )
 
 option(

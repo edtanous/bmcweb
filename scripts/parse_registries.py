@@ -266,49 +266,18 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-<<<<<<< HEAD
-        '--registries', type=str,
-        default="base,task_event,resource_event,update_event,privilege,openbmc",
-        help="Comma delimited list of registries to update")
-=======
         "--registries",
         type=str,
-        default="privilege,openbmc,"
+        default="base,task_event,resource_event,update_event,privilege,openbmc,"
         + ",".join([dmtf[0] for dmtf in dmtf_registries]),
         help="Comma delimited list of registries to update",
     )
->>>>>>> master
 
     args = parser.parse_args()
 
     registries = set(args.registries.split(","))
     files = []
 
-<<<<<<< HEAD
-    if "base" in registries:
-        files.append(
-            make_getter(
-                "Base.1.16.0.json", "base_message_registry.hpp", "base"
-            )
-        )
-    if "task_event" in registries:
-        files.append(
-            make_getter(
-                "TaskEvent.1.0.3.json",
-                "task_event_message_registry.hpp",
-                "task_event",
-            )
-        )
-    if "resource_event" in registries:
-        files.append(make_getter('ResourceEvent.1.3.0.json',
-                                 'resource_event_message_registry.hpp',
-                                 'resource_event'))
-    if "update_event" in registries:
-        files.append(make_getter('Update.1.0.1.json',
-                            'update_event_message_registry.hpp',
-                            'update_event'))
-
-=======
     for registry, version in dmtf_registries:
         if registry in registries:
             registry_pascal_case = to_pascal_case(registry)
@@ -319,7 +288,6 @@ def main():
                     registry,
                 )
             )
->>>>>>> master
     if "openbmc" in registries:
         files.append(openbmc_local_getter())
         
