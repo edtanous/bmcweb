@@ -99,8 +99,7 @@ inline void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         messages::internalError(asyncResp->res);
         return;
     },
-        connection, path, "xyz.openbmc_project.Control.Power.Cap",
-        "ClearPowerCap");
+        connection, path, "com.nvidia.Common.ClearPowerCap", "ClearPowerCap");
 }
 
 inline std::string getFeatureReadyStateType(const std::string& stateType)
