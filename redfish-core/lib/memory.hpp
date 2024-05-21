@@ -1144,6 +1144,8 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
+                    BMCWEB_LOG_ERROR("Invalid Data Type for property : {}",
+                                     property.first);
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -1155,11 +1157,78 @@ inline void getMemoryRowRemappings(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
                 if (value == nullptr)
                 {
+                    BMCWEB_LOG_ERROR("Invalid Data Type for property : {}",
+                                     property.first);
                     messages::internalError(aResp->res);
                     return;
                 }
                 aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
                                     ["UncorrectableRowRemappingCount"] = *value;
+            }
+            else if (property.first == "HighRemappingAvailablityBankCount")
+            {
+                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Invalid Data Type for property : {}",
+                                     property.first);
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                    ["HighAvailablityBankCount"] = *value;
+            }
+            else if (property.first == "LowRemappingAvailablityBankCount")
+            {
+                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Invalid Data Type for property : {}",
+                                     property.first);
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                    ["LowAvailablityBankCount"] = *value;
+            }
+            else if (property.first == "MaxRemappingAvailablityBankCount")
+            {
+                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Invalid Data Type for property : {}",
+                                     property.first);
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                    ["MaxAvailablityBankCount"] = *value;
+            }
+            else if (property.first == "NoRemappingAvailablityBankCount")
+            {
+                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Invalid Data Type for property : {}",
+                                     property.first);
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                    ["NoAvailablityBankCount"] = *value;
+            }
+            else if (property.first == "PartialRemappingAvailablityBankCount")
+            {
+                const uint16_t* value = std::get_if<uint16_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Invalid Data Type for property : {}",
+                                     property.first);
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["RowRemapping"]
+                                    ["PartialAvailablityBankCount"] = *value;
             }
         }
     },
