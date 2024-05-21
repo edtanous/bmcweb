@@ -1943,19 +1943,24 @@ inline void
     {
         return;
     }
+    auto sharedReq = std::make_shared<const crow::Request>(req);
 
-    std::string filepath(
-        updateServiceImageLocation +
-        boost::uuids::to_string(boost::uuids::random_generator()()));
-    monitorForSoftwareAvailable(asyncResp, req, fwObjectCreationDefaultTimeout,
-                                filepath);
+    setForceUpdate(asyncResp, "/xyz/openbmc_project/software", true,
+                   [asyncResp, sharedReq]() mutable {
+        std::string filepath(
+            updateServiceImageLocation +
+            boost::uuids::to_string(boost::uuids::random_generator()()));
 
-    BMCWEB_LOG_DEBUG("Writing file to {}", filepath);
-    std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
-                                    std::ofstream::trunc);
-    out << req.body();
-    out.close();
-    BMCWEB_LOG_DEBUG("file upload complete!!");
+        monitorForSoftwareAvailable(asyncResp, *sharedReq,
+                                    fwObjectCreationDefaultTimeout, filepath);
+
+        BMCWEB_LOG_DEBUG("Writing file to {}", filepath);
+        std::ofstream out(filepath, std::ofstream::out | std::ofstream::binary |
+                                        std::ofstream::trunc);
+        out << sharedReq->body();
+        out.close();
+        BMCWEB_LOG_DEBUG("file upload complete!!");
+    });
 }
 
 class BMCStatusAsyncResp
@@ -2179,17 +2184,6 @@ inline void requestRoutesUpdateService(App& app)
                                 pushURITargets;
                         }
                     }
-                    else if (propertyMap.first == "ForceUpdate")
-                    {
-                        auto forceUpdate =
-                            std::get_if<bool>(&propertyMap.second);
-                        if (forceUpdate)
-                        {
-                            asyncResp->res.jsonValue["HttpPushUriOptions"]
-                                                    ["ForceUpdate"] =
-                                *forceUpdate;
-                        }
-                    }
                 }
                 return;
             },
@@ -2276,11 +2270,9 @@ inline void requestRoutesUpdateService(App& app)
 
         if (pushUriOptions)
         {
-            std::optional<bool> forceUpdate;
             std::optional<nlohmann::json> pushUriApplyTime;
             if (!json_util::readJson(*pushUriOptions, asyncResp->res,
-                                     "HttpPushUriApplyTime", pushUriApplyTime,
-                                     "ForceUpdate", forceUpdate))
+                                     "HttpPushUriApplyTime", pushUriApplyTime))
             {
                 return;
             }
@@ -2325,12 +2317,6 @@ inline void requestRoutesUpdateService(App& app)
                         "xyz.openbmc_project.Software.ApplyTime",
                         "RequestedApplyTime", "ApplyTime", applyTimeNewVal);
                 }
-            }
-
-            if (forceUpdate)
-            {
-                setForceUpdate(asyncResp, "/xyz/openbmc_project/software",
-                               forceUpdate.value_or(false));
             }
         }
 
