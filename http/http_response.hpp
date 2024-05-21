@@ -179,7 +179,11 @@ struct Response
             response.chunked(true);
             return;
         }
+#ifdef BMCWEB_ENABLE_CHUNKING
+        response.chunked(true);
+#else
         response.content_length(*pSize);
+#endif // BMCWEB_ENABLE_CHUNKING
 
         if (is1XXReturn || result() == status::no_content ||
             result() == status::not_modified)

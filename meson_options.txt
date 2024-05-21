@@ -189,6 +189,13 @@ option(
 )
 
 option(
+    'bmcweb-chunking',
+    type: 'feature',
+    value:  'disabled',
+    description: '''Enable bmcweb chunking.'''
+)
+
+option(
     'basic-auth',
     type: 'feature',
     value: 'enabled',
