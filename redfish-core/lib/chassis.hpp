@@ -18,14 +18,14 @@
 #include "app.hpp"
 #include "dbus_utility.hpp"
 #include "led.hpp"
-#include "query.hpp"
 #include "nvidia_protected_component.hpp"
+#include "query.hpp"
 #include "redfish_util.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
-#include "utils/json_utils.hpp"
 #include "utils/health_utils.hpp"
+#include "utils/json_utils.hpp"
 
 #include <boost/container/flat_map.hpp>
 #include <boost/system/error_code.hpp>
@@ -39,6 +39,10 @@
 #include <utils/chassis_utils.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/nvidia_chassis_util.hpp>
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#include "nvidia_debug_token.hpp"
+#endif
 
 #include <array>
 #include <ranges>
@@ -482,7 +486,8 @@ inline void handleChassisGetSubTree(
         {
             continue;
         }
-        redfish::nvidia_chassis_utils::handleFruAssetInformation(asyncResp, chassisId, path);
+        redfish::nvidia_chassis_utils::handleFruAssetInformation(
+            asyncResp, chassisId, path);
         getChassisConnectivity(asyncResp, chassisId, path);
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
@@ -498,10 +503,10 @@ inline void handleChassisGetSubTree(
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
 #ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
-/** NOTES: This is a temporary solution to avoid performance issues may impact
- *  other Redfish services. Please call for architecture decisions from all
- *  NvBMC teams if want to use it in other places.
- */
+        /** NOTES: This is a temporary solution to avoid performance issues may
+         * impact other Redfish services. Please call for architecture decisions
+         * from all NvBMC teams if want to use it in other places.
+         */
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 #error "Conflicts! Please set health-rollup-alternative=disabled."
@@ -735,6 +740,10 @@ inline void handleChassisGetSubTree(
             // association
             redfish::nvidia_chassis_utils::getHealthByAssociation(
                 asyncResp, path, "all_states", chassisId);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            // get debug token resource
+            redfish::getChassisDebugToken(asyncResp, chassisId);
+#endif
         }
         return;
     }
@@ -1229,8 +1238,8 @@ inline void handleOemChassisResetActionInfoPost(
         // check power status
         sdbusplus::asio::getProperty<std::string>(
             *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
-            "/xyz/openbmc_project/state/host0", "xyz.openbmc_project.State.Host",
-            "CurrentHostState",
+            "/xyz/openbmc_project/state/host0",
+            "xyz.openbmc_project.State.Host", "CurrentHostState",
             [asyncResp](const boost::system::error_code& ec,
                         const std::string& hostState) {
             if (ec)
@@ -1255,9 +1264,10 @@ inline void handleOemChassisResetActionInfoPost(
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-                   "org.freedesktop.systemd1.Manager", "StartUnit",
-                   "nvidia-aux-power.service", "replace");
+                },
+                    "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                    "org.freedesktop.systemd1.Manager", "StartUnit",
+                    "nvidia-aux-power.service", "replace");
             }
             else
             {
@@ -1275,9 +1285,10 @@ inline void handleOemChassisResetActionInfoPost(
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-           "org.freedesktop.systemd1.Manager", "StartUnit",
-           "nvidia-aux-power-force.service", "replace");
+        },
+            "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+            "org.freedesktop.systemd1.Manager", "StartUnit",
+            "nvidia-aux-power-force.service", "replace");
     }
 }
 #endif

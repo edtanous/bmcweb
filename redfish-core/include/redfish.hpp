@@ -86,6 +86,10 @@
 #include "update_service.hpp"
 #include "virtual_media.hpp"
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#include "nvidia_debug_token.hpp"
+#endif
+
 namespace redfish
 {
 /*
@@ -182,6 +186,9 @@ class RedfishService
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesChassisResetAction(app);
         requestRoutesChassisResetActionInfo(app);
+#endif
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesChassisDebugToken(app);
 #endif
         requestRoutesUpdateService(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
