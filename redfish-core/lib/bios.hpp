@@ -1980,13 +1980,9 @@ inline void
     {
         return;
     }
-<<<<<<< HEAD
     nlohmann::json pendingAttrJson;
     if (!redfish::json_util::readJsonAction(req, asyncResp->res, "Attributes",
                                             pendingAttrJson))
-=======
-    if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
->>>>>>> master
     {
         BMCWEB_LOG_ERROR("No 'Attributes' found");
         messages::unrecognizedRequestBody(asyncResp->res);
@@ -2041,14 +2037,22 @@ inline void requestRoutesBiosSettings(App& app)
  */
 inline void
     handleBiosResetPost(crow::App& app, const crow::Request& req,
-                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
 
-<<<<<<< HEAD
+    if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
+    {
+        // Option currently returns no systems.  TBD
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+    
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code& ec) {
         if (ec)
@@ -2189,9 +2193,6 @@ inline void handleClearNonVolatileVariablesSubtree(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     const SecureSelector secure, const bool requestToClear,
     const dbus::utility::MapperGetSubTreeResponse clearSubtree)
-=======
-    if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
->>>>>>> master
 {
     if (secure == SecureSelector::both)
     {

@@ -29,7 +29,6 @@
 #include "power_subsystem.hpp"
 #include "power_supply.hpp"
 #include "processor.hpp"
-#include "redfish_sessions.hpp"
 #include "redfish_v1.hpp"
 #include "roles.hpp"
 #include "sensors.hpp"
@@ -44,29 +43,77 @@
 #include "trigger.hpp"
 #include "update_service.hpp"
 #include "virtual_media.hpp"
+#include "nvidia_oem_dpu.hpp"
+#include "network_adapters_generic.hpp"
+#include "system_host_eth.hpp"
+#include "network_adapters.hpp"
+#include "ports.hpp"
+#include "boot_options.hpp"
+#include "erot_chassis.hpp"
+#include "fabric.hpp"
+#include "fabric_adapters.hpp"
+#include "host_interface.hpp"
+#include "secure_boot_database.hpp"
+#include "pcieslots.hpp"
+#include "pcie_slots.hpp"
 
 namespace redfish
 {
 
 RedfishService::RedfishService(App& app)
 {
-    requestAccountServiceRoutes(app);
+    requestAssemblyRoutes(app);
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        requestAccountServiceRoutes(app);
+    }
     if constexpr (BMCWEB_REDFISH_AGGREGATION)
     {
         requestRoutesAggregationService(app);
         requestRoutesAggregationSourceCollection(app);
         requestRoutesAggregationSource(app);
     }
-    requestRoutesRoles(app);
-    requestRoutesRoleCollection(app);
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        requestRoutesRoles(app);
+        requestRoutesRoleCollection(app);
+    }
     requestRoutesServiceRoot(app);
     requestRoutesNetworkProtocol(app);
-    requestRoutesSession(app);
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        requestRoutesSession(app);
+    }
     requestEthernetInterfacesRoutes(app);
+    if constexpr (BMCWEB_ENABLE_LLDP_DEDICATED_PORTS)
+    {
+        requestDedicatedPortsInterfacesRoutes(app);
+    }
+    if constexpr (BMCWEB_ENABLE_NETWORK_ADAPTERS)
+    {
+        requestRoutesNetworkAdapters(app);
+        requestRoutesNetworkDeviceFunctions(app);
+        requestRoutesACDPort(app);
+    }
+    if constexpr (BMCWEB_ENABLE_HOST_ETH_IFACE)
+    {
+        requestHostEthernetInterfacesRoutes(app);
+    }
+    if constexpr (BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC)
+    {
+        requestRoutesNetworkAdapters(app);
+    }
+    if constexpr (BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES)
+    {
+        requestRoutesChassisEnvironmentMetricsClearOOBSetPoint(app);
+        requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(app);
+    }
     if constexpr (BMCWEB_REDFISH_ALLOW_DEPRECATED_POWER_THERMAL)
     {
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesThermal(app);
         requestRoutesPower(app);
+#endif
     }
     if constexpr (BMCWEB_REDFISH_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM)
     {
@@ -87,8 +134,20 @@ RedfishService::RedfishService(App& app)
     requestRoutesManagerDiagnosticData(app);
     requestRoutesChassisCollection(app);
     requestRoutesChassis(app);
-    requestRoutesChassisResetAction(app);
-    requestRoutesChassisResetActionInfo(app);
+    if constexpr (BMCWEB_ENABLE_HOST_OS_FEATURE)
+    {
+        requestRoutesChassisResetAction(app);
+        requestRoutesChassisResetActionInfo(app);
+    }
+    if constexpr (BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES)
+    {
+        requestRoutesSplitUpdateService(app);
+    }
+    if constexpr (BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE)
+        || constexpr(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+        {
+            requestRoutesUpdateServiceActionsSimpleUpdate(app);
+        }
     requestRoutesChassisDrive(app);
     requestRoutesChassisDriveName(app);
     requestRoutesUpdateService(app);
@@ -99,15 +158,36 @@ RedfishService::RedfishService(App& app)
     requestRoutesDrive(app);
     requestRoutesCable(app);
     requestRoutesCableCollection(app);
-
+    requestRoutesSoftwareInventoryCollection(app);
+    requestRoutesSoftwareInventory(app);
+    requestRoutesInventorySoftwareCollection(app);
+    requestRoutesInventorySoftware(app);
     requestRoutesSystemLogServiceCollection(app);
     requestRoutesEventLogService(app);
     requestRoutesPostCodesEntryAdditionalData(app);
-
+    requestRoutesSELLogService(app);
+    requestRoutesChassisLogServiceCollection(app);
     requestRoutesPostCodesLogService(app);
     requestRoutesPostCodesClear(app);
     requestRoutesPostCodesEntry(app);
     requestRoutesPostCodesEntryCollection(app);
+
+    if constexpr (BMCWEB_ENABLE_MFG_TEST_API)
+    {
+        requestRoutesEventLogDiagnosticDataCollect(app);
+        requestRoutesEventLogDiagnosticDataEntry(app);
+    }
+    if constexpr (BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES)
+    {
+        requestRoutesChassisXIDLogService(app);
+        requestRoutesChassisXIDLogEntryCollection(app);
+    }
+
+    requestRoutesDebugToken(app);
+    requestRoutesDebugTokenServiceEntry(app);
+    requestRoutesDebugTokenServiceEntryCollection(app);
+    requestRoutesDebugTokenServiceDiagnosticDataCollect(app);
+    requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(app);
 
     if constexpr (BMCWEB_REDFISH_DUMP_LOG)
     {
@@ -124,12 +204,32 @@ RedfishService::RedfishService(App& app)
         requestRoutesBMCDumpCreate(app);
         requestRoutesBMCDumpClear(app);
 
-        requestRoutesFaultLogDumpService(app);
-        requestRoutesFaultLogDumpEntryCollection(app);
-        requestRoutesFaultLogDumpEntry(app);
-        requestRoutesFaultLogDumpClear(app);
+        if constexpr (!BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG)
+        {
+            // Nvidia has faultlog support under system
+            requestRoutesFaultLogDumpService(app);
+            requestRoutesFaultLogDumpEntryCollection(app);
+            requestRoutesFaultLogDumpEntry(app);
+            requestRoutesFaultLogDumpClear(app);
+        }
     }
 
+    if constexpr (BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG)
+    {
+        requestRoutesSystemFDRService(app);
+        requestRoutesSystemFDREntryCollection(app);
+        requestRoutesSystemFDREntry(app);
+        requestRoutesSystemFDRCreate(app);
+        requestRoutesSystemFDRClear(app);
+    }
+
+    if constexpr (BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG)
+    {
+        requestRoutesSystemFaultLogService(app);
+        requestRoutesSystemFaultLogEntryCollection(app);
+        requestRoutesSystemFaultLogEntry(app);
+        requestRoutesSystemFaultLogClear(app);
+    }
     if constexpr (!BMCWEB_REDFISH_DBUS_LOG)
     {
         requestRoutesJournalEventLogEntryCollection(app);
@@ -159,13 +259,48 @@ RedfishService::RedfishService(App& app)
     requestRoutesProcessor(app);
     requestRoutesOperatingConfigCollection(app);
     requestRoutesOperatingConfig(app);
+    requestRoutesProcessorMetrics(app);
+    requestRoutesProcessorMemoryMetrics(app);
+    requestRoutesProcessorSettings(app);
+    requestRoutesProcessorReset(app);
+    if constexpr (BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES)
+    {
+        requestRoutesEdppReset(app);
+        requestRoutesNvidiaManagerResetToDefaultsAction(app);
+        requestRoutesNvidiaManagerEmmcSecureErase(app);
+        requestRoutesManagerEmmcSecureEraseActionInfo(app);
+
+        requestRouteSyncRawOobCommand(app);
+        requestRouteAsyncRawOobCommand(app);
+        requestRoutesNvidiaAsyncOOBRawCommandActionInfo(app);
+        requestRoutesNvidiaSyncOOBRawCommandActionInfo(app);
+    }
+
+    requestRoutesProcessorPortCollection(app);
+    requestRoutesProcessorPort(app);
+    requestRoutesProcessorPortMetrics(app);
     requestRoutesMemoryCollection(app);
     requestRoutesMemory(app);
+    requestRoutesMemoryMetrics(app);
 
     requestRoutesSystems(app);
 
-    requestRoutesBiosService(app);
-    requestRoutesBiosReset(app);
+    if constexpr (BMCWEB_ENABLE_BIOS)
+    {
+        requestRoutesBiosService(app);
+        requestRoutesBiosSettings(app);
+        requestRoutesBiosReset(app);
+        requestRoutesBiosChangePassword(app);
+        requestRoutesBiosAttrRegistryService(app);
+        requestRoutesBootOptions(app);
+        requestRoutesSecureBoot(app);
+        requestRoutesSecureBootDatabase(app);
+    }
+
+    if constexpr (BMCWEB_ENABLE_HOST_IFACE)
+    {
+        requestHostInterfacesRoutes(app);
+    }
 
     if constexpr (BMCWEB_VM_NBDPROXY)
     {
@@ -178,6 +313,9 @@ RedfishService::RedfishService(App& app)
         requestRoutesDBusEventLogEntryCollection(app);
         requestRoutesDBusEventLogEntry(app);
         requestRoutesDBusEventLogEntryDownload(app);
+        requestRoutesDBusSELLogEntryCollection(app);
+        requestRoutesDBusSELLogEntry(app);
+        requestRoutesDBusSELLogServiceActionsClear(app);
     }
 
     if constexpr (BMCWEB_REDFISH_HOST_LOGGER)
@@ -190,16 +328,21 @@ RedfishService::RedfishService(App& app)
     requestRoutesMessageRegistryFileCollection(app);
     requestRoutesMessageRegistryFile(app);
     requestRoutesMessageRegistry(app);
-
-    requestRoutesCertificateService(app);
-    requestRoutesHTTPSCertificate(app);
-    requestRoutesLDAPCertificate(app);
-    requestRoutesTrustStoreCertificate(app);
-
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        requestRoutesCertificateService(app);
+        requestRoutesHTTPSCertificate(app);
+        requestRoutesLDAPCertificate(app);
+        requestRoutesTrustStoreCertificate(app);
+    }
     requestRoutesSystemPCIeFunctionCollection(app);
     requestRoutesSystemPCIeFunction(app);
     requestRoutesSystemPCIeDeviceCollection(app);
     requestRoutesSystemPCIeDevice(app);
+    requestRoutesChassisPCIeFunctionCollection(app);
+    requestRoutesChassisPCIeFunction(app);
+    requestRoutesChassisPCIeDeviceCollection(app);
+    requestRoutesChassisPCIeDevice(app);
 
     requestRoutesSensorCollection(app);
     requestRoutesSensor(app);
@@ -209,7 +352,11 @@ RedfishService::RedfishService(App& app)
     requestRoutesTaskCollection(app);
     requestRoutesTask(app);
     requestRoutesEventService(app);
-    requestRoutesEventServiceSse(app);
+    if constexpr (BMCWEB_ENABLE_SSE)
+    {
+        requestRoutesEventServiceSse(app);
+    }
+
     requestRoutesEventDestinationCollection(app);
     requestRoutesEventDestination(app);
     requestRoutesFabricAdapters(app);
@@ -223,8 +370,55 @@ RedfishService::RedfishService(App& app)
     requestRoutesMetricReportDefinition(app);
     requestRoutesMetricReportCollection(app);
     requestRoutesMetricReport(app);
-    requestRoutesTriggerCollection(app);
-    requestRoutesTrigger(app);
+
+    requestRoutesFabricCollection(app);
+    requestRoutesFabric(app);
+    requestRoutesSwitchCollection(app);
+    requestRoutesSwitch(app);
+    requestRoutesNVSwitchReset(app);
+    requestRoutesSwitchMetrics(app);
+    requestRoutesPortCollection(app);
+    requestRoutesPort(app);
+    requestRoutesPortMetrics(app);
+    requestRoutesEndpointCollection(app);
+    requestRoutesEndpoint(app);
+    requestRoutesZoneCollection(app);
+    requestRoutesZone(app);
+
+    if constexpr (BMCWEB_ENABLE_HOST_OS_FEATURE)
+    {
+        requestRoutesTriggerCollection(app);
+        requestRoutesTrigger(app);
+    }
+
+    requestRoutesEROTChassisCertificate(app);
+    if constexpr (BMCWEB_ENABLE_DOT)
+    {
+        requestRoutesEROTChassisDOT(app);
+    }
+
+    if constexpr (BMCWEB_ENABLE_MANUAL_BOOT_MODE)
+    {
+        requestRoutesEROTChassisManualBootMode(app);
+    }
+    requestRoutesComponentIntegrity(app);
+    requestRoutesServiceConditions(app);
+    requestRoutesChassisControls(app);
+    requestRoutesChassisControlsCollection(app);
+    requestRoutesUpdateServiceCommitImage(app);
+
+    if constexpr (BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES)
+    {
+        requestRoutesNvidiaOemBf(app);
+        requestRoutesNvidiaManagerSetSelCapacityAction(app);
+        requestRoutesNvidiaManagerGetSelCapacity(app);
+    }
+    requestRoutesTrustedComponents(app);
+    if constexpr (BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+    {
+        requestRoutesUpdateServicePublicKeyExchange(app);
+        requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
+    }
 
     // Note, this must be the last route registered
     requestRoutesRedfish(app);

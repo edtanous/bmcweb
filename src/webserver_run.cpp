@@ -20,7 +20,7 @@
 #include "user_monitor.hpp"
 #include "vm_websocket.hpp"
 #include "webassets.hpp"
-
+#include <watchdog.hpp>
 #include <boost/asio/io_context.hpp>
 #include <sdbusplus/asio/connection.hpp>
 
@@ -33,6 +33,9 @@ int run()
 
     sdbusplus::asio::connection systemBus(*io);
     crow::connections::systemBus = &systemBus;
+
+    // Enable SystemD service watchdog kicking. Service file has timeout of 60s. 
+    crow::watchdog::ServiceWD watchdog(30, io);
 
     // Static assets need to be initialized before Authorization, because auth
     // needs to build the whitelist from the static routes
@@ -99,8 +102,21 @@ int run()
 
     if constexpr (!BMCWEB_INSECURE_DISABLE_SSL)
     {
-        BMCWEB_LOG_INFO("Start Hostname Monitor Service...");
-        crow::hostname_monitor::registerHostnameSignal();
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+            BMCWEB_LOG_INFO("Start Hostname Monitor Service...");
+            crow::hostname_monitor::registerHostnameSignal();
+        }
+    }
+
+    if constexpr (BMCWEB_ENABLE_REDFISH_DUMP_LOG)
+    {
+        crow::obmc_dump::requestRoutes(app);
+    }
+
+    if constexpr (BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS)
+    {
+        tal::TelemetryAggregator::namespaceInit(tal::ProcessType::Client);
     }
 
     bmcweb::registerUserRemovedSignal();
