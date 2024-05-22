@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -182,7 +182,9 @@ class DpuActionSetProperties : virtual public DpuCommonProperties
   public:
     DpuActionSetProperties(
         const std::unordered_map<std::string, ObjectInfo>& objects,
-        const std::string target) : DpuCommonProperties(objects), target(target)
+        const std::string target) :
+        DpuCommonProperties(objects),
+        target(target)
     {}
     std::string getActionTarget()
     {
@@ -277,7 +279,8 @@ class DpuActionSetProperties : virtual public DpuCommonProperties
                 }
 
                 messages::success(asyncResp->res);
-            }, objectInfo.service, objectInfo.obj,
+            },
+                objectInfo.service, objectInfo.obj,
                 "org.freedesktop.DBus.Properties", "Set",
                 objectInfo.propertyInfo.intf, objectInfo.propertyInfo.prop,
                 std::variant<std::string>(toDbus(value, name)));
@@ -295,8 +298,8 @@ class DpuActionSetAndGetProp :
     DpuActionSetAndGetProp(
         const std::unordered_map<std::string, ObjectInfo>& objects,
         const std::string target) :
-        DpuCommonProperties(objects), DpuActionSetProperties(objects, target),
-        DpuGetProperties(objects)
+        DpuCommonProperties(objects),
+        DpuActionSetProperties(objects, target), DpuGetProperties(objects)
     {}
 };
 
@@ -590,7 +593,8 @@ inline void
             messages::internalError(asyncResp->res);
             return;
         }
-    }, systemdServiceBf, rshimSystemdObjBf, systemdUnitIntfBf, method.c_str(),
+    },
+        systemdServiceBf, rshimSystemdObjBf, systemdUnitIntfBf, method.c_str(),
         "replace");
 
     messages::success(asyncResp->res);
@@ -717,9 +721,11 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, systemdServiceBf, switchModeSystemdObj, systemdUnitIntfBf, "Restart",
-            "replace");
-    }, ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface,
+        },
+            systemdServiceBf, switchModeSystemdObj, systemdUnitIntfBf,
+            "Restart", "replace");
+    },
+        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface,
         "Set", ctlBMCSwitchModeIntf, ctlBMCSwitchMode, variantValue);
 
     messages::success(asyncResp->res);
@@ -761,7 +767,8 @@ inline void resetTorSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
             messages::internalError(asyncResp->res);
             return;
         }
-    }, ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface,
+    },
+        ctlBMCSwitchModeService, ctlBMCSwitchModeBMCObj, dbusPropertyInterface,
         "Set", ctlBMCSwitchModeIntf, ctlBMCSwitchMode, variantValue);
 
     messages::success(asyncResp->res);
@@ -883,7 +890,8 @@ inline void handleTruststoreCertificatesCollectionPost(
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                }, truststoreBiosService, objectPath,
+                },
+                    truststoreBiosService, objectPath,
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.Common.UUID", "UUID",
                     dbus::utility::DbusVariantType(*owner));
@@ -1026,7 +1034,8 @@ inline void handleTruststoreCertificatesDelete(
                 return;
             }
             asyncResp->res.result(boost::beast::http::status::no_content);
-        }, truststoreBiosService, truststoreBiosPath + "/" + certId,
+        },
+            truststoreBiosService, truststoreBiosPath + "/" + certId,
             "xyz.openbmc_project.Object.Delete", "Delete");
     });
 }

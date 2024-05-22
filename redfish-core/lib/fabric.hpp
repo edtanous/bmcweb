@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1208,7 +1208,7 @@ inline void requestRoutesSwitch(App& app)
                         getSwitchEndpointsLink(asyncResp, path, fabricId);
                         // Link association to manager
                         getManagerLink(asyncResp, path);
-                        //get health by association
+                        // get health by association
                         getHealthByAssociatedChassis(asyncResp, path, switchId);
 
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
@@ -1500,7 +1500,8 @@ inline void nvswitchPostResetType(
             BMCWEB_LOG_DEBUG("{}", ec);
             messages::internalError(resp->res);
             return;
-        }, conName, cpuObjectPath,
+        },
+            conName, cpuObjectPath,
             "xyz.openbmc_project.Control.Processor.Reset", "Reset");
     });
 }

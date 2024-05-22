@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <file_watcher.hpp>
-
-#include <gtest/gtest.h>
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <thread>
-#include <memory>
-#include <cstdlib>
-#include <cstdio>
-#include <random>
+#include <file_watcher.hpp>
 
-static void ioContextWorker(const std::shared_ptr<boost::asio::io_context> &ioCtx)
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
+#include <random>
+#include <thread>
+
+#include <gtest/gtest.h>
+
+static void
+    ioContextWorker(const std::shared_ptr<boost::asio::io_context>& ioCtx)
 {
     ioCtx->run();
 }
@@ -43,24 +45,23 @@ std::string randomFilename()
 TEST(FileWatcher, GivenNoSetupAndNoPath_Watch_DoesntInvokeCallback)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(50));
 
     auto success = true;
     auto name = randomFilename();
 
     InotifyFileWatcher watcher;
-    watcher.watch([&](const std::vector<FileWatcherEvent> &) {
+    watcher.watch([&](const std::vector<FileWatcherEvent>&) {
         success = false;
         FAIL();
     });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
-        ioCtx->stop(); 
-    }); 
+    tim.async_wait([&](const boost::system::error_code&) { ioCtx->stop(); });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
         FAIL() << "Error in Opening File, " << name.c_str();
     }
@@ -74,28 +75,28 @@ TEST(FileWatcher, GivenNoSetupAndNoPath_Watch_DoesntInvokeCallback)
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(FileWatcher, GivenNoSetupAndPathWithAllEventsParameter_Watch_DoesntInvokeCallback)
+TEST(FileWatcher,
+     GivenNoSetupAndPathWithAllEventsParameter_Watch_DoesntInvokeCallback)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(50));
 
     auto success = true;
     auto name = randomFilename();
 
     InotifyFileWatcher watcher;
     watcher.addPath("./", IN_ALL_EVENTS);
-    watcher.watch([&](const std::vector<FileWatcherEvent> &) {
+    watcher.watch([&](const std::vector<FileWatcherEvent>&) {
         success = false;
         FAIL();
     });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
-        ioCtx->stop(); 
-    }); 
+    tim.async_wait([&](const boost::system::error_code&) { ioCtx->stop(); });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
         FAIL() << "Error in Opening File, " << name.c_str();
     }
@@ -109,30 +110,31 @@ TEST(FileWatcher, GivenNoSetupAndPathWithAllEventsParameter_Watch_DoesntInvokeCa
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreated_Watch_InvokesCallback)
+TEST(
+    FileWatcher,
+    GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreated_Watch_InvokesCallback)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(100));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(100));
 
     auto name = randomFilename();
 
     InotifyFileWatcher watcher;
     watcher.setup(ioCtx);
     watcher.addPath("./", IN_ALL_EVENTS);
-    watcher.watch([&](const std::vector<FileWatcherEvent> &) {
-        ioCtx->stop();
-    });
+    watcher.watch([&](const std::vector<FileWatcherEvent>&) { ioCtx->stop(); });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
+    tim.async_wait([&](const boost::system::error_code&) {
         ioCtx->stop();
         FAIL() << "100ms timeout hit";
     });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
-	    FAIL() << "Error in Opening File, " << name.c_str();
+        FAIL() << "Error in Opening File, " << name.c_str();
     }
     fclose(fp);
 
@@ -142,34 +144,38 @@ TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCr
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreated_Watch_GivesParameters)
+TEST(
+    FileWatcher,
+    GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreated_Watch_GivesParameters)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(50));
 
     auto name = randomFilename();
 
     InotifyFileWatcher watcher;
     watcher.setup(ioCtx);
     watcher.addPath("./", IN_ALL_EVENTS);
-    watcher.watch([&](const std::vector<FileWatcherEvent> &evs) {
-        for (const auto &ev : evs) {
+    watcher.watch([&](const std::vector<FileWatcherEvent>& evs) {
+        for (const auto& ev : evs)
+        {
             EXPECT_EQ(ev.path, "./");
             EXPECT_EQ(ev.name, name);
         }
         ioCtx->stop();
     });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
+    tim.async_wait([&](const boost::system::error_code&) {
         ioCtx->stop();
         FAIL() << "50ms timeout hit";
     });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
-	    FAIL() << "Error in Opening File, " << name.c_str();
+        FAIL() << "Error in Opening File, " << name.c_str();
     }
     fclose(fp);
 
@@ -179,34 +185,39 @@ TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCr
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreatedAndClosed_Watch_GivesCreateEvent)
+TEST(
+    FileWatcher,
+    GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreatedAndClosed_Watch_GivesCreateEvent)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(50));
 
     auto name = randomFilename();
 
     InotifyFileWatcher watcher;
     watcher.setup(ioCtx);
     watcher.addPath("./", IN_ALL_EVENTS);
-    watcher.watch([&](const std::vector<FileWatcherEvent> &evs) {
-        for (const auto &ev : evs) {
-            if (ev.mask & IN_CREATE) {
+    watcher.watch([&](const std::vector<FileWatcherEvent>& evs) {
+        for (const auto& ev : evs)
+        {
+            if (ev.mask & IN_CREATE)
+            {
                 ioCtx->stop();
             }
         }
     });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
+    tim.async_wait([&](const boost::system::error_code&) {
         ioCtx->stop();
         FAIL() << "50ms timeout hit";
     });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
-	    FAIL() << "Error in Opening File, " << name.c_str();
+        FAIL() << "Error in Opening File, " << name.c_str();
     }
     fclose(fp);
 
@@ -216,34 +227,39 @@ TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCr
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(FileWatcher, GivenSetupWithContextAndPathWithCreateParameterAndNewFileCreatedAndClosed_Watch_GivesCreateEvent)
+TEST(
+    FileWatcher,
+    GivenSetupWithContextAndPathWithCreateParameterAndNewFileCreatedAndClosed_Watch_GivesCreateEvent)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(50));
 
     auto name = randomFilename();
 
     InotifyFileWatcher watcher;
     watcher.setup(ioCtx);
     watcher.addPath("./", IN_CREATE);
-    watcher.watch([&](const std::vector<FileWatcherEvent> &evs) {
-        for (const auto &ev : evs) {
-            if (ev.mask & IN_CREATE) {
+    watcher.watch([&](const std::vector<FileWatcherEvent>& evs) {
+        for (const auto& ev : evs)
+        {
+            if (ev.mask & IN_CREATE)
+            {
                 ioCtx->stop();
             }
         }
     });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
+    tim.async_wait([&](const boost::system::error_code&) {
         ioCtx->stop();
         FAIL() << "50ms timeout hit";
     });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
-	    FAIL() << "Error in Opening File, " << name.c_str();
+        FAIL() << "Error in Opening File, " << name.c_str();
     }
     fclose(fp);
 
@@ -253,10 +269,13 @@ TEST(FileWatcher, GivenSetupWithContextAndPathWithCreateParameterAndNewFileCreat
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(FileWatcher, GivenSetupWithContextAndPathWithCloseWriteParameterAndNewFileCreatedAndClosed_Watch_GivesNoOtherEvents)
+TEST(
+    FileWatcher,
+    GivenSetupWithContextAndPathWithCloseWriteParameterAndNewFileCreatedAndClosed_Watch_GivesNoOtherEvents)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(50));
 
     auto success = true;
     auto name = randomFilename();
@@ -264,24 +283,24 @@ TEST(FileWatcher, GivenSetupWithContextAndPathWithCloseWriteParameterAndNewFileC
     InotifyFileWatcher watcher;
     watcher.setup(ioCtx);
     watcher.addPath("./", IN_CLOSE_WRITE);
-    watcher.watch([&](const std::vector<FileWatcherEvent> &evs) {
-        for (const auto &ev : evs) {
-            if (ev.mask & (IN_ALL_EVENTS & ~IN_CLOSE_WRITE)) {
+    watcher.watch([&](const std::vector<FileWatcherEvent>& evs) {
+        for (const auto& ev : evs)
+        {
+            if (ev.mask & (IN_ALL_EVENTS & ~IN_CLOSE_WRITE))
+            {
                 success = false;
                 FAIL();
             }
         }
     });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
-        ioCtx->stop(); 
-    }); 
+    tim.async_wait([&](const boost::system::error_code&) { ioCtx->stop(); });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
-	    FAIL() << "Error in Opening File, " << name.c_str();
+        FAIL() << "Error in Opening File, " << name.c_str();
     }
     fclose(fp);
 
@@ -293,34 +312,39 @@ TEST(FileWatcher, GivenSetupWithContextAndPathWithCloseWriteParameterAndNewFileC
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreatedAndWrittenToAndClosed_Watch_GivesInModifyWriteEvent)
+TEST(
+    FileWatcher,
+    GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreatedAndWrittenToAndClosed_Watch_GivesInModifyWriteEvent)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(50));
 
     auto name = randomFilename();
 
     InotifyFileWatcher watcher;
     watcher.setup(ioCtx);
     watcher.addPath("./", IN_ALL_EVENTS);
-    watcher.watch([&](const std::vector<FileWatcherEvent> &evs) {
-        for (const auto &ev : evs) {
-            if (ev.mask & IN_MODIFY) {
+    watcher.watch([&](const std::vector<FileWatcherEvent>& evs) {
+        for (const auto& ev : evs)
+        {
+            if (ev.mask & IN_MODIFY)
+            {
                 ioCtx->stop();
             }
         }
     });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
+    tim.async_wait([&](const boost::system::error_code&) {
         ioCtx->stop();
         FAIL() << "50ms timeout hit";
     });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
-	    FAIL() << "Error in Opening File, " << name.c_str();
+        FAIL() << "Error in Opening File, " << name.c_str();
     }
     fwrite("test_content", sizeof(char), sizeof("test_content"), fp);
     fclose(fp);
@@ -331,34 +355,39 @@ TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCr
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(FileWatcher, GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreatedAndClosed_Watch_GivesInCloseWriteEvent)
+TEST(
+    FileWatcher,
+    GivenSetupWithContextAndPathWithAllEventsParameterAndNewFileCreatedAndClosed_Watch_GivesInCloseWriteEvent)
 {
     auto ioCtx = std::make_shared<boost::asio::io_context>();
-    boost::asio::deadline_timer tim(*ioCtx, boost::posix_time::milliseconds(50));
+    boost::asio::deadline_timer tim(*ioCtx,
+                                    boost::posix_time::milliseconds(50));
 
     auto name = randomFilename();
 
     InotifyFileWatcher watcher;
     watcher.setup(ioCtx);
     watcher.addPath("./", IN_ALL_EVENTS);
-    watcher.watch([&](const std::vector<FileWatcherEvent> &evs) {
-        for (const auto &ev : evs) {
-            if (ev.mask & IN_CLOSE_WRITE) {
+    watcher.watch([&](const std::vector<FileWatcherEvent>& evs) {
+        for (const auto& ev : evs)
+        {
+            if (ev.mask & IN_CLOSE_WRITE)
+            {
                 ioCtx->stop();
             }
         }
     });
 
-    tim.async_wait([&](const boost::system::error_code &) { 
+    tim.async_wait([&](const boost::system::error_code&) {
         ioCtx->stop();
         FAIL() << "50ms timeout hit";
     });
     std::thread ioThread(&ioContextWorker, ioCtx);
 
     auto fp = fopen(name.c_str(), "w");
-    if(fp == nullptr)
+    if (fp == nullptr)
     {
-	    FAIL() << "Error in Opening File, " << name.c_str();
+        FAIL() << "Error in Opening File, " << name.c_str();
     }
     fclose(fp);
 

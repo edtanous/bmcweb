@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -993,9 +993,9 @@ inline void getSensorDataByService(
         std::variant<std::string, double, uint64_t, std::vector<std::string>>;
     using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
     crow::connections::systemBus->async_method_call(
-        [aResp, chassisId, resourceType,
-         objPath, isSupportPowerLimit](const boost::system::error_code ec,
-                  const PropertiesMap& properties) {
+        [aResp, chassisId, resourceType, objPath,
+         isSupportPowerLimit](const boost::system::error_code ec,
+                              const PropertiesMap& properties) {
         if (ec)
         {
             BMCWEB_LOG_DEBUG("Can't get sensor reading for");
@@ -1053,9 +1053,9 @@ inline void getSensorDataByService(
                     };
                     if (isSupportPowerLimit == true)
                     {
-                    aResp->res.jsonValue["PowerLimitWatts"]["Reading"] =
-                        *attributeValue;
-                }
+                        aResp->res.jsonValue["PowerLimitWatts"]["Reading"] =
+                            *attributeValue;
+                    }
                 }
                 else if (sensorType == "energy")
                 {
@@ -1119,9 +1119,9 @@ inline void getEnvironmentMetricsDataByService(
     BMCWEB_LOG_DEBUG("Get environment metrics data.");
     // Get parent chassis for sensors URI
     crow::connections::systemBus->async_method_call(
-        [aResp, service, resourceType,
-         objPath, isSupportPowerLimit](const boost::system::error_code ec,
-                  std::variant<std::vector<std::string>>& resp) {
+        [aResp, service, resourceType, objPath,
+         isSupportPowerLimit](const boost::system::error_code ec,
+                              std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
             return; // no chassis = no failures
@@ -1143,9 +1143,9 @@ inline void getEnvironmentMetricsDataByService(
         }
         const std::string& chassisId = chassisName;
         crow::connections::systemBus->async_method_call(
-            [aResp, service, resourceType,
-             chassisId, isSupportPowerLimit](const boost::system::error_code& e,
-                        std::variant<std::vector<std::string>>& resp) {
+            [aResp, service, resourceType, chassisId, isSupportPowerLimit](
+                const boost::system::error_code& e,
+                std::variant<std::vector<std::string>>& resp) {
             if (e)
             {
                 messages::internalError(aResp->res);
@@ -1372,8 +1372,8 @@ inline void
                     interfaces.end())
                 {
                     getPowerLimits(aResp, service, path);
-                    // Set the PowerLimit support flag as true to get Power sensor reading by
-                    // getEnvironmentMetricsDataByService()
+                    // Set the PowerLimit support flag as true to get Power
+                    // sensor reading by getEnvironmentMetricsDataByService()
                     getEnvironmentMetricsDataByService(aResp, service, path,
                                                        resourceType, true);
                 }
@@ -1525,7 +1525,8 @@ inline void postEdppReset(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         BMCWEB_LOG_DEBUG("{}", ec);
         messages::internalError(resp->res);
         return;
-    }, *inventoryService, cpuObjectPath, "com.nvidia.Edpp", "Reset");
+    },
+        *inventoryService, cpuObjectPath, "com.nvidia.Edpp", "Reset");
 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 

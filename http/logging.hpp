@@ -167,7 +167,7 @@ struct FormatString
 
     // NOLINTNEXTLINE(google-explicit-constructor)
     FormatString(const char* stringIn, const std::source_location& locIn =
-                                        std::source_location::current()) :
+                                           std::source_location::current()) :
         str(stringIn),
         loc(locIn)
     {}

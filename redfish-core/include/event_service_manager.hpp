@@ -2219,12 +2219,13 @@ class EventServiceManager
                         {
                             deviceName = additional["DEVICE_NAME"];
                         }
-                        //convert SEL SENSOR_PATH to RF OriginOfCondition
+                        // convert SEL SENSOR_PATH to RF OriginOfCondition
                         if (additional.count("SENSOR_PATH") == 1)
                         {
                             originOfCondition = additional["SENSOR_PATH"];
                         }
-                        if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
+                        if (additional.count("REDFISH_ORIGIN_OF_CONDITION") ==
+                            1)
                         {
                             originOfCondition =
                                 additional["REDFISH_ORIGIN_OF_CONDITION"];
@@ -2409,7 +2410,8 @@ class EventServiceManager
                 {
                     for (auto& it : dBusToResourceType)
                     {
-                        if (originOfCondition.find(it.first) != std::string::npos)
+                        if (originOfCondition.find(it.first) !=
+                            std::string::npos)
                         {
                             resourceType = it.second;
                             break;
@@ -2423,7 +2425,8 @@ class EventServiceManager
                 else
                 {
                     BMCWEB_LOG_ERROR(
-                        "no OriginOfCondition in event log. MsgId: ", messageId);
+                        "no OriginOfCondition in event log. MsgId: ",
+                        messageId);
                     sendEventWithOOC(std::string{""}, event);
                 }
             }

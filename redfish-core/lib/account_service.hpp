@@ -428,7 +428,7 @@ inline void handleRoleMapPatch(
                         "xyz.openbmc_project.User.PrivilegeMapperEntry",
                         "GroupName",
                         std::format("RemoteRoleMapping/{}/RemoteGroup", index),
-                                                                 *remoteGroup);
+                        *remoteGroup);
                 }
 
                 // If "LocalRole" info is provided
@@ -687,7 +687,7 @@ inline void handleServiceAddressPatch(
     setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
                     ldapConfigInterface, "LDAPServerURI",
                     ldapServerElementName + "/ServiceAddress",
-                                                 serviceAddressList.front());
+                    serviceAddressList.front());
 }
 /**
  * @brief updates the LDAP Bind DN and updates the
@@ -749,7 +749,7 @@ inline void
                     ldapConfigInterface, "LDAPBaseDN",
                     ldapServerElementName +
                         "/LDAPService/SearchSettings/BaseDistinguishedNames",
-                                                 baseDNList.front());
+                    baseDNList.front());
 }
 /**
  * @brief updates the LDAP user name attribute and updates the

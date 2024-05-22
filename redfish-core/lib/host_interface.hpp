@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -192,7 +192,8 @@ static void
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, biosService, redfish::bios::biosConfigObj,
+        },
+            biosService, redfish::bios::biosConfigObj,
             "org.freedesktop.DBus.Properties", "Set",
             redfish::bios::biosConfigIface, property, std::variant<bool>(flag));
     },
@@ -216,7 +217,9 @@ static void
             messages::internalError(asyncResp->res);
             return;
         }
-    }, "xyz.openbmc_project.Network", "/xyz/openbmc_project/network/" + ifaceId,
+    },
+        "xyz.openbmc_project.Network",
+        "/xyz/openbmc_project/network/" + ifaceId,
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Network.EthernetInterface", "NICEnabled",
         std::variant<bool>(interfaceEnabled));

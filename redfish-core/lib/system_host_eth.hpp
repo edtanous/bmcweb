@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,9 +118,10 @@ void getEthernetIfaceDataHost(
         "xyz.openbmc_project.Network.EthernetInterface"})
 {
     // First, call getEthernetIfaceService to get the serviceName
-    getEthernetIfaceService(ethifaceId,
-                            [ethifaceId, callback, interfaces](
-                                bool success, const std::string& serviceName) {
+    getEthernetIfaceService(
+        ethifaceId,
+        [ethifaceId, callback, interfaces](bool success,
+                                           const std::string& serviceName) {
         if (!success || serviceName.empty())
         {
             // Handle error
@@ -171,7 +172,7 @@ void getEthernetIfaceDataHost(
             serviceName, "/xyz/openbmc_project/network/host0",
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     },
-                            interfaces);
+        interfaces);
 }
 
 inline void requestHostEthernetInterfacesRoutes(App& app)

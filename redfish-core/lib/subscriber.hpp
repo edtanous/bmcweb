@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,7 +160,8 @@ inline void invokeRedfishEventListener()
             BMCWEB_LOG_DEBUG("DBUS response error: {}", ec);
             return;
         }
-    }, serviceName, objectPath, interfaceName, startService,
+    },
+        serviceName, objectPath, interfaceName, startService,
         listenerServiceName, mode);
 }
 
@@ -230,8 +231,8 @@ inline int initRedfishEventListener(boost::asio::io_context& ioc)
     return 0;
 }
 
-inline int startRedfishEventListener(
-    __attribute__((unused)) boost::asio::io_context& ioc)
+inline int startRedfishEventListener(__attribute__((unused))
+                                     boost::asio::io_context& ioc)
 {
     const uint8_t immediateTime = 1;
 
@@ -289,8 +290,9 @@ inline int stopRedfishEventListener(boost::asio::io_context& ioc)
             BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
             return;
         }
-    }, serviceName, objectPath, interfaceName, stopService, listenerServiceName,
-        mode);
+    },
+        serviceName, objectPath, interfaceName, stopService,
+        listenerServiceName, mode);
     return 0;
 }
 #endif

@@ -36,7 +36,8 @@ class Server
                adaptorCtxIn,
            std::shared_ptr<boost::asio::io_context> io =
                std::make_shared<boost::asio::io_context>()) :
-        ioService(std::move(io)), acceptor(std::move(acceptorIn)),
+        ioService(std::move(io)),
+        acceptor(std::move(acceptorIn)),
         signals(*ioService, SIGINT, SIGTERM, SIGHUP), timer(*ioService),
         fileWatcher(), handler(handlerIn), adaptorCtx(std::move(adaptorCtxIn))
     {}

@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,8 @@ class ServiceWD
   public:
     ServiceWD(const int expiryTimeInS,
               std::shared_ptr<boost::asio::io_context>& io) :
-        timer(*io), expiryTimeInS(expiryTimeInS)
+        timer(*io),
+        expiryTimeInS(expiryTimeInS)
     {
         timer.expires_after(std::chrono::seconds(expiryTimeInS));
         handler = [this](const boost::system::error_code& error) {

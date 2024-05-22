@@ -102,7 +102,7 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
     std::shared_ptr<bmcweb::AsyncResp> getReqAsyncResp =
         std::make_shared<bmcweb::AsyncResp>();
 
-    // Need to capture newReqPtr as it need to stay alive till 
+    // Need to capture newReqPtr as it need to stay alive till
     // completion handler is invoked
     auto afterIfMatchHandler =
         [newReqPtr](crow::App& app,
