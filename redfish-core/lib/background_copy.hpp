@@ -20,6 +20,7 @@
 #include "error_messages.hpp"
 #include "mctp_vdm_util_wrapper.hpp"
 
+#include <regex>
 /**
  *@brief updates AutomaticBackgroundCopyEnabled property
  *

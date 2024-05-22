@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "async_resp.hpp"
+#include "dbus_singleton.hpp"
 #include "logging.hpp"
 
 #include <boost/asio.hpp>
@@ -95,7 +97,7 @@ struct MctpVdmUtil
     std::string command;
 };
 
-void MctpVdmUtil::translateOperationToCommand(
+inline void MctpVdmUtil::translateOperationToCommand(
     MctpVdmUtilCommand mctpVdmUtilcommand)
 {
     std::string cmd;
@@ -154,10 +156,11 @@ void MctpVdmUtil::translateOperationToCommand(
     command = "mctp-vdm-util -t " + std::to_string(endpointId) + " -c " + cmd;
 }
 
-void MctpVdmUtil::run(MctpVdmUtilCommand mctpVdmUtilcommand,
-                      const crow::Request& req,
-                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                      ResponseCallback responseCallback)
+inline void
+    MctpVdmUtil::run(MctpVdmUtilCommand mctpVdmUtilcommand,
+                     const crow::Request& req,
+                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                     ResponseCallback responseCallback)
 {
     translateOperationToCommand(mctpVdmUtilcommand);
     auto dataOut = std::make_shared<boost::process::ipstream>();
