@@ -376,7 +376,6 @@ inline void
     });
 }
 
-
 /**
  * @brief Retrieves SMBIOS UUID
  *

@@ -305,8 +305,9 @@ static std::string getBiosDefaultSettingsMode(const std::string& biosMode)
             }
 
             messages::success(asyncResp->res);
-        }, biosService, biosConfigObj, "org.freedesktop.DBus.Properties", "Set",
-            biosConfigIface, "ResetBIOSSettings",
+        },
+            biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            "Set", biosConfigIface, "ResetBIOSSettings",
             std::variant<std::string>(biosMode));
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -834,7 +835,8 @@ static void fillBiosTable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
 
         messages::success(asyncResp->res);
-    }, "xyz.openbmc_project.BIOSConfigManager",
+    },
+        "xyz.openbmc_project.BIOSConfigManager",
         "/xyz/openbmc_project/bios_config/manager",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.BIOSConfig.Manager", "BaseBIOSTable",
@@ -1264,7 +1266,8 @@ static void setBiosCurrentOrPendingAttr(
                 }
 
                 messages::success(asyncResp->res);
-            }, biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
+            },
+                biosService, biosConfigObj, "org.freedesktop.DBus.Properties",
                 "Set", biosConfigIface, "PendingAttributes",
                 std::variant<PendingAttrType>(pendingAttrs));
         },
@@ -2052,7 +2055,8 @@ inline void
             messages::internalError(asyncResp->res);
             return;
         }
-    }, "org.open_power.Software.Host.Updater", "/xyz/openbmc_project/software",
+    },
+        "org.open_power.Software.Host.Updater", "/xyz/openbmc_project/software",
         "xyz.openbmc_project.Common.FactoryReset", "Reset");
 }
 
@@ -2249,7 +2253,8 @@ inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             return;
         }
         BMCWEB_LOG_DEBUG("Boot override CMOSClear update done.");
-    }, "xyz.openbmc_project.Settings",
+    },
+        "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/control/host0/boot",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Boot.Flags", "CMOSClear",
@@ -2264,7 +2269,8 @@ inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             return;
         }
         BMCWEB_LOG_DEBUG("Boot override enable update done.");
-    }, "xyz.openbmc_project.Settings",
+    },
+        "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/control/host0/boot",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Object.Enable", "Enabled",

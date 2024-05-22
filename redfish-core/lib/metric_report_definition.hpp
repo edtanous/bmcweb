@@ -442,7 +442,7 @@ inline bool getUserMetric(crow::Response& res, nlohmann::json::object_t& metric,
     if (!json_util::readJsonObject(
             metric, res, "MetricProperties", uris, "CollectionFunction",
             collectionFunction, "CollectionTimeScope", collectionTimeScopeStr,
-                             "CollectionDuration", collectionDurationStr))
+            "CollectionDuration", collectionDurationStr))
     {
         return false;
     }
@@ -657,7 +657,8 @@ class AddReport
   public:
     AddReport(AddReportArgs argsIn,
               const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        asyncResp(asyncRespIn), args(std::move(argsIn))
+        asyncResp(asyncRespIn),
+        args(std::move(argsIn))
     {}
 
     ~AddReport()
@@ -773,7 +774,8 @@ class UpdateMetrics
   public:
     UpdateMetrics(std::string_view idIn,
                   const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        id(idIn), asyncResp(asyncRespIn)
+        id(idIn),
+        asyncResp(asyncRespIn)
     {}
 
     ~UpdateMetrics()
@@ -895,7 +897,8 @@ inline void
         {
             return;
         }
-    }, "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
+    },
+        "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Telemetry.Report", "Enabled",
         dbus::utility::DbusVariantType{enabled});
@@ -911,7 +914,8 @@ inline void setReportTypeAndInterval(
         {
             return;
         }
-    }, "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
+    },
+        "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
         "xyz.openbmc_project.Telemetry.Report", "SetReportingProperties",
         reportingType, recurrenceInterval);
 }
@@ -926,7 +930,8 @@ inline void
         {
             return;
         }
-    }, "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
+    },
+        "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Telemetry.Report", "ReportUpdates",
         dbus::utility::DbusVariantType{reportUpdates});
@@ -943,7 +948,8 @@ inline void
         {
             return;
         }
-    }, "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
+    },
+        "xyz.openbmc_project.Telemetry", getDbusReportPath(id),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Telemetry.Report", "ReportActions",
         dbus::utility::DbusVariantType{dbusReportActions});
@@ -959,7 +965,7 @@ inline void
         telemetry::getDbusReportPath(id), telemetry::reportInterface,
         [asyncResp, id = std::string(id),
          redfishMetrics = std::vector<nlohmann::json::object_t>(metrics.begin(),
-                                                      metrics.end())](
+                                                                metrics.end())](
             boost::system::error_code ec,
             const dbus::utility::DBusPropertiesMap& properties) mutable {
         if (!redfish::telemetry::verifyCommonErrors(asyncResp->res, id, ec))
@@ -1337,7 +1343,8 @@ inline void handleMetricReportDelete(
         }
 
         asyncResp->res.result(boost::beast::http::status::no_content);
-    }, telemetry::service, reportPath, "xyz.openbmc_project.Object.Delete",
+    },
+        telemetry::service, reportPath, "xyz.openbmc_project.Object.Delete",
         "Delete");
 }
 

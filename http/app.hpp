@@ -108,8 +108,8 @@ class App
             BMCWEB_LOG_DEBUG("TLS RUN");
             if (-1 == socketFd)
             {
-            sslServer = std::make_unique<ssl_server_t>(this, portUint,
-                                                       sslContext, io);
+                sslServer = std::make_unique<ssl_server_t>(this, portUint,
+                                                           sslContext, io);
             }
             else
             {
@@ -124,7 +124,8 @@ class App
             BMCWEB_LOG_DEBUG("HTTP RUN");
             if (-1 == socketFd)
             {
-            server = std::make_unique<server_t>(this, portUint, nullptr, io);
+                server = std::make_unique<server_t>(this, portUint, nullptr,
+                                                    io);
             }
             else
             {

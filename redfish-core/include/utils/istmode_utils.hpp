@@ -2,8 +2,9 @@
 
 #include <registries/privilege_registry.hpp>
 #include <sdbusplus/asio/property.hpp>
-#include <utils/dbus_utils.hpp>
 #include <task.hpp>
+#include <utils/dbus_utils.hpp>
+
 #include <variant>
 
 namespace redfish

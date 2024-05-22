@@ -87,7 +87,8 @@ inline void
                 // discard it
                 dbus::utility::findAssociations(
                     validPath + "/chassis",
-                    [asyncResp, chassisID, &fanList, sensorName, validPath, connectionName](
+                    [asyncResp, chassisID, &fanList, sensorName, validPath,
+                     connectionName](
                         const boost::system::error_code ec,
                         std::variant<std::vector<std::string>>& association) {
                     if (ec)
@@ -107,37 +108,37 @@ inline void
                     std::string sensorChassisID = chassisPath.filename();
                     if (sensorChassisID == chassisID)
                     {
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, chassisID, &fanList,
-                     sensorName](const boost::system::error_code ec,
-                                 const std::variant<double>& value) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_DEBUG("Can't get Fan speed!");
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, chassisID, &fanList,
+                             sensorName](const boost::system::error_code ec,
+                                         const std::variant<double>& value) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_DEBUG("Can't get Fan speed!");
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
 
                             const double* attributeValue =
                                 std::get_if<double>(&value);
-                    if (attributeValue == nullptr)
-                    {
-                        // illegal property
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
+                            if (attributeValue == nullptr)
+                            {
+                                // illegal property
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
                             std::string tempPath = "/redfish/v1/Chassis/" +
                                                    chassisID + "/Sensors/";
-                    fanList.push_back(
-                        {{"DeviceName", "Chassis Fan #" + sensorName},
-                         {"SpeedRPM", *attributeValue},
-                         {"DataSourceUri", tempPath + sensorName},
-                         {"@odata.id", tempPath + sensorName}});
-                },
-                    connectionName, validPath,
-                    "org.freedesktop.DBus.Properties", "Get",
-                    "xyz.openbmc_project.Sensor.Value", "Value");
-            }
+                            fanList.push_back(
+                                {{"DeviceName", "Chassis Fan #" + sensorName},
+                                 {"SpeedRPM", *attributeValue},
+                                 {"DataSourceUri", tempPath + sensorName},
+                                 {"@odata.id", tempPath + sensorName}});
+                        },
+                            connectionName, validPath,
+                            "org.freedesktop.DBus.Properties", "Get",
+                            "xyz.openbmc_project.Sensor.Value", "Value");
+                    }
                 });
             }
             else

@@ -7,7 +7,7 @@
 #include "event_service_manager.hpp"
 #include "google/google_service_root.hpp"
 #include "hostname_monitor.hpp"
-//#include "ibm/management_console_rest.hpp"
+// #include "ibm/management_console_rest.hpp"
 #include "image_upload.hpp"
 #include "kvm_websocket.hpp"
 #include "login_routes.hpp"
@@ -31,7 +31,7 @@
 #include <dump_offload.hpp>
 #include <google/google_service_root.hpp>
 #include <hostname_monitor.hpp>
-//#include <ibm/management_console_rest.hpp>
+// #include <ibm/management_console_rest.hpp>
 #include <image_upload.hpp>
 #include <kvm_websocket.hpp>
 #include <login_routes.hpp>
@@ -46,11 +46,8 @@
 #include <security_headers.hpp>
 #include <ssl_key_handler.hpp>
 #include <vm_websocket.hpp>
-#include <webassets.hpp>
 #include <watchdog.hpp>
-#include <sdbusplus/asio/connection.hpp>
-#include <sdbusplus/bus.hpp>
-#include <sdbusplus/server.hpp>
+#include <webassets.hpp>
 #ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
 #include <tal.hpp>
 #endif
@@ -70,12 +67,15 @@ inline void setupSocket(crow::App& app)
         if (sd_is_socket_inet(SD_LISTEN_FDS_START, AF_UNSPEC, SOCK_STREAM, 1,
                               0) != 0)
         {
-            BMCWEB_LOG_INFO("Starting webserver on socket handle {}", SD_LISTEN_FDS_START);
+            BMCWEB_LOG_INFO("Starting webserver on socket handle {}",
+                            SD_LISTEN_FDS_START);
             app.socket(SD_LISTEN_FDS_START);
         }
         else
         {
-            BMCWEB_LOG_INFO( "bad incoming socket, starting webserver on port {}", defaultPort);
+            BMCWEB_LOG_INFO(
+                "bad incoming socket, starting webserver on port {}",
+                defaultPort);
             app.port(defaultPort);
         }
     }
@@ -96,7 +96,7 @@ static int run()
 
     sdbusplus::asio::connection systemBus(*io);
     crow::connections::systemBus = &systemBus;
-    // Enable SystemD service watchdog kicking. Service file has timeout of 60s. 
+    // Enable SystemD service watchdog kicking. Service file has timeout of 60s.
     crow::watchdog::ServiceWD watchdog(30, io);
 
     // Static assets need to be initialized before Authorization, because auth
@@ -182,7 +182,7 @@ static int run()
     bmcweb::registerUserRemovedSignal();
 
 #ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
-    //Intialise the tal for the client, this will invoke the tal modules.
+    // Intialise the tal for the client, this will invoke the tal modules.
     tal::TelemetryAggregator::namespaceInit(tal::ProcessType::Client);
 #endif
     app.run();

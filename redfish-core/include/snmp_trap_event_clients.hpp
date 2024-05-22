@@ -147,13 +147,13 @@ inline void afterSnmpClientCreate(
                                                  host);
                 return;
             }
-        if (ec.value() != EBADR)
-        {
-            // SNMP not installed
-            messages::propertyValueOutOfRange(asyncResp->res, "SNMPv2c",
-                                              "Protocol");
-            return;
-        }
+            if (ec.value() != EBADR)
+            {
+                // SNMP not installed
+                messages::propertyValueOutOfRange(asyncResp->res, "SNMPv2c",
+                                                  "Protocol");
+                return;
+            }
         }
         messages::internalError(asyncResp->res);
         return;
@@ -181,7 +181,7 @@ inline void
     crow::connections::systemBus->async_method_call(
         [asyncResp, host](const boost::system::error_code& ec,
                           const sdbusplus::message_t& msg,
-                    const std::string& dbusSNMPid) {
+                          const std::string& dbusSNMPid) {
         afterSnmpClientCreate(asyncResp, ec, msg, host, dbusSNMPid);
     },
         "xyz.openbmc_project.Network.SNMP",
@@ -236,7 +236,8 @@ inline void
             return;
         }
         messages::success(asyncResp->res);
-    }, "xyz.openbmc_project.Network.SNMP", static_cast<std::string>(snmpPath),
+    },
+        "xyz.openbmc_project.Network.SNMP", static_cast<std::string>(snmpPath),
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
 

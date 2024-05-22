@@ -768,7 +768,8 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                 {
                     BMCWEB_LOG_DEBUG("Call to DownloaViaTFTP Success");
                 }
-            }, "xyz.openbmc_project.Software.Download",
+            },
+                "xyz.openbmc_project.Software.Download",
                 "/xyz/openbmc_project/software",
                 "xyz.openbmc_project.Common.TFTP", "DownloadViaTFTP", fwFile,
                 server);
@@ -869,7 +870,8 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
                         {
                             BMCWEB_LOG_DEBUG("Call to DownloadViaSCP Success");
                         }
-                    }, "xyz.openbmc_project.Software.Download",
+                    },
+                        "xyz.openbmc_project.Software.Download",
                         "/xyz/openbmc_project/software",
                         "xyz.openbmc_project.Common.SCP", "DownloadViaSCP",
                         server, *username, fwFile, *targetPath);
@@ -1077,7 +1079,8 @@ inline void validateUpdatePolicyCallback(
         }
 
         uploadImageFile(req, asyncResp);
-    }, objInfo[0].first, "/xyz/openbmc_project/software",
+    },
+        objInfo[0].first, "/xyz/openbmc_project/software",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Software.UpdatePolicy", "Targets",
         dbus::utility::DbusVariantType(targets));
@@ -1411,7 +1414,8 @@ void handleSatBMCResponse(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     if (bmcweb::asciiIEquals(contentType, "application/json") ||
         bmcweb::asciiIEquals(contentType, "application/json; charset=utf-8"))
     {
-        nlohmann::json jsonVal = nlohmann::json::parse(*resp.body(), nullptr, false);
+        nlohmann::json jsonVal = nlohmann::json::parse(*resp.body(), nullptr,
+                                                       false);
         if (jsonVal.is_discarded())
         {
             BMCWEB_LOG_ERROR("Error parsing satellite response as JSON");
@@ -2284,9 +2288,10 @@ inline void requestRoutesUpdateService(App& app)
             if (pushUriApplyTime)
             {
                 std::optional<std::string> applyTime;
-        if (!json_util::readJsonPatch(
-                req, asyncResp->res,
-                "HttpPushUriOptions/HttpPushUriApplyTime/ApplyTime", applyTime))
+                if (!json_util::readJsonPatch(
+                        req, asyncResp->res,
+                        "HttpPushUriOptions/HttpPushUriApplyTime/ApplyTime",
+                        applyTime))
                 {
                     return;
                 }
@@ -3130,7 +3135,8 @@ inline void
             messages::internalError(asyncResp->res);
             return;
         }
-            asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] = "#NvidiaSoftwareInventory.v1_1_0.NvidiaSoftwareInventory";
+        asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+            "#NvidiaSoftwareInventory.v1_1_0.NvidiaSoftwareInventory";
 
         for (const auto& property : propertiesList)
         {
@@ -3144,14 +3150,14 @@ inline void
                     {
                         asyncResp->res
                             .jsonValue["Oem"]["Nvidia"]
-                                          ["FirmwareDigestHashAlgorithm"] =
+                                      ["FirmwareDigestHashAlgorithm"] =
                             *algorithm;
                     }
                     else
                     {
                         asyncResp->res
                             .jsonValue["Oem"]["Nvidia"]
-                                          ["FirmwareDigestHashAlgorithm"] =
+                                      ["FirmwareDigestHashAlgorithm"] =
                             nlohmann::detail::value_t::null;
                     }
                 }
@@ -4149,7 +4155,8 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
                 "xyz.openbmc_project.Software.Download",
                 "/xyz/openbmc_project/software",
                 "xyz.openbmc_project.Common.SCP", "GenerateSelfKeyPair");
-        }, "xyz.openbmc_project.Software.Download",
+        },
+            "xyz.openbmc_project.Software.Download",
             "/xyz/openbmc_project/software", "xyz.openbmc_project.Common.SCP",
             "AddRemoteServerPublicKey", remoteServerIP, remoteServerKeyString);
     });
@@ -4208,7 +4215,8 @@ inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
                 BMCWEB_LOG_DEBUG(
                     "Call to RevokeAllRemoteServerPublicKeys succeeded");
             }
-        }, "xyz.openbmc_project.Software.Download",
+        },
+            "xyz.openbmc_project.Software.Download",
             "/xyz/openbmc_project/software", "xyz.openbmc_project.Common.SCP",
             "RevokeAllRemoteServerPublicKeys", remoteServerIP);
     });

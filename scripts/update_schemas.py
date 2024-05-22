@@ -176,7 +176,7 @@ oem_schema_names = [
     "OemManager",
     "OemComputerSystem",
     "OemVirtualMedia",
-    #"OpenBMCAccountService",
+    # "OpenBMCAccountService",
 ]
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -424,7 +424,9 @@ with open(metadata_index_path, "w") as metadata_index:
     metadata_index.write(
         '    <edmx:Reference Uri="/redfish/v1/schema/OemUpdateService_v1.xml">\n'
     )
-    metadata_index.write('        <edmx:Include Namespace="OemUpdateService"/>\n')
+    metadata_index.write(
+        '        <edmx:Include Namespace="OemUpdateService"/>\n'
+    )
     metadata_index.write("    </edmx:Reference>\n")
 
     metadata_index.write("</edmx:Edmx>\n")

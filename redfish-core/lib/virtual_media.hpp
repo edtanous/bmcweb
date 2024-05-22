@@ -100,7 +100,7 @@ inline void
         service, path,
         [service, resName, asyncResp, handler = std::move(handler)](
             const boost::system::error_code& ec,
-                  const dbus::utility::ManagedObjectType& subtree) {
+            const dbus::utility::ManagedObjectType& subtree) {
         if (ec)
         {
             BMCWEB_LOG_DEBUG("DBUS response error");
@@ -668,7 +668,8 @@ inline void doEjectAction(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, service, "/xyz/openbmc_project/VirtualMedia/Legacy/" + name,
+        },
+            service, "/xyz/openbmc_project/VirtualMedia/Legacy/" + name,
             "xyz.openbmc_project.VirtualMedia.Legacy", "Unmount");
     }
     else // proxy
@@ -682,7 +683,8 @@ inline void doEjectAction(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, service, "/xyz/openbmc_project/VirtualMedia/Proxy/" + name,
+        },
+            service, "/xyz/openbmc_project/VirtualMedia/Proxy/" + name,
             "xyz.openbmc_project.VirtualMedia.Proxy", "Unmount");
     }
 }

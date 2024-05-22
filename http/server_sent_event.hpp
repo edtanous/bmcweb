@@ -120,8 +120,8 @@ class ConnectionImpl : public Connection
         // SSE stream header sent, So let us setup monitor.
         // Any read data on this stream will be error in case of SSE.
         adaptor.async_read_some(boost::asio::buffer(buffer),
-                           std::bind_front(&ConnectionImpl::afterReadError,
-                                           this, shared_from_this()));
+                                std::bind_front(&ConnectionImpl::afterReadError,
+                                                this, shared_from_this()));
     }
 
     void afterReadError(const std::shared_ptr<Connection>& /*self*/,

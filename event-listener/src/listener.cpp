@@ -42,7 +42,7 @@ class redfishEventMgr
 
     static void decSessNum()
     {
-        session_num --;
+        session_num--;
     }
 
     static uint8_t getSessNum()
@@ -160,7 +160,7 @@ void handle_request(std::shared_ptr<sdbusplus::asio::connection>& bus,
                     Send&& send)
 {
     // Returns a bad request response
-    auto const bad_request = [&req](beast::string_view why) {
+    const auto bad_request = [&req](beast::string_view why) {
         http::response<http::string_body> res{http::status::bad_request,
                                               req.version()};
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
@@ -202,7 +202,7 @@ void handle_request(std::shared_ptr<sdbusplus::asio::connection>& bus,
 
 //------------------------------------------------------------------------------
 // Report a failure
-void fail(beast::error_code ec, char const* what, bool excp = true)
+void fail(beast::error_code ec, const char* what, bool excp = true)
 {
     lg2::error("{WHAT}: {MSG}", "WHAT", what, "MSG", ec.message());
     if (excp)
@@ -220,8 +220,7 @@ class session : public std::enable_shared_from_this<session>
     {
         session& self_;
 
-        explicit send_lambda(session& self) : self_(self)
-        {}
+        explicit send_lambda(session& self) : self_(self) {}
 
         template <bool isRequest, class Body, class Fields>
         void operator()(http::message<isRequest, Body, Fields>&& msg) const
@@ -254,7 +253,7 @@ class session : public std::enable_shared_from_this<session>
   public:
     // Take ownership of the stream
     session(tcp::socket&& socket,
-            std::shared_ptr<sdbusplus::asio::connection> bus):
+            std::shared_ptr<sdbusplus::asio::connection> bus) :
         stream_(std::move(socket)),
         bus_(bus), lambda_(*this)
     {
@@ -352,9 +351,9 @@ class listener : public std::enable_shared_from_this<listener>
     listener(net::io_context& ioc,
              std::shared_ptr<sdbusplus::asio::connection>&& conn,
              tcp::endpoint& endpoint) :
-        ioc_(ioc), conn_(conn), acceptor_(ioc),endpoint_(endpoint)
-    {
-    }
+        ioc_(ioc),
+        conn_(conn), acceptor_(ioc), endpoint_(endpoint)
+    {}
 
     void init()
     {
@@ -437,7 +436,6 @@ class listener : public std::enable_shared_from_this<listener>
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 lg2::error("Reach maximum sessions!");
             }
-
         }
 
         // Accept another connection
@@ -455,8 +453,8 @@ int main(int argc, char* argv[])
                   << "    http-server-async 0.0.0.0 8080 \n";
         return EXIT_FAILURE;
     }
-    auto const address = net::ip::make_address(argv[1]);
-    auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
+    const auto address = net::ip::make_address(argv[1]);
+    const auto port = static_cast<unsigned short>(std::atoi(argv[2]));
     std::string host(argv[1]);
     host += std::string(":");
     host += std::string(argv[2]);
@@ -472,13 +470,14 @@ int main(int argc, char* argv[])
 
     tcp::endpoint ep{address, port};
 
-    try {
+    try
+    {
         // Create and launch a listening port
         auto rf_listener = std::make_shared<listener>(ioc, std::move(conn), ep);
         rf_listener->init();
         rf_listener->run(host);
     }
-    catch (std::exception& ex) 
+    catch (std::exception& ex)
     {
         lg2::error("{MSG}", "MSG", ex.what());
         return EXIT_FAILURE;

@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -454,13 +454,13 @@ inline void doNDF(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 if (value->find("oob") != 0)
                 {
                     auto& capabilitiesArray =
-                            asyncResp->res.jsonValue["NetDevFuncCapabilities"];
-                        if (std::find(capabilitiesArray.begin(),
-                                    capabilitiesArray.end(),
-                                    "InfiniBand") == capabilitiesArray.end())
-                        {
-                            capabilitiesArray.push_back("InfiniBand");
-                        }
+                        asyncResp->res.jsonValue["NetDevFuncCapabilities"];
+                    if (std::find(capabilitiesArray.begin(),
+                                  capabilitiesArray.end(),
+                                  "InfiniBand") == capabilitiesArray.end())
+                    {
+                        capabilitiesArray.push_back("InfiniBand");
+                    }
                 }
             }
             if (propertyName == "LinkType")

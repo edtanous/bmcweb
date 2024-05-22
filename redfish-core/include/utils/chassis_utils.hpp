@@ -98,7 +98,8 @@ inline void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         BMCWEB_LOG_DEBUG("PowerLimit Reset error {}", ec1);
         messages::internalError(asyncResp->res);
         return;
-    }, connection, path, "xyz.openbmc_project.Control.Power.Cap",
+    },
+        connection, path, "xyz.openbmc_project.Control.Power.Cap",
         "ClearPowerCap");
 }
 

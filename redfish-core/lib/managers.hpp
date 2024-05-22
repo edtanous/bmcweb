@@ -400,7 +400,8 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                     // until a reboot Can't erase what the BMC
                     // is running on
                     doBMCGracefulRestart(asyncResp);
-                }, object.first, "/xyz/openbmc_project/software",
+                },
+                    object.first, "/xyz/openbmc_project/software",
                     ifnameFactoryReset, "Reset");
             }
         },
@@ -464,7 +465,8 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
                     // until a reboot Can't erase what the BMC
                     // is running on
                     doBMCGracefulRestart(asyncResp);
-                }, object.first, "/xyz/openbmc_project/software",
+                },
+                    object.first, "/xyz/openbmc_project/software",
                     ifnameCompleteReset, "CompleteReset");
             }
         },
@@ -1766,7 +1768,8 @@ inline CreatePIDRet createPidInterface(
                 return;
             }
             messages::success(response->res);
-        }, "xyz.openbmc_project.EntityManager", path, iface, "Delete");
+        },
+            "xyz.openbmc_project.EntityManager", path, iface, "Delete");
         return CreatePIDRet::del;
     }
 
@@ -2583,7 +2586,8 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                             return;
                         }
                         messages::success(response->res);
-                    }, "xyz.openbmc_project.EntityManager", chassis,
+                    },
+                        "xyz.openbmc_project.EntityManager", chassis,
                         "xyz.openbmc_project.AddObject", "AddObject", output);
                 }
             }
@@ -3399,9 +3403,8 @@ inline void requestRoutesManager(App& app)
 
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
 
-
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
-            oem["Nvidia"]["UptimeSeconds"] = [asyncResp]()->double {
+        oem["Nvidia"]["UptimeSeconds"] = [asyncResp]() -> double {
             double uptime = 0;
             auto ifs = std::ifstream("/proc/uptime", std::ifstream::in);
             if (ifs.good())
@@ -3506,7 +3509,7 @@ inline void requestRoutesManager(App& app)
             persistent_data::getConfig().isTLSAuthEnabled();
 #endif
 
-            populatePersistentStorageSettingStatus(asyncResp);
+        populatePersistentStorageSettingStatus(asyncResp);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         // Manager.Reset (an action) can be many values, OpenBMC only
@@ -3890,8 +3893,8 @@ inline void requestRoutesManager(App& app)
 #endif // BMCWEB_ENABLE_FENCING_PRIVILEGE
 #ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
         std::optional<bool> tlsAuth;
-#endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#endif  // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+#endif  // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         // clang-format off
         if (!json_util::readJsonPatch(req, asyncResp->res,

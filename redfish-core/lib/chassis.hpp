@@ -144,22 +144,22 @@ inline void getChassisState(std::shared_ptr<bmcweb::AsyncResp> asyncResp)
  */
 inline void handlePhysicalSecurityGetSubTree(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-            const boost::system::error_code& ec,
+    const boost::system::error_code& ec,
     const dbus::utility::MapperGetSubTreeResponse& subtree)
 {
-        if (ec)
+    if (ec)
+    {
+        // do not add err msg in redfish response, because this is not
+        //     mandatory property
+        BMCWEB_LOG_INFO("DBUS error: no matched iface {}", ec);
+        return;
+    }
+    // Iterate over all retrieved ObjectPaths.
+    for (const auto& object : subtree)
+    {
+        if (!object.second.empty())
         {
-            // do not add err msg in redfish response, because this is not
-            //     mandatory property
-            BMCWEB_LOG_INFO("DBUS error: no matched iface {}", ec);
-            return;
-        }
-        // Iterate over all retrieved ObjectPaths.
-        for (const auto& object : subtree)
-        {
-            if (!object.second.empty())
-            {
-                const auto service = object.second.front();
+            const auto service = object.second.front();
 
             BMCWEB_LOG_DEBUG("Get intrusion status by service ");
 
@@ -182,9 +182,9 @@ inline void handlePhysicalSecurityGetSubTree(
                     .jsonValue["PhysicalSecurity"]["IntrusionSensor"] = value;
             });
 
-                return;
-            }
+            return;
         }
+    }
 }
 
 inline void handleChassisCollectionGet(
@@ -548,133 +548,136 @@ inline void handleChassisGetSubTree(
 
         for (const auto& [connectionName, interfaces2] : connectionNames)
         {
+            const std::array<const char*, 3> hasIndicatorLed = {
+                "xyz.openbmc_project.Inventory.Item.Chassis",
+                "xyz.openbmc_project.Inventory.Item.Panel",
+                "xyz.openbmc_project.Inventory.Item.Board.Motherboard"};
 
-        const std::array<const char*, 3> hasIndicatorLed = {
-            "xyz.openbmc_project.Inventory.Item.Chassis",
-            "xyz.openbmc_project.Inventory.Item.Panel",
-            "xyz.openbmc_project.Inventory.Item.Board.Motherboard"};
+            const std::string assetTagInterface =
+                "xyz.openbmc_project.Inventory.Decorator.AssetTag";
+            const std::string replaceableInterface =
+                "xyz.openbmc_project.Inventory.Decorator.Replaceable";
+            const std::string revisionInterface =
+                "xyz.openbmc_project.Inventory.Decorator.Revision";
+            bool operationalStatusPresent = false;
+            const std::string operationalStatusInterface =
+                "xyz.openbmc_project.State.Decorator.OperationalStatus";
 
-        const std::string assetTagInterface =
-            "xyz.openbmc_project.Inventory.Decorator.AssetTag";
-        const std::string replaceableInterface =
-            "xyz.openbmc_project.Inventory.Decorator.Replaceable";
-        const std::string revisionInterface =
-            "xyz.openbmc_project.Inventory.Decorator.Revision";
-        bool operationalStatusPresent = false;
-        const std::string operationalStatusInterface =
-            "xyz.openbmc_project.State.Decorator.OperationalStatus";
+            if (std::find(interfaces2.begin(), interfaces2.end(),
+                          operationalStatusInterface) != interfaces2.end())
+            {
+                operationalStatusPresent = true;
+            }
+            for (const auto& interface : interfaces2)
+            {
+                if (interface == assetTagInterface)
+                {
+                    sdbusplus::asio::getProperty<std::string>(
+                        *crow::connections::systemBus, connectionName, path,
+                        assetTagInterface, "AssetTag",
+                        [asyncResp,
+                         chassisId](const boost::system::error_code& ec2,
+                                    const std::string& property) {
+                        if (ec2)
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "DBus response error for AssetTag: {}", ec2);
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["AssetTag"] = property;
+                    });
+                }
+                else if (interface == replaceableInterface)
+                {
+                    sdbusplus::asio::getProperty<bool>(
+                        *crow::connections::systemBus, connectionName, path,
+                        replaceableInterface, "HotPluggable",
+                        [asyncResp,
+                         chassisId](const boost::system::error_code& ec2,
+                                    const bool property) {
+                        if (ec2)
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "DBus response error for HotPluggable: {}",
+                                ec2);
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["HotPluggable"] = property;
+                    });
+                }
+                else if (interface == revisionInterface)
+                {
+                    sdbusplus::asio::getProperty<std::string>(
+                        *crow::connections::systemBus, connectionName, path,
+                        revisionInterface, "Version",
+                        [asyncResp,
+                         chassisId](const boost::system::error_code& ec2,
+                                    const std::string& property) {
+                        if (ec2)
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "DBus response error for Version: {}", ec2);
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["Version"] = property;
+                    });
+                }
+            }
 
-        if (std::find(interfaces2.begin(), interfaces2.end(),
-                      operationalStatusInterface) != interfaces2.end())
-        {
-            operationalStatusPresent = true;
-        }
-        for (const auto& interface : interfaces2)
-        {
-            if (interface == assetTagInterface)
+            for (const char* interface : hasIndicatorLed)
             {
-                sdbusplus::asio::getProperty<std::string>(
-                    *crow::connections::systemBus, connectionName, path,
-                    assetTagInterface, "AssetTag",
-                    [asyncResp, chassisId](const boost::system::error_code& ec2,
-                                           const std::string& property) {
-                    if (ec2)
-                    {
-                        BMCWEB_LOG_ERROR("DBus response error for AssetTag: {}",
-                                         ec2);
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["AssetTag"] = property;
-                });
+                if (std::ranges::find(interfaces2, interface) !=
+                    interfaces2.end())
+                {
+                    getIndicatorLedState(asyncResp);
+                    getSystemLocationIndicatorActive(asyncResp);
+                    break;
+                }
             }
-            else if (interface == replaceableInterface)
-            {
-                sdbusplus::asio::getProperty<bool>(
-                    *crow::connections::systemBus, connectionName, path,
-                    replaceableInterface, "HotPluggable",
-                    [asyncResp, chassisId](const boost::system::error_code& ec2,
-                                           const bool property) {
-                    if (ec2)
-                    {
-                        BMCWEB_LOG_ERROR(
-                            "DBus response error for HotPluggable: {}", ec2);
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["HotPluggable"] = property;
-                });
-            }
-            else if (interface == revisionInterface)
-            {
-                sdbusplus::asio::getProperty<std::string>(
-                    *crow::connections::systemBus, connectionName, path,
-                    revisionInterface, "Version",
-                    [asyncResp, chassisId](const boost::system::error_code& ec2,
-                                           const std::string& property) {
-                    if (ec2)
-                    {
-                        BMCWEB_LOG_ERROR("DBus response error for Version: {}",
-                                         ec2);
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["Version"] = property;
-                });
-            }
-        }
-
-        for (const char* interface : hasIndicatorLed)
-        {
-            if (std::ranges::find(interfaces2, interface) != interfaces2.end())
-            {
-                getIndicatorLedState(asyncResp);
-                getSystemLocationIndicatorActive(asyncResp);
-                break;
-            }
-        }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        const std::string itemSystemInterface =
-            "xyz.openbmc_project.Inventory.Item.System";
+            const std::string itemSystemInterface =
+                "xyz.openbmc_project.Inventory.Item.System";
 
-        if (std::find(interfaces2.begin(), interfaces2.end(),
-                      itemSystemInterface) != interfaces2.end())
-        {
-            // static power hint
-            redfish::nvidia_chassis_utils::getStaticPowerHintByChassis(
-                asyncResp, path);
-        }
+            if (std::find(interfaces2.begin(), interfaces2.end(),
+                          itemSystemInterface) != interfaces2.end())
+            {
+                // static power hint
+                redfish::nvidia_chassis_utils::getStaticPowerHintByChassis(
+                    asyncResp, path);
+            }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-        sdbusplus::asio::getAllProperties(
-            *crow::connections::systemBus, connectionName, path, "",
-            [asyncResp, chassisId, path, operationalStatusPresent](
-                const boost::system::error_code&,
-                const dbus::utility::DBusPropertiesMap& propertiesList) {
-            redfish::nvidia_chassis_utils::handleChassisGetAllProperties(
-                asyncResp, chassisId, path, propertiesList,
-                operationalStatusPresent);
-            if (!operationalStatusPresent)
-            {
-                getChassisState(asyncResp);
-            }
-            getStorageLink(asyncResp, path);
-        });
+            sdbusplus::asio::getAllProperties(
+                *crow::connections::systemBus, connectionName, path, "",
+                [asyncResp, chassisId, path, operationalStatusPresent](
+                    const boost::system::error_code&,
+                    const dbus::utility::DBusPropertiesMap& propertiesList) {
+                redfish::nvidia_chassis_utils::handleChassisGetAllProperties(
+                    asyncResp, chassisId, path, propertiesList,
+                    operationalStatusPresent);
+                if (!operationalStatusPresent)
+                {
+                    getChassisState(asyncResp);
+                }
+                getStorageLink(asyncResp, path);
+            });
 
-        for (const auto& interface : interfaces2)
-        {
-            if (interface == "xyz.openbmc_project.Common.UUID")
+            for (const auto& interface : interfaces2)
             {
-                getChassisUUID(asyncResp, connectionName, path);
+                if (interface == "xyz.openbmc_project.Common.UUID")
+                {
+                    getChassisUUID(asyncResp, connectionName, path);
+                }
+                else if (interface ==
+                         "xyz.openbmc_project.Inventory.Decorator.LocationCode")
+                {
+                    getChassisLocationCode(asyncResp, connectionName, path);
+                }
             }
-            else if (interface ==
-                     "xyz.openbmc_project.Inventory.Decorator.LocationCode")
-            {
-                getChassisLocationCode(asyncResp, connectionName, path);
-            }
-        }
-
 
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
             redfish::conditions_utils::populateServiceConditions(asyncResp,
@@ -700,15 +703,14 @@ inline void handleChassisGetSubTree(
                                                                objPath);
             redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
             // get network adapter and its health
-            redfish::nvidia_chassis_utils::getNetworkAdapters(asyncResp, path, interfaces2,
-                                           chassisId);
+            redfish::nvidia_chassis_utils::getNetworkAdapters(
+                asyncResp, path, interfaces2, chassisId);
         }
         return;
     }
 
-        // Couldn't find an object with that name.  return an error
-        messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
-
+    // Couldn't find an object with that name.  return an error
+    messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
 }
 
 inline void
@@ -908,7 +910,7 @@ inline void
                 if (indicatorChassis)
                 {
                     setSystemLocationIndicatorActive(asyncResp,
-                                               *locationIndicatorActive);
+                                                     *locationIndicatorActive);
                 }
                 else
                 {
@@ -1221,7 +1223,8 @@ inline void handleOemChassisResetActionInfoPost(
                     messages::internalError(asyncResp->res);
                     return;
                 }
-            }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+            },
+                "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
                 "org.freedesktop.systemd1.Manager", "StartUnit",
                 "nvidia-aux-power.service", "replace");
         }

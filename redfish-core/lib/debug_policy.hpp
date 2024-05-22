@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -245,7 +245,8 @@ inline void debugCapabilitiesProcess(
             return;
         }
         messages::success(asyncResp->res, method);
-    }, svc, path, "xyz.openbmc_project.Control.Processor.RemoteDebug", method,
+    },
+        svc, path, "xyz.openbmc_project.Control.Processor.RemoteDebug", method,
         caps);
 }
 
@@ -263,7 +264,8 @@ inline void
             return;
         }
         messages::success(asyncResp->res, prop);
-    }, svc, path, "org.freedesktop.DBus.Properties", "Set",
+    },
+        svc, path, "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Processor.RemoteDebug", prop,
         dbus::utility::DbusVariantType(value));
 }

@@ -30,12 +30,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <regex>
 #include <source_location>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <regex>
 
 // IWYU pragma: no_include <stddef.h>
 

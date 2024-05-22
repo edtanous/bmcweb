@@ -1,6 +1,6 @@
 #pragma once
-#include "http_request.hpp"
 #include "http_body.hpp"
+#include "http_request.hpp"
 #include "logging.hpp"
 #include "utils/hex_utils.hpp"
 
@@ -12,7 +12,6 @@
 
 #include <optional>
 #include <string>
-
 #include <string_view>
 #include <utility>
 namespace crow
@@ -177,17 +176,17 @@ struct Response
         using http::status_class;
         using http::to_status_class;
         bool is1XXReturn = to_status_class(result()) ==
-                               status_class::informational;
+                           status_class::informational;
         if (*pSize > 0 && (is1XXReturn || result() == status::no_content ||
                            result() == status::not_modified))
-            {
+        {
             BMCWEB_LOG_CRITICAL("{} Response content provided but code was "
                                 "no-content or not_modified, which aren't "
                                 "allowed to have a body",
-                    logPtr(this));
+                                logPtr(this));
             response.content_length(0);
             return;
-            }
+        }
         response.content_length(*pSize);
     }
 

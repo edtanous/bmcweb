@@ -85,8 +85,7 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
     // Try to GET the same resource
     auto getReq = std::make_shared<crow::Request>(
         boost::beast::http::request<bmcweb::HttpBody>{
-            boost::beast::http::verb::get,
-                            req.url().encoded_path(), 11},
+            boost::beast::http::verb::get, req.url().encoded_path(), 11},
         ec);
 
     if (ec)

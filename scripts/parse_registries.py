@@ -237,9 +237,11 @@ def make_privilege_registry():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--registries', type=str,
+        "--registries",
+        type=str,
         default="base,task_event,resource_event,update_event,privilege,openbmc",
-        help="Comma delimited list of registries to update")
+        help="Comma delimited list of registries to update",
+    )
 
     args = parser.parse_args()
 
@@ -261,17 +263,25 @@ def main():
             )
         )
     if "resource_event" in registries:
-        files.append(make_getter('ResourceEvent.1.3.0.json',
-                                 'resource_event_message_registry.hpp',
-                                 'resource_event'))
+        files.append(
+            make_getter(
+                "ResourceEvent.1.3.0.json",
+                "resource_event_message_registry.hpp",
+                "resource_event",
+            )
+        )
     if "update_event" in registries:
-        files.append(make_getter('Update.1.0.1.json',
-                            'update_event_message_registry.hpp',
-                            'update_event'))
+        files.append(
+            make_getter(
+                "Update.1.0.1.json",
+                "update_event_message_registry.hpp",
+                "update_event",
+            )
+        )
 
     if "openbmc" in registries:
         files.append(openbmc_local_getter())
-        
+
     update_registries(files)
 
     if "privilege" in registries:

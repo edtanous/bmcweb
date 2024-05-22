@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,8 @@ void setBootOption(const std::string& id,
                 holdTask->ec = ec;
                 BMCWEB_LOG_DEBUG(" setBootOption D-BUS error");
             }
-        }, "xyz.openbmc_project.BIOSConfigManager", path,
+        },
+            "xyz.openbmc_project.BIOSConfigManager", path,
             "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.BIOSConfig.BootOption", propertyName,
             propertyVariant);
@@ -133,17 +134,17 @@ inline void handleCollectionPendingBootOptionMembers(
     }
 
     std::vector<std::string> pathNames;
-    
+
     for (const auto& object : objects)
     {
         sdbusplus::message::object_path path(object);
-        
+
         std::string leaf = path.filename();
         if (leaf.empty())
         {
             continue;
         }
-        
+
         pathNames.push_back(leaf);
     }
     std::ranges::sort(pathNames, AlphanumLess<std::string>());
@@ -157,42 +158,42 @@ inline void handleCollectionPendingBootOptionMembers(
             [asyncResp, bootOptionName, collectionPath, &members](
                 const boost::system::error_code ec,
                 const dbus::utility::DBusPropertiesMap& bootOptionProperties) {
-                if (ec)
+            if (ec)
+            {
+                messages::resourceNotFound(asyncResp->res, "BootOption",
+                                           bootOptionName);
+                return;
+            }
+            bool enabled = true;
+            bool pendingEnabled = true;
+            for (const auto& [propertyName, propertyVariant] :
+                 bootOptionProperties)
+            {
+                if (propertyName == "Enabled" &&
+                    std::holds_alternative<bool>(propertyVariant))
                 {
-                    messages::resourceNotFound(asyncResp->res, "BootOption",
-                                            bootOptionName);
-                    return;
+                    enabled = std::get<bool>(propertyVariant);
                 }
-                bool enabled = true;
-                bool pendingEnabled = true;
-                for (const auto& [propertyName, propertyVariant] :
-                    bootOptionProperties)
+                else if (propertyName == "PendingEnabled" &&
+                         std::holds_alternative<bool>(propertyVariant))
                 {
-                    if (propertyName == "Enabled" &&
-                        std::holds_alternative<bool>(propertyVariant))
-                    {
-                        enabled = std::get<bool>(propertyVariant);
-                    }
-                    else if (propertyName == "PendingEnabled" &&
-                        std::holds_alternative<bool>(propertyVariant))
-                    {
-                        
-                        pendingEnabled = std::get<bool>(propertyVariant);
-                    }
+                    pendingEnabled = std::get<bool>(propertyVariant);
                 }
-                if (enabled != pendingEnabled)
-                {
-                    asyncResp->res.jsonValue["BootOptionEnabled"] = pendingEnabled;
-                    boost::urls::url url = collectionPath;
-                    crow::utility::appendUrlPieces(url, bootOptionName);
-                    nlohmann::json::object_t member;
-                    member["@odata.id"] = std::move(url);
-                    members.emplace_back(std::move(member));
-                    asyncResp->res.jsonValue["Members@odata.count"] = members.size();
-                }
-            });
+            }
+            if (enabled != pendingEnabled)
+            {
+                asyncResp->res.jsonValue["BootOptionEnabled"] = pendingEnabled;
+                boost::urls::url url = collectionPath;
+                crow::utility::appendUrlPieces(url, bootOptionName);
+                nlohmann::json::object_t member;
+                member["@odata.id"] = std::move(url);
+                members.emplace_back(std::move(member));
+                asyncResp->res.jsonValue["Members@odata.count"] =
+                    members.size();
+            }
+        });
         asyncResp->res.jsonValue["Members@odata.count"] = members.size();
-    }  
+    }
 }
 
 inline void handleBootOptionCollectionGet(
@@ -365,41 +366,41 @@ inline void handleBootOptionGet(crow::App& app, const crow::Request& req,
  *
  * @return None.
  */
-inline void getBootPendingEnable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                                 const std::string& bootOptionName)
+inline void
+    getBootPendingEnable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& bootOptionName)
 {
-       getBootOption(
-            bootOptionName,
-            [asyncResp, bootOptionName](
-                const boost::system::error_code ec,
-                const dbus::utility::DBusPropertiesMap& bootOptionProperties) {
-                if (ec)
-                {
-                    messages::resourceNotFound(asyncResp->res, "BootOption",
-                                            bootOptionName);
-                    return;
-                }
-                bool enabled = true;
-                bool pendingEnabled = true;
-                for (const auto& [propertyName, propertyVariant] :
-                    bootOptionProperties)
-                {
-                    if (propertyName == "Enabled" &&
-                        std::holds_alternative<bool>(propertyVariant))
-                    {
-                        enabled = std::get<bool>(propertyVariant);
-                    }
-                    else if (propertyName == "PendingEnabled" &&
-                        std::holds_alternative<bool>(propertyVariant))
-                    {
-                        pendingEnabled = std::get<bool>(propertyVariant);
-                    }
-                }
-                if (enabled != pendingEnabled)
-                {
-                    asyncResp->res.jsonValue["BootOptionEnabled"] = pendingEnabled;
-                }
-            });
+    getBootOption(
+        bootOptionName,
+        [asyncResp, bootOptionName](
+            const boost::system::error_code ec,
+            const dbus::utility::DBusPropertiesMap& bootOptionProperties) {
+        if (ec)
+        {
+            messages::resourceNotFound(asyncResp->res, "BootOption",
+                                       bootOptionName);
+            return;
+        }
+        bool enabled = true;
+        bool pendingEnabled = true;
+        for (const auto& [propertyName, propertyVariant] : bootOptionProperties)
+        {
+            if (propertyName == "Enabled" &&
+                std::holds_alternative<bool>(propertyVariant))
+            {
+                enabled = std::get<bool>(propertyVariant);
+            }
+            else if (propertyName == "PendingEnabled" &&
+                     std::holds_alternative<bool>(propertyVariant))
+            {
+                pendingEnabled = std::get<bool>(propertyVariant);
+            }
+        }
+        if (enabled != pendingEnabled)
+        {
+            asyncResp->res.jsonValue["BootOptionEnabled"] = pendingEnabled;
+        }
+    });
 }
 
 inline void
@@ -412,8 +413,8 @@ inline void
         return;
     }
     privilege_utils::isBiosPrivilege(
-        req,
-        [req, aResp, bootOptionName](const boost::system::error_code ec, const bool isBios) {
+        req, [req, aResp, bootOptionName](const boost::system::error_code ec,
+                                          const bool isBios) {
         if (ec || isBios == false)
         {
             messages::insufficientPrivilege(aResp->res);
@@ -421,19 +422,20 @@ inline void
         }
         bool newBootOptionEnabled = true;
         if (!json_util::readJsonPatch(req, aResp->res, "BootOptionEnabled",
-                                    newBootOptionEnabled))
+                                      newBootOptionEnabled))
         {
             return;
         }
-        
+
         dbus::utility::DBusPropertiesMap properties;
         properties.push_back({"Enabled", newBootOptionEnabled});
-        setBootOption(bootOptionName, properties,
-                    [aResp, bootOptionName](const boost::system::error_code ec) {
+        setBootOption(
+            bootOptionName, properties,
+            [aResp, bootOptionName](const boost::system::error_code ec) {
             if (ec == boost::system::errc::no_such_device_or_address)
             {
                 messages::resourceNotFound(aResp->res, "BootOption",
-                                        bootOptionName);
+                                           bootOptionName);
                 return;
             }
             if (ec)
@@ -479,16 +481,15 @@ inline void
 }
 
 inline void handleComputerSystemSettingsBootOptionGet(
-                            App& app, const crow::Request& req,
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                            const std::string& bootOptionName)
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& bootOptionName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
-    asyncResp->res.jsonValue["@odata.type"] =
-        "#BootOption.v1_0_4.BootOption";
+    asyncResp->res.jsonValue["@odata.type"] = "#BootOption.v1_0_4.BootOption";
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/BootOptions/" +
         bootOptionName;
@@ -513,12 +514,12 @@ inline void handleComputerSystemSettingsBootOptionsCollectionGet(
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/BootOptions";
     asyncResp->res.jsonValue["Name"] = "Settings Boot Option Collection";
     constexpr std::array<std::string_view, 1> interfaces{
-            "xyz.openbmc_project.BIOSConfig.BootOption"};
+        "xyz.openbmc_project.BIOSConfig.BootOption"};
     dbus::utility::getSubTreePaths(
         "/xyz/openbmc_project/", 0, interfaces,
-        std::bind_front(handleCollectionPendingBootOptionMembers, asyncResp, 
-        boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/BootOptions")));
-    
+        std::bind_front(handleCollectionPendingBootOptionMembers, asyncResp,
+                        boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                         "/Settings/BootOptions")));
 }
 
 inline void handleComputerSystemSettingsBootOptionPatch(
@@ -533,8 +534,8 @@ inline void handleComputerSystemSettingsBootOptionPatch(
 
     bool bootOptionEnabled;
 
-    if (!json_util::readJsonPatch(
-            req, asyncResp->res, "BootOptionEnabled", bootOptionEnabled))
+    if (!json_util::readJsonPatch(req, asyncResp->res, "BootOptionEnabled",
+                                  bootOptionEnabled))
     {
         BMCWEB_LOG_ERROR("Error with patch string");
 
@@ -543,16 +544,18 @@ inline void handleComputerSystemSettingsBootOptionPatch(
 
     dbus::utility::DBusPropertiesMap properties;
     properties.push_back({"PendingEnabled", bootOptionEnabled});
-    boot_options::setBootOption(bootOptionName, properties,
+    boot_options::setBootOption(
+        bootOptionName, properties,
         [asyncResp](const boost::system::error_code ec) {
-            if (ec)
-            {
-                messages::internalError(asyncResp->res);
-                BMCWEB_LOG_ERROR("Error when setting the pending boot "
-                                "option enabled property: ",ec.message());
-                return;
-            }
-        });
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            BMCWEB_LOG_ERROR("Error when setting the pending boot "
+                             "option enabled property: ",
+                             ec.message());
+            return;
+        }
+    });
 }
 } // namespace boot_options
 
@@ -586,20 +589,26 @@ inline void requestRoutesBootOptions(App& app)
         .methods(boost::beast::http::verb::delete_)(std::bind_front(
             boot_options::handleBootOptionDelete, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/BootOptions")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Settings/BootOptions")
         .privileges(redfish::privileges::getComputerSystem)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(boot_options::handleComputerSystemSettingsBootOptionsCollectionGet, std::ref(app)));
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            boot_options::handleComputerSystemSettingsBootOptionsCollectionGet,
+            std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Settings/BootOptions/<str>/")
         .privileges(redfish::privileges::patchComputerSystem)
-        .methods(boost::beast::http::verb::patch)(
-            std::bind_front(boot_options::handleComputerSystemSettingsBootOptionPatch, std::ref(app)));
-            
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/BootOptions/<str>/")
+        .methods(boost::beast::http::verb::patch)(std::bind_front(
+            boot_options::handleComputerSystemSettingsBootOptionPatch,
+            std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                      "/Settings/BootOptions/<str>/")
         .privileges(redfish::privileges::getComputerSystem)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(boot_options::handleComputerSystemSettingsBootOptionGet, std::ref(app)));
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            boot_options::handleComputerSystemSettingsBootOptionGet,
+            std::ref(app)));
 }
 
 } // namespace redfish

@@ -83,7 +83,7 @@ inline void handleTelemetryServiceGet(
                 time_utils::toDurationString(std::chrono::milliseconds(
                     static_cast<time_t>(*minInterval)));
         }
-        });
+    });
 }
 
 inline void requestRoutesTelemetryService(App& app)
