@@ -524,7 +524,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
     using PropertiesMap =
         boost::container::flat_map<std::string,
-                                   std::variant<std::string, size_t>>;
+                                   std::variant<std::string, size_t, double>>;
     // Get interface properties
     crow::connections::systemBus->async_method_call(
         [asyncResp, networkAdapterId](const boost::system::error_code ec,
@@ -554,7 +554,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
             else if (propertyName == "CurrentSpeed")
             {
-                const size_t* value = std::get_if<size_t>(&property.second);
+                const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
                 {
                     BMCWEB_LOG_ERROR("Null value returned "
@@ -590,15 +590,15 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     return;
                 }
                 if (*value ==
-                        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.LinkDown" ||
+                        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.LinkDown" ||
                     *value ==
-                        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.LinkUp")
+                        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.LinkUp")
                 {
                     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                 }
                 else if (
                     *value ==
-                    "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.NoLink")
+                    "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.NoLink")
                 {
                     asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
                 }
@@ -615,19 +615,19 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     return;
                 }
                 if (*value ==
-                    "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Enabled")
+                    "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Enabled")
                 {
                     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
                 }
                 else if (
                     *value ==
-                    "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Disabled")
+                    "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Disabled")
                 {
                     asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
                 }
                 else if (
                     *value ==
-                    "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Error")
+                    "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Error")
                 {
                     asyncResp->res.jsonValue["Status"]["State"] =
                         "UnavailableOffline";
@@ -639,8 +639,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
         }
     },
-        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.Inventory.Item.Port");
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
 inline void getPortDataByAssociation(

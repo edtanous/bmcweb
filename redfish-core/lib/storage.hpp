@@ -807,7 +807,7 @@ inline void
 {
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, connectionName, path,
-        "xyz.openbmc_project.Inventory.Item.Port",
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo",
         [asyncResp](const boost::system::error_code ec,
                     const std::vector<
                         std::pair<std::string, dbus::utility::DbusVariantType>>&
@@ -823,7 +823,7 @@ inline void
             const std::string& propertyName = property.first;
             if (propertyName == "MaxSpeed")
             {
-                const size_t* maxSpeed = std::get_if<size_t>(&property.second);
+                const double* maxSpeed = std::get_if<double>(&property.second);
                 if (maxSpeed == nullptr)
                 {
                     BMCWEB_LOG_ERROR("Illegal property: MaxSpeed");
@@ -835,7 +835,7 @@ inline void
             }
             else if (propertyName == "CurrentSpeed")
             {
-                const size_t* speed = std::get_if<size_t>(&property.second);
+                const double* speed = std::get_if<double>(&property.second);
                 if (speed == nullptr)
                 {
                     BMCWEB_LOG_ERROR("Illegal property: NegotiatedSpeedGbs");
@@ -997,7 +997,7 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             getDriveItemProperties(asyncResp, connectionName, path);
         }
-        else if (interface == "xyz.openbmc_project.Inventory.Item.Port")
+        else if (interface == "xyz.openbmc_project.Inventory.Decorator.PortInfo")
         {
             getDrivePortProperties(asyncResp, connectionName, path);
         }

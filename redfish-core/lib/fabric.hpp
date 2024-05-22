@@ -2280,7 +2280,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.Inventory.Item.Port");
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo");
 }
 
 /**

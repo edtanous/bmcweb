@@ -93,27 +93,27 @@ inline std::string getLinkSpeedGeneration(double speed)
 inline std::string getLinkStatusType(const std::string& linkStatusType)
 {
     if (linkStatusType ==
-        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.LinkDown")
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.LinkDown")
     {
         return "LinkDown";
     }
     if (linkStatusType ==
-        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.LinkUp")
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.LinkUp")
     {
         return "LinkUp";
     }
     if (linkStatusType ==
-        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.NoLink")
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.NoLink")
     {
         return "NoLink";
     }
     if (linkStatusType ==
-        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.Starting")
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.Starting")
     {
         return "Starting";
     }
     if (linkStatusType ==
-        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.Training")
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.Training")
     {
         return "Training";
     }
@@ -124,32 +124,32 @@ inline std::string getLinkStatusType(const std::string& linkStatusType)
 inline std::string getPortProtocol(const std::string& portProtocol)
 {
     if (portProtocol ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.Ethernet")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortProtocol.Ethernet")
     {
         return "Ethernet";
     }
     if (portProtocol ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.FC")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortProtocol.FC")
     {
         return "FC";
     }
     if (portProtocol ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.NVLink")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortProtocol.NVLink")
     {
         return "NVLink";
     }
     if (portProtocol ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.PCIe")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortProtocol.PCIe")
     {
         return "PCIe";
     }
     if (portProtocol ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.OEM")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortProtocol.OEM")
     {
         return "OEM";
     }
     if (portProtocol ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.PCIe")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortProtocol.PCIe")
     {
         return "PCIe";
     }
@@ -157,7 +157,7 @@ inline std::string getPortProtocol(const std::string& portProtocol)
     // C2C is a non-standard protocol in DMTF. Use the standard port protocol
     // for C2C
     if (portProtocol ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortProtocol.NVLink.C2C")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortProtocol.NVLink.C2C")
     {
         return "NVLink";
     }
@@ -169,12 +169,12 @@ inline std::string getPortProtocol(const std::string& portProtocol)
 inline std::string getLinkStates(const std::string& linkState)
 {
     if (linkState ==
-        "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Enabled")
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Enabled")
     {
         return "Enabled";
     }
     if (linkState ==
-        "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Disabled")
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Disabled")
     {
         return "Disabled";
     }
@@ -185,32 +185,32 @@ inline std::string getLinkStates(const std::string& linkState)
 inline std::string getPortType(const std::string& portType)
 {
     if (portType ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortType.BidirectionalPort")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortType.BidirectionalPort")
     {
         return "BidirectionalPort";
     }
     if (portType ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortType.DownstreamPort")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortType.DownstreamPort")
     {
         return "DownstreamPort";
     }
     if (portType ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortType.InterswitchPort")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortType.InterswitchPort")
     {
         return "InterswitchPort";
     }
     if (portType ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortType.ManagementPort")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortType.ManagementPort")
     {
         return "ManagementPort";
     }
     if (portType ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortType.UnconfiguredPort")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortType.UnconfiguredPort")
     {
         return "UnconfiguredPort";
     }
     if (portType ==
-        "xyz.openbmc_project.Inventory.Item.Port.PortType.UpstreamPort")
+        "xyz.openbmc_project.Inventory.Decorator.PortInfo.PortType.UpstreamPort")
     {
         return "UpstreamPort";
     }
@@ -489,15 +489,15 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     return;
                 }
                 if (*value ==
-                        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.LinkDown" ||
+                        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.LinkDown" ||
                     *value ==
-                        "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.LinkUp")
+                        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.LinkUp")
                 {
                     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
                 }
                 else if (
                     *value ==
-                    "xyz.openbmc_project.Inventory.Item.Port.LinkStatusType.NoLink")
+                    "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.NoLink")
                 {
                     asyncResp->res.jsonValue["Status"]["Health"] = "Critical";
                 }
@@ -514,19 +514,19 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     return;
                 }
                 if (*value ==
-                    "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Enabled")
+                    "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Enabled")
                 {
                     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
                 }
                 else if (
                     *value ==
-                    "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Disabled")
+                    "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Disabled")
                 {
                     asyncResp->res.jsonValue["Status"]["State"] = "Disabled";
                 }
                 else if (
                     *value ==
-                    "xyz.openbmc_project.Inventory.Item.Port.LinkStates.Error")
+                    "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Error")
                 {
                     asyncResp->res.jsonValue["Status"]["State"] =
                         "UnavailableOffline";
@@ -538,8 +538,7 @@ inline void getCpuPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
         }
     },
-        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.Inventory.Item.Port");
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
 } // namespace port_utils
