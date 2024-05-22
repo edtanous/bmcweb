@@ -404,7 +404,7 @@ else
   cmake = import('cmake')
   opt = cmake.subproject_options()
   opt.add_cmake_defines({
-    'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;headers;process;type_index;url;uuid',
+    'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;format;interprocess;headers;process;type_index;url;uuid',
     'BUILD_SHARED_LIBS': 'OFF',
   })
 
@@ -414,6 +414,8 @@ else
   boost_callable_traits = boost.dependency('boost_callable_traits').as_system()
   boost_headers = boost.dependency('boost_headers').as_system()
   boost_process = boost.dependency('boost_process').as_system()
+  boost_format = boost.dependency('boost_format').as_system()
+  boost_interprocess = boost.dependency('boost_interprocess').as_system()
   boost_type_index = boost.dependency('boost_type_index').as_system()
   boost_url = boost.dependency('boost_url').as_system()
   boost_uuid = boost.dependency('boost_uuid').as_system()
@@ -421,6 +423,8 @@ else
     boost_asio,
     boost_beast,
     boost_callable_traits,
+    boost_format,
+    boost_interprocess,
     boost_headers,
     boost_process,
     boost_type_index,
