@@ -3866,6 +3866,7 @@ inline void requestRoutesManager(App& app)
                 }
             }
         });
+        getServiceIdentification(asyncResp);
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/")
