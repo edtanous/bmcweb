@@ -642,12 +642,12 @@ class Connection :
     {
         cancelDeadlineTimer();
 
-        std::chrono::seconds timeout(60);
+        std::chrono::seconds timeout(bmcwebResponseTimeoutSeconds);
         // allow slow uploads for logged in users
         bool loggedIn = userSession != nullptr;
         if (loggedIn)
         {
-            timeout = std::chrono::seconds(60);
+            timeout = std::chrono::seconds(bmcwebResponseTimeoutSeconds);
             return;
         }
         std::weak_ptr<Connection<Adaptor, Handler>> weakSelf = weak_from_this();

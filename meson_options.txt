@@ -196,6 +196,13 @@ option(
 )
 
 option(
+    'bmcweb-response-timeout',
+    type: 'integer',
+    value: 60,
+    description: '''The bmcweb response timeout in seconds.'''
+)
+
+option(
     'basic-auth',
     type: 'feature',
     value: 'enabled',
