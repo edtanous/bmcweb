@@ -297,8 +297,6 @@ inline void getChassisFabricSwitchesLinks(
             "org.freedesktop.DBus.Properties", "Get",
             "xyz.openbmc_project.Association", "endpoints");
 
-        // get health for switch by association
-        getHealthByAssociation(aResp, objPath, "all_states", fabricId);
     },
         "xyz.openbmc_project.ObjectMapper", objPath + "/fabrics",
         "org.freedesktop.DBus.Properties", "Get",
@@ -960,9 +958,6 @@ inline void
             {"@odata.id",
              "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
 
-        // get health for network adapter
-        getHealthByAssociation(asyncResp, objPath, "all_states", chassisId);
-
         return;
     }
 
@@ -971,7 +966,7 @@ inline void
     BMCWEB_LOG_ERROR("test networkInterface: {}", objPath);
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, objPath, chassisId(std::string(chassisId))](
+        [asyncResp, chassisId(std::string(chassisId))](
             const boost::system::error_code ec,
             const crow::openbmc_mapper::GetSubTreeType& subtree) {
         if (ec)
@@ -986,9 +981,6 @@ inline void
         asyncResp->res.jsonValue["NetworkAdapters"] = {
             {"@odata.id",
              "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters"}};
-
-        // get health for network adapter
-        getHealthByAssociation(asyncResp, objPath, "all_states", chassisId);
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",

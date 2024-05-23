@@ -702,9 +702,13 @@ inline void handleChassisGetSubTree(
             redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
                                                                objPath);
             redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
-            // get network adapter and its health
+            // get network adapter
             redfish::nvidia_chassis_utils::getNetworkAdapters(
                 asyncResp, path, interfaces2, chassisId);
+            // get health for network adapter and nvswitches chassis by
+            // association
+            redfish::nvidia_chassis_utils::getHealthByAssociation(
+                asyncResp, path, "all_states", chassisId);
         }
         return;
     }
