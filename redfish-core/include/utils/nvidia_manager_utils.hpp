@@ -27,7 +27,6 @@ inline void getOemManagerState(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         if (ec)
         {
             BMCWEB_LOG_DEBUG("Error in getting manager service state");
-            messages::internalError(aResp->res);
             return;
         }
         for (const std::pair<std::string, std::variant<std::string>>& property :

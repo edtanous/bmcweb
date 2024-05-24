@@ -3669,14 +3669,9 @@ inline void requestRoutesManager(App& app)
                          object : subtree)
                 {
                     const std::string& path = object.first;
-                    const std::vector<
-                        std::pair<std::string, std::vector<std::string>>>&
-                        connectionNames = object.second;
                     if (!boost::ends_with(path, PLATFORMBMCID))
                     {
-                        BMCWEB_LOG_ERROR(
-                            "Error while getting manager service state");
-                        return;
+			continue;
                     }
 
                     // At /redfish/v1/Managers/HGX_BMC_0, we want
@@ -3712,18 +3707,6 @@ inline void requestRoutesManager(App& app)
                                       ["ManagerInChassis@odata.count"] = 1;
                     });
 
-                    const std::string& connectionName =
-                        connectionNames[0].first;
-                    const std::vector<std::string>& interfaces =
-                        connectionNames[0].second;
-                    for (const auto& interfaceName : interfaces)
-                    {
-                        if (interfaceName == "xyz.openbmc_project.State."
-                                             "Decorator.OperationalStatus")
-                        {
-                            getManagerState(asyncResp, connectionName, path);
-                        }
-                    }
                     return;
                 }
                 BMCWEB_LOG_ERROR(
