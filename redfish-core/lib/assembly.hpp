@@ -189,8 +189,6 @@ inline void requestAssemblyRoutes(App& app)
             [asyncResp, chassisId(std::string(chassisId))](
                 const boost::system::error_code ec,
                 const crow::openbmc_mapper::GetSubTreeType& subtree) {
-            const std::array<const char*, 1> assemblyIntf = {
-                "xyz.openbmc_project.Inventory.Item.Assembly"};
             if (ec)
             {
                 BMCWEB_LOG_DEBUG("DBUS response error");
@@ -226,31 +224,92 @@ inline void requestAssemblyRoutes(App& app)
                 asyncResp->res.jsonValue["Id"] = "Assembly";
                 asyncResp->res.jsonValue["Name"] = "Assembly data for " +
                                                    chassisId;
-                // Get chassis assembly
+                // Get Chassis assembly through association
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp, chassisId(std::string(chassisId)),
+                    [asyncResp, path, chassisId(std::string(chassisId)),
                      connectionName](
                         const boost::system::error_code ec,
-                        const std::vector<std::string>& assemblyList) {
+                        std::variant<std::vector<std::string>>& resp) {
+                    const std::array<const char*, 1> assemblyIntf = {
+                        "xyz.openbmc_project.Inventory.Item.Assembly"};
                     if (ec)
                     {
-                        BMCWEB_LOG_DEBUG("DBUS response error");
-                        messages::internalError(asyncResp->res);
+                        BMCWEB_LOG_ERROR(
+                            "Chassis and assembly are not connected through association. ec : {}",
+                            ec);
+
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, chassisId(std::string(chassisId)),
+                             connectionName](
+                                const boost::system::error_code ec,
+                                const std::vector<std::string>& assemblyList) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_DEBUG("DBUS response error");
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            // Update the Assemblies
+                            asyncResp->res.jsonValue["Assemblies"] =
+                                nlohmann::json::array();
+                            for (const std::string& assembly : assemblyList)
+                            {
+                                updateAssemblies(asyncResp, connectionName,
+                                                 assembly, chassisId);
+                            }
+                        },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper",
+                            "GetSubTreePaths", path + "/", 0, assemblyIntf);
                         return;
                     }
-                    // Update the Assemblies
-                    asyncResp->res.jsonValue["Assemblies"] =
-                        nlohmann::json::array();
-                    for (const std::string& assembly : assemblyList)
+
+                    else
                     {
-                        updateAssemblies(asyncResp, connectionName, assembly,
-                                         chassisId);
+                        std::vector<std::string>* assemblyList =
+                            std::get_if<std::vector<std::string>>(&resp);
+
+                        for (const std::string& assembly : *assemblyList)
+                        {
+                            BMCWEB_LOG_DEBUG("Found Assembly Path, {}",
+                                             assembly);
+                            asyncResp->res.jsonValue["Assemblies"] =
+                                nlohmann::json::array();
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp, assembly,
+                                 chassisId(std::string(chassisId))](
+                                    const boost::system::error_code errorCode,
+                                    const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>&
+                                        objInfo) mutable {
+                                if (errorCode)
+                                {
+                                    BMCWEB_LOG_ERROR("error_code = {}",
+                                                     errorCode);
+
+                                    messages::internalError(asyncResp->res);
+
+                                    return;
+                                }
+                                else
+                                {
+                                    updateAssemblies(asyncResp,
+                                                     objInfo[0].first, assembly,
+                                                     chassisId);
+                                }
+                            },
+                                "xyz.openbmc_project.ObjectMapper",
+                                "/xyz/openbmc_project/object_mapper",
+                                "xyz.openbmc_project.ObjectMapper", "GetObject",
+                                assembly, assemblyIntf);
+                        }
                     }
                 },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-                    path + "/", 0, assemblyIntf);
+                    "xyz.openbmc_project.ObjectMapper", path + "/assembly",
+                    "org.freedesktop.DBus.Properties", "Get",
+                    "xyz.openbmc_project.Association", "endpoints");
+
                 return;
             }
             // Couldn't find an object with that name. return an error

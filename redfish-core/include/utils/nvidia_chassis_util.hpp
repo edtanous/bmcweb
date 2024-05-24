@@ -1280,6 +1280,113 @@ inline void handleChassisGetAllProperties(
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
 }
 
+inline void getChassisAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
+                            const std::string& service,
+                            const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG("Get Chassis Asset Data");
+    sdbusplus::asio::getAllProperties(
+        *crow::connections::systemBus, service, objPath,
+        "xyz.openbmc_project.Inventory.Decorator.Asset",
+        [objPath, asyncResp{std::move(asyncResp)}](
+            const boost::system::error_code& ec,
+            const dbus::utility::DBusPropertiesMap& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error for getChassisAssetData()");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        const std::string* serialNumber = nullptr;
+        const std::string* model = nullptr;
+        const std::string* manufacturer = nullptr;
+        const std::string* partNumber = nullptr;
+        const std::string* sparePartNumber = nullptr;
+
+        const bool success = sdbusplus::unpackPropertiesNoThrow(
+            dbus_utils::UnpackErrorPrinter(), properties, "SerialNumber",
+            serialNumber, "Model", model, "Manufacturer", manufacturer,
+            "PartNumber", partNumber, "SparePartNumber", sparePartNumber);
+
+        if (!success)
+        {  
+            BMCWEB_LOG_ERROR("DBUS response error while unpacking properties");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        if (serialNumber != nullptr && !serialNumber->empty())
+        {
+            asyncResp->res.jsonValue["SerialNumber"] = *serialNumber;
+        }
+
+        if ((model != nullptr) && !model->empty())
+        {
+            asyncResp->res.jsonValue["Model"] = *model;
+        }
+
+        if (partNumber != nullptr)
+        {
+            asyncResp->res.jsonValue["PartNumber"] = *partNumber;
+        }
+
+        if ((manufacturer != nullptr) && !manufacturer->empty())
+        {
+            asyncResp->res.jsonValue["Manufacturer"] = *manufacturer;
+        }
+
+    });
+}
+
+inline void handleFruAssetInformation(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId, std::string chassisPath)
+{
+    boost::algorithm::erase_tail(chassisPath,
+                                 static_cast<int>(chassisId.size()));
+    asyncResp->res.jsonValue["Id"] = chassisId;
+    constexpr std::array<std::string_view, 1> interfaces = {
+        "xyz.openbmc_project.Inventory.Decorator.Asset"};
+    dbus::utility::getSubTree(
+        chassisPath, 0, interfaces,[asyncResp, chassisId](const boost::system::error_code& ec,
+         const dbus::utility::MapperGetSubTreeResponse& subtree) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        for (const std::pair<
+                 std::string,
+                 std::vector<std::pair<std::string, std::vector<std::string>>>>&
+                 object : subtree)
+        {
+            const std::string& path = object.first;
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                serviceMap = object.second;
+
+            sdbusplus::message::object_path objPath(path);
+            // The path should end with chassisId (representing resource) and
+            // that path should implement Asset Interface
+            if (objPath.filename() != chassisId)
+            {
+                continue;
+            }
+            for (const auto& [serviceName, interfaceList] : serviceMap)
+            {
+                for (const auto& interface : interfaceList)
+                {
+                    if (interface ==
+                        "xyz.openbmc_project.Inventory.Decorator.Asset")
+                    {
+                        getChassisAssetData(asyncResp, serviceName, path);
+                    }
+                }
+            }
+        }});
+}
+
 inline void getIntrusionByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
                                   const std::string& service,
                                   const std::string& objPath)

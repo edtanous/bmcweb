@@ -473,7 +473,7 @@ inline void handleChassisGetSubTree(
         {
             continue;
         }
-
+        redfish::nvidia_chassis_utils::handleFruAssetInformation(asyncResp, chassisId, path);
         getChassisConnectivity(asyncResp, chassisId, path);
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
