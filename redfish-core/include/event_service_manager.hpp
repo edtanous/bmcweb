@@ -728,7 +728,6 @@ class Subscription : public persistent_data::UserSubscription
         return sendEvent(std::move(strMsg));
     }
 
-<<<<<<< HEAD
     /*!
      * @brief   Send the event if this subscription does not filter it out.
      * @param[in] event   The event to be sent.
@@ -827,8 +826,6 @@ class Subscription : public persistent_data::UserSubscription
     }
 
 #ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
-=======
->>>>>>> master
     void filterAndSendEventLogs(
         const std::vector<EventLogObjectsType>& eventRecords)
     {

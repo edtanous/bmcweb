@@ -470,13 +470,8 @@ inline void doMountVmLegacy(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         // Open pipe
         secretPipe = std::make_shared<CredentialsPipe>(
             crow::connections::systemBus->get_io_context());
-<<<<<<< HEAD
-        fd = secretPipe->fd();
-        unixFd = static_cast<sdbusplus::message::unix_fd>(fd);
-=======
         fd = secretPipe->releaseFd();
->>>>>>> master
-
+        unixFd = static_cast<sdbusplus::message::unix_fd>(fd);
         // Pass secret over pipe
         secretPipe->asyncWrite(
             std::move(userName), std::move(password),
