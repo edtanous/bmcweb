@@ -40,11 +40,8 @@
 #include <boost/beast/http/write.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/url/format.hpp>
-<<<<<<< HEAD
 #include <dbus_singleton.hpp>
-=======
 #include <boost/url/url_view_base.hpp>
->>>>>>> master
 #include <sdbusplus/bus/match.hpp>
 #include <utils/dbus_log_utils.hpp>
 #include <utils/json_utils.hpp>
