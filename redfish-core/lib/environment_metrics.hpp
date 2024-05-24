@@ -214,7 +214,7 @@ inline void requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(App& app)
                     connectionNames[0].second;
 
                 if (std::find(interfaces.begin(), interfaces.end(),
-                              "xyz.openbmc_project.Control.Power.Cap") !=
+                              "com.nvidia.Common.ClearPowerCap") !=
                     interfaces.end())
                 {
                     redfish::chassis_utils::resetPowerLimit(asyncResp, objPath,
