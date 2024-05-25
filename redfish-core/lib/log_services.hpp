@@ -128,7 +128,7 @@ static void generateMessageRegistry(
         return;
     }
 
-    // Severity can be overwritten by caller. Using the one defined in the
+    // Severity & Resolution can be overwritten by caller. Using the one defined in the
     // message registries by default.
     std::string sev;
     if (severity.size() == 0)
@@ -138,6 +138,12 @@ static void generateMessageRegistry(
     else
     {
         sev = translateSeverityDbusToRedfish(severity);
+    }
+
+    std::string res(resolution);
+    if (res.size() == 0)
+    {
+        res = msg->resolution;
     }
 
     // Convert messageArgs string for its json format used later.
@@ -176,7 +182,7 @@ static void generateMessageRegistry(
                 {"Message", message},
                 {"MessageId", messageId},
                 {"MessageArgs", msgArgs},
-                {"Resolution", resolution},
+                {"Resolution", res},
                 {"Resolved", resolved}};
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     nlohmann::json oem = {
@@ -845,7 +851,7 @@ inline void parseDumpEntryFromDbusObject(
 
             if (severityPtr != nullptr)
             {
-                severity = convertEventSeverity(*severityPtr);
+                severity = *severityPtr;
             }
 
             if (nvipSignaturePtr != nullptr)
@@ -1120,11 +1126,22 @@ inline void
             }
             else if (dumpType == "FaultLog")
             {
+                std::string messageId = "Platform.1.0.PlatformError";
+                thisEntry["MessageId"] = messageId;
+
+                const registries::Message* msg = registries::getMessage(messageId);
+                if (msg != nullptr)
+                {
+                    thisEntry["Message"] = msg->message;
+                    thisEntry["Severity"] = msg->messageSeverity;
+                    thisEntry["Resolution"] = msg->resolution;
+                }
+
                 thisEntry["DiagnosticDataType"] = faultLogDiagnosticDataType;
                 thisEntry["AdditionalDataURI"] = entriesPath + entryID +
                                                  "/attachment";
                 thisEntry["AdditionalDataSizeBytes"] = size;
-                thisEntry["Severity"] = severity;
+
                 // CPER Properties
                 if (sectionType != "NA")
                 {
@@ -1344,6 +1361,7 @@ inline void
             asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
             asyncResp->res.jsonValue["Created"] =
                 redfish::time_utils::getDateTimeUintUs(timestampUs);
+
             // Set schema defaults
             asyncResp->res.jsonValue["Message"] = "";
             asyncResp->res.jsonValue["Severity"] = "OK";
@@ -1404,6 +1422,17 @@ inline void
                 }
                 else if (dumpType == "FaultLog")
                 {
+                    std::string messageId = "Platform.1.0.PlatformError";
+                    asyncResp->res.jsonValue["MessageId"] = messageId;
+
+                    const registries::Message* msg = registries::getMessage(messageId);
+                    if (msg != nullptr)
+                    {
+                        asyncResp->res.jsonValue["Message"] = msg->message;
+                        asyncResp->res.jsonValue["Severity"] = msg->messageSeverity;
+                        asyncResp->res.jsonValue["Resolution"] = msg->resolution;
+                    }
+
                     asyncResp->res.jsonValue["DiagnosticDataType"] =
                         faultLogDiagnosticDataType;
                     asyncResp->res.jsonValue["AdditionalDataURI"] =
