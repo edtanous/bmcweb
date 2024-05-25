@@ -36,55 +36,117 @@ namespace redfish
 template <typename Callback>
 void getValidNetworkAdapterPath(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& networkAdapterId, Callback&& callback)
+    const std::string& networkAdapterId,
+    const std::vector<std::string>& chassisIntfList,
+    const std::string& chassisObjPath, Callback&& callback)
 {
-    const std::array<const char*, 1> interfaces = {
-        "xyz.openbmc_project.Inventory.Item.NetworkInterface"};
+    const std::string networkInterface =
+        "xyz.openbmc_project.Inventory.Item.NetworkInterface";
 
-    auto respHandler =
+    if (std::find(chassisIntfList.begin(), chassisIntfList.end(),
+                  networkInterface) != chassisIntfList.end())
+    {
+        // networkInterface at the same chassis objPath
+        const std::array<const char*, 1> interfaces = {
+            "xyz.openbmc_project.Inventory.Item.NetworkInterface"};
+
+        auto respHandler =
+            [callback{std::forward<Callback>(callback)}, asyncResp,
+             networkAdapterId](
+                const boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreePathsResponse&
+                    networkAdapterPaths) mutable {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR(
+                    "getValidNetworkAdapterPath respHandler DBUS error: {}",
+                    ec);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            std::optional<std::string> networkAdapterPath;
+            std::string networkAdapterName;
+            for (const std::string& networkAdapter : networkAdapterPaths)
+            {
+                sdbusplus::message::object_path path(networkAdapter);
+                networkAdapterName = path.filename();
+                if (networkAdapterName.empty())
+                {
+                    BMCWEB_LOG_ERROR("Failed to find '/' in {}",
+                                     networkAdapter);
+                    continue;
+                }
+                if (networkAdapterName == networkAdapterId)
+                {
+                    networkAdapterPath = networkAdapter;
+                    break;
+                }
+            }
+            callback(networkAdapterPath);
+            return;
+        };
+
+        // Get the NetworkAdatper Collection
+        crow::connections::systemBus->async_method_call(
+            respHandler, "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+            "/xyz/openbmc_project/inventory", 0, interfaces);
+    }
+
+    crow::connections::systemBus->async_method_call(
         [callback{std::forward<Callback>(callback)}, asyncResp,
-         networkAdapterId](const boost::system::error_code ec,
-                           const dbus::utility::MapperGetSubTreePathsResponse&
-                               networkAdapterPaths) mutable {
+         chassisObjPath, networkAdapterId](const boost::system::error_code ec,
+                           std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
             BMCWEB_LOG_ERROR(
-                "getValidNetworkAdapterPath respHandler DBUS error: {}", ec);
+                "getValidNetworkAdapterPath respHandler DBUS error: {}",
+                ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            BMCWEB_LOG_ERROR(
+                "no network_adapter found {}",
+                chassisObjPath);
             messages::internalError(asyncResp->res);
             return;
         }
 
-        std::optional<std::string> networkAdapterPath;
-        std::string networkAdapterName;
-        for (const std::string& networkAdapter : networkAdapterPaths)
+        std::optional<std::string> validNetworkAdapterPath;
+        for (const std::string& networkAdapterPath : *data)
         {
-            sdbusplus::message::object_path path(networkAdapter);
-            networkAdapterName = path.filename();
+            sdbusplus::message::object_path networkAdapterObjPath(
+                networkAdapterPath);
+            const std::string& networkAdapterName =
+                networkAdapterObjPath.filename();
             if (networkAdapterName.empty())
             {
-                BMCWEB_LOG_ERROR("Failed to find '/' in {}", networkAdapter);
+                BMCWEB_LOG_ERROR("Failed to find '/' in {}",
+                                 networkAdapterPath);
                 continue;
             }
             if (networkAdapterName == networkAdapterId)
             {
-                networkAdapterPath = networkAdapter;
+                validNetworkAdapterPath = networkAdapterPath;
                 break;
             }
         }
-        callback(networkAdapterPath);
-    };
-
-    // Get the NetworkAdatper Collection
-    crow::connections::systemBus->async_method_call(
-        respHandler, "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-        "/xyz/openbmc_project/inventory", 0, interfaces);
+        callback(validNetworkAdapterPath);
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        chassisObjPath + "/network_adapters", "org.freedesktop.DBus.Properties",
+        "Get", "xyz.openbmc_project.Association", "endpoints");
 }
 
 inline void doNetworkAdaptersCollection(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisId,
+    const std::string& chassisId, std::vector<std::string>& chassisIntfList,
     const std::optional<std::string>& validChassisPath)
 {
     if (!validChassisPath)
@@ -99,10 +161,65 @@ inline void doNetworkAdaptersCollection(
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/NetworkAdapters", chassisId);
 
+    const std::string networkInterface =
+        "xyz.openbmc_project.Inventory.Item.NetworkInterface";
+    std::string path = *validChassisPath;
+
+    if (std::find(chassisIntfList.begin(), chassisIntfList.end(),
+                  networkInterface) != chassisIntfList.end())
+    {
+        // networkInterface at the same chassis objPath
+        crow::connections::systemBus->async_method_call(
+            [chassisId, asyncResp](
+                const boost::system::error_code ec,
+                const dbus::utility::MapperGetSubTreePathsResponse& objects) {
+            if (ec == boost::system::errc::io_error)
+            {
+                asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
+                asyncResp->res.jsonValue["Members@odata.count"] = 0;
+                return;
+            }
+
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            nlohmann::json& members = asyncResp->res.jsonValue["Members"];
+            members = nlohmann::json::array();
+            for (const auto& object : objects)
+            {
+                sdbusplus::message::object_path path(object);
+                std::string parentPath = path.parent_path();
+
+                if (parentPath.find(chassisId) != std::string::npos ||
+                    path.filename() == chassisId)
+                {
+                    nlohmann::json::object_t member;
+                    member["@odata.id"] = boost::urls::format(
+                        "/redfish/v1/Chassis/{}/NetworkAdapters/{}", chassisId,
+                        path.filename());
+                    members.push_back(std::move(member));
+                }
+            }
+
+            asyncResp->res.jsonValue["Members@odata.count"] = members.size();
+            return;
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+            "/xyz/openbmc_project/inventory/", 0,
+            std::array<std::string, 1>{
+                "xyz.openbmc_project.Inventory.Item.NetworkInterface"});
+    }
+
+    // get network adapter on chassis by association
     crow::connections::systemBus->async_method_call(
-        [chassisId, asyncResp](
-            const boost::system::error_code ec,
-            const dbus::utility::MapperGetSubTreePathsResponse& objects) {
+        [asyncResp, chassisId](const boost::system::error_code ec,
+                               std::variant<std::vector<std::string>>& resp) {
         if (ec == boost::system::errc::io_error)
         {
             asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
@@ -112,39 +229,43 @@ inline void doNetworkAdaptersCollection(
 
         if (ec)
         {
-            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
 
         nlohmann::json& members = asyncResp->res.jsonValue["Members"];
         members = nlohmann::json::array();
-        std::map<std::string, int> networkAdaptersCollectionMap;
-        std::vector<std::string> pathNames;
-        for (const auto& object : objects)
+        for (const std::string& networkAdapterPath : *data)
         {
-            sdbusplus::message::object_path path(object);
-            std::string parentPath = path.parent_path();
-
-            if (parentPath.find(chassisId) != std::string::npos ||
-                path.filename() == chassisId)
+            sdbusplus::message::object_path networkAdapterObjPath(
+                networkAdapterPath);
+            const std::string& networkAdapterId =
+                networkAdapterObjPath.filename();
+            if (networkAdapterId.empty())
             {
-                nlohmann::json::object_t member;
-                member["@odata.id"] = boost::urls::format(
-                    "/redfish/v1/Chassis/{}/NetworkAdapters/{}", chassisId,
-                    path.filename());
-                members.push_back(std::move(member));
+                messages::internalError(asyncResp->res);
+                return;
             }
+            nlohmann::json::object_t member;
+            member["@odata.id"] =
+                boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}",
+                                    chassisId, networkAdapterId);
+            members.push_back(std::move(member));
         }
-
         asyncResp->res.jsonValue["Members@odata.count"] = members.size();
+        return;
     },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-        "/xyz/openbmc_project/inventory/", 0,
-        std::array<std::string, 1>{
-            "xyz.openbmc_project.Inventory.Item.NetworkInterface"});
+        "xyz.openbmc_project.ObjectMapper", path + "/network_adapters",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
 }
 
 inline std::string convertHealthToRF(const std::string& health)
@@ -380,9 +501,9 @@ inline void
     doPortCollection(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& chassisId,
                      const std::string& networkAdapterId,
-                     const std::optional<std::string>& validChassisPath)
+                     const std::optional<std::string>& validNetworkAdapterPath)
 {
-    if (!validChassisPath)
+    if (!validNetworkAdapterPath)
     {
         BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
         messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
@@ -394,52 +515,19 @@ inline void
     asyncResp->res.jsonValue["@odata.id"] =
         boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports",
                             chassisId, networkAdapterId);
+    std::string path = *validNetworkAdapterPath;
 
-    crow::connections::systemBus->async_method_call(
-        [chassisId, networkAdapterId, asyncResp{std::move(asyncResp)}](
-            const boost::system::error_code ec,
-            const dbus::utility::MapperGetSubTreePathsResponse& objects) {
-        if (ec == boost::system::errc::io_error)
-        {
-            asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
-            asyncResp->res.jsonValue["Members@odata.count"] = 0;
-            return;
-        }
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" + chassisId +
+                                            "/NetworkAdapters/" +
+                                            networkAdapterId + "/Ports";
+    asyncResp->res.jsonValue["@odata.type"] = "#PortCollection.PortCollection";
+    asyncResp->res.jsonValue["Name"] = "Port Collection";
 
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR("DBUS response error {}", ec.value());
-            messages::internalError(asyncResp->res);
-            return;
-        }
-
-        for (const auto& path : objects)
-        {
-            if (!boost::ends_with(path, networkAdapterId))
-            {
-                continue;
-            }
-            asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters/" +
-                networkAdapterId + "/Ports";
-            asyncResp->res.jsonValue["@odata.type"] =
-                "#PortCollection.PortCollection";
-            asyncResp->res.jsonValue["Name"] = "Port Collection";
-
-            collection_util::getCollectionMembersByAssociation(
-                asyncResp,
-                "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters/" +
-                    networkAdapterId + "/Ports",
-                path + "/all_states",
-                {"xyz.openbmc_project.Inventory.Item.Port"});
-        }
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        "/xyz/openbmc_project/object_mapper",
-        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
-        "/xyz/openbmc_project/inventory", 0,
-        std::array<const char*, 1>{
-            "xyz.openbmc_project.Inventory.Item.NetworkInterface"});
+    collection_util::getCollectionMembersByAssociation(
+        asyncResp,
+        "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters/" +
+            networkAdapterId + "/Ports",
+        path + "/all_states", {"xyz.openbmc_project.Inventory.Item.Port"});
 }
 
 inline void handleNetworkAdaptersCollectionGet(
@@ -452,7 +540,7 @@ inline void handleNetworkAdaptersCollectionGet(
         return;
     }
 
-    redfish::chassis_utils::getValidChassisPath(
+    redfish::chassis_utils::getValidChassisPathAndInterfaces(
         asyncResp, chassisId,
         std::bind_front(doNetworkAdaptersCollection, asyncResp, chassisId));
 }
@@ -460,6 +548,7 @@ inline void handleNetworkAdaptersCollectionGet(
 inline void handleNetworkAdapterGetNext(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisId, const std::string& networkAdapterId,
+    const std::vector<std::string>& chassisIntfList,
     const std::optional<std::string>& validChassisPath)
 {
     if (!validChassisPath)
@@ -469,7 +558,8 @@ inline void handleNetworkAdapterGetNext(
         return;
     }
 
-    getValidNetworkAdapterPath(asyncResp, networkAdapterId,
+    getValidNetworkAdapterPath(asyncResp, networkAdapterId, chassisIntfList,
+                               *validChassisPath,
                                std::bind_front(doNetworkAdapter, asyncResp,
                                                chassisId, networkAdapterId));
 }
@@ -485,10 +575,29 @@ inline void
         return;
     }
 
-    redfish::chassis_utils::getValidChassisPath(
+    redfish::chassis_utils::getValidChassisPathAndInterfaces(
         asyncResp, chassisId,
-        std::bind_front(doNetworkAdapter, asyncResp, chassisId,
+        std::bind_front(handleNetworkAdapterGetNext, asyncResp, chassisId,
                         networkAdapterId));
+}
+
+inline void doPortCollectionWithValidChassisId(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId, const std::string& networkAdapterId,
+    const std::vector<std::string>& chassisIntfList,
+    const std::optional<std::string>& validChassisPath)
+{
+    if (!validChassisPath)
+    {
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
+        messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+        return;
+    }
+
+    getValidNetworkAdapterPath(asyncResp, networkAdapterId, chassisIntfList,
+                               *validChassisPath,
+                               std::bind_front(doPortCollection, asyncResp,
+                                               chassisId, networkAdapterId));
 }
 
 inline void handlePortsCollectionGet(
@@ -502,10 +611,10 @@ inline void handlePortsCollectionGet(
         return;
     }
 
-    redfish::chassis_utils::getValidChassisPath(
+    redfish::chassis_utils::getValidChassisPathAndInterfaces(
         asyncResp, chassisId,
-        std::bind_front(doPortCollection, asyncResp, chassisId,
-                        networkAdapterId));
+        std::bind_front(doPortCollectionWithValidChassisId, asyncResp,
+                        chassisId, networkAdapterId));
 }
 
 inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -521,6 +630,9 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports/{}", chassisId,
         networkAdapterId, portId);
+    asyncResp->res.jsonValue["Metrics"]["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports/{}/Metrics", chassisId,
+        networkAdapterId, portId);
 
     using PropertiesMap =
         boost::container::flat_map<std::string,
@@ -531,6 +643,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                       const PropertiesMap& properties) {
         if (ec)
         {
+            BMCWEB_LOG_ERROR("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -564,6 +677,18 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 }
                 asyncResp->res.jsonValue["CurrentSpeedGbps"] = *value;
             }
+            else if (propertyName == "MaxSpeed")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for MaxSpeed");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["MaxSpeedGbps"] = *value;
+            }
             else if (propertyName == "Protocol")
             {
                 const std::string* value =
@@ -589,6 +714,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     messages::internalError(asyncResp->res);
                     return;
                 }
+                asyncResp->res.jsonValue["LinkStatus"] =
+                    port_utils::getLinkStatusType(*value);
                 if (*value ==
                         "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStatusType.LinkDown" ||
                     *value ==
@@ -614,6 +741,8 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                     messages::internalError(asyncResp->res);
                     return;
                 }
+                asyncResp->res.jsonValue["LinkState"] =
+                    port_utils::getLinkStates(*value);
                 if (*value ==
                     "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Enabled")
                 {
@@ -654,6 +783,7 @@ inline void getPortDataByAssociation(
         if (ec)
         {
             // no state sensors attached.
+            BMCWEB_LOG_ERROR("DBUS response error");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -662,39 +792,77 @@ inline void getPortDataByAssociation(
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
+            BMCWEB_LOG_ERROR(
+                "DBUS response error while getting ports");
             messages::internalError(asyncResp->res);
             return;
         }
 
         for (const std::string& sensorPath : *data)
         {
-            // Check Interface in Object or not
+            sdbusplus::message::object_path pPath(sensorpath);
+            if (pPath.filename() != portId)
+            {
+                continue;
+            }
+
             crow::connections::systemBus->async_method_call(
-                [asyncResp, sensorPath, chassisId, networkAdapterId,
-                 portId](const boost::system::error_code ec,
-                         const std::vector<std::pair<
-                             std::string, std::vector<std::string>>>& object) {
-                if (ec)
+                [asyncResp, chassisId, networkAdapterId, portId,
+                 sensorPath](const boost::system::error_code& ec,
+                             std::variant<std::vector<std::string>>& response) {
+                std::string objectPathToGetPortData = sensorPath;
+                if (!ec)
                 {
-                    // the path does not implement item port
-                    // interfaces
-                    return;
+                    std::vector<std::string>* pathData =
+                        std::get_if<std::vector<std::string>>(&response);
+                    if (pathData != nullptr)
+                    {
+                        for (const std::string& associatedPortPath : *pathData)
+                        {
+                            objectPathToGetPortData = associatedPortPath;
+                        }
+                    }
                 }
+                // Check Interface in Object or not
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, objectPathToGetPortData, chassisId,
+                     networkAdapterId, portId](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                    if (ec)
+                    {
+                        // the path does not implement item port
+                        // interfaces
+                        BMCWEB_LOG_DEBUG(
+                            "no port interface on object path {}",
+                            objectPathToGetPortData);
+                        return;
+                    }
 
-                sdbusplus::message::object_path path(sensorPath);
-                if (path.filename() != portId || object.size() != 1)
-                {
-                    return;
-                }
+                    sdbusplus::message::object_path path(
+                        objectPathToGetPortData);
+                    if (path.filename() != portId || object.size() != 1)
+                    {
+                        return;
+                    }
 
-                getPortData(asyncResp, object.front().first, sensorPath,
-                            chassisId, networkAdapterId, portId);
+                    getPortData(asyncResp, object.front().first,
+                                objectPathToGetPortData, chassisId,
+                                networkAdapterId, portId);
+                },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject",
+                    objectPathToGetPortData,
+                    std::array<std::string, 1>(
+                        {"xyz.openbmc_project.Inventory.Item.Port"}));
             },
                 "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
-                std::array<std::string, 1>(
-                    {"xyz.openbmc_project.Inventory.Item.Port"}));
+                sensorPath + "/associated_port",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+            return;
         }
     },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
@@ -723,7 +891,7 @@ inline void doPort(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 inline void doPortWithValidChassisId(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisId, const std::string& networkAdapterId,
-    const std::string& portId,
+    const std::string& portId, const std::vector<std::string>& chassisIntfList,
     const std::optional<std::string>& validChassisPath)
 {
     if (!validChassisPath)
@@ -733,7 +901,8 @@ inline void doPortWithValidChassisId(
         return;
     }
 
-    getValidNetworkAdapterPath(asyncResp, networkAdapterId,
+    getValidNetworkAdapterPath(asyncResp, networkAdapterId, chassisIntfList,
+                               *validChassisPath,
                                std::bind_front(doPort, asyncResp, chassisId,
                                                networkAdapterId, portId));
 }
@@ -749,7 +918,7 @@ inline void handlePortGet(App& app, const crow::Request& req,
         return;
     }
 
-    redfish::chassis_utils::getValidChassisPath(
+    redfish::chassis_utils::getValidChassisPathAndInterfaces(
         asyncResp, chassisId,
         std::bind_front(doPortWithValidChassisId, asyncResp, chassisId,
                         networkAdapterId, portId));

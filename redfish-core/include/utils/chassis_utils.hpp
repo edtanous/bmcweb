@@ -267,6 +267,65 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     BMCWEB_LOG_DEBUG("checkChassisId exit");
 }
 
+/**
+ * @brief Retrieves valid chassis path and interfaces
+ * @param asyncResp   Pointer to object holding response data
+ * @param callback  Callback for next step to get valid chassis path
+ */
+template <typename Callback>
+void getValidChassisPathAndInterfaces(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& chassisId, Callback&& callback)
+{
+    BMCWEB_LOG_DEBUG("check ChassisPathAndInterfaces enter");
+    constexpr std::array<std::string_view, 2> interfaces = {
+        "xyz.openbmc_project.Inventory.Item.Board",
+        "xyz.openbmc_project.Inventory.Item.Chassis"};
+
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project/inventory", 0, interfaces,
+        [callback = std::forward<Callback>(callback), asyncResp,
+         chassisId](const boost::system::error_code& ec,
+                    const dbus::utility::MapperGetSubTreeResponse&
+                        subtree) mutable {
+        BMCWEB_LOG_DEBUG("getValidChassisPathAndInterfaces respHandler enter");
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("getValidChassisPathAndInterfaces respHandler DBUS error: {}",
+                             ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        std::optional<std::string> chassisPath;
+        std::vector<std::string> interfacesOnChassisPath;
+        for (const std::pair<
+             std::string,
+             std::vector<std::pair<std::string, std::vector<std::string>>>>&
+             object : subtree)
+        {
+            const std::string& chassis = object.first;
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                connectionNames = object.second;
+
+            sdbusplus::message::object_path path(chassis);
+            std::string chassisName = path.filename();
+            if (chassisName.empty())
+            {
+                BMCWEB_LOG_ERROR("Failed to find '/' in {}", chassis);
+                continue;
+            }
+            if (chassisName == chassisId)
+            {
+                chassisPath = chassis;
+                interfacesOnChassisPath = connectionNames[0].second;
+                break;
+            }
+        }
+        callback(interfacesOnChassisPath, chassisPath);
+    });
+    BMCWEB_LOG_DEBUG("check ChassisPathAndInterfaces exit");
+}
+
 inline std::string getChassisType(const std::string& chassisType)
 {
     if (chassisType ==
