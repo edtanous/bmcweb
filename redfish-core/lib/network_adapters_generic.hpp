@@ -800,7 +800,7 @@ inline void getPortDataByAssociation(
 
         for (const std::string& sensorPath : *data)
         {
-            sdbusplus::message::object_path pPath(sensorpath);
+            sdbusplus::message::object_path pPath(sensorPath);
             if (pPath.filename() != portId)
             {
                 continue;
@@ -924,6 +924,362 @@ inline void handlePortGet(App& app, const crow::Request& req,
                         networkAdapterId, portId));
 }
 
+/**
+ * @brief Get all port metric info by requesting data
+ * from the given D-Bus object.
+ *
+ * @param[in,out]   asyncResp   Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void
+    getPortMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& service, const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG("Get Port Metric Data");
+    using PropertiesMap =
+        boost::container::flat_map<std::string, dbus::utility::DbusVariantType>;
+    // Get interface properties
+    crow::connections::systemBus->async_method_call(
+        [asyncResp{asyncResp}](const boost::system::error_code ec,
+                               const PropertiesMap& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+            "#NvidiaPortMetrics.v1_0_0.NvidiaPortMetrics";
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        for (const auto& property : properties)
+        {
+            if ((property.first == "TXBytes") || (property.first == "RXBytes"))
+            {
+                const size_t* value = std::get_if<size_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for TX/RX bytes");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue[property.first] = *value;
+            }
+            else if (property.first == "RXErrors")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for receive error");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["RXErrors"] = *value;
+            }
+            else if (property.first == "RXPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for receive packets");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Networking"]["RXFrames"] = *value;
+            }
+            else if (property.first == "TXPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for transmit packets");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Networking"]["TXFrames"] = *value;
+            }
+            else if (property.first == "RXMulticastPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for receive multicast packets");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Networking"]["RXMulticastFrames"] =
+                    *value;
+            }
+            else if (property.first == "TXMulticastPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for transmit multicast packets");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Networking"]["TXMulticastFrames"] =
+                    *value;
+            }
+            else if (property.first == "RXUnicastPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for receive unicast packets");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Networking"]["RXUnicastFrames"] =
+                    *value;
+            }
+            else if (property.first == "TXUnicastPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for transmit unicast packets");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Networking"]["TXUnicastFrames"] =
+                    *value;
+            }
+            else if (property.first == "TXDiscardPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for transmit discard packets");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Networking"]["TXDiscards"] = *value;
+            }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            else if (property.first == "VL15DroppedPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for VL15 dropped packets");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["VL15Dropped"] =
+                    *value;
+            }
+            else if (property.first == "SymbolError")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for symbol error");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["SymbolErrors"] =
+                    *value;
+            }
+            else if (property.first == "LinkErrorRecoveryCounter")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for link error recovery count");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                        ["LinkErrorRecoveryCount"] = *value;
+            }
+            else if (property.first == "RXRemotePhysicalErrorPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for receive remote physical error");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                        ["RXRemotePhysicalErrors"] = *value;
+            }
+            else if (property.first == "RXSwitchRelayErrorPkts")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for receive switch replay error");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res
+                    .jsonValue["Oem"]["Nvidia"]["RXSwitchRelayErrors"] = *value;
+            }
+            else if (property.first == "LinkDownCount")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for link down count");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["LinkDownedCount"] =
+                    *value;
+            }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        }
+    },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
+}
+
+inline void getPortMetricsDataByAssociation(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& objPath, const std::string& chassisId,
+    const std::string& networkAdapterId, const std::string& portId)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisId, networkAdapterId,
+         portId](const boost::system::error_code& ec,
+                 std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            BMCWEB_LOG_ERROR(
+                "No response data while getting ports");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        for (const std::string& sensorPath : *data)
+        {
+            // Check Interface in Object or not
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, sensorPath, chassisId, networkAdapterId,
+                 portId](const boost::system::error_code ec,
+                         const std::vector<std::pair<
+                             std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    // the path does not implement item port metric
+                    // interfaces
+                    BMCWEB_LOG_DEBUG(
+                        "Port interface not present on object path {}",
+                        sensorPath);
+                    return;
+                }
+
+                sdbusplus::message::object_path path(sensorPath);
+                if (path.filename() != portId || object.size() != 1)
+                {
+                    return;
+                }
+                asyncResp->res.jsonValue["@odata.type"] =
+                    "#PortMetrics.v1_0_0.PortMetrics";
+                asyncResp->res.jsonValue["Id"] = portId;
+                asyncResp->res.jsonValue["Name"] = portId + " Port Metrics";
+                asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+                    "/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports/{}/Metrics",
+                    chassisId, networkAdapterId, portId);
+
+                getPortMetricsData(asyncResp, object.front().first, sensorPath);
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                std::array<std::string, 1>(
+                    {"xyz.openbmc_project.Inventory.Item.Port"}));
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void
+    doPortMetrics(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                  const std::string& chassisId,
+                  const std::string& networkAdapterId,
+                  const std::string& portId,
+                  const std::optional<std::string>& validNetworkAdapterPath)
+{
+    if (!validNetworkAdapterPath)
+    {
+        BMCWEB_LOG_ERROR("Not a valid networkAdapter ID{}", networkAdapterId);
+        messages::resourceNotFound(asyncResp->res, "networkAdapter",
+                                   networkAdapterId);
+        return;
+    }
+
+    getPortMetricsDataByAssociation(asyncResp, *validNetworkAdapterPath,
+                                    chassisId, networkAdapterId, portId);
+}
+
+inline void doPortMetricsWithValidChassisId(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId, const std::string& networkAdapterId,
+    const std::string& portId, const std::vector<std::string>& chassisIntfList,
+    const std::optional<std::string>& validChassisPath)
+{
+    if (!validChassisPath)
+    {
+        BMCWEB_LOG_ERROR("Not a valid chassis ID{}", chassisId);
+        messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+        return;
+    }
+
+    getValidNetworkAdapterPath(
+        asyncResp, networkAdapterId, chassisIntfList, *validChassisPath,
+        std::bind_front(doPortMetrics, asyncResp, chassisId, networkAdapterId,
+                        portId));
+}
+
+inline void
+    handlePortMetricsGet(App& app, const crow::Request& req,
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& chassisId,
+                         const std::string& networkAdapterId,
+                         const std::string& portId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    redfish::chassis_utils::getValidChassisPathAndInterfaces(
+        asyncResp, chassisId,
+        std::bind_front(doPortMetricsWithValidChassisId, asyncResp, chassisId,
+                        networkAdapterId, portId));
+}
+
 inline void requestRoutesNetworkAdapters(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/NetworkAdapters/")
@@ -943,6 +1299,12 @@ inline void requestRoutesNetworkAdapters(App& app)
         .privileges(redfish::privileges::getPort)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handlePortGet, std::ref(app)));
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/NetworkAdapters/<str>/Ports/<str>/Metrics")
+        .privileges(redfish::privileges::getPortMetrics)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handlePortMetricsGet, std::ref(app)));
 }
 
 } // namespace redfish
