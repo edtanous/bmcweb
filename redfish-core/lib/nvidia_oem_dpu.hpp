@@ -51,6 +51,10 @@ static const std::string dpuFruObj = "xyz.openbmc_project.Control.dpu_fru";
 static const std::string dpuFruPath =
     "/xyz/openbmc_project/inventory/system/board";
 
+static constexpr std::string_view socForceResetTraget =
+    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    "/Oem/Nvidia/SOC.ForceReset";
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 struct PropertyInfo
 {
@@ -1238,6 +1242,36 @@ inline void requestRoutesNvidiaOemBf(App& app)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             bluefield::handleTruststoreCertificatesResetKeys, std::ref(app)));
 
+    BMCWEB_ROUTE(app, bluefield::socForceResetTraget.data())
+        .privileges(redfish::privileges::postComputerSystem)
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        auto dataOut = std::make_shared<boost::process::ipstream>();
+        auto dataErr = std::make_shared<boost::process::ipstream>();
+        auto callback = [asyncResp, dataOut, dataErr](const boost::system::error_code& ec,
+                                     int errorCode) mutable {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("mlnx_bf_reset_control script failed with error code: {} {}",
+                             ec, errorCode);
+                messages::operationFailed(asyncResp->res);
+            return;
+        }
+        BMCWEB_LOG_DEBUG("SOC Hard Reset");
+        messages::success(asyncResp->res);
+        };
+
+        std::string command = "/usr/sbin/mlnx_bf_reset_control soc_hard_reset_ignore_host";
+        boost::process::async_system(crow::connections::systemBus->get_io_context(),
+                     std::move(callback), command, bp::std_in.close(),
+                     bp::std_out > *dataOut, bp::std_err > *dataErr);
+        });
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 
     BMCWEB_ROUTE(app, bluefield::hostRhimTarget)
@@ -1268,10 +1302,11 @@ inline void requestRoutesNvidiaOemBf(App& app)
         {
             return;
         }
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
         auto& nvidia = asyncResp->res.jsonValue;
-        auto& connectx = nvidia["Connectx"];
         auto& actions = nvidia["Actions"];
+        auto& socForceReset = actions["#SOC.ForceReset"];
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
+        auto& connectx = nvidia["Connectx"];
         auto& hostRshimAction = actions["#HostRshim.Set"];
         auto& modeAction = actions["#Mode.Set"];
 
@@ -1294,6 +1329,7 @@ inline void requestRoutesNvidiaOemBf(App& app)
         actions["#TruststoreCertificates.ResetKeys"]
                ["ResetKeysType@Redfish.AllowableValues"] = {"DeleteAllKeys"};
 #endif
+        socForceReset["target"] = bluefield::socForceResetTraget;
         sdbusplus::asio::getAllProperties(
             *crow::connections::systemBus, bluefield::dpuFruObj,
             bluefield::dpuFruPath,
