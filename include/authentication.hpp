@@ -261,47 +261,42 @@ inline std::shared_ptr<persistent_data::UserSession> authenticate(
         persistent_data::SessionStore::getInstance().getAuthMethodsConfig();
 
     std::shared_ptr<persistent_data::UserSession> sessionOut = nullptr;
-<<<<<<< HEAD
-#ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-    if (persistent_data::getConfig().isTLSAuthEnabled() &&
-        authMethodsConfig.tls)
-=======
     if constexpr (BMCWEB_MUTUAL_TLS_AUTH)
     {
-        if (authMethodsConfig.tls)
->>>>>>> master
-    {
-        sessionOut = performTLSAuth(res, reqHeader, session);
-    }
+        if (persistent_data::getConfig().isTLSAuthEnabled() &&
+            authMethodsConfig.tls)
+        {
+            sessionOut = performTLSAuth(res, reqHeader, session);
+        }
     }
     if constexpr (BMCWEB_XTOKEN_AUTH)
     {
-    if (sessionOut == nullptr && authMethodsConfig.xtoken)
-    {
-        sessionOut = performXtokenAuth(reqHeader);
-    }
+        if (sessionOut == nullptr && authMethodsConfig.xtoken)
+        {
+            sessionOut = performXtokenAuth(reqHeader);
+        }
     }
     if constexpr (BMCWEB_COOKIE_AUTH)
     {
-    if (sessionOut == nullptr && authMethodsConfig.cookie)
-    {
-        sessionOut = performCookieAuth(method, reqHeader);
-    }
+        if (sessionOut == nullptr && authMethodsConfig.cookie)
+        {
+            sessionOut = performCookieAuth(method, reqHeader);
+        }
     }
     std::string_view authHeader = reqHeader["Authorization"];
     BMCWEB_LOG_DEBUG("authHeader={}", authHeader);
     if constexpr (BMCWEB_SESSION_AUTH)
     {
-    if (sessionOut == nullptr && authMethodsConfig.sessionToken)
-    {
-        sessionOut = performTokenAuth(authHeader);
-    }
+        if (sessionOut == nullptr && authMethodsConfig.sessionToken)
+        {
+            sessionOut = performTokenAuth(authHeader);
+        }
     }
     if constexpr (BMCWEB_BASIC_AUTH)
     {
-    if (sessionOut == nullptr && authMethodsConfig.basic)
-    {
-        sessionOut = performBasicAuth(ipAddress, authHeader);
+        if (sessionOut == nullptr && authMethodsConfig.basic)
+        {
+            sessionOut = performBasicAuth(ipAddress, authHeader);
         }
     }
     if (sessionOut != nullptr)

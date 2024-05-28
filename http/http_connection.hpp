@@ -75,21 +75,15 @@ class Connection :
     {
         initParser();
 
-<<<<<<< HEAD
-#ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-        if constexpr (std::is_same<Adaptor,
-                                   boost::beast::ssl_stream<
-                                       boost::asio::ip::tcp::socket>>::value)
-        {
-            prepareMutualTls();
-        }
-#endif // BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-=======
         if constexpr (BMCWEB_MUTUAL_TLS_AUTH)
         {
-            prepareMutualTls();
+            if constexpr (std::is_same<Adaptor,
+                                    boost::beast::ssl_stream<
+                                        boost::asio::ip::tcp::socket>>::value)
+            {
+                prepareMutualTls();
+            }
         }
->>>>>>> master
 
         connectionCount++;
 
@@ -133,32 +127,32 @@ class Connection :
     {
         if constexpr (IsTls<Adaptor>::value)
         {
-        std::error_code error;
-        std::filesystem::path caPath(ensuressl::trustStorePath);
-        auto caAvailable = !std::filesystem::is_empty(caPath, error);
-        caAvailable = caAvailable && !error;
-        if (caAvailable && persistent_data::SessionStore::getInstance()
-                               .getAuthMethodsConfig()
-                               .tls)
-        {
-            adaptor.set_verify_mode(boost::asio::ssl::verify_peer);
-            std::string id = "bmcweb";
-
-            const char* cStr = id.c_str();
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            const auto* idC = reinterpret_cast<const unsigned char*>(cStr);
-            int ret = SSL_set_session_id_context(
-                adaptor.native_handle(), idC,
-                static_cast<unsigned int>(id.length()));
-            if (ret == 0)
+            std::error_code error;
+            std::filesystem::path caPath(ensuressl::trustStorePath);
+            auto caAvailable = !std::filesystem::is_empty(caPath, error);
+            caAvailable = caAvailable && !error;
+            if (caAvailable && persistent_data::SessionStore::getInstance()
+                                   .getAuthMethodsConfig()
+                                   .tls)
             {
-                BMCWEB_LOG_ERROR("{} failed to set SSL id", logPtr(this));
-            }
-        }
+                adaptor.set_verify_mode(boost::asio::ssl::verify_peer);
+                std::string id = "bmcweb";
 
-        adaptor.set_verify_callback(
-            std::bind_front(&self_type::tlsVerifyCallback, this));
-    }
+                const char* cStr = id.c_str();
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                const auto* idC = reinterpret_cast<const unsigned char*>(cStr);
+                int ret = SSL_set_session_id_context(
+                    adaptor.native_handle(), idC,
+                    static_cast<unsigned int>(id.length()));
+                if (ret == 0)
+                {
+                    BMCWEB_LOG_ERROR("{} failed to set SSL id", logPtr(this));
+                }
+            }
+
+            adaptor.set_verify_callback(
+                std::bind_front(&self_type::tlsVerifyCallback, this));
+        }
     }
 
     Adaptor& socket()
@@ -289,56 +283,39 @@ class Connection :
         keepAlive = req->keepAlive();
         if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
         {
-<<<<<<< HEAD
-#ifndef BMCWEB_INSECURE_DISABLE_AUTHX
-        if (persistent_data::getConfig().isTLSAuthEnabled())
-        {
-            if (!crow::authentication::isOnAllowlist(req.url().path(),
-                                                     req.method()) &&
-                req.session == nullptr)
-            {
-                BMCWEB_LOG_WARNING("Authentication failed");
-                forward_unauthorized::sendUnauthorized(
-                    req.url().encoded_path(),
-                    req.getHeaderValue("X-Requested-With"),
-                    req.getHeaderValue("Accept"), res);
-
-                std::string user = getUser(req);
-                if (user.empty())
-                {
-                    completeRequest(res);
-                    return;
-                }                
-                auto asyncResp =
-                    std::make_shared<bmcweb::AsyncResp>(std::move(res));
-                BMCWEB_LOG_DEBUG("Setting completion handler");
-                asyncResp->res.setCompleteRequestHandler(
-                    [self(shared_from_this())](crow::Response& thisRes) {
-                    self->completeRequest(thisRes);
-                });
-                redfish::handleAccountLocked(user, asyncResp, req);
-                return;
-            }
-        }
-#endif // BMCWEB_INSECURE_DISABLE_AUTHX
-=======
             if constexpr (!BMCWEB_INSECURE_DISABLE_AUTH)
-            {
-                if (!crow::authentication::isOnAllowlist(req->url().path(),
-                                                         req->method()) &&
-                    req->session == nullptr)
+                if (persistent_data::getConfig().isTLSAuthEnabled())
                 {
-                    BMCWEB_LOG_WARNING("Authentication failed");
-                    forward_unauthorized::sendUnauthorized(
-                        req->url().encoded_path(),
-                        req->getHeaderValue("X-Requested-With"),
-                        req->getHeaderValue("Accept"), res);
-                    completeRequest(res);
-                    return;
+                    if (!crow::authentication::isOnAllowlist(req.url().path(),
+                                                             req.method()) &&
+                        req.session == nullptr)
+                    {
+                        BMCWEB_LOG_WARNING("Authentication failed");
+                        forward_unauthorized::sendUnauthorized(
+                            req.url().encoded_path(),
+                            req.getHeaderValue("X-Requested-With"),
+                            req.getHeaderValue("Accept"), res);
+
+                        std::string user = getUser(req);
+                        if (user.empty())
+                        {
+                            completeRequest(res);
+                            return;
+                        }
+                        auto asyncResp =
+                            std::make_shared<bmcweb::AsyncResp>(std::move(res));
+                        BMCWEB_LOG_DEBUG("Setting completion handler");
+                        asyncResp->res.setCompleteRequestHandler(
+                            [self(shared_from_this())](
+                                crow::Response& thisRes) {
+                            self->completeRequest(thisRes);
+                        });
+                        redfish::handleAccountLocked(user, asyncResp, req);
+                        return;
+                    }
                 }
-            }
->>>>>>> master
         }
+    }
         auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
         BMCWEB_LOG_DEBUG("Setting completion handler");
         asyncResp->res.setCompleteRequestHandler(
@@ -432,24 +409,29 @@ class Connection :
     }
 
     void gracefulClose()
-        {
-<<<<<<< HEAD
-            adaptor.next_layer().close();
-#ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-            if (persistent_data::getConfig().isTLSAuthEnabled() &&
-                userSession != nullptr)
-#else
-=======
+    {
         BMCWEB_LOG_DEBUG("{} Socket close requested", logPtr(this));
->>>>>>> master
-            if (mtlsSession != nullptr)
-#endif
+        if constexpr (BMCWEB_MUTUAL_TLS_AUTH)
+        {
+            if (persistent_data::getConfig().isTLSAuthEnabled() &&
+                    userSession != nullptr)
             {
                 BMCWEB_LOG_DEBUG("{} Removing TLS session: {}", logPtr(this),
-                                 mtlsSession->uniqueId);
+                                mtlsSession->uniqueId);
                 persistent_data::SessionStore::getInstance().removeSession(
                     mtlsSession);
             }
+        }
+        else
+        {
+            if (mtlsSession != nullptr)
+            {
+                BMCWEB_LOG_DEBUG("{} Removing TLS session: {}", logPtr(this),
+                                mtlsSession->uniqueId);
+                persistent_data::SessionStore::getInstance().removeSession(
+                    mtlsSession);
+            }
+        }
         if constexpr (IsTls<Adaptor>::value)
         {
             adaptor.async_shutdown(std::bind_front(
@@ -612,38 +594,30 @@ class Connection :
 
             if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
             {
-<<<<<<< HEAD
-#ifndef BMCWEB_INSECURE_DISABLE_AUTHX
-            if (persistent_data::getConfig().isTLSAuthEnabled())
-=======
-                if constexpr (!BMCWEB_INSECURE_DISABLE_AUTH)
->>>>>>> master
-            {
-                boost::beast::http::verb method = parser->get().method();
-                userSession = crow::authentication::authenticate(
-                    ip, res, method, parser->get().base(), mtlsSession);
-                }
-            }
-
-            std::string_view expect =
-                parser->get()[boost::beast::http::field::expect];
-            if (bmcweb::asciiIEquals(expect, "100-continue"))
+                if constexpr (!BMCWEB_INSECURE_DISABLE_AUTHX)
+                {
+                    if (persistent_data::getConfig().isTLSAuthEnabled())
                     {
-                res.result(boost::beast::http::status::continue_);
-                doWrite();
-                        return;
+                        boost::beast::http::verb method =
+                            parser->get().method();
+                        userSession = crow::authentication::authenticate(
+                            ip, res, method, parser->get().base(), mtlsSession);
                     }
 
-<<<<<<< HEAD
+                    std::string_view expect =
+                        parser->get()[boost::beast::http::field::expect];
+                    if (bmcweb::asciiIEquals(expect, "100-continue"))
+                    {
+                        res.result(boost::beast::http::status::continue_);
+                        doWrite();
+                        return;
+                    }
                     BMCWEB_LOG_DEBUG("Starting quick deadline");
                 }
             }
-#endif // BMCWEB_INSECURE_DISABLE_AUTHX
-=======
             if (!handleContentLengthError())
             {
                 return;
->>>>>>> master
             }
 
             parser->body_limit(getContentLengthLimit());

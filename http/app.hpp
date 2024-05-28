@@ -43,14 +43,7 @@ class App
     explicit App(std::shared_ptr<boost::asio::io_context> ioIn =
                      std::make_shared<boost::asio::io_context>()) :
         io(std::move(ioIn))
-    {
-#ifdef BMCWEB_ENABLE_SSL
-        if (persistent_data::getConfig().isTLSAuthEnabled())
-        {
-            portUint = 443;
-        }
-#endif
-    }
+    {}
     ~App()
     {
         stop();
@@ -93,24 +86,15 @@ class App
 
     std::optional<boost::asio::ip::tcp::acceptor> setupSocket()
     {
-<<<<<<< HEAD
-        validate();
-#ifdef BMCWEB_ENABLE_SSL
-        if (persistent_data::getConfig().isTLSAuthEnabled())
-        {
-            BMCWEB_LOG_DEBUG("TLS RUN");
-            if (-1 == socketFd)
-=======
         if (io == nullptr)
->>>>>>> master
-            {
+        {
             BMCWEB_LOG_CRITICAL("IO was nullptr?");
             return std::nullopt;
-            }
+        }
         constexpr int defaultPort = 18080;
         int listenFd = sd_listen_fds(0);
         if (listenFd == 1)
-            {
+        {
             BMCWEB_LOG_INFO("attempting systemd socket activation");
             if (sd_is_socket_inet(SD_LISTEN_FDS_START, AF_UNSPEC, SOCK_STREAM,
                                   1, 0) != 0)
@@ -128,39 +112,20 @@ class App
         return boost::asio::ip::tcp::acceptor(
             *io, boost::asio::ip::tcp::endpoint(
                      boost::asio::ip::make_address("0.0.0.0"), defaultPort));
-            }
-<<<<<<< HEAD
-            sslServer->run();
-        }
-        else
-#endif
-        {
-            BMCWEB_LOG_DEBUG("HTTP RUN");
-            if (-1 == socketFd)
-=======
+    }
 
     void run()
->>>>>>> master
-            {
+    {
         validate();
 
         std::optional<boost::asio::ip::tcp::acceptor> acceptor = setupSocket();
         if (!acceptor)
-            {
-<<<<<<< HEAD
-                server = std::make_unique<server_t>(this, socketFd, nullptr,
-                                                    io);
-=======
+        {
             BMCWEB_LOG_CRITICAL("Couldn't start server");
             return;
->>>>>>> master
-            }
-        server.emplace(this, std::move(*acceptor), sslContext, io);
-            server->run();
-<<<<<<< HEAD
         }
-=======
->>>>>>> master
+        server.emplace(this, std::move(*acceptor), sslContext, io);
+        server->run();
     }
 
     void stop()
@@ -201,21 +166,10 @@ class App
 
   private:
     std::shared_ptr<boost::asio::io_context> io;
-<<<<<<< HEAD
-    uint16_t portUint = 80;
-    int socketFd = -1;
-    Router router;
-
-#ifdef BMCWEB_ENABLE_SSL
-    std::unique_ptr<ssl_server_t> sslServer;
-#endif
-    std::unique_ptr<server_t> server;
-=======
 
     std::optional<server_type> server;
 
     Router router;
->>>>>>> master
 };
 } // namespace crow
 using App = crow::App;
