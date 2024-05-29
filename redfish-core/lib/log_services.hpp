@@ -735,7 +735,7 @@ inline void parseDumpEntryFromDbusObject(
             }
             if (type != nullptr &&
                 *type ==
-                    "xyz.openbmc_project.Dump.Entry.FaultLog.FaultDataType.CPER")
+                    "xyz.openbmc_project.Common.FaultLogType.FaultLogTypes.CPER")
             {
                 if (additionalTypeName != nullptr)
                 {
