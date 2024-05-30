@@ -3069,6 +3069,7 @@ inline void handleSensorGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // {
     //     return;
     // }
+#ifdef BMCWEB_ENFORCE_SENSOR_NAME_FORMAT
     std::pair<std::string, std::string> nameType =
         splitSensorNameAndType(sensorId);
     if (nameType.first.empty() || nameType.second.empty())
@@ -3076,7 +3077,7 @@ inline void handleSensorGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         messages::resourceNotFound(asyncResp->res, sensorId, "Sensor");
         return;
     }
-
+#endif //BMCWEB_ENFORCE_SENSOR_NAME_FORMAT
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/Sensors/{}", chassisId, sensorId);
     std::vector<std::string> split;

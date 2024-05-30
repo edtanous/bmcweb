@@ -65,7 +65,8 @@ incdir = include_directories(
 ## create a MAP of  "options : feature_flag"
 
 feature_map = {
-  'lldp-dedicated-ports'                        : '-DBMCWEB_ENABLE_LLDP_DEDICATED_PORTS',
+  'lldp-dedicated-ports'                        : '-DBMCWEB_ENABLE_LLDP_DEDICATED_PORTS', 
+  'enforce_sensor_name_format'                  : '-DBMCWEB_ENFORCE_SENSOR_NAME_FORMAT',
   'power-control-type-percentage'               : '-DBMCWEB_CONTROL_SETPOINT_UNITS_PERCENTAGE',
   'platform-metrics'                            : '-DBMCWEB_ENABLE_PLATFORM_METRICS',
   'basic-auth'                                  : '-DBMCWEB_ENABLE_BASIC_AUTHENTICATION',
