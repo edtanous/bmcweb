@@ -77,5 +77,34 @@ inline void
         extendedInfoArr[0]["MessageSeverity"] = messageSeverity;
     }
 }
+
+inline std::string
+    composeMessage(const std::string& messageId,
+                   const nlohmann::json& messageArgs)
+{
+    const registries::Message* msg = registries::getMessage(messageId);
+
+    if (msg == nullptr)
+    {
+        BMCWEB_LOG_ERROR("MessageId[{}] not supported", messageId);
+        return "";
+    }
+
+    std::string message = msg->message;
+    int i = 0;
+    for (auto& arg : messageArgs)
+    {
+        // Substituion
+        std::string argStr = "%" + std::to_string(++i);
+        size_t argPos = message.find(argStr);
+        if (argPos != std::string::npos)
+        {
+            message.replace(argPos, argStr.length(), arg);
+        }
+    }
+
+    return message;
+}
+
 } // namespace message_registries
 } // namespace redfish

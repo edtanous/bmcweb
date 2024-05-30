@@ -24,6 +24,7 @@
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"
+#include "utils/health_utils.hpp"
 
 #include <boost/container/flat_map.hpp>
 #include <boost/system/error_code.hpp>
@@ -487,6 +488,23 @@ inline void handleChassisGetSubTree(
         });
         health->start();
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+
+#ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
+/** NOTES: This is a temporary solution to avoid performance issues may impact
+ *  other Redfish services. Please call for architecture decisions from all
+ *  NvBMC teams if want to use it in other places.
+ */
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+#error "Conflicts! Please set health-rollup-alternative=disabled."
+#endif
+
+#ifdef BMCWEB_DISABLE_HEALTH_ROLLUP
+#error "Conflicts! Please set disable-health-rollup=disabled."
+#endif
+
+        health_utils::getDeviceHealthInfo(asyncResp->res, chassisId);
+#endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
 
         if (connectionNames.empty())
         {

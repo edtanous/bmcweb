@@ -51,6 +51,11 @@ const std::string chassisPrefixDbus =
     "/xyz/openbmc_project/inventory/system/chassis/";
 const std::string chassisPrefix = "/redfish/v1/Chassis/";
 
+// All the Systems Devices:
+const std::string systemsPrefixDbus =
+    "/xyz/openbmc_project/inventory/system/systems/";
+const std::string systemsPrefixRedfish = "/redfish/v1/Systems/";
+
 // All the Fabric Devices follows pattern:
 
 // "/xyz/openbmc_project/inventory/system/fabrics/HGX_NVLinkFabric_0/Switches/NVSwitch_0/Ports"
@@ -101,7 +106,9 @@ const std::string firmwarePrefix =
 static std::map<std::string, std::string> dBusToRedfishURI = {
     {chassisPrefixDbus, chassisPrefix},     {fabricsPrefixDbus, fabricsPrefix},
     {processorPrefixDbus, processorPrefix}, {memoryPrefixDbus, memoryPrefix},
-    {softwarePrefixDbus, firmwarePrefix},   {sensorSubTree, chassisPrefix}};
+    {softwarePrefixDbus, firmwarePrefix},   {sensorSubTree, chassisPrefix},
+    {systemsPrefixDbus, systemsPrefixRedfish}
+};
 
 /**
  * Utility function for populating async response with
@@ -251,6 +258,24 @@ inline void convertDbusObjectToOriginOfCondition(
         "No Matching prefix found for OriginOfCondition DBus object Path: {}",
         path);
     return;
+}
+
+inline std::string getDeviceRedfishURI(const std::string& device)
+{
+    // if 'device' is already a redfish URI, return it directly.
+    if (std::string_view(device).starts_with(redfishPrefix))
+    {
+        return device;
+    }
+
+    if (std::string_view(PLATFORMSYSTEMID).ends_with(device))
+    {
+        return systemsPrefixRedfish + PLATFORMSYSTEMID;
+    }
+    else
+    {
+        return chassisPrefix + PLATFORMDEVICEPREFIX + device;
+    }
 }
 
 } // namespace origin_utils

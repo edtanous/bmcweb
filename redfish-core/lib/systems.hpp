@@ -4069,7 +4069,26 @@ inline void
     manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+
+#ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
+/** NOTES: This is a temporary solution to avoid performance issues may impact
+ *  other Redfish services. Please call for architecture decisions from all
+ *  NvBMC teams if want to use it in other places.
+ */
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+#error "Conflicts! Please set health-rollup-alternative=disabled."
+#endif
+
+#ifdef BMCWEB_DISABLE_HEALTH_ROLLUP
+#error "Conflicts! Please set disable-health-rollup=disabled."
+#endif
+
+    health_utils::getDeviceHealthInfo(asyncResp->res, PLATFORMSYSTEMID);
+#endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+    redfish::conditions_utils::populateServiceConditions(asyncResp,
+        PLATFORMSYSTEMID);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";
