@@ -1934,34 +1934,16 @@ inline void
     BMCWEB_LOG_DEBUG("DBUS boot source: {}", bootSourceStr);
     BMCWEB_LOG_DEBUG("DBUS boot mode: {}", bootModeStr);
 
-<<<<<<< HEAD
-    sdbusplus::asio::setProperty(
-        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
-        "/xyz/openbmc_project/control/host0/boot",
-        "xyz.openbmc_project.Control.Boot.Source", "BootSource", bootSourceStr,
-        [asyncResp](const boost::system::error_code& ec) {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        BMCWEB_LOG_DEBUG("Boot source update done.");
-    });
-
-    sdbusplus::asio::setProperty(
-        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
-        "/xyz/openbmc_project/control/host0/boot",
-        "xyz.openbmc_project.Control.Boot.Mode", "BootMode", bootModeStr,
-        [asyncResp](const boost::system::error_code& ec) {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        BMCWEB_LOG_DEBUG("Boot mode update done.");
-    });
+    setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
+                    sdbusplus::message::object_path(
+                        "/xyz/openbmc_project/control/host0/boot"),
+                    "xyz.openbmc_project.Control.Boot.Source", "BootSource",
+                    "Boot/BootSourceOverrideTarget", bootSourceStr);
+    setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
+                    sdbusplus::message::object_path(
+                        "/xyz/openbmc_project/control/host0/boot"),
+                    "xyz.openbmc_project.Control.Boot.Mode", "BootMode",
+                    "Boot/BootSourceOverrideTarget", bootModeStr);
 }
 
 /**
@@ -2245,18 +2227,6 @@ void setEntityMangerProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 {
     setDbusProperty(aResp, entityMangerService, card1Path, interface, property,
                     value);
-=======
-    setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
-                    sdbusplus::message::object_path(
-                        "/xyz/openbmc_project/control/host0/boot"),
-                    "xyz.openbmc_project.Control.Boot.Source", "BootSource",
-                    "Boot/BootSourceOverrideTarget", bootSourceStr);
-    setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
-                    sdbusplus::message::object_path(
-                        "/xyz/openbmc_project/control/host0/boot"),
-                    "xyz.openbmc_project.Control.Boot.Mode", "BootMode",
-                    "Boot/BootSourceOverrideTarget", bootModeStr);
->>>>>>> master
 }
 
 /**
@@ -2490,7 +2460,6 @@ inline void
         "PowerRestorePolicy", powerRestorePolicy);
 }
 
-<<<<<<< HEAD
 /**
  * @brief Set Boot Order properties.
  *
@@ -2609,9 +2578,6 @@ inline void setBootOrder(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     }
 }
 
-#ifdef BMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE
-=======
->>>>>>> master
 /**
  * @brief Retrieves provisioning status
  *
@@ -2774,8 +2740,8 @@ inline void
                 continue;
             }
             modeList.emplace_back(modeValue);
+        }
     }
-}
     asyncResp->res.jsonValue["PowerMode@Redfish.AllowableValues"] = modeList;
 
     BMCWEB_LOG_DEBUG("Current power mode: {}", powerMode);
@@ -4017,15 +3983,12 @@ inline void
     getLastResetTime(asyncResp);
     if constexpr (BMCWEB_REDFISH_PROVISIONING_FEATURE)
     {
-    getProvisioningStatus(asyncResp);
-<<<<<<< HEAD
-#endif // BMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE
-#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-=======
+        getProvisioningStatus(asyncResp);
     }
->>>>>>> master
-    getTrustedModuleRequiredToBoot(asyncResp);
-#endif // BMCWEB_ENABLE_HOST_OS_FEATURE
+    if constexpr (BMCWEB_ENABLE_HOST_OS_FEATURE)
+    {
+        getTrustedModuleRequiredToBoot(asyncResp);
+    }
     getPowerMode(asyncResp);
     getIdlePowerSaver(asyncResp);
 #ifdef BMCWEB_ENABLE_DEBUG_INTERFACE

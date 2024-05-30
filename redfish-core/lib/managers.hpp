@@ -3371,19 +3371,19 @@ inline void requestRoutesManager(App& app)
              "/redfish/v1/Managers/" PLATFORMBMCID "/HostInterfaces"}};
 #endif
 
-<<<<<<< HEAD
-#ifdef BMCWEB_ENABLE_RMEDIA
-        asyncResp->res.jsonValue["VirtualMedia"] = {
-            {"@odata.id",
-             "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
-#endif
-=======
+
+        if constexpr (BMCWEB_ENABLE_RMEDIA)
+        {
+                asyncResp->res.jsonValue["VirtualMedia"] = {
+                    {"@odata.id",
+                    "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
+        }
+
         if constexpr (BMCWEB_VM_NBDPROXY)
         {
             asyncResp->res.jsonValue["VirtualMedia"]["@odata.id"] =
                 "/redfish/v1/Managers/bmc/VirtualMedia";
         }
->>>>>>> master
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         // default oem data
@@ -3577,22 +3577,9 @@ inline void requestRoutesManager(App& app)
         // Fill in SerialConsole info
         asyncResp->res.jsonValue["SerialConsole"]["ServiceEnabled"] = true;
         asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] = 15;
-<<<<<<< HEAD
         asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] = {
             "IPMI", "SSH"};
-#ifdef BMCWEB_ENABLE_KVM
-        // Fill in GraphicalConsole info
-        asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] = true;
-        asyncResp->res.jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] =
-            4;
-        asyncResp->res
-            .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] = {"KVMIP"};
-#endif // BMCWEB_ENABLE_KVM
-        if constexpr (!bmcwebEnableMultiHost)
-=======
-        asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] =
-            nlohmann::json::array_t({"IPMI", "SSH"});
-        if constexpr (BMCWEB_KVM)
+        if constexpr (BMCWEB_ENABLE_KVM)
         {
             // Fill in GraphicalConsole info
             asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
@@ -3604,13 +3591,14 @@ inline void requestRoutesManager(App& app)
                 nlohmann::json::array_t({"KVMIP"});
         }
         if constexpr (!BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
->>>>>>> master
         {
             asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] =
                 1;
+
             nlohmann::json::array_t managerForServers;
             nlohmann::json::object_t manager;
-            manager["@odata.id"] = "/redfish/v1/Systems/system";
+            manager["@odata.id"] = std::format("/redfish/v1/Systems/{}",
+                                               BMCWEB_REDFISH_SYSTEM_URI_NAME);
             managerForServers.emplace_back(std::move(manager));
 
             asyncResp->res.jsonValue["Links"]["ManagerForServers"] =

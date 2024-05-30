@@ -91,34 +91,29 @@ constexpr auto powerPaths = std::to_array<std::string_view>({
 constexpr auto getSensorPaths(){
     if constexpr(BMCWEB_REDFISH_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM){
     return std::to_array<std::string_view>({
-    "/xyz/openbmc_project/sensors/power",
-    "/xyz/openbmc_project/sensors/current",
-    "/xyz/openbmc_project/sensors/airflow",
-    "/xyz/openbmc_project/sensors/humidity",
-    "/xyz/openbmc_project/sensors/voltage",
-    "/xyz/openbmc_project/sensors/fan_tach",
-    "/xyz/openbmc_project/sensors/temperature",
-    "/xyz/openbmc_project/sensors/fan_pwm",
-    "/xyz/openbmc_project/sensors/altitude",
-    "/xyz/openbmc_project/sensors/energy",
-<<<<<<< HEAD
-#endif
-    "/xyz/openbmc_project/sensors/utilization",
-    "/xyz/openbmc_project/sensors/frequency"
-});
-=======
-        "/xyz/openbmc_project/sensors/utilization"});
+        "/xyz/openbmc_project/sensors/power",
+        "/xyz/openbmc_project/sensors/current",
+        "/xyz/openbmc_project/sensors/airflow",
+        "/xyz/openbmc_project/sensors/humidity",
+        "/xyz/openbmc_project/sensors/voltage",
+        "/xyz/openbmc_project/sensors/fan_tach",
+        "/xyz/openbmc_project/sensors/temperature",
+        "/xyz/openbmc_project/sensors/fan_pwm",
+        "/xyz/openbmc_project/sensors/altitude",
+        "/xyz/openbmc_project/sensors/energy",
+        "/xyz/openbmc_project/sensors/utilization",
+        "/xyz/openbmc_project/sensors/frequency"});
     } else {
       return  std::to_array<std::string_view>({"/xyz/openbmc_project/sensors/power",
         "/xyz/openbmc_project/sensors/current",
         "/xyz/openbmc_project/sensors/airflow",
         "/xyz/openbmc_project/sensors/humidity",
-        "/xyz/openbmc_project/sensors/utilization"});
+        "/xyz/openbmc_project/sensors/utilization",
+        "/xyz/openbmc_project/sensors/frequency"});
 }
 }
 
 constexpr auto sensorPaths = getSensorPaths();
->>>>>>> master
 
 constexpr auto thermalPaths = std::to_array<std::string_view>({
     "/xyz/openbmc_project/sensors/fan_tach",
