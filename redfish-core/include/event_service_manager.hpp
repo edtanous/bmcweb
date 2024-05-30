@@ -822,7 +822,6 @@ class Subscription : public persistent_data::UserSubscription
         }
     }
 
-#ifndef BMCWEB_ENABLE_REDFISH_DBUS_LOG_ENTRIES
     void filterAndSendEventLogs(
         const std::vector<EventLogObjectsType>& eventRecords)
     {

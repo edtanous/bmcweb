@@ -198,6 +198,7 @@ inline void handleServiceRootGetImpl(
             "/redfish/v1/SessionService/Sessions";
         asyncResp->res.jsonValue["AccountService"]["@odata.id"] =
             "/redfish/v1/AccountService";
+    }
     if constexpr (BMCWEB_REDFISH_AGGREGATION)
     {
         asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =

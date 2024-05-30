@@ -18,9 +18,11 @@
 #pragma once
 
 #include <app.hpp>
+#include <query.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <openbmc_dbus_rest.hpp>
 
 #include <iostream>
 #include <regex>

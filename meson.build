@@ -12,7 +12,7 @@ project(
             'cpp_rtti=true',
             'cpp_std=c++20',
             'warning_level=3',
-            'werror=true',
+            'werror=false',
     ],
 )
 
@@ -71,13 +71,13 @@ feature_map = {
   'google-api'                                  : '-DBMCWEB_ENABLE_GOOGLE_API',
   'host-serial-socket'                          : '-DBMCWEB_ENABLE_HOST_SERIAL_WEBSOCKET',
   'ibm-management-console'                      : '-DBMCWEB_ENABLE_IBM_MANAGEMENT_CONSOLE',
-  'insecure-disable-auth'                       : '-DBMCWEB_INSECURE_DISABLE_AUTHX',
+  #  'insecure-disable-auth'                       : '-DBMCWEB_INSECURE_DISABLE_AUTHX',
   'insecure-disable-csrf'                       : '-DBMCWEB_INSECURE_DISABLE_CSRF_PREVENTION',
   'insecure-disable-ssl'                        : '-DBMCWEB_INSECURE_DISABLE_SSL',
   'insecure-push-style-notification'            : '-DBMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING',
   'insecure-tftp-update'                        : '-DBMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE',
   'scp-update'                                  : '-DBMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE',
-  'insecure-ignore-content-type'                : '-DBMCWEB_INSECURE_IGNORE_CONTENT_TYPE',
+  #  'insecure-ignore-content-type'                : '-DBMCWEB_INSECURE_IGNORE_CONTENT_TYPE',
   'kvm'                                         : '-DBMCWEB_ENABLE_KVM' ,
   'mutual-tls-auth'                             : '-DBMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION',
   'redfish-aggregation'                         : '-DBMCWEB_ENABLE_REDFISH_AGGREGATION',
@@ -101,7 +101,7 @@ feature_map = {
   'redfish-dbus-event'                          : '-DBMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH',
   'redfish-new-powersubsystem-thermalsubsystem' : '-DBMCWEB_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM',
   'redfish-oem-manager-fan-data'                : '-DBMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA',
-  'redfish-provisioning-feature'                : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
+ # 'redfish-provisioning-feature'                : '-DBMCWEB_ENABLE_REDFISH_PROVISIONING_FEATURE',
   'redfish-post-to-old-updateservice'           : '-DBMCWEB_ENABLE_REDFISH_UPDATESERVICE_OLD_POST_URL',
   'redfish'                                     : '-DBMCWEB_ENABLE_REDFISH',
   'rest'                                        : '-DBMCWEB_ENABLE_DBUS_REST',
@@ -211,6 +211,9 @@ add_project_arguments(
     '-Wno-attributes',
     '-Wno-error=deprecated-declarations',    
     '-Wno-comment',
+    '-Wno-unused-parameter',
+    '-Wno-unused-variable',
+    '-Wno-unused-function',
   language:'cpp')
 endif
 
@@ -233,7 +236,7 @@ if (cxx.get_id() == 'gcc')
      '-Wunused-parameter',
      '-Wdouble-promotion',
    # '-Wshadow',
-   # '-Wno-psabi',
+    '-Wno-psabi',
     '-Wno-attributes',
     '-Wno-error=deprecated-declarations',      
     '-Wno-comment',

@@ -5,6 +5,7 @@
 #include "app.hpp"
 #include "dbus_monitor.hpp"
 #include "dbus_singleton.hpp"
+#include <dump_offload.hpp>
 #include "event_service_manager.hpp"
 #include "google/google_service_root.hpp"
 #include "hostname_monitor.hpp"

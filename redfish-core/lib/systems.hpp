@@ -3985,10 +3985,9 @@ inline void
     {
         getProvisioningStatus(asyncResp);
     }
-    if constexpr (BMCWEB_ENABLE_HOST_OS_FEATURE)
-    {
-        getTrustedModuleRequiredToBoot(asyncResp);
-    }
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+    getTrustedModuleRequiredToBoot(asyncResp);
+#endif // BMCWEB_ENABLE_HOST_OS_FEATURE
     getPowerMode(asyncResp);
     getIdlePowerSaver(asyncResp);
 #ifdef BMCWEB_ENABLE_DEBUG_INTERFACE

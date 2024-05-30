@@ -3372,12 +3372,11 @@ inline void requestRoutesManager(App& app)
 #endif
 
 
-        if constexpr (BMCWEB_ENABLE_RMEDIA)
-        {
-                asyncResp->res.jsonValue["VirtualMedia"] = {
-                    {"@odata.id",
-                    "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
-        }
+#ifdef BMCWEB_ENABLE_RMEDIA
+        asyncResp->res.jsonValue["VirtualMedia"] = {
+            {"@odata.id",
+            "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
+#endif
 
         if constexpr (BMCWEB_VM_NBDPROXY)
         {
@@ -3579,17 +3578,16 @@ inline void requestRoutesManager(App& app)
         asyncResp->res.jsonValue["SerialConsole"]["MaxConcurrentSessions"] = 15;
         asyncResp->res.jsonValue["SerialConsole"]["ConnectTypesSupported"] = {
             "IPMI", "SSH"};
-        if constexpr (BMCWEB_ENABLE_KVM)
-        {
-            // Fill in GraphicalConsole info
-            asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
-                true;
-            asyncResp->res
-                .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
-            asyncResp->res
-                .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
-                nlohmann::json::array_t({"KVMIP"});
-        }
+#ifdef BMCWEB_ENABLE_KVM
+        // Fill in GraphicalConsole info
+        asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
+            true;
+        asyncResp->res
+            .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
+        asyncResp->res
+            .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
+            nlohmann::json::array_t({"KVMIP"});
+#endif
         if constexpr (!BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
         {
             asyncResp->res.jsonValue["Links"]["ManagerForServers@odata.count"] =
@@ -3597,8 +3595,7 @@ inline void requestRoutesManager(App& app)
 
             nlohmann::json::array_t managerForServers;
             nlohmann::json::object_t manager;
-            manager["@odata.id"] = std::format("/redfish/v1/Systems/{}",
-                                               BMCWEB_REDFISH_SYSTEM_URI_NAME);
+            manager["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
             managerForServers.emplace_back(std::move(manager));
 
             asyncResp->res.jsonValue["Links"]["ManagerForServers"] =

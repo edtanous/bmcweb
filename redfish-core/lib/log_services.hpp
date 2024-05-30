@@ -3578,6 +3578,7 @@ inline void requestRoutesDBusSELLogEntry(App& app)
 
     {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
             return;
         }
         if constexpr (BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)

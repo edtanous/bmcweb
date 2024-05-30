@@ -7,8 +7,6 @@ if get_option('firmware-image-limit') > get_option('http-body-limit')
 else
   conf_data.set('FIRMWARE_IMAGE_LIMIT_MB', get_option('firmware-image-limit'))
 endif
-xss_enabled = get_option('insecure-disable-xss')
-conf_data.set10('BMCWEB_INSECURE_DISABLE_XSS_PREVENTION', xss_enabled.allowed())
 conf_data.set('STALE_SENSOR_UPPER_LIMIT_IN_MILISECOND', get_option('stalesensor-upper-limit-milisecond'))
 conf_data.set('PLATFORM_METRICS_SENSING_INTERVAL', get_option('platform-metrics-sensing-interval'))
 conf_data.set('UPDATE_SERVICE_IMAGE_LOCATION', get_option('update-service-image-location'))
@@ -49,13 +47,10 @@ conf_data.set10('BMCWEB_ENABLE_PROC_MEM_STATUS', enable_proc_mem_status.enabled(
 feature_options = [
     'basic-auth',
     'cookie-auth',
-    'dns-resolver',
     'experimental-http2',
     'experimental-redfish-multi-computer-system',
     'google-api',
     'host-serial-socket',
-    'http-body-limit',
-    'https_port',
     'ibm-management-console',
     'insecure-disable-auth',
     'insecure-disable-csrf',
@@ -66,7 +61,6 @@ feature_options = [
     'insecure-tftp-update',
     'kvm',
     'mutual-tls-auth',
-    'mutual-tls-common-name-parsing',
     'redfish-aggregation',
     'redfish-allow-deprecated-power-thermal',
     'redfish-bmc-journal',
@@ -93,25 +87,31 @@ string_options = [
 ]
 
 int_options = [
-    'http-body-limit',
-    'https_port',
+    'http-body-limit'
 ]
 
-foreach option_key : feature_options
+feature_options_string = '\n//Feature options\n'
+string_options_string = '\n// String options\n'
+int_options_string = '\n// Integer options\n'
 
-    option_key_config = option_key.to_upper()
+foreach option_key : feature_options + string_options + int_options
+    option_key_config = 'BMCWEB_' + option_key.to_upper()
     option_key_config = option_key_config.replace('-', '_')
 
     message(option_key_config)
+
     opt = get_option(option_key)
     if string_options.contains(option_key)
+        string_options_string += 'constexpr std::string_view  ' + option_key_config + ' = "' + opt + '";\n'
     elif int_options.contains(option_key)
+        int_options_string += 'constexpr const int         ' + option_key_config + ' = ' + opt.to_string() + ';\n'
     else
+        feature_options_string += 'constexpr const bool        ' + option_key_config + ' = ' + opt.allowed().to_string() + ';\n'
         opt = opt.allowed().to_string()
     endif
-    conf_data.set(option_key_config, opt)
     summary(option_key, opt, section: 'Features')
 endforeach
+
 
 conf_data.set('MESON_INSTALL_PREFIX', get_option('prefix'))
 
@@ -128,6 +128,17 @@ loglvlopt = loglvlopt.to_upper()
 conf_data.set('LOGGING_LEVEL', loglvlopt)
 
 conf_data.set('TLS_CACERT_PATH', get_option('tls-cacert-path') )
+
+string_options_string += 'constexpr std::string_view  BMCWEB_LOGGING_LEVEL' + ' = "' + loglvlopt + '";\n'
+
+# NBD proxy is disabled due to lack of maintenance.  See meson_options.txt
+feature_options_string += 'constexpr const bool        BMCWEB_VM_NBDPROXY = false;\n'
+
+conf_data.set(
+    'BMCWEB_OPTIONS',
+    string_options_string + int_options_string + feature_options_string,
+)
+
 conf_h_dep = declare_dependency(
     include_directories: include_directories('.'),
     sources: configure_file(
@@ -145,6 +156,9 @@ configure_file(
                install_dir: systemd_system_unit_dir,
                configuration: conf_data,
     install: true,
+    configuration: configuration_data({
+        'BMCWEB_HTTPS_PORT': get_option('https_port'),
+    }),
 )
 
 configure_file(
@@ -153,6 +167,9 @@ configure_file(
                install_dir: systemd_system_unit_dir,
                configuration: conf_data,
     install: true,
+    configuration: configuration_data({
+        'MESON_INSTALL_PREFIX': get_option('prefix'),
+    }),
 )
 
 # Copy pam-webserver to etc/pam.d

@@ -3250,8 +3250,6 @@ inline void
 }
 
 /**
-=======
->>>>>>> master
  * Handle the PATCH operation of the AppliedOperatingConfig property. Do basic
  * validation of the input data, and then set the D-Bus property.
  *
@@ -5118,8 +5116,6 @@ inline void
 inline void getConnectedProcessorPorts(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& portPath, std::vector<std::string>& portNames)
-=======
->>>>>>> master
 {
     // This is for when the ports are connected to another processor
     crow::connections::systemBus->async_method_call(

@@ -1174,9 +1174,6 @@ void operationNotAllowed(crow::Response& res);
 nlohmann::json actionParameterValueError(const std::string& arg1,
                                          const std::string& arg2);
 
-void actionParameterValueError(crow::Response& res, const std::string& arg1,
-                               const std::string& arg2);
-
 /**
  * @brief Formats ResourceErrorsDetected message into JSON
  * Message body: "The resource property <arg1> has detected errors of type

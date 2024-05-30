@@ -378,13 +378,6 @@ nlohmann::json actionParameterValueError(const std::string& arg1,
                        "request if the operation failed."}};
 }
 
-void actionParameterValueError(crow::Response& res, const std::string& arg1,
-                               const std::string& arg2)
-{
-    res.result(boost::beast::http::status::bad_request);
-    addMessageToErrorJson(res.jsonValue, actionParameterValueError(arg1, arg2));
-}
-
 /**
  * @internal
  * @brief Formats ResourceCannotBeDeleted message into JSON

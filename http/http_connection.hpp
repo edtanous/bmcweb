@@ -27,6 +27,7 @@
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/write.hpp>
+#include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/url/url_view.hpp>
 #include <json_html_serializer.hpp>
@@ -284,19 +285,20 @@ class Connection :
         if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
         {
             if constexpr (!BMCWEB_INSECURE_DISABLE_AUTH)
+            {
                 if (persistent_data::getConfig().isTLSAuthEnabled())
                 {
-                    if (!crow::authentication::isOnAllowlist(req.url().path(),
-                                                             req.method()) &&
-                        req.session == nullptr)
+                    if (!crow::authentication::isOnAllowlist(req->url().path(),
+                                                             req->method()) &&
+                        req->session == nullptr)
                     {
                         BMCWEB_LOG_WARNING("Authentication failed");
                         forward_unauthorized::sendUnauthorized(
-                            req.url().encoded_path(),
-                            req.getHeaderValue("X-Requested-With"),
-                            req.getHeaderValue("Accept"), res);
+                            req->url().encoded_path(),
+                            req->getHeaderValue("X-Requested-With"),
+                            req->getHeaderValue("Accept"), res);
 
-                        std::string user = getUser(req);
+                        std::string user = getUser(*req);
                         if (user.empty())
                         {
                             completeRequest(res);
@@ -310,12 +312,12 @@ class Connection :
                                 crow::Response& thisRes) {
                             self->completeRequest(thisRes);
                         });
-                        redfish::handleAccountLocked(user, asyncResp, req);
+                        redfish::handleAccountLocked(user, asyncResp, *req);
                         return;
                     }
                 }
+            }
         }
-    }
         auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
         BMCWEB_LOG_DEBUG("Setting completion handler");
         asyncResp->res.setCompleteRequestHandler(
@@ -348,7 +350,7 @@ class Connection :
             handler->handleUpgrade(req, asyncResp, std::move(adaptor));
             return;
         }
-        std::string url(req.target());
+        std::string url(req->target());
         std::size_t dumpPos = url.rfind("Dump");
         std::string_view expected =
             req->getHeaderValue(boost::beast::http::field::if_none_match);
@@ -594,7 +596,7 @@ class Connection :
 
             if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
             {
-                if constexpr (!BMCWEB_INSECURE_DISABLE_AUTHX)
+                if constexpr (!BMCWEB_INSECURE_DISABLE_AUTH)
                 {
                     if (persistent_data::getConfig().isTLSAuthEnabled())
                     {
