@@ -179,6 +179,8 @@ class Connection :
 
         startDeadline();
 
+        readClientIp();
+
         // TODO(ed) Abstract this to a more clever class with the idea of an
         // asynchronous "start"
         if constexpr (IsTls<Adaptor>::value)
@@ -321,7 +323,7 @@ class Connection :
             handler->handleUpgrade(req, asyncResp, std::move(adaptor));
             return;
         }
-        std::string url(req.target());
+        std::string url(req->target());
         std::size_t dumpPos = url.rfind("Dump");
         std::string_view expected =
             req->getHeaderValue(boost::beast::http::field::if_none_match);
@@ -399,7 +401,7 @@ class Connection :
         {
             return;
         }
-        req.ipAddress = ip;
+        req->ipAddress = ip;
     }
 
     boost::system::error_code getClientIp(boost::asio::ip::address& ip)
@@ -693,6 +695,9 @@ class Connection :
 
     Adaptor adaptor;
     Handler* handler;
+
+    boost::asio::ip::address ip;
+
     // Making this a std::optional allows it to be efficiently destroyed and
     // re-created on Connection reset
     std::optional<boost::beast::http::request_parser<bmcweb::HttpBody>> parser;
