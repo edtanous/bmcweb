@@ -33,6 +33,7 @@
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "generated/enums/update_service.hpp"
+#include "multipart_parser.hpp"
 #include "ossl_random.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"

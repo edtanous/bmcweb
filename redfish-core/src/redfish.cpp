@@ -45,7 +45,7 @@
 #include "thermal_metrics.hpp"
 #include "thermal_subsystem.hpp"
 #include "trigger.hpp"
-//#include "update_service.hpp"
+#include "update_service.hpp"
 #include "virtual_media.hpp"
 #include "nvidia_oem_dpu.hpp"
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
@@ -148,12 +148,12 @@ RedfishService::RedfishService(App& app)
 
     if constexpr (BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES)
     {
-        // requestRoutesSplitUpdateService(app);
+        requestRoutesSplitUpdateService(app);
     }
-    // #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
-    // defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
-    //     requestRoutesUpdateServiceActionsSimpleUpdate(app);
-    // #endif
+    #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+        requestRoutesUpdateServiceActionsSimpleUpdate(app);
+    #endif
 
     requestRoutesChassisDrive(app);
     requestRoutesChassisDriveName(app);
@@ -408,7 +408,7 @@ RedfishService::RedfishService(App& app)
     requestRoutesServiceConditions(app);
     requestRoutesChassisControls(app);
     requestRoutesChassisControlsCollection(app);
-    // requestRoutesUpdateServiceCommitImage(app);
+    requestRoutesUpdateServiceCommitImage(app);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
     requestRoutesNvidiaOemBf(app);
@@ -417,8 +417,8 @@ RedfishService::RedfishService(App& app)
 #endif
     requestRoutesTrustedComponents(app);
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
-    // requestRoutesUpdateServicePublicKeyExchange(app);
-    // requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
+    requestRoutesUpdateServicePublicKeyExchange(app);
+    requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
 #endif
 
     // Note, this must be the last route registered
