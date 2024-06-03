@@ -2032,6 +2032,10 @@ inline void requestRoutesUpdateService(App& app)
         // This is "Wrong" per the standard, but is done temporarily to
         // avoid noise in failing tests as people transition to having this
         // option disabled
+        if (!asyncResp->res.getHeaderValue("Allow").empty())
+        {
+            asyncResp->res.clearHeader(boost::beast::http::field::allow);
+        }
         asyncResp->res.addHeader(boost::beast::http::field::allow,
                                  "GET, PATCH, HEAD");
 #endif
