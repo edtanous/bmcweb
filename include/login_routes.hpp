@@ -8,7 +8,6 @@
 #include "webassets.hpp"
 
 #include <boost/container/flat_set.hpp>
-#include <common.hpp>
 #include <http_request.hpp>
 #include <http_response.hpp>
 #include <pam_authenticate.hpp>
