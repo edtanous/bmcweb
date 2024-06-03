@@ -150,14 +150,14 @@ RedfishService::RedfishService(App& app)
     {
         // requestRoutesSplitUpdateService(app);
     }
-    #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
-    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
-        requestRoutesUpdateServiceActionsSimpleUpdate(app);
-    #endif
+    // #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
+    // defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+    //     requestRoutesUpdateServiceActionsSimpleUpdate(app);
+    // #endif
 
     requestRoutesChassisDrive(app);
     requestRoutesChassisDriveName(app);
-    // requestRoutesUpdateService(app);
+    requestRoutesUpdateService(app);
     requestRoutesStorageCollection(app);
     requestRoutesStorage(app);
     requestRoutesStorageControllerCollection(app);
@@ -165,10 +165,8 @@ RedfishService::RedfishService(App& app)
     requestRoutesDrive(app);
     requestRoutesCable(app);
     requestRoutesCableCollection(app);
-    // requestRoutesSoftwareInventoryCollection(app);
-    // requestRoutesSoftwareInventory(app);
-    // requestRoutesInventorySoftwareCollection(app);
-    // requestRoutesInventorySoftware(app);
+    requestRoutesInventorySoftwareCollection(app);
+    requestRoutesInventorySoftware(app);
     requestRoutesSystemLogServiceCollection(app);
     requestRoutesEventLogService(app);
     requestRoutesPostCodesEntryAdditionalData(app);
