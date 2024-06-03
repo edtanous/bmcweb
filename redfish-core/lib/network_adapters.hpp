@@ -496,7 +496,7 @@ inline void handleGet(App& app, const crow::Request& req,
         "xyz.openbmc_project.Network.EthernetInterface"};
 
     crow::connections::systemBus->async_method_call(
-        [asyncResp, interfaces, chassisId, id,
+        [asyncResp, chassisId, id,
          isNDF](const boost::system::error_code ec,
                 const crow::openbmc_mapper::GetSubTreeType& subtree) {
         std::string dpuString = "host0";

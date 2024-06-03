@@ -2172,12 +2172,13 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                               "/LogServices/SEL";
         logServiceArray.push_back(std::move(selLog));
 #endif
-#ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
-        nlohmann::json::object_t dumpLog;
-        dumpLog["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                               "/LogServices/Dump";
-        logServiceArray.push_back(std::move(dumpLog));
-#endif
+        if constexpr (BMCWEB_REDFISH_DUMP_LOG)
+        {
+            nlohmann::json::object_t dumpLog;
+            dumpLog["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                   "/LogServices/Dump";
+            logServiceArray.push_back(std::move(dumpLog));
+        }
 
 #ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
         nlohmann::json::object_t fdrLog;
@@ -4004,50 +4005,51 @@ inline void handleBMCLogServicesCollectionGet(
 
     asyncResp->res.jsonValue["Members@odata.count"] = logServiceArray.size();
 
-#ifdef BMCWEB_ENABLE_REDFISH_DUMP_LOG
-    constexpr std::array<std::string_view, 1> interfaces = {
-        "xyz.openbmc_project.Collection.DeleteAll"};
-    dbus::utility::getSubTreePaths(
-        "/xyz/openbmc_project/dump", 0, interfaces,
-        [asyncResp](
-            const boost::system::error_code& ec,
-            const dbus::utility::MapperGetSubTreePathsResponse& subTreePaths) {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR(
-                "handleBMCLogServicesCollectionGet respHandler got error {}",
-                ec);
-            // Assume that getting an error simply means there are no dump
-            // LogServices. Return without adding any error response.
-            return;
-        }
-
-        nlohmann::json& logServiceArrayLocal =
-            asyncResp->res.jsonValue["Members"];
-
-        for (const std::string& path : subTreePaths)
-        {
-            if (path == "/xyz/openbmc_project/dump/bmc")
+    if constexpr (BMCWEB_REDFISH_DUMP_LOG)
+    {
+        constexpr std::array<std::string_view, 1> interfaces = {
+            "xyz.openbmc_project.Collection.DeleteAll"};
+        dbus::utility::getSubTreePaths(
+            "/xyz/openbmc_project/dump", 0, interfaces,
+            [asyncResp](const boost::system::error_code& ec,
+                        const dbus::utility::MapperGetSubTreePathsResponse&
+                            subTreePaths) {
+            if (ec)
             {
-                logServiceArrayLocal.push_back(
-                    {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
-                                   "/LogServices/Dump"}});
+                BMCWEB_LOG_ERROR(
+                    "handleBMCLogServicesCollectionGet respHandler got error {}",
+                    ec);
+                // Assume that getting an error simply means there are no dump
+                // LogServices. Return without adding any error response.
+                return;
             }
-            else if (path == "/xyz/openbmc_project/dump/faultlog")
+
+            nlohmann::json& logServiceArrayLocal =
+                asyncResp->res.jsonValue["Members"];
+
+            for (const std::string& path : subTreePaths)
             {
+                if (path == "/xyz/openbmc_project/dump/bmc")
+                {
+                    logServiceArrayLocal.push_back(
+                        {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID
+                                       "/LogServices/Dump"}});
+                }
+                else if (path == "/xyz/openbmc_project/dump/faultlog")
+                {
 #ifndef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
-                nlohmann::json::object_t member;
-                member["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                                      "/LogServices/FaultLog";
-                logServiceArrayLocal.emplace_back(std::move(member));
+                    nlohmann::json::object_t member;
+                    member["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
+                                          "/LogServices/FaultLog";
+                    logServiceArrayLocal.emplace_back(std::move(member));
 #endif
+                }
             }
-        }
 
-        asyncResp->res.jsonValue["Members@odata.count"] =
-            logServiceArrayLocal.size();
-    });
-#endif
+            asyncResp->res.jsonValue["Members@odata.count"] =
+                logServiceArrayLocal.size();
+        });
+    }
 }
 
 inline void requestRoutesBMCLogServiceCollection(App& app)

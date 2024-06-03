@@ -110,15 +110,14 @@ int run()
         }
     }
 
-    if constexpr (BMCWEB_ENABLE_REDFISH_DUMP_LOG)
+    if constexpr (BMCWEB_REDFISH_DUMP_LOG)
     {
         crow::obmc_dump::requestRoutes(app);
     }
 
-    if constexpr (BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS)
-    {
-        tal::TelemetryAggregator::namespaceInit(tal::ProcessType::Client);
-    }
+#ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
+    tal::TelemetryAggregator::namespaceInit(tal::ProcessType::Client);
+#endif
 
     bmcweb::registerUserRemovedSignal();
 
