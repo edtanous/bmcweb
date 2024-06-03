@@ -2121,7 +2121,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
         std::string parentInterface;
         if (!crow::utility::readUrlSegments(
-                *parsedUri, "redfish", "v1", "Managers", "bmc",
+                *parsedUri, "redfish", "v1", "Managers", PLATFORMBMCID,
                 "EthernetInterfaces", std::ref(parentInterface)))
         {
             messages::propertyValueNotInList(
