@@ -129,8 +129,8 @@ static void generateMessageRegistry(
         return;
     }
 
-    // Severity & Resolution can be overwritten by caller. Using the one defined in the
-    // message registries by default.
+    // Severity & Resolution can be overwritten by caller. Using the one defined
+    // in the message registries by default.
     std::string sev;
     if (severity.size() == 0)
     {
@@ -186,15 +186,18 @@ static void generateMessageRegistry(
                 {"Resolution", res},
                 {"Resolved", resolved}};
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    if ( !eventId.empty() || !deviceName.empty()) {
+    if (!eventId.empty() || !deviceName.empty())
+    {
         nlohmann::json oem = {
-            {"Oem", 
-            {{"Nvidia", 
-            {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-        if (!deviceName.empty()) {
+            {"Oem",
+             {{"Nvidia",
+               {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+        if (!deviceName.empty())
+        {
             oem["Oem"]["Nvidia"]["Device"] = deviceName;
         }
-        if (!eventId.empty()) {
+        if (!eventId.empty())
+        {
             oem["Oem"]["Nvidia"]["ErrorId"] = eventId;
         }
         logEntry.update(oem);
@@ -639,15 +642,15 @@ inline log_entry::OriginatorTypes
 inline void parseDumpEntryFromDbusObject(
     const dbus::utility::ManagedObjectType::value_type& object,
     std::string& dumpStatus, uint64_t& size, uint64_t& timestampUs,
-    std::string& faultLogDiagnosticDataType, std::string& notificationType, std::string& sectionType,
-    std::string& fruid, std::string& severity, std::string& nvipSignature,
-    std::string& nvSeverity, std::string& nvSocketNumber,
-    std::string& pcieVendorID, std::string& pcieDeviceID,
-    std::string& pcieClassCode, std::string& pcieFunctionNumber,
-    std::string& pcieDeviceNumber, std::string& pcieSegmentNumber,
-    std::string& pcieDeviceBusNumber, std::string& pcieSecondaryBusNumber,
-    std::string& pcieSlotNumber, std::string& originatorId,
-    log_entry::OriginatorTypes& originatorType,
+    std::string& faultLogDiagnosticDataType, std::string& notificationType,
+    std::string& sectionType, std::string& fruid, std::string& severity,
+    std::string& nvipSignature, std::string& nvSeverity,
+    std::string& nvSocketNumber, std::string& pcieVendorID,
+    std::string& pcieDeviceID, std::string& pcieClassCode,
+    std::string& pcieFunctionNumber, std::string& pcieDeviceNumber,
+    std::string& pcieSegmentNumber, std::string& pcieDeviceBusNumber,
+    std::string& pcieSecondaryBusNumber, std::string& pcieSlotNumber,
+    std::string& originatorId, log_entry::OriginatorTypes& originatorType,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     for (const auto& interfaceMap : object.second)
@@ -1091,9 +1094,9 @@ inline void
 
             parseDumpEntryFromDbusObject(
                 object, dumpStatus, size, timestampUs,
-                faultLogDiagnosticDataType, notificationType, sectionType, fruid, severity,
-                nvipSignature, nvSeverity, nvSocketNumber, pcieVendorID,
-                pcieDeviceID, pcieClassCode, pcieFunctionNumber,
+                faultLogDiagnosticDataType, notificationType, sectionType,
+                fruid, severity, nvipSignature, nvSeverity, nvSocketNumber,
+                pcieVendorID, pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
                 pcieSecondaryBusNumber, pcieSlotNumber, originatorId,
                 originatorType, asyncResp);
@@ -1139,8 +1142,8 @@ inline void
             {
                 thisEntry["DiagnosticDataType"] = "OEM";
                 thisEntry["OEMDiagnosticDataType"] = "FDR";
-                thisEntry["AdditionalDataURI"] =
-                    boost::urls::format("{}{}/attachment", entriesPath, entryID);
+                thisEntry["AdditionalDataURI"] = boost::urls::format(
+                    "{}{}/attachment", entriesPath, entryID);
                 thisEntry["AdditionalDataSizeBytes"] = size;
             }
             else if (dumpType == "FaultLog")
@@ -1148,7 +1151,8 @@ inline void
                 std::string messageId = "Platform.1.0.PlatformError";
                 thisEntry["MessageId"] = messageId;
 
-                const registries::Message* msg = registries::getMessage(messageId);
+                const registries::Message* msg =
+                    registries::getMessage(messageId);
                 if (msg != nullptr)
                 {
                     thisEntry["Message"] = msg->message;
@@ -1349,9 +1353,9 @@ inline void
 
             parseDumpEntryFromDbusObject(
                 objectPath, dumpStatus, size, timestampUs,
-                faultLogDiagnosticDataType, notificationType, sectionType, fruid, severity,
-                nvipSignature, nvSeverity, nvSocketNumber, pcieVendorID,
-                pcieDeviceID, pcieClassCode, pcieFunctionNumber,
+                faultLogDiagnosticDataType, notificationType, sectionType,
+                fruid, severity, nvipSignature, nvSeverity, nvSocketNumber,
+                pcieVendorID, pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
                 pcieSecondaryBusNumber, pcieSlotNumber, originatorId,
                 originatorType, asyncResp);
@@ -1429,7 +1433,8 @@ inline void
                 std::string messageId = "Platform.1.0.PlatformError";
                 asyncResp->res.jsonValue["MessageId"] = messageId;
 
-                const registries::Message* msg = registries::getMessage(messageId);
+                const registries::Message* msg =
+                    registries::getMessage(messageId);
                 if (msg != nullptr)
                 {
                     asyncResp->res.jsonValue["Message"] = msg->message;
@@ -1461,69 +1466,66 @@ inline void
                     asyncResp->res.jsonValue["CPER"]["Oem"]["NvIpSignature"] =
                         nvipSignature;
                 }
-                    if (nvSeverity != "NA")
-                    {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["NvSeverity"] =
-                            nvSeverity;
-                    }
-                    if (nvSocketNumber != "NA")
-                    {
-                        asyncResp->res
-                            .jsonValue["CPER"]["Oem"]["NvSocketNumber"] =
-                            nvSocketNumber;
-                    }
-                    if (pcieVendorID != "NA")
-                    {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]
-                                                ["PCIeVendorId"] = pcieVendorID;
-                    }
-                    if (pcieDeviceID != "NA")
-                    {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]
-                                                ["PCIeDeviceId"] = pcieDeviceID;
-                    }
-                    if (pcieClassCode != "NA")
-                    {
-                        asyncResp->res
-                            .jsonValue["CPER"]["Oem"]["PCIeClassCode"] =
-                            pcieClassCode;
-                    }
-                    if (pcieFunctionNumber != "NA")
-                    {
-                        asyncResp->res
-                            .jsonValue["CPER"]["Oem"]["PCIeFunctionNumber"] =
-                            pcieFunctionNumber;
-                    }
-                    if (pcieDeviceNumber != "NA")
-                    {
-                        asyncResp->res
-                            .jsonValue["CPER"]["Oem"]["PCIeDeviceNumber"] =
-                            pcieDeviceNumber;
-                    }
-                    if (pcieSegmentNumber != "NA")
-                    {
-                        asyncResp->res
-                            .jsonValue["CPER"]["Oem"]["PCIeSegmentNumber"] =
-                            pcieSegmentNumber;
-                    }
-                    if (pcieDeviceBusNumber != "NA")
-                    {
-                        asyncResp->res
-                            .jsonValue["CPER"]["Oem"]["PCIeDeviceBusNumber"] =
-                            pcieDeviceBusNumber;
-                    }
-                    if (pcieSecondaryBusNumber != "NA")
-                    {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]
-                                                ["PCIeSecondaryBusNumber"] =
-                            pcieSecondaryBusNumber;
-                    }
-                    if (pcieSlotNumber != "NA")
-                    {
-                        asyncResp->res
-                            .jsonValue["CPER"]["Oem"]["PCIeSlotNumber"] =
-                            pcieSlotNumber;
-                    }
+                if (nvSeverity != "NA")
+                {
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["NvSeverity"] =
+                        nvSeverity;
+                }
+                if (nvSocketNumber != "NA")
+                {
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["NvSocketNumber"] =
+                        nvSocketNumber;
+                }
+                if (pcieVendorID != "NA")
+                {
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeVendorId"] =
+                        pcieVendorID;
+                }
+                if (pcieDeviceID != "NA")
+                {
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeDeviceId"] =
+                        pcieDeviceID;
+                }
+                if (pcieClassCode != "NA")
+                {
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeClassCode"] =
+                        pcieClassCode;
+                }
+                if (pcieFunctionNumber != "NA")
+                {
+                    asyncResp->res
+                        .jsonValue["CPER"]["Oem"]["PCIeFunctionNumber"] =
+                        pcieFunctionNumber;
+                }
+                if (pcieDeviceNumber != "NA")
+                {
+                    asyncResp->res
+                        .jsonValue["CPER"]["Oem"]["PCIeDeviceNumber"] =
+                        pcieDeviceNumber;
+                }
+                if (pcieSegmentNumber != "NA")
+                {
+                    asyncResp->res
+                        .jsonValue["CPER"]["Oem"]["PCIeSegmentNumber"] =
+                        pcieSegmentNumber;
+                }
+                if (pcieDeviceBusNumber != "NA")
+                {
+                    asyncResp->res
+                        .jsonValue["CPER"]["Oem"]["PCIeDeviceBusNumber"] =
+                        pcieDeviceBusNumber;
+                }
+                if (pcieSecondaryBusNumber != "NA")
+                {
+                    asyncResp->res
+                        .jsonValue["CPER"]["Oem"]["PCIeSecondaryBusNumber"] =
+                        pcieSecondaryBusNumber;
+                }
+                if (pcieSlotNumber != "NA")
+                {
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeSlotNumber"] =
+                        pcieSlotNumber;
+                }
             }
         }
 
@@ -1618,7 +1620,8 @@ inline void
     }
 
     // Make sure we know how to process the retrieved entry attachment
-    if ((downloadEntryType != "BMC") && (downloadEntryType != "System") && (downloadEntryType != "FDR"))
+    if ((downloadEntryType != "BMC") && (downloadEntryType != "System") &&
+        (downloadEntryType != "FDR"))
     {
         BMCWEB_LOG_ERROR("downloadEntryCallback() invalid entry type: {}",
                          downloadEntryType);
@@ -1650,7 +1653,8 @@ inline void
         asyncResp->res.addHeader(
             boost::beast::http::field::content_transfer_encoding, "Base64");
         return;
-    } else if (downloadEntryType == "FDR")
+    }
+    else if (downloadEntryType == "FDR")
     {
         if (!asyncResp->res.openFd(fd, bmcweb::EncodingType::Raw))
         {
@@ -3032,13 +3036,22 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         redfish::time_utils::getDateTimeStdtime(
                             updateTimestamp);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    if ( (eventId != nullptr && !eventId->empty()) || !deviceName.empty()) {
-                        nlohmann::json oem = {{"Oem", {{"Nvidia", {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-                        if (!deviceName.empty()) {
+                    if ((eventId != nullptr && !eventId->empty()) ||
+                        !deviceName.empty())
+                    {
+                        nlohmann::json oem = {
+                            {"Oem",
+                             {{"Nvidia",
+                               {{"@odata.type",
+                                 "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+                        if (!deviceName.empty())
+                        {
                             oem["Oem"]["Nvidia"]["Device"] = deviceName;
                         }
-                        if (eventId != nullptr && !eventId->empty()) {
-                            oem["Oem"]["Nvidia"]["ErrorId"] = std::string(*eventId);
+                        if (eventId != nullptr && !eventId->empty())
+                        {
+                            oem["Oem"]["Nvidia"]["ErrorId"] =
+                                std::string(*eventId);
                         }
                         thisEntry.update(oem);
                     }
@@ -3234,15 +3247,20 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 asyncResp->res.jsonValue["Modified"] =
                     redfish::time_utils::getDateTimeUintMs(*updateTimestamp);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                if ( (eventId != nullptr && !eventId->empty()) || !deviceName.empty()) {
+                if ((eventId != nullptr && !eventId->empty()) ||
+                    !deviceName.empty())
+                {
                     nlohmann::json oem = {
                         {"Oem",
-                        {{"Nvidia",
-                        {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-                    if (!deviceName.empty()) {
+                         {{"Nvidia",
+                           {{"@odata.type",
+                             "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+                    if (!deviceName.empty())
+                    {
                         oem["Oem"]["Nvidia"]["Device"] = deviceName;
                     }
-                    if (eventId != nullptr && !eventId->empty()) {
+                    if (eventId != nullptr && !eventId->empty())
+                    {
                         oem["Oem"]["Nvidia"]["ErrorId"] = std::string(*eventId);
                     }
                     asyncResp->res.jsonValue.update(oem);
@@ -3537,15 +3555,19 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
         thisEntry["Modified"] =
             redfish::time_utils::getDateTimeStdtime(updateTimestamp);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        if ( (eventId != nullptr && !eventId->empty()) || !deviceName.empty()) {
+        if ((eventId != nullptr && !eventId->empty()) || !deviceName.empty())
+        {
             nlohmann::json oem = {
                 {"Oem",
-                {{"Nvidia",
-                {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-            if (!deviceName.empty()) {
+                 {{"Nvidia",
+                   {{"@odata.type",
+                     "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+            if (!deviceName.empty())
+            {
                 oem["Oem"]["Nvidia"]["Device"] = deviceName;
             }
-            if (eventId != nullptr && !eventId->empty()) {
+            if (eventId != nullptr && !eventId->empty())
+            {
                 oem["Oem"]["Nvidia"]["ErrorId"] = std::string(*eventId);
             }
             thisEntry.update(oem);
@@ -5370,7 +5392,7 @@ inline void requestRoutesSystemFDREntry(App& app)
     });
 }
 
-inline void requestRoutesSystemFDREntryDownload(App &app)
+inline void requestRoutesSystemFDREntryDownload(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/FDR/Entries/<str>/attachment/")
@@ -5379,7 +5401,6 @@ inline void requestRoutesSystemFDREntryDownload(App &app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& entryID) {
-
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -5387,16 +5408,16 @@ inline void requestRoutesSystemFDREntryDownload(App &app)
 
         auto downloadDumpEntryHandler =
             [asyncResp, entryID](const boost::system::error_code& ec,
-                       const sdbusplus::message::unix_fd& unixfd) {
+                                 const sdbusplus::message::unix_fd& unixfd) {
             downloadEntryCallback(asyncResp, entryID, "FDR", ec, unixfd);
         };
 
-        sdbusplus::message::object_path entry("/xyz/openbmc_project/dump/fdr/entry");
+        sdbusplus::message::object_path entry(
+            "/xyz/openbmc_project/dump/fdr/entry");
         entry /= entryID;
         crow::connections::systemBus->async_method_call(
             std::move(downloadDumpEntryHandler),
-            "xyz.openbmc_project.Dump.Manager",
-            entry,
+            "xyz.openbmc_project.Dump.Manager", entry,
             "xyz.openbmc_project.Dump.Entry", "GetFileHandle");
     });
 }
@@ -6874,8 +6895,10 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
                     std::pair<std::string, std::vector<std::string>>>&
                     connectionNames = object.second;
                 const std::string& connectionName = connectionNames[0].first;
-                
-                BMCWEB_LOG_DEBUG("XID Looking for PrettyName on service {} path {}", connectionName, path);
+
+                BMCWEB_LOG_DEBUG(
+                    "XID Looking for PrettyName on service {} path {}",
+                    connectionName, path);
                 sdbusplus::asio::getProperty<std::string>(
                     *crow::connections::systemBus, connectionName, path,
                     "xyz.openbmc_project.Inventory.Item", "PrettyName",
@@ -6884,11 +6907,13 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
                         const std::string& chassisName) {
                     if (!ec)
                     {
-                        BMCWEB_LOG_DEBUG("XID Looking for Namespace on {}_XID", chassisName);
+                        BMCWEB_LOG_DEBUG("XID Looking for Namespace on {}_XID",
+                                         chassisName);
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, chassisId(std::string(chassisId))](
                                 const boost::system::error_code ec,
-                                const std::tuple<uint32_t, uint64_t>& /*reqData*/) {
+                                const std::tuple<uint32_t,
+                                                 uint64_t>& /*reqData*/) {
                             if (!ec)
                             {
                                 nlohmann::json& logServiceArray =
@@ -7400,16 +7425,26 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                     updateTimestamp);
                                         }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                                        if ( (eventId != nullptr && !eventId->empty()) || !deviceName.empty()) {
+                                        if ((eventId != nullptr &&
+                                             !eventId->empty()) ||
+                                            !deviceName.empty())
+                                        {
                                             nlohmann::json oem = {
                                                 {"Oem",
-                                                {{"Nvidia",
-                                                {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-                                            if (!deviceName.empty()) {
-                                                oem["Oem"]["Nvidia"]["Device"] = deviceName;
+                                                 {{"Nvidia",
+                                                   {{"@odata.type",
+                                                     "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+                                            if (!deviceName.empty())
+                                            {
+                                                oem["Oem"]["Nvidia"]["Device"] =
+                                                    deviceName;
                                             }
-                                            if (eventId != nullptr && !eventId->empty()) {
-                                                oem["Oem"]["Nvidia"]["ErrorId"] = std::string(*eventId);
+                                            if (eventId != nullptr &&
+                                                !eventId->empty())
+                                            {
+                                                oem["Oem"]["Nvidia"]
+                                                   ["ErrorId"] =
+                                                       std::string(*eventId);
                                             }
                                             thisEntry.update(oem);
                                         }
@@ -7632,42 +7667,52 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             return;
         }
 
-        int index = 0;
-        std::string matchString;
-        if (oemDiagnosticDataType == "DebugTokenStatus")
+        debug_token::RequestType type;
+        if (oemDiagnosticDataType != "DebugTokenStatus")
         {
-            matchString = "0";
-        }
-        else
-        {
-            index = redfish::debug_token::getMeasurementIndex(
-                oemDiagnosticDataType);
-            if (index < 0)
+            if (oemDiagnosticDataType == "GetDebugTokenRequest")
+            {
+                type = debug_token::RequestType::DebugTokenRequest;
+            }
+#ifdef BMCWEB_ENABLE_DOT
+            else if (oemDiagnosticDataType == "GetDOTCAKUnlockTokenRequest")
+            {
+                type = debug_token::RequestType::DOTCAKUnlockTokenRequest;
+            }
+            else if (oemDiagnosticDataType == "GetDOTEnableTokenRequest")
+            {
+                type = debug_token::RequestType::DOTEnableTokenRequest;
+            }
+            else if (oemDiagnosticDataType == "GetDOTSignTestToken")
+            {
+                type = debug_token::RequestType::DOTSignTestToken;
+            }
+            else if (oemDiagnosticDataType == "GetDOTOverrideTokenRequest")
+            {
+                type = debug_token::RequestType::DOTOverrideTokenRequest;
+            }
+#endif
+            else
             {
                 BMCWEB_LOG_ERROR("Unsupported OEMDiagnosticDataType: {}",
                                  oemDiagnosticDataType);
                 messages::actionParameterValueFormatError(
                     asyncResp->res, oemDiagnosticDataType,
                     "OEMDiagnosticDataType", "CollectDiagnosticData");
-                return;
             }
-            matchString =
-                "type='signal',interface='org.freedesktop.DBus.Properties',"
-                "member='PropertiesChanged',"
-                "path_namespace='/xyz/openbmc_project/SPDM'";
         }
 
         static std::unique_ptr<debug_token::OperationHandler> op;
         if (op)
         {
-            messages::serviceTemporarilyUnavailable(asyncResp->res, "20");
+            messages::serviceTemporarilyUnavailable(
+                asyncResp->res, std::to_string(debugTokenTaskTimeoutSec));
             return;
         }
 
         std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-            [](boost::system::error_code ec, sdbusplus::message_t& msg,
+            [](boost::system::error_code ec, sdbusplus::message_t&,
                const std::shared_ptr<task::TaskData>& taskData) {
-            bool completed = true;
             if (ec)
             {
                 BMCWEB_LOG_ERROR("Debug token operation task error: {}",
@@ -7680,19 +7725,14 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                 }
                 op.reset();
             }
-            else if (op)
-            {
-                completed = op->update(msg);
-                taskData->extendTimer(std::chrono::seconds(20));
-            }
-            return completed ? task::completed : !task::completed;
+            return op == nullptr ? task::completed : !task::completed;
         },
-            matchString);
+            "0");
 
         auto resultHandler =
             [oemDiagnosticDataType,
-             task](const std::shared_ptr<
-                   std::vector<debug_token::DebugTokenEndpoint>>& endpoints) {
+             task](const std::shared_ptr<std::vector<std::unique_ptr<
+                       debug_token::DebugTokenEndpoint>>>& endpoints) {
             std::string result;
             int totalEpCount = 0;
             int validEpCount = 0;
@@ -7702,7 +7742,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                 totalEpCount = static_cast<int>(endpoints->size());
                 for (const auto& ep : *endpoints)
                 {
-                    const auto& state = std::get<3>(ep);
+                    const auto& state = ep->getState();
                     if (oemDiagnosticDataType == "DebugTokenStatus")
                     {
                         if (state == debug_token::EndpointState::StatusAcquired)
@@ -7719,10 +7759,9 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                             ++validEpCount;
                         }
                     }
-                    const auto& mctpEp = std::get<0>(ep);
-                    const auto spdmObject = mctpEp.getSpdmObject();
+                    const auto& objectName = ep->getObject();
                     const auto deviceName =
-                        sdbusplus::message::object_path(spdmObject).filename();
+                        sdbusplus::message::object_path(objectName).filename();
                     std::string stateDesc;
                     switch (state)
                     {
@@ -7754,7 +7793,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                             stateDesc = "Invalid state";
                             task->messages.emplace_back(
                                 messages::resourceErrorsDetectedFormatError(
-                                    spdmObject, stateDesc));
+                                    objectName, stateDesc));
                             break;
                     }
                 }
@@ -7797,10 +7836,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             task->finishTask();
             task->sendTaskEvent(task->state, task->index);
             boost::asio::post(crow::connections::systemBus->get_io_context(),
-                              [task] {
-                task->match.reset();
-                op.reset();
-            });
+                              [task] { op.reset(); });
         };
         auto errorHandler = [task](bool critical, const std::string& desc,
                                    const std::string& error) {
@@ -7815,10 +7851,8 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                 task->finishTask();
                 task->sendTaskEvent(task->state, task->index);
                 boost::asio::post(
-                    crow::connections::systemBus->get_io_context(), [task] {
-                    task->match.reset();
-                    op.reset();
-                });
+                    crow::connections::systemBus->get_io_context(),
+                    [] { op.reset(); });
             }
         };
 
@@ -7830,7 +7864,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
         else
         {
             op = std::make_unique<debug_token::RequestHandler>(
-                resultHandler, errorHandler, index);
+                resultHandler, errorHandler, type);
         }
         task->payload.emplace(req);
         task->populateResp(asyncResp->res);
