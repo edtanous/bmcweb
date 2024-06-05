@@ -2,8 +2,8 @@
 
 #include "registries/base_message_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
-#include "str_utility.hpp"
 #include "registries_selector.hpp"
+#include "str_utility.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -21,8 +21,8 @@ const Message* getMessageFromRegistry(const std::string& messageKey,
 {
     std::span<const MessageEntry>::iterator messageIt = std::ranges::find_if(
         registry, [&messageKey](const MessageEntry& messageEntry) {
-            return std::strcmp(messageEntry.first, messageKey.c_str()) == 0;
-        });
+        return std::strcmp(messageEntry.first, messageKey.c_str()) == 0;
+    });
     if (messageIt != registry.end())
     {
         return &messageIt->second;
@@ -39,7 +39,7 @@ const Message* getMessage(std::string_view messageID)
     if (messageID.empty())
     {
         return nullptr;
-    }    
+    }
     std::vector<std::string> fields;
     fields.reserve(4);
     bmcweb::split(fields, messageID, '.');

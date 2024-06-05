@@ -40,8 +40,8 @@
 #include <boost/beast/http/write.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/url/format.hpp>
-#include <dbus_singleton.hpp>
 #include <boost/url/url_view_base.hpp>
+#include <dbus_singleton.hpp>
 #include <sdbusplus/bus/match.hpp>
 #include <utils/dbus_log_utils.hpp>
 #include <utils/json_utils.hpp>
@@ -1082,7 +1082,7 @@ class EventServiceManager
 
             if constexpr (!BMCWEB_REDFISH_DBUS_LOG)
             {
-            cacheRedfishLogFile();
+                cacheRedfishLogFile();
             }
 
             // Update retry configuration.
@@ -1189,9 +1189,9 @@ class EventServiceManager
             }
             else
             {
-            BMCWEB_LOG_DEBUG("Remove old eventservice config");
+                BMCWEB_LOG_DEBUG("Remove old eventservice config");
+            }
         }
-    }
     }
 
     void updateSubscriptionData() const
@@ -1403,10 +1403,10 @@ class EventServiceManager
 
         if constexpr (!BMCWEB_REDFISH_DBUS_LOG)
         {
-        if (redfishLogFilePosition != 0)
-        {
-            cacheRedfishLogFile();
-        }
+            if (redfishLogFilePosition != 0)
+            {
+                cacheRedfishLogFile();
+            }
         }
         // Update retry configuration.
         subValue->updateRetryConfig(retryAttempts, retryTimeoutInterval);
@@ -2225,12 +2225,13 @@ class EventServiceManager
                         {
                             deviceName = additional["DEVICE_NAME"];
                         }
-                        //convert SEL SENSOR_PATH to RF OriginOfCondition
+                        // convert SEL SENSOR_PATH to RF OriginOfCondition
                         if (additional.count("SENSOR_PATH") == 1)
                         {
                             originOfCondition = additional["SENSOR_PATH"];
                         }
-                        if (additional.count("REDFISH_ORIGIN_OF_CONDITION") == 1)
+                        if (additional.count("REDFISH_ORIGIN_OF_CONDITION") ==
+                            1)
                         {
                             originOfCondition =
                                 additional["REDFISH_ORIGIN_OF_CONDITION"];
@@ -2415,7 +2416,8 @@ class EventServiceManager
                 {
                     for (auto& it : dBusToResourceType)
                     {
-                        if (originOfCondition.find(it.first) != std::string::npos)
+                        if (originOfCondition.find(it.first) !=
+                            std::string::npos)
                         {
                             resourceType = it.second;
                             break;
@@ -2429,7 +2431,8 @@ class EventServiceManager
                 else
                 {
                     BMCWEB_LOG_ERROR(
-                        "no OriginOfCondition in event log. MsgId: ", messageId);
+                        "no OriginOfCondition in event log. MsgId: ",
+                        messageId);
                     sendEventWithOOC(std::string{""}, event);
                 }
             }

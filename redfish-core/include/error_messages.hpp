@@ -478,7 +478,7 @@ void propertyValueConflict(crow::Response& res, std::string_view arg1,
  * @returns Message PropertyValueResourceConflict to JSON */
 nlohmann::json
     propertyValueResourceConflict(std::string_view arg1,
-                                             const nlohmann::json& arg2,
+                                  const nlohmann::json& arg2,
                                   const boost::urls::url_view_base& arg3);
 
 void propertyValueResourceConflict(crow::Response& res, std::string_view arg1,
@@ -720,7 +720,7 @@ void actionParameterNotSupported(crow::Response& res, std::string_view arg1,
  * @returns Message SourceDoesNotSupportProtocol formatted to JSON */
 nlohmann::json
     sourceDoesNotSupportProtocol(const boost::urls::url_view_base& arg1,
-                                            std::string_view arg2);
+                                 std::string_view arg2);
 
 void sourceDoesNotSupportProtocol(crow::Response& res,
                                   const boost::urls::url_view_base& arg1,

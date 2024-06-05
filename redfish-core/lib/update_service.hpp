@@ -689,8 +689,10 @@ inline void doTftpUpdate(const crow::Request& req,
         {
             BMCWEB_LOG_DEBUG("Call to DownloaViaTFTP Success");
         }
-    }, "xyz.openbmc_project.Software.Download", "/xyz/openbmc_project/software",
-        "xyz.openbmc_project.Common.TFTP", "DownloadViaTFTP", path, host);
+    },
+        "xyz.openbmc_project.Software.Download",
+        "/xyz/openbmc_project/software", "xyz.openbmc_project.Common.TFTP",
+        "DownloadViaTFTP", path, host);
 }
 
 inline void handleUpdateServiceSimpleUpdateAction(
@@ -885,7 +887,8 @@ inline void handleUpdateServiceSimpleUpdateAction(
                     {
                         BMCWEB_LOG_DEBUG("Call to DownloadViaSCP Success");
                     }
-                }, "xyz.openbmc_project.Software.Download",
+                },
+                    "xyz.openbmc_project.Software.Download",
                     "/xyz/openbmc_project/software",
                     "xyz.openbmc_project.Common.SCP", "DownloadViaSCP", host,
                     *username, path, *targetPath);
@@ -1090,7 +1093,8 @@ inline void validateUpdatePolicyCallback(
         }
 
         uploadImageFile(req, asyncResp);
-    }, objInfo[0].first, "/xyz/openbmc_project/software",
+    },
+        objInfo[0].first, "/xyz/openbmc_project/software",
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Software.UpdatePolicy", "Targets",
         dbus::utility::DbusVariantType(targets));
@@ -2431,7 +2435,8 @@ inline void handleUpdateServicePatch(
                         messages::internalError(asyncResp->res);
                     }
                     messages::success(asyncResp->res);
-                }, objInfo[0].first, "/xyz/openbmc_project/software",
+                },
+                    objInfo[0].first, "/xyz/openbmc_project/software",
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.Software.UpdatePolicy", "Targets",
                     dbus::utility::DbusVariantType(httpPushUriTargets));
@@ -3250,7 +3255,8 @@ inline void computeDigest(const crow::Request& req,
                 computeDigestInProgress = false;
                 return;
             }
-        }, hashComputeService, hashComputeObjPath, hashComputeInterface,
+        },
+            hashComputeService, hashComputeObjPath, hashComputeInterface,
             "GetHash", retimerId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -4337,7 +4343,8 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
                 "xyz.openbmc_project.Software.Download",
                 "/xyz/openbmc_project/software",
                 "xyz.openbmc_project.Common.SCP", "GenerateSelfKeyPair");
-        }, "xyz.openbmc_project.Software.Download",
+        },
+            "xyz.openbmc_project.Software.Download",
             "/xyz/openbmc_project/software", "xyz.openbmc_project.Common.SCP",
             "AddRemoteServerPublicKey", remoteServerIP, remoteServerKeyString);
     });
@@ -4396,7 +4403,8 @@ inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
                 BMCWEB_LOG_DEBUG(
                     "Call to RevokeAllRemoteServerPublicKeys succeeded");
             }
-        }, "xyz.openbmc_project.Software.Download",
+        },
+            "xyz.openbmc_project.Software.Download",
             "/xyz/openbmc_project/software", "xyz.openbmc_project.Common.SCP",
             "RevokeAllRemoteServerPublicKeys", remoteServerIP);
     });

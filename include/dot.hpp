@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,8 @@ class DotCommandHandler
                       const std::vector<uint8_t>& data,
                       ResultCallback&& resultCallback,
                       ErrorCallback&& errorCallback, int timeoutSec = 3) :
-        resCallback(resultCallback), errCallback(errorCallback)
+        resCallback(resultCallback),
+        errCallback(errorCallback)
     {
         mctp_utils::enumerateMctpEndpoints(
             [this, command, data, timeoutSec](

@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -435,7 +435,8 @@ inline void handleCertificateCollectionPost(
                         messages::internalError(aResp->res);
                         return;
                     }
-                }, getServiceName(databaseId), objectPath,
+                },
+                    getServiceName(databaseId), objectPath,
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.Common.UUID", "UUID",
                     dbus::utility::DbusVariantType(*owner));
@@ -579,7 +580,8 @@ inline void
                 return;
             }
             aResp->res.result(boost::beast::http::status::no_content);
-        }, getServiceName(databaseId), getCertObjectPath(databaseId, certId),
+        },
+            getServiceName(databaseId), getCertObjectPath(databaseId, certId),
             "xyz.openbmc_project.Object.Delete", "Delete");
     });
 }
@@ -715,7 +717,8 @@ inline void handleSignatureCollectionPost(
                         messages::internalError(aResp->res);
                         return;
                     }
-                }, getServiceName(databaseId), objectPath,
+                },
+                    getServiceName(databaseId), objectPath,
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.Common.UUID", "UUID",
                     dbus::utility::DbusVariantType(*owner));
@@ -839,7 +842,8 @@ inline void
                 return;
             }
             aResp->res.result(boost::beast::http::status::no_content);
-        }, getServiceName(databaseId), getSigObjectPath(databaseId, sigId),
+        },
+            getServiceName(databaseId), getSigObjectPath(databaseId, sigId),
             "xyz.openbmc_project.Object.Delete", "Delete");
     });
 }

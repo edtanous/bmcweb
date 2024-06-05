@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -343,8 +343,10 @@ inline void setOemBaseboardChassisAssert(
                     }
                     messages::success(aResp->res);
                     BMCWEB_LOG_DEBUG("Set CHASSIS_PART_NUMBER done.");
-                }, fruObject, fruPath, "org.freedesktop.DBus.Properties", "Set",
-                    "xyz.openbmc_project.FruDevice", "CHASSIS_PART_NUMBER",
+                },
+                    fruObject, fruPath, "org.freedesktop.DBus.Properties",
+                    "Set", "xyz.openbmc_project.FruDevice",
+                    "CHASSIS_PART_NUMBER",
                     dbus::utility::DbusVariantType(value));
             }
             else if (prop == "SerialNumber")
@@ -361,8 +363,10 @@ inline void setOemBaseboardChassisAssert(
                     }
                     messages::success(aResp->res);
                     BMCWEB_LOG_DEBUG("Set CHASSIS_SERIAL_NUMBER done.");
-                }, fruObject, fruPath, "org.freedesktop.DBus.Properties", "Set",
-                    "xyz.openbmc_project.FruDevice", "CHASSIS_SERIAL_NUMBER",
+                },
+                    fruObject, fruPath, "org.freedesktop.DBus.Properties",
+                    "Set", "xyz.openbmc_project.FruDevice",
+                    "CHASSIS_SERIAL_NUMBER",
                     dbus::utility::DbusVariantType(value));
             }
         },
@@ -1183,7 +1187,7 @@ inline void getIntrusionByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         asyncResp->res.jsonValue["PhysicalSecurity"]["IntrusionSensorNumber"] =
             1;
         asyncResp->res.jsonValue["PhysicalSecurity"]["IntrusionSensor"] = value;
-        });
+    });
 }
 
 /**
@@ -1216,7 +1220,7 @@ inline void
                 return;
             }
         }
-        });
+    });
 }
 
 } // namespace nvidia_chassis_utils

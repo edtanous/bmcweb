@@ -33,7 +33,7 @@ namespace redfish
 inline void afterIfMatchRequest(
     crow::App& app, const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::shared_ptr<crow::Request>& req, const std::string& ifMatchHeader,
-                        const crow::Response& resIn)
+    const crow::Response& resIn)
 {
     std::string computedEtag = resIn.computeEtag();
     BMCWEB_LOG_DEBUG("User provided if-match etag {} computed etag {}",

@@ -120,7 +120,8 @@ struct PendingRequest
     PendingRequest(
         boost::beast::http::request<bmcweb::HttpBody>&& reqIn,
         const std::function<void(bool, uint32_t, Response&)>& callbackIn) :
-        req(std::move(reqIn)), callback(callbackIn)
+        req(std::move(reqIn)),
+        callback(callbackIn)
     {}
 };
 
@@ -904,7 +905,8 @@ class HttpClient
     HttpClient() = delete;
     explicit HttpClient(boost::asio::io_context& iocIn,
                         const std::shared_ptr<ConnectionPolicy>& connPolicyIn) :
-        ioc(iocIn), connPolicy(connPolicyIn)
+        ioc(iocIn),
+        connPolicy(connPolicyIn)
     {}
 
     HttpClient(const HttpClient&) = delete;

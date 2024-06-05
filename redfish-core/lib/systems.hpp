@@ -43,9 +43,9 @@
 #include <sdbusplus/message.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 #include <utils/istmode_utils.hpp>
+#include <utils/nvidia_systems_util.hpp>
 #include <utils/privilege_utils.hpp>
 #include <utils/sw_utils.hpp>
-#include <utils/nvidia_systems_util.hpp>
 
 #include <array>
 #include <memory>
@@ -166,7 +166,8 @@ inline void getProcessorProperties(
     const uint16_t* coreCount = nullptr;
 
     const bool success = sdbusplus::unpackPropertiesNoThrow(
-        dbus_utils::UnpackErrorPrinter(), properties, "CoreCount", coreCount, "Family", family);
+        dbus_utils::UnpackErrorPrinter(), properties, "CoreCount", coreCount,
+        "Family", family);
 
     if (!success)
     {
@@ -457,77 +458,77 @@ inline void afterSystemGetSubTree(
     const boost::system::error_code& ec,
     const dbus::utility::MapperGetSubTreeResponse& subtree)
 {
-        if (ec)
+    if (ec)
+    {
+        BMCWEB_LOG_ERROR("DBUS response error {}", ec);
+        messages::internalError(asyncResp->res);
+        return;
+    }
+    // Iterate over all retrieved ObjectPaths.
+    for (const std::pair<
+             std::string,
+             std::vector<std::pair<std::string, std::vector<std::string>>>>&
+             object : subtree)
+    {
+        const std::string& path = object.first;
+        BMCWEB_LOG_DEBUG("Got path: {}", path);
+        const std::vector<std::pair<std::string, std::vector<std::string>>>&
+            connectionNames = object.second;
+        if (connectionNames.empty())
         {
-            BMCWEB_LOG_ERROR("DBUS response error {}", ec);
-            messages::internalError(asyncResp->res);
+            BMCWEB_LOG_ERROR("getComputerSystem DBUS response error");
             return;
         }
-        // Iterate over all retrieved ObjectPaths.
-        for (const std::pair<
-                 std::string,
-                 std::vector<std::pair<std::string, std::vector<std::string>>>>&
-                 object : subtree)
+
+        // This is not system, so check if it's cpu, dimm, UUID or
+        // BiosVer
+        for (const auto& connection : connectionNames)
         {
-            const std::string& path = object.first;
-            BMCWEB_LOG_DEBUG("Got path: {}", path);
-            const std::vector<std::pair<std::string, std::vector<std::string>>>&
-                connectionNames = object.second;
-            if (connectionNames.empty())
+            for (const auto& interfaceName : connection.second)
             {
-                BMCWEB_LOG_ERROR("getComputerSystem DBUS response error");
-                return;
-            }
-
-            // This is not system, so check if it's cpu, dimm, UUID or
-            // BiosVer
-            for (const auto& connection : connectionNames)
-            {
-                for (const auto& interfaceName : connection.second)
-                {
                 if (interfaceName == "xyz.openbmc_project.Inventory.Item.Dimm")
-                    {
-                        BMCWEB_LOG_DEBUG("Found Dimm, now get its properties.");
+                {
+                    BMCWEB_LOG_DEBUG("Found Dimm, now get its properties.");
 
-                        getMemorySummary(asyncResp, connection.first, path);
-                    }
-                    else if (interfaceName ==
-                             "xyz.openbmc_project.Inventory.Item.Cpu")
-                    {
-                        BMCWEB_LOG_DEBUG("Found Cpu, now get its properties.");
+                    getMemorySummary(asyncResp, connection.first, path);
+                }
+                else if (interfaceName ==
+                         "xyz.openbmc_project.Inventory.Item.Cpu")
+                {
+                    BMCWEB_LOG_DEBUG("Found Cpu, now get its properties.");
 
-                        getProcessorSummary(asyncResp, connection.first, path);
-                    }
-                    else if (interfaceName == "xyz.openbmc_project.Common.UUID")
-                    {
-                        BMCWEB_LOG_DEBUG("Found UUID, now get its properties.");
+                    getProcessorSummary(asyncResp, connection.first, path);
+                }
+                else if (interfaceName == "xyz.openbmc_project.Common.UUID")
+                {
+                    BMCWEB_LOG_DEBUG("Found UUID, now get its properties.");
 
-                        sdbusplus::asio::getAllProperties(
+                    sdbusplus::asio::getAllProperties(
                         *crow::connections::systemBus, connection.first, path,
                         "xyz.openbmc_project.Common.UUID",
-                            [asyncResp](const boost::system::error_code& ec3,
-                                        const dbus::utility::DBusPropertiesMap&
-                                            properties) {
-                        afterGetUUID(asyncResp, ec3, properties);
-                        });
-                    }
-                    else if (interfaceName ==
-                             "xyz.openbmc_project.Inventory.Item.System")
-                    {
-                        sdbusplus::asio::getAllProperties(
-                        *crow::connections::systemBus, connection.first, path,
-                            "xyz.openbmc_project.Inventory.Decorator.Asset",
                         [asyncResp](const boost::system::error_code& ec3,
-                                        const dbus::utility::DBusPropertiesMap&
+                                    const dbus::utility::DBusPropertiesMap&
+                                        properties) {
+                        afterGetUUID(asyncResp, ec3, properties);
+                    });
+                }
+                else if (interfaceName ==
+                         "xyz.openbmc_project.Inventory.Item.System")
+                {
+                    sdbusplus::asio::getAllProperties(
+                        *crow::connections::systemBus, connection.first, path,
+                        "xyz.openbmc_project.Inventory.Decorator.Asset",
+                        [asyncResp](const boost::system::error_code& ec3,
+                                    const dbus::utility::DBusPropertiesMap&
                                         properties) {
                         afterGetInventory(asyncResp, ec3, properties);
-                        });
+                    });
 
-                        sdbusplus::asio::getProperty<std::string>(
+                    sdbusplus::asio::getProperty<std::string>(
                         *crow::connections::systemBus, connection.first, path,
-                            "xyz.openbmc_project.Inventory.Decorator."
-                            "AssetTag",
-                            "AssetTag",
+                        "xyz.openbmc_project.Inventory.Decorator."
+                        "AssetTag",
+                        "AssetTag",
                         std::bind_front(afterGetAssetTag, asyncResp));
                 }
             }
@@ -544,7 +545,7 @@ inline void afterSystemGetSubTree(
  */
 inline void
     getComputerSystem(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-                            {
+{
     BMCWEB_LOG_DEBUG("Get available system components.");
     constexpr std::array<std::string_view, 5> interfaces = {
         "xyz.openbmc_project.Inventory.Decorator.Asset",
@@ -2030,8 +2031,9 @@ inline void
                                        property);
             return;
         }
-    }, entityMangerService, card1Path, "org.freedesktop.DBus.Properties", "Set",
-        interface, property, dbus::utility::DbusVariantType(value));
+    },
+        entityMangerService, card1Path, "org.freedesktop.DBus.Properties",
+        "Set", interface, property, dbus::utility::DbusVariantType(value));
 }
 
 /**
@@ -2366,7 +2368,7 @@ inline void
     setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
                     sdbusplus::message::object_path(
                         "/xyz/openbmc_project/logging/settings"),
-        "xyz.openbmc_project.Logging.Settings", "QuiesceOnHwError",
+                    "xyz.openbmc_project.Logging.Settings", "QuiesceOnHwError",
                     "Boot/StopBootOnFault", *stopBootEnabled);
 }
 
@@ -2669,7 +2671,7 @@ inline computer_system::PowerMode
         return PowerMode::MaximumPerformance;
     }
     if (modeString ==
-             "xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving")
+        "xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving")
     {
         return PowerMode::PowerSaving;
     }
@@ -2736,7 +2738,7 @@ inline void
                 translatePowerModeString(aMode);
             if (modeValue == computer_system::PowerMode::Invalid)
             {
-        messages::internalError(asyncResp->res);
+                messages::internalError(asyncResp->res);
                 continue;
             }
             modeList.emplace_back(modeValue);
@@ -3107,7 +3109,7 @@ inline void
         setDbusProperty(asyncResp, "xyz.openbmc_project.Watchdog",
                         sdbusplus::message::object_path(
                             "/xyz/openbmc_project/watchdog/host0"),
-            "xyz.openbmc_project.State.Watchdog", "ExpireAction",
+                        "xyz.openbmc_project.State.Watchdog", "ExpireAction",
                         "HostWatchdogTimer/TimeoutAction", wdtTimeOutActStr);
     }
 
@@ -3355,7 +3357,7 @@ inline void
         if (ipsEnterUtil)
         {
             setDbusProperty(asyncResp, service, path,
-                "xyz.openbmc_project.Control.Power.IdlePowerSaver",
+                            "xyz.openbmc_project.Control.Power.IdlePowerSaver",
                             "EnterUtilizationPercent",
                             "IdlePowerSaver/EnterUtilizationPercent",
                             *ipsEnterUtil);
@@ -3365,7 +3367,7 @@ inline void
             // Convert from seconds into milliseconds for DBus
             const uint64_t timeMilliseconds = *ipsEnterTime * 1000;
             setDbusProperty(asyncResp, service, path,
-                "xyz.openbmc_project.Control.Power.IdlePowerSaver",
+                            "xyz.openbmc_project.Control.Power.IdlePowerSaver",
                             "EnterDwellTime",
                             "IdlePowerSaver/EnterDwellTimeSeconds",
                             timeMilliseconds);
@@ -3373,7 +3375,7 @@ inline void
         if (ipsExitUtil)
         {
             setDbusProperty(asyncResp, service, path,
-                "xyz.openbmc_project.Control.Power.IdlePowerSaver",
+                            "xyz.openbmc_project.Control.Power.IdlePowerSaver",
                             "ExitUtilizationPercent",
                             "IdlePowerSaver/ExitUtilizationPercent",
                             *ipsExitUtil);
@@ -3383,7 +3385,7 @@ inline void
             // Convert from seconds into milliseconds for DBus
             const uint64_t timeMilliseconds = *ipsExitTime * 1000;
             setDbusProperty(asyncResp, service, path,
-                "xyz.openbmc_project.Control.Power.IdlePowerSaver",
+                            "xyz.openbmc_project.Control.Power.IdlePowerSaver",
                             "ExitDwellTime",
                             "IdlePowerSaver/ExitDwellTimeSeconds",
                             timeMilliseconds);
@@ -3595,7 +3597,8 @@ inline void doNMI(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
             return;
         }
         messages::success(asyncResp->res);
-    }, serviceName, objectPath, interfaceName, method);
+    },
+        serviceName, objectPath, interfaceName, method);
 }
 
 inline void handleComputerSystemResetActionPost(
@@ -3870,8 +3873,7 @@ inline void
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["ProcessorSummary"]["Count"] = 0;
 #endif // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-    asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] =
-        int(0);
+    asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] = int(0);
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID;
 
@@ -3938,12 +3940,12 @@ inline void
 
     if constexpr (BMCWEB_KVM)
     {
-    // Fill in GraphicalConsole info
-    asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] = true;
+        // Fill in GraphicalConsole info
+        asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] = true;
         asyncResp->res.jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] =
             4;
-    asyncResp->res.jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
-        nlohmann::json::array_t({"KVMIP"});
+        asyncResp->res.jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
+            nlohmann::json::array_t({"KVMIP"});
     }
 
     getMainChassisId(asyncResp,
@@ -3969,8 +3971,12 @@ inline void
     getSecureBoot(asyncResp);
     populateFromEntityManger(asyncResp);
     getUefiPropertySettingsHost(asyncResp, true);
-    asyncResp->res.jsonValue["Boot"]["BootOrderPropertySelection"] = "BootOrder";
-    asyncResp->res.jsonValue["Boot"]["BootSourceOverrideEnabled@Redfish.AllowableValues"] = {"Once", "Continuous", "Disabled"};
+    asyncResp->res.jsonValue["Boot"]["BootOrderPropertySelection"] =
+        "BootOrder";
+    asyncResp->res
+        .jsonValue["Boot"]
+                  ["BootSourceOverrideEnabled@Redfish.AllowableValues"] = {
+        "Once", "Continuous", "Disabled"};
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
     pcie_util::getPCIeDeviceList(asyncResp,
                                  nlohmann::json::json_pointer("/PCIeDevices"));

@@ -276,36 +276,36 @@ inline bool parseThreshold(crow::Response& res,
                            std::string_view dbusThresholdName,
                            std::vector<NumericThresholdParams>& parsedParams)
 {
-        double reading = 0.0;
-        std::string activation;
-        std::string dwellTimeStr;
+    double reading = 0.0;
+    std::string activation;
+    std::string dwellTimeStr;
 
     if (!json_util::readJsonObject(threshold, res, "Reading", reading,
-                                 "Activation", activation, "DwellTime",
-                                 dwellTimeStr))
-        {
-            return false;
-        }
+                                   "Activation", activation, "DwellTime",
+                                   dwellTimeStr))
+    {
+        return false;
+    }
 
-        std::string dbusActivation = toDbusActivation(activation);
+    std::string dbusActivation = toDbusActivation(activation);
 
-        if (dbusActivation.empty())
-        {
-            messages::propertyValueIncorrect(res, "Activation", activation);
-            return false;
-        }
+    if (dbusActivation.empty())
+    {
+        messages::propertyValueIncorrect(res, "Activation", activation);
+        return false;
+    }
 
-        std::optional<std::chrono::milliseconds> dwellTime =
-            time_utils::fromDurationString(dwellTimeStr);
-        if (!dwellTime)
-        {
-            messages::propertyValueIncorrect(res, "DwellTime", dwellTimeStr);
-            return false;
-        }
+    std::optional<std::chrono::milliseconds> dwellTime =
+        time_utils::fromDurationString(dwellTimeStr);
+    if (!dwellTime)
+    {
+        messages::propertyValueIncorrect(res, "DwellTime", dwellTimeStr);
+        return false;
+    }
 
-        parsedParams.emplace_back(dbusThresholdName,
-                                  static_cast<uint64_t>(dwellTime->count()),
-                                  dbusActivation, reading);
+    parsedParams.emplace_back(dbusThresholdName,
+                              static_cast<uint64_t>(dwellTime->count()),
+                              dbusActivation, reading);
     return true;
 }
 
@@ -522,17 +522,17 @@ inline bool parseLinks(crow::Response& res,
 {
     ctx.reports.reserve(metricReportDefinitions.size());
     for (const std::string& reportDefinionUri : metricReportDefinitions)
+    {
+        std::optional<sdbusplus::message::object_path> reportPath =
+            getReportPathFromReportDefinitionUri(reportDefinionUri);
+        if (!reportPath)
         {
-            std::optional<sdbusplus::message::object_path> reportPath =
-                getReportPathFromReportDefinitionUri(reportDefinionUri);
-            if (!reportPath)
-            {
-                messages::propertyValueIncorrect(res, "MetricReportDefinitions",
-                                                 reportDefinionUri);
-                return false;
-            }
-            ctx.reports.emplace_back(*reportPath);
+            messages::propertyValueIncorrect(res, "MetricReportDefinitions",
+                                             reportDefinionUri);
+            return false;
         }
+        ctx.reports.emplace_back(*reportPath);
+    }
     return true;
 }
 
@@ -1083,8 +1083,9 @@ inline void requestRoutesTrigger(App& app)
             }
 
             asyncResp->res.result(boost::beast::http::status::no_content);
-        }, telemetry::service, triggerPath, "xyz.openbmc_project.Object.Delete",
-            "Delete");
+        },
+            telemetry::service, triggerPath,
+            "xyz.openbmc_project.Object.Delete", "Delete");
     });
 }
 

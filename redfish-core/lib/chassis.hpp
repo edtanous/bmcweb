@@ -144,21 +144,21 @@ inline void getChassisState(std::shared_ptr<bmcweb::AsyncResp> asyncResp)
  */
 inline void handlePhysicalSecurityGetSubTree(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-            const boost::system::error_code& ec,
+    const boost::system::error_code& ec,
     const dbus::utility::MapperGetSubTreeResponse& subtree)
 {
-        if (ec)
+    if (ec)
+    {
+        // do not add err msg in redfish response, because this is not
+        //     mandatory property
+        BMCWEB_LOG_INFO("DBUS error: no matched iface {}", ec);
+        return;
+    }
+    // Iterate over all retrieved ObjectPaths.
+    for (const auto& object : subtree)
+    {
+        if (!object.second.empty())
         {
-            // do not add err msg in redfish response, because this is not
-            //     mandatory property
-            BMCWEB_LOG_INFO("DBUS error: no matched iface {}", ec);
-            return;
-        }
-        // Iterate over all retrieved ObjectPaths.
-        for (const auto& object : subtree)
-        {
-            if (!object.second.empty())
-            {
             const auto& service = object.second.front();
 
             BMCWEB_LOG_DEBUG("Get intrusion status by service ");
@@ -182,9 +182,9 @@ inline void handlePhysicalSecurityGetSubTree(
                     .jsonValue["PhysicalSecurity"]["IntrusionSensor"] = value;
             });
 
-                return;
-            }
+            return;
         }
+    }
 }
 
 inline void handleChassisCollectionGet(
@@ -412,24 +412,24 @@ inline void handleDecoratorAssetProperties(
 
     if constexpr (BMCWEB_REDFISH_ALLOW_DEPRECATED_POWER_THERMAL)
     {
-    asyncResp->res.jsonValue["Thermal"]["@odata.id"] =
-        boost::urls::format("/redfish/v1/Chassis/{}/Thermal", chassisId);
-    // Power object
-    asyncResp->res.jsonValue["Power"]["@odata.id"] =
-        boost::urls::format("/redfish/v1/Chassis/{}/Power", chassisId);
+        asyncResp->res.jsonValue["Thermal"]["@odata.id"] =
+            boost::urls::format("/redfish/v1/Chassis/{}/Thermal", chassisId);
+        // Power object
+        asyncResp->res.jsonValue["Power"]["@odata.id"] =
+            boost::urls::format("/redfish/v1/Chassis/{}/Power", chassisId);
     }
 
     if constexpr (BMCWEB_REDFISH_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM)
     {
-    asyncResp->res.jsonValue["ThermalSubsystem"]["@odata.id"] =
-        boost::urls::format("/redfish/v1/Chassis/{}/ThermalSubsystem",
-                            chassisId);
-    asyncResp->res.jsonValue["PowerSubsystem"]["@odata.id"] =
+        asyncResp->res.jsonValue["ThermalSubsystem"]["@odata.id"] =
+            boost::urls::format("/redfish/v1/Chassis/{}/ThermalSubsystem",
+                                chassisId);
+        asyncResp->res.jsonValue["PowerSubsystem"]["@odata.id"] =
             boost::urls::format("/redfish/v1/Chassis/{}/PowerSubsystem",
                                 chassisId);
-    asyncResp->res.jsonValue["EnvironmentMetrics"]["@odata.id"] =
-        boost::urls::format("/redfish/v1/Chassis/{}/EnvironmentMetrics",
-                            chassisId);
+        asyncResp->res.jsonValue["EnvironmentMetrics"]["@odata.id"] =
+            boost::urls::format("/redfish/v1/Chassis/{}/EnvironmentMetrics",
+                                chassisId);
     }
     // SensorCollection
     asyncResp->res.jsonValue["Sensors"]["@odata.id"] =
@@ -683,36 +683,33 @@ inline void handleChassisGetSubTree(
             }
         }
 
-
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
-            redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                                 chassisId);
+        redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                             chassisId);
 #endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            // Baseboard Chassis OEM properties if exist, search by association
-            redfish::nvidia_chassis_utils::getOemBaseboardChassisAssert(
-                asyncResp, objPath);
+        // Baseboard Chassis OEM properties if exist, search by association
+        redfish::nvidia_chassis_utils::getOemBaseboardChassisAssert(asyncResp,
+                                                                    objPath);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-            // Links association to underneath chassis
-            redfish::nvidia_chassis_utils::getChassisLinksContains(asyncResp,
-                                                                   objPath);
-            // Links association to underneath processors
-            redfish::nvidia_chassis_utils::getChassisProcessorLinks(asyncResp,
-                                                                    objPath);
-            // Links association to connected fabric switches
-            redfish::nvidia_chassis_utils::getChassisFabricSwitchesLinks(
-                asyncResp, objPath);
-            // Link association to parent chassis
-            redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
+        // Links association to underneath chassis
+        redfish::nvidia_chassis_utils::getChassisLinksContains(asyncResp,
                                                                objPath);
-            redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
-            return;
+        // Links association to underneath processors
+        redfish::nvidia_chassis_utils::getChassisProcessorLinks(asyncResp,
+                                                                objPath);
+        // Links association to connected fabric switches
+        redfish::nvidia_chassis_utils::getChassisFabricSwitchesLinks(asyncResp,
+                                                                     objPath);
+        // Link association to parent chassis
+        redfish::chassis_utils::getChassisLinksContainedBy(asyncResp, objPath);
+        redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
+        return;
     }
 
-        // Couldn't find an object with that name.  return an error
-        messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
-
+    // Couldn't find an object with that name.  return an error
+    messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
 }
 
 inline void
@@ -912,7 +909,7 @@ inline void
                 if (indicatorChassis)
                 {
                     setSystemLocationIndicatorActive(asyncResp,
-                                               *locationIndicatorActive);
+                                                     *locationIndicatorActive);
                 }
                 else
                 {
@@ -1225,7 +1222,8 @@ inline void handleOemChassisResetActionInfoPost(
                     messages::internalError(asyncResp->res);
                     return;
                 }
-            }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+            },
+                "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
                 "org.freedesktop.systemd1.Manager", "StartUnit",
                 "nvidia-aux-power.service", "replace");
         }

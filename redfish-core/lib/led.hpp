@@ -142,8 +142,7 @@ inline void
             asyncResp, "xyz.openbmc_project.LED.GroupManager",
             sdbusplus::message::object_path(
                 "/xyz/openbmc_project/led/groups/enclosure_identify"),
-            "xyz.openbmc_project.Led.Group", "Asserted", "IndicatorLED",
-            ledOn);
+            "xyz.openbmc_project.Led.Group", "Asserted", "IndicatorLED", ledOn);
     });
 }
 

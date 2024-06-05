@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@
 #pragma once
 
 #include <app.hpp>
-#include <query.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <openbmc_dbus_rest.hpp>
+#include <query.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
-#include <openbmc_dbus_rest.hpp>
 
 #include <iostream>
 #include <regex>

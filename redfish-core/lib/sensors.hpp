@@ -271,8 +271,9 @@ class SensorsAsyncResp
                      const std::string& chassisIdIn,
                      std::span<const std::string_view> typesIn,
                      std::string_view subNode) :
-        asyncResp(asyncRespIn), chassisId(chassisIdIn), types(typesIn),
-        chassisSubNode(subNode), efficientExpand(false)
+        asyncResp(asyncRespIn),
+        chassisId(chassisIdIn), types(typesIn), chassisSubNode(subNode),
+        efficientExpand(false)
     {}
 
     // Store extra data about sensor mapping and return it in callback
@@ -281,9 +282,9 @@ class SensorsAsyncResp
                      std::span<const std::string_view> typesIn,
                      std::string_view subNode,
                      DataCompleteCb&& creationComplete) :
-        asyncResp(asyncRespIn), chassisId(chassisIdIn), types(typesIn),
-        chassisSubNode(subNode), efficientExpand(false),
-        metadata{std::vector<SensorData>()},
+        asyncResp(asyncRespIn),
+        chassisId(chassisIdIn), types(typesIn), chassisSubNode(subNode),
+        efficientExpand(false), metadata{std::vector<SensorData>()},
         dataComplete{std::move(creationComplete)}
     {}
 
@@ -292,8 +293,9 @@ class SensorsAsyncResp
                      const std::string& chassisIdIn,
                      std::span<const std::string_view> typesIn,
                      const std::string_view& subNode, bool efficientExpandIn) :
-        asyncResp(asyncRespIn), chassisId(chassisIdIn), types(typesIn),
-        chassisSubNode(subNode), efficientExpand(efficientExpandIn)
+        asyncResp(asyncRespIn),
+        chassisId(chassisIdIn), types(typesIn), chassisSubNode(subNode),
+        efficientExpand(efficientExpandIn)
     {}
 
     ~SensorsAsyncResp()
@@ -488,8 +490,8 @@ void getConnections(std::shared_ptr<SensorsAsyncResp> sensorsAsyncResp,
     auto objectsWithConnectionCb =
         [callback = std::forward<Callback>(callback)](
             const std::set<std::string>& connections,
-                   const std::set<std::pair<std::string, std::string>>&
-                   /*objectsWithConnection*/) { callback(connections); };
+            const std::set<std::pair<std::string, std::string>>&
+            /*objectsWithConnection*/) { callback(connections); };
     getObjectsWithConnection(sensorsAsyncResp, sensorNames,
                              std::move(objectsWithConnectionCb));
 }
@@ -2846,8 +2848,8 @@ inline void setSensorsOverride(
         auto getObjectsWithConnectionCb =
             [sensorAsyncResp, overrideMap, propertyValueNameStr](
                 const std::set<std::string>& /*connections*/,
-                          const std::set<std::pair<std::string, std::string>>&
-                              objectsWithConnection) {
+                const std::set<std::pair<std::string, std::string>>&
+                    objectsWithConnection) {
             if (objectsWithConnection.size() != overrideMap.size())
             {
                 BMCWEB_LOG_INFO(

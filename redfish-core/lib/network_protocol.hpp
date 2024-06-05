@@ -280,11 +280,11 @@ inline void afterSetNTP(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         return;
     }
     asyncResp->res.result(boost::beast::http::status::no_content);
-    }
+}
 
 inline void handleNTPProtocolEnabled(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, bool ntpEnabled)
-        {
+{
     bool interactive = false;
     auto callback = [asyncResp](const boost::system::error_code& ec) {
         afterSetNTP(asyncResp, ec);

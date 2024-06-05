@@ -64,9 +64,9 @@ class Trie
 
   private:
     void optimizeNode(Node& node)
-        {
+    {
         if (node.stringParamChild != 0U)
-            {
+        {
             optimizeNode(nodes[node.stringParamChild]);
         }
         if (node.pathParamChild != 0U)
@@ -75,7 +75,7 @@ class Trie
         }
 
         if (node.children.empty())
-            {
+        {
             return;
         }
         while (true)
@@ -86,16 +86,16 @@ class Trie
             {
                 Node& child = nodes[kv.second];
                 if (child.isSimpleNode())
-            {
-                for (const Node::ChildMap::value_type& childKv :
-                         child.children)
                 {
-                    merged[kv.first + childKv.first] = childKv.second;
+                    for (const Node::ChildMap::value_type& childKv :
+                         child.children)
+                    {
+                        merged[kv.first + childKv.first] = childKv.second;
                         didMerge = true;
+                    }
                 }
-            }
-        else
-        {
+                else
+                {
                     merged[kv.first] = kv.second;
                 }
             }
@@ -124,7 +124,7 @@ class Trie
     }
 
     void findRouteIndexesHelper(std::string_view reqUrl,
-                          std::vector<unsigned>& routeIndexes,
+                                std::vector<unsigned>& routeIndexes,
                                 const Node& node) const
     {
         for (const Node::ChildMap::value_type& kv : node.children)
@@ -152,12 +152,12 @@ class Trie
 
     void findRouteIndexes(const std::string& reqUrl,
                           std::vector<unsigned>& routeIndexes) const
-        {
+    {
         findRouteIndexesHelper(reqUrl, routeIndexes, head());
-        }
+    }
 
     struct FindResult
-        {
+    {
         unsigned ruleIndex;
         std::vector<std::string> params;
     };
@@ -167,9 +167,9 @@ class Trie
                           std::vector<std::string>& params) const
     {
         if (reqUrl.empty())
-            {
+        {
             return {node.ruleIndex, params};
-            }
+        }
 
         if (node.stringParamChild != 0U)
         {
@@ -188,7 +188,7 @@ class Trie
                 FindResult ret = findHelper(
                     reqUrl.substr(epos), nodes[node.stringParamChild], params);
                 if (ret.ruleIndex != 0U)
-            {
+                {
                     return {ret.ruleIndex, std::move(ret.params)};
                 }
                 params.pop_back();
@@ -257,14 +257,14 @@ class Trie
                         param = &node.pathParamChild;
                     }
                     if (*param == 0U)
-                        {
+                    {
                         *param = newNode();
-                        }
+                    }
                     idx = *param;
 
                     url.remove_prefix(str1.size());
-                        break;
-                    }
+                    break;
+                }
                 if (found)
                 {
                     continue;
@@ -273,13 +273,13 @@ class Trie
                 BMCWEB_LOG_CRITICAL("Cant find tag for {}", url);
                 return;
             }
-                std::string piece(&c, 1);
+            std::string piece(&c, 1);
             if (!nodes[idx].children.contains(piece))
-                {
-                    unsigned newNodeIdx = newNode();
-                    nodes[idx].children.emplace(piece, newNodeIdx);
-                }
-                idx = nodes[idx].children[piece];
+            {
+                unsigned newNodeIdx = newNode();
+                nodes[idx].children.emplace(piece, newNodeIdx);
+            }
+            idx = nodes[idx].children[piece];
             url.remove_prefix(1);
         }
         if (nodes[idx].ruleIndex != 0U)
@@ -292,13 +292,13 @@ class Trie
 
   private:
     void debugNodePrint(Node& n, size_t level)
-        {
+    {
         std::string spaces(level, ' ');
         if (n.stringParamChild != 0U)
-            {
+        {
             BMCWEB_LOG_DEBUG("{}<str>", spaces);
             debugNodePrint(nodes[n.stringParamChild], level + 5);
-            }
+        }
         if (n.pathParamChild != 0U)
         {
             BMCWEB_LOG_DEBUG("{} <path>", spaces);

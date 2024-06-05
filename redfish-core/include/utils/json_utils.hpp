@@ -114,8 +114,8 @@ bool checkRange(const FromType& from [[maybe_unused]],
         if (std::isnan(from))
         {
             BMCWEB_LOG_DEBUG("Value for key {} was NAN", key);
-        return false;
-    }
+            return false;
+        }
     }
     if constexpr (std::numeric_limits<ToType>::max() <
                   std::numeric_limits<FromType>::max())
@@ -124,8 +124,8 @@ bool checkRange(const FromType& from [[maybe_unused]],
         {
             BMCWEB_LOG_DEBUG("Value for key {} was greater than max {}", key,
                              std::numeric_limits<FromType>::max());
-        return false;
-    }
+            return false;
+        }
     }
     if constexpr (std::numeric_limits<ToType>::lowest() >
                   std::numeric_limits<FromType>::lowest())
@@ -209,8 +209,8 @@ UnpackErrorCode unpackValueWithErrorCode(nlohmann::json& jsonValue,
         value = static_cast<Type>(*jsonPtr);
     }
 
-    else if constexpr ((std::is_unsigned_v<Type>) &&
-                       (!std::is_same_v<bool, Type>))
+    else if constexpr ((std::is_unsigned_v<Type>)&&(
+                           !std::is_same_v<bool, Type>))
     {
         uint64_t* jsonPtr = jsonValue.get_ptr<uint64_t*>();
         if (jsonPtr == nullptr)
@@ -499,7 +499,7 @@ inline bool readJsonHelper(nlohmann::json& jsonRequest, crow::Response& res,
 
 inline bool readJsonHelperObject(nlohmann::json::object_t& obj,
                                  crow::Response& res,
-                           std::span<PerUnpack> toUnpack)
+                                 std::span<PerUnpack> toUnpack)
 {
     bool result = true;
     for (auto& item : obj)
@@ -558,7 +558,8 @@ inline bool readJsonHelperObject(nlohmann::json::object_t& obj,
                     std::remove_pointer_t<std::decay_t<decltype(val)>>;
                 return details::unpackValue<ContainedT>(
                     item.second, unpackSpec.key, res, *val);
-            }, unpackSpec.value) &&
+            },
+                         unpackSpec.value) &&
                      result;
 
             unpackSpec.complete = true;
@@ -576,11 +577,13 @@ inline bool readJsonHelperObject(nlohmann::json::object_t& obj,
     {
         if (!perUnpack.complete)
         {
-            bool isOptional = std::visit([](auto&& val) {
+            bool isOptional = std::visit(
+                [](auto&& val) {
                 using ContainedType =
                     std::remove_pointer_t<std::decay_t<decltype(val)>>;
                 return details::IsOptional<ContainedType>::value;
-            }, perUnpack.value);
+            },
+                perUnpack.value);
             if (isOptional)
             {
                 continue;

@@ -35,7 +35,8 @@ class Server
            [[maybe_unused]] const std::shared_ptr<boost::asio::ssl::context>&
                adaptorCtxIn,
            std::shared_ptr<boost::asio::io_context> io) :
-        ioService(std::move(io)), acceptor(std::move(acceptorIn)),
+        ioService(std::move(io)),
+        acceptor(std::move(acceptorIn)),
         signals(*ioService, SIGINT, SIGTERM, SIGHUP), timer(*ioService),
         fileWatcher(), handler(handlerIn), adaptorCtx(std::move(adaptorCtxIn))
     {}
@@ -88,7 +89,6 @@ class Server
                                    boost::beast::ssl_stream<
                                        boost::asio::ip::tcp::socket>>::value)
         {
-        
             namespace fs = std::filesystem;
             // Cleanup older certificate file existing in the system
             fs::path oldCert = "/home/root/server.pem";

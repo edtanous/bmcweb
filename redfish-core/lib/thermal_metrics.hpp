@@ -1,9 +1,11 @@
 #pragma once
 
 #include "bmcweb_config.h"
+
 #include "sensors.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/time_utils.hpp"
+
 #include <utils/chassis_utils.hpp>
 
 namespace redfish

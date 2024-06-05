@@ -214,7 +214,8 @@ inline void getPropertiesForEnumerate(
         for (const auto& [name, value] : propertiesList)
         {
             nlohmann::json& propertyJson = objectJson[name];
-            std::visit([&propertyJson](auto&& val) {
+            std::visit(
+                [&propertyJson](auto&& val) {
                 if constexpr (std::is_same_v<std::decay_t<decltype(val)>,
                                              sdbusplus::message::unix_fd>)
                 {
@@ -224,7 +225,8 @@ inline void getPropertiesForEnumerate(
                 {
                     propertyJson = val;
                 }
-            }, value);
+            },
+                value);
         }
     });
 }
@@ -268,7 +270,8 @@ struct InProgressEnumerateData
     InProgressEnumerateData(
         const std::string& objectPathIn,
         const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        objectPath(objectPathIn), asyncResp(asyncRespIn)
+        objectPath(objectPathIn),
+        asyncResp(asyncRespIn)
     {}
 
     ~InProgressEnumerateData()
@@ -334,7 +337,8 @@ inline void getManagedObjectsForEnumerate(
                     {
                         nlohmann::json& propertyJson =
                             objectJson[property.first];
-                        std::visit([&propertyJson](auto&& val) {
+                        std::visit(
+                            [&propertyJson](auto&& val) {
                             if constexpr (std::is_same_v<
                                               std::decay_t<decltype(val)>,
                                               sdbusplus::message::unix_fd>)
@@ -345,7 +349,8 @@ inline void getManagedObjectsForEnumerate(
                             {
                                 propertyJson = val;
                             }
-                        }, property.second);
+                        },
+                            property.second);
                     }
                 }
             }
@@ -476,7 +481,8 @@ inline void getObjectAndEnumerate(
 struct InProgressActionData
 {
     explicit InProgressActionData(
-        const std::shared_ptr<bmcweb::AsyncResp>& res) : asyncResp(res)
+        const std::shared_ptr<bmcweb::AsyncResp>& res) :
+        asyncResp(res)
     {}
     ~InProgressActionData()
     {

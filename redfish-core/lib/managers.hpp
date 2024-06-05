@@ -400,7 +400,8 @@ inline void requestRoutesManagerResetToDefaultsAction(App& app)
                     // until a reboot Can't erase what the BMC
                     // is running on
                     doBMCGracefulRestart(asyncResp);
-                }, object.first, "/xyz/openbmc_project/software",
+                },
+                    object.first, "/xyz/openbmc_project/software",
                     ifnameFactoryReset, "Reset");
             }
         },
@@ -464,7 +465,8 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
                     // until a reboot Can't erase what the BMC
                     // is running on
                     doBMCGracefulRestart(asyncResp);
-                }, object.first, "/xyz/openbmc_project/software",
+                },
+                    object.first, "/xyz/openbmc_project/software",
                     ifnameCompleteReset, "CompleteReset");
             }
         },
@@ -1766,7 +1768,8 @@ inline CreatePIDRet createPidInterface(
                 return;
             }
             messages::success(response->res);
-        }, "xyz.openbmc_project.EntityManager", path, iface, "Delete");
+        },
+            "xyz.openbmc_project.EntityManager", path, iface, "Delete");
         return CreatePIDRet::del;
     }
 
@@ -2583,7 +2586,8 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                             return;
                         }
                         messages::success(response->res);
-                    }, "xyz.openbmc_project.EntityManager", chassis,
+                    },
+                        "xyz.openbmc_project.EntityManager", chassis,
                         "xyz.openbmc_project.AddObject", "AddObject", output);
                 }
             }
@@ -3371,11 +3375,10 @@ inline void requestRoutesManager(App& app)
              "/redfish/v1/Managers/" PLATFORMBMCID "/HostInterfaces"}};
 #endif
 
-
 #ifdef BMCWEB_ENABLE_RMEDIA
         asyncResp->res.jsonValue["VirtualMedia"] = {
             {"@odata.id",
-            "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
+             "/redfish/v1/Managers/" PLATFORMBMCID "/VirtualMedia"}};
 #endif
 
         if constexpr (BMCWEB_VM_NBDPROXY)
@@ -3406,9 +3409,8 @@ inline void requestRoutesManager(App& app)
 
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
 
-
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES
-            oem["Nvidia"]["UptimeSeconds"] = [asyncResp]()->double {
+        oem["Nvidia"]["UptimeSeconds"] = [asyncResp]() -> double {
             double uptime = 0;
             auto ifs = std::ifstream("/proc/uptime", std::ifstream::in);
             if (ifs.good())
@@ -3513,7 +3515,7 @@ inline void requestRoutesManager(App& app)
             persistent_data::getConfig().isTLSAuthEnabled();
 #endif
 
-            populatePersistentStorageSettingStatus(asyncResp);
+        populatePersistentStorageSettingStatus(asyncResp);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         // Manager.Reset (an action) can be many values, OpenBMC only
@@ -3580,12 +3582,10 @@ inline void requestRoutesManager(App& app)
             "IPMI", "SSH"};
 #ifdef BMCWEB_ENABLE_KVM
         // Fill in GraphicalConsole info
-        asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] =
-            true;
-        asyncResp->res
-            .jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] = 4;
-        asyncResp->res
-            .jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
+        asyncResp->res.jsonValue["GraphicalConsole"]["ServiceEnabled"] = true;
+        asyncResp->res.jsonValue["GraphicalConsole"]["MaxConcurrentSessions"] =
+            4;
+        asyncResp->res.jsonValue["GraphicalConsole"]["ConnectTypesSupported"] =
             nlohmann::json::array_t({"KVMIP"});
 #endif
         if constexpr (!BMCWEB_EXPERIMENTAL_REDFISH_MULTI_COMPUTER_SYSTEM)
@@ -3634,8 +3634,8 @@ inline void requestRoutesManager(App& app)
 
         if constexpr (BMCWEB_REDFISH_OEM_MANAGER_FAN_DATA)
         {
-        auto pids = std::make_shared<GetPIDValues>(asyncResp);
-        pids->run();
+            auto pids = std::make_shared<GetPIDValues>(asyncResp);
+            pids->run();
         }
 
         getMainChassisId(asyncResp,
@@ -3910,7 +3910,7 @@ inline void requestRoutesManager(App& app)
             return;
         }
         // clang-format on
-        
+
         if (pidControllers || fanControllers || fanZones ||
             stepwiseControllers || profile)
         {
@@ -3918,34 +3918,34 @@ inline void requestRoutesManager(App& app)
             {
                 std::vector<std::pair<std::string,
                                       std::optional<nlohmann::json::object_t>>>
-                configuration;
-            if (pidControllers)
-            {
-                configuration.emplace_back("PidControllers",
-                                           std::move(pidControllers));
-            }
-            if (fanControllers)
-            {
-                configuration.emplace_back("FanControllers",
-                                           std::move(fanControllers));
-            }
-            if (fanZones)
-            {
-                configuration.emplace_back("FanZones", std::move(fanZones));
-            }
-            if (stepwiseControllers)
-            {
-                configuration.emplace_back("StepwiseControllers",
-                                           std::move(stepwiseControllers));
-            }
-            auto pid = std::make_shared<SetPIDValues>(
-                asyncResp, std::move(configuration), profile);
-                    pid->run();
+                    configuration;
+                if (pidControllers)
+                {
+                    configuration.emplace_back("PidControllers",
+                                               std::move(pidControllers));
+                }
+                if (fanControllers)
+                {
+                    configuration.emplace_back("FanControllers",
+                                               std::move(fanControllers));
+                }
+                if (fanZones)
+                {
+                    configuration.emplace_back("FanZones", std::move(fanZones));
+                }
+                if (stepwiseControllers)
+                {
+                    configuration.emplace_back("StepwiseControllers",
+                                               std::move(stepwiseControllers));
+                }
+                auto pid = std::make_shared<SetPIDValues>(
+                    asyncResp, std::move(configuration), profile);
+                pid->run();
             }
             else
             {
-            messages::propertyUnknown(asyncResp->res, "Oem");
-            return;
+                messages::propertyUnknown(asyncResp->res, "Oem");
+                return;
             }
         }
 
@@ -4055,7 +4055,6 @@ inline void requestRoutesManager(App& app)
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         }
-
     });
 }
 

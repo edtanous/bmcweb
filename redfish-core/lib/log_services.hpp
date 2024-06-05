@@ -251,7 +251,7 @@ inline std::string getDumpPath(std::string_view dumpType)
 }
 
 inline int getJournalMetadata(sd_journal* journal, std::string_view field,
-                                     std::string_view& contents)
+                              std::string_view& contents)
 {
     const char* data = nullptr;
     size_t length = 0;
@@ -301,7 +301,7 @@ inline bool getEntryTimestamp(sd_journal* journal, std::string& entryTimestamp)
 }
 
 inline bool getUniqueEntryID(sd_journal* journal, std::string& entryID,
-                                    const bool firstEntry = true)
+                             const bool firstEntry = true)
 {
     int ret = 0;
     static sd_id128_t prevBootID{};
@@ -2203,12 +2203,12 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
 
         if constexpr (BMCWEB_REDFISH_HOST_LOGGER)
         {
-        nlohmann::json::object_t hostlogger;
-        hostlogger["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                  "/LogServices/HostLogger";
-        logServiceArray.push_back(std::move(hostlogger));
+            nlohmann::json::object_t hostlogger;
+            hostlogger["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                      "/LogServices/HostLogger";
+            logServiceArray.push_back(std::move(hostlogger));
         }
-        
+
         nlohmann::json::object_t debugToken;
         debugToken["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                   "/LogServices/DebugTokenService";
@@ -2383,7 +2383,8 @@ inline void requestRoutesEventLogService(App& app)
                     messages::internalError(asyncResp->res);
                     return;
                 }
-            }, "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
+            },
+                "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
                 "org.freedesktop.DBus.Properties", "Set",
                 "xyz.openbmc_project.Logging.Namespace",
                 "AutoClearResolvedLogEnabled",
@@ -2467,7 +2468,8 @@ inline void requestRoutesJournalEventLogClear(App& app)
             }
 
             messages::success(asyncResp->res);
-        }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+        },
+            "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
             "org.freedesktop.systemd1.Manager", "ReloadUnit", "rsyslog.service",
             "replace");
     });
@@ -3226,7 +3228,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
         BMCWEB_LOG_DEBUG("Set Resolved");
 
         setDbusProperty(asyncResp, "xyz.openbmc_project.Logging",
-            "/xyz/openbmc_project/logging/entry/" + entryId,
+                        "/xyz/openbmc_project/logging/entry/" + entryId,
                         "xyz.openbmc_project.Logging.Entry", "Resolved",
                         "Resolved", *resolved);
     });
@@ -3287,7 +3289,6 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             "xyz.openbmc_project.Object.Delete", "Delete");
     });
 }
-
 
 inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
                                     nlohmann::json& thisEntry)
@@ -5181,7 +5182,8 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, serviceName, objectPath, interfaceName, enableService,
+        },
+            serviceName, objectPath, interfaceName, enableService,
             std::array<std::string, 1>{fdrServiceName}, runtime, force);
 
         // Try to start service
@@ -5195,8 +5197,9 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, serviceName, objectPath, interfaceName, startService, fdrServiceName,
-            mode);
+        },
+            serviceName, objectPath, interfaceName, startService,
+            fdrServiceName, mode);
     }
     else
     {
@@ -5211,7 +5214,8 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, serviceName, objectPath, interfaceName, stopService, fdrServiceName,
+        },
+            serviceName, objectPath, interfaceName, stopService, fdrServiceName,
             mode);
 
         // Try to disable service persistently
@@ -5225,7 +5229,8 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, serviceName, objectPath, interfaceName, disableService,
+        },
+            serviceName, objectPath, interfaceName, disableService,
             std::array<std::string, 1>{fdrServiceName}, runtime);
     }
 }
@@ -6245,7 +6250,8 @@ inline void requestRoutesPostCodesClear(App& app)
                 return;
             }
             messages::success(asyncResp->res);
-        }, "xyz.openbmc_project.State.Boot.PostCode0",
+        },
+            "xyz.openbmc_project.State.Boot.PostCode0",
             "/xyz/openbmc_project/State/Boot/PostCode0",
             "xyz.openbmc_project.Collection.DeleteAll", "DeleteAll");
     });
@@ -7350,7 +7356,7 @@ inline void requestRoutesDebugToken(App& app)
             redfishDateTimeOffset.second;
         asyncResp->res.jsonValue["Entries"] = {
             {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                "/LogServices/DebugTokenService/Entries"}};
+                          "/LogServices/DebugTokenService/Entries"}};
         asyncResp->res.jsonValue["Actions"] = {
             {"#LogService.CollectDiagnosticData",
              {{"target",
@@ -7366,47 +7372,47 @@ inline void requestRoutesDebugTokenServiceEntryCollection(App& app)
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
-                if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                {
-                    return;
-                }
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#LogEntryCollection.LogEntryCollection";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                    "/LogServices/DebugTokenService/Entries";
-                asyncResp->res.jsonValue["Name"] = "Debug Token Service Entries";
-                asyncResp->res.jsonValue["Description"] =
-                    "Collection of Debug Token Service Entries";
-                asyncResp->res.jsonValue["Members@odata.count"] = debugTokenData.size();
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#LogEntryCollection.LogEntryCollection";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+            "/LogServices/DebugTokenService/Entries";
+        asyncResp->res.jsonValue["Name"] = "Debug Token Service Entries";
+        asyncResp->res.jsonValue["Description"] =
+            "Collection of Debug Token Service Entries";
+        asyncResp->res.jsonValue["Members@odata.count"] = debugTokenData.size();
 
-                nlohmann::json& entriesArray = asyncResp->res.jsonValue["Members"];
-                entriesArray = nlohmann::json::array();
-                auto entryID = 0;
-                for (auto& objects : debugTokenData)
-                {
-                    nlohmann::json::object_t thisEntry;
+        nlohmann::json& entriesArray = asyncResp->res.jsonValue["Members"];
+        entriesArray = nlohmann::json::array();
+        auto entryID = 0;
+        for (auto& objects : debugTokenData)
+        {
+            nlohmann::json::object_t thisEntry;
 
-                    thisEntry["@odata.type"] = "#LogEntry.v1_15_0.LogEntry";
-                    thisEntry["@odata.id"] =
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/LogServices/DebugTokenService/Entries/" +
-                            std::to_string(entryID);
-                    thisEntry["Id"] = std::to_string(entryID);
-                    thisEntry["EntryType"] = "Oem";
-                    thisEntry["Name"] = "Debug Token Entry";
-                    thisEntry["DiagnosticDataType"] = "OEM";
-                    thisEntry["OEMDiagnosticDataType"] = std::get<0>(objects);
-                    thisEntry["AdditionalDataSizeBytes"] = std::get<1>(objects).length();
-                    thisEntry["AdditionalDataURI"] =
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/LogServices/DebugTokenService/Entries/" +
-                            std::to_string(entryID) + "/attachment";
-                    entriesArray.push_back(std::move(thisEntry));
-                    entryID++;
-                }
-            });
+            thisEntry["@odata.type"] = "#LogEntry.v1_15_0.LogEntry";
+            thisEntry["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                     "/LogServices/DebugTokenService/Entries/" +
+                                     std::to_string(entryID);
+            thisEntry["Id"] = std::to_string(entryID);
+            thisEntry["EntryType"] = "Oem";
+            thisEntry["Name"] = "Debug Token Entry";
+            thisEntry["DiagnosticDataType"] = "OEM";
+            thisEntry["OEMDiagnosticDataType"] = std::get<0>(objects);
+            thisEntry["AdditionalDataSizeBytes"] =
+                std::get<1>(objects).length();
+            thisEntry["AdditionalDataURI"] =
+                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                "/LogServices/DebugTokenService/Entries/" +
+                std::to_string(entryID) + "/attachment";
+            entriesArray.push_back(std::move(thisEntry));
+            entryID++;
+        }
+    });
 }
 
 inline void requestRoutesDebugTokenServiceEntry(App& app)
@@ -7418,52 +7424,50 @@ inline void requestRoutesDebugTokenServiceEntry(App& app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& idstr) {
-                    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-                    {
-                        return;
-                    }
-                    std::string_view accept = req.getHeaderValue("Accept");
-                    if (!accept.empty() &&
-                        !http_helpers::isContentTypeAllowed(
-                        req.getHeaderValue("Accept"),
-                        http_helpers::ContentType::OctetStream, true))
-                    {
-                        asyncResp->res.result(boost::beast::http::status::bad_request);
-                        return;
-                    }
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+        std::string_view accept = req.getHeaderValue("Accept");
+        if (!accept.empty() &&
+            !http_helpers::isContentTypeAllowed(
+                req.getHeaderValue("Accept"),
+                http_helpers::ContentType::OctetStream, true))
+        {
+            asyncResp->res.result(boost::beast::http::status::bad_request);
+            return;
+        }
 
-                    uint32_t id = static_cast<uint32_t>(stoi(idstr));
-                    auto dataCount = debugTokenData.size();
-                    if (dataCount == 0 || id > dataCount - 1)
-                    {
-                        messages::resourceMissingAtURI(
-                            asyncResp->res,
-                            boost::urls::format(
-                            "/redfish/v1/Systems/{}/LogServices/DebugTokenService/Entries/{}",
-                            PLATFORMSYSTEMID, std::to_string(id)));
-                            asyncResp->res.result(
-                            boost::beast::http::status::not_found);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["@odata.type"] =
-                        "#LogEntry.v1_15_0.LogEntry";
-                    asyncResp->res.jsonValue["@odata.id"] =
-                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                        "/LogServices/DebugTokenService/Entries/" +
-                        std::to_string(id);
-                    asyncResp->res.jsonValue["Id"] = std::to_string(id);
-                    asyncResp->res.jsonValue["EntryType"] = "Oem";
-                    asyncResp->res.jsonValue["Name"] = "Debug Token Entry";
-                    asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
-                    asyncResp->res.jsonValue["OEMDiagnosticDataType"] =
-                        std::get<0>(debugTokenData.at(id));
-                    asyncResp->res.jsonValue["AdditionalDataSizeBytes"] =
-                        std::get<1>(debugTokenData.at(id)).length();
-                    asyncResp->res.jsonValue["AdditionalDataURI"] =
-                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                        "/LogServices/DebugTokenService/Entries/" +
-                        std::to_string(id) + "/attachment";
-                });
+        uint32_t id = static_cast<uint32_t>(stoi(idstr));
+        auto dataCount = debugTokenData.size();
+        if (dataCount == 0 || id > dataCount - 1)
+        {
+            messages::resourceMissingAtURI(
+                asyncResp->res,
+                boost::urls::format(
+                    "/redfish/v1/Systems/{}/LogServices/DebugTokenService/Entries/{}",
+                    PLATFORMSYSTEMID, std::to_string(id)));
+            asyncResp->res.result(boost::beast::http::status::not_found);
+            return;
+        }
+        asyncResp->res.jsonValue["@odata.type"] = "#LogEntry.v1_15_0.LogEntry";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+            "/LogServices/DebugTokenService/Entries/" +
+            std::to_string(id);
+        asyncResp->res.jsonValue["Id"] = std::to_string(id);
+        asyncResp->res.jsonValue["EntryType"] = "Oem";
+        asyncResp->res.jsonValue["Name"] = "Debug Token Entry";
+        asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
+        asyncResp->res.jsonValue["OEMDiagnosticDataType"] =
+            std::get<0>(debugTokenData.at(id));
+        asyncResp->res.jsonValue["AdditionalDataSizeBytes"] =
+            std::get<1>(debugTokenData.at(id)).length();
+        asyncResp->res.jsonValue["AdditionalDataURI"] =
+            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+            "/LogServices/DebugTokenService/Entries/" +
+            std::to_string(id) + "/attachment";
+    });
 }
 
 inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
@@ -7622,7 +7626,8 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             }
             if (result.size() != 0)
             {
-                debugTokenData.emplace_back(make_tuple(oemDiagnosticDataType, result));
+                debugTokenData.emplace_back(
+                    make_tuple(oemDiagnosticDataType, result));
                 std::string path = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                    "/LogServices/DebugTokenService/"
                                    "Entries/" +

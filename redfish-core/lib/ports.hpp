@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -393,8 +393,8 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
         else if (lldpType == lldpTransmit)
         {
-                        jsonSchema["ChassisId"] = "";
-                        jsonSchema["ChassisIdSubtype"] = "NotTransmitted";
+            jsonSchema["ChassisId"] = "";
+            jsonSchema["ChassisIdSubtype"] = "NotTransmitted";
         }
 
         idStr = getTlvString(stdOut, "Port ID TLV");
@@ -405,8 +405,8 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
         else if (lldpType == lldpTransmit)
         {
-                        jsonSchema["PortId"] = "";
-                        jsonSchema["PortIdSubtype"] = "NotTransmitted";
+            jsonSchema["PortId"] = "";
+            jsonSchema["PortIdSubtype"] = "NotTransmitted";
         }
 
         idStr = getTlvString(stdOut, "System Capabilities TLV");
@@ -534,12 +534,12 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
         {
             return;
         }
-                asyncResp->res.jsonValue["@odata.type"] =
-                    "#Port.v1_9_0.Port";
-                asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts/" + entryIdx;
-                asyncResp->res.jsonValue["Name"] = "Manager Dedicated Network Port";
-                asyncResp->res.jsonValue["Id"] = entryIdx;
+        asyncResp->res.jsonValue["@odata.type"] = "#Port.v1_9_0.Port";
+        asyncResp->res.jsonValue["@odata.id"] =
+            "/redfish/v1/Managers/" PLATFORMBMCID "/DedicatedNetworkPorts/" +
+            entryIdx;
+        asyncResp->res.jsonValue["Name"] = "Manager Dedicated Network Port";
+        asyncResp->res.jsonValue["Id"] = entryIdx;
         getEthernetIfaceList(
             [asyncResp, entryIdx](const bool& success,
                                   const std::vector<std::string>& ifaceList) {
@@ -551,8 +551,8 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
             int entryIdxInt = std::stoi(entryIdx);
             int count = 1;
             std::string tag = "vlan";
-                        nlohmann::json& ifaceArray =
-                            asyncResp->res.jsonValue["Links"]["EthernetInterfaces"];
+            nlohmann::json& ifaceArray =
+                asyncResp->res.jsonValue["Links"]["EthernetInterfaces"];
             for (const std::string& ifaceItem : ifaceList)
             {
                 // take only none vlan interfaces

@@ -8,8 +8,8 @@
 #include "http_response.hpp"
 #include "json_formatters.hpp"
 #include "logging.hpp"
-#include "str_utility.hpp"
 #include "redfish_aggregator.hpp"
+#include "str_utility.hpp"
 
 #include <sys/types.h>
 
@@ -515,10 +515,12 @@ inline bool processOnly(crow::App& app, crow::Response& res,
 
     auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
-    auto needToCallHandlers = RedfishAggregator::beginAggregation(newReq, asyncResp) == Result::LocalHandle;
+    auto needToCallHandlers = RedfishAggregator::beginAggregation(
+                                  newReq, asyncResp) == Result::LocalHandle;
 #endif
 
-    BMCWEB_LOG_DEBUG("setting completion handler on {}", logPtr(&asyncResp->res));
+    BMCWEB_LOG_DEBUG("setting completion handler on {}",
+                     logPtr(&asyncResp->res));
     asyncResp->res.setCompleteRequestHandler(std::move(completionHandler));
 
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
@@ -822,7 +824,8 @@ class MultiAsyncResp : public std::enable_shared_from_this<MultiAsyncResp>
     // class manages the final "merge" of the json resources.
     MultiAsyncResp(crow::App& appIn,
                    std::shared_ptr<bmcweb::AsyncResp> finalResIn) :
-        app(appIn), finalRes(std::move(finalResIn))
+        app(appIn),
+        finalRes(std::move(finalResIn))
     {}
 
     void addAwaitingResponse(
@@ -868,7 +871,7 @@ class MultiAsyncResp : public std::enable_shared_from_this<MultiAsyncResp>
             auto newReq = std::make_shared<crow::Request>(
                 crow::Request::Body{boost::beast::http::verb::get, subQuery,
                                     11},
-                                 ec);
+                ec);
             if (ec)
             {
                 messages::internalError(finalRes->res);

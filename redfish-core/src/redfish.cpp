@@ -2,15 +2,15 @@
 
 #include "bmcweb_config.h"
 
-#include "assembly.hpp"
 #include "account_service.hpp"
 #include "aggregation_service.hpp"
 #include "app.hpp"
+#include "assembly.hpp"
 #include "bios.hpp"
 #include "cable.hpp"
-#include "control.hpp"
 #include "certificate_service.hpp"
 #include "chassis.hpp"
+#include "control.hpp"
 #include "environment_metrics.hpp"
 #include "ethernet.hpp"
 #include "event_service.hpp"
@@ -26,6 +26,7 @@
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
 #include "network_protocol.hpp"
+#include "nvidia_oem_dpu.hpp"
 #include "pcie.hpp"
 #include "power.hpp"
 #include "power_subsystem.hpp"
@@ -47,22 +48,21 @@
 #include "trigger.hpp"
 #include "update_service.hpp"
 #include "virtual_media.hpp"
-#include "nvidia_oem_dpu.hpp"
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
 #include "network_adapters_generic.hpp"
 #endif
-#include "system_host_eth.hpp"
-#include "network_adapters.hpp"
-#include "ports.hpp"
 #include "boot_options.hpp"
 #include "erot_chassis.hpp"
 #include "fabric.hpp"
 #include "fabric_adapters.hpp"
 #include "host_interface.hpp"
-#include "secure_boot_database.hpp"
-#include "secure_boot.hpp"
-#include "pcieslots.hpp"
+#include "network_adapters.hpp"
 #include "pcie_slots.hpp"
+#include "pcieslots.hpp"
+#include "ports.hpp"
+#include "secure_boot.hpp"
+#include "secure_boot_database.hpp"
+#include "system_host_eth.hpp"
 #include "trusted_components.hpp"
 
 namespace redfish
@@ -97,7 +97,7 @@ RedfishService::RedfishService(App& app)
     requestDedicatedPortsInterfacesRoutes(app);
 #endif
 
- #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
     requestRoutesNetworkAdapters(app);
     requestRoutesNetworkDeviceFunctions(app);
     requestRoutesACDPort(app);
@@ -149,10 +149,10 @@ RedfishService::RedfishService(App& app)
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     requestRoutesSplitUpdateService(app);
 #endif
-    #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
+#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
     defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
-        requestRoutesUpdateServiceActionsSimpleUpdate(app);
-    #endif
+    requestRoutesUpdateServiceActionsSimpleUpdate(app);
+#endif
 
     requestRoutesChassisDrive(app);
     requestRoutesChassisDriveName(app);
@@ -214,7 +214,6 @@ RedfishService::RedfishService(App& app)
         requestRoutesFaultLogDumpEntry(app);
         requestRoutesFaultLogDumpClear(app);
 #endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
-
     }
 
 #ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
@@ -226,10 +225,10 @@ RedfishService::RedfishService(App& app)
 #endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
-        requestRoutesSystemFaultLogService(app);
-        requestRoutesSystemFaultLogEntryCollection(app);
-        requestRoutesSystemFaultLogEntry(app);
-        requestRoutesSystemFaultLogClear(app);
+    requestRoutesSystemFaultLogService(app);
+    requestRoutesSystemFaultLogEntryCollection(app);
+    requestRoutesSystemFaultLogEntry(app);
+    requestRoutesSystemFaultLogClear(app);
 #endif
     if constexpr (!BMCWEB_REDFISH_DBUS_LOG)
     {
@@ -296,11 +295,9 @@ RedfishService::RedfishService(App& app)
     requestRoutesSecureBootDatabase(app);
 #endif
 
-
 #ifdef BMCWEB_ENABLE_HOST_IFACE
     requestHostInterfacesRoutes(app);
 #endif
-
 
     if constexpr (BMCWEB_VM_NBDPROXY)
     {
@@ -355,7 +352,6 @@ RedfishService::RedfishService(App& app)
 #ifdef BMCWEB_ENABLE_SSE
     requestRoutesEventServiceSse(app);
 #endif
-    
 
     requestRoutesEventDestinationCollection(app);
     requestRoutesEventDestination(app);
@@ -390,12 +386,10 @@ RedfishService::RedfishService(App& app)
     requestRoutesTrigger(app);
 #endif
 
-
     requestRoutesEROTChassisCertificate(app);
 #ifdef BMCWEB_ENABLE_DOT
     requestRoutesEROTChassisDOT(app);
 #endif
-
 
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
     requestRoutesEROTChassisManualBootMode(app);

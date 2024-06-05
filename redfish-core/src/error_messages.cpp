@@ -30,12 +30,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <regex>
 #include <source_location>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <regex>
 
 // IWYU pragma: no_include <stddef.h>
 
@@ -868,7 +868,7 @@ void propertyValueConflict(crow::Response& res, std::string_view arg1,
  */
 nlohmann::json
     propertyValueResourceConflict(std::string_view arg1,
-                                             const nlohmann::json& arg2,
+                                  const nlohmann::json& arg2,
                                   const boost::urls::url_view_base& arg3)
 {
     std::string arg2Str = arg2.dump(2, ' ', true,
@@ -1228,7 +1228,7 @@ void actionParameterNotSupported(crow::Response& res, std::string_view arg1,
  */
 nlohmann::json
     sourceDoesNotSupportProtocol(const boost::urls::url_view_base& arg1,
-                                            std::string_view arg2)
+                                 std::string_view arg2)
 {
     return getLog(
         redfish::registries::base::Index::sourceDoesNotSupportProtocol,

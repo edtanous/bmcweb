@@ -3364,8 +3364,8 @@ inline void requestRoutesOperatingConfigCollection(App& app)
                 constexpr std::array<std::string_view, 1> interface{
                     "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"};
                 collection_util::getCollectionMembers(
-                    asyncResp, boost::urls::url(operationConfiguuri),
-                    interface, object.c_str());
+                    asyncResp, boost::urls::url(operationConfiguuri), interface,
+                    object.c_str());
                 return;
             }
         },
@@ -3543,9 +3543,9 @@ inline void requestRoutesProcessor(App& app)
                 req, asyncResp->res, "SpeedLimitMHz", speedLimit, "SpeedLocked",
                 speedLocked, "AppliedOperatingConfig/@odata.id",
                 appliedConfigUri, "Oem", oemObject))
-            {
-                return;
-            }
+        {
+            return;
+        }
         // speedlimit is required property for patching speedlocked
         if (!speedLimit && speedLocked)
         {

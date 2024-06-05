@@ -131,8 +131,8 @@ struct MctpVdmUtil
     }
     uint32_t endpointId = 0L;
     std::string command;
-    
-    public:
+
+  public:
     MctpVdmUtil(uint32_t endpointId) : endpointId(endpointId) {}
 
     /**

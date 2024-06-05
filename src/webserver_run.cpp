@@ -5,7 +5,6 @@
 #include "app.hpp"
 #include "dbus_monitor.hpp"
 #include "dbus_singleton.hpp"
-#include <dump_offload.hpp>
 #include "event_service_manager.hpp"
 #include "google/google_service_root.hpp"
 #include "hostname_monitor.hpp"
@@ -21,9 +20,11 @@
 #include "user_monitor.hpp"
 #include "vm_websocket.hpp"
 #include "webassets.hpp"
-#include <watchdog.hpp>
+
 #include <boost/asio/io_context.hpp>
+#include <dump_offload.hpp>
 #include <sdbusplus/asio/connection.hpp>
+#include <watchdog.hpp>
 
 #include <memory>
 
@@ -35,7 +36,7 @@ int run()
     sdbusplus::asio::connection systemBus(*io);
     crow::connections::systemBus = &systemBus;
 
-    // Enable SystemD service watchdog kicking. Service file has timeout of 60s. 
+    // Enable SystemD service watchdog kicking. Service file has timeout of 60s.
     crow::watchdog::ServiceWD watchdog(30, io);
 
     // Static assets need to be initialized before Authorization, because auth

@@ -433,7 +433,7 @@ inline void handleRoleMapPatch(
                         "xyz.openbmc_project.User.PrivilegeMapperEntry",
                         "GroupName",
                         std::format("RemoteRoleMapping/{}/RemoteGroup", index),
-                                                                 *remoteGroup);
+                        *remoteGroup);
                 }
 
                 // If "LocalRole" info is provided
@@ -692,7 +692,7 @@ inline void handleServiceAddressPatch(
     setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
                     ldapConfigInterface, "LDAPServerURI",
                     ldapServerElementName + "/ServiceAddress",
-                                                 serviceAddressList.front());
+                    serviceAddressList.front());
 }
 /**
  * @brief updates the LDAP Bind DN and updates the
@@ -754,7 +754,7 @@ inline void
                     ldapConfigInterface, "LDAPBaseDN",
                     ldapServerElementName +
                         "/LDAPService/SearchSettings/BaseDistinguishedNames",
-                                                 baseDNList.front());
+                    baseDNList.front());
 }
 /**
  * @brief updates the LDAP user name attribute and updates the
@@ -837,10 +837,10 @@ inline void
     {
         if constexpr (!BMCWEB_BASIC_AUTH)
         {
-        messages::actionNotSupported(
-            asyncResp->res,
-            "Setting BasicAuth when basic-auth feature is disabled");
-        return;
+            messages::actionNotSupported(
+                asyncResp->res,
+                "Setting BasicAuth when basic-auth feature is disabled");
+            return;
         }
 
         authMethodsConfig.basic = *auth.basicAuth;
@@ -850,10 +850,10 @@ inline void
     {
         if constexpr (!BMCWEB_COOKIE_AUTH)
         {
-        messages::actionNotSupported(
-            asyncResp->res,
-            "Setting Cookie when cookie-auth feature is disabled");
-        return;
+            messages::actionNotSupported(
+                asyncResp->res,
+                "Setting Cookie when cookie-auth feature is disabled");
+            return;
         }
         authMethodsConfig.cookie = *auth.cookie;
     }
@@ -862,10 +862,10 @@ inline void
     {
         if constexpr (!BMCWEB_SESSION_AUTH)
         {
-        messages::actionNotSupported(
-            asyncResp->res,
-            "Setting SessionToken when session-auth feature is disabled");
-        return;
+            messages::actionNotSupported(
+                asyncResp->res,
+                "Setting SessionToken when session-auth feature is disabled");
+            return;
         }
         authMethodsConfig.sessionToken = *auth.sessionToken;
     }
@@ -874,10 +874,10 @@ inline void
     {
         if constexpr (!BMCWEB_XTOKEN_AUTH)
         {
-        messages::actionNotSupported(
-            asyncResp->res,
-            "Setting XToken when xtoken-auth feature is disabled");
-        return;
+            messages::actionNotSupported(
+                asyncResp->res,
+                "Setting XToken when xtoken-auth feature is disabled");
+            return;
         }
         authMethodsConfig.xtoken = *auth.xToken;
     }
@@ -886,10 +886,10 @@ inline void
     {
         if constexpr (!BMCWEB_MUTUAL_TLS_AUTH)
         {
-        messages::actionNotSupported(
-            asyncResp->res,
-            "Setting TLS when mutual-tls-auth feature is disabled");
-        return;
+            messages::actionNotSupported(
+                asyncResp->res,
+                "Setting TLS when mutual-tls-auth feature is disabled");
+            return;
         }
         authMethodsConfig.tls = *auth.tls;
     }
@@ -996,7 +996,7 @@ inline void handleLDAPPatch(LdapPatchParams&& input,
                       [asyncResp, input = std::move(input),
                        dbusObjectPath = std::move(dbusObjectPath)](
                           bool success, const LDAPConfigData& confData,
-                            const std::string& serverT) mutable {
+                          const std::string& serverT) mutable {
         if (!success)
         {
             messages::internalError(asyncResp->res);
@@ -1869,10 +1869,10 @@ inline void
 
     if constexpr (BMCWEB_INSECURE_DISABLE_AUTH)
     {
-    // If authentication is disabled, there are no user accounts
+        // If authentication is disabled, there are no user accounts
         messages::resourceNotFound(asyncResp->res, "ManagerAccount",
                                    accountName);
-    return;
+        return;
     }
 
     if (req.session == nullptr)
@@ -2048,9 +2048,9 @@ inline void
 
     if constexpr (BMCWEB_INSECURE_DISABLE_AUTH)
     {
-    // If authentication is disabled, there are no user accounts
-    messages::resourceNotFound(asyncResp->res, "ManagerAccount", username);
-    return;
+        // If authentication is disabled, there are no user accounts
+        messages::resourceNotFound(asyncResp->res, "ManagerAccount", username);
+        return;
     }
     sdbusplus::message::object_path tempObjPath(rootUserDbusPath);
     tempObjPath /= username;
@@ -2107,9 +2107,9 @@ inline void
     }
     if constexpr (BMCWEB_INSECURE_DISABLE_AUTH)
     {
-    // If authentication is disabled, there are no user accounts
-    messages::resourceNotFound(asyncResp->res, "ManagerAccount", username);
-    return;
+        // If authentication is disabled, there are no user accounts
+        messages::resourceNotFound(asyncResp->res, "ManagerAccount", username);
+        return;
     }
     std::optional<std::string> newUserName;
     std::optional<std::string> password;

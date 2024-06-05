@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #include "tal.hpp"
 
 #include <nlohmann/json.hpp>
+
 #include <unordered_set>
 
 namespace redfish
@@ -118,17 +119,17 @@ static std::string cpu = platformDevicePrefix + "CPU_";
 static std::string nvLink = "NVLink_";
 static std::string gpmInstances = "UtilizationPercent/";
 
-
-
-inline std::string getSwitchId(const std::string &key) {
-  // Use regular expressions to extract the numeric part after "NVSwitch_"
-  std::regex  pattern("NVSwitch_(\\d+)");
-  std::smatch match;
-  std::string swithId = "";
-  if (std::regex_search(key, match, pattern)) {
-    swithId = match[1].str();
-  }
-  return swithId;
+inline std::string getSwitchId(const std::string& key)
+{
+    // Use regular expressions to extract the numeric part after "NVSwitch_"
+    std::regex pattern("NVSwitch_(\\d+)");
+    std::smatch match;
+    std::string swithId = "";
+    if (std::regex_search(key, match, pattern))
+    {
+        swithId = match[1].str();
+    }
+    return swithId;
 }
 
 inline std::string replaceNumber(const std::string& input,
@@ -157,68 +158,84 @@ inline std::string replaceNumber(const std::string& input,
             }
             out = tmpPath;
         }
-    } else if (value == "{CWild}") {
-    if (std::regex_search(res, match, pattern)) {
-      if (!firstMatch) {
-        std::string number = match[1].str();
-        firstMatch = true;
-        replacedName.insert(number);
-      }
-      size_t lastSlashPos = input.find_last_of('/');
-      std::string dupSensorName = "";
-      if (lastSlashPos != std::string::npos) {
-        dupSensorName = input.substr(lastSlashPos + 1);
-        std::regex expProcessorModule{"ProcessorModule_\\d"};
-        dupSensorName = std::regex_replace(dupSensorName, expProcessorModule,
-                                           "ProcessorModule_{PMWild}");
+    }
+    else if (value == "{CWild}")
+    {
+        if (std::regex_search(res, match, pattern))
+        {
+            if (!firstMatch)
+            {
+                std::string number = match[1].str();
+                firstMatch = true;
+                replacedName.insert(number);
+            }
+            size_t lastSlashPos = input.find_last_of('/');
+            std::string dupSensorName = "";
+            if (lastSlashPos != std::string::npos)
+            {
+                dupSensorName = input.substr(lastSlashPos + 1);
+                std::regex expProcessorModule{"ProcessorModule_\\d"};
+                dupSensorName = std::regex_replace(dupSensorName,
+                                                   expProcessorModule,
+                                                   "ProcessorModule_{PMWild}");
 
-        std::regex expCpu{"CPU_\\d"};
-        dupSensorName =
-            std::regex_replace(dupSensorName, expCpu, "CPU_{CWild}");
-      }
-      std::string tmpPath = std::string("/redfish/v1/Chassis/");
-      tmpPath += PLATFORMDEVICEPREFIX;
-      tmpPath += "CPU_{CWild}";
-      tmpPath += "/Sensors/";
-      tmpPath += PLATFORMDEVICEPREFIX;
-      tmpPath += dupSensorName;
-      out = tmpPath;
+                std::regex expCpu{"CPU_\\d"};
+                dupSensorName = std::regex_replace(dupSensorName, expCpu,
+                                                   "CPU_{CWild}");
+            }
+            std::string tmpPath = std::string("/redfish/v1/Chassis/");
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += "CPU_{CWild}";
+            tmpPath += "/Sensors/";
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += dupSensorName;
+            out = tmpPath;
+        }
     }
-  } else if (value == "{PMWild}") {
-    if (std::regex_search(res, match, pattern)) {
-      if (!firstMatch) {
-        std::string number = match[1].str();
-        firstMatch = true;
-        replacedName.insert(number);
-      }
-      size_t lastSlashPos = input.find_last_of('/');
-      std::string dupSensorName = "";
-      if (lastSlashPos != std::string::npos) {
-        dupSensorName = input.substr(lastSlashPos + 1);
-        std::regex expProcessorModule{"ProcessorModule_\\d"};
-        dupSensorName = std::regex_replace(dupSensorName, expProcessorModule,
-                                           "ProcessorModule_{PMWild}");
-      }
-      std::string tmpPath = std::string("/redfish/v1/Chassis/");
-      tmpPath += PLATFORMDEVICEPREFIX;
-      tmpPath += "ProcessorModule_{PMWild}";
-      tmpPath += "/Sensors/";
-      tmpPath += PLATFORMDEVICEPREFIX;
-      tmpPath += dupSensorName;
-      out = tmpPath;
+    else if (value == "{PMWild}")
+    {
+        if (std::regex_search(res, match, pattern))
+        {
+            if (!firstMatch)
+            {
+                std::string number = match[1].str();
+                firstMatch = true;
+                replacedName.insert(number);
+            }
+            size_t lastSlashPos = input.find_last_of('/');
+            std::string dupSensorName = "";
+            if (lastSlashPos != std::string::npos)
+            {
+                dupSensorName = input.substr(lastSlashPos + 1);
+                std::regex expProcessorModule{"ProcessorModule_\\d"};
+                dupSensorName = std::regex_replace(dupSensorName,
+                                                   expProcessorModule,
+                                                   "ProcessorModule_{PMWild}");
+            }
+            std::string tmpPath = std::string("/redfish/v1/Chassis/");
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += "ProcessorModule_{PMWild}";
+            tmpPath += "/Sensors/";
+            tmpPath += PLATFORMDEVICEPREFIX;
+            tmpPath += dupSensorName;
+            out = tmpPath;
+        }
     }
-  } else {
-    while (std::regex_search(res, match, pattern)) {
-      if (!firstMatch) {
-        std::string number = match[1].str();
-        replacedName.insert(number);
-        firstMatch = true;
-      }
-      res = std::regex_replace(res, pattern, key + value);
-      out = res;
+    else
+    {
+        while (std::regex_search(res, match, pattern))
+        {
+            if (!firstMatch)
+            {
+                std::string number = match[1].str();
+                replacedName.insert(number);
+                firstMatch = true;
+            }
+            res = std::regex_replace(res, pattern, key + value);
+            out = res;
+        }
     }
-  }
-  return out;
+    return out;
 }
 
 inline void metricsReplacementsNonPlatformMetrics(
@@ -363,179 +380,219 @@ inline void metricsReplacementsNonPlatformMetrics(
             {"Values", devCountNVSwitchId},
         });
     }
-  if(deviceType == "MemoryMetrics" || deviceType == "ProcessorMetrics" || deviceType == "ProcessorGpmMetrics" || 
-                    deviceType == "ProcessorPortMetrics" || deviceType == "ProcessorPortGpmMetrics" ){
-    nlohmann::json devCountGpuId = nlohmann::json::array();
-    for (const auto &e : gpuId) {
-      devCountGpuId.push_back(std::to_string(e));
+    if (deviceType == "MemoryMetrics" || deviceType == "ProcessorMetrics" ||
+        deviceType == "ProcessorGpmMetrics" ||
+        deviceType == "ProcessorPortMetrics" ||
+        deviceType == "ProcessorPortGpmMetrics")
+    {
+        nlohmann::json devCountGpuId = nlohmann::json::array();
+        for (const auto& e : gpuId)
+        {
+            devCountGpuId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "GpuId"},
+            {"Values", devCountGpuId},
+        });
     }
-    wildCards.push_back({
-      {"Name", "GpuId"},
-      {"Values", devCountGpuId},
-    });
-  }
-  if(deviceType == "ProcessorGpmMetrics" ){
-    nlohmann::json devCountInstanceId = nlohmann::json::array();
-    for (const auto &e : gpmInstance) {
-      devCountInstanceId.push_back(std::to_string(e));
+    if (deviceType == "ProcessorGpmMetrics")
+    {
+        nlohmann::json devCountInstanceId = nlohmann::json::array();
+        for (const auto& e : gpmInstance)
+        {
+            devCountInstanceId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "InstanceId"},
+            {"Values", devCountInstanceId},
+        });
     }
-    wildCards.push_back({
-      {"Name", "InstanceId"},
-      {"Values", devCountInstanceId},
-    });
-  }
-  if(deviceType == "ProcessorPortMetrics" || deviceType == "ProcessorPortGpmMetrics" ){
-    nlohmann::json devCountnvlinkId = nlohmann::json::array();
-    for (const auto &e : nvlinkId_Type_1) {
-      devCountnvlinkId.push_back(std::to_string(e));
+    if (deviceType == "ProcessorPortMetrics" ||
+        deviceType == "ProcessorPortGpmMetrics")
+    {
+        nlohmann::json devCountnvlinkId = nlohmann::json::array();
+        for (const auto& e : nvlinkId_Type_1)
+        {
+            devCountnvlinkId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "NvlinkId"},
+            {"Values", devCountnvlinkId},
+        });
     }
-    wildCards.push_back({
-      {"Name", "NvlinkId"},
-      {"Values", devCountnvlinkId},
-    });
-  }
-}
-
-inline void metricsReplacements(std::vector<std::string> name,
-                         const std::shared_ptr<bmcweb::AsyncResp> &asyncResp,
-                         std::vector<std::string> inputMetricProperties) {
-  std::set<std::string> metricProperties;
-  nlohmann::json &wildCards = asyncResp->res.jsonValue["Wildcards"];
-  std::set<std::string> wildCardValues;
-  for (const auto &e : inputMetricProperties) {
-    std::string metricProperty = replaceNumber(
-        e, name[0], name[1], wildCardValues);
-    if (metricProperty != "") {
-      metricProperties.insert(metricProperty);
-    }
-  }
-  // insert set to json payload here
-  nlohmann::json devCount = nlohmann::json::array();
-  for (const auto &e : wildCardValues) {
-    devCount.push_back(e);
-  }
-
-  wildCards.push_back({
-      {"Name", name[2]},
-      {"Values", devCount},
-  });
-  for (const auto &property : metricProperties) {
-    asyncResp->res.jsonValue["MetricProperties"].push_back(property);
-  }
-  return;
 }
 
 inline void
-getShmemMetricsDefinition(const std::shared_ptr<bmcweb::AsyncResp> &asyncResp,
-                          const std::string &metricId,
-                          const std::string &deviceType) {
-  BMCWEB_LOG_DEBUG("getShmemMetricsDefinitions :{}", metricId);
-
-  std::vector<std::string> chassisPlatformEnvironmentMetricsReplacements = {
-    {chassisName, "{BSWild}", "BSWild"}};
-  std::vector<std::string> processorPlatformEnvironmentMetricsReplacements = {
-    {processorModule, "{PMWild}", "PMWild"}};
-  std::vector<std::string> cpuPlatformEnvironmentMetricsReplacements = {
-    {cpu, "{CWild}", "CWild"}};
-  std::vector<std::string> fpgaPlatformEnvironmentMetricsReplacements = {
-    {fpgaChassiName, "{FWild}", "FWild"}};
-  std::vector<std::string> gpuPlatformEnvironmentMetricsReplacements = {
-    {gpuName, "{GWild}", "GWild"}};
-  std::vector<std::string> nvSwitchPlatformEnvironmentMetricsReplacements = {
-    {nvSwitch, "{NWild}", "NWild"}};
-  std::vector<std::string> pcieRetimerPlatformEnvironmentMetricsReplacements = {
-    {pcieRetimer, "{PRWild}", "PRWild"}};
-  std::vector<std::string> pcieSwitchPlatformEnvironmentMetricsReplacements = {
-    {pcieSwtich, "{PSWild}", "PSWild"}};
-
-  try {
-    const auto &values = tal::TelemetryAggregator::getAllMrds(metricId);
-    std::vector<std::string> inputMetricProperties;
-    std::unordered_set<std::string> inputMetricPropertiesSet;
-    nlohmann::json wildCards = nlohmann::json::array();
-    asyncResp->res.jsonValue["Wildcards"] = wildCards;
-    for (const auto &e : values) {
-      if(deviceType == "NVSwitchPortMetrics" || deviceType == "ProcessorPortMetrics" || deviceType == "ProcessorPortGpmMetrics"){
-        std::string result = e.metricProperty;
-        size_t pos = result.find("#");
-        if (pos != std::string::npos) {
-            result = result.substr(0, pos);
+    metricsReplacements(std::vector<std::string> name,
+                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        std::vector<std::string> inputMetricProperties)
+{
+    std::set<std::string> metricProperties;
+    nlohmann::json& wildCards = asyncResp->res.jsonValue["Wildcards"];
+    std::set<std::string> wildCardValues;
+    for (const auto& e : inputMetricProperties)
+    {
+        std::string metricProperty = replaceNumber(e, name[0], name[1],
+                                                   wildCardValues);
+        if (metricProperty != "")
+        {
+            metricProperties.insert(metricProperty);
         }
-        inputMetricPropertiesSet.insert(result);
-      }
-      else{
-        inputMetricProperties.push_back(e.metricProperty);
-      }
     }
-    if(deviceType == "NVSwitchPortMetrics" || deviceType == "ProcessorPortMetrics" || deviceType == "ProcessorPortGpmMetrics" ){
-      for (const auto &e : inputMetricPropertiesSet) {
-        inputMetricProperties.push_back(e);
-      }
+    // insert set to json payload here
+    nlohmann::json devCount = nlohmann::json::array();
+    for (const auto& e : wildCardValues)
+    {
+        devCount.push_back(e);
     }
 
-    if (deviceType == "PlatformEnvironmentMetrics") {
-      nvSwitch = platformDevicePrefix + "NVSwitch_";
-      asyncResp->res.jsonValue["@odata.type"] =
-          "#MetricReportDefinition.v1_4_1.MetricReportDefinition";
-      asyncResp->res.jsonValue["@odata.id"] =
-          metricReportDefinitionUri + std::string("/") + metricId;
-      asyncResp->res.jsonValue["Id"] = metricId;
-      nlohmann::json metricPropertiesAray = nlohmann::json::array();
-      asyncResp->res.jsonValue["MetricProperties"] = metricPropertiesAray;
-
-      metricsReplacements(chassisPlatformEnvironmentMetricsReplacements,
-                          asyncResp, inputMetricProperties);
-      metricsReplacements(processorPlatformEnvironmentMetricsReplacements,
-                          asyncResp, inputMetricProperties);
-      metricsReplacements(cpuPlatformEnvironmentMetricsReplacements, asyncResp,
-                          inputMetricProperties);
-      metricsReplacements(fpgaPlatformEnvironmentMetricsReplacements, asyncResp,
-                          inputMetricProperties);
-      metricsReplacements(gpuPlatformEnvironmentMetricsReplacements, asyncResp,
-                          inputMetricProperties);
-      metricsReplacements(nvSwitchPlatformEnvironmentMetricsReplacements,
-                          asyncResp, inputMetricProperties);
-      metricsReplacements(pcieRetimerPlatformEnvironmentMetricsReplacements,
-                          asyncResp, inputMetricProperties);
-      metricsReplacements(pcieSwitchPlatformEnvironmentMetricsReplacements,
-                          asyncResp, inputMetricProperties);
-
-      asyncResp->res.jsonValue["MetricReport"]["@odata.id"] =
-          metricReportUri + std::string("/") + metricId;
-      asyncResp->res.jsonValue["MetricReportDefinitionType"] = "OnRequest";
-      asyncResp->res.jsonValue["Name"] = metricId;
-      std::vector<std::string> redfishReportActions;
-      redfishReportActions.emplace_back("LogToMetricReportsCollection");
-      asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
-      asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-      asyncResp->res.jsonValue["ReportUpdates"] = "Overwrite";
-    } else {
-      nvSwitch = "NVSwitch_";
-      metricsReplacementsNonPlatformMetrics(asyncResp, inputMetricProperties, deviceType);
+    wildCards.push_back({
+        {"Name", name[2]},
+        {"Values", devCount},
+    });
+    for (const auto& property : metricProperties)
+    {
+        asyncResp->res.jsonValue["MetricProperties"].push_back(property);
     }
-  } catch (std::exception const &e) {
-    BMCWEB_LOG_ERROR("Exception while getting MRD values: {}", e.what());
-    messages::resourceNotFound(asyncResp->res, "MetricReport", metricId);
-  }
+    return;
+}
+
+inline void getShmemMetricsDefinition(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& metricId, const std::string& deviceType)
+{
+    BMCWEB_LOG_DEBUG("getShmemMetricsDefinitions :{}", metricId);
+
+    std::vector<std::string> chassisPlatformEnvironmentMetricsReplacements = {
+        {chassisName, "{BSWild}", "BSWild"}};
+    std::vector<std::string> processorPlatformEnvironmentMetricsReplacements = {
+        {processorModule, "{PMWild}", "PMWild"}};
+    std::vector<std::string> cpuPlatformEnvironmentMetricsReplacements = {
+        {cpu, "{CWild}", "CWild"}};
+    std::vector<std::string> fpgaPlatformEnvironmentMetricsReplacements = {
+        {fpgaChassiName, "{FWild}", "FWild"}};
+    std::vector<std::string> gpuPlatformEnvironmentMetricsReplacements = {
+        {gpuName, "{GWild}", "GWild"}};
+    std::vector<std::string> nvSwitchPlatformEnvironmentMetricsReplacements = {
+        {nvSwitch, "{NWild}", "NWild"}};
+    std::vector<std::string> pcieRetimerPlatformEnvironmentMetricsReplacements =
+        {{pcieRetimer, "{PRWild}", "PRWild"}};
+    std::vector<std::string> pcieSwitchPlatformEnvironmentMetricsReplacements =
+        {{pcieSwtich, "{PSWild}", "PSWild"}};
+
+    try
+    {
+        const auto& values = tal::TelemetryAggregator::getAllMrds(metricId);
+        std::vector<std::string> inputMetricProperties;
+        std::unordered_set<std::string> inputMetricPropertiesSet;
+        nlohmann::json wildCards = nlohmann::json::array();
+        asyncResp->res.jsonValue["Wildcards"] = wildCards;
+        for (const auto& e : values)
+        {
+            if (deviceType == "NVSwitchPortMetrics" ||
+                deviceType == "ProcessorPortMetrics" ||
+                deviceType == "ProcessorPortGpmMetrics")
+            {
+                std::string result = e.metricProperty;
+                size_t pos = result.find("#");
+                if (pos != std::string::npos)
+                {
+                    result = result.substr(0, pos);
+                }
+                inputMetricPropertiesSet.insert(result);
+            }
+            else
+            {
+                inputMetricProperties.push_back(e.metricProperty);
+            }
+        }
+        if (deviceType == "NVSwitchPortMetrics" ||
+            deviceType == "ProcessorPortMetrics" ||
+            deviceType == "ProcessorPortGpmMetrics")
+        {
+            for (const auto& e : inputMetricPropertiesSet)
+            {
+                inputMetricProperties.push_back(e);
+            }
+        }
+
+        if (deviceType == "PlatformEnvironmentMetrics")
+        {
+            nvSwitch = platformDevicePrefix + "NVSwitch_";
+            asyncResp->res.jsonValue["@odata.type"] =
+                "#MetricReportDefinition.v1_4_1.MetricReportDefinition";
+            asyncResp->res.jsonValue["@odata.id"] = metricReportDefinitionUri +
+                                                    std::string("/") + metricId;
+            asyncResp->res.jsonValue["Id"] = metricId;
+            nlohmann::json metricPropertiesAray = nlohmann::json::array();
+            asyncResp->res.jsonValue["MetricProperties"] = metricPropertiesAray;
+
+            metricsReplacements(chassisPlatformEnvironmentMetricsReplacements,
+                                asyncResp, inputMetricProperties);
+            metricsReplacements(processorPlatformEnvironmentMetricsReplacements,
+                                asyncResp, inputMetricProperties);
+            metricsReplacements(cpuPlatformEnvironmentMetricsReplacements,
+                                asyncResp, inputMetricProperties);
+            metricsReplacements(fpgaPlatformEnvironmentMetricsReplacements,
+                                asyncResp, inputMetricProperties);
+            metricsReplacements(gpuPlatformEnvironmentMetricsReplacements,
+                                asyncResp, inputMetricProperties);
+            metricsReplacements(nvSwitchPlatformEnvironmentMetricsReplacements,
+                                asyncResp, inputMetricProperties);
+            metricsReplacements(
+                pcieRetimerPlatformEnvironmentMetricsReplacements, asyncResp,
+                inputMetricProperties);
+            metricsReplacements(
+                pcieSwitchPlatformEnvironmentMetricsReplacements, asyncResp,
+                inputMetricProperties);
+
+            asyncResp->res.jsonValue["MetricReport"]["@odata.id"] =
+                metricReportUri + std::string("/") + metricId;
+            asyncResp->res.jsonValue["MetricReportDefinitionType"] =
+                "OnRequest";
+            asyncResp->res.jsonValue["Name"] = metricId;
+            std::vector<std::string> redfishReportActions;
+            redfishReportActions.emplace_back("LogToMetricReportsCollection");
+            asyncResp->res.jsonValue["ReportActions"] = redfishReportActions;
+            asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+            asyncResp->res.jsonValue["ReportUpdates"] = "Overwrite";
+        }
+        else
+        {
+            nvSwitch = "NVSwitch_";
+            metricsReplacementsNonPlatformMetrics(
+                asyncResp, inputMetricProperties, deviceType);
+        }
+    }
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_ERROR("Exception while getting MRD values: {}", e.what());
+        messages::resourceNotFound(asyncResp->res, "MetricReport", metricId);
+    }
 }
 
 inline void getShmemMetricsReportCollection(
-    const std::shared_ptr<bmcweb::AsyncResp> &asyncResp) {
-  BMCWEB_LOG_ERROR("Exception while getShmemMetricsReportDefinition");
-  try {
-    const auto &values = tal::TelemetryAggregator::getMrdNamespaces();
-    nlohmann::json &addMembers = asyncResp->res.jsonValue["Members"];
-    for (std::string memoryMetricId : values) {
-      // Get the metric object
-      std::string metricReportDefUriPath =
-        "/redfish/v1/TelemetryService/MetricReportDefinitions/";
-      std::string uripath = metricReportDefUriPath + memoryMetricId;
-      addMembers.push_back({{"@odata.id", uripath}});
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    BMCWEB_LOG_ERROR("Exception while getShmemMetricsReportDefinition");
+    try
+    {
+        const auto& values = tal::TelemetryAggregator::getMrdNamespaces();
+        nlohmann::json& addMembers = asyncResp->res.jsonValue["Members"];
+        for (std::string memoryMetricId : values)
+        {
+            // Get the metric object
+            std::string metricReportDefUriPath =
+                "/redfish/v1/TelemetryService/MetricReportDefinitions/";
+            std::string uripath = metricReportDefUriPath + memoryMetricId;
+            addMembers.push_back({{"@odata.id", uripath}});
+        }
+        asyncResp->res.jsonValue["Members@odata.count"] = addMembers.size();
     }
-    asyncResp->res.jsonValue["Members@odata.count"] = addMembers.size();
-  } catch (std::exception const &e) {
-    BMCWEB_LOG_ERROR("Exception while getting MRD: {}", e.what());
-  }
+    catch (const std::exception& e)
+    {
+        BMCWEB_LOG_ERROR("Exception while getting MRD: {}", e.what());
+    }
 }
 
 } // namespace shmem

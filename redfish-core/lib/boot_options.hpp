@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,8 @@ void setBootOption(const std::string& id,
                 holdTask->ec = ec;
                 BMCWEB_LOG_DEBUG(" setBootOption D-BUS error");
             }
-        }, "xyz.openbmc_project.BIOSConfigManager", path,
+        },
+            "xyz.openbmc_project.BIOSConfigManager", path,
             "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.BIOSConfig.BootOption", propertyName,
             propertyVariant);

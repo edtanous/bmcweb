@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 #pragma once
+#include "utils/time_utils.hpp"
+
 #include <utils/chassis_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/port_utils.hpp>
-#include "utils/time_utils.hpp"
 
 // Inline function to check if a key-value pair json object already exists in
 // the JSON array

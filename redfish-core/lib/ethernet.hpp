@@ -759,7 +759,8 @@ inline void deleteIPAddress(const std::string& ifaceId,
         {
             messages::internalError(asyncResp->res);
         }
-    }, "xyz.openbmc_project.Network",
+    },
+        "xyz.openbmc_project.Network",
         "/xyz/openbmc_project/network/" + ifaceId + ipHash,
         "xyz.openbmc_project.Object.Delete", "Delete");
 }
@@ -831,7 +832,8 @@ inline void deleteAndCreateIPAddress(
             {
                 messages::internalError(asyncResp->res);
             }
-        }, "xyz.openbmc_project.Network",
+        },
+            "xyz.openbmc_project.Network",
             "/xyz/openbmc_project/network/" + ifaceId,
             "xyz.openbmc_project.Network.IP.Create", "IP", protocol, address,
             prefixLength, gateway);
@@ -1383,10 +1385,10 @@ inline void setDHCPConfig(const std::string& propertyName, const bool& value,
     path /= ethifaceId;
 
     if (type == NetworkType::dhcp4)
-        {
+    {
         path /= "dhcp4";
         redfishPropertyName = "DHCPv4";
-        }
+    }
     else
     {
         path /= "dhcp6";
@@ -1450,7 +1452,7 @@ inline void handleDHCPPatch(const std::string& ifaceId,
     if (v4dhcpParms.useDnsServers)
     {
         nextDNSv4 = *v4dhcpParms.useDnsServers;
-        }
+    }
     if (v6dhcpParms.useDnsServers)
     {
         nextDNSv6 = *v6dhcpParms.useDnsServers;
@@ -1461,7 +1463,7 @@ inline void handleDHCPPatch(const std::string& ifaceId,
     if (v4dhcpParms.useNtpServers)
     {
         nextNTPv4 = *v4dhcpParms.useNtpServers;
-        }
+    }
     if (v6dhcpParms.useNtpServers)
     {
         nextNTPv6 = *v6dhcpParms.useNtpServers;
@@ -1472,7 +1474,7 @@ inline void handleDHCPPatch(const std::string& ifaceId,
     if (v4dhcpParms.useDomainName)
     {
         nextUsev4Domain = *v4dhcpParms.useDomainName;
-        }
+    }
     if (v6dhcpParms.useDomainName)
     {
         nextUsev6Domain = *v6dhcpParms.useDomainName;
@@ -1523,8 +1525,8 @@ inline void handleIPv4StaticPatch(
     const std::string& ifaceId,
     std::vector<std::variant<nlohmann::json::object_t, std::nullptr_t>>& input,
     const EthernetInterfaceData& ethData,
-                          const std::vector<IPv4AddressData>& ipv4Data,
-                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::vector<IPv4AddressData>& ipv4Data,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     unsigned entryIdx = 1;
     // Find the first static IP address currently active on the NIC and
@@ -1586,8 +1588,8 @@ inline void handleIPv4StaticPatch(
             std::optional<std::string> gateway;
 
             if (!json_util::readJsonObject(*obj, asyncResp->res, "Address",
-                                     address, "SubnetMask", subnetMask,
-                                     "Gateway", gateway))
+                                           address, "SubnetMask", subnetMask,
+                                           "Gateway", gateway))
             {
                 messages::propertyValueFormatError(asyncResp->res, *obj,
                                                    pathString);
@@ -1710,11 +1712,11 @@ inline void handleIPv4StaticPatch(
         {
             // Received {}, do not modify this address
             if (nicIpEntry != ipv4Data.cend())
-                {
+            {
                 nicIpEntry = getNextStaticIpEntry(++nicIpEntry,
                                                   ipv4Data.cend());
                 entryIdx++;
-                }
+            }
             else
             {
                 // Requested a DO NOT MODIFY action on an entry not assigned
@@ -1777,22 +1779,22 @@ inline void handleIPv6StaticAddressesPatch(
             if (!address)
             {
                 if (nicIpEntry == ipv6Data.end())
-            {
-                messages::propertyMissing(asyncResp->res,
-                                          pathString + "/Address");
-                return;
-            }
+                {
+                    messages::propertyMissing(asyncResp->res,
+                                              pathString + "/Address");
+                    return;
+                }
                 address = nicIpEntry->address;
             }
 
             if (!prefixLength)
             {
                 if (nicIpEntry == ipv6Data.end())
-            {
-                messages::propertyMissing(asyncResp->res,
-                                          pathString + "/PrefixLength");
-                return;
-            }
+                {
+                    messages::propertyMissing(asyncResp->res,
+                                              pathString + "/PrefixLength");
+                    return;
+                }
                 prefixLength = nicIpEntry->prefixLength;
             }
 
@@ -1852,7 +1854,7 @@ inline void parseInterfaceData(
     const std::string& ifaceId, const EthernetInterfaceData& ethData,
     const std::vector<IPv4AddressData>& ipv4Data,
     const std::vector<IPv6AddressData>& ipv6Data,
-    const std::vector<StaticGatewayData>& ipv6GatewayData,    
+    const std::vector<StaticGatewayData>& ipv6GatewayData,
     const std::string& route = "/redfish/v1/Managers/" PLATFORMBMCID
                                "/EthernetInterfaces/")
 {
@@ -2167,7 +2169,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
         std::string parentInterfaceUri;
         if (!json_util::readJsonObject(relatedInterfaces[0], asyncResp->res,
-                                 "@odata.id", parentInterfaceUri))
+                                       "@odata.id", parentInterfaceUri))
         {
             messages::propertyMissing(asyncResp->res,
                                       "Links/RelatedInterfaces/0/@odata.id");
@@ -2234,7 +2236,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
             ifaceId,
             [asyncResp,
              ifaceId](const bool& success, const EthernetInterfaceData& ethData,
-                                 const std::vector<IPv4AddressData>& ipv4Data,
+                      const std::vector<IPv4AddressData>& ipv4Data,
                       const std::vector<IPv6AddressData>& ipv6Data,
                       const std::vector<StaticGatewayData>& ipv6GatewayData) {
             if (!success)
