@@ -866,7 +866,7 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             }
 
             resp->res.jsonValue["@odata.type"] =
-                "#NvidiaManager.v1_1_0.NvidiaManager";
+                "#NvidiaManager.v1_2_0.NvidiaManager";
             resp->res.jsonValue["StatusRegister"] =
                 intToHexByteArray(get<1>(res));
             resp->res.jsonValue["DataOut"] = intToHexByteArray(get<2>(res));
@@ -1101,7 +1101,7 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 return;
             }
             resp->res.jsonValue["@odata.type"] =
-                "#NvidiaManager.v1_1_0.NvidiaManager";
+                "#NvidiaManager.v1_2_0.NvidiaManager";
 
             resp->res.jsonValue["StatusRegister"] =
                 intToHexByteArray(get<1>(res));
@@ -3100,7 +3100,7 @@ inline void
 
                         nlohmann::json& json = asyncResp->res.jsonValue;
                         json["Oem"]["Nvidia"]["@odata.type"] =
-                            "#NvidiaManager.v1_1_0.NvidiaManager";
+                            "#NvidiaManager.v1_2_0.NvidiaManager";
                         json["Oem"]["Nvidia"]["SMBPBIFencingPrivilege"] =
                             redfish::dbus_utils::toSMPBIPrivilegeString(
                                 *fencingPrivilege);
