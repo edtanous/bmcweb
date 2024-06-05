@@ -46,6 +46,7 @@
 #include <utils/nvidia_systems_util.hpp>
 #include <utils/privilege_utils.hpp>
 #include <utils/sw_utils.hpp>
+#include <utils/nvidia_pcie_utils.hpp>
 
 #include <array>
 #include <memory>
@@ -4152,8 +4153,7 @@ inline void
                   ["BootSourceOverrideEnabled@Redfish.AllowableValues"] = {
         "Once", "Continuous", "Disabled"};
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
-    pcie_util::getPCIeDeviceList(asyncResp,
-                                 nlohmann::json::json_pointer("/PCIeDevices"));
+    nvidia_pcie_utils::getPCIeDeviceList(asyncResp, "PCIeDevices");
     getHostWatchdogTimer(asyncResp);
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     getPowerRestorePolicy(asyncResp);
