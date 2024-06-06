@@ -1200,6 +1200,7 @@ void getEthernetIfaceList(CallbackFunc&& callback)
                 // If interface is
                 // xyz.openbmc_project.Network.EthernetInterface, this is
                 // what we're looking for.
+
                 if (interface.first ==
                     "xyz.openbmc_project.Network.EthernetInterface")
                 {
@@ -2048,18 +2049,13 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
             nlohmann::json& ifaceArray = asyncResp->res.jsonValue["Members"];
             ifaceArray = nlohmann::json::array();
-            std::string tag = "_";
             for (const std::string& ifaceItem : ifaceList)
             {
-                std::size_t found = ifaceItem.find(tag);
-                if (found == std::string::npos)
-                {
-                    nlohmann::json::object_t iface;
-                    iface["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID
-                                         "/EthernetInterfaces/" +
-                                         ifaceItem;
-                    ifaceArray.push_back(std::move(iface));
-                }
+                nlohmann::json::object_t iface;
+                iface["@odata.id"] = boost::urls::format(
+                    "/redfish/v1/Managers/bmc/EthernetInterfaces/{}",
+                    ifaceItem);
+                ifaceArray.push_back(std::move(iface));
             }
 
             asyncResp->res.jsonValue["Members@odata.count"] = ifaceArray.size();
