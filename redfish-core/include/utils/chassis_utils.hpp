@@ -26,6 +26,10 @@ constexpr const char* switchInvIntf =
     "xyz.openbmc_project.Inventory.Item.Switch";
 
 constexpr const char* bmcInvInterf = "xyz.openbmc_project.Inventory.Item.BMC";
+
+using Associations =
+    std::vector<std::tuple<std::string, std::string, std::string>>;
+
 using GetSubTreeType = std::vector<
     std::pair<std::string,
               std::vector<std::pair<std::string, std::vector<std::string>>>>>;
@@ -99,7 +103,7 @@ inline void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         messages::internalError(asyncResp->res);
         return;
     },
-    connection, path, "com.nvidia.Common.ClearPowerCap", "ClearPowerCap");
+        connection, path, "com.nvidia.Common.ClearPowerCap", "ClearPowerCap");
 }
 
 inline std::string getFeatureReadyStateType(const std::string& stateType)
@@ -273,8 +277,9 @@ void getValidChassisPath(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
  * @param callback  Callback for next step to get valid chassis path
  */
 template <typename Callback>
-void getValidChassisPathAndInterfaces(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const std::string& chassisId, Callback&& callback)
+void getValidChassisPathAndInterfaces(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId, Callback&& callback)
 {
     BMCWEB_LOG_DEBUG("check ChassisPathAndInterfaces enter");
     constexpr std::array<std::string_view, 2> interfaces = {
@@ -283,15 +288,15 @@ void getValidChassisPathAndInterfaces(const std::shared_ptr<bmcweb::AsyncResp>& 
 
     dbus::utility::getSubTree(
         "/xyz/openbmc_project/inventory", 0, interfaces,
-        [callback = std::forward<Callback>(callback), asyncResp,
-         chassisId](const boost::system::error_code& ec,
-                    const dbus::utility::MapperGetSubTreeResponse&
-                        subtree) mutable {
+        [callback = std::forward<Callback>(callback), asyncResp, chassisId](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetSubTreeResponse& subtree) mutable {
         BMCWEB_LOG_DEBUG("getValidChassisPathAndInterfaces respHandler enter");
         if (ec)
         {
-            BMCWEB_LOG_ERROR("getValidChassisPathAndInterfaces respHandler DBUS error: {}",
-                             ec);
+            BMCWEB_LOG_ERROR(
+                "getValidChassisPathAndInterfaces respHandler DBUS error: {}",
+                ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -299,9 +304,9 @@ void getValidChassisPathAndInterfaces(const std::shared_ptr<bmcweb::AsyncResp>& 
         std::optional<std::string> chassisPath;
         std::vector<std::string> interfacesOnChassisPath;
         for (const std::pair<
-             std::string,
-             std::vector<std::pair<std::string, std::vector<std::string>>>>&
-             object : subtree)
+                 std::string,
+                 std::vector<std::pair<std::string, std::vector<std::string>>>>&
+                 object : subtree)
         {
             const std::string& chassis = object.first;
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
@@ -831,17 +836,54 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
             return !chassisID.compare(
                 sdbusplus::message::object_path(object.first).filename());
         });
-
         if (objIt == subtree.end())
         {
             BMCWEB_LOG_DEBUG("Dbus Object not found:{}", chassisID);
             callback(false);
             return;
         }
-        callback(true);
-        return;
+        std::string serviceName;
+        for (const auto& service : objIt->second)
+        {
+            if (!serviceName.empty())
+            {
+                break;
+            }
+            for (const auto& interface : service.second)
+            {
+                if (interface == "xyz.openbmc_project.Association.Definitions")
+                {
+                    serviceName = service.first;
+                    break;
+                }
+            }
+        }
+        if (serviceName.empty())
+        {
+            callback(false);
+            return;
+        }
+        sdbusplus::asio::getProperty<Associations>(
+            *crow::connections::systemBus, serviceName, objIt->first,
+            "xyz.openbmc_project.Association.Definitions", "Associations",
+            [chassisID, callback](const boost::system::error_code ec,
+                                  const Associations& associations) {
+            if (ec)
+            {
+                callback(false);
+                return;
+            }
+            for (const auto& assoc : associations)
+            {
+                if (std::get<1>(assoc) == "associated_ROT")
+                {
+                    callback(true);
+                    return;
+                }
+            }
+        });
+        callback(false);
     },
-
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree",
