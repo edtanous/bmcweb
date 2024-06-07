@@ -310,6 +310,104 @@ inline std::string getRedfishFWHealth(const std::string& fwState)
 }
 
 /**
+ * @brief Put recovery status of input swId into json response
+ *
+ * This function will put the appropriate Redfish state of the input
+ * firmware id to ["Status"]["State"] within the json response
+ *
+ * @param[i,o] aResp    Async response object
+ * @param[i]   swId     The software ID to get status for
+ * @param[i]   dbusSvc  The dbus service implementing the software object
+ *
+ * @return void
+ */
+inline void getFwRecoveryStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::shared_ptr<std::string>& swId,
+                        const std::string& dbusSvc)
+{
+    auto getLastSegnmentFromDotterString = [](const std::string input) -> std::string {
+        size_t pos = input.rfind(".");
+        if (pos == std::string::npos)
+        {
+            BMCWEB_LOG_ERROR("Unable to extract last segment from input {}", input);
+            return "";
+        }
+        return input.substr(pos + 1);
+    };
+
+    BMCWEB_LOG_DEBUG("getFwRecoveryStatus: swId {} svc {}", *swId, dbusSvc);
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, swId, &getLastSegnmentFromDotterString](
+            const boost::system::error_code errorCode,
+            const boost::container::flat_map<
+                std::string, dbus::utility::DbusVariantType>& propertiesList) {
+        if (errorCode)
+        {
+            // OK since not all fwtypes support recovery
+            return;
+        }
+
+        const auto& it = propertiesList.find("Health");
+        if (it == propertiesList.end())
+        {
+            BMCWEB_LOG_ERROR("Can't find D-Bus property \"xyz.openbmc_project.State.Decorator.Health.Health\"!");
+            messages::propertyMissing(asyncResp->res, "Health");
+            return;
+        }
+
+        const std::string* health =
+            std::get_if<std::string>(&it->second);
+        if (health == nullptr)
+        {
+            BMCWEB_LOG_ERROR("wrong types for D-Bus property \"xyz.openbmc_project.State.Decorator.Health.Health\"!");
+            messages::propertyValueTypeError(asyncResp->res, "", "Health");
+            return;
+        }
+        BMCWEB_LOG_DEBUG("getFwRecoveryStatus: Health {}", *health);
+        asyncResp->res.jsonValue["Status"]["Health"] = getLastSegnmentFromDotterString(*health);
+    },
+        dbusSvc, "/xyz/openbmc_project/software/" + *swId,
+        "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.State.Decorator.Health");
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, swId, &getLastSegnmentFromDotterString](
+            const boost::system::error_code errorCode,
+            const boost::container::flat_map<
+                std::string, dbus::utility::DbusVariantType>& propertiesList) {
+        if (errorCode)
+        {
+            // OK since not all fwtypes support recovery
+            return;
+        }
+
+        const auto& it = propertiesList.find("State");
+        if (it == propertiesList.end())
+        {
+            BMCWEB_LOG_ERROR("Can't find property \"xyz.openbmc_project.State.Decorator.OperationalStatus.State\"!");
+            messages::propertyMissing(asyncResp->res, "State");
+            return;
+        }
+
+        const std::string* state =
+            std::get_if<std::string>(&it->second);
+        if (state == nullptr)
+        {
+            BMCWEB_LOG_ERROR("wrong types for property\"xyz.openbmc_project.State.Decorator.OperationalStatus.State\"!");
+            messages::propertyValueTypeError(asyncResp->res, "", "State");
+            return;
+        }
+        BMCWEB_LOG_DEBUG("getFwRecoveryStatus: State {}", *state);
+        asyncResp->res.jsonValue["Status"]["State"] = getLastSegnmentFromDotterString(*state);
+    },
+        dbusSvc, "/xyz/openbmc_project/software/" + *swId,
+        "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.State.Decorator.OperationalStatus");
+}
+
+
+/**
  * @brief Put status of input swId into json response
  *
  * This function will put the appropriate Redfish state of the input
