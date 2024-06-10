@@ -2432,7 +2432,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
 
                 auto pathItr = std::ranges::find_if(
                     managedObj, [&dbusObjName](const auto& obj) {
-                    return obj.first.parent_path() == dbusObjName;
+                    return obj.first.filename() == dbusObjName;
                 });
                 dbus::utility::DBusPropertiesMap output;
 
@@ -2560,7 +2560,7 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
                     bool foundChassis = false;
                     for (const auto& obj : managedObj)
                     {
-                        if (obj.first.parent_path() == chassis)
+                        if (obj.first.filename() == chassis)
                         {
                             chassis = obj.first.str;
                             foundChassis = true;
