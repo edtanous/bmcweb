@@ -461,7 +461,7 @@ static void
                     });
                     if (preTaskMessages.size() > 0)
                     {
-                        task->messages.emplace_back(preTaskMessages);
+                        task->messages.insert(task->messages.end(), preTaskMessages.begin(), preTaskMessages.end());
                     }
                     preTaskMessages = {};
                 }
