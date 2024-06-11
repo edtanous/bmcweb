@@ -52,8 +52,7 @@ static const std::string dpuFruPath =
     "/xyz/openbmc_project/inventory/system/board";
 
 static constexpr std::string_view socForceResetTraget =
-    "/redfish/v1/Systems/" PLATFORMSYSTEMID
-    "/Oem/Nvidia/SOC.ForceReset";
+    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/SOC.ForceReset";
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 struct PropertyInfo
@@ -1253,24 +1252,28 @@ inline void requestRoutesNvidiaOemBf(App& app)
         }
         auto dataOut = std::make_shared<boost::process::ipstream>();
         auto dataErr = std::make_shared<boost::process::ipstream>();
-        auto callback = [asyncResp, dataOut, dataErr](const boost::system::error_code& ec,
-                                     int errorCode) mutable {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR("mlnx_bf_reset_control script failed with error code: {} {}",
-                             ec, errorCode);
+        auto callback = [asyncResp, dataOut,
+                         dataErr](const boost::system::error_code& ec,
+                                  int errorCode) mutable {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR(
+                    "mlnx_bf_reset_control script failed with error code: {} {}",
+                    ec, errorCode);
                 messages::operationFailed(asyncResp->res);
-            return;
-        }
-        BMCWEB_LOG_DEBUG("SOC Hard Reset");
-        messages::success(asyncResp->res);
+                return;
+            }
+            BMCWEB_LOG_DEBUG("SOC Hard Reset");
+            messages::success(asyncResp->res);
         };
 
-        std::string command = "/usr/sbin/mlnx_bf_reset_control soc_hard_reset_ignore_host";
-        boost::process::async_system(crow::connections::systemBus->get_io_context(),
-                     std::move(callback), command, bp::std_in.close(),
-                     bp::std_out > *dataOut, bp::std_err > *dataErr);
-        });
+        std::string command =
+            "/usr/sbin/mlnx_bf_reset_control soc_hard_reset_ignore_host";
+        boost::process::async_system(
+            crow::connections::systemBus->get_io_context(), std::move(callback),
+            command, bp::std_in.close(), bp::std_out > *dataOut,
+            bp::std_err > *dataErr);
+    });
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 

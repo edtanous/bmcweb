@@ -181,9 +181,10 @@ inline void
  * @param[in]       objPath     D-Bus object to query.
  * @param[in]       fabricId    fabric id for redfish URI.
  */
-inline void updateProcessorPortLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                            const std::string& objPath,
-                            const std::string& fabricId)
+inline void
+    updateProcessorPortLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& objPath,
+                             const std::string& fabricId)
 {
     BMCWEB_LOG_DEBUG("Get Processor Port Links");
     crow::connections::systemBus->async_method_call(
@@ -285,18 +286,16 @@ inline void getConnectedNetworkAdapter(
                              std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG(
-                "Get parent chassis failed on {}",
-                networkAdapterPath);
+            BMCWEB_LOG_DEBUG("Get parent chassis failed on {}",
+                             networkAdapterPath);
             return;
         }
         std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_DEBUG(
-                "Get connected network adapter failed on: {}",
-                networkAdapterName);
+            BMCWEB_LOG_DEBUG("Get connected network adapter failed on: {}",
+                             networkAdapterName);
             return;
         }
         for (const std::string& networkAdapterChassisPath : *data)
@@ -336,16 +335,14 @@ inline void updateNetworkAdapterPortLinks(
                          std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("Dbus resource error on {}",
-                objPath);
+            BMCWEB_LOG_DEBUG("Dbus resource error on {}", objPath);
             return; // no endpoint = no failures
         }
         std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_DEBUG("No data received on {}",
-                objPath);
+            BMCWEB_LOG_DEBUG("No data received on {}", objPath);
             return;
         }
         for (const std::string& networkAdapterPath : *data)
@@ -372,7 +369,7 @@ inline void updateNetworkAdapterPortLinks(
 inline void
     getConnectedSwitchPort(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                            const std::string& portPath,
-                         const std::string& fabricId,
+                           const std::string& fabricId,
                            const std::string& switchName)
 {
     BMCWEB_LOG_DEBUG("Get connected switch ports on {}", switchName);
@@ -389,8 +386,8 @@ inline void
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_DEBUG(
-                "No response data on{} switch_port association", portPath);
+            BMCWEB_LOG_DEBUG("No response data on{} switch_port association",
+                             portPath);
             return;
         }
         nlohmann::json& switchlinksArray =
@@ -402,9 +399,9 @@ inline void
             if (portId.empty())
             {
                 BMCWEB_LOG_ERROR("Unable to fetch port");
-            messages::internalError(asyncResp->res);
-            return;
-        }
+                messages::internalError(asyncResp->res);
+                return;
+            }
             nlohmann::json thisPort = nlohmann::json::object();
             std::string portUri = "/redfish/v1/Fabrics/" + fabricId;
             portUri += "/Switches/" + switchName + "/Ports/";
@@ -430,25 +427,26 @@ inline void
     updateSwitchPortLinks(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                           const std::string& objPath,
                           const std::string& fabricId)
-        {
+{
     BMCWEB_LOG_DEBUG("Get Switch Port Links");
     crow::connections::systemBus->async_method_call(
         [aResp, objPath,
          fabricId](const boost::system::error_code ec,
                    std::variant<std::vector<std::string>>& resp) {
         if (ec)
-            {
+        {
             BMCWEB_LOG_DEBUG("Dbus response error");
             return; // no endpoint = no failures
-            }
+        }
         std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
-            {
+        {
             BMCWEB_LOG_DEBUG(
-                "No response data on {} associated_switch association", objPath);
+                "No response data on {} associated_switch association",
+                objPath);
             return;
-            }
+        }
         for (const std::string& switchPath : *data)
         {
             sdbusplus::message::object_path switchObjPath(switchPath);
@@ -457,8 +455,8 @@ inline void
             {
                 BMCWEB_LOG_ERROR("Empty switch name");
                 messages::internalError(aResp->res);
-            return;
-        }
+                return;
+            }
             nlohmann::json& switchLinksArray =
                 aResp->res.jsonValue["Links"]["ConnectedSwitches"];
             nlohmann::json thisSwitch = nlohmann::json::object();
@@ -1836,12 +1834,12 @@ inline void requestRoutesPortCollection(App& app)
                     std::vector<std::string>* data =
                         std::get_if<std::vector<std::string>>(&resp);
                     if (data == nullptr)
-                        {
+                    {
                         BMCWEB_LOG_ERROR(
                             "DBUS response error while getting switches");
                         messages::internalError(asyncResp->res);
                         return;
-                        }
+                    }
                     for (const std::string& object : *data)
                     {
                         // Get the switchId object
@@ -3768,9 +3766,9 @@ inline void requestRoutesPortMetrics(App& app)
                     {
                         // Get the switchId object
                         if (!boost::ends_with(switchPath, switchId))
-                {
-                    continue;
-                }
+                        {
+                            continue;
+                        }
 
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, fabricId, switchId, portId](
@@ -3851,10 +3849,10 @@ inline void requestRoutesPortMetrics(App& app)
                             switchPath + "/all_states",
                             "org.freedesktop.DBus.Properties", "Get",
                             "xyz.openbmc_project.Association", "endpoints");
-                return;
-            }
-            // Couldn't find an object with that name.
-            // Return an error
+                        return;
+                    }
+                    // Couldn't find an object with that name.
+                    // Return an error
                     messages::resourceNotFound(
                         asyncResp->res, "#Switch.v1_8_0.Switch", switchId);
                 },

@@ -176,7 +176,8 @@ inline void requestRoutesMetricReportCollection(App& app)
         asyncResp->res.jsonValue["Name"] = "Metric Report Collection";
 #ifdef BMCWEB_ENABLE_PLATFORM_METRICS
 #ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
-        redfish::shmem::getShmemMetricsReportCollection(asyncResp, "MetricReports");
+        redfish::shmem::getShmemMetricsReportCollection(asyncResp,
+                                                        "MetricReports");
 #else
         addMetricReportMembers(asyncResp);
 #endif

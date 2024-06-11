@@ -5,17 +5,17 @@
 
 #pragma once
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/exception/diagnostic_information.hpp>
+#include <boost/interprocess/exceptions.hpp>
+#include <boost/interprocess/sync/file_lock.hpp>
+#include <nlohmann/json.hpp>
+
 #include <algorithm>
-#include <string>
-#include <vector>
 #include <chrono>
 #include <fstream>
-#include <nlohmann/json.hpp>
-#include <boost/interprocess/sync/file_lock.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/interprocess/exceptions.hpp>
-#include <boost/exception/diagnostic_information.hpp>
-
+#include <string>
+#include <vector>
 
 namespace redfish
 {
@@ -26,7 +26,7 @@ namespace file_utils
 {
 
 #ifndef FLOCK_TIMEOUT
-#define FLOCK_TIMEOUT 100 //msec
+#define FLOCK_TIMEOUT 100 // msec
 #endif
 
 /**
@@ -50,7 +50,9 @@ inline int readFile2Json(const std::string& filePath, nlohmann::json& j)
         {
             auto now = std::chrono::steady_clock::now();
             auto elapsed =
-                std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+                std::chrono::duration_cast<std::chrono::milliseconds>(now -
+                                                                      start)
+                    .count();
 
             if (elapsed >= FLOCK_TIMEOUT)
             {
@@ -68,7 +70,7 @@ inline int readFile2Json(const std::string& filePath, nlohmann::json& j)
         }
 
         std::string jsonString((std::istreambuf_iterator<char>(ifs)),
-            std::istreambuf_iterator<char>());
+                               std::istreambuf_iterator<char>());
 
         ifs.close();
         fileLock.unlock();
@@ -83,18 +85,18 @@ inline int readFile2Json(const std::string& filePath, nlohmann::json& j)
 
         j = json;
     }
-    catch(const std::exception& ex)
+    catch (const std::exception& ex)
     {
         BMCWEB_LOG_ERROR("An std::exception error occurred: {}", ex.what());
         return -3;
     }
-    catch(const boost::exception& ex)
+    catch (const boost::exception& ex)
     {
         BMCWEB_LOG_ERROR("A boost::exception error occurred: {}",
-            boost::diagnostic_information(ex));
+                         boost::diagnostic_information(ex));
         return -4;
     }
-    catch(...)
+    catch (...)
     {
         BMCWEB_LOG_ERROR("Caught an unknown error");
         return -5;

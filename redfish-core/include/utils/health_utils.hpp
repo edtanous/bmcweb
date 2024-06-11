@@ -7,15 +7,15 @@
 
 #include "utils/file_utils.hpp"
 
-#include <string>
 #include <nlohmann/json.hpp>
+
+#include <string>
 
 namespace redfish
 {
 
 namespace health_utils
 {
-
 
 /** NOTES: This is a temporary solution to avoid performance issues may impact
  *  other Redfish services. Please call for architecture decisions from all
@@ -27,7 +27,7 @@ namespace health_utils
  *
  */
 inline void getDeviceHealthInfo(crow::Response& resp,
-    const std::string& chassisId)
+                                const std::string& chassisId)
 {
     std::string deviceId = chassisId;
     if (strlen(PLATFORMDEVICEPREFIX) > 0)
@@ -38,7 +38,7 @@ inline void getDeviceHealthInfo(crow::Response& resp,
         }
     }
 
-    if(deviceId.empty())
+    if (deviceId.empty())
     {
         BMCWEB_LOG_ERROR("No device {} health info!", deviceId);
         return;
@@ -57,8 +57,7 @@ inline void getDeviceHealthInfo(crow::Response& resp,
     int rc = file_utils::readFile2Json(deviceStatusPath, jStatus);
     if (rc != 0)
     {
-        BMCWEB_LOG_ERROR("Health: read {} status file failed!",
-            deviceId);
+        BMCWEB_LOG_ERROR("Health: read {} status file failed!", deviceId);
         // No need to report error since no status file means device is OK.
         return;
     }
@@ -66,8 +65,7 @@ inline void getDeviceHealthInfo(crow::Response& resp,
     auto j = jStatus.find("Status");
     if (j == jStatus.end())
     {
-        BMCWEB_LOG_ERROR("Health: No Status in status file of {}!",
-            deviceId);
+        BMCWEB_LOG_ERROR("Health: No Status in status file of {}!", deviceId);
         messages::internalError(resp);
         return;
     }
@@ -78,13 +76,11 @@ inline void getDeviceHealthInfo(crow::Response& resp,
         std::string value = *h;
         if (value.length() == 0)
         {
-            BMCWEB_LOG_ERROR("Get {} Health failed!",
-                deviceId);
+            BMCWEB_LOG_ERROR("Get {} Health failed!", deviceId);
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Get {} Health {}!",
-                deviceId, value);
+            BMCWEB_LOG_DEBUG("Get {} Health {}!", deviceId, value);
             health = value;
         }
     }
@@ -95,13 +91,11 @@ inline void getDeviceHealthInfo(crow::Response& resp,
         std::string value = *r;
         if (value.length() == 0)
         {
-            BMCWEB_LOG_ERROR("Get {} HealthRollup failed!",
-                deviceId);
+            BMCWEB_LOG_ERROR("Get {} HealthRollup failed!", deviceId);
         }
         else
         {
-            BMCWEB_LOG_DEBUG("Get {} HealthRollup {}!",
-                deviceId, value);
+            BMCWEB_LOG_DEBUG("Get {} HealthRollup {}!", deviceId, value);
             rollup = value;
         }
     }

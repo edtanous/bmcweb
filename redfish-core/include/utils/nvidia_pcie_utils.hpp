@@ -7,7 +7,8 @@ namespace nvidia_pcie_utils
 
 static constexpr const char* pciePath = "/xyz/openbmc_project/PCIe";
 
-inline void getPCIeDeviceList(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+inline void
+    getPCIeDeviceList(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                       const std::string& name,
                       const std::string& path = pciePath,
                       const std::string& chassisId = std::string())
@@ -60,8 +61,6 @@ inline void getPCIeDeviceList(const std::shared_ptr<bmcweb::AsyncResp>& asyncRes
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
         std::string(path) + "/", 1, std::array<std::string, 0>());
 }
-
-
 
 } // namespace nvidia_pcie_utils
 } // namespace redfish

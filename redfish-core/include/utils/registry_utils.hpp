@@ -78,9 +78,8 @@ inline void
     }
 }
 
-inline std::string
-    composeMessage(const std::string& messageId,
-                   const nlohmann::json& messageArgs)
+inline std::string composeMessage(const std::string& messageId,
+                                  const nlohmann::json& messageArgs)
 {
     const registries::Message* msg = registries::getMessage(messageId);
 

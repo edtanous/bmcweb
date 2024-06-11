@@ -1936,7 +1936,8 @@ inline void getMetricReportCollection(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
 #ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
-    redfish::shmem::getShmemMetricsReportCollection(asyncResp, "MetricReportDefinitions");
+    redfish::shmem::getShmemMetricsReportCollection(asyncResp,
+                                                    "MetricReportDefinitions");
     return;
 #endif
     BMCWEB_LOG_DEBUG("getMetricReportCollection");

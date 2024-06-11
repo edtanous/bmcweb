@@ -104,11 +104,13 @@ const std::string firmwarePrefix =
     "/redfish/v1/UpdateService/FirmwareInventory/";
 
 static std::map<std::string, std::string> dBusToRedfishURI = {
-    {chassisPrefixDbus, chassisPrefix},     {fabricsPrefixDbus, fabricsPrefix},
-    {processorPrefixDbus, processorPrefix}, {memoryPrefixDbus, memoryPrefix},
-    {softwarePrefixDbus, firmwarePrefix},   {sensorSubTree, chassisPrefix},
-    {systemsPrefixDbus, systemsPrefixRedfish}
-};
+    {chassisPrefixDbus, chassisPrefix},
+    {fabricsPrefixDbus, fabricsPrefix},
+    {processorPrefixDbus, processorPrefix},
+    {memoryPrefixDbus, memoryPrefix},
+    {softwarePrefixDbus, firmwarePrefix},
+    {sensorSubTree, chassisPrefix},
+    {systemsPrefixDbus, systemsPrefixRedfish}};
 
 /**
  * Utility function for populating async response with

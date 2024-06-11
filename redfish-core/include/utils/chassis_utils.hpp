@@ -494,7 +494,7 @@ enum class InBandOption
 
 inline void
     handleMctpInBandActions(const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& chassisUUID,
                             const InBandOption option, bool enabled = false,
                             const std::string& chassisId = "")
@@ -508,54 +508,54 @@ inline void
          enabled](const boost::system::error_code& ec,
                   const dbus::utility::MapperGetObject& resp) mutable {
         if (ec || resp.empty())
-    {
+        {
             BMCWEB_LOG_WARNING(
                 "DBUS response error during getting of service name: {}", ec);
             return;
-    }
+        }
         for (auto it = resp.begin(); it != resp.end(); ++it)
         {
             std::string serviceName = it->first;
-    crow::connections::systemBus->async_method_call(
+            crow::connections::systemBus->async_method_call(
                 [req, asyncResp, chassisUUID, serviceName, option, enabled,
                  chassisId](const boost::system::error_code& ec,
-                      const dbus::utility::ManagedObjectType& resp) {
-        if (ec)
-        {
-            BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
-                messages::internalError(asyncResp->res);
-            return;
-        }
+                            const dbus::utility::ManagedObjectType& resp) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG("DBUS response error for MCTP.Control");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
 
-        const uint32_t* eid = nullptr;
-        const std::string* uuid = nullptr;
+                const uint32_t* eid = nullptr;
+                const std::string* uuid = nullptr;
                 const std::vector<uint8_t>* supportedMsgTypes = nullptr;
-        bool foundEID = false;
+                bool foundEID = false;
 
-        for (auto& objectPath : resp)
-        {
-            for (auto& interfaceMap : objectPath.second)
-            {
+                for (auto& objectPath : resp)
+                {
+                    for (auto& interfaceMap : objectPath.second)
+                    {
                         if (interfaceMap.first ==
                             "xyz.openbmc_project.Common.UUID")
-                {
-                    for (auto& propertyMap : interfaceMap.second)
-                    {
-                        if (propertyMap.first == "UUID")
                         {
+                            for (auto& propertyMap : interfaceMap.second)
+                            {
+                                if (propertyMap.first == "UUID")
+                                {
                                     uuid = std::get_if<std::string>(
                                         &propertyMap.second);
+                                }
+                            }
                         }
-                    }
-                }
 
                         if (interfaceMap.first ==
                             "xyz.openbmc_project.MCTP.Endpoint")
-                {
-                    for (auto& propertyMap : interfaceMap.second)
-                    {
-                        if (propertyMap.first == "EID")
                         {
+                            for (auto& propertyMap : interfaceMap.second)
+                            {
+                                if (propertyMap.first == "EID")
+                                {
                                     eid = std::get_if<uint32_t>(
                                         &propertyMap.second);
                                 }
@@ -565,10 +565,10 @@ inline void
                                     supportedMsgTypes =
                                         std::get_if<std::vector<uint8_t>>(
                                             &propertyMap.second);
+                                }
+                            }
                         }
                     }
-                }
-            }
 
                     if ((*uuid) == chassisUUID && supportedMsgTypes)
                     {
@@ -576,19 +576,19 @@ inline void
                                       supportedMsgTypes->end(),
                                       mctpTypeVDMIANA) !=
                             supportedMsgTypes->end())
-            {
-                foundEID = true;
-                break;
-            }
-        }
+                        {
+                            foundEID = true;
+                            break;
+                        }
+                    }
                 }
 
-        if (foundEID)
-        {
+                if (foundEID)
+                {
                     switch (option)
-        {
+                    {
                         case InBandOption::BackgroundCopyStatus:
-            {
+                        {
                             nlohmann::json& oem =
                                 asyncResp->res.jsonValue["Oem"]["Nvidia"];
                             oem["@odata.type"] =
@@ -618,10 +618,10 @@ inline void
                                 });
                             });
                             break;
-            }
+                        }
                         case InBandOption::setBackgroundCopyEnabled:
                             enableBackgroundCopy(req, asyncResp, *eid, enabled,
-                    chassisId);
+                                                 chassisId);
                             break;
                         case InBandOption::setInBandEnabled:
                             enableInBand(req, asyncResp, *eid, enabled,
@@ -631,12 +631,12 @@ inline void
                             BMCWEB_LOG_DEBUG(
                                 "Invalid enum provided for inNand mctp access");
                             break;
-            }
+                    }
+                }
+            },
+                serviceName, "/xyz/openbmc_project/mctp",
+                "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
         }
-    },
-        serviceName, "/xyz/openbmc_project/mctp",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-}
     });
 }
 
@@ -674,7 +674,7 @@ inline void
                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& chassisId,
                      const std::string& chassisUUID, bool enabled)
-            {
+{
     handleMctpInBandActions(req, asyncResp, chassisUUID,
                             InBandOption::setInBandEnabled, enabled, chassisId);
 }
@@ -692,7 +692,7 @@ inline void getBackgroundCopyAndInBandInfo(
     const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisUUID)
-        {
+{
     handleMctpInBandActions(req, asyncResp, chassisUUID,
                             InBandOption::BackgroundCopyStatus);
 }
@@ -893,8 +893,8 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
             {
                 if (std::get<1>(assoc) == "associated_ROT")
                 {
-        callback(true);
-        return;
+                    callback(true);
+                    return;
                 }
             }
         });

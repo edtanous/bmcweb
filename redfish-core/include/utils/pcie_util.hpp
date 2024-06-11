@@ -39,8 +39,8 @@ inline void
 {
     static constexpr std::array<std::string_view, 1> pcieDeviceInterface = {
         "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
-    const boost::urls::url pcieDeviceUrl =
-        boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices");
+    const boost::urls::url pcieDeviceUrl = boost::urls::url(
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices");
     collection_util::getCollectionToKey(
         asyncResp, pcieDeviceUrl, pcieDeviceInterface,
         "/xyz/openbmc_project/inventory", jsonKeyName);

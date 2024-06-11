@@ -43,10 +43,10 @@
 #include <sdbusplus/message.hpp>
 #include <sdbusplus/unpack_properties.hpp>
 #include <utils/istmode_utils.hpp>
+#include <utils/nvidia_pcie_utils.hpp>
 #include <utils/nvidia_systems_util.hpp>
 #include <utils/privilege_utils.hpp>
 #include <utils/sw_utils.hpp>
-#include <utils/nvidia_pcie_utils.hpp>
 
 #include <array>
 #include <memory>
@@ -3918,10 +3918,10 @@ inline void
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
 
 #ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
-/** NOTES: This is a temporary solution to avoid performance issues may impact
- *  other Redfish services. Please call for architecture decisions from all
- *  NvBMC teams if want to use it in other places.
- */
+    /** NOTES: This is a temporary solution to avoid performance issues may
+     * impact other Redfish services. Please call for architecture decisions
+     * from all NvBMC teams if want to use it in other places.
+     */
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 #error "Conflicts! Please set health-rollup-alternative=disabled."
@@ -3935,7 +3935,7 @@ inline void
 #endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     redfish::conditions_utils::populateServiceConditions(asyncResp,
-        PLATFORMSYSTEMID);
+                                                         PLATFORMSYSTEMID);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";

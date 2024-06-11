@@ -78,9 +78,9 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         {
             suffix = "/Metrics#/Oem/Nvidia/NVLinkErrors/ReplayCount";
         }
-        }
+    }
     else if (ifaceName == "xyz.openbmc_project.Metrics.PortMetricsOem2")
-        {
+    {
         if (metricName == "RXBytes")
         {
             suffix = "/Metrics#/RXBytes";
@@ -91,7 +91,7 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         }
     }
     else if (ifaceName == "xyz.openbmc_project.Metrics.PortMetricsOem3")
-        {
+    {
         if (metricName == "RXNoProtocolBytes")
         {
             suffix = "/Metrics#/Oem/Nvidia/RXNoProtocolBytes";

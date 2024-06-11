@@ -43,8 +43,7 @@ static std::map<std::string, std::string> modes = {
     {"xyz.openbmc_project.Control.Power.Mode.PowerMode.Static", "Disabled"}};
 
 const std::array<const char*, 3> powerinterfaces = {
-    "xyz.openbmc_project.Control.Power.Cap",
-    "com.nvidia.Common.ClearPowerCap",
+    "xyz.openbmc_project.Control.Power.Cap", "com.nvidia.Common.ClearPowerCap",
     "xyz.openbmc_project.Control.Power.Mode"};
 inline void
     getPowercontrolObjects(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -127,7 +126,8 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             if (propertyName == "MaxPowerCapValue")
                             {
                                 propertyName = "AllowableMax";
-                                const auto* value = std::get_if<size_t>(&property.second);
+                                const auto* value =
+                                    std::get_if<size_t>(&property.second);
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_ERROR(
@@ -141,10 +141,11 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             else if (propertyName == "MinPowerCapValue")
                             {
                                 propertyName = "AllowableMin";
-                                const auto* value = std::get_if<size_t>(&property.second);
+                                const auto* value =
+                                    std::get_if<size_t>(&property.second);
                                 if (value == nullptr)
                                 {
-                                     BMCWEB_LOG_ERROR(
+                                    BMCWEB_LOG_ERROR(
                                         "Internal errror for AllowableMin");
                                     messages::internalError(asyncResp->res);
                                     return;
@@ -155,7 +156,8 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             else if (propertyName == setPointPropName)
                             {
                                 propertyName = "SetPoint";
-                                const auto* value = std::get_if<size_t>(&property.second);
+                                const auto* value =
+                                    std::get_if<size_t>(&property.second);
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_ERROR(
@@ -169,7 +171,8 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             else if (propertyName == "DefaultPowerCap")
                             {
                                 propertyName = "DefaultSetPoint";
-                                const auto* value = std::get_if<size_t>(&property.second);
+                                const auto* value =
+                                    std::get_if<size_t>(&property.second);
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_ERROR(

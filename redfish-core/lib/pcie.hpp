@@ -1235,9 +1235,9 @@ inline void addPCIeDeviceProperties(
     }
 
     asyncResp->res.jsonValue["PCIeFunctions"]["@odata.id"] =
-        boost::urls::format(
-            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/{}/PCIeFunctions",
-            pcieDeviceId);
+        boost::urls::format("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/{}/PCIeFunctions",
+                            pcieDeviceId);
 }
 
 inline void requestRoutesSystemPCIeDeviceCollection(App& app)
@@ -1327,7 +1327,8 @@ inline void addPCIeDeviceCommonProperties(
         "</redfish/v1/JsonSchemas/PCIeDevice/PCIeDevice.json>; rel=describedby");
     asyncResp->res.jsonValue["@odata.type"] = "#PCIeDevice.v1_9_0.PCIeDevice";
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/{}", pcieDeviceId);
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/{}",
+        pcieDeviceId);
     asyncResp->res.jsonValue["Name"] = "PCIe Device";
     asyncResp->res.jsonValue["Id"] = pcieDeviceId;
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -1417,9 +1418,10 @@ inline void addPCIeFunctionList(
         }
 
         nlohmann::json::object_t pcieFunction;
-        pcieFunction["@odata.id"] = boost::urls::format(
-            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/{}/PCIeFunctions/{}",
-            pcieDeviceId, std::to_string(functionNum));
+        pcieFunction["@odata.id"] =
+            boost::urls::format("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/PCIeDevices/{}/PCIeFunctions/{}",
+                                pcieDeviceId, std::to_string(functionNum));
         pcieFunctionList.emplace_back(std::move(pcieFunction));
     }
     res.jsonValue["PCIeFunctions@odata.count"] = pcieFunctionList.size();
@@ -1577,8 +1579,8 @@ inline void requestRoutesChassisPCIeDeviceCollection(App& app)
                     {"Description", "Collection of PCIe Devices"},
                     {"Members", nlohmann::json::array()},
                     {"Members@odata.count", 0}};
-                nvidia_pcie_utils::getPCIeDeviceList(asyncResp, "Members", chassisPCIePath,
-                                  chassisId);
+                nvidia_pcie_utils::getPCIeDeviceList(
+                    asyncResp, "Members", chassisPCIePath, chassisId);
                 return;
             }
             messages::resourceNotFound(asyncResp->res,
@@ -1658,14 +1660,16 @@ inline void addPCIeFunctionCommonProperties(crow::Response& resp,
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/PCIeFunction/PCIeFunction.json>; rel=describedby");
     resp.jsonValue["@odata.type"] = "#PCIeFunction.v1_2_3.PCIeFunction";
-    resp.jsonValue["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/{}/PCIeFunctions/{}",
-        pcieDeviceId, std::to_string(pcieFunctionId));
+    resp.jsonValue["@odata.id"] =
+        boost::urls::format("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/PCIeDevices/{}/PCIeFunctions/{}",
+                            pcieDeviceId, std::to_string(pcieFunctionId));
     resp.jsonValue["Name"] = "PCIe Function";
     resp.jsonValue["Id"] = std::to_string(pcieFunctionId);
     resp.jsonValue["FunctionId"] = pcieFunctionId;
     resp.jsonValue["Links"]["PCIeDevice"]["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/{}", pcieDeviceId);
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices/{}",
+        pcieDeviceId);
 }
 
 inline void

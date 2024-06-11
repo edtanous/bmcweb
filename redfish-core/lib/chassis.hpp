@@ -23,8 +23,8 @@
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
-#include "utils/json_utils.hpp"
 #include "utils/health_utils.hpp"
+#include "utils/json_utils.hpp"
 
 #include <boost/container/flat_map.hpp>
 #include <boost/system/error_code.hpp>
@@ -479,7 +479,8 @@ inline void handleChassisGetSubTree(
         {
             continue;
         }
-        redfish::nvidia_chassis_utils::handleFruAssetInformation(asyncResp, chassisId, path);
+        redfish::nvidia_chassis_utils::handleFruAssetInformation(
+            asyncResp, chassisId, path);
         getChassisConnectivity(asyncResp, chassisId, path);
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
@@ -495,10 +496,10 @@ inline void handleChassisGetSubTree(
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
 #ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
-/** NOTES: This is a temporary solution to avoid performance issues may impact
- *  other Redfish services. Please call for architecture decisions from all
- *  NvBMC teams if want to use it in other places.
- */
+        /** NOTES: This is a temporary solution to avoid performance issues may
+         * impact other Redfish services. Please call for architecture decisions
+         * from all NvBMC teams if want to use it in other places.
+         */
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 #error "Conflicts! Please set health-rollup-alternative=disabled."
@@ -571,159 +572,160 @@ inline void handleChassisGetSubTree(
 
         for (const auto& [connectionName, interfaces2] : connectionNames)
         {
-        const std::array<const char*, 3> hasIndicatorLed = {
-            "xyz.openbmc_project.Inventory.Item.Chassis",
-            "xyz.openbmc_project.Inventory.Item.Panel",
-            "xyz.openbmc_project.Inventory.Item.Board.Motherboard"};
+            const std::array<const char*, 3> hasIndicatorLed = {
+                "xyz.openbmc_project.Inventory.Item.Chassis",
+                "xyz.openbmc_project.Inventory.Item.Panel",
+                "xyz.openbmc_project.Inventory.Item.Board.Motherboard"};
 
-        const std::string assetTagInterface =
-            "xyz.openbmc_project.Inventory.Decorator.AssetTag";
-        const std::string replaceableInterface =
-            "xyz.openbmc_project.Inventory.Decorator.Replaceable";
-        const std::string revisionInterface =
-            "xyz.openbmc_project.Inventory.Decorator.Revision";
-        bool operationalStatusPresent = false;
-        const std::string operationalStatusInterface =
-            "xyz.openbmc_project.State.Decorator.OperationalStatus";
+            const std::string assetTagInterface =
+                "xyz.openbmc_project.Inventory.Decorator.AssetTag";
+            const std::string replaceableInterface =
+                "xyz.openbmc_project.Inventory.Decorator.Replaceable";
+            const std::string revisionInterface =
+                "xyz.openbmc_project.Inventory.Decorator.Revision";
+            bool operationalStatusPresent = false;
+            const std::string operationalStatusInterface =
+                "xyz.openbmc_project.State.Decorator.OperationalStatus";
 
-        if (std::find(interfaces2.begin(), interfaces2.end(),
-                      operationalStatusInterface) != interfaces2.end())
-        {
-            operationalStatusPresent = true;
-        }
-        for (const auto& interface : interfaces2)
-        {
-            if (interface == assetTagInterface)
+            if (std::find(interfaces2.begin(), interfaces2.end(),
+                          operationalStatusInterface) != interfaces2.end())
             {
-                sdbusplus::asio::getProperty<std::string>(
-                    *crow::connections::systemBus, connectionName, path,
-                    assetTagInterface, "AssetTag",
+                operationalStatusPresent = true;
+            }
+            for (const auto& interface : interfaces2)
+            {
+                if (interface == assetTagInterface)
+                {
+                    sdbusplus::asio::getProperty<std::string>(
+                        *crow::connections::systemBus, connectionName, path,
+                        assetTagInterface, "AssetTag",
                         [asyncResp,
                          chassisId](const boost::system::error_code& ec2,
-                                           const std::string& property) {
-                    if (ec2)
-                    {
+                                    const std::string& property) {
+                        if (ec2)
+                        {
                             BMCWEB_LOG_ERROR(
                                 "DBus response error for AssetTag: {}", ec2);
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["AssetTag"] = property;
-                });
-            }
-            else if (interface == replaceableInterface)
-            {
-                sdbusplus::asio::getProperty<bool>(
-                    *crow::connections::systemBus, connectionName, path,
-                    replaceableInterface, "HotPluggable",
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["AssetTag"] = property;
+                    });
+                }
+                else if (interface == replaceableInterface)
+                {
+                    sdbusplus::asio::getProperty<bool>(
+                        *crow::connections::systemBus, connectionName, path,
+                        replaceableInterface, "HotPluggable",
                         [asyncResp,
                          chassisId](const boost::system::error_code& ec2,
-                                           const bool property) {
-                    if (ec2)
-                    {
-                        BMCWEB_LOG_ERROR(
+                                    const bool property) {
+                        if (ec2)
+                        {
+                            BMCWEB_LOG_ERROR(
                                 "DBus response error for HotPluggable: {}",
                                 ec2);
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["HotPluggable"] = property;
-                });
-            }
-            else if (interface == revisionInterface)
-            {
-                sdbusplus::asio::getProperty<std::string>(
-                    *crow::connections::systemBus, connectionName, path,
-                    revisionInterface, "Version",
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["HotPluggable"] = property;
+                    });
+                }
+                else if (interface == revisionInterface)
+                {
+                    sdbusplus::asio::getProperty<std::string>(
+                        *crow::connections::systemBus, connectionName, path,
+                        revisionInterface, "Version",
                         [asyncResp,
                          chassisId](const boost::system::error_code& ec2,
-                                           const std::string& property) {
-                    if (ec2)
-                    {
+                                    const std::string& property) {
+                        if (ec2)
+                        {
                             BMCWEB_LOG_ERROR(
                                 "DBus response error for Version: {}", ec2);
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["Version"] = property;
-                });
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        asyncResp->res.jsonValue["Version"] = property;
+                    });
+                }
             }
-        }
 
-        for (const char* interface : hasIndicatorLed)
-        {
+            for (const char* interface : hasIndicatorLed)
+            {
                 if (std::ranges::find(interfaces2, interface) !=
                     interfaces2.end())
-            {
-                getIndicatorLedState(asyncResp);
-                getSystemLocationIndicatorActive(asyncResp);
-                break;
+                {
+                    getIndicatorLedState(asyncResp);
+                    getSystemLocationIndicatorActive(asyncResp);
+                    break;
+                }
             }
-        }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        const std::string itemSystemInterface =
-            "xyz.openbmc_project.Inventory.Item.System";
+            const std::string itemSystemInterface =
+                "xyz.openbmc_project.Inventory.Item.System";
 
-        if (std::find(interfaces2.begin(), interfaces2.end(),
-                      itemSystemInterface) != interfaces2.end())
-        {
-            // static power hint
-            redfish::nvidia_chassis_utils::getStaticPowerHintByChassis(
-                asyncResp, path);
-        }
+            if (std::find(interfaces2.begin(), interfaces2.end(),
+                          itemSystemInterface) != interfaces2.end())
+            {
+                // static power hint
+                redfish::nvidia_chassis_utils::getStaticPowerHintByChassis(
+                    asyncResp, path);
+            }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-        sdbusplus::asio::getAllProperties(
-            *crow::connections::systemBus, connectionName, path, "",
-            [asyncResp, chassisId, path, operationalStatusPresent](
-                const boost::system::error_code&,
-                const dbus::utility::DBusPropertiesMap& propertiesList) {
-            redfish::nvidia_chassis_utils::handleChassisGetAllProperties(
-                asyncResp, chassisId, path, propertiesList,
-                operationalStatusPresent);
-            if (!operationalStatusPresent)
-            {
-                getChassisState(asyncResp);
-            }
-            getStorageLink(asyncResp, path);
-        });
+            sdbusplus::asio::getAllProperties(
+                *crow::connections::systemBus, connectionName, path, "",
+                [asyncResp, chassisId, path, operationalStatusPresent](
+                    const boost::system::error_code&,
+                    const dbus::utility::DBusPropertiesMap& propertiesList) {
+                redfish::nvidia_chassis_utils::handleChassisGetAllProperties(
+                    asyncResp, chassisId, path, propertiesList,
+                    operationalStatusPresent);
+                if (!operationalStatusPresent)
+                {
+                    getChassisState(asyncResp);
+                }
+                getStorageLink(asyncResp, path);
+            });
 
-        for (const auto& interface : interfaces2)
-        {
-            if (interface == "xyz.openbmc_project.Common.UUID")
+            for (const auto& interface : interfaces2)
             {
-                getChassisUUID(asyncResp, connectionName, path);
+                if (interface == "xyz.openbmc_project.Common.UUID")
+                {
+                    getChassisUUID(asyncResp, connectionName, path);
+                }
+                else if (interface ==
+                         "xyz.openbmc_project.Inventory.Decorator.LocationCode")
+                {
+                    getChassisLocationCode(asyncResp, connectionName, path);
+                }
             }
-            else if (interface ==
-                     "xyz.openbmc_project.Inventory.Decorator.LocationCode")
-            {
-                getChassisLocationCode(asyncResp, connectionName, path);
-            }
-        }
 
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
-        redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                             chassisId);
+            redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                                 chassisId);
 #endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        // Baseboard Chassis OEM properties if exist, search by association
-        redfish::nvidia_chassis_utils::getOemBaseboardChassisAssert(asyncResp,
-                                                                    objPath);
+            // Baseboard Chassis OEM properties if exist, search by association
+            redfish::nvidia_chassis_utils::getOemBaseboardChassisAssert(
+                asyncResp, objPath);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
-        // Links association to underneath chassis
-        redfish::nvidia_chassis_utils::getChassisLinksContains(asyncResp,
+            // Links association to underneath chassis
+            redfish::nvidia_chassis_utils::getChassisLinksContains(asyncResp,
+                                                                   objPath);
+            // Links association to underneath processors
+            redfish::nvidia_chassis_utils::getChassisProcessorLinks(asyncResp,
+                                                                    objPath);
+            // Links association to connected fabric switches
+            redfish::nvidia_chassis_utils::getChassisFabricSwitchesLinks(
+                asyncResp, objPath);
+            // Link association to parent chassis
+            redfish::chassis_utils::getChassisLinksContainedBy(asyncResp,
                                                                objPath);
-        // Links association to underneath processors
-        redfish::nvidia_chassis_utils::getChassisProcessorLinks(asyncResp,
-                                                                objPath);
-        // Links association to connected fabric switches
-        redfish::nvidia_chassis_utils::getChassisFabricSwitchesLinks(asyncResp,
-                                                                     objPath);
-        // Link association to parent chassis
-        redfish::chassis_utils::getChassisLinksContainedBy(asyncResp, objPath);
-        redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
+            redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
             // get network adapter
             redfish::nvidia_chassis_utils::getNetworkAdapters(
                 asyncResp, path, interfaces2, chassisId);
@@ -1222,46 +1224,46 @@ inline void handleOemChassisResetActionInfoPost(
 
     if (resetType == "AuxPowerCycle")
     {
-    // check power status
-    sdbusplus::asio::getProperty<std::string>(
-        *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
-        "/xyz/openbmc_project/state/host0", "xyz.openbmc_project.State.Host",
-        "CurrentHostState",
-        [asyncResp](const boost::system::error_code& ec,
-                    const std::string& hostState) {
-        if (ec)
-        {
-            if (ec == boost::system::errc::host_unreachable)
+        // check power status
+        sdbusplus::asio::getProperty<std::string>(
+            *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
+            "/xyz/openbmc_project/state/host0",
+            "xyz.openbmc_project.State.Host", "CurrentHostState",
+            [asyncResp](const boost::system::error_code& ec,
+                        const std::string& hostState) {
+            if (ec)
             {
-                // Service not available, no error, just don't
-                // return host state info
-                BMCWEB_LOG_DEBUG("Service not available {}", ec);
-                return;
-            }
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        if (hostState == "xyz.openbmc_project.State.Host.HostState.Off")
-        {
-            crow::connections::systemBus->async_method_call(
-                [asyncResp](const boost::system::error_code& ec) {
-                if (ec)
+                if (ec == boost::system::errc::host_unreachable)
                 {
-                    BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
-                    messages::internalError(asyncResp->res);
+                    // Service not available, no error, just don't
+                    // return host state info
+                    BMCWEB_LOG_DEBUG("Service not available {}", ec);
                     return;
                 }
-            },
-                "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-                "org.freedesktop.systemd1.Manager", "StartUnit",
-                "nvidia-aux-power.service", "replace");
-        }
-        else
-        {
-            messages::chassisPowerStateOffRequired(asyncResp->res, "0");
-        }
-    });
-}
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (hostState == "xyz.openbmc_project.State.Host.HostState.Off")
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp](const boost::system::error_code& ec) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                },
+                    "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                    "org.freedesktop.systemd1.Manager", "StartUnit",
+                    "nvidia-aux-power.service", "replace");
+            }
+            else
+            {
+                messages::chassisPowerStateOffRequired(asyncResp->res, "0");
+            }
+        });
+    }
     else
     {
         crow::connections::systemBus->async_method_call(
@@ -1272,9 +1274,10 @@ inline void handleOemChassisResetActionInfoPost(
                 messages::internalError(asyncResp->res);
                 return;
             }
-        }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-           "org.freedesktop.systemd1.Manager", "StartUnit",
-           "nvidia-aux-power-force.service", "replace");
+        },
+            "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+            "org.freedesktop.systemd1.Manager", "StartUnit",
+            "nvidia-aux-power-force.service", "replace");
     }
 }
 #endif

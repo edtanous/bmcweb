@@ -22,10 +22,10 @@
 #pragma once
 
 #include <utils/dbus_log_utils.hpp>
-#include <utils/origin_utils.hpp>
-#include <utils/time_utils.hpp>
 #include <utils/file_utils.hpp>
+#include <utils/origin_utils.hpp>
 #include <utils/registry_utils.hpp>
+#include <utils/time_utils.hpp>
 
 namespace redfish
 {
@@ -284,9 +284,8 @@ inline void handleServiceConditionsURI(
  *  other Redfish services. Please call for architecture decisions from all
  *  NvBMC teams if want to use it in other places.
  */
-inline void handleDeviceServiceConditionsFromFile(
-    crow::Response& resp,
-    const std::string& deviceId)
+inline void handleDeviceServiceConditionsFromFile(crow::Response& resp,
+                                                  const std::string& deviceId)
 {
     static const std::string deviceStatusFSPath = bmcwebDeviceStatusFSPath;
 
@@ -297,8 +296,7 @@ inline void handleDeviceServiceConditionsFromFile(
     int rc = file_utils::readFile2Json(deviceStatusPath, jStatus);
     if (rc != 0)
     {
-        BMCWEB_LOG_ERROR("Condtions: read {} status file failed!",
-            deviceId);
+        BMCWEB_LOG_ERROR("Condtions: read {} status file failed!", deviceId);
         // No need to report error since no status file means device is OK.
         return;
     }
@@ -307,7 +305,7 @@ inline void handleDeviceServiceConditionsFromFile(
     if (jSts == jStatus.end())
     {
         BMCWEB_LOG_ERROR("Condtions: No Status in status file of {}!",
-            deviceId);
+                         deviceId);
         messages::internalError(resp);
         return;
     }
@@ -316,7 +314,7 @@ inline void handleDeviceServiceConditionsFromFile(
     if (jCond == jSts->end())
     {
         BMCWEB_LOG_ERROR("Condtions: No Conditions in status file of {}!",
-            deviceId);
+                         deviceId);
         messages::internalError(resp);
         return;
     }
@@ -332,8 +330,8 @@ inline void handleDeviceServiceConditionsFromFile(
         {
             // MessageRegistry Format
             std::string messageId = *jMsgId;
-            std::string message = message_registries::composeMessage(
-                *jMsgId, *jMsgArgs);
+            std::string message = message_registries::composeMessage(*jMsgId,
+                                                                     *jMsgArgs);
 
             conditionResp["MessageId"] = messageId;
             conditionResp["MessageArgs"] = *jMsgArgs;
@@ -362,8 +360,8 @@ inline void handleDeviceServiceConditionsFromFile(
             }
             else
             {
-                BMCWEB_LOG_DEBUG("Get {} OriginOfCondition {}!",
-                    deviceId, originOfCondition);
+                BMCWEB_LOG_DEBUG("Get {} OriginOfCondition {}!", deviceId,
+                                 originOfCondition);
                 conditionResp["OriginOfCondition"]["@odata.id"] =
                     originOfCondition;
             }
@@ -398,13 +396,11 @@ inline void handleDeviceServiceConditionsFromFile(
             std::string resolution = *jResolution;
             if (resolution.length() == 0)
             {
-                BMCWEB_LOG_ERROR("Get {} Resolution failed!",
-                    deviceId);
+                BMCWEB_LOG_ERROR("Get {} Resolution failed!", deviceId);
             }
             else
             {
-                BMCWEB_LOG_DEBUG("Get {} Resolution {}!",
-                    deviceId, resolution);
+                BMCWEB_LOG_DEBUG("Get {} Resolution {}!", deviceId, resolution);
                 conditionResp["Resolution"] = resolution;
             }
         }
@@ -415,13 +411,11 @@ inline void handleDeviceServiceConditionsFromFile(
             std::string severity = *jSeverity;
             if (severity.length() == 0)
             {
-                BMCWEB_LOG_ERROR("Get {} Severity failed!",
-                    deviceId);
+                BMCWEB_LOG_ERROR("Get {} Severity failed!", deviceId);
             }
             else
             {
-                BMCWEB_LOG_DEBUG("Get {} Severity {}!",
-                    deviceId, severity);
+                BMCWEB_LOG_DEBUG("Get {} Severity {}!", deviceId, severity);
                 conditionResp["Severity"] = severity;
             }
         }
@@ -432,13 +426,11 @@ inline void handleDeviceServiceConditionsFromFile(
             std::string timestamp = *jTimestamp;
             if (timestamp.length() == 0)
             {
-                BMCWEB_LOG_ERROR("Get {} Timestamp failed!",
-                    deviceId);
+                BMCWEB_LOG_ERROR("Get {} Timestamp failed!", deviceId);
             }
             else
             {
-                BMCWEB_LOG_DEBUG("Get {} Timestamp {}!",
-                    deviceId, timestamp);
+                BMCWEB_LOG_DEBUG("Get {} Timestamp {}!", deviceId, timestamp);
                 conditionResp["Timestamp"] = timestamp;
             }
         }
@@ -450,12 +442,10 @@ inline void handleDeviceServiceConditionsFromFile(
         }
         else
         {
-            resp.jsonValue["Status"]["Conditions"].push_back(
-                conditionResp);
+            resp.jsonValue["Status"]["Conditions"].push_back(conditionResp);
         }
     }
 }
-
 
 /**
  * Utility function for populating Conditions

@@ -3679,7 +3679,7 @@ inline void requestRoutesManager(App& app)
                     const std::string& path = object.first;
                     if (!boost::ends_with(path, PLATFORMBMCID))
                     {
-			continue;
+                        continue;
                     }
 
                     // At /redfish/v1/Managers/HGX_BMC_0, we want
@@ -3970,61 +3970,61 @@ inline void requestRoutesManager(App& app)
         }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 #ifdef BMCWEB_ENABLE_FENCING_PRIVILEGE
-                if (privilege)
+        if (privilege)
+        {
+            crow::connections::systemBus->async_method_call(
+                [asyncResp,
+                 privilege](const boost::system::error_code ec,
+                            const MapperGetSubTreeResponse& subtree) {
+                if (ec)
                 {
-                    crow::connections::systemBus->async_method_call(
-                        [asyncResp,
-                         privilege](const boost::system::error_code ec,
-                                    const MapperGetSubTreeResponse& subtree) {
-                        if (ec)
-                        {
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                        for (const auto& [objectPath, serviceMap] : subtree)
-                        {
-                            if (serviceMap.size() < 1)
-                            {
-                                BMCWEB_LOG_ERROR("Got 0 service "
-                                                 "names");
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                    const std::string& serviceName = serviceMap[0].first;
-                            // Patch SMBPBI Fencing Privilege
-                    patchFencingPrivilege(asyncResp, *privilege, serviceName,
-                                          objectPath);
-                        }
-                    },
-                        "xyz.openbmc_project.ObjectMapper",
-                        "/xyz/openbmc_project/object_mapper",
-                        "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/",
-                        int32_t(0),
-                        std::array<const char*, 1>{
-                            "xyz.openbmc_project.GpuOobRecovery.Server"});
+                    messages::internalError(asyncResp->res);
+                    return;
                 }
-#endif // BMCWEB_ENABLE_FENCING_PRIVILEGE
-#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
-                if (tlsAuth)
+                for (const auto& [objectPath, serviceMap] : subtree)
                 {
-            if (*tlsAuth == persistent_data::getConfig().isTLSAuthEnabled())
+                    if (serviceMap.size() < 1)
                     {
-                        BMCWEB_LOG_DEBUG(
-                            "Ignoring redundant patch of AuthenticationTLSRequired.");
-                    }
-                    else if (!*tlsAuth)
-                    {
-                        BMCWEB_LOG_ERROR(
-                            "Disabling AuthenticationTLSRequired is not allowed.");
-                        messages::propertyValueIncorrect(
-                    asyncResp->res, "AuthenticationTLSRequired", "false");
+                        BMCWEB_LOG_ERROR("Got 0 service "
+                                         "names");
+                        messages::internalError(asyncResp->res);
                         return;
                     }
-                    else
-                    {
-                        enableTLSAuth();
-                    }
+                    const std::string& serviceName = serviceMap[0].first;
+                    // Patch SMBPBI Fencing Privilege
+                    patchFencingPrivilege(asyncResp, *privilege, serviceName,
+                                          objectPath);
                 }
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree", "/",
+                int32_t(0),
+                std::array<const char*, 1>{
+                    "xyz.openbmc_project.GpuOobRecovery.Server"});
+        }
+#endif // BMCWEB_ENABLE_FENCING_PRIVILEGE
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+        if (tlsAuth)
+        {
+            if (*tlsAuth == persistent_data::getConfig().isTLSAuthEnabled())
+            {
+                BMCWEB_LOG_DEBUG(
+                    "Ignoring redundant patch of AuthenticationTLSRequired.");
+            }
+            else if (!*tlsAuth)
+            {
+                BMCWEB_LOG_ERROR(
+                    "Disabling AuthenticationTLSRequired is not allowed.");
+                messages::propertyValueIncorrect(
+                    asyncResp->res, "AuthenticationTLSRequired", "false");
+                return;
+            }
+            else
+            {
+                enableTLSAuth();
+            }
+        }
 #endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     });

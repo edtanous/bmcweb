@@ -1116,8 +1116,8 @@ inline void
             {
                 thisEntry["DiagnosticDataType"] = "OEM";
                 thisEntry["OEMDiagnosticDataType"] = "FDR";
-                thisEntry["AdditionalDataURI"] =
-                    boost::urls::format("{}{}/attachment", entriesPath, entryID);
+                thisEntry["AdditionalDataURI"] = boost::urls::format(
+                    "{}{}/attachment", entriesPath, entryID);
                 thisEntry["AdditionalDataSizeBytes"] = size;
             }
             else if (dumpType == "FaultLog")
@@ -1501,7 +1501,8 @@ inline void
                 {
                     asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
                     asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
-                    asyncResp->res.jsonValue["AdditionalDataURI"] = boost::urls::format(
+                    asyncResp->res
+                        .jsonValue["AdditionalDataURI"] = boost::urls::format(
                         "/redfish/v1/Systems/{}/LogServices/FDR/Entries/{}/attachment",
                         PLATFORMSYSTEMID, entryID);
                 }
@@ -1599,7 +1600,8 @@ inline void
     }
 
     // Make sure we know how to process the retrieved entry attachment
-    if ((downloadEntryType != "BMC") && (downloadEntryType != "System") && (downloadEntryType != "FDR"))
+    if ((downloadEntryType != "BMC") && (downloadEntryType != "System") &&
+        (downloadEntryType != "FDR"))
     {
         BMCWEB_LOG_ERROR("downloadEntryCallback() invalid entry type: {}",
                          downloadEntryType);
@@ -1631,7 +1633,8 @@ inline void
         asyncResp->res.addHeader(
             boost::beast::http::field::content_transfer_encoding, "Base64");
         return;
-    } else if (downloadEntryType == "FDR")
+    }
+    else if (downloadEntryType == "FDR")
     {
         if (!asyncResp->res.openFd(fd, bmcweb::EncodingType::Raw))
         {
@@ -5342,7 +5345,7 @@ inline void requestRoutesSystemFDREntry(App& app)
     });
 }
 
-inline void requestRoutesSystemFDREntryDownload(App &app)
+inline void requestRoutesSystemFDREntryDownload(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/FDR/Entries/<str>/attachment/")
@@ -5351,7 +5354,6 @@ inline void requestRoutesSystemFDREntryDownload(App &app)
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& entryID) {
-
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -5359,16 +5361,16 @@ inline void requestRoutesSystemFDREntryDownload(App &app)
 
         auto downloadDumpEntryHandler =
             [asyncResp, entryID](const boost::system::error_code& ec,
-                       const sdbusplus::message::unix_fd& unixfd) {
+                                 const sdbusplus::message::unix_fd& unixfd) {
             downloadEntryCallback(asyncResp, entryID, "FDR", ec, unixfd);
         };
 
-        sdbusplus::message::object_path entry("/xyz/openbmc_project/dump/fdr/entry");
+        sdbusplus::message::object_path entry(
+            "/xyz/openbmc_project/dump/fdr/entry");
         entry /= entryID;
         crow::connections::systemBus->async_method_call(
-            std::move(downloadDumpEntryHandler), 
-            "xyz.openbmc_project.Dump.Manager",
-            entry,
+            std::move(downloadDumpEntryHandler),
+            "xyz.openbmc_project.Dump.Manager", entry,
             "xyz.openbmc_project.Dump.Entry", "GetFileHandle");
     });
 }

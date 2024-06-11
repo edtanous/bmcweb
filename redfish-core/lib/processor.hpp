@@ -2741,7 +2741,7 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
     if (isSupportFirmwareVersion == true)
     {
-    getComponentFirmwareVersion(aResp, objectPath);
+        getComponentFirmwareVersion(aResp, objectPath);
     }
 
     aResp->res.jsonValue["EnvironmentMetrics"] = {
@@ -4980,12 +4980,12 @@ inline void requestRoutesProcessorPortCollection(App& app)
                     "#PortCollection.PortCollection";
                 asyncResp->res.jsonValue["Name"] = "NVLink Port Collection";
 
-                        collection_util::getCollectionMembersByAssociation(
-                            asyncResp,
+                collection_util::getCollectionMembersByAssociation(
+                    asyncResp,
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
-                                processorId + "/Ports",
-                            path + "/all_states",
-                            {"xyz.openbmc_project.Inventory.Item.Port"});
+                        processorId + "/Ports",
+                    path + "/all_states",
+                    {"xyz.openbmc_project.Inventory.Item.Port"});
                 return;
             }
             // Object not found
@@ -5282,9 +5282,8 @@ inline void getProcessorPortData(
                 if (ec)
                 {
                     // the path does not implement port interfaces
-                    BMCWEB_LOG_DEBUG(
-                        "no port interface on object path {}",
-                        sensorpath);
+                    BMCWEB_LOG_DEBUG("no port interface on object path {}",
+                                     sensorpath);
                     return;
                 }
 
@@ -5343,8 +5342,7 @@ inline void getProcessorAcceleratorPortData(
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_ERROR(
-                "No response error while getting ports");
+            BMCWEB_LOG_ERROR("No response error while getting ports");
             messages::internalError(aResp->res);
             return;
         }
@@ -5370,9 +5368,8 @@ inline void getProcessorAcceleratorPortData(
                 if (ec)
                 {
                     // the path does not implement port interfaces
-                    BMCWEB_LOG_DEBUG(
-                        "no port interface on object path {}",
-                        sensorpath);
+                    BMCWEB_LOG_DEBUG("no port interface on object path {}",
+                                     sensorpath);
                     return;
                 }
 
@@ -5475,8 +5472,8 @@ inline void requestRoutesProcessorPort(App& app)
                         interfacesList.end())
                     {
                         getProcessorAcceleratorPortData(asyncResp, path,
-                                                          processorId, port);
-                                }
+                                                        processorId, port);
+                    }
                 }
                 return;
             }
@@ -6020,14 +6017,14 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                     std::string, std::vector<std::string>>>&
                                     object) {
                             if (ec)
-                        {
+                            {
                                 // the path does not implement port
                                 // interfaces
                                 BMCWEB_LOG_DEBUG(
                                     "no port interface on object path {}",
                                     sensorpath);
                                 return;
-                        }
+                            }
 
                             sdbusplus::message::object_path path(sensorpath);
                             if (path.filename() != portId)
@@ -6035,9 +6032,9 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                 return;
                             }
 
-                        std::string portMetricUri =
-                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                            "/Processors/";
+                            std::string portMetricUri =
+                                "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                "/Processors/";
                             portMetricUri += processorId;
                             portMetricUri += "/Ports/";
                             portMetricUri += portId + "/Metrics";
@@ -6046,14 +6043,14 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                             asyncResp->res.jsonValue["@odata.type"] =
                                 "#PortMetrics.v1_3_0.PortMetrics";
                             asyncResp->res.jsonValue["Name"] = portId +
-                                                           " Port Metrics";
+                                                               " Port Metrics";
                             asyncResp->res.jsonValue["Id"] = "Metrics";
 
                             getProcessorPortMetricsData(
                                 asyncResp, object.front().first, sensorpath);
-                },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
+                        },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
                             "xyz.openbmc_project.ObjectMapper", "GetObject",
                             sensorpath,
                             std::array<std::string, 1>(

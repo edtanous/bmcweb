@@ -296,7 +296,6 @@ inline void getChassisFabricSwitchesLinks(
             "xyz.openbmc_project.ObjectMapper", objPath + "/all_switches",
             "org.freedesktop.DBus.Properties", "Get",
             "xyz.openbmc_project.Association", "endpoints");
-
     },
         "xyz.openbmc_project.ObjectMapper", objPath + "/fabrics",
         "org.freedesktop.DBus.Properties", "Get",
@@ -1281,8 +1280,8 @@ inline void handleChassisGetAllProperties(
 }
 
 inline void getChassisAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
-                            const std::string& service,
-                            const std::string& objPath)
+                                const std::string& service,
+                                const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG("Get Chassis Asset Data");
     sdbusplus::asio::getAllProperties(
@@ -1310,7 +1309,7 @@ inline void getChassisAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
             "PartNumber", partNumber, "SparePartNumber", sparePartNumber);
 
         if (!success)
-        {  
+        {
             BMCWEB_LOG_ERROR("DBUS response error while unpacking properties");
             messages::internalError(asyncResp->res);
             return;
@@ -1335,7 +1334,6 @@ inline void getChassisAssetData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         {
             asyncResp->res.jsonValue["Manufacturer"] = *manufacturer;
         }
-
     });
 }
 
@@ -1349,8 +1347,10 @@ inline void handleFruAssetInformation(
     constexpr std::array<std::string_view, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Decorator.Asset"};
     dbus::utility::getSubTree(
-        chassisPath, 0, interfaces,[asyncResp, chassisId](const boost::system::error_code& ec,
-         const dbus::utility::MapperGetSubTreeResponse& subtree) {
+        chassisPath, 0, interfaces,
+        [asyncResp,
+         chassisId](const boost::system::error_code& ec,
+                    const dbus::utility::MapperGetSubTreeResponse& subtree) {
         if (ec)
         {
             BMCWEB_LOG_ERROR("DBUS response error {}", ec);
@@ -1384,7 +1384,8 @@ inline void handleFruAssetInformation(
                     }
                 }
             }
-        }});
+        }
+    });
 }
 
 inline void getIntrusionByService(std::shared_ptr<bmcweb::AsyncResp> asyncResp,

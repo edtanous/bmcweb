@@ -420,31 +420,31 @@ inline void
             messages::insufficientPrivilege(aResp->res);
             return;
         }
-    bool newBootOptionEnabled = true;
-    if (!json_util::readJsonPatch(req, aResp->res, "BootOptionEnabled",
-                                  newBootOptionEnabled))
-    {
-        return;
-    }
+        bool newBootOptionEnabled = true;
+        if (!json_util::readJsonPatch(req, aResp->res, "BootOptionEnabled",
+                                      newBootOptionEnabled))
+        {
+            return;
+        }
 
-    dbus::utility::DBusPropertiesMap properties;
-    properties.push_back({"Enabled", newBootOptionEnabled});
+        dbus::utility::DBusPropertiesMap properties;
+        properties.push_back({"Enabled", newBootOptionEnabled});
         setBootOption(
             bootOptionName, properties,
-                  [aResp, bootOptionName](const boost::system::error_code ec) {
-        if (ec == boost::system::errc::no_such_device_or_address)
-        {
-            messages::resourceNotFound(aResp->res, "BootOption",
-                                       bootOptionName);
-            return;
-        }
-        if (ec)
-        {
-            messages::internalError(aResp->res);
-            return;
-        }
-        aResp->res.result(boost::beast::http::status::no_content);
-    });
+            [aResp, bootOptionName](const boost::system::error_code ec) {
+            if (ec == boost::system::errc::no_such_device_or_address)
+            {
+                messages::resourceNotFound(aResp->res, "BootOption",
+                                           bootOptionName);
+                return;
+            }
+            if (ec)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+            aResp->res.result(boost::beast::http::status::no_content);
+        });
     });
 }
 

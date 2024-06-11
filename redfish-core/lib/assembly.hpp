@@ -240,22 +240,22 @@ inline void requestAssemblyRoutes(App& app)
                             "Chassis and assembly are not connected through association. ec : {}",
                             ec);
 
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp, chassisId(std::string(chassisId)),
-                     connectionName](
-                        const boost::system::error_code ec,
-                        const std::vector<std::string>& assemblyList) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_DEBUG("DBUS response error");
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    // Update the Assemblies
-                    asyncResp->res.jsonValue["Assemblies"] =
-                        nlohmann::json::array();
-                    for (const std::string& assembly : assemblyList)
-                    {
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, chassisId(std::string(chassisId)),
+                             connectionName](
+                                const boost::system::error_code ec,
+                                const std::vector<std::string>& assemblyList) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_DEBUG("DBUS response error");
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            // Update the Assemblies
+                            asyncResp->res.jsonValue["Assemblies"] =
+                                nlohmann::json::array();
+                            for (const std::string& assembly : assemblyList)
+                            {
                                 updateAssemblies(asyncResp, connectionName,
                                                  assembly, chassisId);
                             }
@@ -298,11 +298,11 @@ inline void requestAssemblyRoutes(App& app)
                                 {
                                     updateAssemblies(asyncResp,
                                                      objInfo[0].first, assembly,
-                                         chassisId);
-                    }
-                },
-                    "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
+                                                     chassisId);
+                                }
+                            },
+                                "xyz.openbmc_project.ObjectMapper",
+                                "/xyz/openbmc_project/object_mapper",
                                 "xyz.openbmc_project.ObjectMapper", "GetObject",
                                 assembly, assemblyIntf);
                         }
