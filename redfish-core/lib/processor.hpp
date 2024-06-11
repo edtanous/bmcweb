@@ -2645,8 +2645,6 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& objectPath,
                              const dbus::utility::MapperServiceMap& serviceMap)
 {
-    bool isSupportFirmwareVersion = false;
-
     for (const auto& [serviceName, interfaceList] : serviceMap)
     {
         for (const auto& interface : interfaceList)
@@ -2693,10 +2691,6 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             else if (interface == "xyz.openbmc_project.Common.UUID")
             {
                 getProcessorUUID(aResp, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Software.Version")
-            {
-                isSupportFirmwareVersion = true;
             }
             else if (interface ==
                      "xyz.openbmc_project.Inventory.Decorator.UniqueIdentifier")
@@ -2745,10 +2739,7 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
     }
 
-    if (isSupportFirmwareVersion == true)
-    {
-        getComponentFirmwareVersion(aResp, objectPath);
-    }
+    getComponentFirmwareVersion(aResp, objectPath);
 
     aResp->res.jsonValue["EnvironmentMetrics"] = {
         {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
