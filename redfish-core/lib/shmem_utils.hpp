@@ -572,7 +572,7 @@ inline void getShmemMetricsDefinition(
 }
 
 inline void getShmemMetricsReportCollection(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& reportType)
 {
     BMCWEB_LOG_ERROR("Exception while getShmemMetricsReportDefinition");
     try
@@ -583,7 +583,13 @@ inline void getShmemMetricsReportCollection(
         {
             // Get the metric object
             std::string metricReportDefUriPath =
-                "/redfish/v1/TelemetryService/MetricReportDefinitions/";
+                "/redfish/v1/TelemetryService/";
+            if(reportType == "MetricReports"){
+                metricReportDefUriPath += "MetricReports/";
+            }
+            else{
+                metricReportDefUriPath += "MetricReportDefinitions/"; 
+            }
             std::string uripath = metricReportDefUriPath + memoryMetricId;
             addMembers.push_back({{"@odata.id", uripath}});
         }

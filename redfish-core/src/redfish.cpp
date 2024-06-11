@@ -150,7 +150,8 @@ RedfishService::RedfishService(App& app)
     requestRoutesSplitUpdateService(app);
 #endif
 #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
-    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE) ||                            \
+    defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
     requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
 
@@ -220,6 +221,7 @@ RedfishService::RedfishService(App& app)
     requestRoutesSystemFDRService(app);
     requestRoutesSystemFDREntryCollection(app);
     requestRoutesSystemFDREntry(app);
+    requestRoutesSystemFDREntryDownload(app);
     requestRoutesSystemFDRCreate(app);
     requestRoutesSystemFDRClear(app);
 #endif
@@ -399,6 +401,9 @@ RedfishService::RedfishService(App& app)
     requestRoutesChassisControls(app);
     requestRoutesChassisControlsCollection(app);
     requestRoutesUpdateServiceCommitImage(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    requestRoutesComputeDigestPost(app);
+#endif
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
     requestRoutesNvidiaOemBf(app);

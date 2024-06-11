@@ -41,8 +41,10 @@ static std::map<std::string, std::string> modes = {
     {"xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM", "Override"},
     {"xyz.openbmc_project.Control.Power.Mode.PowerMode.PowerSaving", "Manual"},
     {"xyz.openbmc_project.Control.Power.Mode.PowerMode.Static", "Disabled"}};
-const std::array<const char*, 2> powerinterfaces = {
+
+const std::array<const char*, 3> powerinterfaces = {
     "xyz.openbmc_project.Control.Power.Cap",
+    "com.nvidia.Common.ClearPowerCap",
     "xyz.openbmc_project.Control.Power.Mode"};
 inline void
     getPowercontrolObjects(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -98,6 +100,7 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             {
                 if ((interface == "xyz.openbmc_project.Control.Power.Cap") ||
                     (interface == "xyz.openbmc_project.Control.Power.Mode") ||
+                    (interface == "com.nvidia.Common.ClearPowerCap") ||
                     (interface ==
                      "xyz.openbmc_project.Inventory.Decorator.Area"))
                 {
@@ -124,18 +127,58 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             if (propertyName == "MaxPowerCapValue")
                             {
                                 propertyName = "AllowableMax";
+                                const auto* value = std::get_if<size_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for AllowableMax");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                                continue;
                             }
                             else if (propertyName == "MinPowerCapValue")
                             {
                                 propertyName = "AllowableMin";
+                                const auto* value = std::get_if<size_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                     BMCWEB_LOG_ERROR(
+                                        "Internal errror for AllowableMin");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                                continue;
                             }
                             else if (propertyName == setPointPropName)
                             {
                                 propertyName = "SetPoint";
+                                const auto* value = std::get_if<size_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for SetPoint");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                                continue;
                             }
                             else if (propertyName == "DefaultPowerCap")
                             {
                                 propertyName = "DefaultSetPoint";
+                                const auto* value = std::get_if<size_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for DefaultSetPoint");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                                continue;
                             }
                             else if (propertyName == "PhysicalContext")
                             {
@@ -165,14 +208,6 @@ inline void getChassisPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
                                 continue;
                             }
-                            const auto* value =
-                                std::get_if<size_t>(&property.second);
-                            if (value == nullptr)
-                            {
-                                messages::internalError(asyncResp->res);
-                                return;
-                            }
-                            asyncResp->res.jsonValue[propertyName] = *value;
                         }
                     },
                         element.first, path, "org.freedesktop.DBus.Properties",

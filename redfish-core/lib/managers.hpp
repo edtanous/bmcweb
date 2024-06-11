@@ -866,7 +866,7 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             }
 
             resp->res.jsonValue["@odata.type"] =
-                "#NvidiaManager.v1_1_0.NvidiaManager";
+                "#NvidiaManager.v1_2_0.NvidiaManager";
             resp->res.jsonValue["StatusRegister"] =
                 intToHexByteArray(get<1>(res));
             resp->res.jsonValue["DataOut"] = intToHexByteArray(get<2>(res));
@@ -1101,7 +1101,7 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 return;
             }
             resp->res.jsonValue["@odata.type"] =
-                "#NvidiaManager.v1_1_0.NvidiaManager";
+                "#NvidiaManager.v1_2_0.NvidiaManager";
 
             resp->res.jsonValue["StatusRegister"] =
                 intToHexByteArray(get<1>(res));
@@ -3100,7 +3100,7 @@ inline void
 
                         nlohmann::json& json = asyncResp->res.jsonValue;
                         json["Oem"]["Nvidia"]["@odata.type"] =
-                            "#NvidiaManager.v1_1_0.NvidiaManager";
+                            "#NvidiaManager.v1_2_0.NvidiaManager";
                         json["Oem"]["Nvidia"]["SMBPBIFencingPrivilege"] =
                             redfish::dbus_utils::toSMPBIPrivilegeString(
                                 *fencingPrivilege);
@@ -3677,14 +3677,9 @@ inline void requestRoutesManager(App& app)
                          object : subtree)
                 {
                     const std::string& path = object.first;
-                    const std::vector<
-                        std::pair<std::string, std::vector<std::string>>>&
-                        connectionNames = object.second;
                     if (!boost::ends_with(path, PLATFORMBMCID))
                     {
-                        BMCWEB_LOG_ERROR(
-                            "Error while getting manager service state");
-                        return;
+			continue;
                     }
 
                     // At /redfish/v1/Managers/HGX_BMC_0, we want
@@ -3720,18 +3715,6 @@ inline void requestRoutesManager(App& app)
                                       ["ManagerInChassis@odata.count"] = 1;
                     });
 
-                    const std::string& connectionName =
-                        connectionNames[0].first;
-                    const std::vector<std::string>& interfaces =
-                        connectionNames[0].second;
-                    for (const auto& interfaceName : interfaces)
-                    {
-                        if (interfaceName == "xyz.openbmc_project.State."
-                                             "Decorator.OperationalStatus")
-                        {
-                            getManagerState(asyncResp, connectionName, path);
-                        }
-                    }
                     return;
                 }
                 BMCWEB_LOG_ERROR(
@@ -3874,6 +3857,7 @@ inline void requestRoutesManager(App& app)
                 }
             }
         });
+        getServiceIdentification(asyncResp);
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/")
@@ -3887,30 +3871,50 @@ inline void requestRoutesManager(App& app)
         }
         std::optional<std::string> activeSoftwareImageOdataId;
         std::optional<std::string> datetime;
-        std::optional<nlohmann::json> oem;
         std::optional<std::string> serviceIdentification;
-        std::optional<nlohmann::json::object_t> pidControllers;
+#ifdef BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
         std::optional<nlohmann::json::object_t> fanControllers;
         std::optional<nlohmann::json::object_t> fanZones;
-        std::optional<nlohmann::json::object_t> stepwiseControllers;
+        std::optional<nlohmann::json::object_t> pidControllers;
         std::optional<std::string> profile;
+        std::optional<nlohmann::json::object_t> stepwiseControllers;
+#endif // BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#ifdef BMCWEB_ENABLE_FENCING_PRIVILEGE
+        std::optional<std::string> privilege;
+#endif // BMCWEB_ENABLE_FENCING_PRIVILEGE
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+        std::optional<bool> tlsAuth;
+#endif  // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+#endif  // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         // clang-format off
         if (!json_util::readJsonPatch(req, asyncResp->res,
-              "DateTime", datetime,
-              "Links/ActiveSoftwareImage/@odata.id", activeSoftwareImageOdataId,
+#ifdef BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
               "Oem/OpenBmc/Fan/FanControllers", fanControllers,
               "Oem/OpenBmc/Fan/FanZones", fanZones,
               "Oem/OpenBmc/Fan/PidControllers", pidControllers,
               "Oem/OpenBmc/Fan/Profile", profile,
               "Oem/OpenBmc/Fan/StepwiseControllers", stepwiseControllers,
-              "Oem", oem, "DateTime", datetime, "ServiceIdentification", serviceIdentification
+#endif // BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#ifdef BMCWEB_ENABLE_FENCING_PRIVILEGE
+              "Oem/Nvidia/SMBPBIFencingPrivilege", privilege,
+#endif // BMCWEB_ENABLE_FENCING_PRIVILEGE
+#ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+              "Oem/Nvidia/AuthenticationTLSRequired", tlsAuth,
+#endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+              "Links/ActiveSoftwareImage/@odata.id", activeSoftwareImageOdataId,
+              "DateTime", datetime,
+              "ServiceIdentification", serviceIdentification
         ))
         {
             return;
         }
         // clang-format on
 
+#ifdef BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
         if (pidControllers || fanControllers || fanZones ||
             stepwiseControllers || profile)
         {
@@ -3948,7 +3952,7 @@ inline void requestRoutesManager(App& app)
                 return;
             }
         }
-
+#endif
         if (activeSoftwareImageOdataId)
         {
             setActiveFirmwareImage(asyncResp, *activeSoftwareImageOdataId);
@@ -3958,38 +3962,16 @@ inline void requestRoutesManager(App& app)
         {
             setDateTime(asyncResp, *datetime);
         }
+
         if (serviceIdentification)
         {
             setServiceIdentification(asyncResp,
                                      std::move(*serviceIdentification));
         }
-
-        if (oem)
-        {
-            std::optional<nlohmann::json> nvidia;
-            if (!redfish::json_util::readJson(*oem, asyncResp->res, "Nvidia",
-                                              nvidia))
-            {
-                return;
-            }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            if (nvidia)
-            {
-                std::optional<std::string> privilege;
-                std::optional<bool> tlsAuth;
-                if (!redfish::json_util::readJson(
-                        *nvidia, asyncResp->res, "AuthenticationTLSRequired",
-                        tlsAuth, "SMBPBIFencingPrivilege", privilege))
-                {
-                    BMCWEB_LOG_ERROR(
-                        "Illegal Property {}",
-                        oem->dump(2, ' ', true,
-                                  nlohmann::json::error_handler_t::replace));
-                    return;
-                }
+#ifdef BMCWEB_ENABLE_FENCING_PRIVILEGE
                 if (privilege)
                 {
-#ifdef BMCWEB_ENABLE_FENCING_PRIVILEGE
                     crow::connections::systemBus->async_method_call(
                         [asyncResp,
                          privilege](const boost::system::error_code ec,
@@ -4008,11 +3990,10 @@ inline void requestRoutesManager(App& app)
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
-                            const std::string& serviceName =
-                                serviceMap[0].first;
+                    const std::string& serviceName = serviceMap[0].first;
                             // Patch SMBPBI Fencing Privilege
-                            patchFencingPrivilege(asyncResp, *privilege,
-                                                  serviceName, objectPath);
+                    patchFencingPrivilege(asyncResp, *privilege, serviceName,
+                                          objectPath);
                         }
                     },
                         "xyz.openbmc_project.ObjectMapper",
@@ -4021,18 +4002,12 @@ inline void requestRoutesManager(App& app)
                         int32_t(0),
                         std::array<const char*, 1>{
                             "xyz.openbmc_project.GpuOobRecovery.Server"});
-#else  // BMCWEB_ENABLE_FENCING_PRIVILEGE -> Throw error for bad request
-                    asyncResp->res.result(
-                        boost::beast::http::status::bad_request);
-                    return;
-#endif // BMCWEB_ENABLE_FENCING_PRIVILEGE
                 }
-
+#endif // BMCWEB_ENABLE_FENCING_PRIVILEGE
 #ifdef BMCWEB_ENABLE_TLS_AUTH_OPT_IN
                 if (tlsAuth)
                 {
-                    if (*tlsAuth ==
-                        persistent_data::getConfig().isTLSAuthEnabled())
+            if (*tlsAuth == persistent_data::getConfig().isTLSAuthEnabled())
                     {
                         BMCWEB_LOG_DEBUG(
                             "Ignoring redundant patch of AuthenticationTLSRequired.");
@@ -4042,8 +4017,7 @@ inline void requestRoutesManager(App& app)
                         BMCWEB_LOG_ERROR(
                             "Disabling AuthenticationTLSRequired is not allowed.");
                         messages::propertyValueIncorrect(
-                            asyncResp->res, "AuthenticationTLSRequired",
-                            "false");
+                    asyncResp->res, "AuthenticationTLSRequired", "false");
                         return;
                     }
                     else
@@ -4052,9 +4026,7 @@ inline void requestRoutesManager(App& app)
                     }
                 }
 #endif // BMCWEB_ENABLE_TLS_AUTH_OPT_IN
-            }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        }
     });
 }
 

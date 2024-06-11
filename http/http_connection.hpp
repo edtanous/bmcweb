@@ -369,13 +369,6 @@ class Connection :
         }
 #endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
 
-#ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
-        if (dumpPos == std::string::npos)
-        {
-            dumpPos = url.rfind("FDR");
-        }
-#endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
-
         std::size_t attachmentPos = url.rfind("attachment");
         std::size_t satellitesPos = std::string::npos;
 
@@ -697,11 +690,17 @@ class Connection :
                       const boost::system::error_code& ec,
                       std::size_t bytesTransferred)
     {
-        BMCWEB_LOG_DEBUG("{} async_write wrote {} bytes, ec=", logPtr(this),
+        BMCWEB_LOG_DEBUG("{} async_write wrote {} bytes, ec={}", logPtr(this),
                          bytesTransferred, ec);
 
         cancelDeadlineTimer();
 
+        if (ec == boost::system::errc::operation_would_block ||
+            ec == boost::system::errc::resource_unavailable_try_again)
+        {
+            doWrite();
+            return;
+        }
         if (ec)
         {
             BMCWEB_LOG_DEBUG("{} from write(2)", logPtr(this));
@@ -757,12 +756,12 @@ class Connection :
     {
         cancelDeadlineTimer();
 
-        std::chrono::seconds timeout(60);
+        std::chrono::seconds timeout(bmcwebResponseTimeoutSeconds);
         // allow slow uploads for logged in users
         bool loggedIn = userSession != nullptr;
         if (loggedIn)
         {
-            timeout = std::chrono::seconds(60);
+            timeout = std::chrono::seconds(bmcwebResponseTimeoutSeconds);
             return;
         }
         std::weak_ptr<Connection<Adaptor, Handler>> weakSelf = weak_from_this();

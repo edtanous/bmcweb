@@ -2529,6 +2529,7 @@ inline void handleBiosAttrRegistryPut(
                              redfish::bios::BiosRegistryJsonFileName);
             return;
         }
+        redfish::bios::BiosRegistryJson["Id"] = "BiosAttributeRegistry";
         outputFile << redfish::bios::BiosRegistryJson.dump();
         outputFile.close();
 

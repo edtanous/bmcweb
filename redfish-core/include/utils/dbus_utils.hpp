@@ -280,6 +280,14 @@ inline std::string toReasonType(const std::string& reason)
     {
         return "SyncBoost";
     }
+    if(reason == "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.ClockOptimizedForPower")
+    {
+        return "ClockOptimizedForPower";
+    }
+    if(reason == "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.ClockOptimizedForThermalEngage")
+    {
+        return "ClockOptimizedForThermalEngage";
+    }
     if (reason ==
         "xyz.openbmc_project.State.ProcessorPerformance.ThrottleReasons.GPUThermalOvertTreshold")
     {

@@ -24,6 +24,7 @@
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"
+#include "utils/health_utils.hpp"
 
 #include <boost/container/flat_map.hpp>
 #include <boost/system/error_code.hpp>
@@ -478,7 +479,7 @@ inline void handleChassisGetSubTree(
         {
             continue;
         }
-
+        redfish::nvidia_chassis_utils::handleFruAssetInformation(asyncResp, chassisId, path);
         getChassisConnectivity(asyncResp, chassisId, path);
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
@@ -492,6 +493,23 @@ inline void handleChassisGetSubTree(
         });
         health->start();
 #endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+
+#ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
+/** NOTES: This is a temporary solution to avoid performance issues may impact
+ *  other Redfish services. Please call for architecture decisions from all
+ *  NvBMC teams if want to use it in other places.
+ */
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+#error "Conflicts! Please set health-rollup-alternative=disabled."
+#endif
+
+#ifdef BMCWEB_DISABLE_HEALTH_ROLLUP
+#error "Conflicts! Please set disable-health-rollup=disabled."
+#endif
+
+        health_utils::getDeviceHealthInfo(asyncResp->res, chassisId);
+#endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
 
         if (connectionNames.empty())
         {
@@ -551,9 +569,8 @@ inline void handleChassisGetSubTree(
             asyncResp->res.jsonValue["Drives"] = std::move(reference);
         });
 
-        const std::string& connectionName = connectionNames[0].first;
-
-        const std::vector<std::string>& interfaces2 = connectionNames[0].second;
+        for (const auto& [connectionName, interfaces2] : connectionNames)
+        {
         const std::array<const char*, 3> hasIndicatorLed = {
             "xyz.openbmc_project.Inventory.Item.Chassis",
             "xyz.openbmc_project.Inventory.Item.Panel",
@@ -581,12 +598,13 @@ inline void handleChassisGetSubTree(
                 sdbusplus::asio::getProperty<std::string>(
                     *crow::connections::systemBus, connectionName, path,
                     assetTagInterface, "AssetTag",
-                    [asyncResp, chassisId](const boost::system::error_code& ec2,
+                        [asyncResp,
+                         chassisId](const boost::system::error_code& ec2,
                                            const std::string& property) {
                     if (ec2)
                     {
-                        BMCWEB_LOG_ERROR("DBus response error for AssetTag: {}",
-                                         ec2);
+                            BMCWEB_LOG_ERROR(
+                                "DBus response error for AssetTag: {}", ec2);
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -598,12 +616,14 @@ inline void handleChassisGetSubTree(
                 sdbusplus::asio::getProperty<bool>(
                     *crow::connections::systemBus, connectionName, path,
                     replaceableInterface, "HotPluggable",
-                    [asyncResp, chassisId](const boost::system::error_code& ec2,
+                        [asyncResp,
+                         chassisId](const boost::system::error_code& ec2,
                                            const bool property) {
                     if (ec2)
                     {
                         BMCWEB_LOG_ERROR(
-                            "DBus response error for HotPluggable: {}", ec2);
+                                "DBus response error for HotPluggable: {}",
+                                ec2);
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -615,12 +635,13 @@ inline void handleChassisGetSubTree(
                 sdbusplus::asio::getProperty<std::string>(
                     *crow::connections::systemBus, connectionName, path,
                     revisionInterface, "Version",
-                    [asyncResp, chassisId](const boost::system::error_code& ec2,
+                        [asyncResp,
+                         chassisId](const boost::system::error_code& ec2,
                                            const std::string& property) {
                     if (ec2)
                     {
-                        BMCWEB_LOG_ERROR("DBus response error for Version: {}",
-                                         ec2);
+                            BMCWEB_LOG_ERROR(
+                                "DBus response error for Version: {}", ec2);
                         messages::internalError(asyncResp->res);
                         return;
                     }
@@ -631,16 +652,14 @@ inline void handleChassisGetSubTree(
 
         for (const char* interface : hasIndicatorLed)
         {
-            if (std::ranges::find(interfaces2, interface) != interfaces2.end())
+                if (std::ranges::find(interfaces2, interface) !=
+                    interfaces2.end())
             {
                 getIndicatorLedState(asyncResp);
                 getSystemLocationIndicatorActive(asyncResp);
                 break;
             }
         }
-
-        redfish::nvidia_chassis_utils::getNetworkAdapters(
-            asyncResp, path, interfaces2, chassisId);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         const std::string itemSystemInterface =
@@ -705,6 +724,14 @@ inline void handleChassisGetSubTree(
         // Link association to parent chassis
         redfish::chassis_utils::getChassisLinksContainedBy(asyncResp, objPath);
         redfish::nvidia_chassis_utils::getPhysicalSecurityData(asyncResp);
+            // get network adapter
+            redfish::nvidia_chassis_utils::getNetworkAdapters(
+                asyncResp, path, interfaces2, chassisId);
+            // get health for network adapter and nvswitches chassis by
+            // association
+            redfish::nvidia_chassis_utils::getHealthByAssociation(
+                asyncResp, path, "all_states", chassisId);
+        }
         return;
     }
 
@@ -1186,13 +1213,15 @@ inline void handleOemChassisResetActionInfoPost(
         return;
     }
 
-    if (resetType != "AuxPowerCycle")
+    if (resetType != "AuxPowerCycle" && resetType != "AuxPowerCycleForce")
     {
         messages::actionParameterValueError(asyncResp->res, "ResetType",
                                             "NvidiaChassis.AuxPowerReset");
         return;
     }
 
+    if (resetType == "AuxPowerCycle")
+    {
     // check power status
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, "xyz.openbmc_project.State.Host",
@@ -1232,6 +1261,21 @@ inline void handleOemChassisResetActionInfoPost(
             messages::chassisPowerStateOffRequired(asyncResp->res, "0");
         }
     });
+}
+    else
+    {
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code& ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("DBUS response error {}", ec);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+        }, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+           "org.freedesktop.systemd1.Manager", "StartUnit",
+           "nvidia-aux-power-force.service", "replace");
+    }
 }
 #endif
 

@@ -1755,7 +1755,14 @@
             "Message": "Numeric threshold '%1' of trigger '%2' is crossed on sensor %3, recorded value: %4, crossing direction: %5, timestamp: %6",
             "MessageSeverity": "Critical",
             "NumberOfArgs": 6,
-            "ParamTypes": ["string", "string", "string", "number", "string", "string"],
+            "ParamTypes": [
+                "string",
+                "string",
+                "string",
+                "number",
+                "string",
+                "string"
+            ],
             "Resolution": "None.",
             "Severity": "Critical"
         },
@@ -1764,7 +1771,14 @@
             "Message": "Numeric threshold: '%1' of trigger: '%2' is crossed on sensor %3, recorded value: %4, crossing direction: %5, timestamp: %6",
             "MessageSeverity": "Warning",
             "NumberOfArgs": 6,
-            "ParamTypes": ["string", "string", "string", "number", "string", "string"],
+            "ParamTypes": [
+                "string",
+                "string",
+                "string",
+                "number",
+                "string",
+                "string"
+            ],
             "Resolution": "None.",
             "Severity": "Warning"
         },
@@ -1823,7 +1837,7 @@
             "Severity": "Warning"
         },
         "IPCCriticalThresholdCrossed": {
-            "Description":  "Indicates that the IPC monitor has detected a service crossing the critical threshold limit set on a property",
+            "Description": "Indicates that the IPC monitor has detected a service crossing the critical threshold limit set on a property",
             "Message": "DBus IPC Monitor detected %1 unit crossing critical threshold set on %2 IPC property. Property Reading=%3 Threshold=%4.",
             "MessageSeverity": "Critical",
             "NumberOfArgs": 4,

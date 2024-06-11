@@ -268,7 +268,7 @@ def main():
     parser.add_argument(
         "--registries",
         type=str,
-        default="base,task_event,resource_event,update_event,privilege,openbmc,"
+        default="privilege,openbmc,"
         + ",".join([dmtf[0] for dmtf in dmtf_registries]),
         help="Comma delimited list of registries to update",
     )

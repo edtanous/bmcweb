@@ -739,6 +739,11 @@ inline void handleUpdateServiceSimpleUpdateAction(
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
     supportedProtocols.push_back("SCP");
 #endif
+#ifdef BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE
+        supportedProtocols.push_back("HTTP");
+        supportedProtocols.push_back("HTTPS");
+#endif
+
     // OpenBMC currently only supports TFTP and SCP
     if (std::find(supportedProtocols.begin(), supportedProtocols.end(),
                   *transferProtocol) == supportedProtocols.end())
@@ -750,7 +755,10 @@ inline void handleUpdateServiceSimpleUpdateAction(
         return;
     }
 
-    if ((*transferProtocol == "SCP") && (!targets))
+        if (((*transferProtocol == "SCP") ||
+             (*transferProtocol == "HTTP") ||
+             (*transferProtocol == "HTTPS")) &&
+            (!targets))
     {
         messages::createFailedMissingReqProperties(asyncResp->res, "Targets");
         BMCWEB_LOG_DEBUG("Missing Target URI");
@@ -763,6 +771,22 @@ inline void handleUpdateServiceSimpleUpdateAction(
         BMCWEB_LOG_DEBUG("Missing Username");
         return;
     }
+
+    // Format should be <IP or Hostname>/<file> for imageURI
+    size_t separator = imageURI.find('/');
+    if ((separator == std::string::npos) ||
+        ((separator + 1) > imageURI.size()))
+    {
+        messages::actionParameterValueTypeError(
+            asyncResp->res, imageURI, "ImageURI",
+            "UpdateService.SimpleUpdate");
+        BMCWEB_LOG_ERROR("Invalid ImageURI: {}", imageURI);
+        return;
+    }
+
+    std::string server = imageURI.substr(0, separator);
+    std::string fwFile = imageURI.substr(separator + 1);
+    BMCWEB_LOG_DEBUG("Server: {} File: {} Protocol: {}", server, fwFile, *transferProtocol);
 
     // Allow only one operation at a time
     if (fwUpdateInProgress != false)
@@ -781,7 +805,9 @@ inline void handleUpdateServiceSimpleUpdateAction(
     {
         doTftpUpdate(req, asyncResp, *url);
     }
-    else if (*transferProtocol == "SCP")
+    else if ((*transferProtocol == "SCP") ||
+                (*transferProtocol == "HTTP") ||
+                (*transferProtocol == "HTTPS"))
     {
         std::string path(url->encoded_path());
         if (path.size() < 2)
@@ -809,8 +835,9 @@ inline void handleUpdateServiceSimpleUpdateAction(
 
         // Search for the version object related to the given target URI
         crow::connections::systemBus->async_method_call(
-            [req, asyncResp, objName, path, host,
-             username](const boost::system::error_code ec,
+                [req, asyncResp, objName, fwFile, server, path, host, transferProtocol,
+                 username](
+                    const boost::system::error_code ec,
                        const std::vector<std::pair<
                            std::string, std::vector<std::string>>>& objInfo) {
             if (ec)
@@ -834,7 +861,7 @@ inline void handleUpdateServiceSimpleUpdateAction(
             // Read the version object's FilePath property which holds
             // the local path used for the update procedure
             crow::connections::systemBus->async_method_call(
-                [req, asyncResp, path, host,
+                    [req, asyncResp, fwFile, server, path, host, transferProtocol,
                  username](const boost::system::error_code ecPath,
                            const std::variant<std::string>& property) {
                 if (ecPath)
@@ -873,25 +900,50 @@ inline void handleUpdateServiceSimpleUpdateAction(
                 // Give SCP 10 minutes to detect new software
                 monitorForSoftwareAvailable(asyncResp, req, 600);
 
-                // Call SCP service. As key-based authentication is used,
-                // user password is not necessary
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ecSCP) {
-                    if (ecSCP)
-                    {
-                        messages::internalError(asyncResp->res);
-                        BMCWEB_LOG_ERROR("error_code = {} error msg = {}",
-                                         ecSCP, ecSCP.message());
+                if (*transferProtocol == "SCP")
+                {
+                    // Call SCP service. As passwordless authentication is used,
+                    // user password is not necessary
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp](const boost::system::error_code ecSCP) {
+                        if (ecSCP)
+                        {
+                            messages::internalError(asyncResp->res);
+                            BMCWEB_LOG_ERROR("error_code = {} error msg = {}",
+                                            ecSCP, ecSCP.message());
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_DEBUG("Call to DownloadViaSCP Success");
+                        }
+                    },
+                        "xyz.openbmc_project.Software.Download",
+                        "/xyz/openbmc_project/software",
+                        "xyz.openbmc_project.Common.SCP", "DownloadViaSCP", host,
+                        *username, path, *targetPath);
+                }
+		        else if ((*transferProtocol == "HTTP") ||
+                             (*transferProtocol == "HTTPS"))
+                {
+                    // Call HTTP/HTTPS service
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp](const boost::system::error_code ecH) {
+                        if (ecH)
+                        {
+                            messages::internalError(asyncResp->res);
+                            BMCWEB_LOG_ERROR("error_code = {} error msg = {}",
+                                                ecH, ecH.message());
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_DEBUG("Call to DownloadViaHTTP Success");
+                        }
+                    }, "xyz.openbmc_project.Software.Download",
+                        "/xyz/openbmc_project/software",
+                        "xyz.openbmc_project.Common.HTTP", "DownloadViaHTTP",
+                        server, (*transferProtocol == "HTTPS"),
+                        fwFile, *targetPath);
                     }
-                    else
-                    {
-                        BMCWEB_LOG_DEBUG("Call to DownloadViaSCP Success");
-                    }
-                },
-                    "xyz.openbmc_project.Software.Download",
-                    "/xyz/openbmc_project/software",
-                    "xyz.openbmc_project.Common.SCP", "DownloadViaSCP", host,
-                    *username, path, *targetPath);
             },
                 objInfo[0].first, objName, "org.freedesktop.DBus.Properties",
                 "Get", "xyz.openbmc_project.Common.FilePath", "Path");
@@ -1844,7 +1896,7 @@ inline void processMultipartFormData(
  */
 inline bool preCheckMultipartUpdateServiceReq(
     const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, bool enableFWInProgCheck)
 {
     if (req.body().size() > firmwareImageLimitBytes)
     {
@@ -1861,9 +1913,8 @@ inline bool preCheckMultipartUpdateServiceReq(
         return false;
     }
 
-#ifndef BMCWEB_ENABLE_REDFISH_AGGREGATION
     // Only allow one FW update at a time
-    if (fwUpdateInProgress != false)
+    if (enableFWInProgCheck && fwUpdateInProgress != false)
     {
         if (asyncResp)
         {
@@ -1876,7 +1927,6 @@ inline bool preCheckMultipartUpdateServiceReq(
         }
         return false;
     }
-#endif
 
     std::error_code spaceInfoError;
     const std::filesystem::space_info spaceInfo =
@@ -1918,7 +1968,14 @@ inline void handleMultipartUpdateServicePost(
     BMCWEB_LOG_DEBUG(
         "Execute HTTP POST method '/redfish/v1/UpdateService/update-multipart/'");
 
-    if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
+    bool enableFWInProgCheck = true;
+#ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
+    // This is the flag to check BMC firmware update. 
+    // Parse the multipart payload and then learn satBMC or BMC firmware update
+    // So UpdateInProgress will be checking at the later stage.
+    enableFWInProgCheck = false;
+#endif
+    if (!preCheckMultipartUpdateServiceReq(req, asyncResp, enableFWInProgCheck))
     {
         return;
     }
@@ -1953,7 +2010,7 @@ inline void
     BMCWEB_LOG_DEBUG(
         "Execute HTTP POST method '/redfish/v1/UpdateService/update/'");
 
-    if (!preCheckMultipartUpdateServiceReq(req, asyncResp))
+    if (!preCheckMultipartUpdateServiceReq(req, asyncResp, true))
     {
         return;
     }
@@ -2037,6 +2094,10 @@ inline void
     // This is "Wrong" per the standard, but is done temporarily to
     // avoid noise in failing tests as people transition to having this
     // option disabled
+        if (!asyncResp->res.getHeaderValue("Allow").empty())
+        {
+            asyncResp->res.clearHeader(boost::beast::http::field::allow);
+        }
     asyncResp->res.addHeader(boost::beast::http::field::allow,
                              "GET, PATCH, HEAD");
 #endif
@@ -2080,7 +2141,8 @@ inline void
          "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys"}};
 
 #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
-    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)           ||                  \
+    defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
     // Update Actions object.
     nlohmann::json& updateSvcSimpleUpdate =
         asyncResp->res.jsonValue["Actions"]["#UpdateService.SimpleUpdate"];
@@ -2092,6 +2154,12 @@ inline void
 #endif
 #ifdef BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE
     updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] += "SCP";
+#endif
+#ifdef BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE
+        updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] +=
+            "HTTP";
+        updateSvcSimpleUpdate["TransferProtocol@Redfish.AllowableValues"] +=
+            "HTTPS";
 #endif
 #endif
     // Get the current ApplyTime value
@@ -3095,53 +3163,56 @@ inline void computeDigest(const crow::Request& req,
         }
         // Ensure we only got one service back
         if (objInfo.size() != 1)
-        {
-            BMCWEB_LOG_ERROR("Invalid Object Size {}", objInfo.size());
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        const std::string hashComputeService = objInfo[0].first;
-        unsigned retimerId;
-        try
-        {
-            retimerId = std::stoul(swId.substr(swId.rfind("_") + 1));
-        }
-        catch (const std::exception& e)
-        {
-            BMCWEB_LOG_ERROR("Error while parsing retimer Id: {}", e.what());
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        // callback to reset hash compute state for timeout scenario
-        auto timeoutCallback = [](const std::string_view state, size_t index) {
-            nlohmann::json message{};
-            if (state == "Started")
             {
-                message = messages::taskStarted(std::to_string(index));
+                BMCWEB_LOG_ERROR("Invalid Object Size {}", objInfo.size());
+                messages::internalError(asyncResp->res);
+                return;
             }
-            else if (state == "Aborted")
+            const std::string hashComputeService = objInfo[0].first;
+            unsigned retimerId;
+            try
             {
-                computeDigestInProgress = false;
-                message = messages::taskAborted(std::to_string(index));
+                retimerId = std::stoul(swId.substr(swId.rfind("_") + 1));
             }
-            return message;
-        };
-        // create a task to wait for the hash digest property changed signal
-        std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-            [hashComputeObjPath, hashComputeService](
-                boost::system::error_code ec, sdbusplus::message::message& msg,
-                const std::shared_ptr<task::TaskData>& taskData) {
-            if (ec)
+            catch (const std::exception& e)
             {
-                if (ec != boost::asio::error::operation_aborted)
+                BMCWEB_LOG_ERROR("Error while parsing retimer Id: {}",
+                                 e.what());
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            // callback to reset hash compute state for timeout scenario
+            auto timeoutCallback = [](const std::string_view state,
+                                      size_t index) {
+                nlohmann::json message{};
+                if (state == "Started")
                 {
-                    taskData->state = "Aborted";
-                    taskData->messages.emplace_back(
-                        messages::resourceErrorsDetectedFormatError(
-                            "NvidiaSoftwareInventory.ComputeDigest",
-                            ec.message()));
-                    taskData->finishTask();
+                    message = messages::taskStarted(std::to_string(index));
                 }
+                else if (state == "Aborted")
+                {
+                    computeDigestInProgress = false;
+                    message = messages::taskAborted(std::to_string(index));
+                }
+                return message;
+            };
+            // create a task to wait for the hash digest property changed signal
+            std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+                [hashComputeObjPath, hashComputeService](
+                    boost::system::error_code ec,
+                    sdbusplus::message::message& msg,
+                    const std::shared_ptr<task::TaskData>& taskData) {
+                    if (ec)
+                    {
+                        if (ec != boost::asio::error::operation_aborted)
+                        {
+                            taskData->state = "Aborted";
+                            taskData->messages.emplace_back(
+                                messages::resourceErrorsDetectedFormatError(
+                                    "NvidiaSoftwareInventory.ComputeDigest",
+                                    ec.message()));
+                            taskData->finishTask();
+                        }
                 computeDigestInProgress = false;
                 return task::completed;
             }
@@ -3151,11 +3222,12 @@ inline void computeDigest(const crow::Request& req,
 
             msg.read(interface, props);
             if (interface == hashComputeInterface)
-            {
-                auto it = props.find("Digest");
-                if (it == props.end())
-                {
-                    BMCWEB_LOG_ERROR("Signal doesn't have Digest value");
+                    {
+                        auto it = props.find("Digest");
+                        if (it == props.end())
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "Signal doesn't have Digest value");
                     return !task::completed;
                 }
                 auto value = std::get_if<std::string>(&(it->second));
@@ -3179,7 +3251,8 @@ inline void computeDigest(const crow::Request& req,
                             taskData->state = "Exception";
                             taskData->messages.emplace_back(
                                 messages::taskAborted(
-                                    std::to_string(taskData->index)));
+                                                std::to_string(
+                                                    taskData->index)));
                             return;
                         }
                         const std::string* hashAlgoValue =
@@ -3191,18 +3264,23 @@ inline void computeDigest(const crow::Request& req,
                             taskData->state = "Exception";
                             taskData->messages.emplace_back(
                                 messages::taskAborted(
-                                    std::to_string(taskData->index)));
+                                                std::to_string(
+                                                    taskData->index)));
                             return;
                         }
 
                         nlohmann::json jsonResponse;
-                        jsonResponse["FirmwareDigest"] = hashDigestValue;
-                        jsonResponse["FirmwareDigestHashingAlgorithm"] =
-                            *hashAlgoValue;
-                        taskData->taskResponse.emplace(jsonResponse);
-                        std::string location =
-                            "Location: /redfish/v1/TaskService/Tasks/" +
-                            std::to_string(taskData->index) + "/Monitor";
+                                    jsonResponse["FirmwareDigest"] =
+                                        hashDigestValue;
+                                    jsonResponse
+                                        ["FirmwareDigestHashingAlgorithm"] =
+                                            *hashAlgoValue;
+                                    taskData->taskResponse.emplace(
+                                        jsonResponse);
+                                    std::string location =
+                                        "Location: /redfish/v1/TaskService/Tasks/" +
+                                        std::to_string(taskData->index) +
+                                        "/Monitor";
                         taskData->payload->httpHeaders.emplace_back(
                             std::move(location));
                         taskData->state = "Completed";
@@ -3220,7 +3298,8 @@ inline void computeDigest(const crow::Request& req,
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR("GetHash failed. Digest is empty.");
+                            BMCWEB_LOG_ERROR(
+                                "GetHash failed. Digest is empty.");
                     taskData->state = "Exception";
                     taskData->messages.emplace_back(
                         messages::resourceErrorsDetectedFormatError(
@@ -3250,7 +3329,8 @@ inline void computeDigest(const crow::Request& req,
                 task->state = "Aborted";
                 task->messages.emplace_back(
                     messages::resourceErrorsDetectedFormatError(
-                        "NvidiaSoftwareInventory.ComputeDigest", ec.message()));
+                                "NvidiaSoftwareInventory.ComputeDigest",
+                                ec.message()));
                 task->finishTask();
                 computeDigestInProgress = false;
                 return;
@@ -3287,7 +3367,8 @@ inline void
         if (ec)
         {
             messages::resourceNotFound(
-                asyncResp->res, "NvidiaSoftwareInventory.ComputeDigest", swId);
+                    asyncResp->res, "NvidiaSoftwareInventory.ComputeDigest",
+                    swId);
             BMCWEB_LOG_ERROR("Invalid object path: {}", ec);
             return;
         }
@@ -3323,15 +3404,18 @@ inline void requestRoutesComputeDigestPost(App& app)
         app, "/redfish/v1/UpdateService/FirmwareInventory/<str>/Actions/Oem/"
              "NvidiaSoftwareInventory.ComputeDigest")
         .privileges(redfish::privileges::postUpdateService)
-        .methods(boost::beast::http::verb::post)(
-            [&app](const crow::Request& req,
+        .methods(
+            boost::beast::http::verb::
+                post)([&app](
+                          const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                    const std::string& param) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
         }
-        BMCWEB_LOG_DEBUG("Enter NvidiaSoftwareInventory.ComputeDigest doPost");
+            BMCWEB_LOG_DEBUG(
+                "Enter NvidiaSoftwareInventory.ComputeDigest doPost");
         std::shared_ptr<std::string> swId =
             std::make_shared<std::string>(param);
         // skip input parameter validation

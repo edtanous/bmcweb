@@ -190,6 +190,20 @@ option(
 )
 
 option(
+    'bmcweb-chunking',
+    type: 'feature',
+    value:  'disabled',
+    description: '''Enable bmcweb chunking.'''
+)
+
+option(
+    'bmcweb-response-timeout',
+    type: 'integer',
+    value: 60,
+    description: '''The bmcweb response timeout in seconds.'''
+)
+
+option(
     'basic-auth',
     type: 'feature',
     value: 'enabled',
@@ -355,6 +369,8 @@ option(
     description: 'Allows this BMC to aggregate resources from satellite BMCs'
 )
 
+option('enforce_sensor_name_format',type: 'feature', value: 'enabled', description: 'Enable or disable enforcement of sensor name format')
+
 option('power-control-type-percentage', type : 'feature', value : 'disabled', description : 'set power control SetPointUnits to percentage.')
 option ('redfish-aggregation-prefix', type : 'string', value : '5B247A', description : 'redfish aggregation prefix')
 option ('rfa-hmc-update-target', type : 'string', value : 'HGX_Chassis_0', description : 'the update target to update all HMC components')
@@ -370,6 +386,7 @@ option('nvidia-oem-bf3-properties', type : 'feature', value : 'disabled', descri
 option('nvidia-oem-oberon-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Oberon properties')
 option('nvidia-oem-common-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Nvidia common properties.')
 option('nvidia-retimer-debugmode', type : 'feature', value : 'disabled', description : 'Enable Nvidia retimer debug mode.')
+option('nvidia-oem-device-status-from-file', type : 'feature', value : 'disabled', description : 'Enable OEM Nvidia device status properties from file.')
 option ('stalesensor-upper-limit-milisecond', type : 'integer', min : 1, max : 65535, value : 750, description : 'Upper limit in miliseconds to determine the staleness of sensor reading')
 option ('platform-metrics-sensing-interval', type : 'integer', min : 1, max : 65535, value : 250, description : 'Platform metrics telemetry sensor refresh interval in milliseconds')
 option ('platform-system-id', type : 'string', value : 'system', description : 'Platform specific computer system id')
@@ -458,6 +475,15 @@ option(
     description: '''Enable SCP based firmware update transactions through
                     Redfish UpdateService.SimpleUpdate.'''
 )
+
+option(
+    'redfish-updateservice-http-pull',
+    type: 'feature',
+    value: 'disabled',
+    description: '''Enable HTTP/HTTPS based firmware update transactions through
+                    Redfish UpdateService.SimpleUpdate.'''
+)
+
 option(
     'insecure-ignore-content-type',
     type: 'feature',

@@ -67,4 +67,5 @@ constexpr const char *rfaBmcHostURL = @RFA_BMC_HOST_URL@;
 constexpr const int rfaDeferSubscribeTime = @RFA_SUBSCRIBE_TIME@;
 
 // NOLINTEND(readability-identifier-naming)
+constexpr const int bmcwebResponseTimeoutSeconds = @BMCWEB_RESPONSE_TIMEOUT@;
 // clang-format on

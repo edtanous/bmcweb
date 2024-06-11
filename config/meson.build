@@ -43,6 +43,7 @@ enable_health_populate = get_option('redfish-health-populate')
 conf_data.set10('BMCWEB_ENABLE_HEALTH_POPULATE', enable_health_populate.enabled())
 enable_proc_mem_status = get_option('redfish-enable-proccessor-memory-status')
 conf_data.set10('BMCWEB_ENABLE_PROC_MEM_STATUS', enable_proc_mem_status.enabled())
+conf_data.set('BMCWEB_RESPONSE_TIMEOUT', get_option('bmcweb-response-timeout'))
 
 feature_options = [
     'basic-auth',

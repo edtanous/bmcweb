@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 /*!
- * @file    origin_utils.cpp
+ * @file    conditions_utils.cpp
  * @brief   Source code for utility functions of handling service conditions.
  */
 
@@ -24,6 +24,8 @@
 #include <utils/dbus_log_utils.hpp>
 #include <utils/origin_utils.hpp>
 #include <utils/time_utils.hpp>
+#include <utils/file_utils.hpp>
+#include <utils/registry_utils.hpp>
 
 namespace redfish
 {
@@ -278,6 +280,183 @@ inline void handleServiceConditionsURI(
         "xyz.openbmc_project.Logging.Namespace.ResolvedFilterType.Unresolved");
 }
 
+/** NOTES: This is a temporary solution to avoid performance issues may impact
+ *  other Redfish services. Please call for architecture decisions from all
+ *  NvBMC teams if want to use it in other places.
+ */
+inline void handleDeviceServiceConditionsFromFile(
+    crow::Response& resp,
+    const std::string& deviceId)
+{
+    static const std::string deviceStatusFSPath = bmcwebDeviceStatusFSPath;
+
+    std::string deviceStatusPath = deviceStatusFSPath + "/" + deviceId;
+
+    nlohmann::json jStatus{};
+
+    int rc = file_utils::readFile2Json(deviceStatusPath, jStatus);
+    if (rc != 0)
+    {
+        BMCWEB_LOG_ERROR("Condtions: read {} status file failed!",
+            deviceId);
+        // No need to report error since no status file means device is OK.
+        return;
+    }
+
+    auto jSts = jStatus.find("Status");
+    if (jSts == jStatus.end())
+    {
+        BMCWEB_LOG_ERROR("Condtions: No Status in status file of {}!",
+            deviceId);
+        messages::internalError(resp);
+        return;
+    }
+
+    auto jCond = jSts->find("Conditions");
+    if (jCond == jSts->end())
+    {
+        BMCWEB_LOG_ERROR("Condtions: No Conditions in status file of {}!",
+            deviceId);
+        messages::internalError(resp);
+        return;
+    }
+
+    for (auto& j : *jCond)
+    {
+        nlohmann::json conditionResp{};
+
+        // Support both MessageRegistry or non-MessageRegitry formats
+        auto jMsgId = j.find("MessageId");
+        auto jMsgArgs = j.find("MessageArgs");
+        if (jMsgId != j.end() && jMsgArgs != j.end())
+        {
+            // MessageRegistry Format
+            std::string messageId = *jMsgId;
+            std::string message = message_registries::composeMessage(
+                *jMsgId, *jMsgArgs);
+
+            conditionResp["MessageId"] = messageId;
+            conditionResp["MessageArgs"] = *jMsgArgs;
+            conditionResp["Message"] = message;
+        }
+        else
+        {
+            // Non-MessageRegistry Format
+            auto jMsg = j.find("Message");
+            if (jMsg != j.end())
+            {
+                conditionResp["Message"] = *jMsg;
+            }
+        }
+
+        auto jOOC = j.find("OriginOfCondition");
+        if (jOOC != j.end())
+        {
+            std::string ooc = *jOOC;
+            std::string originOfCondition =
+                origin_utils::getDeviceRedfishURI(ooc);
+
+            if (originOfCondition.length() == 0)
+            {
+                BMCWEB_LOG_ERROR("getDeviceRedfishURI of {} failed!", ooc);
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG("Get {} OriginOfCondition {}!",
+                    deviceId, originOfCondition);
+                conditionResp["OriginOfCondition"]["@odata.id"] =
+                    originOfCondition;
+            }
+        }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        auto jDevice = j.find("Device");
+        if (jDevice != j.end())
+        {
+            std::string device = *jDevice;
+            conditionResp["Oem"]["Nvidia"]["Device"] = device;
+        }
+
+        auto jErrorId = j.find("ErrorId");
+        if (jErrorId != j.end())
+        {
+            std::string errorId = *jErrorId;
+            conditionResp["Oem"]["Nvidia"]["ErrorId"] = errorId;
+        }
+
+        // If Device or ErrorId exists,
+        if (conditionResp.contains("Oem") &&
+            conditionResp["Oem"].contains("Nvidia"))
+        {
+            conditionResp["Oem"]["Nvidia"]["@odata.type"] =
+                "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry";
+        }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        auto jResolution = j.find("Resolution");
+        if (jResolution != j.end())
+        {
+            std::string resolution = *jResolution;
+            if (resolution.length() == 0)
+            {
+                BMCWEB_LOG_ERROR("Get {} Resolution failed!",
+                    deviceId);
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG("Get {} Resolution {}!",
+                    deviceId, resolution);
+                conditionResp["Resolution"] = resolution;
+            }
+        }
+
+        auto jSeverity = j.find("Severity");
+        if (jSeverity != j.end())
+        {
+            std::string severity = *jSeverity;
+            if (severity.length() == 0)
+            {
+                BMCWEB_LOG_ERROR("Get {} Severity failed!",
+                    deviceId);
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG("Get {} Severity {}!",
+                    deviceId, severity);
+                conditionResp["Severity"] = severity;
+            }
+        }
+
+        auto jTimestamp = j.find("Timestamp");
+        if (jTimestamp != j.end())
+        {
+            std::string timestamp = *jTimestamp;
+            if (timestamp.length() == 0)
+            {
+                BMCWEB_LOG_ERROR("Get {} Timestamp failed!",
+                    deviceId);
+            }
+            else
+            {
+                BMCWEB_LOG_DEBUG("Get {} Timestamp {}!",
+                    deviceId, timestamp);
+                conditionResp["Timestamp"] = timestamp;
+            }
+        }
+
+        // Add condition into array
+        if (resp.jsonValue.contains("Conditions"))
+        {
+            resp.jsonValue["Conditions"].push_back(conditionResp);
+        }
+        else
+        {
+            resp.jsonValue["Status"]["Conditions"].push_back(
+                conditionResp);
+        }
+    }
+}
+
+
 /**
  * Utility function for populating Conditions
  * array of the ServiceConditions uri
@@ -311,7 +490,11 @@ inline void populateServiceConditions(
             asyncResp->res.jsonValue["Status"]["Conditions"] =
                 nlohmann::json::array();
         }
+#ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
+        handleDeviceServiceConditionsFromFile(asyncResp->res, chasId);
+#else
         handleDeviceServiceConditions(asyncResp, chasId);
+#endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
     }
     else
     {

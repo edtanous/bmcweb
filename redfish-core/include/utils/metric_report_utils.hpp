@@ -42,17 +42,27 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
 {
     std::string suffix;
     // form redfish URI for device/sub device property
-    if (ifaceName == "xyz.openbmc_project.Inventory.Item.Port")
+    if (ifaceName == "xyz.openbmc_project.Inventory.Decorator.PortInfo")
     {
-        if (metricName == "RXNoProtocolBytes")
+        if (metricName == "CurrentSpeed")
         {
-            suffix = "/Metrics#/Oem/Nvidia/RXNoProtocolBytes";
+            suffix = "#/CurrentSpeedGbps";
         }
-        else if (metricName == "TXNoProtocolBytes")
+        else if (metricName == "MaxSpeed")
         {
-            suffix = "/Metrics#/Oem/Nvidia/TXNoProtocolBytes";
+            suffix = "#/MaxSpeedGbps";
         }
-        else if (metricName == "DataCRCCount")
+    }
+    else if (ifaceName == "xyz.openbmc_project.Inventory.Decorator.PortState")
+    {
+        if (metricName == "LinkStatus")
+        {
+            suffix = "#/LinkStatus";
+        }
+    }
+    else if (ifaceName == "xyz.openbmc_project.Metrics.PortMetricsOem1")
+    {
+        if (metricName == "DataCRCCount")
         {
             suffix = "/Metrics#/Oem/Nvidia/NVLinkErrors/DataCRCCount";
         }
@@ -68,15 +78,10 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         {
             suffix = "/Metrics#/Oem/Nvidia/NVLinkErrors/ReplayCount";
         }
-        else if (metricName == "RuntimeError")
-        {
-            suffix = "/Metrics#/Oem/Nvidia/NVLinkErrors/RuntimeError";
         }
-        else if (metricName == "TrainingError")
+    else if (ifaceName == "xyz.openbmc_project.Metrics.PortMetricsOem2")
         {
-            suffix = "/Metrics#/Oem/Nvidia/NVLinkErrors/TrainingError";
-        }
-        else if (metricName == "RXBytes")
+        if (metricName == "RXBytes")
         {
             suffix = "/Metrics#/RXBytes";
         }
@@ -84,17 +89,24 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         {
             suffix = "/Metrics#/TXBytes";
         }
-        else if (metricName == "CurrentSpeed")
+    }
+    else if (ifaceName == "xyz.openbmc_project.Metrics.PortMetricsOem3")
         {
-            suffix = "#/CurrentSpeedGbps";
+        if (metricName == "RXNoProtocolBytes")
+        {
+            suffix = "/Metrics#/Oem/Nvidia/RXNoProtocolBytes";
         }
-        else if (metricName == "MaxSpeed")
+        else if (metricName == "TXNoProtocolBytes")
         {
-            suffix = "#/MaxSpeedGbps";
+            suffix = "/Metrics#/Oem/Nvidia/TXNoProtocolBytes";
         }
-        else if (metricName == "LinkStatus")
+        else if (metricName == "RuntimeError")
         {
-            suffix = "#/LinkStatus";
+            suffix = "/Metrics#/Oem/Nvidia/NVLinkErrors/RuntimeError";
+        }
+        else if (metricName == "TrainingError")
+        {
+            suffix = "/Metrics#/Oem/Nvidia/NVLinkErrors/TrainingError";
         }
         else if (metricName == "TXWidth")
         {
@@ -544,7 +556,7 @@ inline std::string translateReading(const std::string& ifaceName,
             metricValue = toPCIeType(reading);
         }
     }
-    else if (ifaceName == "xyz.openbmc_project.Inventory.Item.Port")
+    else if (ifaceName == "xyz.openbmc_project.Inventory.Decorator.PortState")
     {
         if (metricName == "LinkStatus")
         {
