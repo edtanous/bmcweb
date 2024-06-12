@@ -394,7 +394,7 @@ inline void
             return;
         }
         nlohmann::json& switchlinksArray =
-            asyncResp->res.jsonValue["Links"]["ConnectedSwitchPorts"];
+            asyncResp->res.jsonValue["Links"]["ConnectedPorts"];
         for (const std::string& portPath1 : *data)
         {
             sdbusplus::message::object_path objectPath(portPath1);
@@ -681,6 +681,7 @@ inline void
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 #ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
     asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
 #endif // BMCWEB_DISABLE_HEALTH_ROLLUP

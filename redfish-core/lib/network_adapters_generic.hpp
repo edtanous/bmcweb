@@ -492,6 +492,18 @@ inline void
         boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports",
                             chassisId, networkAdapterId);
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+    asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
+    asyncResp->res.jsonValue["Status"]["Conditions"] = nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
+
+    asyncResp->res.jsonValue["Controllers"]["PCIeInterface"] = nlohmann::json::array();
+    asyncResp->res.jsonValue["Controllers"]["Links"]["PCIeDevices"] = nlohmann::json::array();
+    asyncResp->res.jsonValue["Controllers"]["Links"]["Ports"] = nlohmann::json::array();
+
     getAssetData(asyncResp, *validNetworkAdapterPath, networkAdapterId);
     getHealthByAssociation(asyncResp, *validNetworkAdapterPath,
                            networkAdapterId);

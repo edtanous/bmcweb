@@ -178,6 +178,16 @@ inline std::string getLinkStates(const std::string& linkState)
     {
         return "Disabled";
     }
+    if (linkState ==
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Unknown")
+    {
+        return "Disabled";
+    }
+    if (linkState ==
+        "xyz.openbmc_project.Inventory.Decorator.PortState.LinkStates.Error")
+    {
+        return "Disabled";
+    }
     // Unknown or others
     return "";
 }
@@ -416,6 +426,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 #ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
     asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
 #endif // BMCWEB_DISABLE_HEALTH_ROLLUP
