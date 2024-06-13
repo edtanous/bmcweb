@@ -4039,7 +4039,7 @@ inline void requestRoutesInventorySoftware(App& app)
                 "xyz.openbmc_project.ObjectMapper", "GetSubTree",
                 "/xyz/openbmc_project/software/", static_cast<int32_t>(0),
                 std::array<const char*, 1>{
-                    "xyz.openbmc_project.Software.Version"});
+                    "xyz.openbmc_project.Software.Settings"});
         }
     });
 }
