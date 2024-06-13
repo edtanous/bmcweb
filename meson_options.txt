@@ -372,6 +372,7 @@ option('nvidia-oem-oberon-properties', type : 'feature', value : 'disabled', des
 option('nvidia-oem-common-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Nvidia common properties.')
 option('nvidia-retimer-debugmode', type : 'feature', value : 'disabled', description : 'Enable Nvidia retimer debug mode.')
 option('nvidia-oem-device-status-from-file', type : 'feature', value : 'disabled', description : 'Enable OEM Nvidia device status properties from file.')
+option('nvidia-bootentryid', type : 'feature', value : 'disabled', description : 'Enable OEM Nvidia BootEntryID for phosphor-logging based logs.')
 option ('stalesensor-upper-limit-milisecond', type : 'integer', min : 1, max : 65535, value : 750, description : 'Upper limit in miliseconds to determine the staleness of sensor reading')
 option ('platform-metrics-sensing-interval', type : 'integer', min : 1, max : 65535, value : 250, description : 'Platform metrics telemetry sensor refresh interval in milliseconds')
 option ('platform-system-id', type : 'string', value : 'system', description : 'Platform specific computer system id')

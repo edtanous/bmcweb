@@ -2334,6 +2334,11 @@ inline void requestRoutesEventLogService(App& app)
             "xyz.openbmc_project.Logging.Namespace", "GetStats", "all");
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        if (bmcwebEnableNvidiaBootEntryId)
+        {
+            populateBootEntryId(asyncResp->res);
+        }
+
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec,
                         std::variant<bool>& resp) {
@@ -5356,7 +5361,7 @@ inline void requestRoutesSystemFDREntryDownload(App &app)
         sdbusplus::message::object_path entry("/xyz/openbmc_project/dump/fdr/entry");
         entry /= entryID;
         crow::connections::systemBus->async_method_call(
-            std::move(downloadDumpEntryHandler), 
+            std::move(downloadDumpEntryHandler),
             "xyz.openbmc_project.Dump.Manager",
             entry,
             "xyz.openbmc_project.Dump.Entry", "GetFileHandle");
@@ -6958,7 +6963,12 @@ inline void requestRoutesChassisXIDLogService(App& app)
                         "xyz.openbmc_project.Logging.Namespace", "GetStats",
                         chassisName + "_XID");
                 });
-
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                if (bmcwebEnableNvidiaBootEntryId)
+                {
+                    populateBootEntryId(asyncResp->res);
+                }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 asyncResp->res.jsonValue["Entries"] = {
                     {"@odata.id", "/redfish/v1/Chassis/" + chassisId +
                                       "/LogServices/XID/Entries"}};

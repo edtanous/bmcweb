@@ -75,4 +75,6 @@ constexpr const int rfaDeferSubscribeTime = @RFA_SUBSCRIBE_TIME@;
 constexpr const int bmcwebResponseTimeoutSeconds = @BMCWEB_RESPONSE_TIMEOUT@;
 
 constexpr const bool bmcwebMTLSCommonNameParsingMeta = @BMCWEB_ENABLE_MTLS_COMMON_NAME_PARSING_META@ == 1;
+
+constexpr const bool bmcwebEnableNvidiaBootEntryId = @BMCWEB_ENABLE_NVIDIA_BOOTENTRYID@ == 1;
 // clang-format on
