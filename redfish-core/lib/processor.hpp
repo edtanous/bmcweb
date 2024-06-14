@@ -6050,8 +6050,11 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                                                " Port Metrics";
                             asyncResp->res.jsonValue["Id"] = "Metrics";
 
-                            getProcessorPortMetricsData(
-                                asyncResp, object.front().first, sensorpath);
+                            for (const auto& [service, interfaces] : object)
+                            {
+                                getProcessorPortMetricsData(asyncResp, service,
+                                                            sensorpath);
+                            }
                         },
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
