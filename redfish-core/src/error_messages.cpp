@@ -1650,6 +1650,24 @@ void queryCombinationInvalid(crow::Response& res)
 
 /**
  * @internal
+ * @brief Formats EventBufferExceeded message into JSON
+ *
+ * See header file for more information
+ * @endinternal
+ */
+nlohmann::json eventBufferExceeded()
+{
+    return getLog(redfish::registries::base::Index::eventBufferExceeded, {});
+}
+
+void eventBufferExceeded(crow::Response& res)
+{
+    res.result(boost::beast::http::status::bad_request);
+    addMessageToErrorJson(res.jsonValue, eventBufferExceeded());
+}
+
+/**
+ * @internal
  * @brief Formats InsufficientPrivilege message into JSON
  *
  * See header file for more information
