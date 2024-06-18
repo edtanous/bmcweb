@@ -218,6 +218,7 @@ add_project_arguments(
     '-Wno-attributes',
     '-Wno-error=deprecated-declarations',    
     '-Wno-comment',
+    '-Wno-disabled-macro-expansion',
   language:'cpp')
 endif
 

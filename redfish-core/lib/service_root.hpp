@@ -257,7 +257,7 @@ inline void handleServiceRootGetImpl(
     protocolFeatures["ExpandQuery"]["Levels"] = bmcwebInsecureEnableQueryParams;
     protocolFeatures["ExpandQuery"]["Links"] = bmcwebInsecureEnableQueryParams;
     protocolFeatures["ExpandQuery"]["NoLinks"] =
-    protocolFeatures["FilterQuery"] = BMCWEB_INSECURE_ENABLE_REDFISH_QUERY;
+    protocolFeatures["FilterQuery"] = bmcwebInsecureEnableQueryParams;
     protocolFeatures["OnlyMemberQuery"] = true;
     protocolFeatures["SelectQuery"] = true;
     protocolFeatures["DeepOperations"]["DeepPOST"] = false;

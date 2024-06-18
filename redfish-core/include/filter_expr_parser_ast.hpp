@@ -6,6 +6,7 @@
 #include <iostream>
 #include <list>
 #include <numeric>
+#include <optional>
 #include <string>
 
 namespace redfish

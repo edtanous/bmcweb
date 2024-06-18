@@ -450,7 +450,7 @@ inline std::optional<Query> parseParameters(boost::urls::params_view urlParams,
                 return std::nullopt;
             }
         }
-        else if (it.key == "$filter" && BMCWEB_INSECURE_ENABLE_REDFISH_QUERY)
+        else if (it.key == "$filter" && bmcwebInsecureEnableQueryParams)
         {
             if (!getFilterParam(it.value, ret))
             {
