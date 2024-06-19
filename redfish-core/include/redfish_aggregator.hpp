@@ -362,6 +362,18 @@ static inline void addPrefixToHeadersInResp(nlohmann::json& json,
 // an aggregated resource.
 static inline void addPrefixes(nlohmann::json& json, std::string_view prefix)
 {
+    // get url from odata.id property of the response before url fixup
+    std::string odataProp;
+    nlohmann::json::iterator odataIdIt = json.find("@odata.id");
+    if (odataIdIt != json.end())
+    {
+        const std::string* odataIdStr = odataIdIt->get_ptr<const std::string*>();
+        if (odataIdStr != nullptr)
+        {
+            odataProp = *odataIdStr;
+        }
+    }
+
     nlohmann::json::object_t* object =
         json.get_ptr<nlohmann::json::object_t*>();
     if (object != nullptr)
@@ -376,7 +388,15 @@ static inline void addPrefixes(nlohmann::json& json, std::string_view prefix)
 
             if (item.first == "Id")
             {
-                addPrefixToID(item.second, prefix);
+                // url will be prepended with the prefix if the url is
+                // aggregated from top-level or subordinate collection
+                // resources.
+                std::string url = odataProp;
+                addPrefixToStringItem(url, prefix);
+                if(url != odataProp)
+                {
+                    addPrefixToID(item.second, prefix);
+                }
                 continue;
             }
 
