@@ -392,6 +392,7 @@ class Event
         }
 
         eventLogEntry["MessageId"] = messageId;
+        eventLogEntry["EventType"] = "Event";
         if (!actions.empty())
         {
             eventLogEntry["Actions"] = actions;
@@ -406,7 +407,7 @@ class Event
         }
         if (!eventTimestamp.empty())
         {
-            eventLogEntry["EventTimeStamp"] = eventTimestamp;
+            eventLogEntry["EventTimestamp"] = eventTimestamp;
         }
         if (!logEntry.empty())
         {
@@ -1501,6 +1502,7 @@ class EventServiceManager
         nlohmann::json event = {
             {"EventId", eventId},
             {"MemberId", memberId},
+            {"EventType", "Event"},
             {"EventTimestamp",
              redfish::time_utils::getDateTimeOffsetNow().first},
             {"OriginOfCondition", origin}};
