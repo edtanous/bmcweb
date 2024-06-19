@@ -511,11 +511,11 @@ inline std::string getProcessorGpmMetricURIDef(std::string& propertyName)
             "/Processors/" + gpuPrefix +
             "{GpuId}/ProcessorMetrics#/Oem/Nvidia/IMMAUtilizationPercent";
     }
-    else if (propertyName == "IntergerActivityUtilizationPercent")
+    else if (propertyName == "IntegerActivityUtilizationPercent")
     {
         propURI +=
             "/Processors/" + gpuPrefix +
-            "{GpuId}/ProcessorMetrics#/Oem/Nvidia/IntergerActivityUtilizationPercent";
+            "{GpuId}/ProcessorMetrics#/Oem/Nvidia/IntegerActivityUtilizationPercent";
     }
     else if (propertyName == "NVDecUtilizationPercent")
     {
@@ -685,7 +685,7 @@ inline void populateGpmMetricProperties(
         propName = "NVDecUtilizationPercent";
         metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
 
-        propName = "IntergerActivityUtilizationPercent";
+        propName = "IntegerActivityUtilizationPercent";
         metricPropertiesAray.push_back(getProcessorGpmMetricURIDef(propName));
 
         propName = "IMMAUtilizationPercent";

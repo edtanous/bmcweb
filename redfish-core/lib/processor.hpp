@@ -2393,7 +2393,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             "PCIeRawTxBandwidthGbps", pcieTxBandwidthGbps, "SMActivityPercent",
             smActivityPercent, "SMOccupancyPercent", smOccupancyPercent,
             "TensorCoreActivityPercent", tensorCoreActivityPercent,
-            "IntergerActivityUtilizationPercent", integerActivityUtil,
+            "IntegerActivityUtilizationPercent", integerActivityUtil,
             "DMMAUtilizationPercent", dmmaUtil, "HMMAUtilizationPercent",
             hmmaUtil, "IMMAUtilizationPercent", immaUtil,
             "NVDecInstanceUtilizationPercent", nvdecInstanceUtil,
@@ -2557,13 +2557,13 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         if (integerActivityUtil != nullptr)
         {
-            json["Oem"]["Nvidia"]["IntergerActivityUtilizationPercent"] =
+            json["Oem"]["Nvidia"]["IntegerActivityUtilizationPercent"] =
                 *integerActivityUtil;
         }
         else
         {
             BMCWEB_LOG_DEBUG("Null value returned "
-                             "for IntergerActivityUtilizationPercent");
+                             "for IntegerActivityUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
