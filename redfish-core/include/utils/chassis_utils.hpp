@@ -897,8 +897,8 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
                     return;
                 }
             }
+            callback(false);
         });
-        callback(false);
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
