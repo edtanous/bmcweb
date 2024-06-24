@@ -4175,6 +4175,14 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                       "com.nvidia.GPMMetrics");
                 }
 
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Inventory.Item.Cpu."
+                              "OperatingConfig") != interfaces.end())
+                {
+                    nvidia_processor_utils::getSMUtilizationData(aResp, service,
+                                                                 path);
+                }
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 getSensorMetric(aResp, service, path);
 
