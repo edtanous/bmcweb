@@ -806,6 +806,27 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
+
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+    asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+       // update health rollup
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        objPath, [asyncResp](const std::string& rootHealth,
+                             const std::string& healthRollup) {
+        asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+        asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+    });
+    health->start();
+
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
+    redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                         networkAdapterId);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 }
 
 inline void

@@ -110,7 +110,7 @@ inline void
                     std::string, std::variant<std::string, size_t>>;
                 // Get interface properties
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec,
+                    [asyncResp, sensorPath](const boost::system::error_code ec,
                                 const PropertiesMap& properties) {
                     if (ec)
                     {
@@ -133,6 +133,29 @@ inline void
                             }
                             asyncResp->res.jsonValue["Status"]["State"] =
                                 "Enabled";
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+                            asyncResp->res.jsonValue["Status"]["HealthRollup"] =
+                                "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+       // update health
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+                            std::shared_ptr<HealthRollup> health =
+                                std::make_shared<HealthRollup>(
+                                    sensorPath,
+                                    [asyncResp](
+                                        const std::string& rootHealth,
+                                        const std::string& healthRollup) {
+                                asyncResp->res.jsonValue["Status"]["Health"] =
+                                    rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+                                asyncResp->res
+                                    .jsonValue["Status"]["HealthRollup"] =
+                                    healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+                            });
+                            health->start();
+
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
                             if (*value ==
                                 "xyz.openbmc_project.State.Decorator.Health.HealthType.OK")
                             {
