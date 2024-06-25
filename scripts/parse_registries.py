@@ -71,6 +71,26 @@ def openbmc_local_getter():
     return (path, json_file, "openbmc", url)
 
 
+def nvidia_local_getter():
+    url = ""
+    with open(
+        os.path.join(
+            SCRIPT_DIR,
+            "..",
+            "redfish-core",
+            "include",
+            "registries",
+            "oem",
+            "nvidia.json",
+        ),
+        "rb",
+    ) as json_file:
+        json_file = json.load(json_file)
+
+    path = os.path.join(include_path, "oem", "nvidia_message_registry.hpp")
+    return (path, json_file, "nvidia", url)
+
+
 def update_registries(files):
     # Remove the old files
     for file, json_dict, namespace, url in files:
@@ -288,6 +308,9 @@ def main():
                     registry,
                 )
             )
+
+    if "nvidia" in registries:
+        files.append(nvidia_local_getter())
 
     if "openbmc" in registries:
         files.append(openbmc_local_getter())

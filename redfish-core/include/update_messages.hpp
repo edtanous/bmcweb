@@ -214,6 +214,51 @@ inline nlohmann::json resourceErrorsDetected(const std::string& arg1,
         {"Resolution", "None."}};
 }
 
+inline nlohmann::json componentUpdateSkipped(const std::string& arg1,
+                                             const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "NvidiaUpdate.1.0.ComponentUpdateSkipped"},
+        {"Message", "The update operation for the component '" + arg1 +
+                        "' is skipped because '" + arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+
+inline nlohmann::json recoveryStarted(const std::string& arg1)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "NvidiaUpdate.1.0.RecoveryStarted"},
+        {"Message", "Firmware Recovery Started on '" + arg1 + "'."},
+        {"MessageArgs", {arg1}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+
+inline nlohmann::json recoverySuccessful(const std::string& arg1)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "NvidiaUpdate.1.0.RecoverySuccessful"},
+        {"Message", "Firmware '" + arg1 + "' is successfully recovered."},
+        {"MessageArgs", {arg1}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+
+inline nlohmann::json firmwareNotInRecovery(const std::string& arg1)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "NvidiaUpdate.1.0.FirmwareNotInRecovery"},
+        {"Message", "Firmware '" + arg1 + "' is not in Recovery."},
+        {"MessageArgs", {arg1}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
 
 inline nlohmann::json getUpdateMessage(const std::string& msgId,
                                        std::vector<std::string>& args)
@@ -292,6 +337,22 @@ inline nlohmann::json getUpdateMessage(const std::string& msgId,
     if (msgId == "ResourceEvent.1.0.ResourceErrorsDetected")
     {
         return resourceErrorsDetected(arg0, arg1);
+    }
+    if (msgId == "NvidiaUpdate.1.0.ComponentUpdateSkipped")
+    {
+        return componentUpdateSkipped(arg0, arg1);
+    }
+    if (msgId == "NvidiaUpdate.1.0.RecoveryStarted")
+    {
+        return recoveryStarted(arg0);
+    }
+    if (msgId == "NvidiaUpdate.1.0.RecoverySuccessful")
+    {
+        return recoverySuccessful(arg0);
+    }
+    if (msgId == "NvidiaUpdate.1.0.FirmwareNotInRecovery")
+    {
+        return firmwareNotInRecovery(arg0);
     }
 
     return {};
