@@ -362,10 +362,6 @@ inline void afterGetUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         BMCWEB_LOG_DEBUG("UUID = {}", valueStr);
         asyncResp->res.jsonValue["UUID"] = valueStr;
     }
-#ifdef BMCWEB_ENABLE_BIOS
-    // UUID from smbios if exist
-    sw_util::getSwBIOSUUID(asyncResp);
-#endif
 }
 
 inline void
@@ -504,14 +500,20 @@ inline void afterSystemGetSubTree(
                 {
                     BMCWEB_LOG_DEBUG("Found UUID, now get its properties.");
 
-                    sdbusplus::asio::getAllProperties(
-                        *crow::connections::systemBus, connection.first, path,
-                        "xyz.openbmc_project.Common.UUID",
-                        [asyncResp](const boost::system::error_code& ec3,
-                                    const dbus::utility::DBusPropertiesMap&
-                                        properties) {
-                        afterGetUUID(asyncResp, ec3, properties);
-                    });
+#ifdef BMCWEB_ENABLE_BIOS
+                    // Make sure to get SMBIOS UUID
+                    if (std::filesystem::path(path).filename() == "bios")
+                    {
+                        sdbusplus::asio::getAllProperties(
+                            *crow::connections::systemBus, connection.first, path,
+                            "xyz.openbmc_project.Common.UUID",
+                            [asyncResp](const boost::system::error_code& ec3,
+                                        const dbus::utility::DBusPropertiesMap&
+                                            properties) {
+                            afterGetUUID(asyncResp, ec3, properties);
+                        });
+                    }
+#endif
                 }
                 else if (interfaceName ==
                          "xyz.openbmc_project.Inventory.Item.System")
