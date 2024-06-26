@@ -185,31 +185,6 @@ inline void requestRoutesCable(App& app)
                 getCableProperties(asyncResp, objectPath, serviceMap);
                 return;
             }
-
-            asyncResp->res.jsonValue["@odata.type"] = "#Cable.v1_0_0.Cable";
-            asyncResp->res.jsonValue["@odata.id"] =
-                boost::urls::format("/redfish/v1/Cables/{}", cableId);
-            asyncResp->res.jsonValue["Id"] = 1;
-            if (cableId == "HGX_ProcessorModule_Management_0") {
-                asyncResp->res.jsonValue["Name"] = "ProcessorModule_Management_0";
-                asyncResp->res.jsonValue["Links"]["DownstreamChassis"]["@odata.id"] = "/redfish/v1/Chassis/HGX_ProcessorModule_1";
-                asyncResp->res.jsonValue["Links"]["UpstreamChassis"]["@odata.id"] = "/redfish/v1/Chassis/HGX_ProcessorModule_0";
-                asyncResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] = "Management_Cable_0";
-                asyncResp->res.jsonValue["Location"]["PartLocationContext"] = "HGX_Chassis_0/ProcessorModule_0";
-                asyncResp->res.jsonValue["PartNumber"] = "TODO";
-                asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-                return;
-            }
-            else if(cableId == "HGX_ProcessorModule_Clink_0") {
-                asyncResp->res.jsonValue["Links"]["DownstreamChassis"]["@odata.id"] = "/redfish/v1/Chassis/HGX_ProcessorModule_1";
-                asyncResp->res.jsonValue["Links"]["UpstreamChassis"]["@odata.id"] = "/redfish/v1/Chassis/HGX_ProcessorModule_0";
-                asyncResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] = "Clink_Cable_0";
-                asyncResp->res.jsonValue["Location"]["PartLocationContext"] = "HGX_Chassis_0/ProcessorModule_0";
-                asyncResp->res.jsonValue["Name"] = "ProcessorModule_Clink_0";
-                asyncResp->res.jsonValue["PartNumber"] = "TODO";
-                asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-                return;
-            }
             messages::resourceNotFound(asyncResp->res, "Cable", cableId);
         });
     });
@@ -234,22 +209,11 @@ inline void requestRoutesCableCollection(App& app)
         asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Cables";
         asyncResp->res.jsonValue["Name"] = "Cable Collection";
         asyncResp->res.jsonValue["Description"] = "Collection of Cable Entries";
-        asyncResp->res.jsonValue["Description3"] = "Collection of Cable Entries";
-        asyncResp->res.jsonValue["Members@odata.count"] = 2;
-
-        asyncResp->res.jsonValue["Members"] = {
-            {
-                {"@odata.id", "/redfish/v1/Cables/HGX_ProcessorModule_Clink_0"}
-            },
-            {
-                {"@odata.id", "/redfish/v1/Cables/HGX_ProcessorModule_Management_0"}
-            }
-        };
-        // constexpr std::array<std::string_view, 1> interfaces{
-        //     "xyz.openbmc_project.Inventory.Item.Cable"};
-        // collection_util::getCollectionMembers(
-        //     asyncResp, boost::urls::url("/redfish/v1/Cables"), interfaces,
-        //     "/xyz/openbmc_project/inventory");
+        constexpr std::array<std::string_view, 1> interfaces{
+            "xyz.openbmc_project.Inventory.Item.Cable"};
+        collection_util::getCollectionMembers(
+            asyncResp, boost::urls::url("/redfish/v1/Cables"), interfaces,
+            "/xyz/openbmc_project/inventory");
     });
 }
 
