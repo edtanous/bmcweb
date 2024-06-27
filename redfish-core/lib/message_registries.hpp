@@ -21,6 +21,7 @@
 #include "registries/base_message_registry.hpp"
 #include "registries/bios_attribute_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
+#include "registries/platform_message_registry.hpp"
 #include "registries/privilege_registry.hpp"
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
@@ -53,6 +54,7 @@ inline void handleMessageRegistryFileCollectionGet(
         {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
         {{"@odata.id", "/redfish/v1/Registries/ResourceEvent"}},
         {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}},
+        {{"@odata.id", "/redfish/v1/Registries/Platform"}},
 #ifdef BMCWEB_ENABLE_BIOS
         {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}},
 #endif
@@ -115,6 +117,11 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     {
         header = &registries::bios::header;
         dmtf.clear();
+    }
+    else if (registry == "Platform")
+    {
+        header = &registries::platform::header;
+        url = registries::platform::url;
     }
     else
     {
@@ -192,6 +199,15 @@ inline void handleMessageRegistryGet(
         header = &registries::openbmc::header;
         for (const registries::MessageEntry& entry :
              registries::openbmc::registry)
+        {
+            registryEntries.emplace_back(&entry);
+        }
+    }
+    else if (registry == "Platform")
+    {
+        header = &registries::platform::header;
+        for (const registries::MessageEntry& entry :
+             registries::platform::registry)
         {
             registryEntries.emplace_back(&entry);
         }

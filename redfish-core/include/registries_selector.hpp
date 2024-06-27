@@ -1,6 +1,7 @@
 #pragma once
 #include "registries/base_message_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
+#include "registries/platform_message_registry.hpp"
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
 #include "registries/update_message_registry.hpp"
@@ -32,6 +33,10 @@ inline std::span<const MessageEntry>
     if (update::header.registryPrefix == registryName)
     {
         return {update::registry};
+    }
+    if (platform::header.registryPrefix == registryName)
+    {
+        return {platform::registry};
     }
 
     return {openbmc::registry};
