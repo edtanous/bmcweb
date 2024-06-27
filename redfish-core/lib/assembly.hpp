@@ -90,8 +90,7 @@ inline void
             const std::string& propertyName = property.first;
             if ((propertyName == "Model") || (propertyName == "Name") ||
                 (propertyName == "PartNumber") ||
-                (propertyName == "SerialNumber") ||
-                (propertyName == "Version") || (propertyName == "SKU"))
+                (propertyName == "SerialNumber") || (propertyName == "Version"))
             {
                 const std::string* value =
                     std::get_if<std::string>(&property.second);
