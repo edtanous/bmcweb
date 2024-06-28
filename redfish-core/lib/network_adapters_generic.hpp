@@ -1145,7 +1145,7 @@ inline void
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaPortMetrics.v1_0_0.NvidiaPortMetrics";
+            "#NvidiaPortMetrics.v1_3_0.NvidiaPortMetrics";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         for (const auto& property : properties)
         {
@@ -1396,7 +1396,7 @@ inline void getPortMetricsDataByAssociation(
                     return;
                 }
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#PortMetrics.v1_0_0.PortMetrics";
+                    "#PortMetrics.v1_6_1.PortMetrics";
                 asyncResp->res.jsonValue["Id"] = portId;
                 asyncResp->res.jsonValue["Name"] = portId + " Port Metrics";
                 asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(

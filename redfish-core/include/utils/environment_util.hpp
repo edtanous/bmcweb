@@ -1491,7 +1491,7 @@ inline void
             return;
         }
         // Object not found
-        messages::resourceNotFound(aResp->res, "#Processor.v1_13_0.Processor",
+        messages::resourceNotFound(aResp->res, "#Processor.v1_20_0.Processor",
                                    processorId);
     },
         "xyz.openbmc_project.ObjectMapper",

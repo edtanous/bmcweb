@@ -2323,7 +2323,7 @@ inline void requestRoutesEventLogService(App& app)
                 "#NvidiaLogService.v1_1_0.NvidiaLogService";
 #else
             asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaLogService.v1_0_0.NvidiaLogService";
+                "#NvidiaLogService.v1_3_0.NvidiaLogService";
 #endif /* BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES */
             asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] =
                 std::to_string(std::get<0>(reqData));
@@ -6949,7 +6949,7 @@ inline void requestRoutesChassisXIDLogService(App& app)
                             std::get<1>(reqData));
                         asyncResp->res
                             .jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                            "#NvidiaLogService.v1_0_0.NvidiaLogService";
+                            "#NvidiaLogService.v1_3_0.NvidiaLogService";
                         asyncResp->res
                             .jsonValue["Oem"]["Nvidia"]["LatestEntryID"] =
                             std::to_string(std::get<0>(reqData));

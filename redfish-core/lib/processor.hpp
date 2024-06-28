@@ -3509,7 +3509,7 @@ inline void requestRoutesProcessor(App& app)
         }
 
         asyncResp->res.jsonValue["@odata.type"] =
-            "#Processor.v1_13_0.Processor";
+            "#Processor.v1_20_0.Processor";
         asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
             processorId;
@@ -4194,7 +4194,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
             return;
         }
         // Object not found
-        messages::resourceNotFound(aResp->res, "#Processor.v1_13_0.Processor",
+        messages::resourceNotFound(aResp->res, "#Processor.v1_20_0.Processor",
                                    processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -4503,7 +4503,7 @@ inline void getProcessorMemoryMetricsData(
             return;
         }
         // Object not found
-        messages::resourceNotFound(aResp->res, "#Processor.v1_13_0.Processor",
+        messages::resourceNotFound(aResp->res, "#Processor.v1_20_0.Processor",
                                    processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -4575,7 +4575,7 @@ inline void
             json["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/Processors/" +
                                 processorId + "/Settings";
-            json["@odata.type"] = "#Processor.v1_13_0.Processor";
+            json["@odata.type"] = "#Processor.v1_20_0.Processor";
             json["Id"] = "Settings";
             json["Name"] = processorId + "PendingSettings";
             for (const auto& [service, interfaces] : object)
@@ -4999,7 +4999,7 @@ inline void requestRoutesProcessorPortCollection(App& app)
             }
             // Object not found
             messages::resourceNotFound(
-                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+                asyncResp->res, "#Processor.v1_20_0.Processor", processorId);
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -5491,7 +5491,7 @@ inline void requestRoutesProcessorPort(App& app)
             }
             // Object not found
             messages::resourceNotFound(
-                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+                asyncResp->res, "#Processor.v1_20_0.Processor", processorId);
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -5697,7 +5697,7 @@ inline void getProcessorPortMetricsData(
                     return;
                 }
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaPortMetrics.v1_1_0.NvidiaPortMetrics";
+                    "#NvidiaPortMetrics.v1_3_0.NvidiaPortMetrics";
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXNoProtocolBytes"] =
                     *value;
             }
@@ -6079,7 +6079,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
             }
             // Object not found
             messages::resourceNotFound(
-                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+                asyncResp->res, "#Processor.v1_20_0.Processor", processorId);
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
