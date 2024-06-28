@@ -1099,13 +1099,8 @@ inline void objectPropertiesToJson(
             {
                 if (valueName == "Elapsed")
                 {
-                    static constexpr size_t timeSize{100};
-                    std::array<char, timeSize> time{};
-                    auto stime = static_cast<std::time_t>(*uint64Value);
-                    std::strftime(time.data(), timeSize, "%FT%T%z",
-                                  std::localtime(&stime));
-
-                    sensorJson[key] = time.data();
+                    sensorJson[key] =
+                        time_utils::getDateTimeUintMs(*uint64Value);
                 }
             }
             else
