@@ -22,6 +22,7 @@
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/serializer.hpp>
 #include <boost/beast/http/write.hpp>
+#include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/system/error_code.hpp>
 
@@ -179,6 +180,13 @@ class HTTP2Connection :
         boost::beast::http::fields& fields = res.fields();
         std::string code = std::to_string(res.resultInt());
         std::vector<nghttp2_nv> hdr;
+
+        completeResponseFields(thisReq, thisRes);
+        thisRes.addHeader(boost::beast::http::field::date, getCachedDateStr());
+        thisRes.preparePayload();
+
+        boost::beast::http::fields& fields = thisRes.fields();
+        std::string code = std::to_string(thisRes.resultInt());
         hdr.emplace_back(
             headerFromStringViews(":status", code, NGHTTP2_NV_FLAG_NONE));
         for (const boost::beast::http::fields::value_type& header : fields)
@@ -186,6 +194,8 @@ class HTTP2Connection :
             hdr.emplace_back(headerFromStringViews(
                 header.name_string(), header.value(), NGHTTP2_NV_FLAG_NONE));
         }
+        Http2StreamData& stream = it->second;
+        crow::Response& res = stream.res;
         http::response<bmcweb::HttpBody>& fbody = res.response;
         stream.writer.emplace(fbody.base(), fbody.body());
 
@@ -263,30 +273,30 @@ class HTTP2Connection :
         auto asyncResp =
             std::make_shared<bmcweb::AsyncResp>(std::move(it->second.res));
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
+        thisReq.session = crow::authentication::authenticate(
+            {}, thisRes, thisReq.method(), thisReq.req, nullptr);
+        if (!crow::authentication::isOnAllowlist(thisReq.url().path(),
+                                                 thisReq.method()) &&
+            thisReq.session == nullptr)
         {
-            thisReq.session = crow::authentication::authenticate(
-                {}, asyncResp->res, thisReq.method(), thisReq.req, nullptr);
-            if (!crow::authentication::isOnAllowlist(thisReq.url().path(),
-                                                     thisReq.method()) &&
-                thisReq.session == nullptr)
+            BMCWEB_LOG_WARNING("Authentication failed");
+            forward_unauthorized::sendUnauthorized(
+                thisReq.url().encoded_path(),
+                thisReq.getHeaderValue("X-Requested-With"),
+                thisReq.getHeaderValue("Accept"), thisRes);
+        }
+        else
+#endif // BMCWEB_INSECURE_DISABLE_AUTHX
+        {
+            std::string_view expected = thisReq.getHeaderValue(
+                boost::beast::http::field::if_none_match);
+            BMCWEB_LOG_DEBUG("Setting expected hash {}", expected);
+            if (!expected.empty())
             {
-                BMCWEB_LOG_WARNING("Authentication failed");
-                forward_unauthorized::sendUnauthorized(
-                    thisReq.url().encoded_path(),
-                    thisReq.getHeaderValue("X-Requested-With"),
-                    thisReq.getHeaderValue("Accept"), asyncResp->res);
-                return 0;
+                asyncResp->res.setExpectedHash(expected);
             }
+            handler->handle(it->second.req, asyncResp);
         }
-#endif
-        std::string_view expected =
-            thisReq.getHeaderValue(boost::beast::http::field::if_none_match);
-        BMCWEB_LOG_DEBUG("Setting expected hash {}", expected);
-        if (!expected.empty())
-        {
-            asyncResp->res.setExpectedHash(expected);
-        }
-        handler->handle(it->second.req, asyncResp);
         return 0;
     }
 
@@ -550,7 +560,7 @@ class HTTP2Connection :
     void close()
     {
         if constexpr (std::is_same_v<Adaptor,
-                                     boost::asio::ssl::stream<
+                                     boost::beast::ssl_stream<
                                          boost::asio::ip::tcp::socket>>)
         {
             adaptor.next_layer().close();

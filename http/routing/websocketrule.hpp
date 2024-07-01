@@ -16,12 +16,7 @@ class WebSocketRule : public BaseRule
     using self_t = WebSocketRule;
 
   public:
-    explicit WebSocketRule(const std::string& ruleIn) : BaseRule(ruleIn)
-    {
-        isUpgrade = true;
-        // Clear GET handler
-        methodsBitfield = 0;
-    }
+    explicit WebSocketRule(const std::string& ruleIn) : BaseRule(ruleIn) {}
 
     void validate() override {}
 
@@ -29,10 +24,7 @@ class WebSocketRule : public BaseRule
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const std::vector<std::string>& /*params*/) override
     {
-        BMCWEB_LOG_ERROR(
-            "Handle called on websocket rule.  This should never happen");
-        asyncResp->res.result(
-            boost::beast::http::status::internal_server_error);
+        asyncResp->res.result(boost::beast::http::status::not_found);
     }
 
     void handleUpgrade(const Request& req,
