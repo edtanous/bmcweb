@@ -106,18 +106,19 @@ inline bool
     return true;
 }
 
-inline bool
-    afterGetUserInfo(Request& req,
-                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                     BaseRule& rule, const boost::system::error_code& ec,
-                     const dbus::utility::DBusPropertiesMap& userInfoMap)
+template <typename CallbackFn>
+void afterGetUserInfo(Request& req,
+                      const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                      BaseRule& rule, CallbackFn callback,
+                      const boost::system::error_code& ec,
+                      const dbus::utility::DBusPropertiesMap& userInfoMap)
 {
     if (ec)
     {
         BMCWEB_LOG_ERROR("GetUserInfo failed...");
         asyncResp->res.result(
             boost::beast::http::status::internal_server_error);
-        return false;
+        return;
     }
 
     if (!populateUserInfo(req, userInfoMap))
@@ -125,7 +126,7 @@ inline bool
         BMCWEB_LOG_ERROR("Failed to populate user information");
         asyncResp->res.result(
             boost::beast::http::status::internal_server_error);
-        return false;
+        return;
     }
 
     if (!isUserPrivileged(req, asyncResp, rule))
@@ -133,30 +134,28 @@ inline bool
         // User is not privileged
         BMCWEB_LOG_ERROR("Insufficient Privilege");
         asyncResp->res.result(boost::beast::http::status::forbidden);
-        return false;
+        return;
     }
-
-    return true;
+    callback(req);
 }
 
 template <typename CallbackFn>
-void validatePrivilege(const std::shared_ptr<Request>& req,
+void validatePrivilege(Request& req,
                        const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                        BaseRule& rule, CallbackFn&& callback)
 {
-    if (req->session == nullptr)
+    if (req.session == nullptr)
     {
         return;
     }
-    std::string username = req->session->username;
+    std::string username = req.session->username;
     crow::connections::systemBus->async_method_call(
-        [req, asyncResp, &rule, callback = std::forward<CallbackFn>(callback)](
+        [req{std::move(req)}, asyncResp, &rule,
+         callback = std::forward<CallbackFn>(callback)](
             const boost::system::error_code& ec,
             const dbus::utility::DBusPropertiesMap& userInfoMap) mutable {
-        if (afterGetUserInfo(*req, asyncResp, rule, ec, userInfoMap))
-        {
-            callback();
-        }
+        afterGetUserInfo(req, asyncResp, rule,
+                         std::forward<CallbackFn>(callback), ec, userInfoMap);
     },
         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
         "xyz.openbmc_project.User.Manager", "GetUserInfo", username);
