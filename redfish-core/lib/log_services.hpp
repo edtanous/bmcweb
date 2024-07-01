@@ -1098,8 +1098,8 @@ inline void
                 fruid, severity, nvipSignature, nvSeverity, nvSocketNumber,
                 pcieVendorID, pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
-                pcieSecondaryBusNumber, pcieSlotNumber, originatorId,
-                originatorType, asyncResp);
+                pcieSecondaryBusNumber, pcieSlotNumber,
+                originatorId, originatorType, asyncResp);
 
             if (dumpStatus !=
                     "xyz.openbmc_project.Common.Progress.OperationStatus.Completed" &&
@@ -1322,8 +1322,8 @@ inline void
                 fruid, severity, nvipSignature, nvSeverity, nvSocketNumber,
                 pcieVendorID, pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
-                pcieSecondaryBusNumber, pcieSlotNumber, originatorId,
-                originatorType, asyncResp);
+                pcieSecondaryBusNumber, pcieSlotNumber,
+                originatorId, originatorType, asyncResp);
 
             if (dumpStatus !=
                     "xyz.openbmc_project.Common.Progress.OperationStatus.Completed" &&
@@ -2774,6 +2774,78 @@ inline void requestRoutesJournalEventLogEntry(App& app)
     });
 }
 
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
+inline void parseAdditionalDataForCPER(nlohmann::json& entry,
+                                       const nlohmann::json& oem,
+                                       AdditionalData& additional)
+{
+
+    const std::string& type = additional["DiagnosticDataType"];
+    BMCWEB_LOG_DEBUG("Got {}", type);
+    if ("CPER" != type && "CPERSection" != type)
+        return;
+
+    entry["DiagnosticDataType"] = type;
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_CPER_PROPERTIES
+    entry.update(oem);
+#else
+    (void)oem;
+#endif
+
+    for (const auto& iter : additional)
+    {
+        if ("DiagnosticData" == iter.first)
+            entry["DiagnosticData"] = iter.second;
+
+        if ("NotificationTypeGUID" == iter.first && "CPER" == type)
+            entry["CPER"]["NotificationType"] = iter.second;
+
+        if ("SectionTypeGUID" == iter.first && "CPERSection" == type)
+            entry["CPER"]["SectionType"] = iter.second;
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_CPER_PROPERTIES
+        // Common
+        if ("SectionTypeGUID" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["SectionGUID"] = iter.second;
+        if ("SectionType" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["SectionType"] = iter.second;
+        if ("SectionSeverity" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["Severity"] = iter.second;
+        if ("FruID" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["FruID"] = iter.second;
+        // NVIDIA
+        if ("NvSignature" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["NvIpSignature"] = iter.second;
+        if ("NvSeverity" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["NvSeverity"] = iter.second;
+        if ("NvSocket" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["NvSocket"] = iter.second;
+        //  PCIe
+        if ("PCIeVendorId" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeVendorId"] = iter.second;
+        if ("PCIeDeviceId" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceId"] = iter.second;
+        if ("PCIeClassCode" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeClassCode"] = iter.second;
+        if ("PCIeFunctionNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeFunctionNumber"] = iter.second;
+        if ("PCIeDeviceNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceNumber"] = iter.second;
+        if ("PCIeSegmentNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeSegmentNumber"] = iter.second;
+        if ("PCIeDeviceBusNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceBusNumber"] = iter.second;
+        if ("PCIeSecondaryBusNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeSecondaryBusNumber"] = iter.second;
+        if ("PCIeSlotNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeSlotNumber"] = iter.second;
+#endif
+    }
+
+    BMCWEB_LOG_DEBUG("Done {}", type);
+}
+#endif
+
 inline void requestRoutesDBusEventLogEntryCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
@@ -2952,6 +3024,9 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                 std::string messageArgs;
                 std::string originOfCondition;
                 std::string deviceName;
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
+                nlohmann::json cper = {};
+#endif
                 if (additionalDataRaw != nullptr)
                 {
                     AdditionalData additional(*additionalDataRaw);
@@ -2975,6 +3050,18 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     {
                         deviceName = additional["DEVICE_NAME"];
                     }
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
+                    if (additional.count("DiagnosticDataType") > 0)
+                    {
+                        nlohmann::json oem = {
+                            {"CPER",
+                              {{"Oem",
+                                {{"Nvidia",
+                                  {{"@odata.type",
+                                    "#NvidiaLogEntry.v1_0_0.CPER"}}}}}}}};
+                        parseAdditionalDataForCPER(cper, oem, additional);
+                    }
+#endif
                 }
                 if (isMessageRegistry)
                 {
@@ -3043,6 +3130,12 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         thisEntry["ServiceProviderNotified"] = *notifyAction;
                     }
                 }
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
+                if (!cper.empty())
+                {
+                    thisEntry.update(cper);
+                }
+#endif
                 if (filePath != nullptr)
                 {
                     thisEntry["AdditionalDataURI"] =
@@ -3140,6 +3233,9 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             std::string messageArgs;
             std::string originOfCondition;
             std::string deviceName;
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
+            nlohmann::json cper = {};
+#endif
             if (additionalDataRaw != nullptr)
             {
                 AdditionalData additional(*additionalDataRaw);
@@ -3163,6 +3259,18 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 {
                     deviceName = additional["DEVICE_NAME"];
                 }
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
+                if (additional.count("DiagnosticDataType") > 0)
+                {
+                    nlohmann::json oem = {
+                        {"CPER",
+                          {{"Oem",
+                            {{"Nvidia",
+                              {{"@odata.type",
+                                "#NvidiaLogEntry.v1_0_0.CPER"}}}}}}}};
+                    parseAdditionalDataForCPER(cper, oem, additional);
+                }
+#endif
             }
 
             if (isMessageRegistry)
@@ -3251,6 +3359,12 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     getLogEntryAdditionalDataURI(std::to_string(*id));
                 }
             }
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
+            if (!cper.empty())
+            {
+                asyncResp->res.jsonValue.update(cper);
+            }
+#endif
         });
     });
 
