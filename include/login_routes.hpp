@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app.hpp"
+#include "common.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
 #include "multipart_parser.hpp"
