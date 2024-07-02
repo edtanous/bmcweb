@@ -22,12 +22,16 @@ constexpr const char* acceleratorInvIntf =
 
 constexpr const char* cpuInvIntf = "xyz.openbmc_project.Inventory.Item.Cpu";
 
+constexpr const char* nvLinkMgmtInvIntf =
+    "xyz.openbmc_project.Inventory.Item.NetworkInterface";
+
 constexpr const char* switchInvIntf =
     "xyz.openbmc_project.Inventory.Item.Switch";
 
 constexpr const char* bmcInvInterf = "xyz.openbmc_project.Inventory.Item.BMC";
 
-constexpr const char* chassisInvInterf = "xyz.openbmc_project.Inventory.Item.Chassis";
+constexpr const char* chassisInvInterf =
+    "xyz.openbmc_project.Inventory.Item.Chassis";
 
 using Associations =
     std::vector<std::tuple<std::string, std::string, std::string>>;
@@ -1020,6 +1024,20 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                                      url);
                     callback(true, url);
                     return;
+                }
+                if (interface == nvLinkMgmtInvIntf)
+                {
+                    const std::string chassisPrefixDbus =
+                        "/xyz/openbmc_project/inventory/system/chassis/";
+                    if (invObjPath.string().find(chassisPrefixDbus) !=
+                        std::string::npos)
+                    {
+                        std::string url = std::string("/redfish/v1/Chassis/");
+                        url += invObjPath.string().substr(
+                            chassisPrefixDbus.size());
+                        callback(true, url);
+                        return;
+                    }
                 }
                 if (interface == switchInvIntf)
                 {
