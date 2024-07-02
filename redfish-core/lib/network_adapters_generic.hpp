@@ -332,12 +332,30 @@ inline void
                            const std::string& networkAdapterId)
 {
     crow::connections::systemBus->async_method_call(
+        [asyncResp, objPath,
+         networkAdapterId](const boost::system::error_code& ec,
+                           std::variant<std::vector<std::string>>& response) {
+        std::string objectPathOfChassis = objPath;
+        if (!ec)
+        {
+            std::vector<std::string>* pathData =
+                std::get_if<std::vector<std::string>>(&response);
+            if (pathData != nullptr)
+            {
+                for (const std::string& parentChassisPath : *pathData)
+                {
+                    objectPathOfChassis = parentChassisPath;
+                }
+            }
+        }
+        crow::connections::systemBus->async_method_call(
         [asyncResp,
          networkAdapterId](const boost::system::error_code& ec,
                            std::variant<std::vector<std::string>>& resp) {
         if (ec)
         {
             // no state sensors attached.
+                BMCWEB_LOG_DEBUG("DBUS response error");
             return;
         }
 
@@ -345,6 +363,7 @@ inline void
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
+                BMCWEB_LOG_ERROR("DBUS response error while getting all_states");
             messages::internalError(asyncResp->res);
             return;
         }
@@ -365,6 +384,7 @@ inline void
                 {
                     // the path does not implement Decorator Health
                     // interfaces
+                        BMCWEB_LOG_DEBUG("No Health interface found");
                     return;
                 }
                 getHealthData(asyncResp, object.front().first, sensorPath);
@@ -376,7 +396,12 @@ inline void
                     {"xyz.openbmc_project.State.Decorator.Health"}));
         }
     },
-        "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
+            "xyz.openbmc_project.ObjectMapper",
+            objectPathOfChassis + "/all_states",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
@@ -489,6 +514,18 @@ inline void
         boost::urls::format("/redfish/v1/Chassis/{}/NetworkAdapters/{}/Ports",
                             chassisId, networkAdapterId);
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+    asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
+    asyncResp->res.jsonValue["Status"]["Conditions"] = nlohmann::json::array();
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
+
+    asyncResp->res.jsonValue["Controllers"]["PCIeInterface"] = nlohmann::json::array();
+    asyncResp->res.jsonValue["Controllers"]["Links"]["PCIeDevices"] = nlohmann::json::array();
+    asyncResp->res.jsonValue["Controllers"]["Links"]["Ports"] = nlohmann::json::array();
+
     getAssetData(asyncResp, *validNetworkAdapterPath, networkAdapterId);
     getHealthByAssociation(asyncResp, *validNetworkAdapterPath,
                            networkAdapterId);
@@ -766,6 +803,27 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
+
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+    asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+       // update health rollup
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+    std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
+        objPath, [asyncResp](const std::string& rootHealth,
+                             const std::string& healthRollup) {
+        asyncResp->res.jsonValue["Status"]["Health"] = rootHealth;
+#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
+        asyncResp->res.jsonValue["Status"]["HealthRollup"] = healthRollup;
+#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
+    });
+    health->start();
+
+#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+#ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
+    redfish::conditions_utils::populateServiceConditions(asyncResp,
+                                                         networkAdapterId);
+#endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 }
 
 inline void getSwitchPorts(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -1096,7 +1154,7 @@ inline void
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaPortMetrics.v1_0_0.NvidiaPortMetrics";
+            "#NvidiaPortMetrics.v1_3_0.NvidiaPortMetrics";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         for (const auto& property : properties)
         {
@@ -1346,7 +1404,7 @@ inline void getPortMetricsDataByAssociation(
                     return;
                 }
                 asyncResp->res.jsonValue["@odata.type"] =
-                    "#PortMetrics.v1_0_0.PortMetrics";
+                    "#PortMetrics.v1_6_1.PortMetrics";
                 asyncResp->res.jsonValue["Id"] = portId;
                 asyncResp->res.jsonValue["Name"] = portId + " Port Metrics";
                 asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(

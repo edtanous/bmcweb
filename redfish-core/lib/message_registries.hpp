@@ -21,10 +21,11 @@
 #include "registries/base_message_registry.hpp"
 #include "registries/bios_attribute_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
+#include "registries/platform_message_registry.hpp"
 #include "registries/privilege_registry.hpp"
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
-#include "registries/update_event_message_registry.hpp"
+#include "registries/update_message_registry.hpp"
 
 #include <boost/url/format.hpp>
 
@@ -53,6 +54,7 @@ inline void handleMessageRegistryFileCollectionGet(
         {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
         {{"@odata.id", "/redfish/v1/Registries/ResourceEvent"}},
         {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}},
+        {{"@odata.id", "/redfish/v1/Registries/Platform"}},
 #ifdef BMCWEB_ENABLE_BIOS
         {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}},
 #endif
@@ -105,15 +107,21 @@ inline void handleMessageRoutesMessageRegistryFileGet(
         header = &registries::resource_event::header;
         url = registries::resource_event::url;
     }
-    else if (registry == "UpdateEvent")
+    else if (registry == "Update" ||
+             registry == "UpdateEvent")
     {
-        header = &registries::update_event::header;
-        url = registries::update_event::url;
+        header = &registries::update::header;
+        url = registries::update::url;
     }
     else if (registry == "BiosAttributeRegistry")
     {
         header = &registries::bios::header;
         dmtf.clear();
+    }
+    else if (registry == "Platform")
+    {
+        header = &registries::platform::header;
+        url = registries::platform::url;
     }
     else
     {
@@ -195,6 +203,15 @@ inline void handleMessageRegistryGet(
             registryEntries.emplace_back(&entry);
         }
     }
+    else if (registry == "Platform")
+    {
+        header = &registries::platform::header;
+        for (const registries::MessageEntry& entry :
+             registries::platform::registry)
+        {
+            registryEntries.emplace_back(&entry);
+        }
+    }
     else if (registry == "ResourceEvent")
     {
         header = &registries::resource_event::header;
@@ -204,11 +221,12 @@ inline void handleMessageRegistryGet(
             registryEntries.emplace_back(&entry);
         }
     }
-    else if (registry == "UpdateEvent")
+    else if (registry == "Update" ||
+             registry == "UpdateEvent")
     {
-        header = &registries::update_event::header;
+        header = &registries::update::header;
         for (const registries::MessageEntry& entry :
-             registries::update_event::registry)
+             registries::update::registry)
         {
             registryEntries.emplace_back(&entry);
         }

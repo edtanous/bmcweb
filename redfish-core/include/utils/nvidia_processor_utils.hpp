@@ -266,6 +266,51 @@ inline void
         "com.nvidia.CCMode");
 }
 
+/**
+ * @brief Populate Property SMUtilizationPercent by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getSMUtilizationData(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                 const std::string& service,
+                                 const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG("Get processor metrics SMUtilizationPercent data.");
+    crow::connections::systemBus->async_method_call(
+        [aResp{std::move(aResp)}](const boost::system::error_code ec,
+                                  const OperatingConfigProperties& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        for (const auto& property : properties)
+        {
+            if (property.first == "Utilization")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR(
+                        "Failed to get value of Property Utilization");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+
+                aResp->res.jsonValue["Oem"]["Nvidia"]["SMUtilizationPercent"] =
+                    *value;
+            }
+        }
+    },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig");
+}
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace nvidia_processor_utils

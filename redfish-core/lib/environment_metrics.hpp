@@ -225,7 +225,7 @@ inline void requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(App& app)
             }
 
             messages::resourceNotFound(
-                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+                asyncResp->res, "#Processor.v1_20_0.Processor", processorId);
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -728,7 +728,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                     }
 
                     messages::resourceNotFound(asyncResp->res,
-                                               "#Processor.v1_13_0.Processor",
+                                               "#Processor.v1_20_0.Processor",
                                                processorId);
                 },
                     "xyz.openbmc_project.ObjectMapper",

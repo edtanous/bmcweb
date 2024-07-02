@@ -1799,7 +1799,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                         std::string pcieFunctionURI = pcieDeviceURI;
                         pcieFunctionURI += "/PCIeFunctions";
                         asyncResp->res.jsonValue = {
-                            {"@odata.type", "#PCIeDevice.v1_5_0.PCIeDevice"},
+                            {"@odata.type", "#PCIeDevice.v1_14_0.PCIeDevice"},
                             {"@odata.id", pcieDeviceURI},
                             {"Name", "PCIe Device"},
                             {"Id", device},
@@ -1870,7 +1870,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                         return;
                     }
                     messages::resourceNotFound(asyncResp->res,
-                                               "#PCIeDevice.v1_5_0.PCIeDevice",
+                                               "#PCIeDevice.v1_14_0.PCIeDevice",
                                                device);
                 },
                     "xyz.openbmc_project.ObjectMapper",
@@ -1981,7 +1981,7 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
                         return;
                     }
                     messages::resourceNotFound(asyncResp->res,
-                                               "#PCIeDevice.v1_5_0.PCIeDevice",
+                                               "#PCIeDevice.v1_14_0.PCIeDevice",
                                                device);
                 },
                     "xyz.openbmc_project.ObjectMapper",
@@ -2081,7 +2081,7 @@ inline void requestRoutesChassisPCIeFunction(App& app)
                         return;
                     }
                     messages::resourceNotFound(asyncResp->res,
-                                               "#PCIeDevice.v1_5_0.PCIeDevice",
+                                               "#PCIeDevice.v1_14_0.PCIeDevice",
                                                device);
                 },
                     "xyz.openbmc_project.ObjectMapper",

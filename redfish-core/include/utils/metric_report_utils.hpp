@@ -233,9 +233,9 @@ inline std::string getPropertySuffix(const std::string& ifaceName,
         {
             suffix = "/Oem/Nvidia/PCIeRawRxBandwidthGbps";
         }
-        if (metricName == "IntergerActivityUtilizationPercent")
+        if (metricName == "IntegerActivityUtilizationPercent")
         {
-            suffix = "/Oem/Nvidia/IntergerActivityUtilizationPercent";
+            suffix = "/Oem/Nvidia/IntegerActivityUtilizationPercent";
         }
         if (metricName == "DMMAUtilizationPercent")
         {

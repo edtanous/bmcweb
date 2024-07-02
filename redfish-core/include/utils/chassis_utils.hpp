@@ -27,6 +27,8 @@ constexpr const char* switchInvIntf =
 
 constexpr const char* bmcInvInterf = "xyz.openbmc_project.Inventory.Item.BMC";
 
+constexpr const char* chassisInvInterf = "xyz.openbmc_project.Inventory.Item.Chassis";
+
 using Associations =
     std::vector<std::tuple<std::string, std::string, std::string>>;
 
@@ -897,8 +899,8 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
                     return;
                 }
             }
+            callback(false);
         });
-        callback(false);
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -1010,7 +1012,15 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                     callback(true, url);
                     return;
                 }
-
+                if (interface == chassisInvInterf)
+                {
+                    url = std::string("/redfish/v1/Chassis/") +
+                          invObjPath.filename().string();
+                    BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface,
+                                     url);
+                    callback(true, url);
+                    return;
+                }
                 if (interface == switchInvIntf)
                 {
                     /* busctl call xyz.openbmc_project.ObjectMapper

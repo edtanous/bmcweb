@@ -1706,8 +1706,11 @@ static void
                 redfish::bios::BiosRegistryJson["RegistryEntries"]
                                                ["Attributes"];
 
+            bool BiosTableLoopEntered = false;
+
             for (const BaseBIOSTableItem& attrIt : *baseBiosTable)
             {
+                BiosTableLoopEntered = true;
                 std::string attrType = getBiosAttrType(
                     std::string(std::get<BaseBiosTableIndex::baseBiosAttrType>(
                         attrIt.second)));
@@ -1757,6 +1760,10 @@ static void
                 {
                     BMCWEB_LOG_ERROR("Attribute type not supported");
                 }
+            }
+            if (!BiosTableLoopEntered)
+            {
+                redfish::bios::BiosRegistryJson = nlohmann::json();
             }
             asyncResp->res.jsonValue = redfish::bios::BiosRegistryJson;
         },

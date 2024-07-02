@@ -1989,6 +1989,24 @@ inline void
                     aResp->res.jsonValue["SerialNumber"] = *serialNumber;
                 }
             }
+            if (propertyName == "Manufacturer")
+            {
+                const std::string* manufacturer =
+                    std::get_if<std::string>(&property.second);
+                if (manufacturer != nullptr)
+                {
+                    aResp->res.jsonValue["Manufacturer"] = *manufacturer;
+                }
+            }
+            if (propertyName == "Model")
+            {
+                const std::string* model =
+                    std::get_if<std::string>(&property.second);
+                if (model != nullptr)
+                {
+                    aResp->res.jsonValue["Model"] = *model;
+                }
+            }
         }
     },
         entityMangerService, card1Path, "org.freedesktop.DBus.Properties",

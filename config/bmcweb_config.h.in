@@ -68,4 +68,6 @@ constexpr const int rfaDeferSubscribeTime = @RFA_SUBSCRIBE_TIME@;
 
 // NOLINTEND(readability-identifier-naming)
 constexpr const int bmcwebResponseTimeoutSeconds = @BMCWEB_RESPONSE_TIMEOUT@;
+constexpr const bool bmcwebEnableNvidiaBootEntryId = @BMCWEB_ENABLE_NVIDIA_BOOTENTRYID@ == 1;
+
 // clang-format on

@@ -369,7 +369,6 @@ inline void
             BMCWEB_LOG_ERROR("error_code = ", ec);
             BMCWEB_LOG_ERROR("error msg = ", ec.message());
 
-            messages::internalError(asyncResp->res);
             return;
         }
 
@@ -390,7 +389,6 @@ inline void
                     BMCWEB_LOG_ERROR("error_code = ", ec);
                     BMCWEB_LOG_ERROR("error msg = ", ec.message());
 
-                    messages::internalError(asyncResp->res);
                     return;
                 }
 
@@ -410,7 +408,6 @@ inline void
                             BMCWEB_LOG_ERROR("error_code = ", ec);
                             BMCWEB_LOG_ERROR("error msg = ", ec.message());
 
-                            messages::internalError(asyncResp->res);
                             return;
                         }
 
@@ -452,7 +449,6 @@ inline void
                                     BMCWEB_LOG_ERROR("error msg = ",
                                                      ec.message());
 
-                                    messages::internalError(asyncResp->res);
                                     return;
                                 }
                                 asyncResp->res.jsonValue["FirmwareVersion"] =

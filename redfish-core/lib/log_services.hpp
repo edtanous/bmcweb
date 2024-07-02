@@ -130,7 +130,7 @@ static void generateMessageRegistry(
         return;
     }
 
-    // Severity can be overwritten by caller. Using the one defined in the
+    // Severity & Resolution can be overwritten by caller. Using the one defined in the
     // message registries by default.
     std::string sev;
     if (severity.size() == 0)
@@ -140,6 +140,12 @@ static void generateMessageRegistry(
     else
     {
         sev = translateSeverityDbusToRedfish(severity);
+    }
+
+    std::string res(resolution);
+    if (res.size() == 0)
+    {
+        res = msg->resolution;
     }
 
     // Convert messageArgs string for its json format used later.
@@ -178,7 +184,7 @@ static void generateMessageRegistry(
                 {"Message", message},
                 {"MessageId", messageId},
                 {"MessageArgs", msgArgs},
-                {"Resolution", resolution},
+                {"Resolution", res},
                 {"Resolved", resolved}};
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     nlohmann::json oem = {
@@ -628,7 +634,7 @@ inline log_entry::OriginatorTypes
 inline void parseDumpEntryFromDbusObject(
     const dbus::utility::ManagedObjectType::value_type& object,
     std::string& dumpStatus, uint64_t& size, uint64_t& timestampUs,
-    std::string& faultLogDiagnosticDataType, std::string& sectionType,
+    std::string& faultLogDiagnosticDataType, std::string& notificationType, std::string& sectionType,
     std::string& fruid, std::string& severity, std::string& nvipSignature,
     std::string& nvSeverity, std::string& nvSocketNumber,
     std::string& pcieVendorID, std::string& pcieDeviceID,
@@ -731,7 +737,7 @@ inline void parseDumpEntryFromDbusObject(
             }
             if (type != nullptr &&
                 *type ==
-                    "xyz.openbmc_project.Dump.Entry.FaultLog.FaultDataType.CPER")
+                    "xyz.openbmc_project.Common.FaultLogType.FaultLogTypes.CPER")
             {
                 if (additionalTypeName != nullptr)
                 {
@@ -742,6 +748,7 @@ inline void parseDumpEntryFromDbusObject(
         else if (interfaceMap.first ==
                  "xyz.openbmc_project.Dump.Entry.CPERDecode")
         {
+            const std::string* notificationTypePtr = nullptr;
             const std::string* sectionTypePtr = nullptr;
             const std::string* fruidPtr = nullptr;
             const std::string* severityPtr = nullptr;
@@ -829,6 +836,11 @@ inline void parseDumpEntryFromDbusObject(
                     sectionTypePtr =
                         std::get_if<std::string>(&propertyMap.second);
                 }
+                else if (propertyMap.first == "Notification_Type")
+                {
+                    notificationTypePtr =
+                        std::get_if<std::string>(&propertyMap.second);
+                }
                 else if (propertyMap.first == "Severity")
                 {
                     severityPtr = std::get_if<std::string>(&propertyMap.second);
@@ -840,6 +852,11 @@ inline void parseDumpEntryFromDbusObject(
                 fruid = *fruidPtr;
             }
 
+            if (notificationTypePtr != nullptr)
+            {
+                notificationType = *notificationTypePtr;
+            }
+
             if (sectionTypePtr != nullptr)
             {
                 sectionType = *sectionTypePtr;
@@ -847,7 +864,7 @@ inline void parseDumpEntryFromDbusObject(
 
             if (severityPtr != nullptr)
             {
-                severity = convertEventSeverity(*severityPtr);
+                severity = *severityPtr;
             }
 
             if (nvipSignaturePtr != nullptr)
@@ -1044,6 +1061,7 @@ inline void
                 log_entry::OriginatorTypes::Internal;
             nlohmann::json::object_t thisEntry;
             std::string faultLogDiagnosticDataType;
+            std::string notificationType;
             std::string sectionType;
             std::string fruid;
             std::string severity;
@@ -1068,7 +1086,7 @@ inline void
 
             parseDumpEntryFromDbusObject(
                 object, dumpStatus, size, timestampUs,
-                faultLogDiagnosticDataType, sectionType, fruid, severity,
+                faultLogDiagnosticDataType, notificationType, sectionType, fruid, severity,
                 nvipSignature, nvSeverity, nvSocketNumber, pcieVendorID,
                 pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
@@ -1122,12 +1140,27 @@ inline void
             }
             else if (dumpType == "FaultLog")
             {
+                std::string messageId = "Platform.1.0.PlatformError";
+                thisEntry["MessageId"] = messageId;
+
+                const registries::Message* msg = registries::getMessage(messageId);
+                if (msg != nullptr)
+                {
+                    thisEntry["Message"] = msg->message;
+                    thisEntry["Severity"] = msg->messageSeverity;
+                    thisEntry["Resolution"] = msg->resolution;
+                }
+
                 thisEntry["DiagnosticDataType"] = faultLogDiagnosticDataType;
                 thisEntry["AdditionalDataURI"] = entriesPath + entryID +
                                                  "/attachment";
                 thisEntry["AdditionalDataSizeBytes"] = size;
-                thisEntry["Severity"] = severity;
+
                 // CPER Properties
+                if (notificationType != "NA")
+                {
+                    thisEntry["CPER"]["NotificationType"] = notificationType;
+                }
                 if (sectionType != "NA")
                 {
                     thisEntry["CPER"]["Oem"]["SectionType"] = sectionType;
@@ -1289,6 +1322,7 @@ inline void
             uint64_t size = 0;
             std::string dumpStatus;
             std::string faultLogDiagnosticDataType;
+            std::string notificationType;
             std::string sectionType;
             std::string fruid;
             std::string severity;
@@ -1310,7 +1344,7 @@ inline void
 
             parseDumpEntryFromDbusObject(
                 objectPath, dumpStatus, size, timestampUs,
-                faultLogDiagnosticDataType, sectionType, fruid, severity,
+                faultLogDiagnosticDataType, notificationType, sectionType, fruid, severity,
                 nvipSignature, nvSeverity, nvSocketNumber, pcieVendorID,
                 pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
@@ -1346,6 +1380,7 @@ inline void
             asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
             asyncResp->res.jsonValue["Created"] =
                 redfish::time_utils::getDateTimeUintUs(timestampUs);
+
             // Set schema defaults
             asyncResp->res.jsonValue["Message"] = "";
             asyncResp->res.jsonValue["Severity"] = "OK";
@@ -1376,6 +1411,11 @@ inline void
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID
                     "/LogServices/FaultLog/Entries/" +
                     entryID + "/attachment";
+                if (notificationType != "NA")
+                {
+                    asyncResp->res.jsonValue["CPER"]["NotificationType"] =
+                        notificationType;
+                }
                 if (sectionType != "NA")
                 {
                     asyncResp->res.jsonValue["CPER"]["Oem"]["SectionType"] =
@@ -1406,12 +1446,28 @@ inline void
                 }
                 else if (dumpType == "FaultLog")
                 {
+                    std::string messageId = "Platform.1.0.PlatformError";
+                    asyncResp->res.jsonValue["MessageId"] = messageId;
+
+                    const registries::Message* msg = registries::getMessage(messageId);
+                    if (msg != nullptr)
+                    {
+                        asyncResp->res.jsonValue["Message"] = msg->message;
+                        asyncResp->res.jsonValue["Severity"] = msg->messageSeverity;
+                        asyncResp->res.jsonValue["Resolution"] = msg->resolution;
+                    }
+
                     asyncResp->res.jsonValue["DiagnosticDataType"] =
                         faultLogDiagnosticDataType;
                     asyncResp->res.jsonValue["AdditionalDataURI"] =
                         "/redfish/v1/Systems/" PLATFORMSYSTEMID
                         "/LogServices/FaultLog/Entries/" +
                         entryID + "/attachment";
+                    if (notificationType != "NA")
+                    {
+                        asyncResp->res.jsonValue["CPER"]["NotificationType"] =
+                            notificationType;
+                    }
                     if (sectionType != "NA")
                     {
                         asyncResp->res.jsonValue["CPER"]["Oem"]["SectionType"] =
@@ -2331,7 +2387,7 @@ inline void requestRoutesEventLogService(App& app)
                 "#NvidiaLogService.v1_1_0.NvidiaLogService";
 #else
             asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaLogService.v1_0_0.NvidiaLogService";
+                "#NvidiaLogService.v1_3_0.NvidiaLogService";
 #endif /* BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES */
             asyncResp->res.jsonValue["Oem"]["Nvidia"]["LatestEntryID"] =
                 std::to_string(std::get<0>(reqData));
@@ -2342,6 +2398,11 @@ inline void requestRoutesEventLogService(App& app)
             "xyz.openbmc_project.Logging.Namespace", "GetStats", "all");
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        if (bmcwebEnableNvidiaBootEntryId)
+        {
+            populateBootEntryId(asyncResp->res);
+        }
+
         crow::connections::systemBus->async_method_call(
             [asyncResp](const boost::system::error_code ec,
                         std::variant<bool>& resp) {
@@ -6956,7 +7017,7 @@ inline void requestRoutesChassisXIDLogService(App& app)
                             std::get<1>(reqData));
                         asyncResp->res
                             .jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                            "#NvidiaLogService.v1_0_0.NvidiaLogService";
+                            "#NvidiaLogService.v1_3_0.NvidiaLogService";
                         asyncResp->res
                             .jsonValue["Oem"]["Nvidia"]["LatestEntryID"] =
                             std::to_string(std::get<0>(reqData));
@@ -6970,7 +7031,12 @@ inline void requestRoutesChassisXIDLogService(App& app)
                         "xyz.openbmc_project.Logging.Namespace", "GetStats",
                         chassisName + "_XID");
                 });
-
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                if (bmcwebEnableNvidiaBootEntryId)
+                {
+                    populateBootEntryId(asyncResp->res);
+                }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 asyncResp->res.jsonValue["Entries"] = {
                     {"@odata.id", "/redfish/v1/Chassis/" + chassisId +
                                       "/LogServices/XID/Entries"}};

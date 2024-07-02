@@ -37,6 +37,7 @@
 #include "ossl_random.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
+#include "registries/openbmc_message_registry.hpp"
 #include "task.hpp"
 #include "task_messages.hpp"
 #include "utils/collection.hpp"
@@ -466,7 +467,7 @@ static void
                     });
                     if (preTaskMessages.size() > 0)
                     {
-                        task->messages.emplace_back(preTaskMessages);
+                        task->messages.insert(task->messages.end(), preTaskMessages.begin(), preTaskMessages.end());
                     }
                     preTaskMessages = {};
                 }
@@ -2853,6 +2854,47 @@ inline static void
 }
 
 inline static void
+    getRelatedItemsNetworkAdapter(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const sdbusplus::message::object_path& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, objPath](const boost::system::error_code& errorCode,
+                             std::variant<std::vector<std::string>>& resp) {
+        if (errorCode)
+        {
+            BMCWEB_LOG_ERROR("error_code = {}", errorCode);
+            BMCWEB_LOG_ERROR("error msg = {}", errorCode.message());
+            return;
+        }
+        std::string networAdapterChassisName = "Networkadapter";
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            BMCWEB_LOG_ERROR("Invalid Object.");
+            return;
+        }
+        for (const std::string& path : *data)
+        {
+            sdbusplus::message::object_path myLocalPath(path);
+            networAdapterChassisName = myLocalPath.filename();
+            break;
+        }
+        nlohmann::json& relatedItem = asyncResp->res.jsonValue["RelatedItem"];
+        nlohmann::json& relatedItemCount =
+            asyncResp->res.jsonValue["RelatedItem@odata.count"];
+        relatedItem.push_back(
+            {{"@odata.id", "/redfish/v1/Chassis/" + networAdapterChassisName + "/NetworkAdapters/" +
+                               objPath.filename()}});
+
+        relatedItemCount = relatedItem.size();
+    },
+        "xyz.openbmc_project.ObjectMapper", objPath.str + "/parent_chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline static void
     getRelatedItemsOther(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const sdbusplus::message::object_path& association)
 {
@@ -2931,6 +2973,12 @@ inline static void
                 {
                     getRelatedItemsSwitch(aResp, association);
                 }
+
+                if (interfaces == "xyz.openbmc_project.Inventory."
+                                  "Item.NetworkInterface")
+                {
+                    getRelatedItemsNetworkAdapter(aResp, association);
+                }
             }
         }
 
@@ -2939,7 +2987,7 @@ inline static void
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", association.str,
-        std::array<const char*, 9>{
+        std::array<const char*, 10>{
             "xyz.openbmc_project.Inventory.Item.PowerSupply",
             "xyz.openbmc_project.Inventory.Item.Accelerator",
             "xyz.openbmc_project.Inventory.Item.PCIeDevice",
@@ -2948,7 +2996,8 @@ inline static void
             "xyz.openbmc_project.Inventory.Item.Drive",
             "xyz.openbmc_project.Inventory.Item.Board",
             "xyz.openbmc_project.Inventory.Item.Chassis",
-            "xyz.openbmc_project.Inventory.Item.StorageController"});
+            "xyz.openbmc_project.Inventory.Item.StorageController",
+            "xyz.openbmc_project.Inventory.Item.NetworkInterface"});
 }
 
 /*
@@ -3942,7 +3991,7 @@ inline void requestRoutesInventorySoftware(App& app)
                 "xyz.openbmc_project.ObjectMapper", "GetSubTree",
                 "/xyz/openbmc_project/software/", static_cast<int32_t>(0),
                 std::array<const char*, 1>{
-                    "xyz.openbmc_project.Software.Version"});
+                    "xyz.openbmc_project.Software.Settings"});
         }
     });
 }

@@ -391,7 +391,7 @@ inline void
             return;
         }
         nlohmann::json& switchlinksArray =
-            asyncResp->res.jsonValue["Links"]["ConnectedSwitchPorts"];
+            asyncResp->res.jsonValue["Links"]["ConnectedPorts"];
         for (const std::string& portPath1 : *data)
         {
             sdbusplus::message::object_path objectPath(portPath1);
@@ -679,6 +679,7 @@ inline void
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 #ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
     asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
 #endif // BMCWEB_DISABLE_HEALTH_ROLLUP
@@ -2617,17 +2618,45 @@ inline void getEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  * @param[in]       objPath     D-Bus object to query.
  */
 inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                        const std::string& service, const std::string& objPath)
+                        const std::string& objPath)
 {
     crow::connections::systemBus->async_method_call(
-        [aResp](const boost::system::error_code ec,
+        [aResp, objPath](const boost::system::error_code& ec,
+                         std::variant<std::vector<std::string>>& response) {
+        std::string objectPathToGetPortData = objPath;
+        if (!ec)
+        {
+            std::vector<std::string>* pathData =
+                std::get_if<std::vector<std::string>>(&response);
+            if (pathData != nullptr)
+            {
+                for (const std::string& associatedPortPath : *pathData)
+                {
+                    objectPathToGetPortData = associatedPortPath;
+                }
+            }
+        }
+        crow::connections::systemBus->async_method_call(
+            [aResp, objectPathToGetPortData](
+                const boost::system::error_code ec,
+                const std::vector<
+                    std::pair<std::string, std::vector<std::string>>>& object) {
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("No port interface found {}",
+                                 objectPathToGetPortData);
+                return;
+            }
+            crow::connections::systemBus->async_method_call(
+                [aResp](
+                    const boost::system::error_code ec,
                 const boost::container::flat_map<
                     std::string, std::variant<std::string, bool, size_t,
                                               std::vector<std::string>>>&
                     properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("DBUS response error");
+                    BMCWEB_LOG_ERROR("DBUS response error");
             messages::internalError(aResp->res);
             return;
         }
@@ -2640,7 +2669,7 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     std::get_if<std::string>(&property.second);
                 if (value == nullptr)
                 {
-                    BMCWEB_LOG_DEBUG("Null value returned "
+                            BMCWEB_LOG_ERROR("Null value returned "
                                      "for protocol type");
                     messages::internalError(aResp->res);
                     return;
@@ -2650,8 +2679,20 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             }
         }
     },
-        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+                object.front().first, objectPathToGetPortData,
+                "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Decorator.PortInfo");
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetObject",
+            objectPathToGetPortData,
+            std::array<std::string, 1>(
+                {"xyz.openbmc_project.Inventory.Item.Port"}));
+    },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/associated_port",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
 }
 
 /**
@@ -2789,62 +2830,8 @@ inline void getEndpointPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         for (const std::string& portPath : *data)
         {
-            // Get subtree for port parent path
-            size_t separator = portPath.rfind('/');
-            if (separator == std::string::npos)
-            {
-                BMCWEB_LOG_ERROR("Invalid port link path");
-                continue;
-            }
-            std::string portInventoryPath = portPath.substr(0, separator);
-            // Get port subtree
-            crow::connections::systemBus->async_method_call(
-                [aResp, portPath](
-                    const boost::system::error_code ec,
-                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
-                if (ec)
-                {
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                // Iterate over all retrieved ObjectPaths.
-                for (const std::pair<
-                         std::string,
-                         std::vector<
-                             std::pair<std::string, std::vector<std::string>>>>&
-                         object : subtree)
-                {
-                    // Filter port link object
-                    if (object.first != portPath)
-                    {
-                        continue;
-                    }
-                    const std::vector<
-                        std::pair<std::string, std::vector<std::string>>>&
-                        connectionNames = object.second;
-                    if (connectionNames.size() < 1)
-                    {
-                        BMCWEB_LOG_ERROR("Got 0 Connection names");
-                        continue;
-                    }
-                    const std::string& connectionName =
-                        connectionNames[0].first;
-                    const std::vector<std::string>& interfaces =
-                        connectionNames[0].second;
-                    const std::string portInterface =
-                        "xyz.openbmc_project.Inventory.Item.Port";
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  portInterface) != interfaces.end())
-                    {
                         // Get port protocol data
-                        getPortData(aResp, connectionName, portPath);
-                    }
-                }
-            },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                portInventoryPath, 0, std::array<const char*, 0>());
+            getPortData(aResp, portPath);
         }
         const std::vector<std::string> portPaths = *data;
         // Get connected switches port links
@@ -3221,7 +3208,7 @@ inline void getFabricsPortMetricsData(
         }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaPortMetrics.v1_0_0.NvidiaPortMetrics";
+            "#NvidiaPortMetrics.v1_3_0.NvidiaPortMetrics";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         for (const auto& property : properties)
         {

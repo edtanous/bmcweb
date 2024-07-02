@@ -194,6 +194,7 @@ add_project_arguments(
     '-Wformat=2',
     '-Wno-c++98-compat-pedantic',
     '-Wno-c++98-compat',
+    '-Wno-c++20-extensions',
     '-Wno-documentation-unknown-command',
     '-Wno-documentation',
     '-Wno-exit-time-destructors',
@@ -210,6 +211,7 @@ add_project_arguments(
     '-Wno-attributes',
     '-Wno-error=deprecated-declarations',    
     '-Wno-comment',
+    '-Wno-disabled-macro-expansion',
   language:'cpp')
 endif
 
@@ -461,6 +463,8 @@ srcfiles_bmcweb = files(
     # Begin large files, should be at the beginning
     'redfish-core/src/redfish.cpp',
   'redfish-core/src/registries.cpp',
+  'redfish-core/src/filter_expr_executor.cpp',
+  'redfish-core/src/filter_expr_printer.cpp',
   'redfish-core/src/utils/dbus_utils.cpp',
   'redfish-core/src/utils/json_utils.cpp',
     'redfish-core/src/utils/time_utils.cpp',
@@ -518,6 +522,8 @@ srcfiles_unittest = files(
   'test/include/ossl_random.cpp',
   'test/include/str_utility_test.cpp',
   'test/redfish-core/include/privileges_test.cpp',
+  'test/redfish-core/include/filter_expr_parser_test.cpp',
+  'test/redfish-core/include/filter_expr_executor_test.cpp',
   'test/redfish-core/include/redfish_aggregator_test.cpp',
   'test/redfish-core/include/registries_test.cpp',
   'test/redfish-core/include/utils/dbus_utils.cpp',

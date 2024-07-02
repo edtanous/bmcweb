@@ -48,4 +48,24 @@ inline static std::string convertEventSeverity(const std::string& severity)
     return severity;
 }
 
+inline void populateBootEntryId(crow::Response& resp)
+{
+    std::string bootEntryId{""};
+    std::string filePath{"/run/bootentryid"};
+
+    std::ifstream ifs(filePath);
+
+    if (!ifs.is_open())
+    {
+        BMCWEB_LOG_ERROR("Can't open file {}!\n", filePath);
+        return;
+    }
+
+    ifs >> bootEntryId;
+
+    BMCWEB_LOG_ERROR("BootEntryID is {}.\n", bootEntryId);
+
+    resp.jsonValue["Oem"]["Nvidia"]["BootEntryID"] = bootEntryId;
+}
+
 } // namespace redfish

@@ -2387,7 +2387,7 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             "PCIeRawTxBandwidthGbps", pcieTxBandwidthGbps, "SMActivityPercent",
             smActivityPercent, "SMOccupancyPercent", smOccupancyPercent,
             "TensorCoreActivityPercent", tensorCoreActivityPercent,
-            "IntergerActivityUtilizationPercent", integerActivityUtil,
+            "IntegerActivityUtilizationPercent", integerActivityUtil,
             "DMMAUtilizationPercent", dmmaUtil, "HMMAUtilizationPercent",
             hmmaUtil, "IMMAUtilizationPercent", immaUtil,
             "NVDecInstanceUtilizationPercent", nvdecInstanceUtil,
@@ -2551,13 +2551,13 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         if (integerActivityUtil != nullptr)
         {
-            json["Oem"]["Nvidia"]["IntergerActivityUtilizationPercent"] =
+            json["Oem"]["Nvidia"]["IntegerActivityUtilizationPercent"] =
                 *integerActivityUtil;
         }
         else
         {
             BMCWEB_LOG_DEBUG("Null value returned "
-                             "for IntergerActivityUtilizationPercent");
+                             "for IntegerActivityUtilizationPercent");
             messages::internalError(aResp->res);
             return;
         }
@@ -2639,8 +2639,6 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& objectPath,
                              const dbus::utility::MapperServiceMap& serviceMap)
 {
-    bool isSupportFirmwareVersion = false;
-
     for (const auto& [serviceName, interfaceList] : serviceMap)
     {
         for (const auto& interface : interfaceList)
@@ -2687,10 +2685,6 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             else if (interface == "xyz.openbmc_project.Common.UUID")
             {
                 getProcessorUUID(aResp, serviceName, objectPath);
-            }
-            else if (interface == "xyz.openbmc_project.Software.Version")
-            {
-                isSupportFirmwareVersion = true;
             }
             else if (interface ==
                      "xyz.openbmc_project.Inventory.Decorator.UniqueIdentifier")
@@ -2739,10 +2733,7 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
     }
 
-    if (isSupportFirmwareVersion == true)
-    {
         getComponentFirmwareVersion(aResp, objectPath);
-    }
 
     aResp->res.jsonValue["EnvironmentMetrics"] = {
         {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
@@ -3508,7 +3499,7 @@ inline void requestRoutesProcessor(App& app)
         }
 
         asyncResp->res.jsonValue["@odata.type"] =
-            "#Processor.v1_13_0.Processor";
+            "#Processor.v1_20_0.Processor";
         asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
             processorId;
@@ -4174,6 +4165,14 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                       "com.nvidia.GPMMetrics");
                 }
 
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "xyz.openbmc_project.Inventory.Item.Cpu."
+                              "OperatingConfig") != interfaces.end())
+                {
+                    nvidia_processor_utils::getSMUtilizationData(aResp, service,
+                                                                 path);
+                }
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 getSensorMetric(aResp, service, path);
 
@@ -4185,7 +4184,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
             return;
         }
         // Object not found
-        messages::resourceNotFound(aResp->res, "#Processor.v1_13_0.Processor",
+        messages::resourceNotFound(aResp->res, "#Processor.v1_20_0.Processor",
                                    processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -4494,7 +4493,7 @@ inline void getProcessorMemoryMetricsData(
             return;
         }
         // Object not found
-        messages::resourceNotFound(aResp->res, "#Processor.v1_13_0.Processor",
+        messages::resourceNotFound(aResp->res, "#Processor.v1_20_0.Processor",
                                    processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -4566,7 +4565,7 @@ inline void
             json["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                 "/Processors/" +
                                 processorId + "/Settings";
-            json["@odata.type"] = "#Processor.v1_13_0.Processor";
+            json["@odata.type"] = "#Processor.v1_20_0.Processor";
             json["Id"] = "Settings";
             json["Name"] = processorId + "PendingSettings";
             for (const auto& [service, interfaces] : object)
@@ -4990,7 +4989,7 @@ inline void requestRoutesProcessorPortCollection(App& app)
             }
             // Object not found
             messages::resourceNotFound(
-                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+                asyncResp->res, "#Processor.v1_20_0.Processor", processorId);
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -5479,7 +5478,7 @@ inline void requestRoutesProcessorPort(App& app)
             }
             // Object not found
             messages::resourceNotFound(
-                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+                asyncResp->res, "#Processor.v1_20_0.Processor", processorId);
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -5685,7 +5684,7 @@ inline void getProcessorPortMetricsData(
                     return;
                 }
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaPortMetrics.v1_1_0.NvidiaPortMetrics";
+                    "#NvidiaPortMetrics.v1_3_0.NvidiaPortMetrics";
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["RXNoProtocolBytes"] =
                     *value;
             }
@@ -6046,8 +6045,11 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                                                " Port Metrics";
                             asyncResp->res.jsonValue["Id"] = "Metrics";
 
-                            getProcessorPortMetricsData(
-                                asyncResp, object.front().first, sensorpath);
+                            for (const auto& [service, interfaces] : object)
+                            {
+                                getProcessorPortMetricsData(asyncResp, service,
+                                                            sensorpath);
+                            }
                         },
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
@@ -6064,7 +6066,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
             }
             // Object not found
             messages::resourceNotFound(
-                asyncResp->res, "#Processor.v1_13_0.Processor", processorId);
+                asyncResp->res, "#Processor.v1_20_0.Processor", processorId);
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
