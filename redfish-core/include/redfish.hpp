@@ -429,7 +429,7 @@ class RedfishService
         requestRoutesChassisControlsCollection(app);
         requestRoutesUpdateServiceCommitImage(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        requestRoutesComputeDigestPost(app);
+       requestRoutesComputeDigestPost(app);
 #endif
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
         requestRoutesNvidiaOemBf(app);
@@ -445,6 +445,9 @@ class RedfishService
         requestRoutesProcessorPowerSmoothingAdminProfile(app);
         requestRoutesProcessorPowerSmoothingPresetProfileCollection(app);
         requestRoutesProcessorPowerSmoothingPresetProfile(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesChassisFirmwareInfo(app);
+#endif
         // Note, this must be the last route registered
         requestRoutesRedfish(app);
     }

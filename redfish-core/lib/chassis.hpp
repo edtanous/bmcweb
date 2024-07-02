@@ -19,6 +19,7 @@
 #include "dbus_utility.hpp"
 #include "led.hpp"
 #include "query.hpp"
+#include "nvidia_protected_component.hpp"
 #include "redfish_util.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
@@ -1385,6 +1386,40 @@ inline void requestRoutesChassisResetActionInfo(App& app)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleOemChassisResetActionInfoGet, std::ref(app)));
 #endif
+}
+
+inline void requestRoutesChassisFirmwareInfo(App& app)
+{
+    using namespace firmware_info;
+
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleNvidiaRoTProtectedComponentCollection, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTProtectedComponent, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/"
+        "ImageSlots/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTImageSlotCollection, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/"
+        "ImageSlots/<str>/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTImageSlot, std::ref(app)));
 }
 
 } // namespace redfish
