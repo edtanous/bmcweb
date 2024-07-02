@@ -617,7 +617,47 @@ inline void requestRoutesComponentIntegrity(App& app)
         {
             return;
         }
-        asyncResp->res.jsonValue = {
+        constexpr std::array<std::string_view, 1> interfaces = {spdmResponderIntf};
+        dbus::utility::getSubTreePaths(
+            rootSPDMDbusPath, 0, interfaces,
+            [compIntegrityID, asyncResp](const boost::system::error_code& ec,
+                   const dbus::utility::MapperGetSubTreePathsResponse& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("GetSubTreePaths error: {}", ec);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (resp.size() == 0)
+            {
+                BMCWEB_LOG_ERROR("No objects with SPDM interface found for {}", compIntegrityID);
+                messages::resourceMissingAtURI(
+                    asyncResp->res,
+                    boost::urls::format(
+                        "/redfish/v1/ComponentIntegrity/{}/SPDMGetSignedMeasurementsActionInfo",
+                        compIntegrityID));
+                return;
+            }
+            bool found {};
+            for (const auto& path : resp)
+            {
+                if (path.find(compIntegrityID) != std::string::npos)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                BMCWEB_LOG_ERROR("SPDM interface not implemented for {}", compIntegrityID);
+                messages::resourceMissingAtURI(
+                    asyncResp->res,
+                    boost::urls::format(
+                        "/redfish/v1/ComponentIntegrity/{}/SPDMGetSignedMeasurementsActionInfo",
+                        compIntegrityID));
+                return;
+            }
+            asyncResp->res.jsonValue = {
             {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
             {"@odata.id", "/redfish/v1/ComponentIntegrity/" + compIntegrityID +
                               "/SPDMGetSignedMeasurementsActionInfo"},
@@ -635,6 +675,9 @@ inline void requestRoutesComponentIntegrity(App& app)
                {"DataType", "Number"},
                {"MinimumValue", 0},
                {"MaximumValue", 7}}}}};
+
+        });
+
     });
 
 } // routes component integrity
