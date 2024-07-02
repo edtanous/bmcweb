@@ -115,13 +115,7 @@ class Connection :
         // don't require auth
         if (preverified)
         {
-            boost::asio::ip::address ipAddress;
-            if (getClientIp(ipAddress))
-            {
-                return true;
-            }
-
-            mtlsSession = verifyMtlsUser(ipAddress, ctx);
+            mtlsSession = verifyMtlsUser(ip, ctx);
             if (mtlsSession)
             {
                 BMCWEB_LOG_DEBUG("{} Generating TLS session: {}", logPtr(this),
@@ -395,19 +389,7 @@ class Connection :
 
     void readClientIp()
     {
-        boost::asio::ip::address ip;
-        boost::system::error_code ec = getClientIp(ip);
-        if (ec)
-        {
-            return;
-        }
-        req->ipAddress = ip;
-    }
-
-    boost::system::error_code getClientIp(boost::asio::ip::address& ip)
-    {
         boost::system::error_code ec;
-        BMCWEB_LOG_DEBUG("Fetch the client IP address");
 
         if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
         {
@@ -420,11 +402,10 @@ class Connection :
                 // will be empty.
                 BMCWEB_LOG_ERROR(
                     "Failed to get the client's IP Address. ec : {}", ec);
-                return ec;
+                return;
             }
             ip = endpoint.address();
         }
-        return ec;
     }
 
   private:
