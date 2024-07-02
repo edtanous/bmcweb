@@ -1849,7 +1849,7 @@ inline void parseInterfaceData(
         nlohmann::json::array_t relatedInterfaces;
         nlohmann::json& parentInterface = relatedInterfaces.emplace_back();
         parentInterface["@odata.id"] =
-            boost::urls::format("/redfish/v1/Managers/bmc/EthernetInterfaces",
+            boost::urls::format("/redfish/v1/Managers/{}/EthernetInterfaces", PLATFORMBMCID,
                                 extractParentInterfaceName(ifaceId));
         jsonResponse["Links"]["RelatedInterfaces"] =
             std::move(relatedInterfaces);
@@ -2053,7 +2053,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
             {
                 nlohmann::json::object_t iface;
                 iface["@odata.id"] = boost::urls::format(
-                    "/redfish/v1/Managers/bmc/EthernetInterfaces/{}",
+                    "/redfish/v1/Managers/{}/EthernetInterfaces/{}", PLATFORMBMCID,
                     ifaceItem);
                 ifaceArray.push_back(std::move(iface));
             }
