@@ -54,6 +54,7 @@ std::string
 std::string
     FilterExpressionPrinter::operator()(const filter_ast::LogicalOr& x) const
 {
+<<<<<<< HEAD
     std::string out;
     if (!x.rest.empty())
     {
@@ -69,6 +70,20 @@ std::string
     if (!x.rest.empty())
     {
         out += ")";
+=======
+    std::string prefix;
+    std::string postfix;
+    if (!x.rest.empty())
+    {
+        prefix = "(";
+        postfix = ")";
+    }
+    std::string out = std::format("{}{}{}", prefix, (*this)(x.first), postfix);
+
+    for (const filter_ast::LogicalNot& oper : x.rest)
+    {
+        out += std::format(" or ({})", (*this)(oper));
+>>>>>>> master
     }
     return out;
 }
@@ -76,6 +91,7 @@ std::string
 std::string
     FilterExpressionPrinter::operator()(const filter_ast::LogicalAnd& x) const
 {
+<<<<<<< HEAD
     std::string out;
     if (!x.rest.empty())
     {
@@ -91,6 +107,20 @@ std::string
     if (!x.rest.empty())
     {
         out += ")";
+=======
+    std::string prefix;
+    std::string postfix;
+    if (!x.rest.empty())
+    {
+        prefix = "(";
+        postfix = ")";
+    }
+    std::string out = std::format("{}{}{}", prefix, (*this)(x.first), postfix);
+
+    for (const filter_ast::LogicalOr& oper : x.rest)
+    {
+        out += std::format(" and ({})", (*this)(oper));
+>>>>>>> master
     }
     return out;
 }

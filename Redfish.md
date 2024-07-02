@@ -749,7 +749,7 @@ other.
 
 - ClientOriginIPAddress
 - Description
-- Oem
+- Roles
 - UserName
 
 ### /redfish/v1/Systems/

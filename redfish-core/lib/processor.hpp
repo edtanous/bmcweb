@@ -1382,7 +1382,13 @@ inline void getCpuConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                               "/Processors/" +
                               cpuId + "/OperatingConfigs";
             nlohmann::json::object_t operatingConfig;
+<<<<<<< HEAD
             operatingConfig["@odata.id"] = uri;
+=======
+            operatingConfig["@odata.id"] = boost::urls::format(
+                "/redfish/v1/Systems/{}/Processors/{}/OperatingConfigs",
+                BMCWEB_REDFISH_SYSTEM_URI_NAME, cpuId);
+>>>>>>> master
             json["OperatingConfigs"] = std::move(operatingConfig);
 
             // Reuse the D-Bus config object name for the Redfish
@@ -1400,7 +1406,14 @@ inline void getCpuConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             uri += '/';
             uri += dbusPath.substr(baseNamePos + 1);
             nlohmann::json::object_t appliedOperatingConfig;
+<<<<<<< HEAD
             appliedOperatingConfig["@odata.id"] = uri;
+=======
+            appliedOperatingConfig["@odata.id"] = boost::urls::format(
+                "/redfish/v1/Systems/{}/Processors/{}/OperatingConfigs/{}",
+                BMCWEB_REDFISH_SYSTEM_URI_NAME, cpuId,
+                dbusPath.substr(baseNamePos + 1));
+>>>>>>> master
             json["AppliedOperatingConfig"] = std::move(appliedOperatingConfig);
 
             // Once we found the current applied config, queue another
@@ -5234,6 +5247,7 @@ inline void
                 return;
             }
 
+<<<<<<< HEAD
             portNames.push_back(portName);
         }
         getConnectedProcessorPorts(asyncResp, portPath, portNames);
@@ -5263,6 +5277,15 @@ inline void getProcessorPortData(
         std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
+=======
+    // Check that the config URI is a child of the cpu URI being patched.
+    std::string expectedPrefix(std::format("/redfish/v1/Systems/{}/Processors/",
+                                           BMCWEB_REDFISH_SYSTEM_URI_NAME));
+    expectedPrefix += processorId;
+    expectedPrefix += "/OperatingConfigs/";
+    if (!appliedConfigUri.starts_with(expectedPrefix) ||
+        expectedPrefix.size() == appliedConfigUri.size())
+>>>>>>> master
         {
             messages::internalError(aResp->res);
             return;
@@ -5292,6 +5315,7 @@ inline void getProcessorPortData(
                     return;
                 }
 
+<<<<<<< HEAD
                 std::string portUri = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                       "/Processors/";
                 portUri += processorId;
@@ -5318,6 +5342,13 @@ inline void getProcessorPortData(
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
+=======
+    // Set the property, with handler to check error responses
+    setDbusProperty(
+        resp, "AppliedOperatingConfig", *controlService, cpuObjectPath,
+        "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig",
+        "AppliedConfig", configPath);
+>>>>>>> master
 }
 
 inline void getProcessorAcceleratorPortData(
@@ -5750,10 +5781,15 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
+<<<<<<< HEAD
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
                                         ["ReplayCount"] = *value;
             }
             else if (property.first == "RuntimeError")
+=======
+
+        if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
             {
                 const uint16_t* value = std::get_if<uint16_t>(&property.second);
                 if (value == nullptr)
@@ -5762,7 +5798,27 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
+<<<<<<< HEAD
                 if (*value != 0)
+=======
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#OperatingConfigCollection.OperatingConfigCollection";
+        asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+            "/redfish/v1/Systems/{}/Processors/{}/OperatingConfigs",
+            BMCWEB_REDFISH_SYSTEM_URI_NAME, cpuName);
+        asyncResp->res.jsonValue["Name"] = "Operating Config Collection";
+
+        // First find the matching CPU object so we know how to
+        // constrain our search for related Config objects.
+        const std::array<std::string_view, 1> interfaces = {
+            "xyz.openbmc_project.Control.Processor.CurrentOperatingConfig"};
+        dbus::utility::getSubTreePaths(
+            "/xyz/openbmc_project/inventory", 0, interfaces,
+            [asyncResp, cpuName](
+                const boost::system::error_code& ec,
+                const dbus::utility::MapperGetSubTreePathsResponse& objects) {
+            if (ec)
+>>>>>>> master
                 {
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
                                             ["RuntimeError"] = true;
@@ -5792,6 +5848,25 @@ inline void getProcessorPortMetricsData(
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]["NVLinkErrors"]
                                             ["TrainingError"] = false;
                 }
+<<<<<<< HEAD
+=======
+
+                // Not expected that there will be multiple matching
+                // CPU objects, but if there are just use the first
+                // one.
+
+                // Use the common search routine to construct the
+                // Collection of all Config objects under this CPU.
+                constexpr std::array<std::string_view, 1> interface{
+                    "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"};
+                collection_util::getCollectionMembers(
+                    asyncResp,
+                    boost::urls::format(
+                        "/redfish/v1/Systems/{}/Processors/{}/OperatingConfigs",
+                        BMCWEB_REDFISH_SYSTEM_URI_NAME, cpuName),
+                    interface, object);
+                return;
+>>>>>>> master
             }
             else if (property.first == "NVLinkDataRxBandwidthGbps")
             {
@@ -5874,10 +5949,15 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
+<<<<<<< HEAD
                 asyncResp->res.jsonValue["PCIeErrors"]["NonFatalErrorCount"] =
                     *value;
             }
             else if (property.first == "feCount")
+=======
+
+        if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
             {
                 const int64_t* value = std::get_if<int64_t>(&property.second);
                 if (value == nullptr)
@@ -5904,7 +5984,26 @@ inline void getProcessorPortMetricsData(
                 const int64_t* value = std::get_if<int64_t>(&property.second);
                 if (value == nullptr)
                 {
+<<<<<<< HEAD
                     messages::internalError(asyncResp->res);
+=======
+                    continue;
+                }
+
+                nlohmann::json& json = asyncResp->res.jsonValue;
+                json["@odata.type"] = "#OperatingConfig.v1_0_0.OperatingConfig";
+                json["@odata.id"] = boost::urls::format(
+                    "/redfish/v1/Systems/{}/Processors/{}/OperatingConfigs/{}",
+                    BMCWEB_REDFISH_SYSTEM_URI_NAME, cpuName, configName);
+                json["Name"] = "Processor Profile";
+                json["Id"] = configName;
+
+                // Just use the first implementation of the object - not
+                // expected that there would be multiple matching
+                // services
+                getOperatingConfigData(asyncResp, serviceMap.begin()->first,
+                                       objectPath);
+>>>>>>> master
                     return;
                 }
                 asyncResp->res.jsonValue["PCIeErrors"]["ReplayCount"] = *value;
@@ -5928,9 +6027,14 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
+<<<<<<< HEAD
                 asyncResp->res.jsonValue["PCIeErrors"]["NAKSentCount"] = *value;
             }
             else if (property.first == "NAKReceivedCount")
+=======
+
+        if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
             {
                 const int64_t* value = std::get_if<int64_t>(&property.second);
                 if (value == nullptr)
@@ -5938,12 +6042,34 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
+<<<<<<< HEAD
                 asyncResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] =
                     *value;
             }
         }
     },
         service, path, "org.freedesktop.DBus.Properties", "GetAll", "");
+=======
+
+        asyncResp->res.addHeader(
+            boost::beast::http::field::link,
+            "</redfish/v1/JsonSchemas/ProcessorCollection/ProcessorCollection.json>; rel=describedby");
+
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#ProcessorCollection.ProcessorCollection";
+        asyncResp->res.jsonValue["Name"] = "Processor Collection";
+
+        asyncResp->res.jsonValue["@odata.id"] =
+            std::format("/redfish/v1/Systems/{}/Processors",
+                        BMCWEB_REDFISH_SYSTEM_URI_NAME);
+
+        collection_util::getCollectionMembers(
+            asyncResp,
+            boost::urls::format("/redfish/v1/Systems/{}/Processors",
+                                BMCWEB_REDFISH_SYSTEM_URI_NAME),
+            processorInterfaces, "/xyz/openbmc_project/inventory");
+    });
+>>>>>>> master
 }
 
 inline void requestRoutesProcessorPortMetrics(App& app)
@@ -5978,17 +6104,47 @@ inline void requestRoutesProcessorPortMetrics(App& app)
 
                 return;
             }
+<<<<<<< HEAD
             for (const auto& [path, object] : subtree)
+=======
+        if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
             {
                 if (!boost::ends_with(path, processorId))
                 {
                     continue;
                 }
+<<<<<<< HEAD
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, processorId,
                      portId](const boost::system::error_code& e,
                              std::variant<std::vector<std::string>>& resp) {
                     if (e)
+=======
+
+        asyncResp->res.addHeader(
+            boost::beast::http::field::link,
+            "</redfish/v1/JsonSchemas/Processor/Processor.json>; rel=describedby");
+        asyncResp->res.jsonValue["@odata.type"] =
+            "#Processor.v1_18_0.Processor";
+        asyncResp->res.jsonValue["@odata.id"] =
+            boost::urls::format("/redfish/v1/Systems/{}/Processors/{}",
+                                BMCWEB_REDFISH_SYSTEM_URI_NAME, processorId);
+
+        getProcessorObject(
+            asyncResp, processorId,
+            std::bind_front(getProcessorData, asyncResp, processorId));
+    });
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/")
+        .privileges(redfish::privileges::patchProcessor)
+        .methods(boost::beast::http::verb::patch)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& systemName,
+                   const std::string& processorId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+>>>>>>> master
                     {
                         // no state sensors attached.
                         messages::internalError(asyncResp->res);
@@ -6002,6 +6158,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                         messages::internalError(asyncResp->res);
                         return;
                     }
+<<<<<<< HEAD
 
                     for (const std::string& sensorpath : *data)
                     {
@@ -6016,6 +6173,9 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                                     std::string, std::vector<std::string>>>&
                                     object) {
                             if (ec)
+=======
+        if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
                             {
                                 // the path does not implement port
                                 // interfaces

@@ -89,10 +89,12 @@ feature_options = [
 string_options = [
     'dns-resolver',
     'mutual-tls-common-name-parsing',
+    'redfish-manager-uri-name',
+    'redfish-system-uri-name',
 ]
 
 int_options = [
-    'http-body-limit'
+    'http-body-limit',
 ]
 
 feature_options_string = '\n//Feature options\n'
@@ -120,9 +122,6 @@ endforeach
 
 conf_data.set('MESON_INSTALL_PREFIX', get_option('prefix'))
 
-conf_data.set10('BMCWEB_VIRTUAL_MEDIA_VM', get_option('vm-websocket').allowed())
-conf_data.set10('BMCWEB_VIRTUAL_MEDIA_NBD', false)
-
 # Logging level
 loglvlopt = get_option('bmcweb-logging')
 if get_option('buildtype').startswith('debug') and loglvlopt == 'disabled'
@@ -130,7 +129,15 @@ if get_option('buildtype').startswith('debug') and loglvlopt == 'disabled'
    loglvlopt = 'debug'
 endif
 loglvlopt = loglvlopt.to_upper()
-conf_data.set('LOGGING_LEVEL', loglvlopt)
+string_options_string += 'constexpr std::string_view  BMCWEB_LOGGING_LEVEL' + ' = "' + loglvlopt + '";\n'
+
+# NBD proxy is disabled due to lack of maintenance.  See meson_options.txt
+feature_options_string += 'constexpr const bool        BMCWEB_VM_NBDPROXY = false;\n'
+
+conf_data.set(
+    'BMCWEB_OPTIONS',
+    string_options_string + int_options_string + feature_options_string,
+)
 
 conf_data.set('TLS_CACERT_PATH', get_option('tls-cacert-path') )
 
@@ -154,12 +161,10 @@ conf_h_dep = declare_dependency(
 )
 
 # Configure and install systemd unit files
-
 configure_file(
     input: 'bmcweb.socket.in',
                output : 'bmcweb.socket',
                install_dir: systemd_system_unit_dir,
-               configuration: conf_data,
     install: true,
     configuration: configuration_data({
         'BMCWEB_HTTPS_PORT': get_option('https_port'),
@@ -170,7 +175,6 @@ configure_file(
     input: 'bmcweb.service.in',
                output : 'bmcweb.service',
                install_dir: systemd_system_unit_dir,
-               configuration: conf_data,
     install: true,
     configuration: configuration_data({
         'MESON_INSTALL_PREFIX': get_option('prefix'),

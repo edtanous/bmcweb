@@ -244,7 +244,7 @@ def to_pascal_case(text):
 
 def main():
     dmtf_registries = (
-        ("base", "1.16.0"),
+        ("base", "1.18.1"),
         ("composition", "1.1.2"),
         ("environmental", "1.0.1"),
         ("ethernet_fabric", "1.0.1"),
@@ -290,7 +290,7 @@ def main():
             )
     if "openbmc" in registries:
         files.append(openbmc_local_getter())
-        
+
     update_registries(files)
 
     if "privilege" in registries:

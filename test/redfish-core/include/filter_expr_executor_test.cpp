@@ -181,6 +181,21 @@ TEST(FilterParser, String)
     filterFalse("'1235' le SerialNumber", members);
 }
 
+TEST(FilterParser, StringHuman)
+{
+    // Ensure that we're sorting based on human facing numbers, not
+    // lexicographic comparison
+
+    const nlohmann::json members = R"({"Members": [{}]})"_json;
+    // Forward true conditions
+    filterFalse("'20' eq '3'", members);
+    filterTrue("'20' ne '3'", members);
+    filterTrue("'20' gt '3'", members);
+    filterTrue("'20' ge '3'", members);
+    filterFalse("'20' lt '3'", members);
+    filterFalse("'20' le '3'", members);
+}
+
 TEST(FilterParser, StringSemver)
 {
     const nlohmann::json members =

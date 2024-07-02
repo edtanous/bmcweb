@@ -906,6 +906,7 @@ inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         // Set @odata only if object is found
         asyncResp->res.jsonValue["@odata.type"] = "#Memory.v1_11_0.Memory";
         asyncResp->res.jsonValue["@odata.id"] =
+<<<<<<< HEAD
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory/" + dimmId;
         std::string memoryMetricsURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
                                        "/Memory/";
@@ -917,6 +918,10 @@ inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         asyncResp->res.jsonValue["EnvironmentMetrics"]["@odata.id"] =
             environmentMetricsURI;
 
+=======
+            boost::urls::format("/redfish/v1/Systems/{}/Memory/{}",
+                                BMCWEB_REDFISH_SYSTEM_URI_NAME, dimmId);
+>>>>>>> master
         return;
     });
 }
@@ -943,7 +948,11 @@ inline void requestRoutesMemoryCollection(App& app)
                                        systemName);
             return;
         }
+<<<<<<< HEAD
         if (systemName != PLATFORMSYSTEMID)
+=======
+        if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
         {
             messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                        systemName);
@@ -953,14 +962,24 @@ inline void requestRoutesMemoryCollection(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#MemoryCollection.MemoryCollection";
         asyncResp->res.jsonValue["Name"] = "Memory Module Collection";
+<<<<<<< HEAD
         asyncResp->res.jsonValue["@odata.id"] =
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
+=======
+        asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+            "/redfish/v1/Systems/{}/Memory", BMCWEB_REDFISH_SYSTEM_URI_NAME);
+>>>>>>> master
 
         constexpr std::array<std::string_view, 1> interfaces{
             "xyz.openbmc_project.Inventory.Item.Dimm"};
         collection_util::getCollectionMembers(
             asyncResp,
+<<<<<<< HEAD
             boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory"),
+=======
+            boost::urls::format("/redfish/v1/Systems/{}/Memory",
+                                BMCWEB_REDFISH_SYSTEM_URI_NAME),
+>>>>>>> master
             interfaces, "/xyz/openbmc_project/inventory");
     });
 }
@@ -989,7 +1008,11 @@ inline void requestRoutesMemory(App& app)
             return;
         }
 
+<<<<<<< HEAD
         if (systemName != PLATFORMSYSTEMID)
+=======
+        if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
         {
             messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                        systemName);

@@ -5,6 +5,8 @@
 #include "logging.hpp"
 #include "ossl_random.hpp"
 
+#include <boost/beast/core/file_posix.hpp>
+
 extern "C"
 {
 #include <nghttp2/nghttp2.h>
@@ -22,10 +24,16 @@ extern "C"
 
 #include <asn1.hpp>
 #include <boost/asio/ssl/context.hpp>
+<<<<<<< HEAD
 #include <logging.hpp>
 #include <lsp.hpp>
 // #include <random.hpp>
+=======
+#include <boost/system/error_code.hpp>
+>>>>>>> master
 
+#include <filesystem>
+#include <memory>
 #include <optional>
 #include <random>
 #include <string>
@@ -106,18 +114,41 @@ inline bool validateCertificate(X509* const cert)
     return false;
 }
 
+<<<<<<< HEAD
 inline bool verifyOpensslKeyCert(const std::string& filepath,
                                  pem_password_cb* pwdCb)
+=======
+inline std::string verifyOpensslKeyCert(const std::string& filepath)
+>>>>>>> master
 {
     bool privateKeyValid = false;
-    bool certValid = false;
 
     BMCWEB_LOG_INFO("Checking certs in file {}", filepath);
-
-    FILE* file = fopen(filepath.c_str(), "r");
-    if (file != nullptr)
+    boost::beast::file_posix file;
+    boost::system::error_code ec;
+    file.open(filepath.c_str(), boost::beast::file_mode::read, ec);
+    if (ec)
     {
+        return "";
+    }
+    bool certValid = false;
+    std::string fileContents;
+    fileContents.resize(static_cast<size_t>(file.size(ec)), '\0');
+    file.read(fileContents.data(), fileContents.size(), ec);
+    if (ec)
+    {
+<<<<<<< HEAD
         EVP_PKEY* pkey = PEM_read_PrivateKey(file, nullptr, pwdCb, nullptr);
+=======
+        BMCWEB_LOG_ERROR("Failed to read file");
+        return "";
+    }
+
+    BIO* bufio = BIO_new_mem_buf(static_cast<void*>(fileContents.data()),
+                                 static_cast<int>(fileContents.size()));
+    EVP_PKEY* pkey = PEM_read_bio_PrivateKey(bufio, nullptr, nullptr, nullptr);
+    BIO_free(bufio);
+>>>>>>> master
         if (pkey != nullptr)
         {
 #if (OPENSSL_VERSION_NUMBER < 0x30000000L)
@@ -160,8 +191,7 @@ inline bool verifyOpensslKeyCert(const std::string& filepath,
 
             if (pkeyCtx == nullptr)
             {
-                BMCWEB_LOG_ERROR("Unable to allocate pkeyCtx {}",
-                                 ERR_get_error());
+            BMCWEB_LOG_ERROR("Unable to allocate pkeyCtx {}", ERR_get_error());
             }
             else if (EVP_PKEY_check(pkeyCtx) == 1)
             {
@@ -169,24 +199,20 @@ inline bool verifyOpensslKeyCert(const std::string& filepath,
             }
             else
             {
-                BMCWEB_LOG_ERROR("Key not valid error number {}",
-                                 ERR_get_error());
+            BMCWEB_LOG_ERROR("Key not valid error number {}", ERR_get_error());
             }
 #endif
 
             if (privateKeyValid)
             {
-                // If the order is certificate followed by key in input file
-                // then, certificate read will fail. So, setting the file
-                // pointer to point beginning of file to avoid certificate and
-                // key order issue.
-                fseek(file, 0, SEEK_SET);
-
-                X509* x509 = PEM_read_X509(file, nullptr, nullptr, nullptr);
+            BIO* bufio2 =
+                BIO_new_mem_buf(static_cast<void*>(fileContents.data()),
+                                static_cast<int>(fileContents.size()));
+            X509* x509 = PEM_read_bio_X509(bufio2, nullptr, nullptr, nullptr);
+            BIO_free(bufio2);
                 if (x509 == nullptr)
                 {
-                    BMCWEB_LOG_ERROR("error getting x509 cert {}",
-                                     ERR_get_error());
+                BMCWEB_LOG_ERROR("error getting x509 cert {}", ERR_get_error());
                 }
                 else
                 {
@@ -200,9 +226,11 @@ inline bool verifyOpensslKeyCert(const std::string& filepath,
 #endif
             EVP_PKEY_free(pkey);
         }
-        fclose(file);
+    if (!certValid)
+    {
+        return "";
     }
-    return certValid;
+    return fileContents;
 }
 
 inline X509* loadCert(const std::string& filePath)
@@ -255,14 +283,32 @@ inline int addExt(X509* cert, int nid, const char* value)
     return 0;
 }
 
+<<<<<<< HEAD
 inline void generateSslCertificate(const std::string& filepath,
                                    const std::string& cn,
                                    std::vector<char>* pkeyPwd)
+=======
+// Writes a certificate to a path, ignoring errors
+inline void writeCertificateToFile(const std::string& filepath,
+                                   const std::string& certificate)
 {
-    FILE* pFile = nullptr;
+    boost::system::error_code ec;
+    boost::beast::file_posix file;
+    file.open(filepath.c_str(), boost::beast::file_mode::write, ec);
+    if (!ec)
+    {
+        file.write(certificate.data(), certificate.size(), ec);
+        // ignore result
+    }
+}
+
+inline std::string generateSslCertificate(const std::string& cn)
+>>>>>>> master
+{
     BMCWEB_LOG_INFO("Generating new keys");
     initOpenssl();
 
+    std::string buffer;
     BMCWEB_LOG_INFO("Generating EC key");
     EVP_PKEY* pPrivKey = createEcKey();
     if (pPrivKey != nullptr)
@@ -323,10 +369,13 @@ inline void generateSslCertificate(const std::string& filepath,
             // Sign the certificate with our private key
             X509_sign(x509, pPrivKey, EVP_sha256());
 
-            pFile = fopen(filepath.c_str(), "wt");
+            BIO* bufio = BIO_new(BIO_s_mem());
 
-            if (pFile != nullptr)
+            int pkeyRet = PEM_write_bio_PrivateKey(
+                bufio, pPrivKey, nullptr, nullptr, 0, nullptr, nullptr);
+            if (pkeyRet <= 0)
             {
+<<<<<<< HEAD
                 PEM_write_PrivateKey(
                     pFile, pPrivKey,
                     pkeyPwd != nullptr ? EVP_aes_256_cbc() : nullptr,
@@ -339,8 +388,29 @@ inline void generateSslCertificate(const std::string& filepath,
                 PEM_write_X509(pFile, x509);
                 fclose(pFile);
                 pFile = nullptr;
+=======
+                BMCWEB_LOG_ERROR(
+                    "Failed to write pkey with code {}.  Ignoring.", pkeyRet);
             }
 
+            char* data = nullptr;
+            long int dataLen = BIO_get_mem_data(bufio, &data);
+            buffer += std::string_view(data, static_cast<size_t>(dataLen));
+            BIO_free(bufio);
+
+            bufio = BIO_new(BIO_s_mem());
+            pkeyRet = PEM_write_bio_X509(bufio, x509);
+            if (pkeyRet <= 0)
+            {
+                BMCWEB_LOG_ERROR(
+                    "Failed to write X509 with code {}.  Ignoring.", pkeyRet);
+>>>>>>> master
+            }
+            dataLen = BIO_get_mem_data(bufio, &data);
+            buffer += std::string_view(data, static_cast<size_t>(dataLen));
+
+            BIO_free(bufio);
+            BMCWEB_LOG_INFO("Cert size is {}", buffer.size());
             X509_free(x509);
         }
 
@@ -349,6 +419,7 @@ inline void generateSslCertificate(const std::string& filepath,
     }
 
     // cleanup_openssl();
+    return buffer;
 }
 
 EVP_PKEY* createEcKey()
@@ -428,6 +499,7 @@ void initOpenssl()
 #endif
 }
 
+<<<<<<< HEAD
 inline void encryptCredentials(const std::string& filename,
                                std::vector<char>* pkeyPwd)
 {
@@ -503,7 +575,50 @@ inline void ensureOpensslKeyPresentEncryptedAndValid(
     {
         BMCWEB_LOG_ERROR("Error in verifying signature, regenerating");
         generateSslCertificate(filepath, "testhost", pwd);
+=======
+inline std::string ensureOpensslKeyPresentAndValid(const std::string& filepath)
+{
+    std::string cert = verifyOpensslKeyCert(filepath);
+
+    if (cert.empty())
+    {
+        BMCWEB_LOG_WARNING("Error in verifying signature, regenerating");
+        cert = generateSslCertificate("testhost");
+        if (cert.empty())
+        {
+            BMCWEB_LOG_ERROR("Failed to generate cert");
+        }
+        else
+        {
+            writeCertificateToFile(filepath, cert);
+        }
+>>>>>>> master
     }
+    return cert;
+}
+
+inline std::string ensureCertificate()
+{
+    namespace fs = std::filesystem;
+    // Cleanup older certificate file existing in the system
+    fs::path oldcertPath = fs::path("/home/root/server.pem");
+    std::error_code ec;
+    fs::remove(oldcertPath, ec);
+    // Ignore failure to remove;  File might not exist.
+
+    fs::path certPath = "/etc/ssl/certs/https/";
+    // if path does not exist create the path so that
+    // self signed certificate can be created in the
+    // path
+    fs::path certFile = certPath / "server.pem";
+
+    if (!fs::exists(certPath, ec))
+    {
+        fs::create_directories(certPath, ec);
+    }
+    BMCWEB_LOG_INFO("Building SSL Context file= {}", certFile.string());
+    std::string sslPemFile(certFile);
+    return ensuressl::ensureOpensslKeyPresentAndValid(sslPemFile);
 }
 
 inline int nextProtoCallback(SSL* /*unused*/, const unsigned char** data,
@@ -536,19 +651,17 @@ inline int alpnSelectProtoCallback(SSL* /*unused*/, const unsigned char** out,
     return SSL_TLSEXT_ERR_OK;
 }
 
-inline std::shared_ptr<boost::asio::ssl::context>
-    getSslContext(const std::string& sslPemFile)
+inline bool getSslContext(boost::asio::ssl::context& mSslContext,
+                          const std::string& sslPemFile)
 {
-    std::shared_ptr<boost::asio::ssl::context> mSslContext =
-        std::make_shared<boost::asio::ssl::context>(
-            boost::asio::ssl::context::tls_server);
-    mSslContext->set_options(boost::asio::ssl::context::default_workarounds |
+    mSslContext.set_options(boost::asio::ssl::context::default_workarounds |
                              boost::asio::ssl::context::no_sslv2 |
                              boost::asio::ssl::context::no_sslv3 |
                              boost::asio::ssl::context::single_dh_use |
                              boost::asio::ssl::context::no_tlsv1 |
                              boost::asio::ssl::context::no_tlsv1_1);
 
+<<<<<<< HEAD
     // BIG WARNING: This needs to stay disabled, as there will always be
     // unauthenticated endpoints
     // mSslContext->set_verify_mode(boost::asio::ssl::verify_peer);
@@ -557,22 +670,29 @@ inline std::shared_ptr<boost::asio::ssl::context>
     SSL_CTX_set_default_passwd_cb(mSslContext->native_handle(),
                                   lsp::passwordCallback);
 
+=======
+>>>>>>> master
     BMCWEB_LOG_DEBUG("Using default TrustStore location: {}", trustStorePath);
-    mSslContext->add_verify_path(trustStorePath);
+    mSslContext.add_verify_path(trustStorePath);
 
-    mSslContext->use_certificate_file(sslPemFile,
-                                      boost::asio::ssl::context::pem);
-    mSslContext->use_private_key_file(sslPemFile,
-                                      boost::asio::ssl::context::pem);
-
-    if constexpr (BMCWEB_EXPERIMENTAL_HTTP2)
+    if (!sslPemFile.empty())
     {
-        SSL_CTX_set_next_protos_advertised_cb(mSslContext->native_handle(),
-                                              nextProtoCallback, nullptr);
+        boost::system::error_code ec;
 
-        SSL_CTX_set_alpn_select_cb(mSslContext->native_handle(),
-                                   alpnSelectProtoCallback, nullptr);
+        boost::asio::const_buffer buf(sslPemFile.data(), sslPemFile.size());
+        mSslContext.use_certificate(buf, boost::asio::ssl::context::pem, ec);
+        if (ec)
+        {
+            return false;
     }
+        mSslContext.use_private_key(buf, boost::asio::ssl::context::pem, ec);
+        if (ec)
+        {
+            BMCWEB_LOG_CRITICAL("Failed to open ssl pkey");
+            return false;
+        }
+    }
+
     // Set up EC curves to auto (boost asio doesn't have a method for this)
     // There is a pull request to add this.  Once this is included in an asio
     // drop, use the right way
@@ -592,38 +712,69 @@ inline std::shared_ptr<boost::asio::ssl::context>
                                       "DHE-RSA-AES256-GCM-SHA384:"
                                       "DHE-RSA-CHACHA20-POLY1305";
 
-    if (SSL_CTX_set_cipher_list(mSslContext->native_handle(),
+    if (SSL_CTX_set_cipher_list(mSslContext.native_handle(),
                                 mozillaIntermediate) != 1)
     {
         BMCWEB_LOG_ERROR("Error setting cipher list");
+        return false;
     }
-    return mSslContext;
+    return true;
+    }
+
+inline std::shared_ptr<boost::asio::ssl::context> getSslServerContext()
+{
+    boost::asio::ssl::context sslCtx(boost::asio::ssl::context::tls_server);
+
+    auto certFile = ensureCertificate();
+    if (!getSslContext(sslCtx, certFile))
+    {
+        BMCWEB_LOG_CRITICAL("Couldn't get server context");
+        return nullptr;
+    }
+
+    // BIG WARNING: This needs to stay disabled, as there will always be
+    // unauthenticated endpoints
+    // mSslContext->set_verify_mode(boost::asio::ssl::verify_peer);
+
+    SSL_CTX_set_options(sslCtx.native_handle(), SSL_OP_NO_RENEGOTIATION);
+
+    if constexpr (BMCWEB_EXPERIMENTAL_HTTP2)
+    {
+        SSL_CTX_set_next_protos_advertised_cb(sslCtx.native_handle(),
+                                              nextProtoCallback, nullptr);
+
+        SSL_CTX_set_alpn_select_cb(sslCtx.native_handle(),
+                                   alpnSelectProtoCallback, nullptr);
+    }
+
+    return std::make_shared<boost::asio::ssl::context>(std::move(sslCtx));
 }
 
 inline std::optional<boost::asio::ssl::context> getSSLClientContext()
 {
+    namespace fs = std::filesystem;
+
     boost::asio::ssl::context sslCtx(boost::asio::ssl::context::tls_client);
 
-    boost::system::error_code ec;
+    // NOTE, this path is temporary;  In the future it will need to change to
+    // be set per subscription.  Do not rely on this.
+    fs::path certPath = "/etc/ssl/certs/https/client.pem";
+    std::string cert = verifyOpensslKeyCert(certPath);
 
-    // Support only TLS v1.2 & v1.3
-    sslCtx.set_options(boost::asio::ssl::context::default_workarounds |
-                           boost::asio::ssl::context::no_sslv2 |
-                           boost::asio::ssl::context::no_sslv3 |
-                           boost::asio::ssl::context::single_dh_use |
-                           boost::asio::ssl::context::no_tlsv1 |
-                           boost::asio::ssl::context::no_tlsv1_1,
-                       ec);
-    if (ec)
+    if (!getSslContext(sslCtx, cert))
     {
-        BMCWEB_LOG_ERROR("SSL context set_options failed");
         return std::nullopt;
     }
 
     // Add a directory containing certificate authority files to be used
     // for performing verification.
+<<<<<<< HEAD
     // e.g. /etc/ssl/certs/authority/
     sslCtx.add_verify_path(tlsCaCertificatePath, ec);
+=======
+    boost::system::error_code ec;
+    sslCtx.set_default_verify_paths(ec);
+>>>>>>> master
     if (ec)
     {
         BMCWEB_LOG_ERROR("SSL context add_verify_path failed");
@@ -658,7 +809,7 @@ inline std::optional<boost::asio::ssl::context> getSSLClientContext()
         return std::nullopt;
     }
 
-    return sslCtx;
+    return {std::move(sslCtx)};
 }
 
 } // namespace ensuressl

@@ -11,6 +11,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <boost/url/format.hpp>
+
 namespace redfish
 {
 namespace bios
@@ -1998,6 +2000,7 @@ inline void
         messages::unrecognizedRequestBody(asyncResp->res);
         return;
     }
+<<<<<<< HEAD
     // Update the Pending Atttributes
     bios::setBiosPendingAttr(asyncResp, pendingAttrJson);
 }
@@ -2010,15 +2013,30 @@ inline void
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+=======
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
     {
         return;
     }
+<<<<<<< HEAD
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/Settings";
     asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_2_0.Bios";
     asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
     asyncResp->res.jsonValue["Description"] = "BIOS Settings";
     asyncResp->res.jsonValue["Id"] = "BIOS_Settings";
+=======
+    asyncResp->res.jsonValue["@odata.id"] = std::format(
+        "/redfish/v1/Systems/{}/Bios", BMCWEB_REDFISH_SYSTEM_URI_NAME);
+    asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_1_0.Bios";
+    asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
+    asyncResp->res.jsonValue["Description"] = "BIOS Configuration Service";
+    asyncResp->res.jsonValue["Id"] = "BIOS";
+    asyncResp->res.jsonValue["Actions"]["#Bios.ResetBios"]["target"] =
+        std::format("/redfish/v1/Systems/{}/Bios/Actions/Bios.ResetBios",
+                    BMCWEB_REDFISH_SYSTEM_URI_NAME);
+>>>>>>> master
 
     asyncResp->res.jsonValue["Attributes"] = nlohmann::json({});
     // get the BIOS Attributes
@@ -2063,6 +2081,16 @@ inline void
         return;
     }
 
+<<<<<<< HEAD
+=======
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+
+>>>>>>> master
     crow::connections::systemBus->async_method_call(
         [asyncResp](const boost::system::error_code& ec) {
         if (ec)

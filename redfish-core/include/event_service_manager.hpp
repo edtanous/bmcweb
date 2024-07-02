@@ -235,6 +235,7 @@ inline int formatEventLogEntry(const std::string& logEntryID,
 
 } // namespace event_log
 
+<<<<<<< HEAD
 enum redfish_bool
 {
     redfishBoolNa, // NOT APPLICABLE
@@ -649,6 +650,8 @@ inline bool
     return true;
 }
 
+=======
+>>>>>>> master
 class Subscription : public persistent_data::UserSubscription
 {
   public:
@@ -1121,17 +1124,19 @@ class EventServiceManager
             return;
         }
 
-        for (const auto& item : jsonData.items())
+        const nlohmann::json::object_t* obj =
+            jsonData.get_ptr<const nlohmann::json::object_t*>();
+        for (const auto& item : *obj)
         {
-            if (item.key() == "Configuration")
+            if (item.first == "Configuration")
             {
                 persistent_data::EventServiceStore::getInstance()
                     .getEventServiceConfig()
-                    .fromJson(item.value());
+                    .fromJson(item.second);
             }
-            else if (item.key() == "Subscriptions")
+            else if (item.first == "Subscriptions")
             {
-                for (const auto& elem : item.value())
+                for (const auto& elem : item.second)
                 {
                     std::shared_ptr<persistent_data::UserSubscription>
                         newSubscription =

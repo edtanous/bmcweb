@@ -204,12 +204,6 @@ inline void handleServiceRootGetImpl(
         asyncResp->res.jsonValue["AggregationService"]["@odata.id"] =
             "/redfish/v1/AggregationService";
     }
-    else
-    {
-        asyncResp->res
-            .jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
-            "/redfish/v1/Managers/" PLATFORMBMCID;
-    }
     asyncResp->res.jsonValue["Chassis"]["@odata.id"] = "/redfish/v1/Chassis";
 #ifndef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
     asyncResp->res.jsonValue["ComponentIntegrity"]["@odata.id"] =
@@ -247,6 +241,9 @@ inline void handleServiceRootGetImpl(
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Cables"]["@odata.id"] = "/redfish/v1/Cables";
 #endif
+    asyncResp->res.jsonValue["Links"]["ManagerProvidingService"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Managers/{}",
+                            BMCWEB_REDFISH_MANAGER_URI_NAME);
 
     nlohmann::json& protocolFeatures =
         asyncResp->res.jsonValue["ProtocolFeaturesSupported"];

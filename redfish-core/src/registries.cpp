@@ -2,7 +2,11 @@
 
 #include "registries/base_message_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
+<<<<<<< HEAD
 #include "registries_selector.hpp"
+=======
+#include "registries/telemetry_message_registry.hpp"
+>>>>>>> master
 #include "str_utility.hpp"
 
 #include <algorithm>
@@ -51,8 +55,27 @@ const Message* getMessage(std::string_view messageID)
     const std::string& messageKey = fields[3];
 
     // Find the right registry and check it for the MessageKey
+<<<<<<< HEAD
     return getMessageFromRegistry(messageKey,
                                   getRegistryFromPrefix(registryName));
+=======
+    if (std::string(base::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(base::registry));
+    }
+    if (std::string(openbmc::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(openbmc::registry));
+    }
+    if (std::string(telemetry::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(telemetry::registry));
+    }
+    return nullptr;
+>>>>>>> master
 }
 
 } // namespace redfish::registries

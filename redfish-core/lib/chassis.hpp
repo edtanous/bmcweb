@@ -84,8 +84,14 @@ inline void getStorageLink(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             }
 
             nlohmann::json::object_t storage;
+<<<<<<< HEAD
             storage["@odata.id"] = boost::urls::format(
                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/{}", id);
+=======
+            storage["@odata.id"] =
+                boost::urls::format("/redfish/v1/Systems/{}/Storage/{}",
+                                    BMCWEB_REDFISH_SYSTEM_URI_NAME, id);
+>>>>>>> master
             storages.emplace_back(std::move(storage));
         }
         asyncResp->res.jsonValue["Links"]["Storage@odata.count"] =
@@ -439,14 +445,24 @@ inline void handleDecoratorAssetProperties(
 
     nlohmann::json::array_t computerSystems;
     nlohmann::json::object_t system;
+<<<<<<< HEAD
     system["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+=======
+    system["@odata.id"] = std::format("/redfish/v1/Systems/{}",
+                                      BMCWEB_REDFISH_SYSTEM_URI_NAME);
+>>>>>>> master
     computerSystems.emplace_back(std::move(system));
     asyncResp->res.jsonValue["Links"]["ComputerSystems"] =
         std::move(computerSystems);
 
     nlohmann::json::array_t managedBy;
     nlohmann::json::object_t manager;
+<<<<<<< HEAD
     manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
+=======
+    manager["@odata.id"] = boost::urls::format("/redfish/v1/Managers/{}",
+                                               BMCWEB_REDFISH_MANAGER_URI_NAME);
+>>>>>>> master
     managedBy.emplace_back(std::move(manager));
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
     getChassisState(asyncResp);
@@ -1079,8 +1095,8 @@ inline void
             objectPath = "/xyz/openbmc_project/state/chassis0";
         }
 
-        setDbusProperty(asyncResp, processName, objectPath, interfaceName,
-                        destProperty, "ResetType", propertyValue);
+        setDbusProperty(asyncResp, "ResetType", processName, objectPath,
+                        interfaceName, destProperty, propertyValue);
     });
 }
 

@@ -20,7 +20,6 @@
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "generated/enums/account_service.hpp"
-#include "openbmc_dbus_rest.hpp"
 #include "persistent_data.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
@@ -40,6 +39,7 @@
 #include <ranges>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace redfish
@@ -264,9 +264,10 @@ inline void
         // logged.
         return;
     }
-    setDbusProperty(asyncResp, "xyz.openbmc_project.User.Manager",
-                    dbusObjectPath, "xyz.openbmc_project.User.Attributes",
-                    "UserGroups", "AccountTypes", updatedUserGroups);
+    setDbusProperty(asyncResp, "AccountTypes",
+                    "xyz.openbmc_project.User.Manager", dbusObjectPath,
+                    "xyz.openbmc_project.User.Attributes", "UserGroups",
+                    updatedUserGroups);
 }
 
 inline void userErrorMessageHandler(
@@ -429,22 +430,22 @@ inline void handleRoleMapPatch(
                 if (remoteGroup)
                 {
                     setDbusProperty(
-                        asyncResp, ldapDbusService, roleMapObjData[index].first,
-                        "xyz.openbmc_project.User.PrivilegeMapperEntry",
-                        "GroupName",
+                        asyncResp,
                         std::format("RemoteRoleMapping/{}/RemoteGroup", index),
-                        *remoteGroup);
+                        ldapDbusService, roleMapObjData[index].first,
+                        "xyz.openbmc_project.User.PrivilegeMapperEntry",
+                        "GroupName", *remoteGroup);
                 }
 
                 // If "LocalRole" info is provided
                 if (localRole)
                 {
                     setDbusProperty(
-                        asyncResp, ldapDbusService, roleMapObjData[index].first,
-                        "xyz.openbmc_project.User.PrivilegeMapperEntry",
-                        "Privilege",
+                        asyncResp,
                         std::format("RemoteRoleMapping/{}/LocalRole", index),
-                        *localRole);
+                        ldapDbusService, roleMapObjData[index].first,
+                        "xyz.openbmc_project.User.PrivilegeMapperEntry",
+                        "Privilege", *localRole);
                 }
             }
             // Create a new RoleMapping Object.
@@ -689,10 +690,9 @@ inline void handleServiceAddressPatch(
     const std::string& ldapServerElementName,
     const std::string& ldapConfigObject)
 {
-    setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
-                    ldapConfigInterface, "LDAPServerURI",
-                    ldapServerElementName + "/ServiceAddress",
-                    serviceAddressList.front());
+    setDbusProperty(asyncResp, ldapServerElementName + "/ServiceAddress",
+                    ldapDbusService, ldapConfigObject, ldapConfigInterface,
+                    "LDAPServerURI", serviceAddressList.front());
 }
 /**
  * @brief updates the LDAP Bind DN and updates the
@@ -709,10 +709,10 @@ inline void
                         const std::string& ldapServerElementName,
                         const std::string& ldapConfigObject)
 {
-    setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
-                    ldapConfigInterface, "LDAPBindDN",
+    setDbusProperty(asyncResp,
                     ldapServerElementName + "/Authentication/Username",
-                    username);
+                    ldapDbusService, ldapConfigObject, ldapConfigInterface,
+                    "LDAPBindDN", username);
 }
 
 /**
@@ -729,10 +729,10 @@ inline void
                         const std::string& ldapServerElementName,
                         const std::string& ldapConfigObject)
 {
-    setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
-                    ldapConfigInterface, "LDAPBindDNPassword",
+    setDbusProperty(asyncResp,
                     ldapServerElementName + "/Authentication/Password",
-                    password);
+                    ldapDbusService, ldapConfigObject, ldapConfigInterface,
+                    "LDAPBindDNPassword", password);
 }
 
 /**
@@ -750,11 +750,11 @@ inline void
                       const std::string& ldapServerElementName,
                       const std::string& ldapConfigObject)
 {
-    setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
-                    ldapConfigInterface, "LDAPBaseDN",
+    setDbusProperty(asyncResp,
                     ldapServerElementName +
                         "/LDAPService/SearchSettings/BaseDistinguishedNames",
-                    baseDNList.front());
+                    ldapDbusService, ldapConfigObject, ldapConfigInterface,
+                    "LDAPBaseDN", baseDNList.front());
 }
 /**
  * @brief updates the LDAP user name attribute and updates the
@@ -771,11 +771,11 @@ inline void
                             const std::string& ldapServerElementName,
                             const std::string& ldapConfigObject)
 {
-    setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
-                    ldapConfigInterface, "UserNameAttribute",
+    setDbusProperty(asyncResp,
                     ldapServerElementName +
                         "LDAPService/SearchSettings/UsernameAttribute",
-                    userNameAttribute);
+                    ldapDbusService, ldapConfigObject, ldapConfigInterface,
+                    "UserNameAttribute", userNameAttribute);
 }
 /**
  * @brief updates the LDAP group attribute and updates the
@@ -792,11 +792,11 @@ inline void handleGroupNameAttrPatch(
     const std::string& ldapServerElementName,
     const std::string& ldapConfigObject)
 {
-    setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
-                    ldapConfigInterface, "GroupNameAttribute",
+    setDbusProperty(asyncResp,
                     ldapServerElementName +
                         "/LDAPService/SearchSettings/GroupsAttribute",
-                    groupsAttribute);
+                    ldapDbusService, ldapConfigObject, ldapConfigInterface,
+                    "GroupNameAttribute", groupsAttribute);
 }
 /**
  * @brief updates the LDAP service enable and updates the
@@ -812,9 +812,9 @@ inline void handleServiceEnablePatch(
     const std::string& ldapServerElementName,
     const std::string& ldapConfigObject)
 {
-    setDbusProperty(asyncResp, ldapDbusService, ldapConfigObject,
-                    ldapEnableInterface, "Enabled",
-                    ldapServerElementName + "/ServiceEnabled", serviceEnabled);
+    setDbusProperty(asyncResp, ldapServerElementName + "/ServiceEnabled",
+                    ldapDbusService, ldapConfigObject, ldapEnableInterface,
+                    "Enabled", serviceEnabled);
 }
 
 struct AuthMethods
@@ -1074,16 +1074,18 @@ inline void updateUserProperties(
     const std::optional<std::string>& password,
     const std::optional<bool>& enabled,
     const std::optional<std::string>& roleId, const std::optional<bool>& locked,
-    std::optional<std::vector<std::string>> accountTypes, bool userSelf)
+    std::optional<std::vector<std::string>> accountTypes, bool userSelf,
+    const std::shared_ptr<persistent_data::UserSession>& session)
 {
     sdbusplus::message::object_path tempObjPath(rootUserDbusPath);
     tempObjPath /= username;
     std::string dbusObjectPath(tempObjPath);
 
     dbus::utility::checkDbusPathExists(
-        dbusObjectPath, [dbusObjectPath, username, password, roleId, enabled,
-                         locked, accountTypes(std::move(accountTypes)),
-                         userSelf, asyncResp{std::move(asyncResp)}](int rc) {
+        dbusObjectPath,
+        [dbusObjectPath, username, password, roleId, enabled, locked,
+         accountTypes(std::move(accountTypes)), userSelf, session,
+         asyncResp{std::move(asyncResp)}](int rc) {
         if (rc <= 0)
         {
             messages::resourceNotFound(asyncResp->res, "ManagerAccount",
@@ -1138,16 +1140,19 @@ inline void updateUserProperties(
             }
             else
             {
+                // Remove existing sessions of the user when password changed
+                persistent_data::SessionStore::getInstance()
+                    .removeSessionsByUsernameExceptSession(username, session);
                 messages::success(asyncResp->res);
             }
         }
 
         if (enabled)
         {
-            setDbusProperty(asyncResp, "xyz.openbmc_project.User.Manager",
-                            dbusObjectPath,
+            setDbusProperty(asyncResp, "Enabled",
+                            "xyz.openbmc_project.User.Manager", dbusObjectPath,
                             "xyz.openbmc_project.User.Attributes",
-                            "UserEnabled", "Enabled", *enabled);
+                            "UserEnabled", *enabled);
         }
 
         if (roleId)
@@ -1159,10 +1164,10 @@ inline void updateUserProperties(
                                                  "Locked");
                 return;
             }
-            setDbusProperty(asyncResp, "xyz.openbmc_project.User.Manager",
-                            dbusObjectPath,
+            setDbusProperty(asyncResp, "RoleId",
+                            "xyz.openbmc_project.User.Manager", dbusObjectPath,
                             "xyz.openbmc_project.User.Attributes",
-                            "UserPrivilege", "RoleId", priv);
+                            "UserPrivilege", priv);
         }
 
         if (locked)
@@ -1176,10 +1181,10 @@ inline void updateUserProperties(
                                                  "Locked");
                 return;
             }
-            setDbusProperty(asyncResp, "xyz.openbmc_project.User.Manager",
-                            dbusObjectPath,
+            setDbusProperty(asyncResp, "Locked",
+                            "xyz.openbmc_project.User.Manager", dbusObjectPath,
                             "xyz.openbmc_project.User.Attributes",
-                            "UserLockedForFailedAttempt", "Locked", *locked);
+                            "UserLockedForFailedAttempt", *locked);
         }
 
         if (accountTypes)
@@ -1492,10 +1497,10 @@ inline void handleAccountServicePatch(
     if (minPasswordLength)
     {
         setDbusProperty(
-            asyncResp, "xyz.openbmc_project.User.Manager",
+            asyncResp, "MinPasswordLength", "xyz.openbmc_project.User.Manager",
             sdbusplus::message::object_path("/xyz/openbmc_project/user"),
             "xyz.openbmc_project.User.AccountPolicy", "MinPasswordLength",
-            "MinPasswordLength", *minPasswordLength);
+            *minPasswordLength);
     }
 
     if (maxPasswordLength)
@@ -1512,19 +1517,20 @@ inline void handleAccountServicePatch(
     if (unlockTimeout)
     {
         setDbusProperty(
-            asyncResp, "xyz.openbmc_project.User.Manager",
+            asyncResp, "AccountLockoutDuration",
+            "xyz.openbmc_project.User.Manager",
             sdbusplus::message::object_path("/xyz/openbmc_project/user"),
             "xyz.openbmc_project.User.AccountPolicy", "AccountUnlockTimeout",
-            "AccountLockoutDuration", *unlockTimeout);
+            *unlockTimeout);
     }
     if (lockoutThreshold)
     {
         setDbusProperty(
-            asyncResp, "xyz.openbmc_project.User.Manager",
+            asyncResp, "AccountLockoutThreshold",
+            "xyz.openbmc_project.User.Manager",
             sdbusplus::message::object_path("/xyz/openbmc_project/user"),
             "xyz.openbmc_project.User.AccountPolicy",
-            "MaxLoginAttemptBeforeLockout", "AccountLockoutThreshold",
-            *lockoutThreshold);
+            "MaxLoginAttemptBeforeLockout", *lockoutThreshold);
     }
 }
 
@@ -1963,9 +1969,12 @@ inline void
                             return;
                         }
                         asyncResp->res.jsonValue["Locked"] = *userLocked;
+                        nlohmann::json::array_t allowed;
+                        // can only unlock accounts
+                        allowed.emplace_back("false");
                         asyncResp->res
-                            .jsonValue["Locked@Redfish.AllowableValues"] = {
-                            "false"}; // can only unlock accounts
+                            .jsonValue["Locked@Redfish.AllowableValues"] =
+                            std::move(allowed);
                     }
                     else if (property.first == "UserPrivilege")
                     {
@@ -2167,13 +2176,13 @@ inline void
     if (!newUserName || (newUserName.value() == username))
     {
         updateUserProperties(asyncResp, username, password, enabled, roleId,
-                             locked, accountTypes, userSelf);
+                             locked, accountTypes, userSelf, req.session);
         return;
     }
     crow::connections::systemBus->async_method_call(
         [asyncResp, username, password(std::move(password)),
          roleId(std::move(roleId)), enabled, newUser{std::string(*newUserName)},
-         locked, userSelf, accountTypes(std::move(accountTypes))](
+         locked, userSelf, req, accountTypes(std::move(accountTypes))](
             const boost::system::error_code& ec, sdbusplus::message_t& m) {
         if (ec)
         {
@@ -2183,7 +2192,7 @@ inline void
         }
 
         updateUserProperties(asyncResp, newUser, password, enabled, roleId,
-                             locked, accountTypes, userSelf);
+                             locked, accountTypes, userSelf, req.session);
     },
         "xyz.openbmc_project.User.Manager", "/xyz/openbmc_project/user",
         "xyz.openbmc_project.User.Manager", "RenameUser", username,

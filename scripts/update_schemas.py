@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import shutil
-import xml.etree.ElementTree as ET
 import zipfile
 from collections import OrderedDict, defaultdict
 from io import BytesIO
@@ -10,7 +9,7 @@ import generate_schema_enums
 import requests
 from generate_schema_collections import generate_top_collections
 
-VERSION = "DSP8010_2023.3"
+VERSION = "DSP8010_2024.1"
 
 WARNING = """/****************************************************************
  *                 READ THIS WARNING FIRST
@@ -23,6 +22,7 @@ WARNING = """/****************************************************************
  * github organization.
  ***************************************************************/"""
 
+<<<<<<< HEAD
 # To use a new schema, add to list and rerun tool
 include_list = [
     "AccountService",
@@ -179,6 +179,8 @@ oem_schema_names = [
     #"OpenBMCAccountService",
 ]
 
+=======
+>>>>>>> master
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 proxies = {"https": os.environ.get("https_proxy", None)}
@@ -203,9 +205,12 @@ cpp_path = os.path.realpath(
 )
 
 
-schema_path = os.path.join(static_path, "schema")
-json_schema_path = os.path.join(static_path, "JsonSchemas")
-metadata_index_path = os.path.join(static_path, "$metadata", "index.xml")
+schema_path = os.path.join(
+    SCRIPT_DIR, "..", "redfish-core", "schema", "dmtf", "csdl"
+)
+json_schema_path = os.path.join(
+    SCRIPT_DIR, "..", "redfish-core", "schema", "dmtf", "json-schema"
+)
 
 zipBytesIO = BytesIO(r.content)
 zip_ref = zipfile.ZipFile(zipBytesIO)
@@ -258,10 +263,6 @@ if os.path.exists(json_schema_path):
             os.remove(f)
         else:
             shutil.rmtree(f)
-try:
-    os.remove(metadata_index_path)
-except FileNotFoundError:
-    pass
 
 if not os.path.exists(schema_path):
     os.makedirs(schema_path)
@@ -279,9 +280,6 @@ for zip_file in zip_ref.infolist():
     elif zip_file.filename.startswith("json-schema/"):
         filename = os.path.basename(zip_file.filename)
         filenamesplit = filename.split(".")
-        # exclude schemas again to save flash space
-        if filenamesplit[0] not in include_list:
-            continue
         json_schema_files[filenamesplit[0]].append(filename)
     elif zip_file.filename.startswith("openapi/"):
         pass
@@ -297,38 +295,12 @@ json_schema_files = OrderedDict(
     # sorted(json_schema_files.items(), key=lambda x: SchemaVersion(x[0]))
     sorted(json_schema_files.items())
 )
-
-csdl_filenames.sort(key=SchemaVersion)
-
-# Create oem filenames - from oem json names
-oem_csdl_filenames = []
-for filename in oem_schema_names:
-    oem_csdl_filenames.append(filename + "_v1.xml")
-
-# Append Oem csdl files
-csdl_filenames += oem_csdl_filenames
-
-with open(metadata_index_path, "w") as metadata_index:
-    metadata_index.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    metadata_index.write(
-        "<edmx:Edmx xmlns:edmx="
-        '"http://docs.oasis-open.org/odata/ns/edmx"'
-        ' Version="4.0">\n'
-    )
-
-    for filename in csdl_filenames:
-        # filename looks like Zone_v1.xml
-        if filename in oem_csdl_filenames:
-            with open(
-                os.path.join(schema_path, filename), "rb"
-            ) as oem_csdl_in:
-                content = oem_csdl_in.read()
-                content = content.replace(b"\r\n", b"\n")
-        else:
-            with open(os.path.join(schema_path, filename), "wb") as schema_out:
-                content = zip_ref.read(os.path.join("csdl", filename))
+for csdl_file in csdl_filenames:
+    with open(os.path.join(schema_path, csdl_file), "wb") as schema_out:
+        content = zip_ref.read(os.path.join("csdl", csdl_file))
                 content = content.replace(b"\r\n", b"\n")
                 schema_out.write(content)
+<<<<<<< HEAD
                 filenamesplit = filename.split("_")
                 if filenamesplit[0] not in include_list:
                     continue
@@ -431,16 +403,23 @@ with open(metadata_index_path, "w") as metadata_index:
 
     metadata_index.write("</edmx:Edmx>\n")
 
+=======
+>>>>>>> master
 
 for schema, version in json_schema_files.items():
     zip_filepath = os.path.join("json-schema", version[0])
-    schemadir = os.path.join(json_schema_path, schema)
-    os.makedirs(schemadir)
 
-    with open(os.path.join(schemadir, schema + ".json"), "wb") as schema_file:
+    with open(os.path.join(json_schema_path, version[0]), "wb") as schema_file:
         schema_file.write(zip_ref.read(zip_filepath).replace(b"\r\n", b"\n"))
 
 with open(os.path.join(cpp_path, "schemas.hpp"), "w") as hpp_file:
+    schemas = []
+    for root, dirs, files in os.walk(
+        os.path.join(SCRIPT_DIR, "..", "static", "redfish", "v1", "schema")
+    ):
+        for csdl_file in sorted(files, key=SchemaVersion):
+            if csdl_file.endswith(".xml"):
+                schemas.append(csdl_file.replace("_v1.xml", ""))
     hpp_file.write(
         "#pragma once\n"
         "{WARNING}\n"
@@ -452,14 +431,11 @@ with open(os.path.join(cpp_path, "schemas.hpp"), "w") as hpp_file:
         "{{\n"
         "    constexpr std::array<std::string_view,{SIZE}> schemas {{\n".format(
             WARNING=WARNING,
-            SIZE=len(json_schema_files) + len(oem_schema_names),
+            SIZE=len(schemas),
         )
     )
-    for schema_file in json_schema_files:
-        hpp_file.write('        "{}",\n'.format(schema_file))
-
-    for schema_file in oem_schema_names:
-        hpp_file.write('        "{}",\n'.format(schema_file))
+    for schema in schemas:
+        hpp_file.write('        "{}",\n'.format(schema))
 
     hpp_file.write("    };\n}\n")
 
@@ -467,19 +443,3 @@ zip_ref.close()
 
 generate_schema_enums.main()
 generate_top_collections()
-
-# Now delete the xml schema files we aren't supporting
-if os.path.exists(schema_path):
-    files = [
-        os.path.join(schema_path, f)
-        for f in os.listdir(schema_path)
-        if not any([f.startswith(prefix) for prefix in skip_prefixes])
-    ]
-    for filename in files:
-        # filename will include the absolute path
-        filenamesplit = filename.split("/")
-        name = filenamesplit.pop()
-        namesplit = name.split("_")
-        if namesplit[0] not in include_list:
-            print("excluding schema: " + filename)
-            os.remove(filename)

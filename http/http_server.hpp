@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <future>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -85,6 +86,7 @@ class Server
         {
             return;
         }
+<<<<<<< HEAD
         if constexpr (std::is_same<Adaptor,
                                    boost::beast::ssl_stream<
                                        boost::asio::ip::tcp::socket>>::value)
@@ -112,6 +114,11 @@ class Server
                 sslPemFile, &pwd, lsp::passwordCallback);
             std::shared_ptr<boost::asio::ssl::context> sslContext =
                 ensuressl::getSslContext(sslPemFile);
+=======
+
+        auto sslContext = ensuressl::getSslServerContext();
+
+>>>>>>> master
             adaptorCtx = sslContext;
             handler->ssl(std::move(sslContext));
         }
@@ -212,7 +219,7 @@ class Server
             if (adaptorCtx == nullptr)
             {
                 BMCWEB_LOG_CRITICAL(
-                    "Asked to lauch TLS socket but no context available");
+                    "Asked to launch TLS socket but no context available");
                 return;
             }
             connection = std::make_shared<Connection<Adaptor, Handler>>(

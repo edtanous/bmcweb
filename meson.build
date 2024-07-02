@@ -2,7 +2,7 @@ project(
     'bmcweb',
     'cpp',
         version : '1.0',
-        meson_version: '>=0.63.0',
+    meson_version: '>=1.3.0',
         default_options: [
             'b_lto_mode=default',
             'b_lto_threads=0',
@@ -209,7 +209,6 @@ add_project_arguments(
     '-Wno-covered-switch-default',
     '-Wno-error=deprecated-declarations',
     '-Wno-attributes',
-    '-Wno-error=deprecated-declarations',    
     '-Wno-comment',
     '-Wno-disabled-macro-expansion',
   language:'cpp')
@@ -297,6 +296,7 @@ add_project_arguments(
   '-DBOOST_EXCEPTION_DISABLE',
   '-DBOOST_NO_EXCEPTIONS',
   '-DBOOST_URL_NO_SOURCE_LOCATION',
+            '-DBOOST_SPIRIT_X3_NO_RTTI',
   '-DJSON_NOEXCEPTION',
   '-DOPENSSL_NO_FILENAMES',
   '-DSDBUSPLUS_DISABLE_BOOST_COROUTINES',
@@ -389,7 +389,7 @@ else
   opt = cmake.subproject_options()
     opt.add_cmake_defines(
         {
-    'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;headers;process;type_index;url;uuid',
+            'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;headers;process;type_index;url;uuid;spirit',
     'BUILD_SHARED_LIBS': 'OFF',
         },
     )
@@ -403,6 +403,7 @@ else
   boost_type_index = boost.dependency('boost_type_index').as_system()
   boost_url = boost.dependency('boost_url').as_system()
   boost_uuid = boost.dependency('boost_uuid').as_system()
+    boost_spirit = boost.dependency('boost_spirit').as_system()
   bmcweb_dependencies += [
     boost_asio,
     boost_beast,
@@ -412,6 +413,7 @@ else
     boost_type_index,
     boost_url,
         boost_uuid,
+        boost_spirit,
   ]
 endif
 
@@ -446,7 +448,7 @@ summary(
     section: 'Directories',
 )
 
-install_subdir('static', install_dir : 'share/www', strip_directory : true)
+install_subdir('static', install_dir: 'share/www', strip_directory: true, follow_symlinks: true)
 
 # Config subdirectory
 
@@ -461,10 +463,10 @@ srcfiles_bmcweb = files(
 
   'redfish-core/src/error_messages.cpp',
     # Begin large files, should be at the beginning
+    'redfish-core/src/filter_expr_executor.cpp',
+    'redfish-core/src/filter_expr_printer.cpp',
     'redfish-core/src/redfish.cpp',
   'redfish-core/src/registries.cpp',
-  'redfish-core/src/filter_expr_executor.cpp',
-  'redfish-core/src/filter_expr_printer.cpp',
   'redfish-core/src/utils/dbus_utils.cpp',
   'redfish-core/src/utils/json_utils.cpp',
     'redfish-core/src/utils/time_utils.cpp',
@@ -520,6 +522,7 @@ srcfiles_unittest = files(
   'test/include/multipart_test.cpp',
   'test/include/openbmc_dbus_rest_test.cpp',
   'test/include/ossl_random.cpp',
+    'test/include/ssl_key_handler_test.cpp',
   'test/include/str_utility_test.cpp',
   'test/redfish-core/include/privileges_test.cpp',
   'test/redfish-core/include/filter_expr_parser_test.cpp',
@@ -537,12 +540,13 @@ srcfiles_unittest = files(
   #'test/redfish-core/lib/log_services_dump_test.cpp',
   'test/redfish-core/lib/log_services_test.cpp',
   'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
-  #'test/redfish-core/lib/power_subsystem_test.cpp',
-  #'test/redfish-core/lib/sensors_test.cpp',
-  #'test/redfish-core/lib/service_root_test.cpp',
-  #'test/redfish-core/lib/system_test.cpp',
-  #'test/redfish-core/lib/thermal_subsystem_test.cpp',
-  #'test/redfish-core/lib/update_service_test.cpp',
+  'test/redfish-core/lib/metadata_test.cpp',
+  # 'test/redfish-core/lib/power_subsystem_test.cpp',
+  # 'test/redfish-core/lib/sensors_test.cpp',
+  # 'test/redfish-core/lib/service_root_test.cpp',
+  # 'test/redfish-core/lib/system_test.cpp',
+  # 'test/redfish-core/lib/thermal_subsystem_test.cpp',
+  # 'test/redfish-core/lib/update_service_test.cpp',
 )
 
 if(get_option('tests').allowed())

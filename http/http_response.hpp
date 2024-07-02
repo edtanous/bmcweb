@@ -7,6 +7,8 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/beast/http/basic_dynamic_body.hpp>
+#include <fcntl.h>
+
 #include <boost/beast/http/message.hpp>
 #include <nlohmann/json.hpp>
 
@@ -14,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+
 namespace crow
 {
 
@@ -185,11 +188,15 @@ struct Response
             response.chunked(true);
             return;
         }
+<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_CHUNKING
         response.chunked(true);
 #else
         response.content_length(*pSize);
 #endif // BMCWEB_ENABLE_CHUNKING
+=======
+        response.content_length(*pSize);
+>>>>>>> master
 
         if (is1XXReturn || result() == status::no_content ||
             result() == status::not_modified)

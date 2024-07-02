@@ -23,7 +23,6 @@
 #include "generated/enums/drive.hpp"
 #include "generated/enums/protocol.hpp"
 #include "human_sort.hpp"
-#include "openbmc_dbus_rest.hpp"
 #include "query.hpp"
 #include "redfish_util.hpp"
 #include "registries/privilege_registry.hpp"
@@ -58,7 +57,11 @@ inline void handleSystemsStorageCollectionGet(
     {
         return;
     }
+<<<<<<< HEAD
     if (systemName != PLATFORMSYSTEMID)
+=======
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -67,15 +70,25 @@ inline void handleSystemsStorageCollectionGet(
 
     asyncResp->res.jsonValue["@odata.type"] =
         "#StorageCollection.StorageCollection";
+<<<<<<< HEAD
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
+=======
+    asyncResp->res.jsonValue["@odata.id"] = std::format(
+        "/redfish/v1/Systems/{}/Storage", BMCWEB_REDFISH_SYSTEM_URI_NAME);
+>>>>>>> master
     asyncResp->res.jsonValue["Name"] = "Storage Collection";
 
     constexpr std::array<std::string_view, 1> interface{
         "xyz.openbmc_project.Inventory.Item.Storage"};
     collection_util::getCollectionMembers(
         asyncResp,
+<<<<<<< HEAD
         boost::urls::format("/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage"),
+=======
+        boost::urls::format("/redfish/v1/Systems/{}/Storage",
+                            BMCWEB_REDFISH_SYSTEM_URI_NAME),
+>>>>>>> master
         interface, "/xyz/openbmc_project/inventory");
 }
 
@@ -154,9 +167,15 @@ inline void afterChassisDriveCollectionSubtree(
         std::string file = std::filesystem::path(path).filename();
 
         driveJson["@odata.id"] = boost::urls::format(
+<<<<<<< HEAD
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/{}",
             file);
         driveArray.push_back(driveJson);
+=======
+            "/redfish/v1/Systems/{}/Storage/1/Drives/{}",
+            BMCWEB_REDFISH_SYSTEM_URI_NAME, object.filename());
+        driveArray.emplace_back(std::move(driveJson));
+>>>>>>> master
     }
     count = driveArray.size();
 }
@@ -196,8 +215,14 @@ inline void afterSystemsStorageGetSubtree(
     }
 
     asyncResp->res.jsonValue["@odata.type"] = "#Storage.v1_13_0.Storage";
+<<<<<<< HEAD
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/{}", storageId);
+=======
+    asyncResp->res.jsonValue["@odata.id"] =
+        boost::urls::format("/redfish/v1/Systems/{}/Storage/{}",
+                            BMCWEB_REDFISH_SYSTEM_URI_NAME, storageId);
+>>>>>>> master
     asyncResp->res.jsonValue["Name"] = "Storage";
     asyncResp->res.jsonValue["Id"] = storageId;
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -209,9 +234,15 @@ inline void afterSystemsStorageGetSubtree(
     //}
 
     getDrives(asyncResp);
+<<<<<<< HEAD
     asyncResp->res.jsonValue["Controllers"]["@odata.id"] = boost::urls::format(
         "/redfish/v0/Systems/" PLATFORMSYSTEMID "/Storage/{}/Controllers",
         storageId);
+=======
+    asyncResp->res.jsonValue["Controllers"]["@odata.id"] =
+        boost::urls::format("/redfish/v1/Systems/{}/Storage/{}/Controllers",
+                            BMCWEB_REDFISH_SYSTEM_URI_NAME, storageId);
+>>>>>>> master
 }
 
 inline void
@@ -275,8 +306,14 @@ inline void afterSubtree(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     // Storage subsystem to Storage link.
     nlohmann::json::array_t storageServices;
     nlohmann::json::object_t storageService;
+<<<<<<< HEAD
     storageService["@odata.id"] = boost::urls::format(
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/{}", storageId);
+=======
+    storageService["@odata.id"] =
+        boost::urls::format("/redfish/v1/Systems/{}/Storage/{}",
+                            BMCWEB_REDFISH_SYSTEM_URI_NAME, storageId);
+>>>>>>> master
     storageServices.emplace_back(storageService);
     asyncResp->res.jsonValue["Links"]["StorageServices"] =
         std::move(storageServices);
@@ -1454,9 +1491,15 @@ inline void afterGetSubtreeSystemsStorageDrive(
     const dbus::utility::MapperServiceMap& connectionNames = drive->second;
 
     asyncResp->res.jsonValue["@odata.type"] = "#Drive.v1_7_0.Drive";
+<<<<<<< HEAD
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Drives/{}",
         driveId);
+=======
+    asyncResp->res.jsonValue["@odata.id"] =
+        boost::urls::format("/redfish/v1/Systems/{}/Storage/1/Drives/{}",
+                            BMCWEB_REDFISH_SYSTEM_URI_NAME, driveId);
+>>>>>>> master
     asyncResp->res.jsonValue["Name"] = driveId;
     asyncResp->res.jsonValue["Id"] = driveId;
 
@@ -1499,7 +1542,11 @@ inline void handleSystemsStorageDriveGet(
         return;
     }
 
+<<<<<<< HEAD
     if (systemName != PLATFORMSYSTEMID)
+=======
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -1939,9 +1986,15 @@ inline void populateStorageController(
 {
     asyncResp->res.jsonValue["@odata.type"] =
         "#StorageController.v1_6_0.StorageController";
+<<<<<<< HEAD
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Controllers/{}",
         controllerId);
+=======
+    asyncResp->res.jsonValue["@odata.id"] =
+        boost::urls::format("/redfish/v1/Systems/{}/Storage/1/Controllers/{}",
+                            BMCWEB_REDFISH_SYSTEM_URI_NAME, controllerId);
+>>>>>>> master
     asyncResp->res.jsonValue["Name"] = controllerId;
     asyncResp->res.jsonValue["Id"] = controllerId;
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -2038,8 +2091,13 @@ inline void populateStorageControllerCollection(
         }
         nlohmann::json::object_t member;
         member["@odata.id"] = boost::urls::format(
+<<<<<<< HEAD
             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Controllers/{}",
             id);
+=======
+            "/redfish/v1/Systems/{}/Storage/1/Controllers/{}",
+            BMCWEB_REDFISH_SYSTEM_URI_NAME, id);
+>>>>>>> master
         members.emplace_back(member);
     }
     asyncResp->res.jsonValue["Members@odata.count"] = members.size();
@@ -2057,7 +2115,11 @@ inline void handleSystemsStorageControllerCollectionGet(
             "Failed to setup Redfish Route for StorageController Collection");
         return;
     }
+<<<<<<< HEAD
     if (systemName != PLATFORMSYSTEMID)
+=======
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -2068,7 +2130,12 @@ inline void handleSystemsStorageControllerCollectionGet(
     asyncResp->res.jsonValue["@odata.type"] =
         "#StorageControllerCollection.StorageControllerCollection";
     asyncResp->res.jsonValue["@odata.id"] =
+<<<<<<< HEAD
         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/1/Controllers";
+=======
+        std::format("/redfish/v1/Systems/{}/Storage/1/Controllers",
+                    BMCWEB_REDFISH_SYSTEM_URI_NAME);
+>>>>>>> master
     asyncResp->res.jsonValue["Name"] = "Storage Controller Collection";
 
     constexpr std::array<std::string_view, 1> interfaces = {
@@ -2092,7 +2159,11 @@ inline void handleSystemsStorageControllerGet(
         BMCWEB_LOG_DEBUG("Failed to setup Redfish Route for StorageController");
         return;
     }
+<<<<<<< HEAD
     if (systemName != PLATFORMSYSTEMID)
+=======
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
+>>>>>>> master
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);

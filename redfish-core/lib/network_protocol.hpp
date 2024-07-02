@@ -18,7 +18,6 @@
 #include "app.hpp"
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
-#include "openbmc_dbus_rest.hpp"
 #include "query.hpp"
 #include "redfish_util.hpp"
 #include "registries/privilege_registry.hpp"
@@ -26,6 +25,7 @@
 #include "utils/stl_utils.hpp"
 
 #include <boost/system/error_code.hpp>
+#include <boost/url/format.hpp>
 #include <sdbusplus/asio/property.hpp>
 
 #include <array>
@@ -171,7 +171,12 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["@odata.type"] =
         "#ManagerNetworkProtocol.v1_5_0.ManagerNetworkProtocol";
     asyncResp->res.jsonValue["@odata.id"] =
+<<<<<<< HEAD
         "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol";
+=======
+        boost::urls::format("/redfish/v1/Managers/{}/NetworkProtocol",
+                            BMCWEB_REDFISH_MANAGER_URI_NAME);
+>>>>>>> master
     asyncResp->res.jsonValue["Id"] = "NetworkProtocol";
     asyncResp->res.jsonValue["Name"] = "Manager Network Protocol";
     asyncResp->res.jsonValue["Description"] = "Manager Network Service";
@@ -260,8 +265,14 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                          effectiveUserPrivileges))
     {
         asyncResp->res.jsonValue["HTTPS"]["Certificates"]["@odata.id"] =
+<<<<<<< HEAD
             "/redfish/v1/Managers/" PLATFORMBMCID
             "/NetworkProtocol/HTTPS/Certificates";
+=======
+            boost::urls::format(
+                "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates",
+                BMCWEB_REDFISH_MANAGER_URI_NAME);
+>>>>>>> master
     }
 #endif
 
@@ -397,8 +408,8 @@ inline void
                         continue;
                     }
 
-                    setDbusProperty(asyncResp, service, objectPath, interface,
-                                    "StaticNTPServers", "NTP/NTPServers/",
+                    setDbusProperty(asyncResp, "NTP/NTPServers/", service,
+                                    objectPath, interface, "StaticNTPServers",
                                     currentNtpServers);
                 }
             }
@@ -429,13 +440,15 @@ inline void
             if (entry.first.starts_with(netBasePath))
             {
                 setDbusProperty(
-                    asyncResp, entry.second.begin()->first, entry.first,
+                    asyncResp, "IPMI/ProtocolEnabled",
+                    entry.second.begin()->first, entry.first,
                     "xyz.openbmc_project.Control.Service.Attributes", "Running",
-                    "IPMI/ProtocolEnabled", protocolEnabled);
+                    protocolEnabled);
                 setDbusProperty(
-                    asyncResp, entry.second.begin()->first, entry.first,
+                    asyncResp, "IPMI/ProtocolEnabled",
+                    entry.second.begin()->first, entry.first,
                     "xyz.openbmc_project.Control.Service.Attributes", "Enabled",
-                    "IPMI/ProtocolEnabled", protocolEnabled);
+                    protocolEnabled);
             }
         }
     });
@@ -494,12 +507,20 @@ inline void handleBmcNetworkProtocolHead(
 
 inline void handleManagersNetworkProtocolPatch(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
+
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
     std::optional<std::string> newHostName;
 
     std::optional<std::vector<IpAddress>> ntpServerObjects;
@@ -574,7 +595,8 @@ inline void handleManagersNetworkProtocolPatch(
 
 inline void handleManagersNetworkProtocolHead(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -583,29 +605,59 @@ inline void handleManagersNetworkProtocolHead(
     asyncResp->res.addHeader(
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/ManagerNetworkProtocol.json>; rel=describedby");
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
 }
 
 inline void handleManagersNetworkProtocolGet(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId)
 {
-    handleManagersNetworkProtocolHead(app, req, asyncResp);
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.addHeader(
+        boost::beast::http::field::link,
+        "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/ManagerNetworkProtocol.json>; rel=describedby");
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+{
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
     getNetworkData(asyncResp, req);
 }
 
 inline void requestRoutesNetworkProtocol(App& app)
 {
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
+=======
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/NetworkProtocol/")
+>>>>>>> master
         .privileges(redfish::privileges::patchManagerNetworkProtocol)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleManagersNetworkProtocolPatch, std::ref(app)));
 
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
+=======
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/NetworkProtocol/")
+>>>>>>> master
         .privileges(redfish::privileges::headManagerNetworkProtocol)
         .methods(boost::beast::http::verb::head)(
             std::bind_front(handleManagersNetworkProtocolHead, std::ref(app)));
 
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
+=======
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/NetworkProtocol/")
+>>>>>>> master
         .privileges(redfish::privileges::getManagerNetworkProtocol)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleManagersNetworkProtocolGet, std::ref(app)));

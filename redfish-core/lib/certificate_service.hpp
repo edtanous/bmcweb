@@ -250,7 +250,11 @@ static void
             {
                 certURL = boost::urls::format(
                     "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",
+<<<<<<< HEAD
                     PLATFORMBMCID, certId);
+=======
+                    BMCWEB_REDFISH_MANAGER_URI_NAME, certId);
+>>>>>>> master
             }
             else if (objPath.parent_path() == certs::ldapObjectPath)
             {
@@ -261,7 +265,11 @@ static void
             {
                 certURL = boost::urls::format(
                     "/redfish/v1/Managers/{}/Truststore/Certificates/{}",
+<<<<<<< HEAD
                     PLATFORMBMCID, certId);
+=======
+                    BMCWEB_REDFISH_MANAGER_URI_NAME, certId);
+>>>>>>> master
             }
             else
             {
@@ -672,8 +680,14 @@ inline void
 
     std::string objectPath;
     std::string service;
+<<<<<<< HEAD
     if (certURI.starts_with("/redfish/v1/Managers/" PLATFORMBMCID
                             "/NetworkProtocol/HTTPS/Certificates"))
+=======
+    if (certURI.starts_with(std::format(
+            "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates",
+            BMCWEB_REDFISH_MANAGER_URI_NAME)))
+>>>>>>> master
     {
         objectPath = certs::httpsObjectPath;
         service = certs::httpsServiceName;
@@ -708,8 +722,14 @@ inline void
     }
 
     // validate KeyUsage supporting only 1 type based on URL
+<<<<<<< HEAD
     if (certURI.starts_with("/redfish/v1/Managers/" PLATFORMBMCID
                             "/NetworkProtocol/HTTPS/Certificates"))
+=======
+    if (certURI.starts_with(std::format(
+            "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates",
+            BMCWEB_REDFISH_MANAGER_URI_NAME)))
+>>>>>>> master
     {
         if (optKeyUsage->empty())
         {
@@ -870,16 +890,29 @@ inline void requestRoutesCertificateService(App& app)
 
 inline void handleHTTPSCertificateCollectionGet(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
 
+<<<<<<< HEAD
     asyncResp->res.jsonValue["@odata.id"] =
         "/redfish/v1/Managers/" PLATFORMBMCID
         "/NetworkProtocol/HTTPS/Certificates";
+=======
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
+    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates",
+        BMCWEB_REDFISH_MANAGER_URI_NAME);
+>>>>>>> master
     asyncResp->res.jsonValue["@odata.type"] =
         "#CertificateCollection.CertificateCollection";
     asyncResp->res.jsonValue["Name"] = "HTTPS Certificates Collection";
@@ -893,12 +926,20 @@ inline void handleHTTPSCertificateCollectionGet(
 
 inline void handleHTTPSCertificateCollectionPost(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
+
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
     BMCWEB_LOG_DEBUG("HTTPSCertificateCollection::doPost");
 
     asyncResp->res.jsonValue["Name"] = "HTTPS Certificate";
@@ -931,7 +972,11 @@ inline void handleHTTPSCertificateCollectionPost(
 
         const boost::urls::url certURL = boost::urls::format(
             "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",
+<<<<<<< HEAD
             PLATFORMBMCID, certId);
+=======
+            BMCWEB_REDFISH_MANAGER_URI_NAME, certId);
+>>>>>>> master
         getCertificateProperties(asyncResp, objectPath, certs::httpsServiceName,
                                  certId, certURL, "HTTPS Certificate");
         BMCWEB_LOG_DEBUG("HTTPS certificate install file={}",
@@ -943,39 +988,66 @@ inline void handleHTTPSCertificateCollectionPost(
 
 inline void handleHTTPSCertificateGet(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId, const std::string& certId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
 
-    BMCWEB_LOG_DEBUG("HTTPS Certificate ID={}", id);
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
+    BMCWEB_LOG_DEBUG("HTTPS Certificate ID={}", certId);
     const boost::urls::url certURL = boost::urls::format(
         "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates/{}",
+<<<<<<< HEAD
         PLATFORMBMCID, id);
+=======
+        BMCWEB_REDFISH_MANAGER_URI_NAME, certId);
+>>>>>>> master
     std::string objPath =
-        sdbusplus::message::object_path(certs::httpsObjectPath) / id;
-    getCertificateProperties(asyncResp, objPath, certs::httpsServiceName, id,
-                             certURL, "HTTPS Certificate");
+        sdbusplus::message::object_path(certs::httpsObjectPath) / certId;
+    getCertificateProperties(asyncResp, objPath, certs::httpsServiceName,
+                             certId, certURL, "HTTPS Certificate");
 }
 
 inline void requestRoutesHTTPSCertificate(App& app)
 {
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/NetworkProtocol/HTTPS/Certificates/")
+=======
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Managers/<str>/NetworkProtocol/HTTPS/Certificates/")
+>>>>>>> master
         .privileges(redfish::privileges::getCertificateCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleHTTPSCertificateCollectionGet, std::ref(app)));
 
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/NetworkProtocol/HTTPS/Certificates/")
+=======
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Managers/<str>/NetworkProtocol/HTTPS/Certificates/")
+>>>>>>> master
         .privileges(redfish::privileges::postCertificateCollection)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleHTTPSCertificateCollectionPost, std::ref(app)));
 
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/NetworkProtocol/HTTPS/Certificates/<str>/")
+=======
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Managers/<str>/NetworkProtocol/HTTPS/Certificates/<str>/")
+>>>>>>> master
         .privileges(redfish::privileges::getCertificate)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleHTTPSCertificateGet, std::ref(app)));
@@ -1105,15 +1177,27 @@ inline void requestRoutesLDAPCertificate(App& app)
 
 inline void handleTrustStoreCertificateCollectionGet(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
 
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
     asyncResp->res.jsonValue["@odata.id"] =
+<<<<<<< HEAD
         "/redfish/v1/Managers/" PLATFORMBMCID "/Truststore/Certificates/";
+=======
+        boost::urls::format("/redfish/v1/Managers/{}/Truststore/Certificates/",
+                            BMCWEB_REDFISH_MANAGER_URI_NAME);
+>>>>>>> master
     asyncResp->res.jsonValue["@odata.type"] =
         "#CertificateCollection.CertificateCollection";
     asyncResp->res.jsonValue["Name"] = "TrustStore Certificates Collection";
@@ -1127,12 +1211,20 @@ inline void handleTrustStoreCertificateCollectionGet(
 
 inline void handleTrustStoreCertificateCollectionPost(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
+
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
     std::string certHttpBody = getCertificateFromReqBody(asyncResp, req);
 
     if (certHttpBody.empty())
@@ -1157,8 +1249,13 @@ inline void handleTrustStoreCertificateCollectionPost(
         sdbusplus::message::object_path path(objectPath);
         std::string certId = path.filename();
         const boost::urls::url certURL = boost::urls::format(
+<<<<<<< HEAD
             "/redfish/v1/Managers/{}/Truststore/Certificates/{}", PLATFORMBMCID,
             certId);
+=======
+            "/redfish/v1/Managers/{}/Truststore/Certificates/{}",
+            BMCWEB_REDFISH_MANAGER_URI_NAME, certId);
+>>>>>>> master
         getCertificateProperties(asyncResp, objectPath,
                                  certs::authorityServiceName, certId, certURL,
                                  "TrustStore Certificate");
@@ -1171,61 +1268,98 @@ inline void handleTrustStoreCertificateCollectionPost(
 
 inline void handleTrustStoreCertificateGet(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId, const std::string& certId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
 
-    BMCWEB_LOG_DEBUG("Truststore Certificate ID={}", id);
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
+    BMCWEB_LOG_DEBUG("Truststore Certificate ID={}", certId);
     const boost::urls::url certURL = boost::urls::format(
+<<<<<<< HEAD
         "/redfish/v1/Managers/{}/Truststore/Certificates/{}", PLATFORMBMCID,
         id);
+=======
+        "/redfish/v1/Managers/{}/Truststore/Certificates/{}",
+        BMCWEB_REDFISH_MANAGER_URI_NAME, certId);
+>>>>>>> master
     std::string objPath =
-        sdbusplus::message::object_path(certs::authorityObjectPath) / id;
+        sdbusplus::message::object_path(certs::authorityObjectPath) / certId;
     getCertificateProperties(asyncResp, objPath, certs::authorityServiceName,
-                             id, certURL, "TrustStore Certificate");
+                             certId, certURL, "TrustStore Certificate");
 }
 
 inline void handleTrustStoreCertificateDelete(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& managerId, const std::string& certId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
         return;
     }
 
-    BMCWEB_LOG_DEBUG("Delete TrustStore Certificate ID={}", id);
+    if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
+    {
+        messages::resourceNotFound(asyncResp->res, "Manager", managerId);
+        return;
+    }
+
+    BMCWEB_LOG_DEBUG("Delete TrustStore Certificate ID={}", certId);
     std::string objPath =
-        sdbusplus::message::object_path(certs::authorityObjectPath) / id;
+        sdbusplus::message::object_path(certs::authorityObjectPath) / certId;
 
     deleteCertificate(asyncResp, certs::authorityServiceName, objPath);
 }
 
 inline void requestRoutesTrustStoreCertificate(App& app)
 {
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/Truststore/Certificates/")
+=======
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/Truststore/Certificates/")
+>>>>>>> master
         .privileges(redfish::privileges::getCertificate)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleTrustStoreCertificateCollectionGet, std::ref(app)));
 
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/Truststore/Certificates/")
+=======
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/Truststore/Certificates/")
+>>>>>>> master
         .privileges(redfish::privileges::postCertificateCollection)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleTrustStoreCertificateCollectionPost, std::ref(app)));
 
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/Truststore/Certificates/<str>/")
+=======
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/<str>/Truststore/Certificates/<str>/")
+>>>>>>> master
         .privileges(redfish::privileges::getCertificate)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleTrustStoreCertificateGet, std::ref(app)));
 
+<<<<<<< HEAD
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
                       "/Truststore/Certificates/<str>/")
+=======
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/<str>/Truststore/Certificates/<str>/")
+>>>>>>> master
         .privileges(redfish::privileges::deleteCertificate)
         .methods(boost::beast::http::verb::delete_)(
             std::bind_front(handleTrustStoreCertificateDelete, std::ref(app)));
