@@ -2707,6 +2707,20 @@ inline static bool validSubpath([[maybe_unused]] const std::string& objPath,
 {
     return false;
 }
+
+inline static bool relatedItemAlreadyPresent(const nlohmann::json& relatedItem,
+                                 const std::string& itemPath)
+{
+    for (const auto& obj: relatedItem)
+    {
+        if (obj.contains("@odata.id") && obj["@odata.id"] == itemPath)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 inline static void
     getRelatedItemsDrive(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const sdbusplus::message::object_path& objPath)
@@ -3040,9 +3054,12 @@ inline static void
                     interfaces == "xyz.openbmc_project.Inventory."
                                   "Item.Chassis")
                 {
-                    relatedItem.push_back(
-                        {{"@odata.id",
-                          "/redfish/v1/Chassis/" + association.filename()}});
+                    std::string itemPath = "/redfish/v1/Chassis/" +
+                                           association.filename();
+                    if (!relatedItemAlreadyPresent(relatedItem, itemPath))
+                    {
+                        relatedItem.push_back({{"@odata.id", itemPath}});
+                    }
                 }
 
                 if (interfaces == "xyz.openbmc_project.Inventory."
