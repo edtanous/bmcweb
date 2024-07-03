@@ -465,7 +465,6 @@ static void
                     }
                     preTaskMessages = {};
                 }
-                fwUpdateInProgress = false;
                 activateImage(objPath.str, objInfo[0].first);
             });
             break;
@@ -477,12 +476,13 @@ inline void afterAvailbleTimerAsyncWait(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& imagePath, const boost::system::error_code& ec)
 {
-    cleanUp();
+    fwUpdateMatcher = nullptr;
     if (ec == boost::asio::error::operation_aborted)
     {
         // expected, we were canceled before the timer completed.
         return;
     }
+    fwUpdateInProgress = false;
     BMCWEB_LOG_ERROR("Timed out waiting for firmware object being created");
     BMCWEB_LOG_ERROR("FW image may has already been uploaded to server");
     if (ec)
