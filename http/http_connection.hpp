@@ -378,14 +378,6 @@ class Connection :
         if constexpr (IsTls<Adaptor>::value)
         {
             adaptor.next_layer().close();
-#ifdef BMCWEB_ENABLE_MUTUAL_TLS_AUTHENTICATION
-            if (persistent_data::getConfig().isTLSAuthEnabled() &&
-                userSession != nullptr)
-	    {
-		//do not remove user session
-                BMCWEB_LOG_DEBUG("Closing connection");
-	    }
-#else
             if (mtlsSession != nullptr)
             {
                 BMCWEB_LOG_DEBUG("{} Removing TLS session: {}", logPtr(this),
@@ -393,7 +385,6 @@ class Connection :
                 persistent_data::SessionStore::getInstance().removeSession(
                     mtlsSession);
             }
-#endif
         }
         else
         {
