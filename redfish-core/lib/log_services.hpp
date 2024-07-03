@@ -1401,6 +1401,15 @@ inline void
                     "/LogServices/Dump/Entries/" +
                     entryID + "/attachment";
             }
+            else if (dumpType == "FDR")
+            {
+                asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
+                asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
+                asyncResp->res.jsonValue["AdditionalDataURI"] =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                    "/LogServices/FDR/Entries/" +
+                    entryID + "/attachment";
+            }
             else if (dumpType == "FaultLog")
             {
                 asyncResp->res.jsonValue["DiagnosticDataType"] =
@@ -1409,6 +1418,18 @@ inline void
                     "/redfish/v1/Systems/" PLATFORMSYSTEMID
                     "/LogServices/FaultLog/Entries/" +
                     entryID + "/attachment";
+
+                std::string messageId = "Platform.1.0.PlatformError";
+                asyncResp->res.jsonValue["MessageId"] = messageId;
+
+                const registries::Message* msg = registries::getMessage(messageId);
+                if (msg != nullptr)
+                {
+                    asyncResp->res.jsonValue["Message"] = msg->message;
+                    asyncResp->res.jsonValue["Severity"] = msg->messageSeverity;
+                    asyncResp->res.jsonValue["Resolution"] = msg->resolution;
+                }
+
                 if (notificationType != "NA")
                 {
                     asyncResp->res.jsonValue["CPER"]["NotificationType"] =
@@ -1433,60 +1454,6 @@ inline void
                     asyncResp->res.jsonValue["CPER"]["Oem"]["NvIpSignature"] =
                         nvipSignature;
                 }
-                else if (dumpType == "FDR")
-                {
-                    asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
-                    asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
-                    asyncResp->res.jsonValue["AdditionalDataURI"] =
-                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                        "/LogServices/FDR/Entries/" +
-                        entryID + "/attachment";
-                }
-                else if (dumpType == "FaultLog")
-                {
-                    std::string messageId = "Platform.1.0.PlatformError";
-                    asyncResp->res.jsonValue["MessageId"] = messageId;
-
-                    const registries::Message* msg = registries::getMessage(messageId);
-                    if (msg != nullptr)
-                    {
-                        asyncResp->res.jsonValue["Message"] = msg->message;
-                        asyncResp->res.jsonValue["Severity"] = msg->messageSeverity;
-                        asyncResp->res.jsonValue["Resolution"] = msg->resolution;
-                    }
-
-                    asyncResp->res.jsonValue["DiagnosticDataType"] =
-                        faultLogDiagnosticDataType;
-                    asyncResp->res.jsonValue["AdditionalDataURI"] =
-                        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                        "/LogServices/FaultLog/Entries/" +
-                        entryID + "/attachment";
-                    if (notificationType != "NA")
-                    {
-                        asyncResp->res.jsonValue["CPER"]["NotificationType"] =
-                            notificationType;
-                    }
-                    if (sectionType != "NA")
-                    {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["SectionType"] =
-                            sectionType;
-                    }
-                    if (fruid != "NA")
-                    {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["FruID"] =
-                            fruid;
-                    }
-                    if (severity != "NA")
-                    {
-                        asyncResp->res.jsonValue["CPER"]["Oem"]["Severity"] =
-                            severity;
-                    }
-                    if (nvipSignature != "NA")
-                    {
-                        asyncResp->res
-                            .jsonValue["CPER"]["Oem"]["NvIpSignature"] =
-                            nvipSignature;
-                    }
                     if (nvSeverity != "NA")
                     {
                         asyncResp->res.jsonValue["CPER"]["Oem"]["NvSeverity"] =
@@ -1550,15 +1517,6 @@ inline void
                             .jsonValue["CPER"]["Oem"]["PCIeSlotNumber"] =
                             pcieSlotNumber;
                     }
-                }
-                else if (dumpType == "FDR")
-                {
-                    asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
-                    asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
-                    asyncResp->res.jsonValue["AdditionalDataURI"] = boost::urls::format(
-                        "/redfish/v1/Systems/{}/LogServices/FDR/Entries/{}/attachment",
-                        PLATFORMSYSTEMID, entryID);
-                }
             }
         }
 
