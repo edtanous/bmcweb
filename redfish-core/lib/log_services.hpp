@@ -23,6 +23,7 @@
 #include "gzfile.hpp"
 #include "http_utility.hpp"
 #include "human_sort.hpp"
+#include "nvidia_messages.hpp"
 #include "query.hpp"
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
@@ -7725,6 +7726,10 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     std::string stateDesc;
                     switch (state)
                     {
+                        case debug_token::EndpointState::DebugTokenUnsupported:
+                            task->messages.emplace_back(
+                                messages::debugTokenUnsupported(deviceName));
+                            break;
                         case debug_token::EndpointState::StatusAcquired:
                             task->messages.emplace_back(
                                 messages::debugTokenStatusSuccess(deviceName));

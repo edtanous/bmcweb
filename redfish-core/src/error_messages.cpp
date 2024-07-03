@@ -2093,40 +2093,6 @@ void unsupportedMediaType(crow::Response& res)
     addMessageToErrorJson(res.jsonValue, unsupportedMediaType());
 }
 
-/**
- * @brief Method to get error message from OpenBMC message registry
- *
- * @param[in] name - registry index
- * @param[in] args - argument
- * @return nlohmann::json
- */
-inline nlohmann::json getLogOpenBMC(redfish::registries::openbmc::Index name,
-                                    std::span<const std::string_view> args)
-{
-    size_t index = static_cast<size_t>(name);
-    if (index >= redfish::registries::openbmc::registry.size())
-    {
-        return {};
-    }
-    return getLogFromRegistry(redfish::registries::openbmc::header,
-                              redfish::registries::openbmc::registry, index,
-                              args);
-}
-
-nlohmann::json debugTokenRequestSuccess(const std::string& arg1)
-{
-    std::array<std::string_view, 1> args{arg1};
-    return getLogOpenBMC(
-        redfish::registries::openbmc::Index::debugTokenRequestSuccess, args);
-}
-
-nlohmann::json debugTokenStatusSuccess(const std::string& arg1)
-{
-    std::array<std::string_view, 1> args{arg1};
-    return getLogOpenBMC(
-        redfish::registries::openbmc::Index::debugTokenStatusSuccess, args);
-}
-
 } // namespace messages
 
 } // namespace redfish

@@ -14,6 +14,42 @@
             "Resolution": "None.",
             "Severity": "OK"
         },
+        "DebugTokenInstallationSuccess": {
+            "Description": "Signifies the successful completion of debug token installation.",
+            "Message": "The operation to install a debug token for device '%1' has been successfully completed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "DebugTokenRequestSuccess": {
+            "Description": "Signifies the successful completion of the debug token request.",
+            "Message": "The operation to request a debug token for device '%1' has been successfully completed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "DebugTokenStatusSuccess": {
+            "Description": "Signifies the successful completion of the debug token status request.",
+            "Message": "The operation to obtain a token status for device '%1' has been successfully completed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "DebugTokenUnsupported": {
+            "Description": "Indicates that the device does not support debug token functionality.",
+            "Message": "Device '%1' does not support debug token functionality.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": ["string"],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
         "RecoveryStarted": {
             "Description": "Indicates that recovery has started on a component",
             "Message": "Firmware Recovery Started on %1.",

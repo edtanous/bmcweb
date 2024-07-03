@@ -68,7 +68,8 @@ enum class EndpointState
     StatusAcquired,
     TokenInstalled,
     RequestAcquired,
-    Error
+    Error,
+    DebugTokenUnsupported
 };
 
 using DebugTokenEndpoint =
