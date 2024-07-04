@@ -235,7 +235,6 @@ inline int formatEventLogEntry(const std::string& logEntryID,
 
 } // namespace event_log
 
-<<<<<<< HEAD
 enum redfish_bool
 {
     redfishBoolNa, // NOT APPLICABLE
@@ -650,8 +649,6 @@ inline bool
     return true;
 }
 
-=======
->>>>>>> master
 class Subscription : public persistent_data::UserSubscription
 {
   public:

@@ -1863,13 +1863,9 @@ inline void parseInterfaceData(
 {
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
     jsonResponse["Id"] = ifaceId;
-<<<<<<< HEAD
-    jsonResponse["@odata.id"] = route + ifaceId;
-=======
     jsonResponse["@odata.id"] =
         boost::urls::format("/redfish/v1/Managers/{}/EthernetInterfaces/{}",
                             BMCWEB_REDFISH_MANAGER_URI_NAME, ifaceId);
->>>>>>> master
     jsonResponse["InterfaceEnabled"] = ethData.nicEnabled;
 
     if (ethData.nicEnabled)
@@ -2094,12 +2090,7 @@ inline bool verifyNames(const std::string& parent, const std::string& iface)
 
 inline void requestEthernetInterfacesRoutes(App& app)
 {
-<<<<<<< HEAD
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/")
-=======
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/EthernetInterfaces/")
->>>>>>> master
         .privileges(redfish::privileges::getEthernetInterfaceCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -2119,12 +2110,8 @@ inline void requestEthernetInterfacesRoutes(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#EthernetInterfaceCollection.EthernetInterfaceCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-<<<<<<< HEAD
-            "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces";
-=======
             boost::urls::format("/redfish/v1/Managers/{}/EthernetInterfaces",
                                 BMCWEB_REDFISH_MANAGER_URI_NAME);
->>>>>>> master
         asyncResp->res.jsonValue["Name"] =
             "Ethernet Network Interface Collection";
         asyncResp->res.jsonValue["Description"] =
@@ -2153,15 +2140,6 @@ inline void requestEthernetInterfacesRoutes(App& app)
                 }
 
             asyncResp->res.jsonValue["Members@odata.count"] = ifaceArray.size();
-<<<<<<< HEAD
-            asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces";
-        });
-    });
-
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/" PLATFORMBMCID "/EthernetInterfaces/")
-=======
             asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
                 "/redfish/v1/Managers/{}/EthernetInterfaces",
                 BMCWEB_REDFISH_MANAGER_URI_NAME);
@@ -2169,7 +2147,6 @@ inline void requestEthernetInterfacesRoutes(App& app)
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/EthernetInterfaces/")
->>>>>>> master
         .privileges(redfish::privileges::postEthernetInterfaceCollection)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -2260,12 +2237,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
             vlanId);
     });
 
-<<<<<<< HEAD
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/EthernetInterfaces/<str>")
-=======
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/EthernetInterfaces/<str>/")
->>>>>>> master
         .privileges(redfish::privileges::getEthernetInterface)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -2309,12 +2281,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
         });
     });
 
-<<<<<<< HEAD
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/EthernetInterfaces/<str>/")
-=======
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/EthernetInterfaces/<str>/")
->>>>>>> master
         .privileges(redfish::privileges::patchEthernetInterface)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
@@ -2467,28 +2434,19 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
             if (interfaceEnabled)
             {
-<<<<<<< HEAD
 #ifdef BMCWEB_NIC_CONFIGURATION_UPDATE
-                setDbusProperty(asyncResp, "xyz.openbmc_project.Network",
-=======
                 setDbusProperty(asyncResp, "InterfaceEnabled",
                                 "xyz.openbmc_project.Network",
->>>>>>> master
                                 sdbusplus::message::object_path(
                                     "/xyz/openbmc_project/network") /
                                     ifaceId,
                                 "xyz.openbmc_project.Network.EthernetInterface",
-<<<<<<< HEAD
-                                "NICEnabled", "InterfaceEnabled",
-                                *interfaceEnabled);
+                                "NICEnabled", *interfaceEnabled);
 #else
                 messages::propertyNotWritable(asyncResp->res,
                                               "InterfaceEnabled");
                 return;
 #endif
-=======
-                                "NICEnabled", *interfaceEnabled);
->>>>>>> master
             }
 
             if (mtuSize)
@@ -2498,12 +2456,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
         });
     });
     
-<<<<<<< HEAD
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/EthernetInterfaces/<str>/")
-=======
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/EthernetInterfaces/<str>/")
->>>>>>> master
         .privileges(redfish::privileges::deleteEthernetInterface)
         .methods(boost::beast::http::verb::delete_)(
             [&app](const crow::Request& req,

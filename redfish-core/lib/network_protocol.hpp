@@ -171,12 +171,8 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["@odata.type"] =
         "#ManagerNetworkProtocol.v1_5_0.ManagerNetworkProtocol";
     asyncResp->res.jsonValue["@odata.id"] =
-<<<<<<< HEAD
-        "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol";
-=======
         boost::urls::format("/redfish/v1/Managers/{}/NetworkProtocol",
                             BMCWEB_REDFISH_MANAGER_URI_NAME);
->>>>>>> master
     asyncResp->res.jsonValue["Id"] = "NetworkProtocol";
     asyncResp->res.jsonValue["Name"] = "Manager Network Protocol";
     asyncResp->res.jsonValue["Description"] = "Manager Network Service";
@@ -265,14 +261,9 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                                          effectiveUserPrivileges))
     {
         asyncResp->res.jsonValue["HTTPS"]["Certificates"]["@odata.id"] =
-<<<<<<< HEAD
-            "/redfish/v1/Managers/" PLATFORMBMCID
-            "/NetworkProtocol/HTTPS/Certificates";
-=======
             boost::urls::format(
                 "/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates",
                 BMCWEB_REDFISH_MANAGER_URI_NAME);
->>>>>>> master
     }
 #endif
 
@@ -635,29 +626,17 @@ inline void handleManagersNetworkProtocolGet(
 
 inline void requestRoutesNetworkProtocol(App& app)
 {
-<<<<<<< HEAD
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
-=======
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/NetworkProtocol/")
->>>>>>> master
         .privileges(redfish::privileges::patchManagerNetworkProtocol)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleManagersNetworkProtocolPatch, std::ref(app)));
 
-<<<<<<< HEAD
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
-=======
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/NetworkProtocol/")
->>>>>>> master
         .privileges(redfish::privileges::headManagerNetworkProtocol)
         .methods(boost::beast::http::verb::head)(
             std::bind_front(handleManagersNetworkProtocolHead, std::ref(app)));
 
-<<<<<<< HEAD
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID "/NetworkProtocol/")
-=======
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/NetworkProtocol/")
->>>>>>> master
         .privileges(redfish::privileges::getManagerNetworkProtocol)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleManagersNetworkProtocolGet, std::ref(app)));
