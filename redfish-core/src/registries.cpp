@@ -2,11 +2,7 @@
 
 #include "registries/base_message_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
-<<<<<<< HEAD
-#include "registries_selector.hpp"
-=======
 #include "registries/telemetry_message_registry.hpp"
->>>>>>> master
 #include "str_utility.hpp"
 
 #include <algorithm>
@@ -55,10 +51,6 @@ const Message* getMessage(std::string_view messageID)
     const std::string& messageKey = fields[3];
 
     // Find the right registry and check it for the MessageKey
-<<<<<<< HEAD
-    return getMessageFromRegistry(messageKey,
-                                  getRegistryFromPrefix(registryName));
-=======
     if (std::string(base::header.registryPrefix) == registryName)
     {
         return getMessageFromRegistry(
@@ -74,8 +66,28 @@ const Message* getMessage(std::string_view messageID)
         return getMessageFromRegistry(
             messageKey, std::span<const MessageEntry>(telemetry::registry));
     }
+    if (std::string(task_event::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(task_event::registry));
+    }
+    if (std::string(resource_event::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(resource_event::registry));
+    }
+    if (std::string(update::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(update::registry));
+    }
+    if (std::string(platform::header.registryPrefix) == registryName)
+    {
+        return getMessageFromRegistry(
+            messageKey, std::span<const MessageEntry>(platform::registry));
+    }
+    
     return nullptr;
->>>>>>> master
 }
 
 } // namespace redfish::registries

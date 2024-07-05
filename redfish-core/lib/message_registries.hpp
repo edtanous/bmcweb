@@ -25,11 +25,7 @@
 #include "registries/privilege_registry.hpp"
 #include "registries/resource_event_message_registry.hpp"
 #include "registries/task_event_message_registry.hpp"
-<<<<<<< HEAD
-#include "registries/update_message_registry.hpp"
-=======
 #include "registries/telemetry_message_registry.hpp"
->>>>>>> master
 
 #include <boost/url/format.hpp>
 
@@ -53,32 +49,17 @@ inline void handleMessageRegistryFileCollectionGet(
     asyncResp->res.jsonValue["Name"] = "MessageRegistryFile Collection";
     asyncResp->res.jsonValue["Description"] =
         "Collection of MessageRegistryFiles";
-<<<<<<< HEAD
-    asyncResp->res.jsonValue["Members"] = {
-        {{"@odata.id", "/redfish/v1/Registries/Base"}},
-        {{"@odata.id", "/redfish/v1/Registries/TaskEvent"}},
-        {{"@odata.id", "/redfish/v1/Registries/ResourceEvent"}},
-        {{"@odata.id", "/redfish/v1/Registries/OpenBMC"}},
-        {{"@odata.id", "/redfish/v1/Registries/Platform"}},
-#ifdef BMCWEB_ENABLE_BIOS
-        {{"@odata.id", "/redfish/v1/Registries/BiosAttributeRegistry"}},
-#endif
-    };
-    asyncResp->res.jsonValue["Members@odata.count"] =
-        asyncResp->res.jsonValue["Members"].size();
-=======
-    asyncResp->res.jsonValue["Members@odata.count"] = 5;
+    asyncResp->res.jsonValue["Members@odata.count"] = 8;
 
     nlohmann::json& members = asyncResp->res.jsonValue["Members"];
     for (const char* memberName : std::to_array(
-             {"Base", "TaskEvent", "ResourceEvent", "OpenBMC", "Telemetry"}))
+             {"Base", "TaskEvent", "ResourceEvent", "OpenBMC", "Telemetry", "Platform", "Update", "BiosAttributeRegistry"}))
     {
         nlohmann::json::object_t member;
         member["@odata.id"] = boost::urls::format("/redfish/v1/Registries/{}",
                                                   memberName);
         members.emplace_back(std::move(member));
     }
->>>>>>> master
 }
 
 inline void requestRoutesMessageRegistryFileCollection(App& app)
@@ -125,7 +106,6 @@ inline void handleMessageRoutesMessageRegistryFileGet(
         header = &registries::resource_event::header;
         url = registries::resource_event::url;
     }
-<<<<<<< HEAD
     else if (registry == "Update" ||
              registry == "UpdateEvent")
     {
@@ -141,12 +121,10 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     {
         header = &registries::platform::header;
         url = registries::platform::url;
-=======
     else if (registry == "Telemetry")
     {
         header = &registries::telemetry::header;
         url = registries::telemetry::url;
->>>>>>> master
     }
     else
     {
@@ -246,7 +224,6 @@ inline void handleMessageRegistryGet(
             registryEntries.emplace_back(&entry);
         }
     }
-<<<<<<< HEAD
     else if (registry == "Update" ||
              registry == "UpdateEvent")
     {
@@ -261,13 +238,11 @@ inline void handleMessageRegistryGet(
     {
         header = &registries::bios::header;
         for (const registries::MessageEntry& entry : registries::bios::registry)
-=======
     else if (registry == "Telemetry")
     {
         header = &registries::telemetry::header;
         for (const registries::MessageEntry& entry :
              registries::telemetry::registry)
->>>>>>> master
         {
             registryEntries.emplace_back(&entry);
         }

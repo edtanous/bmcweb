@@ -15,11 +15,7 @@
 
 namespace redfish
 {
-<<<<<<< HEAD
     constexpr std::array<std::string_view,132> schemas {
-=======
-    constexpr std::array<std::string_view,112> schemas {
->>>>>>> master
         "AccountService",
         "ActionInfo",
         "AggregationService",
@@ -84,13 +80,6 @@ namespace redfish
         "MetricReportCollection",
         "MetricReportDefinition",
         "MetricReportDefinitionCollection",
-<<<<<<< HEAD
-=======
-        "OemComputerSystem",
-        "OemManager",
-        "OemVirtualMedia",
-        "OpenBMCAccountService",
->>>>>>> master
         "OperatingConfig",
         "OperatingConfigCollection",
         "PCIeDevice",
@@ -111,11 +100,6 @@ namespace redfish
         "ProcessorCollection",
         "ProcessorMetrics",
         "Protocol",
-<<<<<<< HEAD
-=======
-        "RedfishError",
-        "RedfishExtensions",
->>>>>>> master
         "Redundancy",
         "Resource",
         "Role",
@@ -155,7 +139,6 @@ namespace redfish
         "VLanNetworkInterfaceCollection",
         "VirtualMedia",
         "VirtualMediaCollection",
-<<<<<<< HEAD
         "odata",
         "odata-v4",
         "redfish-error",
@@ -165,7 +148,5 @@ namespace redfish
         "OemManager",
         "OemComputerSystem",
         "OemVirtualMedia",
-=======
->>>>>>> master
     };
 }
