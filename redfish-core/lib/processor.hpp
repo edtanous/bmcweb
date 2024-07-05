@@ -3958,80 +3958,115 @@ inline void
 
 inline void
     getStateSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                         const std::string& service, const std::string& objPath)
+                         const std::string& service, const std::string& path)
 {
-    crow::connections::systemBus->async_method_call(
+    // Get the Processors Associations to cover all processors' cases,
+    // to ensure the object has `all_processors` and go ahead.
+    sdbusplus::asio::getProperty<std::vector<std::tuple<std::string, std::string, std::string>>>(
+        *crow::connections::systemBus, service, path,
+        "xyz.openbmc_project.Association.Definitions", "Associations",
         [aResp, service,
-         objPath](const boost::system::error_code& e,
-                  std::variant<std::vector<std::string>>& resp) {
-        if (e)
+         path](const boost::system::error_code ec,
+               const std::vector<std::tuple<std::string, std::string, std::string>>& property) {
+        std::string objPath;
+        std::string redirectObjPath;
+
+	if (ec)
         {
-            // No state sensors attached.
+            BMCWEB_LOG_DEBUG("DBUS response error");
             return;
         }
-        std::vector<std::string>* data =
-            std::get_if<std::vector<std::string>>(&resp);
-        if (data == nullptr)
+
+        for (const auto& assoc : property)
         {
-            messages::internalError(aResp->res);
-            return;
+            if (std::get<1>(assoc) == "all_processors")
+            {
+                redirectObjPath = std::get<2>(assoc);
+            }
         }
-        for (const std::string& sensorPath : *data)
+        if (!redirectObjPath.empty())
         {
-            BMCWEB_LOG_DEBUG("State Sensor Object Path {}", sensorPath);
-
-            const std::array<const char*, 3> sensorInterfaces = {
-                "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
-                "xyz.openbmc_project.State.ProcessorPerformance",
-                "com.nvidia.MemorySpareChannel"};
-            // Process sensor reading
-            crow::connections::systemBus->async_method_call(
-                [aResp, sensorPath](
-                    const boost::system::error_code ec,
-                    const std::vector<std::pair<
-                        std::string, std::vector<std::string>>>& object) {
-                if (ec)
-                {
-                    // The path does not implement any state interfaces.
-                    return;
-                }
-
-                for (const auto& [service, interfaces] : object)
-                {
-                    if (std::find(
-                            interfaces.begin(), interfaces.end(),
-                            "xyz.openbmc_project.State.ProcessorPerformance") !=
-                        interfaces.end())
-                    {
-                        getProcessorPerformanceData(aResp, service, sensorPath);
-                    }
-                    if (std::find(
-                            interfaces.begin(), interfaces.end(),
-                            "xyz.openbmc_project.State.Decorator.PowerSystemInputs") !=
-                        interfaces.end())
-                    {
-                        getPowerSystemInputsData(aResp, service, sensorPath);
-                    }
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "com.nvidia.MemorySpareChannel") !=
-                        interfaces.end())
-                    {
-                        getMemorySpareChannelPresenceData(aResp, service,
-                                                          sensorPath);
-                    }
-                }
-            },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
-                sensorInterfaces);
+            objPath = redirectObjPath;
+        }
+        else
+        {
+            objPath = path;
         }
 
-        getPowerBreakThrottle(aResp, service, objPath);
-    },
-        "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
+        crow::connections::systemBus->async_method_call(
+            [aResp, service,
+             objPath](const boost::system::error_code& e,
+                      std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                // No state sensors attached.
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const std::string& sensorPath : *data)
+            {
+                BMCWEB_LOG_DEBUG("State Sensor Object Path {}", sensorPath);
+
+                const std::array<const char*, 3> sensorInterfaces = {
+                    "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
+                    "xyz.openbmc_project.State.ProcessorPerformance",
+                    "com.nvidia.MemorySpareChannel"};
+                // Process sensor reading
+                crow::connections::systemBus->async_method_call(
+                    [aResp, sensorPath](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                    if (ec)
+                    {
+                        // The path does not implement any state interfaces.
+                        return;
+                    }
+
+                    for (const auto& [service, interfaces] : object)
+                    {
+                        if (std::find(
+                                interfaces.begin(), interfaces.end(),
+                                "xyz.openbmc_project.State.ProcessorPerformance") !=
+                            interfaces.end())
+                        {
+                            getProcessorPerformanceData(aResp, service, sensorPath);
+                        }
+                        if (std::find(
+                                interfaces.begin(), interfaces.end(),
+                                "xyz.openbmc_project.State.Decorator.PowerSystemInputs") !=
+                            interfaces.end())
+                        {
+                            getPowerSystemInputsData(aResp, service, sensorPath);
+                        }
+                        if (std::find(interfaces.begin(), interfaces.end(),
+                                      "com.nvidia.MemorySpareChannel") !=
+                            interfaces.end())
+                        {
+                            getMemorySpareChannelPresenceData(aResp, service,
+                                                              sensorPath);
+                        }
+                    }
+                },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                    sensorInterfaces);
+            }
+
+            getPowerBreakThrottle(aResp, service, objPath);
+        },
+            "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    });
 }
 
 inline void
