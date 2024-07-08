@@ -2047,19 +2047,19 @@ inline void requestRoutesPort(App& app)
                                         "GetObject", objectPathToGetPortData,
                                         std::array<std::string, 1>(
                                             {"xyz.openbmc_project.Inventory.Item.Port"}));
+
+                                    updateProcessorPortLinks(
+                                        asyncResp, portPath, fabricId);
+                                    updateNetworkAdapterPortLinks(asyncResp,
+                                                                  portPath);
+                                    updateSwitchPortLinks(asyncResp, portPath,
+                                                          fabricId);
                                 },
                                     "xyz.openbmc_project.ObjectMapper",
                                     portPath + "/associated_port",
                                     "org.freedesktop.DBus.Properties", "Get",
                                     "xyz.openbmc_project.Association",
                                     "endpoints");
-
-                                updateProcessorPortLinks(asyncResp, portPath,
-                                                         fabricId);
-                                updateNetworkAdapterPortLinks(asyncResp,
-                                                              portPath);
-                                updateSwitchPortLinks(asyncResp, portPath,
-                                                      fabricId);
                                 return;
                             }
                             // Couldn't find an object with that
