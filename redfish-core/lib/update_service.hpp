@@ -2113,6 +2113,14 @@ inline void requestRoutesUpdateService(App& app)
             {"target",
              "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys"}};
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        asyncResp->res.jsonValue["Oem"]["Nvidia"] = {
+            {"@odata.type", "#NvidiaUpdateService.v1_0_0.NvidiaUpdateService"},
+            {"PersistentStorage",
+             {{"@odata.id",
+               "/redfish/v1/UpdateService/Oem/Nvidia/PersistentStorage"}}}};
+#endif
+
 #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
     defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)           ||                  \
     defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
