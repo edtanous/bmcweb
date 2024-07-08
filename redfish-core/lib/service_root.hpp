@@ -131,8 +131,7 @@ inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
             // Ignore any objects which don't end with our desired bmcid
             if (!boost::ends_with(objectPath, PLATFORMBMCID))
             {
-                BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
-                return;
+                continue;
             }
 
             bool found = false;
