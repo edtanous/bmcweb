@@ -1025,7 +1025,8 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
 }
 
-// ToDo: get ChassisID vs. getMainChassisId
+// The getMainChassisId() would get the Main Chassis ID but it's not suitable for the case of Drives under sub-chassis
+// Need to ensure this Chassis includes the drive endpoints
 inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::string& driveId)
 {
@@ -1467,12 +1468,7 @@ inline void afterGetSubtreeSystemsStorageDrive(
         return;
     }
 
-    getMainChassisId(asyncResp,
-                     [](const std::string& chassisId,
-                        const std::shared_ptr<bmcweb::AsyncResp>& aRsp) {
-        aRsp->res.jsonValue["Links"]["Chassis"]["@odata.id"] =
-            boost::urls::format("/redfish/v1/Chassis/{}", chassisId);
-    });
+    getChassisID(asyncResp, driveId);
 
     // default it to Enabled
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
