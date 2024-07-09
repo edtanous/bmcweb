@@ -18,18 +18,19 @@
 
 #include "component_integrity.hpp"
 #include "dbus_utility.hpp"
+#include "debug_token_utility.hpp"
 #include "openbmc_dbus_rest.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/mctp_utils.hpp"
 
 #include <boost/asio.hpp>
-#include <boost/interprocess/streams/bufferstream.hpp>
 #include <boost/process.hpp>
 #include <boost/process/async.hpp>
 #include <boost/process/child.hpp>
 
 #include <functional>
 #include <memory>
+#include <sstream>
 #include <variant>
 #include <vector>
 
@@ -70,8 +71,6 @@ constexpr const int targetedOpTimeoutSeconds = 2;
 // mctp-vdm-util's output size per endpoint
 constexpr const size_t statusQueryOutputSize = 256;
 constexpr const int statusQueryTimeoutSeconds = 60;
-constexpr const size_t statusQueryResponseLength = 19;
-constexpr const size_t statusQueryDebugTokenStatusOctet = 9;
 
 enum class EndpointState
 {
@@ -85,7 +84,7 @@ enum class EndpointState
 
 using DebugTokenEndpoint =
     std::tuple<mctp_utils::MctpEndpoint, /* endpoint data */
-               std::string /* status data */,
+               std::unique_ptr<VdmTokenStatus> /* status data */,
                std::vector<uint8_t> /* request data */, EndpointState>;
 using ResultCallback = std::function<void(
     const std::shared_ptr<std::vector<DebugTokenEndpoint>>&)>;
@@ -145,8 +144,8 @@ class StatusQueryHandler : public OperationHandler
                         msgTypes.end())
                     {
                         endpoints->emplace_back(std::make_tuple(
-                            std::move(ep), std::string(),
-                            std::vector<uint8_t>(), EndpointState::None));
+                            std::move(ep), nullptr, std::vector<uint8_t>(),
+                            EndpointState::None));
                     }
                 }
                 endpoints->shrink_to_fit();
@@ -179,17 +178,27 @@ class StatusQueryHandler : public OperationHandler
     {
         if (endpoints)
         {
-            std::ostringstream output;
+            nlohmann::json statusOutput;
+            auto statusArray = nlohmann::json::array();
             for (const auto& ep : *endpoints)
             {
+                const auto& mctpEp = std::get<0>(ep);
                 const auto& status = std::get<1>(ep);
                 const auto& state = std::get<3>(ep);
-                if (state == EndpointState::StatusAcquired)
+                if (state != EndpointState::StatusAcquired &&
+                    state != EndpointState::TokenInstalled)
                 {
-                    output << status << std::endl;
+                    continue;
                 }
+                nlohmann::json epOutput;
+                std::filesystem::path path(mctpEp.getSpdmObject());
+                epOutput["@odata.id"] = std::string("/redfish/v1/Chassis/") +
+                                        std::string(path.filename());
+                vdmTokenStatusToJson(*status, epOutput);
+                statusArray.push_back(std::move(epOutput));
             }
-            result = output.str();
+            statusOutput["DebugTokenStatus"] = std::move(statusArray);
+            result = statusOutput.dump(4);
         }
     }
 
@@ -216,58 +225,67 @@ class StatusQueryHandler : public OperationHandler
             // error messages
             BMCWEB_LOG_ERROR("{}: {}", desc, exitCode);
         }
-        boost::interprocess::bufferstream outputStream(subprocessOutput.data(),
-                                                       subprocessOutput.size());
-        std::string line, rxLine, txLine;
-        int currentEid = -1;
-        while (std::getline(outputStream, line))
+        std::map<int, VdmTokenStatus> outputMap =
+            parseVdmUtilWrapperOutput(subprocessOutput);
+        for (const auto& [eid, vdmStatus] : outputMap)
         {
-            if (line.rfind("teid = ", 0) == 0)
+            // report errors if found
+            if (vdmStatus.responseStatus == VdmResponseStatus::INVALID_LENGTH ||
+                vdmStatus.responseStatus == VdmResponseStatus::PROCESSING_ERROR)
             {
-                if (currentEid != -1)
-                {
-                    errCallback(false, desc,
-                                "No RX data for EID " +
-                                    std::to_string(currentEid));
-                }
-                currentEid = std::stoi(line.substr(7));
-                rxLine.clear();
-                txLine.clear();
+                errCallback(false, desc,
+                            "Invalid status query data for EID " +
+                                std::to_string(eid));
             }
-            if (currentEid != -1 && line.rfind("RX: ", 0) == 0)
+            else if (vdmStatus.responseStatus == VdmResponseStatus::ERROR)
             {
-                rxLine = line.substr(4);
+                errCallback(false, desc,
+                            "Error code received for EID " +
+                                std::to_string(eid) + ": " +
+                                std::to_string(*vdmStatus.errorCode));
             }
-            if (currentEid != -1 && line.rfind("TX: ", 0) == 0)
+            else if (vdmStatus.tokenStatus ==
+                     VdmTokenInstallationStatus::INVALID)
             {
-                txLine = line.substr(4);
+                errCallback(false, desc,
+                            "Invalid token status for EID " +
+                                std::to_string(eid));
             }
-            if (currentEid != -1 && !rxLine.empty() && !txLine.empty())
+            auto ep = std::find_if(endpoints->begin(), endpoints->end(),
+                                   [eid](const auto& ep) {
+                const auto& mctpEp = std::get<0>(ep);
+                return mctpEp.getMctpEid() == eid;
+            });
+            if (ep == endpoints->end())
             {
-                BMCWEB_LOG_DEBUG("{} RX: {}", currentEid, rxLine);
-                BMCWEB_LOG_DEBUG("{} TX: {}", currentEid, txLine);
-                if (rxLine.size() > txLine.size())
-                {
-                    auto ep = std::find_if(endpoints->begin(), endpoints->end(),
-                                           [currentEid](const auto& ep) {
-                        const auto& mctpEp = std::get<0>(ep);
-                        return mctpEp.getMctpEid() == currentEid;
-                    });
-                    if (ep != endpoints->end())
-                    {
-                        auto& status = std::get<1>(*ep);
-                        auto& state = std::get<3>(*ep);
-                        status = rxLine;
-                        state = EndpointState::StatusAcquired;
-                    }
-                }
-                else
-                {
-                    errCallback(false, desc,
-                                "RX data too short for EID " +
-                                    std::to_string(currentEid));
-                }
-                currentEid = -1;
+                continue;
+            }
+            auto& status = std::get<1>(*ep);
+            auto& state = std::get<3>(*ep);
+            status = std::make_unique<VdmTokenStatus>(vdmStatus);
+            if (status->responseStatus == VdmResponseStatus::INVALID_LENGTH ||
+                status->responseStatus == VdmResponseStatus::PROCESSING_ERROR ||
+                status->responseStatus == VdmResponseStatus::ERROR ||
+                status->tokenStatus == VdmTokenInstallationStatus::INVALID)
+            {
+                state = EndpointState::Error;
+                continue;
+            }
+            if (status->responseStatus == VdmResponseStatus::NOT_SUPPORTED)
+            {
+                state = EndpointState::DebugTokenUnsupported;
+                continue;
+            }
+            if (status->tokenStatus ==
+                VdmTokenInstallationStatus::NOT_INSTALLED)
+            {
+                state = EndpointState::StatusAcquired;
+                continue;
+            }
+            if (status->tokenStatus == VdmTokenInstallationStatus::INSTALLED)
+            {
+                state = EndpointState::TokenInstalled;
+                continue;
             }
         }
         resCallback(endpoints);
@@ -293,28 +311,25 @@ class StatusQueryHandler : public OperationHandler
             }
         });
 
-        std::ostringstream vdmCalls;
+        std::vector<std::string> args;
         for (const auto& endpoint : *endpoints)
         {
             const auto& mctpEp = std::get<0>(endpoint);
             const auto& mctpEid = mctpEp.getMctpEid();
             if (mctpEid != -1)
             {
-                vdmCalls << "mctp-vdm-util -c debug_token_query -t "
-                         << std::to_string(mctpEid) << ";";
+                args.emplace_back(std::to_string(mctpEid));
             }
         }
-
-        BMCWEB_LOG_DEBUG("/bin/sh -c '{}'", vdmCalls.str());
-        std::vector<std::string> args = {"-c", vdmCalls.str()};
         try
         {
-            subprocessOutput.resize(statusQueryOutputSize * endpoints->size());
+            subprocessOutput.resize(statusQueryOutputSize * args.size());
             auto callback = [this](int exitCode, const std::error_code& ec) {
                 subprocessExitCallback(exitCode, ec);
             };
             subprocess = std::make_unique<boost::process::child>(
-                "/bin/sh", args, boost::process::std_err > boost::process::null,
+                "/usr/bin/mctp-vdm-util-token-status-query-wrapper.sh", args,
+                boost::process::std_err > boost::process::null,
                 boost::process::std_out > boost::asio::buffer(subprocessOutput),
                 crow::connections::systemBus->get_io_context(),
                 boost::process::on_exit = std::move(callback));
@@ -383,47 +398,31 @@ class RequestHandler : public OperationHandler
             for (auto& endpoint : *endpoints)
             {
                 const auto& mctpEp = std::get<0>(endpoint);
-                const auto& status = std::get<1>(endpoint);
                 const auto& state = std::get<3>(endpoint);
                 const auto& spdmObject = mctpEp.getSpdmObject();
                 const std::string desc = "SPDM refresh call for " + spdmObject;
                 BMCWEB_LOG_DEBUG("{}", desc);
                 if (spdmObject.empty() ||
-                    state != EndpointState::StatusAcquired || status.empty())
+                    state != EndpointState::StatusAcquired)
                 {
-                    errCallback(false, desc, "invalid endpoint state");
                     continue;
                 }
-                std::istringstream iss(status);
-                std::vector<std::string> tokens{
-                    std::istream_iterator<std::string>{iss},
-                    std::istream_iterator<std::string>{}};
-                if (tokens.size() == statusQueryResponseLength &&
-                    tokens[statusQueryDebugTokenStatusOctet] ==
-                        std::string("00"))
-                {
-                    crow::connections::systemBus->async_method_call(
-                        [this, desc,
-                         &endpoint](const boost::system::error_code ec) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
-                            errCallback(false, desc, ec.message());
-                            auto& state = std::get<3>(endpoint);
-                            state = EndpointState::Error;
-                            finalize();
-                        }
-                    },
-                        spdmBusName, spdmObject, spdmResponderIntf, "Refresh",
-                        static_cast<uint8_t>(0), std::vector<uint8_t>(),
-                        indices, static_cast<uint32_t>(0));
-                    refreshIssued = true;
-                }
-                else
-                {
-                    auto& state = std::get<3>(endpoint);
-                    state = EndpointState::TokenInstalled;
-                }
+                crow::connections::systemBus->async_method_call(
+                    [this, desc,
+                     &endpoint](const boost::system::error_code ec) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
+                        errCallback(false, desc, ec.message());
+                        auto& state = std::get<3>(endpoint);
+                        state = EndpointState::Error;
+                        finalize();
+                    }
+                },
+                    spdmBusName, spdmObject, spdmResponderIntf, "Refresh",
+                    static_cast<uint8_t>(0), std::vector<uint8_t>(), indices,
+                    static_cast<uint32_t>(0));
+                refreshIssued = true;
             }
             if (!refreshIssued)
             {
