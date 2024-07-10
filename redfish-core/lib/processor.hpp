@@ -5715,6 +5715,19 @@ inline void getProcessorPortMetricsData(
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["TXNoProtocolBytes"] =
                     *value;
             }
+            else if (property.first == "BitErrorRate")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for bit error rate");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["BitErrorRate"] =
+                    *value;
+            }
             else if (property.first == "DataCRCCount")
             {
                 const uint32_t* value = std::get_if<uint32_t>(&property.second);
