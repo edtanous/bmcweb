@@ -1625,7 +1625,7 @@ inline void
             json["SpeedLimitMHz"] = speed;
         }
 
-        if (turboProfile != nullptr)
+        if (turboProfile != nullptr && !turboProfile->empty())
         {
             nlohmann::json& turboArray = json["TurboProfile"];
             turboArray = nlohmann::json::array();
@@ -1638,7 +1638,8 @@ inline void
             }
         }
 
-        if (baseSpeedPrioritySettings != nullptr)
+        if (baseSpeedPrioritySettings != nullptr &&
+            !baseSpeedPrioritySettings->empty())
         {
             nlohmann::json& baseSpeedArray = json["BaseSpeedPrioritySettings"];
             baseSpeedArray = nlohmann::json::array();
