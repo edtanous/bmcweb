@@ -3768,7 +3768,7 @@ inline void requestRoutesSoftwareInventory(App& app)
                 if (!settingService.empty())
                 {
                     fw_util::getFwWriteProtectedStatus(asyncResp, swId,
-                                                       obj.second[0].first);
+                                                       settingService);
                 }
 
                 if (!versionService.empty())
