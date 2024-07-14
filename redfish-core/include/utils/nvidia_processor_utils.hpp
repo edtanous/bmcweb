@@ -309,6 +309,27 @@ inline void getSMUtilizationData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig");
 }
 
+/**
+ * @brief Fill out processor nvidia specific info by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       cpuId       Processor ID.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+
+inline void
+    getPowerSmoothingInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          const std::string& processorId)
+{
+    std::string powerSmoothingURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                    "/Processors/";
+    powerSmoothingURI += processorId;
+    powerSmoothingURI += "/Oem/Nvidia/PowerSmoothing";
+    aResp->res.jsonValue["PowerSmoothing"]["@odata.id"] = powerSmoothingURI;
+}
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace nvidia_processor_utils

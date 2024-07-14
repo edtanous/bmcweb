@@ -42,6 +42,7 @@
 #include "message_registries.hpp"
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
+#include "nvidia_power_smoothing.hpp"
 #include "ports.hpp"
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
@@ -199,7 +200,7 @@ class RedfishService
         requestRoutesCableCollection(app);
 // #endif
 #if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
-    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE)           ||                  \
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE) ||                            \
     defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
         requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
@@ -425,9 +426,9 @@ class RedfishService
         requestRoutesServiceConditions(app);
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
-       requestRoutesUpdateServiceCommitImage(app);
+        requestRoutesUpdateServiceCommitImage(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-       requestRoutesComputeDigestPost(app);
+        requestRoutesComputeDigestPost(app);
 #endif
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES
         requestRoutesNvidiaOemBf(app);
@@ -439,6 +440,10 @@ class RedfishService
         requestRoutesUpdateServicePublicKeyExchange(app);
         requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
 #endif
+        requestRoutesProcessorPowerSmoothing(app);
+        requestRoutesProcessorPowerSmoothingAdminProfile(app);
+        requestRoutesProcessorPowerSmoothingPresetProfileCollection(app);
+        requestRoutesProcessorPowerSmoothingPresetProfile(app);
         // Note, this must be the last route registered
         requestRoutesRedfish(app);
     }

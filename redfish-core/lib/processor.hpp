@@ -2253,6 +2253,14 @@ inline void
                                                    objPath);
 }
 
+inline void
+    getPowerSmoothingInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          std::string processorId)
+{
+    BMCWEB_LOG_DEBUG(" get getPowerSmoothingInfo data");
+    redfish::nvidia_processor_utils::getPowerSmoothingInfo(aResp, processorId);
+}
+
 inline void getProcessorRemoteDebugState(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath)
@@ -2740,6 +2748,10 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getProcessorCCModeData(aResp, processorId, serviceName,
                                        objectPath);
+            }
+            else if (interface == "com.nvidia.Cpu.PowerSmoothing")
+            {
+                getPowerSmoothingInfo(aResp, processorId);
             }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         }
@@ -5358,9 +5370,8 @@ inline void getProcessorPortData(
                 if (ec)
                 {
                     // the path does not implement port interfaces
-                    BMCWEB_LOG_DEBUG(
-                        "no port interface on object path {}",
-                        sensorpath);
+                    BMCWEB_LOG_DEBUG("no port interface on object path {}",
+                                     sensorpath);
                     return;
                 }
 
@@ -5419,8 +5430,7 @@ inline void getProcessorAcceleratorPortData(
             std::get_if<std::vector<std::string>>(&resp);
         if (data == nullptr)
         {
-            BMCWEB_LOG_ERROR(
-                "No response error while getting ports");
+            BMCWEB_LOG_ERROR("No response error while getting ports");
             messages::internalError(aResp->res);
             return;
         }
@@ -5446,9 +5456,8 @@ inline void getProcessorAcceleratorPortData(
                 if (ec)
                 {
                     // the path does not implement port interfaces
-                    BMCWEB_LOG_DEBUG(
-                        "no port interface on object path {}",
-                        sensorpath);
+                    BMCWEB_LOG_DEBUG("no port interface on object path {}",
+                                     sensorpath);
                     return;
                 }
 
