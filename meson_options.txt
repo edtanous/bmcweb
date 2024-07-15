@@ -580,3 +580,4 @@ option('gpu-index-start', type : 'integer', value : 1, description : 'The index 
 option ('enable-fabric-adapter', type : 'feature', value : 'disabled', description : 'Enables fabric adapter schema.')
 option ('enable-sse', type : 'feature', value : 'enabled', description : 'Enables Event SSE.')
 option('tls-cacert-path', type : 'string', value : '/etc/ssl/certs/authority/', description : 'CA certificate path truststore')
+option ('cpu-diag-support', type : 'feature', value : 'disabled', description : 'Enables cpu diag support.')

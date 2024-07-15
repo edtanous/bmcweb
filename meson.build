@@ -146,6 +146,7 @@ feature_map = {
   'shmem-platform-metrics'                      : '-DBMCWEB_ENABLE_SHMEM_PLATFORM_METRICS',
   'enable-sse'                                  : '-DBMCWEB_ENABLE_SSE',
   'erot-reset'                                  : '-DBMCWEB_ENABLE_EROT_RESET',
+  'cpu-diag-support'                            : '-DBMCWEB_ENABLE_CPU_DIAG_FEATURE',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

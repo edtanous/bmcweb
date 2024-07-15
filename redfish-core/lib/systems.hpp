@@ -21,6 +21,7 @@
 #include "dbus_singleton.hpp"
 #include "dbus_utility.hpp"
 #include "debug_policy.hpp"
+#include "cpu_diag.hpp"
 #include "generated/enums/computer_system.hpp"
 #include "generated/enums/resource.hpp"
 #include "hypervisor_system.hpp"
@@ -3776,6 +3777,88 @@ inline void doNMI(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     },
         serviceName, objectPath, interfaceName, method);
 }
+#ifdef BMCWEB_ENABLE_CPU_DIAG_FEATURE
+
+inline void handleProcessorDiagActionPost(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemName)
+{
+    std::optional<nlohmann::json> processorDiagCapabilities;
+
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    if (systemName != PLATFORMSYSTEMID)
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+    if (!json_util::readJsonAction(req, asyncResp->res, "ProcessorDiagCapabilities", processorDiagCapabilities))
+    {
+        return;
+    }
+    if (processorDiagCapabilities)
+    {
+        handleDiagPostReq(asyncResp, *processorDiagCapabilities);
+    }
+}
+
+inline void handleProcessorDiagSysConfigActionPost(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemName)
+{
+    std::optional<nlohmann::json> processorDiagSysConfig;
+
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    if (systemName != PLATFORMSYSTEMID)
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+    if (!json_util::readJsonAction(req, asyncResp->res, "ProcessorDiagSysConfig", processorDiagSysConfig))
+    {
+        return;
+    }
+    if (processorDiagSysConfig)
+    {
+        handleDiagSysConfigPostReq(asyncResp, *processorDiagSysConfig);
+    }
+}
+inline void handleProcessorDiagTidConfigActionPost(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemName)
+{
+    std::optional<nlohmann::json> processorDiagTidConfig;
+
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    if (systemName != PLATFORMSYSTEMID)
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+    if (!json_util::readJsonAction(req, asyncResp->res, "ProcessorDiagTidConfig", processorDiagTidConfig))
+    {
+        return;
+    }
+    if (processorDiagTidConfig)
+    {
+        handleDiagTidConfigPostReq(asyncResp, *processorDiagTidConfig);
+    }
+}
+#endif
 
 inline void handleComputerSystemResetActionPost(
     crow::App& app, const crow::Request& req,
@@ -4267,6 +4350,29 @@ inline void
 #ifdef BMCWEB_ENABLE_DEBUG_INTERFACE
     handleDebugPolicyGet(asyncResp);
 #endif
+
+#ifdef BMCWEB_ENABLE_CPU_DIAG_FEATURE
+    asyncResp->res.jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagMode"]["target"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/ProcessorDiagCapabilities";
+
+    asyncResp->res.jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagMode"]["@Redfish.ActionInfo"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/ProcessorDiagCapabilitiesActionInfo";
+
+    asyncResp->res.jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagSysConfig"]["target"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/ProcessorDiagSysConfig";
+
+    asyncResp->res.jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagSysConfig"]["@Redfish.ActionInfo"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/ProcessorDiagSysConfigActionInfo";
+
+    asyncResp->res.jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagTidConfig"]["target"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/ProcessorDiagTidConfig";
+
+    asyncResp->res.jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagTidConfig"]["@Redfish.ActionInfo"] =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia/ProcessorDiagTidConfigActionInfo";
+
+    handleDiagModeGet(asyncResp);
+#endif
+
 }
 
 inline void handleComputerSystemPatch(
@@ -4697,6 +4803,169 @@ inline void handleSystemCollectionResetActionGet(
         afterGetAllowedHostTransitions(asyncResp, ec, allowedHostTransitions);
     });
 }
+#ifdef BMCWEB_ENABLE_CPU_DIAG_FEATURE
+inline void handleSystemProcessorDiagCapabilitiesActionGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemName)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    if (systemName != PLATFORMSYSTEMID )
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + systemName + "/Oem/Nvidia/ProcessorDiagCapabilitiesActionInfo";
+    asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
+    asyncResp->res.jsonValue["Name"] = "DiagMode Action Info";
+    asyncResp->res.jsonValue["Id"] = "DiagModeActionInfo";
+
+    nlohmann::json::array_t parameters;
+    nlohmann::json::object_t parameter;
+
+    parameter["Name"] = "DiagMode";
+    parameter["Required"] = true;
+    parameter["DataType"] = "boolean";
+    nlohmann::json::array_t allowableValues;
+    allowableValues.emplace_back("True");
+    allowableValues.emplace_back("False");
+    parameter["AllowableValues"] = std::move(allowableValues);
+    parameters.emplace_back(std::move(parameter));
+
+    asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+
+}
+inline void handleSystemProcessorDiagSysConfigActionGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemName)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    if (systemName != PLATFORMSYSTEMID )
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + systemName + "/Oem/Nvidia/ProcessorDiagSysConfigActionInfo";
+    asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
+    asyncResp->res.jsonValue["Name"] = "DiagSysConfig Action Info";
+    asyncResp->res.jsonValue["Id"] = "DiagSysConfigActionInfo";
+
+    nlohmann::json::array_t parameters;
+    nlohmann::json::object_t parameter;
+
+    parameter["Name"] = "ConfigType";
+    parameter["Required"] = true;
+    parameter["DataType"] = "Number";
+    nlohmann::json::array_t allowableValues;
+    allowableValues.emplace_back(0);
+    allowableValues.emplace_back(1);
+    parameter["AllowableValues"] = std::move(allowableValues);
+    parameters.emplace_back(std::move(parameter));
+
+    parameter["Name"] = "TestDuration";
+    parameter["Required"] = true;
+    parameter["DataType"] = "Number";
+    parameter["MinimumValue"] = 0;
+    parameter["MaximunValue"] = 255;
+    parameters.emplace_back(std::move(parameter));
+
+    parameter["Name"] = "DynamicData";
+    parameter["Required"] = true;
+    parameter["DataType"] = "NumberArray";
+    parameter["ArraySizeMaximum"] = 250;
+    parameter["MinimumValue"] = 0;
+    parameter["MaximunValue"] = 255;
+    parameters.emplace_back(std::move(parameter));
+    asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+
+}
+inline void handleSystemProcessorDiagTidConfigActionGet(
+    crow::App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& systemName)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    if (systemName != PLATFORMSYSTEMID )
+    {
+        messages::resourceNotFound(asyncResp->res, "ComputerSystem",
+                                   systemName);
+        return;
+    }
+
+    asyncResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + systemName + "/Oem/Nvidia/ProcessorDiagTidConfigActionInfo";
+    asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
+    asyncResp->res.jsonValue["Name"] = "DiagTidConfig Action Info";
+    asyncResp->res.jsonValue["Id"] = "DiagTidConfigActionInfo";
+
+    nlohmann::json::array_t parameters;
+    nlohmann::json::object_t parameter;
+
+    parameter["Name"] = "Tid";
+    parameter["Required"] = true;
+    parameter["DataType"] = "Number";
+    parameter["MinimumValue"] = 0;
+    parameter["MaximunValue"] = 255;
+    parameters.emplace_back(std::move(parameter));
+
+    parameter["Name"] = "TestDuration";
+    parameter["Required"] = true;
+    parameter["DataType"] = "Number";
+    parameter["MinimumValue"] = 0;
+    parameter["MaximunValue"] = 255;
+    parameters.emplace_back(std::move(parameter));
+
+    parameter["Name"] = "Loops";
+    parameter["Required"] = true;
+    parameter["DataType"] = "Number";
+    parameter["MinimumValue"] = 0;
+    parameter["MaximunValue"] = 65535;
+    parameters.emplace_back(std::move(parameter));
+    parameter["Name"] = "LogLevel";
+    parameter["Required"] = true;
+    parameter["DataType"] = "Number";
+    parameter["MinimumValue"] = 0;
+    parameter["MaximunValue"] = 255;
+    parameters.emplace_back(std::move(parameter));
+
+    parameter["Name"] = "DynamicDataSize";
+    parameter["Required"] = true;
+    parameter["DataType"] = "Number";
+    parameter["MinimumValue"] = 0;
+    parameter["MaximunValue"] = 255;
+    parameters.emplace_back(std::move(parameter));
+
+    parameter["Name"] = "DynamicData";
+    parameter["Required"] = true;
+    parameter["DataType"] = "NumberArray";
+    parameter["ArraySizeMaximum"] = 50;
+    parameter["MinimumValue"] = 0;
+    parameter["MaximunValue"] = 255;
+    parameters.emplace_back(std::move(parameter));
+    asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+
+}
+#endif
+
 /**
  * SystemResetActionInfo derived class for delivering Computer Systems
  * ResetType AllowableValues using ResetInfo schema.
@@ -4727,6 +4996,38 @@ inline void requestRoutesSystems(App& app)
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleComputerSystemPatch, std::ref(app)));
+
+#ifdef BMCWEB_ENABLE_CPU_DIAG_FEATURE
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/ProcessorDiagCapabilities")
+        .privileges(redfish::privileges::postComputerSystem)
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleProcessorDiagActionPost, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/ProcessorDiagCapabilitiesActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleSystemProcessorDiagCapabilitiesActionGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/ProcessorDiagSysConfig")
+        .privileges(redfish::privileges::postComputerSystem)
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleProcessorDiagSysConfigActionPost, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/ProcessorDiagSysConfigActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleSystemProcessorDiagSysConfigActionGet, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/ProcessorDiagTidConfig")
+        .privileges(redfish::privileges::postComputerSystem)
+        .methods(boost::beast::http::verb::post)(std::bind_front(
+            handleProcessorDiagTidConfigActionPost, std::ref(app)));
+
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/ProcessorDiagTidConfigActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleSystemProcessorDiagTidConfigActionGet, std::ref(app)));
+#endif
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Actions/ComputerSystem.Reset/")
         .privileges(redfish::privileges::postComputerSystem)
