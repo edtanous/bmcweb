@@ -36,6 +36,8 @@ conf_data.set_quoted('PLATFORM_GPU_NAME_PREFIX', get_option('platform-gpu-name-p
 conf_data.set_quoted('PLATFORM_CHASSIS_NAME', get_option('platform-chassis-name'))
 conf_data.set_quoted('RFA_HMC_UPDATE_TARGET', get_option('rfa-hmc-update-target'))
 conf_data.set_quoted('RFA_BMC_HOST_URL', get_option('rfa-bmc-host-url'))
+conf_data.set_quoted('NETWORK_ADAPTER_PREFIX', get_option('nvidia-network-adapter-prefix'))
+conf_data.set_quoted('NETWORK_ADAPTER_LINK_PREFIX', get_option('nvidia-network-adapter-link-prefix'))
 conf_data.set('RFA_SUBSCRIBE_TIME', get_option('rfa-delay-subscribe-time'))
 conf_data.set_quoted('REDFISH_AGGREGATION_PREFIX', get_option('redfish-aggregation-prefix'))
 conf_data.set_quoted('FW_MCTP_MAPPING_JSON', join_paths(package_datadir, 'fw_mctp_mapping.json'))

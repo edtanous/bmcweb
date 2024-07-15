@@ -1090,6 +1090,92 @@ inline std::string getNVSwitchPortMetricURIDef(std::string& propertyName,
     return propURI;
 }
 
+inline std::string getNetworkAdapterPortMetricsURIDef(std::string& propertyName)
+{
+    std::string propURI = "/redfish/v1/Chassis/";
+    propURI += PLATFORMDEVICEPREFIX;
+    propURI += NETWORKADAPTERPREFIX;
+    propURI += "{NId}/NetworkAdapters/";
+    propURI += NETWORKADAPTERPREFIX;
+    propURI += "{NId}/Ports/";
+    propURI += NETWORKADAPTERLINKPREFIX;
+    propURI += "{NvlinkId}";
+
+    if (propertyName == "CurrentSpeedGbps")
+    {
+        propURI += "#/CurrentSpeedGbps";
+    }
+    else if (propertyName == "LinkStatus")
+    {
+        propURI += "#/LinkStatus";
+    }
+    else if (propertyName == "TXBytes")
+    {
+        propURI += "/Metrics#/TXBytes";
+    }
+    else if (propertyName == "RXBytes")
+    {
+        propURI += "/Metrics#/RXBytes";
+    }
+    else if (propertyName == "RXErrors")
+    {
+        propURI += "/Metrics#/RXErrors";
+    }
+    else if (propertyName == "TXPkts")
+    {
+        propURI += "/Metrics#/Networking/TXFrames";
+    }
+    else if (propertyName == "RXPkts")
+    {
+        propURI += "/Metrics#/Networking/RXFrames";
+    }
+    else if (propertyName == "RXMulticastPkts")
+    {
+        propURI += "/Metrics#/Networking/RXMulticastFrames";
+    }
+    else if (propertyName == "TXMulticastPkts")
+    {
+        propURI += "/Metrics#/Networking/TXMulticastFrames";
+    }
+    else if (propertyName == "RXUnicastPkts")
+    {
+        propURI += "/Metrics#/Networking/RXUnicastFrames";
+    }
+    else if (propertyName == "TXUnicastPkts")
+    {
+        propURI += "/Metrics#/Networking/TXUnicastFrames";
+    }
+    else if (propertyName == "TXDiscardPkts")
+    {
+        propURI += "/Metrics#/Networking/TXDiscards";
+    }
+    else if (propertyName == "VL15DroppedPkts")
+    {
+        propURI += "/Metrics#/Oem/Nvidia/VL15Dropped";
+    }
+    else if (propertyName == "SymbolError")
+    {
+        propURI += "/Metrics#/Oem/Nvidia/SymbolErrors";
+    }
+    else if (propertyName == "LinkErrorRecoveryCounter")
+    {
+        propURI += "/Metrics#/Oem/Nvidia/LinkErrorRecoveryCount";
+    }
+    else if (propertyName == "LinkDownCount")
+    {
+        propURI += "/Metrics#/Oem/Nvidia/LinkDownedCount";
+    }
+    else if (propertyName == "RXRemotePhysicalErrorPkts")
+    {
+        propURI += "/Metrics#/Oem/Nvidia/RXRemotePhysicalErrors";
+    }
+    else if (propertyName == "RXSwitchRelayErrorPkts")
+    {
+        propURI += "/Metrics#/Oem/Nvidia/RXSwitchRelayErrors";
+    }
+    return propURI;
+}
+
 inline void populateMetricProperties(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& deviceType)
@@ -1329,6 +1415,65 @@ inline void
     propName = "DataCRCCount";
     metricPropertiesAray.push_back(
         getNVSwitchPortMetricURIDef(propName, switchType));
+}
+
+inline void populateNetworkAdapterPortMetricProperties(
+    nlohmann::json& metricPropertiesAray)
+{
+    std::string propName = "CurrentSpeedGbps";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "LinkStatus";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "TXBytes";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "RXBytes";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "RXErrors";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "TXPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "RXPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "RXMulticastPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "TXMulticastPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "RXUnicastPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "TXUnicastPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "TXDiscardPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "VL15DroppedPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "SymbolError";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "LinkErrorRecoveryCounter";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "LinkDownCount";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "RXRemotePhysicalErrorPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
+    propName = "RXSwitchRelayErrorPkts";
+    metricPropertiesAray.push_back(
+        getNetworkAdapterPortMetricsURIDef(propName));
 }
 
 inline std::string getWildCardDevId(const std::string& deviceType)
@@ -1690,6 +1835,7 @@ inline void getMetricReportDefForAggregatedMetrics(
         deviceType != "NVSwitchMetrics" &&
         deviceType != "ProcessorPortMetrics" &&
         deviceType != "NVSwitchPortMetrics" &&
+        deviceType != "NetworkAdapterPortMetrics" &&
         deviceType != "ProcessorGpmMetrics" &&
         deviceType != "ProcessorPortGpmMetrics")
     {
@@ -1723,6 +1869,13 @@ inline void getMetricReportDefForAggregatedMetrics(
         asyncResp->res.jsonValue["MetricProperties"] =
             nvswitchMetricPropertiesAray;
     }
+    else if (deviceType == "NetworkAdapterPortMetrics")
+    {
+        nlohmann::json networkAdapterPortMetricPropertiesAray = nlohmann::json::array();
+        populateNetworkAdapterPortMetricProperties(networkAdapterPortMetricPropertiesAray);
+        asyncResp->res.jsonValue["MetricProperties"] =
+            networkAdapterPortMetricPropertiesAray;
+    }
     else
     {
         populateMetricProperties(asyncResp, deviceType);
@@ -1750,6 +1903,8 @@ inline void validateAndGetMetricReportDefinition(
     std::string nvSwitchMetricId = PLATFORMDEVICEPREFIX "NVSwitchMetrics_0";
     std::string nvSwitchPortMetricId = PLATFORMDEVICEPREFIX
         "NVSwitchPortMetrics_0";
+    std::string networkAdapterPortMetricId = PLATFORMDEVICEPREFIX
+        "NetworkAdapterPortMetrics_0";
     if (id == PLATFORMMETRICSID)
     {
         deviceType = "PlatformEnvironmentMetrics";
@@ -1789,6 +1944,11 @@ inline void validateAndGetMetricReportDefinition(
     {
         validMetricId = true;
         deviceType = "NVSwitchPortMetrics";
+    }
+    else if (id == networkAdapterPortMetricId)
+    {
+        validMetricId = true;
+        deviceType = "NetworkAdapterPortMetrics";
     }
     if (!validMetricId)
     {
@@ -2012,6 +2172,14 @@ inline void getMetricReportCollection(
                     "NVSwitchPortMetrics";
                 switchPortMetricId += "_0";
                 uripath = metricReportDefUriPath + switchPortMetricId;
+                addMembers.push_back({{"@odata.id", uripath}});
+            }
+            else if (boost::ends_with(object, "NetworkAdapters"))
+            {
+                std::string networkAdaptersPortMetricId = PLATFORMDEVICEPREFIX
+                    "NetworkAdapterPortMetrics";
+                networkAdaptersPortMetricId += "_0";
+                std::string uripath = metricReportDefUriPath + networkAdaptersPortMetricId;
                 addMembers.push_back({{"@odata.id", uripath}});
             }
         }

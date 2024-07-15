@@ -117,6 +117,8 @@ std::string pcieSwtich = platformDevicePrefix + "PCIeSwitch_";
 std::string processorModule = platformDevicePrefix + "ProcessorModule_";
 std::string cpu = platformDevicePrefix + "CPU_";
 std::string nvLink = "NVLink_";
+std::string networkAdapter(NETWORKADAPTERPREFIX);
+std::string networkAdapterLink(NETWORKADAPTERLINKPREFIX);
 std::string gpmInstances = "UtilizationPercent/";
 
 inline std::string getSwitchId(const std::string& key)
@@ -249,6 +251,8 @@ void metricsReplacementsNonPlatformMetrics(
     std::set<int> nvlinkId_Type_2;
     std::set<int> gpuId;
     std::set<int> gpmInstance;
+    std::set<int> networkAdapterNId;
+    std::set<int> nvLinkManagementId;
     nlohmann::json& wildCards = asyncResp->res.jsonValue["Wildcards"];
     for (const auto& e : inputMetricProperties)
     {
@@ -326,6 +330,21 @@ void metricsReplacementsNonPlatformMetrics(
                 nvlinkId_Type_1.insert(number);
             }
         }
+        if (deviceType == "NetworkAdapterPortMetrics")
+        {
+            std::regex networkAdapterPattern(networkAdapter + "(\\d+)");
+            if (std::regex_search(e, match, networkAdapterPattern))
+            {
+                int number = std::stoi(match[1].str());
+                networkAdapterNId.insert(number);
+            }
+            std::regex nvLinkManagementPattern(networkAdapterLink + "(\\d+)");
+            if (std::regex_search(e, match, nvLinkManagementPattern))
+            {
+                int number = std::stoi(match[1].str());
+                nvLinkManagementId.insert(number);
+            }
+        }
     }
     if (deviceType == "NVSwitchPortMetrics")
     {
@@ -365,6 +384,28 @@ void metricsReplacementsNonPlatformMetrics(
         wildCards.push_back({
             {"Name", "NvlinkId_Type_2"},
             {"Values", devCountNVlinkId_Type_2},
+        });
+    }
+    if (deviceType == "NetworkAdapterPortMetrics")
+    {
+        nlohmann::json devCountNetworkAdapter = nlohmann::json::array();
+        for (const auto& e : networkAdapterNId)
+        {
+            devCountNetworkAdapter.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "NId"},
+            {"Values", devCountNetworkAdapter},
+        });
+
+        nlohmann::json devCountNVLinkManagementId = nlohmann::json::array();
+        for (const auto& e : nvLinkManagementId)
+        {
+            devCountNVLinkManagementId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "NvlinkId"},
+            {"Values", devCountNVLinkManagementId},
         });
     }
     if (deviceType == "NVSwitchMetrics")
@@ -489,6 +530,7 @@ inline void getShmemMetricsDefinition(
         {
             if (deviceType == "NVSwitchPortMetrics" ||
                 deviceType == "ProcessorPortMetrics" ||
+                deviceType == "NetworkAdapterPortMetrics" ||
                 deviceType == "ProcessorPortGpmMetrics")
             {
                 std::string result = e.metricProperty;
@@ -506,6 +548,7 @@ inline void getShmemMetricsDefinition(
         }
         if (deviceType == "NVSwitchPortMetrics" ||
             deviceType == "ProcessorPortMetrics" ||
+            deviceType == "NetworkAdapterPortMetrics" ||
             deviceType == "ProcessorPortGpmMetrics")
         {
             for (const auto& e : inputMetricPropertiesSet)
