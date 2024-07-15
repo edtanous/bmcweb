@@ -6850,8 +6850,8 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
                     asyncResp->res.jsonValue["Members"];
                 logServiceArray = nlohmann::json::array();
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
-                if (chassisId.find("GPU") != std::string::npos ||
-                    chassisId.find("NVSwitch") != std::string::npos)
+                if ((chassisId.find("GPU") != std::string::npos ||
+                    chassisId.find("NVSwitch") != std::string::npos) && chassisId.find("RoT") == std::string::npos))
                 {
                     logServiceArray.push_back(
                         {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
