@@ -5128,11 +5128,11 @@ inline void getFDRServiceState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 
         if (serviceState == "running")
         {
-            aResp->res.jsonValue["ServiceEnabled"] = "True";
+            aResp->res.jsonValue["ServiceEnabled"] = true;
         }
         else
         {
-            aResp->res.jsonValue["ServiceEnabled"] = "False";
+            aResp->res.jsonValue["ServiceEnabled"] = false;
         }
     });
 }
@@ -6851,7 +6851,7 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
                 logServiceArray = nlohmann::json::array();
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
                 if ((chassisId.find("GPU") != std::string::npos ||
-                    chassisId.find("NVSwitch") != std::string::npos) && chassisId.find("RoT") == std::string::npos))
+                    chassisId.find("NVSwitch") != std::string::npos) && chassisId.find("RoT") == std::string::npos)
                 {
                     logServiceArray.push_back(
                         {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
