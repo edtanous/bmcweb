@@ -349,7 +349,7 @@ inline void getEROTChassis(const crow::Request& req,
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
             asyncResp->res.jsonValue["@odata.type"] =
-                "#Chassis.v1_17_0.Chassis";
+                "#Chassis.v1_22_0.Chassis";
             asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" +
                                                     chassisId;
             asyncResp->res.jsonValue["Name"] = chassisId;
@@ -401,7 +401,7 @@ inline void getEROTChassis(const crow::Request& req,
         }
 
         // Couldn't find an object with that name.  return an error
-        messages::resourceNotFound(asyncResp->res, "#Chassis.v1_17_0.Chassis",
+        messages::resourceNotFound(asyncResp->res, "#Chassis.v1_22_0.Chassis",
                                    chassisId);
     },
 
