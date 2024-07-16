@@ -236,6 +236,7 @@ inline void handleServiceRootGetImpl(
         "/redfish/v1/EventService";
     asyncResp->res.jsonValue["TelemetryService"]["@odata.id"] =
         "/redfish/v1/TelemetryService";
+    getServiceIdentification(asyncResp);
 
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Cables"]["@odata.id"] = "/redfish/v1/Cables";
@@ -260,6 +261,7 @@ inline void handleServiceRootGetImpl(
     protocolFeatures["SelectQuery"] = true;
     protocolFeatures["DeepOperations"]["DeepPOST"] = false;
     protocolFeatures["DeepOperations"]["DeepPATCH"] = false;
+    getBMCObject(asyncResp);
 }
 inline void
     handleServiceRootGet(App& app, const crow::Request& req,
@@ -271,8 +273,6 @@ inline void
     }
 
     handleServiceRootGetImpl(asyncResp);
-    getBMCObject(asyncResp);
-    getServiceIdentification(asyncResp);
 }
 
 inline void requestRoutesServiceRoot(App& app)

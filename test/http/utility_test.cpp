@@ -163,10 +163,7 @@ TEST(Router, ParameterTagging)
 {
     EXPECT_EQ(1, getParameterTag("<str>"));
     EXPECT_EQ(1, getParameterTag("<string>"));
-    EXPECT_EQ(1, getParameterTag("<path>"));
-    EXPECT_EQ(2, getParameterTag("<str>/<str>"));
-    EXPECT_EQ(2, getParameterTag("<string>/<string>"));
-    EXPECT_EQ(2, getParameterTag("<path>/<path>"));
+    EXPECT_EQ(2, getParameterTag("<path>"));
 }
 
 TEST(URL, JsonEncoding)

@@ -78,12 +78,8 @@ class BaseRule
 
     size_t methodsBitfield{1 << static_cast<size_t>(HttpVerb::Get)};
     static_assert(std::numeric_limits<decltype(methodsBitfield)>::digits >
-                      static_cast<int>(HttpVerb::Max),
+                      methodNotAllowedIndex,
                   "Not enough bits to store bitfield");
-
-    bool isNotFound = false;
-    bool isMethodNotAllowed = false;
-    bool isUpgrade = false;
 
     std::vector<redfish::Privileges> privilegesSet;
 

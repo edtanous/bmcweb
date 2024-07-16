@@ -88,7 +88,7 @@ inline bool searchCollectionsArray(std::string_view uri,
 
     auto rootUri = uri.substr(serviceRootUri.size(), parseCount);
     std::string str(rootUri.begin(), rootUri.end());
-    boost::system::result<boost::urls::url_view> parsedUrl =
+    boost::urls::result<boost::urls::url_view> parsedUrl =
         boost::urls::parse_relative_ref(str);
     if (!parsedUrl)
     {

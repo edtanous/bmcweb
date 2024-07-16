@@ -235,14 +235,7 @@ class ConfigFile
 
     void writeData()
     {
-        boost::beast::file_posix persistentFile;
-        boost::system::error_code ec;
-        persistentFile.open(filename, boost::beast::file_mode::write, ec);
-        if (ec)
-        {
-            BMCWEB_LOG_CRITICAL("Unable to store persistent data to file");
-            return;
-        }
+        std::ofstream persistentFile(filename);
 
         // set the permission of the file to 640
         std::filesystem::perms permission =
@@ -336,13 +329,7 @@ class ConfigFile
 
             subscriptions.emplace_back(std::move(subscription));
         }
-        std::string dump = nlohmann::json(data).dump(
-            -1, ' ', true, nlohmann::json::error_handler_t::replace);
-        persistentFile.write(dump.data(), dump.size(), ec);
-        if (ec)
-        {
-            BMCWEB_LOG_CRITICAL("Failed to log persistent File");
-        }
+        persistentFile << data;
     }
 
     std::string systemUuid;

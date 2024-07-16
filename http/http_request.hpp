@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.hpp"
 #include "http_body.hpp"
 #include "sessions.hpp"
 
@@ -18,8 +19,7 @@ namespace crow
 
 struct Request
 {
-    using Body = boost::beast::http::request<bmcweb::HttpBody>;
-    Body req;
+    boost::beast::http::request<bmcweb::HttpBody> req;
 
   private:
     boost::urls::url urlBase;
@@ -33,7 +33,9 @@ struct Request
     std::shared_ptr<persistent_data::UserSession> session;
 
     std::string userRole;
-    Request(Body reqIn, std::error_code& ec) : req(std::move(reqIn))
+    Request(boost::beast::http::request<bmcweb::HttpBody> reqIn,
+            std::error_code& ec) :
+        req(std::move(reqIn))
     {
         if (!setUrlInfo())
         {

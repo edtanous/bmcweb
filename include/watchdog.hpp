@@ -18,6 +18,7 @@
 #include <systemd/sd-daemon.h>
 
 #include <boost/asio/steady_timer.hpp>
+#include <common.hpp>
 
 namespace crow
 {

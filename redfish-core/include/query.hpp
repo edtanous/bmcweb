@@ -16,6 +16,7 @@
 
 #include <functional>
 #include <memory>
+#include <new>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -46,7 +47,7 @@ inline void afterIfMatchRequest(
     // Restart the request without if-match
     req->clearHeader(boost::beast::http::field::if_match);
     BMCWEB_LOG_DEBUG("Restarting request");
-    app.handle(req, asyncResp);
+    app.handle(*req, asyncResp);
 }
 
 inline bool handleIfMatch(crow::App& app, const crow::Request& req,
@@ -83,8 +84,8 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
 
     // Try to GET the same resource
     auto getReq = std::make_shared<crow::Request>(
-    crow::Request::Body{boost::beast::http::verb::get,
-                            req.url().encoded_path(), 11},
+        boost::beast::http::request<bmcweb::HttpBody>{
+            boost::beast::http::verb::get, req.url().encoded_path(), 11},
         ec);
 
     if (ec)
@@ -108,7 +109,7 @@ inline bool handleIfMatch(crow::App& app, const crow::Request& req,
         afterIfMatchRequest, std::ref(app), asyncResp,
         std::make_shared<crow::Request>(req), std::move(ifMatch)));
 
-    app.handle(getReq, getReqAsyncResp);
+    app.handle(*getReq, getReqAsyncResp);
     return false;
 }
 

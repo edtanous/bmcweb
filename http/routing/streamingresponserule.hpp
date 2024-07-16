@@ -1,7 +1,6 @@
 #pragma once
 #include "baserule.hpp"
 #include "dynamicrule.hpp"
-#include "http_stream.hpp"
 
 #include <boost/beast/http/verb.hpp>
 
