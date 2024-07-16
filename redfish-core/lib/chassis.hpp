@@ -479,6 +479,8 @@ inline void handleChassisGetSubTree(
         messages::internalError(asyncResp->res);
         return;
     }
+
+    bool isFoundChassisObject = false;
     // Iterate over all retrieved ObjectPaths.
     for (const std::pair<
              std::string,
@@ -629,6 +631,9 @@ inline void handleChassisGetSubTree(
                 }
                 else if (interface == replaceableInterface)
                 {
+                    redfish::chassis_utils::getChassisReplaceable(
+                        asyncResp, connectionName, path);
+
                     sdbusplus::asio::getProperty<bool>(
                         *crow::connections::systemBus, connectionName, path,
                         replaceableInterface, "HotPluggable",
@@ -640,10 +645,12 @@ inline void handleChassisGetSubTree(
                             BMCWEB_LOG_ERROR(
                                 "DBus response error for HotPluggable: {}",
                                 ec2);
-                            messages::internalError(asyncResp->res);
-                            return;
+                            // not abort the resource display
                         }
-                        asyncResp->res.jsonValue["HotPluggable"] = property;
+                        else
+                        {
+                            asyncResp->res.jsonValue["HotPluggable"] = property;
+                        }
                     });
                 }
                 else if (interface == revisionInterface)
@@ -716,6 +723,11 @@ inline void handleChassisGetSubTree(
                 {
                     getChassisLocationCode(asyncResp, connectionName, path);
                 }
+                else if (interface ==
+                         "xyz.openbmc_project.Inventory.Decorator.LocationContext")
+                {
+                    redfish::chassis_utils::getChassisLocationContext(asyncResp, connectionName, path);
+                }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 else if (
                     interface ==
@@ -762,20 +774,25 @@ inline void handleChassisGetSubTree(
             redfish::getChassisDebugToken(asyncResp, chassisId);
 #endif
         }
-        return;
+        isFoundChassisObject = true;
+        // need to check all objpath because a few configs are set by another service
     }
 
-    // Couldn't find an object with that name.  return an error
-    messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+    if (isFoundChassisObject == false)
+    {
+        // Couldn't find an object with that name.  return an error
+        messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+    }
 }
 
 inline void
     handleChassisGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                      const std::string& chassisId)
 {
-    constexpr std::array<std::string_view, 2> interfaces = {
+    constexpr std::array<std::string_view, 3> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Board",
-        "xyz.openbmc_project.Inventory.Item.Chassis"};
+        "xyz.openbmc_project.Inventory.Item.Chassis",
+        "xyz.openbmc_project.Inventory.Item.Component"};
 
     dbus::utility::getSubTree(
         "/xyz/openbmc_project/inventory", 0, interfaces,

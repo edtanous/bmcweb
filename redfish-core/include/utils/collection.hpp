@@ -15,6 +15,8 @@
 #include <string_view>
 #include <vector>
 
+#include <boost/container/flat_set.hpp>
+
 namespace redfish
 {
 namespace collection_util
@@ -52,7 +54,7 @@ inline void handleCollectionMembers(
         return;
     }
 
-    std::vector<std::string> pathNames;
+    boost::container::flat_set<std::string> pathNames;
     for (const auto& object : objects)
     {
         sdbusplus::message::object_path path(object);
@@ -61,9 +63,8 @@ inline void handleCollectionMembers(
         {
             continue;
         }
-        pathNames.push_back(leaf);
+        pathNames.emplace(std::move(leaf));
     }
-    std::ranges::sort(pathNames, AlphanumLess<std::string>());
 
     nlohmann::json& members = asyncResp->res.jsonValue[jsonKeyName];
 

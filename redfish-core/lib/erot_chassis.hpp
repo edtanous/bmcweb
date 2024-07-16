@@ -378,23 +378,55 @@ inline void getEROTChassis(const crow::Request& req,
 
             firmware_info::updateProtectedComponentLink(asyncResp, chassisId);
 
-            redfish::chassis_utils::getChassisUUID(
-                req, asyncResp, connectionNames[0].first, path, true);
+            // Might have 2+ services to support different properties
+            for (size_t serviceIdx = 0; serviceIdx < connectionNames.size(); serviceIdx++)
+            {
+                // Check if the interface exists, then go ahead getting the property value to prevent getting an internal error
+                for (const auto& interface : connectionNames[serviceIdx].second)
+                {
+                    if (interface == "xyz.openbmc_project.Common.UUID")
+                    {
+	                redfish::chassis_utils::getChassisUUID(
+                            req, asyncResp, connectionNames[serviceIdx].first, path, true);
+                    }
+                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.Location")
+                    {
+                        redfish::chassis_utils::getChassisLocationType(
+                            asyncResp, connectionNames[serviceIdx].first, path);
+                    }
+                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.LocationCode")
+                    {
+                        redfish::chassis_utils::getChassisLocationCode(
+                            asyncResp, connectionNames[serviceIdx].first, path);
+                    }
+                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.LocationContext")
+                    {
+                        redfish::chassis_utils::getChassisLocationContext(
+                            asyncResp, connectionNames[serviceIdx].first, path);
+                    }
+                    else if (interface == "xyz.openbmc_project.Inventory.Item.Chassis")
+                    {
+                        redfish::chassis_utils::getChassisType(
+                            asyncResp, connectionNames[serviceIdx].first, path);
+                    }
+                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.Asset")
+                    {
+                        redfish::chassis_utils::getChassisManufacturer(
+                            asyncResp, connectionNames[serviceIdx].first, path);
 
-            redfish::chassis_utils::getChassisLocationType(
-                asyncResp, connectionNames[0].first, path);
+                        redfish::chassis_utils::getChassisSerialNumber(
+                            asyncResp, connectionNames[serviceIdx].first, path);
 
-            redfish::chassis_utils::getChassisType(
-                asyncResp, connectionNames[0].first, path);
-
-            redfish::chassis_utils::getChassisManufacturer(
-                asyncResp, connectionNames[0].first, path);
-
-            redfish::chassis_utils::getChassisSerialNumber(
-                asyncResp, connectionNames[0].first, path);
-
-            redfish::chassis_utils::getChassisSKU(
-                asyncResp, connectionNames[0].first, path);
+                        redfish::chassis_utils::getChassisSKU(
+                            asyncResp, connectionNames[serviceIdx].first, path);
+                    }
+                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.Replaceable")
+                    {
+                        redfish::chassis_utils::getChassisReplaceable(
+                            asyncResp, connectionNames[serviceIdx].first, path);
+                    }
+                }
+            }
 
             getChassisOEMComponentProtected(asyncResp, path);
 

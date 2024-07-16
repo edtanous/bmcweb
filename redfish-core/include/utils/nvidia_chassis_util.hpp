@@ -16,6 +16,8 @@
  */
 #pragma once
 
+#include <boost/container/flat_set.hpp>
+
 namespace redfish
 {
 namespace nvidia_chassis_utils
@@ -46,6 +48,7 @@ inline void
         }
         nlohmann::json& linksArray = aResp->res.jsonValue["Links"]["Contains"];
         linksArray = nlohmann::json::array();
+        boost::container::flat_set<std::string> chassisNames;
         for (const std::string& chassisPath : *data)
         {
             sdbusplus::message::object_path objectPath(chassisPath);
@@ -55,6 +58,10 @@ inline void
                 messages::internalError(aResp->res);
                 return;
             }
+            chassisNames.emplace(std::move(chassisName));
+        }
+        for (const auto &chassisName : chassisNames)
+        {
             linksArray.push_back(
                 {{"@odata.id", "/redfish/v1/Chassis/" + chassisName}});
         }
@@ -1277,6 +1284,7 @@ inline void handleChassisGetAllProperties(
     const std::string* uuid = nullptr;
     const std::string* locationCode = nullptr;
     const std::string* locationType = nullptr;
+    const std::string* locationContext = nullptr;
     const std::string* prettyName = nullptr;
     const std::string* type = nullptr;
     const double* height = nullptr;
@@ -1299,7 +1307,8 @@ inline void handleChassisGetAllProperties(
         width, "Depth", depth, "MinPowerWatts", minPowerWatts, "MaxPowerWatts",
         maxPowerWatts, "AssetTag", assetTag, "WriteProtected", writeProtected,
         "WriteProtectedControl", writeProtectedControl,
-        "PCIeReferenceClockCount", pCIeReferenceClockCount, "State", state);
+        "PCIeReferenceClockCount", pCIeReferenceClockCount, "State", state,
+        "LocationContext", locationContext);
 
     if (!success)
     {
@@ -1354,6 +1363,11 @@ inline void handleChassisGetAllProperties(
     {
         asyncResp->res.jsonValue["Location"]["PartLocation"]["LocationType"] =
             redfish::dbus_utils::toLocationType(*locationType);
+    }
+    if (locationContext != nullptr)
+    {
+        asyncResp->res.jsonValue["Location"]["PartLocationContext"] =
+            *locationContext;
     }
     if (prettyName != nullptr)
     {

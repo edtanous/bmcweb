@@ -487,6 +487,72 @@ inline void
     });
 }
 
+inline void
+    getChassisLocationCode(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.LocationCode", "LocationCode",
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::string& property) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error for LocationCode");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        asyncResp->res.jsonValue["Location"]["PartLocation"]["ServiceLabel"] =
+            property;
+    });
+}
+
+inline void
+    getChassisLocationContext(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.LocationContext", "LocationContext",
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::string& property) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error for LocationContext");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        asyncResp->res.jsonValue["Location"]["PartLocationContext"] =
+            property;
+    });
+}
+
+inline void
+    getChassisReplaceable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    sdbusplus::asio::getProperty<bool>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.Replaceable", "FieldReplaceable",
+        [asyncResp](const boost::system::error_code& ec,
+                    const bool property) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error for Replaceable");
+            // not return Internal Error because it can be an optional property
+            return;
+        }
+
+        asyncResp->res.jsonValue["Replaceable"] =
+            property;
+    });
+}
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 /**
  * @brief Translates PowerMode DBUS property value to redfish.
