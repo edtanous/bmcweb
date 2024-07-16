@@ -271,17 +271,20 @@ class Connection :
         if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
         {
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
-            if (!crow::authentication::isOnAllowlist(req->url().path(),
-                                                     req->method()) &&
-                req->session == nullptr)
+            if (persistent_data::getConfig().isTLSAuthEnabled())
             {
-                BMCWEB_LOG_WARNING("Authentication failed");
-                forward_unauthorized::sendUnauthorized(
-                    req->url().encoded_path(),
-                    req->getHeaderValue("X-Requested-With"),
-                    req->getHeaderValue("Accept"), res);
-                completeRequest(res);
-                return;
+                if (!crow::authentication::isOnAllowlist(req->url().path(),
+                                                         req->method()) &&
+                    req->session == nullptr)
+                {
+                    BMCWEB_LOG_WARNING("Authentication failed");
+                    forward_unauthorized::sendUnauthorized(
+                        req->url().encoded_path(),
+                        req->getHeaderValue("X-Requested-With"),
+                        req->getHeaderValue("Accept"), res);
+                    completeRequest(res);
+                    return;
+                }
             }
 #endif // BMCWEB_INSECURE_DISABLE_AUTHX
         }
