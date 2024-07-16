@@ -1539,12 +1539,13 @@ inline void getCpuUniqueId(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 inline void
     getOperatingConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                            const std::string& service,
-                           const std::string& objPath)
+                           const std::string& objPath,
+                           const std::string& deviceType)
 {
     sdbusplus::asio::getAllProperties(
         *crow::connections::systemBus, service, objPath,
         "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
-        [aResp](const boost::system::error_code ec,
+        [aResp, deviceType](const boost::system::error_code ec,
                 const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
@@ -1583,7 +1584,8 @@ inline void
 
         nlohmann::json& json = aResp->res.jsonValue;
 
-        if (availableCoreCount != nullptr)
+        if (availableCoreCount != nullptr &&
+            deviceType != "xyz.openbmc_project.Inventory.Item.Accelerator")
         {
             json["TotalAvailableCoreCount"] = *availableCoreCount;
         }
@@ -1593,7 +1595,8 @@ inline void
             json["BaseSpeedMHz"] = *baseSpeed;
         }
 
-        if (maxJunctionTemperature != nullptr)
+        if (maxJunctionTemperature != nullptr &&
+            deviceType != "xyz.openbmc_project.Inventory.Item.Accelerator")
         {
             json["MaxJunctionTemperatureCelsius"] = *maxJunctionTemperature;
         }
@@ -1871,14 +1874,14 @@ inline void
         "xyz.openbmc_project.State.ProcessorPerformance");
 }
 
-inline void
-    getProcessorPerformanceData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                                const std::string& service,
-                                const std::string& objPath)
+inline void getProcessorPerformanceData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
+    const std::string& objPath, const std::string& deviceType)
 {
     crow::connections::systemBus->async_method_call(
-        [aResp, objPath](const boost::system::error_code ec,
-                         const OperatingConfigProperties& properties) {
+        [aResp, objPath,
+         deviceType](const boost::system::error_code ec,
+                     const OperatingConfigProperties& properties) {
         if (ec)
         {
             BMCWEB_LOG_DEBUG("DBUS response error");
@@ -1890,7 +1893,8 @@ inline void
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
                 "#NvidiaProcessorMetrics.v1_4_0.NvidiaGPUProcessorMetrics";
-            if (property.first == "Value")
+            if (property.first == "Value" &&
+                deviceType != "xyz.openbmc_project.Inventory.Item.Accelerator")
             {
                 const std::string* state =
                     std::get_if<std::string>(&property.second);
@@ -2644,7 +2648,8 @@ inline void getGPMMetricsData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::string& processorId,
                              const std::string& objectPath,
-                             const dbus::utility::MapperServiceMap& serviceMap)
+                             const dbus::utility::MapperServiceMap& serviceMap,
+                             const std::string& deviceType)
 {
     for (const auto& [serviceName, interfaceList] : serviceMap)
     {
@@ -2701,7 +2706,7 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             else if (interface ==
                      "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig")
             {
-                getOperatingConfigData(aResp, serviceName, objectPath);
+                getOperatingConfigData(aResp, serviceName, objectPath, deviceType);
             }
             else if (interface ==
                      "xyz.openbmc_project.Inventory.Item.PersistentMemory")
@@ -3429,11 +3434,12 @@ inline void requestRoutesOperatingConfig(App& app)
                 json["Name"] = "Processor Profile";
                 json["Id"] = configName;
 
+                std::string deviceType = "xyz.openbmc_project.Inventory.Item.Cpu";
                 // Just use the first implementation of the object - not
                 // expected that there would be multiple matching
                 // services
                 getOperatingConfigData(asyncResp, serviceMap.begin()->first,
-                                       objectPath);
+                                       objectPath, deviceType);
                 return;
             }
             messages::resourceNotFound(asyncResp->res, "OperatingConfig",
@@ -3576,7 +3582,8 @@ inline void requestRoutesProcessor(App& app)
                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
                     const std::string& processorId1,
                     const std::string& objectPath,
-                    const MapperServiceMap& serviceMap) {
+                    const MapperServiceMap& serviceMap,
+                    [[maybe_unused]] const std::string& deviceType) {
                 patchSpeedConfig(asyncResp1, processorId1, reqSpeedConfig,
                                  objectPath, serviceMap);
             });
@@ -3601,11 +3608,13 @@ inline void requestRoutesProcessor(App& app)
                 {
                     redfish::processor_utils::getProcessorObject(
                         asyncResp, processorId,
-                        [migMode](const std::shared_ptr<bmcweb::AsyncResp>&
-                                      asyncResp1,
-                                  const std::string& processorId1,
-                                  const std::string& objectPath,
-                                  const MapperServiceMap& serviceMap) {
+                        [migMode](
+                            const std::shared_ptr<bmcweb::AsyncResp>&
+                                asyncResp1,
+                            const std::string& processorId1,
+                            const std::string& objectPath,
+                            const MapperServiceMap& serviceMap,
+                            [[maybe_unused]] const std::string& deviceType) {
                         patchMigMode(asyncResp1, processorId1, *migMode,
                                      objectPath, serviceMap);
                     });
@@ -3619,8 +3628,8 @@ inline void requestRoutesProcessor(App& app)
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& processorId,
                             const std::string& objectPath,
-                            [[maybe_unused]] const MapperServiceMap&
-                                serviceMap) {
+                            [[maybe_unused]] const MapperServiceMap& serviceMap,
+                            [[maybe_unused]] const std::string& deviceType) {
                         patchRemoteDebug(asyncResp, processorId,
                                          *remoteDebugEnabled, objectPath);
                     });
@@ -3639,7 +3648,8 @@ inline void requestRoutesProcessor(App& app)
                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
                     const std::string& processorId1,
                     const std::string& objectPath,
-                    const MapperServiceMap& serviceMap) {
+                    const MapperServiceMap& serviceMap,
+                    [[maybe_unused]] const std::string& deviceType) {
                 patchAppliedOperatingConfig(asyncResp1, processorId1,
                                             *appliedConfigUri, objectPath,
                                             serviceMap);
@@ -3958,7 +3968,8 @@ inline void
 
 inline void
     getStateSensorMetric(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                         const std::string& service, const std::string& path)
+                         const std::string& service, const std::string& path,
+                         const std::string& deviceType)
 {
     // Get the Processors Associations to cover all processors' cases,
     // to ensure the object has `all_processors` and go ahead.
@@ -3966,7 +3977,7 @@ inline void
         *crow::connections::systemBus, service, path,
         "xyz.openbmc_project.Association.Definitions", "Associations",
         [aResp, service,
-         path](const boost::system::error_code ec,
+         path, deviceType](const boost::system::error_code ec,
                const std::vector<std::tuple<std::string, std::string, std::string>>& property) {
         std::string objPath;
         std::string redirectObjPath;
@@ -3995,7 +4006,7 @@ inline void
 
         crow::connections::systemBus->async_method_call(
             [aResp, service,
-             objPath](const boost::system::error_code& e,
+             objPath, deviceType](const boost::system::error_code& e,
                       std::variant<std::vector<std::string>>& resp) {
             if (e)
             {
@@ -4020,7 +4031,7 @@ inline void
                     "com.nvidia.MemorySpareChannel"};
                 // Process sensor reading
                 crow::connections::systemBus->async_method_call(
-                    [aResp, sensorPath](
+                    [aResp, sensorPath, deviceType](
                         const boost::system::error_code ec,
                         const std::vector<std::pair<
                             std::string, std::vector<std::string>>>& object) {
@@ -4037,7 +4048,8 @@ inline void
                                 "xyz.openbmc_project.State.ProcessorPerformance") !=
                             interfaces.end())
                         {
-                            getProcessorPerformanceData(aResp, service, sensorPath);
+                            getProcessorPerformanceData(aResp, service,
+                                                        sensorPath, deviceType);
                         }
                         if (std::find(
                                 interfaces.begin(), interfaces.end(),
@@ -4168,6 +4180,20 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
             aResp->res.jsonValue["Name"] = processorId + " Processor Metrics";
             for (const auto& [service, interfaces] : object)
             {
+                std::string deviceType = "";
+                if (std::find(
+                        interfaces.begin(), interfaces.end(),
+                        "xyz.openbmc_project.Inventory.Item.Accelerator") !=
+                    interfaces.end())
+                {
+                    deviceType =
+                        "xyz.openbmc_project.Inventory.Item.Accelerator";
+                }
+                else
+                {
+                    deviceType = "xyz.openbmc_project.Inventory.Item.Cpu";
+                }
+
                 if (std::find(interfaces.begin(), interfaces.end(),
                               "xyz.openbmc_project.Inventory.Item.Cpu."
                               "OperatingConfig") != interfaces.end())
@@ -4193,7 +4219,8 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                         "xyz.openbmc_project.State.ProcessorPerformance") !=
                     interfaces.end())
                 {
-                    getProcessorPerformanceData(aResp, service, path);
+                    getProcessorPerformanceData(aResp, service, path,
+                                                deviceType);
                 }
 
                 if (std::find(interfaces.begin(), interfaces.end(),
@@ -4223,7 +4250,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 getSensorMetric(aResp, service, path);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                getStateSensorMetric(aResp, service, path);
+                getStateSensorMetric(aResp, service, path, deviceType);
                 getNumericSensorMetric(aResp, service, path);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
             }
@@ -4811,7 +4838,8 @@ inline void requestRoutesProcessorSettings(App& app)
                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
                         const std::string& processorId1,
                         const std::string& objectPath,
-                        const MapperServiceMap& serviceMap) {
+                        const MapperServiceMap& serviceMap,
+                        [[maybe_unused]] const std::string& deviceType) {
                     patchEccMode(asyncResp1, processorId1, *eccModeEnabled,
                                  objectPath, serviceMap);
                 });
@@ -4846,7 +4874,8 @@ inline void requestRoutesProcessorSettings(App& app)
                                      asyncResp1,
                                  const std::string& processorId1,
                                  const std::string& objectPath,
-                                 const MapperServiceMap& serviceMap) {
+                                 const MapperServiceMap& serviceMap,
+                                 [[maybe_unused]] const std::string& deviceType) {
                         redfish::nvidia_processor_utils::patchCCMode(
                             asyncResp1, processorId1, *ccMode, objectPath,
                             serviceMap);
@@ -4860,7 +4889,8 @@ inline void requestRoutesProcessorSettings(App& app)
                                         asyncResp1,
                                     const std::string& processorId1,
                                     const std::string& objectPath,
-                                    const MapperServiceMap& serviceMap) {
+                                    const MapperServiceMap& serviceMap,
+                                    [[maybe_unused]] const std::string& deviceType) {
                         redfish::nvidia_processor_utils::patchCCDevMode(
                             asyncResp1, processorId1, *ccDevMode, objectPath,
                             serviceMap);
@@ -4972,7 +5002,8 @@ inline void requestRoutesProcessorReset(App& app)
                     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
                     const std::string& processorId1,
                     const std::string& objectPath,
-                    const MapperServiceMap& serviceMap) {
+                    const MapperServiceMap& serviceMap,
+                    [[maybe_unused]] const std::string& deviceType) {
                 postResetType(asyncResp1, processorId1, objectPath, *resetType,
                               serviceMap);
             });

@@ -639,7 +639,9 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                                     asyncResp,
                                 const std::string& processorId,
                                 const std::string& objectPath,
-                                const MapperServiceMap& serviceMap) {
+                                const MapperServiceMap& serviceMap,
+                                [[maybe_unused]] const std::string&
+                                    deviceType) {
                             redfish::nvidia_env_utils::patchEdppSetPoint(
                                 asyncResp, processorId, *setPoint, *persistency,
                                 objectPath, serviceMap);
@@ -653,7 +655,9 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                                            asyncResp,
                                        const std::string& processorId,
                                        const std::string& objectPath,
-                                       const MapperServiceMap& serviceMap) {
+                                       const MapperServiceMap& serviceMap,
+                                       [[maybe_unused]] const std::string&
+                                           deviceType) {
                             redfish::nvidia_env_utils::patchEdppSetPoint(
                                 asyncResp, processorId, *setPoint, false,
                                 objectPath, serviceMap);
@@ -790,7 +794,8 @@ inline void requestRoutesEdppReset(App& app)
             asyncResp, processorId,
             [](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId, const std::string& objectPath,
-               const MapperServiceMap& serviceMap) {
+               const MapperServiceMap& serviceMap,
+               [[maybe_unused]] const std::string& deviceType) {
             redfish::nvidia_env_utils::postEdppReset(asyncResp, processorId,
                                                      objectPath, serviceMap);
         });

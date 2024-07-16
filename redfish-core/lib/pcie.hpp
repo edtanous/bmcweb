@@ -751,7 +751,7 @@ static inline void
                     // unknown, no need to handle
                     return;
                 }
-                asyncResp->res.jsonValue["PCIeInterface"]["PcieType"] =
+                asyncResp->res.jsonValue["PCIeInterface"]["PCIeType"] =
                     *generationInUse;
             }
         }
