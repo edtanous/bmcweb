@@ -35,6 +35,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <memory>
 #include <vector>
 
 namespace crow
@@ -114,13 +115,7 @@ class Connection :
         // don't require auth
         if (preverified)
         {
-            boost::asio::ip::address ipAddress;
-            if (getClientIp(ipAddress))
-            {
-                return true;
-            }
-
-            mtlsSession = verifyMtlsUser(ipAddress, ctx);
+            mtlsSession = verifyMtlsUser(ip, ctx);
             if (mtlsSession)
             {
                 BMCWEB_LOG_DEBUG("{} Generating TLS session: {}", logPtr(this),
@@ -178,6 +173,8 @@ class Connection :
 
         startDeadline();
 
+        readClientIp();
+
         // TODO(ed) Abstract this to a more clever class with the idea of an
         // asynchronous "start"
         if constexpr (IsTls<Adaptor>::value)
@@ -233,7 +230,7 @@ class Connection :
         {
             return;
         }
-        req = crow::Request(parser->release(), reqEc);
+        req = std::make_shared<crow::Request>(parser->release(), reqEc);
         if (reqEc)
         {
             BMCWEB_LOG_DEBUG("Request failed to construct{}", reqEc.message());
@@ -241,15 +238,15 @@ class Connection :
             completeRequest(res);
             return;
         }
-        req.session = userSession;
+        req->session = userSession;
 
         // Fetch the client IP address
-        readClientIp();
+        req->ipAddress = ip;
 
         // Check for HTTP version 1.1.
-        if (req.version() == 11)
+        if (req->version() == 11)
         {
-            if (req.getHeaderValue(boost::beast::http::field::host).empty())
+            if (req->getHeaderValue(boost::beast::http::field::host).empty())
             {
                 res.result(boost::beast::http::status::bad_request);
                 completeRequest(res);
@@ -258,11 +255,11 @@ class Connection :
         }
 
         BMCWEB_LOG_INFO("Request:  {} HTTP/{}.{} {} {} {}", logPtr(this),
-                        req.version() / 10, req.version() % 10,
-                        req.methodString(), req.target(),
-                        req.ipAddress.to_string());
+                        req->version() / 10, req->version() % 10,
+                        req->methodString(), req->target(),
+                        req->ipAddress.to_string());
 
-        req.ioService = static_cast<decltype(req.ioService)>(
+        req->ioService = static_cast<decltype(req->ioService)>(
             &adaptor.get_executor().context());
 
         if (res.completed)
@@ -270,38 +267,21 @@ class Connection :
             completeRequest(res);
             return;
         }
-        keepAlive = req.keepAlive();
+        keepAlive = req->keepAlive();
         if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
         {
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
-            if (persistent_data::getConfig().isTLSAuthEnabled())
+            if (!crow::authentication::isOnAllowlist(req->url().path(),
+                                                     req->method()) &&
+                req->session == nullptr)
             {
-                if (!crow::authentication::isOnAllowlist(req.url().path(),
-                                                         req.method()) &&
-                    req.session == nullptr)
-                {
-                    BMCWEB_LOG_WARNING("Authentication failed");
-                    forward_unauthorized::sendUnauthorized(
-                        req.url().encoded_path(),
-                        req.getHeaderValue("X-Requested-With"),
-                        req.getHeaderValue("Accept"), res);
-
-                    std::string user = getUser(req);
-                    if (user.empty())
-                    {
-                        completeRequest(res);
-                        return;
-                    }
-                    auto asyncResp =
-                        std::make_shared<bmcweb::AsyncResp>(std::move(res));
-                    BMCWEB_LOG_DEBUG("Setting completion handler");
-                    asyncResp->res.setCompleteRequestHandler(
-                        [self(shared_from_this())](crow::Response& thisRes) {
-                        self->completeRequest(thisRes);
-                    });
-                    redfish::handleAccountLocked(user, asyncResp, req);
-                    return;
-                }
+                BMCWEB_LOG_WARNING("Authentication failed");
+                forward_unauthorized::sendUnauthorized(
+                    req->url().encoded_path(),
+                    req->getHeaderValue("X-Requested-With"),
+                    req->getHeaderValue("Accept"), res);
+                completeRequest(res);
+                return;
             }
 #endif // BMCWEB_INSECURE_DISABLE_AUTHX
         }
@@ -312,11 +292,11 @@ class Connection :
             self->completeRequest(thisRes);
         });
         bool isSse =
-            isContentTypeAllowed(req.getHeaderValue("Accept"),
+            isContentTypeAllowed(req->getHeaderValue("Accept"),
                                  http_helpers::ContentType::EventStream, false);
         std::string_view upgradeType(
-            req.getHeaderValue(boost::beast::http::field::upgrade));
-        if ((req.isUpgrade() &&
+            req->getHeaderValue(boost::beast::http::field::upgrade));
+        if ((req->isUpgrade() &&
              bmcweb::asciiIEquals(upgradeType, "websocket")) ||
             isSse)
         {
@@ -337,10 +317,10 @@ class Connection :
             handler->handleUpgrade(req, asyncResp, std::move(adaptor));
             return;
         }
-        std::string url(req.target());
+        std::string url(req->target());
         std::size_t dumpPos = url.rfind("Dump");
         std::string_view expected =
-            req.getHeaderValue(boost::beast::http::field::if_none_match);
+            req->getHeaderValue(boost::beast::http::field::if_none_match);
         if (!expected.empty())
         {
             res.setExpectedHash(expected);
@@ -397,7 +377,7 @@ class Connection :
         res = std::move(thisRes);
         res.keepAlive(keepAlive);
 
-        completeResponseFields(req, res);
+        completeResponseFields(*req, res);
         res.addHeader(boost::beast::http::field::date, getCachedDateStr());
 
         doWrite();
@@ -409,19 +389,7 @@ class Connection :
 
     void readClientIp()
     {
-        boost::asio::ip::address ip;
-        boost::system::error_code ec = getClientIp(ip);
-        if (ec)
-        {
-            return;
-        }
-        req.ipAddress = ip;
-    }
-
-    boost::system::error_code getClientIp(boost::asio::ip::address& ip)
-    {
         boost::system::error_code ec;
-        BMCWEB_LOG_DEBUG("Fetch the client IP address");
 
         if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
         {
@@ -434,11 +402,10 @@ class Connection :
                 // will be empty.
                 BMCWEB_LOG_ERROR(
                     "Failed to get the client's IP Address. ec : {}", ec);
-                return ec;
+                return;
             }
             ip = endpoint.address();
         }
-        return ec;
     }
 
   private:
@@ -477,13 +444,6 @@ class Connection :
                 return;
             }
 
-            readClientIp();
-
-            boost::asio::ip::address ip;
-            if (getClientIp(ip))
-            {
-                BMCWEB_LOG_DEBUG("Unable to get client IP");
-            }
             if constexpr (!std::is_same_v<Adaptor, boost::beast::test::stream>)
             {
 #ifndef BMCWEB_INSECURE_DISABLE_AUTHX
@@ -603,8 +563,7 @@ class Connection :
 
         userSession = nullptr;
 
-        // Destroy the Request via the std::optional
-        req.clear();
+        req->clear();
         doReadHeaders();
     }
 
@@ -717,6 +676,9 @@ class Connection :
 
     Adaptor adaptor;
     Handler* handler;
+
+    boost::asio::ip::address ip;
+
     // Making this a std::optional allows it to be efficiently destroyed and
     // re-created on Connection reset
     std::optional<boost::beast::http::request_parser<bmcweb::HttpBody>> parser;
@@ -725,7 +687,7 @@ class Connection :
 
     boost::beast::flat_static_buffer<8192> buffer;
 
-    crow::Request req;
+    std::shared_ptr<crow::Request> req;
     crow::Response res;
 
     std::shared_ptr<persistent_data::UserSession> userSession;

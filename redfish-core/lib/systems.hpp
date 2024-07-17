@@ -4566,7 +4566,6 @@ inline void afterGetAllowedHostTransitions(
     nlohmann::json::array_t parameters;
     parameters.emplace_back(std::move(parameter));
     asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
-    redfish::nvidia_systems_utils::getChassisNMIStatus(asyncResp);
 }
 
 inline void handleSystemCollectionResetActionGet(
@@ -4608,6 +4607,8 @@ inline void handleSystemCollectionResetActionGet(
     asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
     asyncResp->res.jsonValue["Name"] = "Reset Action Info";
     asyncResp->res.jsonValue["Id"] = "ResetActionInfo";
+
+    redfish::nvidia_systems_utils::getChassisNMIStatus(asyncResp);
 
     // Look to see if system defines AllowedHostTransitions
     sdbusplus::asio::getProperty<std::vector<std::string>>(

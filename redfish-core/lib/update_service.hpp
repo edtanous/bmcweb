@@ -30,7 +30,9 @@
 #endif
 
 #include "app.hpp"
+#include "component_integrity.hpp"
 #include "dbus_utility.hpp"
+#include "multipart_parser.hpp"
 #include "ossl_random.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
@@ -1076,8 +1078,8 @@ inline bool areTargetsInvalidOrUnupdatable(
  * @return None
  */
 inline void validateUpdatePolicyCallback(
-    const boost::system::error_code errorCode, const MapperServiceMap& objInfo,
-    const crow::Request& req,
+    const boost::system::error_code errorCode,
+    const dbus::utility::MapperServiceMap& objInfo, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::vector<sdbusplus::message::object_path>& targets)
 {
@@ -1182,8 +1184,9 @@ inline void areTargetsUpdateableCallback(
     }
 
     crow::connections::systemBus->async_method_call(
-        [req, asyncResp, targets](const boost::system::error_code errorCode,
-                                  const MapperServiceMap& objInfo) mutable {
+        [req, asyncResp,
+         targets](const boost::system::error_code errorCode,
+                  const dbus::utility::MapperServiceMap& objInfo) mutable {
         validateUpdatePolicyCallback(errorCode, objInfo, req, asyncResp,
                                      targets);
     },
@@ -2260,7 +2263,8 @@ inline void requestRoutesUpdateService(App& app)
 
         crow::connections::systemBus->async_method_call(
             [getUpdateStatus](boost::system::error_code ec,
-                              const MapperGetSubTreeResponse& subtree) mutable {
+                              const dbus::utility::MapperGetSubTreeResponse&
+                                  subtree) mutable {
             if (ec || !subtree.size())
             {
                 getUpdateStatus->mctp_serviceStatus = false;
