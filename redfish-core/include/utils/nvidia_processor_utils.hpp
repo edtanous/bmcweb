@@ -309,6 +309,42 @@ inline void getSMUtilizationData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig");
 }
 
+inline void getNvLinkTotalCount(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                const std::string& cpuId,
+                                const std::string& service,
+                                const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, cpuId](const boost::system::error_code ec,
+                       const OperatingConfigProperties& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("DBUS response error");
+            messages::internalError(aResp->res);
+            return;
+        }
+        nlohmann::json& json = aResp->res.jsonValue;
+        for (const auto& property : properties)
+        {
+            if (property.first == "TotalNumberNVLinks")
+            {
+                const uint64_t* totalNumberNVLinks =
+                    std::get_if<uint64_t>(&property.second);
+                if (totalNumberNVLinks == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Invalid Data Type");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                json["Oem"]["Nvidia"]["TotalNumberNVLinks"] =
+                    *totalNumberNVLinks;
+            }
+        }
+    },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "com.nvidia.NVLink.NvLinkTotalCount");
+}
+
 /**
  * @brief Fill out processor nvidia specific info by
  * requesting data from the given D-Bus object.

@@ -2843,6 +2843,11 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getPowerSmoothingInfo(aResp, processorId);
             }
+            else if (interface == "com.nvidia.NVLink.NvLinkTotalCount")
+            {
+                redfish::nvidia_processor_utils::getNvLinkTotalCount(
+                    aResp, processorId, serviceName, objectPath);
+            }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         }
     }
