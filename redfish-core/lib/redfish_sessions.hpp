@@ -262,10 +262,7 @@ inline void handleSessionCollectionPost(
             boost::urls::format("/redfish/v1/AccountService/Accounts/{}",
                                 session->username));
     }
-
-    crow::getUserInfo(asyncResp, username, session, [asyncResp, session]() {
     fillSessionObject(asyncResp->res, *session);
-<<<<<<< HEAD
 #ifdef BMCWEB_ENABLE_REDFISH_DBUS_EVENT_PUSH
     // Send an event for session creation
     Event event = redfish::EventUtil::getInstance().createEventResourceCreated(
@@ -273,9 +270,6 @@ inline void handleSessionCollectionPost(
     redfish::EventServiceManager::getInstance().sendEventWithOOC(
         std::string(req.target()), event);
 #endif
-=======
-    });
->>>>>>> master
 }
 inline void handleSessionServiceHead(
     crow::App& app, const crow::Request& req,
