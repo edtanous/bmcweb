@@ -246,11 +246,9 @@ enum redfish_bool
 static constexpr int redfishInvalidEvent = -1;
 static constexpr int redfishInvalidArgs = -2;
 
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
 void parseAdditionalDataForCPER(nlohmann::json& entry,
                                 const nlohmann::json& oem,
                                 AdditionalData& additional);
-#endif
 
 /*
  * Structure for an event which is based on Event v1.7.0 in "Redfish Schema
@@ -273,9 +271,7 @@ class Event
     std::string messageSeverity = "";
     std::string originOfCondition = "";
     nlohmann::json oem = nlohmann::json::object();
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
     nlohmann::json cper = nlohmann::json::object();
-#endif
     std::string eventResolution = "";
     std::string logEntryId = "";
     std::string satBMCLogEntryUrl = "";
@@ -443,12 +439,10 @@ class Event
         {
             eventLogEntry.update(oem);
         }
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
         if (!cper.empty())
         {
             eventLogEntry.update(cper);
         }
-#endif
         if (!originOfCondition.empty() && includeOriginOfCondition)
         {
             eventLogEntry["OriginOfCondition"] = nlohmann::json::object();
@@ -2260,9 +2254,7 @@ class EventServiceManager
             std::string resolution;
             std::vector<std::string> messageArgs = {};
             const std::vector<std::string>* additionalDataPtr;
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
             nlohmann::json cper = {};
-#endif
 
             msg.read(objPath, properties);
             for (const auto& [key, val] :
@@ -2346,7 +2338,6 @@ class EventServiceManager
                                     additional.count("REDFISH_MESSAGE_ID")));
                             return;
                         }
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
                         if (additional.count("DiagnosticDataType") > 0)
                         {
                             nlohmann::json oem = {
@@ -2357,7 +2348,6 @@ class EventServiceManager
                                         "#NvidiaEvent.v1_0_0.CPER"}}}}}}}};
                             parseAdditionalDataForCPER(cper, oem, additional);
                         }
-#endif
                     }
                     else
                     {
@@ -2475,12 +2465,10 @@ class EventServiceManager
                         {"Device", deviceName},
                         {"ErrorId", eventId}}}}}};
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
                 if (!cper.empty())
                 {
                     event.cper = cper;
                 }
-#endif
                 event.eventResolution = resolution;
                 event.logEntryId = logEntryId;
                 event.satBMCLogEntryUrl = satBMCLogEntryUrl;

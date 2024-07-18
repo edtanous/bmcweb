@@ -2774,7 +2774,6 @@ inline void requestRoutesJournalEventLogEntry(App& app)
     });
 }
 
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
 inline void parseAdditionalDataForCPER(nlohmann::json& entry,
                                        const nlohmann::json& oem,
                                        AdditionalData& additional)
@@ -2786,11 +2785,7 @@ inline void parseAdditionalDataForCPER(nlohmann::json& entry,
         return;
 
     entry["DiagnosticDataType"] = type;
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_CPER_PROPERTIES
     entry.update(oem);
-#else
-    (void)oem;
-#endif
 
     for (const auto& iter : additional)
     {
@@ -2803,7 +2798,6 @@ inline void parseAdditionalDataForCPER(nlohmann::json& entry,
         if ("SectionTypeGUID" == iter.first && "CPERSection" == type)
             entry["CPER"]["SectionType"] = iter.second;
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_CPER_PROPERTIES
         // Common
         if ("SectionTypeGUID" == iter.first)
             entry["CPER"]["Oem"]["Nvidia"]["SectionGUID"] = iter.second;
@@ -2839,12 +2833,10 @@ inline void parseAdditionalDataForCPER(nlohmann::json& entry,
             entry["CPER"]["Oem"]["Nvidia"]["PCIeSecondaryBusNumber"] = iter.second;
         if ("PCIeSlotNumber" == iter.first)
             entry["CPER"]["Oem"]["Nvidia"]["PCIeSlotNumber"] = iter.second;
-#endif
     }
 
     BMCWEB_LOG_DEBUG("Done {}", type);
 }
-#endif
 
 inline void requestRoutesDBusEventLogEntryCollection(App& app)
 {
@@ -3024,9 +3016,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                 std::string messageArgs;
                 std::string originOfCondition;
                 std::string deviceName;
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
                 nlohmann::json cper = {};
-#endif
                 if (additionalDataRaw != nullptr)
                 {
                     AdditionalData additional(*additionalDataRaw);
@@ -3050,7 +3040,6 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     {
                         deviceName = additional["DEVICE_NAME"];
                     }
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
                     if (additional.count("DiagnosticDataType") > 0)
                     {
                         nlohmann::json oem = {
@@ -3061,7 +3050,6 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                                     "#NvidiaLogEntry.v1_0_0.CPER"}}}}}}}};
                         parseAdditionalDataForCPER(cper, oem, additional);
                     }
-#endif
                 }
                 if (isMessageRegistry)
                 {
@@ -3130,12 +3118,10 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         thisEntry["ServiceProviderNotified"] = *notifyAction;
                     }
                 }
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
                 if (!cper.empty())
                 {
                     thisEntry.update(cper);
                 }
-#endif
                 if (filePath != nullptr)
                 {
                     thisEntry["AdditionalDataURI"] =
@@ -3233,9 +3219,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             std::string messageArgs;
             std::string originOfCondition;
             std::string deviceName;
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
             nlohmann::json cper = {};
-#endif
             if (additionalDataRaw != nullptr)
             {
                 AdditionalData additional(*additionalDataRaw);
@@ -3259,7 +3243,6 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 {
                     deviceName = additional["DEVICE_NAME"];
                 }
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
                 if (additional.count("DiagnosticDataType") > 0)
                 {
                     nlohmann::json oem = {
@@ -3270,7 +3253,6 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                                 "#NvidiaLogEntry.v1_0_0.CPER"}}}}}}}};
                     parseAdditionalDataForCPER(cper, oem, additional);
                 }
-#endif
             }
 
             if (isMessageRegistry)
@@ -3359,12 +3341,10 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     getLogEntryAdditionalDataURI(std::to_string(*id));
                 }
             }
-#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_EVENT_LOG
             if (!cper.empty())
             {
                 asyncResp->res.jsonValue.update(cper);
             }
-#endif
         });
     });
 
