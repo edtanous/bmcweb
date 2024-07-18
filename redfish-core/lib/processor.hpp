@@ -1272,6 +1272,23 @@ inline void getAcceleratorDataByService(
         aResp->res.jsonValue["Status"]["Health"] = health;
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
+#ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
+/** NOTES: This is a temporary solution to avoid performance issues may impact
+ *  other Redfish services. Please call for architecture decisions from all
+ *  NvBMC teams if want to use it in other places.
+ */
+
+#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
+#error "Conflicts! Please set health-rollup-alternative=disabled."
+#endif
+
+#ifdef BMCWEB_DISABLE_HEALTH_ROLLUP
+#error "Conflicts! Please set disable-health-rollup=disabled."
+#endif
+
+        health_utils::getDeviceHealthInfo(aResp->res, acclrtrId);
+#endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
+
         if (accType != nullptr && !accType->empty())
         {
             aResp->res.jsonValue["ProcessorType"] = getProcessorType(*accType);
