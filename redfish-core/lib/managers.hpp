@@ -3620,10 +3620,10 @@ inline void requestRoutesManager(App& app)
         managerGetLastResetTime(asyncResp);
 
         // ManagerDiagnosticData is added for all BMCs.
-        // nlohmann::json& managerDiagnosticData =
-        //     asyncResp->res.jsonValue["ManagerDiagnosticData"];
-        // managerDiagnosticData["@odata.id"] =
-        //     "/redfish/v1/Managers/" PLATFORMBMCID "/ManagerDiagnosticData";
+        nlohmann::json& managerDiagnosticData =
+             asyncResp->res.jsonValue["ManagerDiagnosticData"];
+        managerDiagnosticData["@odata.id"] =
+             "/redfish/v1/Managers/" PLATFORMBMCID "/ManagerDiagnosticData";
 
 #ifdef BMCWEB_ENABLE_REDFISH_OEM_MANAGER_FAN_DATA
         auto pids = std::make_shared<GetPIDValues>(asyncResp);
