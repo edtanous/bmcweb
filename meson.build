@@ -85,6 +85,7 @@ feature_map = {
   'redfish-bmc-journal'                         : '-DBMCWEB_ENABLE_REDFISH_BMC_JOURNAL',
   'redfish-cpu-log'                             : '-DBMCWEB_ENABLE_REDFISH_CPU_LOG',
   'nvidia-oem-properties'                       : '-DBMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES',
+  'nvidia-oem-fw-update-staging'                : '-DBMCWEB_ENABLE_NVIDIA_UPDATE_STAGING',
   'nvidia-oem-logservices'                      : '-DBMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES',
   'nvidia-oem-common-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES',
   'nvidia-oem-bf-properties'                    : '-DBMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES',

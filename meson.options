@@ -395,6 +395,7 @@ option('health-rollup-alternative', type : 'feature', value : 'disabled', descri
 option('disable-health-rollup', type : 'feature', value : 'disabled', description : 'Disable health rollup.')
 option('disable-conditions-array', type : 'feature', value : 'disabled', description : 'Disable conditions array.')
 option('nvidia-oem-properties', type : 'feature', value : 'disabled', description : 'Enable OEM properties.')
+option('nvidia-oem-fw-update-staging', type : 'feature', value : 'disabled', description : 'Enable Stage and Activate later Update.')
 option('nvidia-oem-logservices', type : 'feature', value : 'disabled', description : 'Enable OEM log services.')
 option('nvidia-oem-bf-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Bluefield properties')
 option('nvidia-oem-bf3-properties', type : 'feature', value : 'disabled', description : 'Enable OEM Bluefield 3 properties')

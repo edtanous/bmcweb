@@ -42,6 +42,35 @@ constexpr const char* otherPurpose =
     "xyz.openbmc_project.Software.Version.VersionPurpose.Other";
 
 /**
+ * @brief The D-Bus service name for the Object Mapper.
+ */
+constexpr const char* serviceObjectMapper = "xyz.openbmc_project.ObjectMapper";
+
+/**
+ * @brief Maps D-Bus firmware states to human-readable values.
+ */
+static std::map<std::string, std::string> firmwareState = {
+    {"xyz.openbmc_project.Software.State.FirmwareState.Unknown", "Unknown"},
+    {"xyz.openbmc_project.Software.State.FirmwareState.Activated", "Activated"},
+    {"xyz.openbmc_project.Software.State.FirmwareState.PendingActivation",
+     "PendingActivation"},
+    {"xyz.openbmc_project.Software.State.FirmwareState.Staged", "Staged"},
+    {"xyz.openbmc_project.Software.State.FirmwareState.WriteInProgress",
+     "WriteInProgress"},
+    {"xyz.openbmc_project.Software.State.FirmwareState.Inactive", "Inactive"},
+    {"xyz.openbmc_project.Software.State.FirmwareState.FailedAuthentication",
+     "FailedAuthentication"}};
+
+/**
+ * @brief Maps D-Bus firmware build types to human-readable values.
+ */
+static std::map<std::string, std::string> buildType = {
+    {"xyz.openbmc_project.Software.BuildType.FirmwareBuildType.Release",
+     "Release"},
+    {"xyz.openbmc_project.Software.BuildType.FirmwareBuildType.Development",
+     "Development"}};
+
+/**
  * @brief Populate the running firmware version and image links
  *
  * @param[i,o] aResp             Async response object
@@ -521,6 +550,218 @@ inline void getFwWriteProtectedStatus(
         dbusSvc, "/xyz/openbmc_project/software/" + *swId,
         "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Software.Settings");
+}
+
+/**
+ * @brief Populates the firmware slot information in the JSON response.
+ *
+ * This function retrieves the firmware slot details from the D-Bus service and
+ * updates the JSON response object with the relevant information for the
+ * specified slot type.
+ *
+ * @param asyncResp Async response object that will be populated with slot
+ * information.
+ * @param slotObjPath The D-Bus object path representing the firmware slot to be
+ * queried.
+ * @param slotType The type of the slot (e.g., "ActiveFirmwareSlot",
+ * "InactiveFirmwareSlot").
+ */
+inline void populateSlotInfo(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
+                             const std::string& slotObjPath,
+                             const std::string& slotType)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, slotObjPath, slotType](const boost::system::error_code ec,
+                                           const GetObjectType& response) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("error_code = ", ec);
+            BMCWEB_LOG_ERROR("error msg = ", ec.message());
+            return;
+        }
+
+        const std::string softwareSlotInterface = "xyz.openbmc_project.Software.Slot";
+        std::string slotService;
+
+        for (const auto& [service, interfaces] : response)
+        {
+            if (std::find(interfaces.begin(), interfaces.end(),
+                          softwareSlotInterface) != interfaces.end())
+            {
+                slotService = service;
+                break;
+            }
+        }
+
+        if (!slotService.empty())
+        {
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, slotService, slotObjPath,
+                 slotType](const boost::system::error_code ec,
+                           const boost::container::flat_map<
+                               std::string, dbus::utility::DbusVariantType>&
+                               properties) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR("error_code = ", ec);
+                    BMCWEB_LOG_ERROR("error msg = ", ec.message());
+                    return;
+                }
+                nlohmann::json& oemSlot =
+                    asyncResp->res.jsonValue["Oem"]["Nvidia"][slotType];
+                for (const auto& [key, val] : properties)
+                {
+                    if (key == "SlotId")
+                    {
+                        if (const uint8_t* value = std::get_if<uint8_t>(&val))
+                        {
+                            oemSlot["SlotId"] = *value;
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_ERROR("Null value returned for SlotId");
+                        }
+                    }
+                    else if (key == "FirmwareComparisonNumber")
+                    {
+                        if (const uint32_t* value = std::get_if<uint32_t>(&val))
+                        {
+                            oemSlot["FirmwareComparisonNumber"] = *value;
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "Null value returned for FirmwareComparisonNumber");
+                        }
+                    }
+                    else if (key == "ExtendedVersion")
+                    {
+                        if (const std::string* value =
+                                std::get_if<std::string>(&val))
+                        {
+                            oemSlot["Version"] = *value;
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_ERROR("Null value returned for Version");
+                        }
+                    }
+                    else if (key == "BuildType")
+                    {
+                        if (const std::string* value =
+                                std::get_if<std::string>(&val))
+                        {
+                            auto it = buildType.find(*value);
+                            if (it != buildType.end())
+                            {
+                                oemSlot["BuildType"] = it->second;
+                            }
+                            else
+                            {
+                                BMCWEB_LOG_ERROR(
+                                    "BuildType '{}' not found in map", *value);
+                                oemSlot["BuildType"] = "";
+                            }
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "Null value returned for BuildType");
+                        }
+                    }
+                    else if (key == "State")
+                    {
+                        if (const std::string* value =
+                                std::get_if<std::string>(&val))
+                        {
+                            auto it = firmwareState.find(*value);
+                            if (it != firmwareState.end())
+                            {
+                                BMCWEB_LOG_ERROR(
+                                    "FirmwareState '{}' not found in map",
+                                    *value);
+                                oemSlot["FirmwareState"] = it->second;
+                            }
+                            else
+                            {
+                                oemSlot["FirmwareState"] = "";
+                            }
+                        }
+                        else
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "Null value returned for FirmwareState");
+                        }
+                    }
+                }
+            },
+                slotService, slotObjPath, "org.freedesktop.DBus.Properties",
+                "GetAll", "");
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", slotObjPath,
+        std::array<const char*, 0>());
+}
+
+/**
+ * @brief Retrieves firmware slot information for a given object
+ * path.
+ *
+ * This function fetches the Active and Inactive firmware slot information using
+ * D-Bus properties and updates the JSON response with the slot details.
+ *
+ * @param asyncResp     Async response object that will be populated with slot
+ * information.
+ * @param objectPath    Dbus object path used to query slot information
+ *
+ */
+inline void getFWSlotInformation(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
+                                 const std::string& objectPath)
+{
+    sdbusplus::asio::getProperty<std::vector<std::string>>(
+        *crow::connections::systemBus, serviceObjectMapper,
+        objectPath + "/ActiveSlot", "xyz.openbmc_project.Association",
+        "endpoints",
+        [asyncResp, objectPath](const boost::system::error_code ec,
+                                const std::vector<std::string>& objPaths) {
+        asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+            "#NvidiaSoftwareInventory.v1_2_0.NvidiaSoftwareInventory";
+        if (ec)
+        {
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                    ["StageOnlyUpdateOptionSupported"] = false;
+            return;
+        }
+
+        if (!objPaths.empty())
+        {
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                    ["StageOnlyUpdateOptionSupported"] = true;
+            populateSlotInfo(asyncResp, objPaths.front(), "ActiveFirmwareSlot");
+        }
+
+        sdbusplus::asio::getProperty<std::vector<std::string>>(
+            *crow::connections::systemBus, serviceObjectMapper,
+            objectPath + "/InactiveSlot", "xyz.openbmc_project.Association",
+            "endpoints",
+            [asyncResp](const boost::system::error_code ec,
+                        const std::vector<std::string>& objPaths) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("error_code = ", ec);
+                BMCWEB_LOG_ERROR("error msg = ", ec.message());
+                return;
+            }
+
+            if (!objPaths.empty())
+            {
+                populateSlotInfo(asyncResp, objPaths.front(),
+                                 "InactiveFirmwareSlot");
+            }
+        });
+    });
 }
 
 /**
