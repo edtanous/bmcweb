@@ -4948,6 +4948,8 @@ inline void requestRoutesSystemDumpServiceActionInfo(App& app)
             "DiagnosticType=RetRegister");
         OEMDiagnosticDataType_allowableValues.push_back(
             "DiagnosticType=FirmwareAttributes");
+        OEMDiagnosticDataType_allowableValues.push_back(
+            "DiagnosticType=HardwareCheckout");
         parameter_OEMDiagnosticDataType["AllowableValues"] =
             std::move(OEMDiagnosticDataType_allowableValues);
 
