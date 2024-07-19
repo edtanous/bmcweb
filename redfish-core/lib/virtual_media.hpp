@@ -699,7 +699,7 @@ inline void handleManagersVirtualMediaActionInsertPost(
     }
 
     constexpr std::string_view action = "VirtualMedia.InsertMedia";
-    if (name != PLATFORMBMCID)
+    if (name != BMCWEB_REDFISH_MANAGER_URI_NAME)
     {
         messages::resourceNotFound(asyncResp->res, action, resName);
 
@@ -778,7 +778,7 @@ inline void handleManagersVirtualMediaActionEject(
     }
 
     constexpr std::string_view action = "VirtualMedia.EjectMedia";
-    if (managerName != PLATFORMBMCID)
+    if (managerName != BMCWEB_REDFISH_MANAGER_URI_NAME)
     {
         messages::resourceNotFound(asyncResp->res, action, resName);
 
@@ -839,7 +839,7 @@ inline void handleManagersVirtualMediaCollectionGet(
     {
         return;
     }
-    if (name != PLATFORMBMCID)
+    if (name != BMCWEB_REDFISH_MANAGER_URI_NAME)
     {
         messages::resourceNotFound(asyncResp->res, "VirtualMedia", name);
 
@@ -879,7 +879,7 @@ inline void
     {
         return;
     }
-    if (name != PLATFORMBMCID)
+    if (name != BMCWEB_REDFISH_MANAGER_URI_NAME)
     {
         messages::resourceNotFound(asyncResp->res, "VirtualMedia", resName);
 

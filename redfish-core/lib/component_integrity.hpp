@@ -488,7 +488,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                 {"ComponentIntegrityEnabled", true},
                 {"SPDM",
                  {{"Requester",
-                   {{"@odata.id", "/redfish/v1/Managers/" PLATFORMBMCID}}}}},
+                   {{"@odata.id", "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME}}}}},
                 {"Actions",
                  {{"#ComponentIntegrity.SPDMGetSignedMeasurements",
                    {{"target",

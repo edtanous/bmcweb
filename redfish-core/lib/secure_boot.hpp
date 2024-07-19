@@ -39,7 +39,7 @@ inline void handleSecureBootGet(crow::App& app, const crow::Request& req,
     {
         return;
     }
-    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                         "/SecureBoot";
     aResp->res.jsonValue["@odata.type"] = "#SecureBoot.v1_1_0.SecureBoot";
     aResp->res.jsonValue["Name"] = "UEFI Secure Boot";
@@ -47,7 +47,7 @@ inline void handleSecureBootGet(crow::App& app, const crow::Request& req,
         "The UEFI Secure Boot associated with this system.";
     aResp->res.jsonValue["Id"] = "SecureBoot";
     aResp->res.jsonValue["SecureBootDatabases"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
         "/SecureBoot/SecureBootDatabases";
 
     sdbusplus::asio::getAllProperties(
@@ -281,12 +281,12 @@ inline void
 
 inline void requestRoutesSecureBoot(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/SecureBoot/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/SecureBoot/")
         .privileges(redfish::privileges::getSecureBoot)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(secure_boot::handleSecureBootGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/SecureBoot/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/SecureBoot/")
         .privileges(redfish::privileges::patchSecureBoot)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(secure_boot::handleSecureBootPatch, std::ref(app)));

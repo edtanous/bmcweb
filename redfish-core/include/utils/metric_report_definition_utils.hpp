@@ -421,7 +421,7 @@ inline void getPlatformMetricReportDefinition(
 // metric properties
 inline std::string getMemoryMetricURIDef(std::string& propertyName)
 {
-    std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string propURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
     std::string gpuPrefix(platformGpuNamePrefix);
     if (propertyName == "RowRemappingFailed")
     {
@@ -469,7 +469,7 @@ inline std::string getMemoryMetricURIDef(std::string& propertyName)
 // metric properties
 inline std::string getProcessorGpmMetricURIDef(std::string& propertyName)
 {
-    std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string propURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
     std::string gpuPrefix(platformGpuNamePrefix);
 
     if (propertyName == "DMMAUtilizationPercent")
@@ -612,7 +612,7 @@ inline std::string getProcessorGpmMetricURIDef(std::string& propertyName)
 // metric properties
 inline std::string getProcessorPortGpmMetricURIDef(std::string& propertyName)
 {
-    std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string propURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
     if (propertyName == "NVLinkDataTxBandwidthGbps")
     {
         propURI +=
@@ -732,7 +732,7 @@ inline void populateGpmMetricProperties(
 
 inline std::string getProcessorMetricURIDef(std::string& propertyName)
 {
-    std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string propURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
     std::string gpuPrefix(platformGpuNamePrefix);
     if (propertyName == "State")
     {
@@ -930,7 +930,7 @@ inline std::string getNVSwitchMetricURIDef(std::string& propertyName)
 
 inline std::string getProcessorPortMetricURIDef(std::string& propertyName)
 {
-    std::string propURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    std::string propURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
     std::string gpuPrefix(platformGpuNamePrefix);
     if (propertyName == "CurrentSpeedGbps")
     {

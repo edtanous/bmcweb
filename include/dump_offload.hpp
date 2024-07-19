@@ -252,7 +252,7 @@ static boost::container::flat_map<crow::streaming_response::Connection*,
 
 inline void requestRoutes(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
                       "/LogServices/Dump/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
@@ -282,7 +282,7 @@ inline void requestRoutes(App& app)
         handlers.erase(handler);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                       "/LogServices/Dump/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
@@ -312,7 +312,7 @@ inline void requestRoutes(App& app)
         handler->second->outputBuffer.clear();
     });
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                       "/LogServices/FaultLog/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()

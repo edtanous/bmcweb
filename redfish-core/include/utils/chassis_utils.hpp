@@ -1004,7 +1004,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                        - "xyz.openbmc_project.GpuMgr" ...
                        - "xyz.openbmc_project.ObjectMapper" ...
                     */
-                    url = std::string("/redfish/v1/Systems/" PLATFORMSYSTEMID
+                    url = std::string("/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                       "/Processors/") +
                           invObjPath.filename().string();
                     BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface,
@@ -1065,7 +1065,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                 }
                 if (interface == bmcInvInterf)
                 {
-                    url = std::string("/redfish/v1/Managers/" PLATFORMBMCID);
+                    url = std::string("/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME);
                     BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface,
                                      url);
                     callback(true, url);

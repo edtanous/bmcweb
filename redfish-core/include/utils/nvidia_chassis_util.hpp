@@ -238,7 +238,7 @@ inline void
                 return;
             }
             linksArray.push_back(
-                {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                {{"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                "/Processors/" +
                                    processorName}});
         }
@@ -1290,14 +1290,14 @@ inline void handleChassisGetAllProperties(
 
     nlohmann::json::array_t computerSystems;
     nlohmann::json::object_t system;
-    system["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    system["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
     computerSystems.emplace_back(std::move(system));
     asyncResp->res.jsonValue["Links"]["ComputerSystems"] =
         std::move(computerSystems);
 
     nlohmann::json::array_t managedBy;
     nlohmann::json::object_t manager;
-    manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
+    manager["@odata.id"] = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME;
     managedBy.emplace_back(std::move(manager));
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
 }

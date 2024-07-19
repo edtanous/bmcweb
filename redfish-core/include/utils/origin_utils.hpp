@@ -77,7 +77,7 @@ const std::string fabricsPrefix = "/redfish/v1/Fabrics/";
 // "/redfish/v1/Systems/HGX_Baseboard_0/Memory/GPU_SXM_1_DRAM_0"
 const std::string memoryPrefixDbus =
     "/xyz/openbmc_project/inventory/system/memory/";
-const std::string memoryPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+const std::string memoryPrefix = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                  "/Memory/";
 
 // All the Processor Devices follows pattern:
@@ -89,7 +89,7 @@ const std::string memoryPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
 // "/redfish/v1/Systems/HGX_Baseboard_0/Processors/GPU_SXM_1/Ports/NVLink_0"
 const std::string processorPrefixDbus =
     "/xyz/openbmc_project/inventory/system/processors/";
-const std::string processorPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+const std::string processorPrefix = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                     "/Processors/";
 
 // All the Processor Devices follows pattern:
@@ -162,7 +162,7 @@ static void oocUtilServiceConditions(
          {"Message", message},
          {"MessageId", messageId},
          {"MessageArgs", msgArgs}};
-    j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID "/"
+    j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/"
                                  "LogServices/EventLog/Entries/" +
                                  id;
     if (ooc.size() > 0)
@@ -270,9 +270,9 @@ inline std::string getDeviceRedfishURI(const std::string& device)
         return device;
     }
 
-    if (std::string_view(PLATFORMSYSTEMID).ends_with(device))
+    if (std::string_view(BMCWEB_REDFISH_SYSTEM_URI_NAME).ends_with(device))
     {
-        return systemsPrefixRedfish + PLATFORMSYSTEMID;
+        return systemsPrefixRedfish + BMCWEB_REDFISH_SYSTEM_URI_NAME;
     }
     else
     {

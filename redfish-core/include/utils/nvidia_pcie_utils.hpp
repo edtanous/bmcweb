@@ -48,7 +48,7 @@ inline void
             else
             {
                 pcieDeviceList.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                    {{"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                    "/PCIeDevices/" +
                                        devName}});
             }

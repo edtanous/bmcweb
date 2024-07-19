@@ -246,12 +246,8 @@ inline void handleManagerDiagnosticDataGet(
     asyncResp->res.jsonValue["@odata.type"] =
         "#ManagerDiagnosticData.v1_2_0.ManagerDiagnosticData";
     asyncResp->res.jsonValue["@odata.id"] =
-<<<<<<< HEAD
-        "/redfish/v1/Managers/" PLATFORMBMCID "/ManagerDiagnosticData";
-=======
         boost::urls::format("/redfish/v1/Managers/{}/ManagerDiagnosticData",
                             BMCWEB_REDFISH_MANAGER_URI_NAME);
->>>>>>> master
     asyncResp->res.jsonValue["Id"] = "ManagerDiagnosticData";
     asyncResp->res.jsonValue["Name"] = "Manager Diagnostic Data";
 
@@ -263,12 +259,7 @@ inline void handleManagerDiagnosticDataGet(
 
 inline void requestRoutesManagerDiagnosticData(App& app)
 {
-<<<<<<< HEAD
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/" PLATFORMBMCID "/ManagerDiagnosticData")
-=======
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/ManagerDiagnosticData")
->>>>>>> master
         .privileges(redfish::privileges::getManagerDiagnosticData)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleManagerDiagnosticDataGet, std::ref(app)));

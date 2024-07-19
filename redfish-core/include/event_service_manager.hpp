@@ -1990,11 +1990,11 @@ class EventServiceManager
     const std::string fabricsPrefix = "/redfish/v1/Fabrics/";
     const std::string memoryPrefixDbus =
         "/xyz/openbmc_project/inventory/system/memory/";
-    const std::string memoryPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    const std::string memoryPrefix = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                      "/Memory/";
     const std::string processorPrefixDbus =
         "/xyz/openbmc_project/inventory/system/processors/";
-    const std::string processorPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    const std::string processorPrefix = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                         "/Processors/";
     const std::string softwarePrefixDbus = "/xyz/openbmc_project/software/";
     const std::string firmwarePrefix =
@@ -2006,16 +2006,16 @@ class EventServiceManager
     const std::string virtualMediaLegacyUSB1PrefixDbus =
         "/xyz/openbmc_project/VirtualMedia/Legacy/USB1";
     const std::string virtualMediaUSB1Prefix =
-        "/redfish/v1/Managers/" PLATFORMBMCID
+        "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
         "/VirtualMedia/USB1/Actions/VirtualMedia.";
     const std::string virtualMediaLegacyUSB2PrefixDbus =
         "/xyz/openbmc_project/VirtualMedia/Legacy/USB2";
     const std::string virtualMediaUSB2Prefix =
-        "/redfish/v1/Managers/" PLATFORMBMCID
+        "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
         "/VirtualMedia/USB2/Actions/VirtualMedia.";
     const std::string sessionServiceServicePrefix = "/redfish/v1/";
     const std::string networkPrefixDbus = "/xyz/openbmc_project/network/";
-    const std::string networkPrefix = "/redfish/v1/Managers/" PLATFORMBMCID
+    const std::string networkPrefix = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
                                       "/EthernetInterfaces/";
     const std::string ldapCertificateDbusPrefix =
         "/xyz/openbmc_project/certs/client/ldap/";
@@ -2024,22 +2024,22 @@ class EventServiceManager
     const std::string authorityCertificateDbusPrefix =
         "/xyz/openbmc_project/certs/authority/ldap/";
     const std::string authorityCertificatePrefix =
-        "/redfish/v1/Managers/" PLATFORMBMCID "/Truststore/Certificates/";
+        "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME "/Truststore/Certificates/";
     const std::string httpsCertificateDbusPrefix =
         "/xyz/openbmc_project/certs/server/https/";
     const std::string httpsCertificatePrefix =
-        "/redfish/v1/Managers/" PLATFORMBMCID
+        "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
         "/NetworkProtocol/HTTPS/Certificates/";
     const std::string updateServiceDbusPrefix =
         "/xyz/openbmc_project/software/";
     const std::string updateServicePrefix = "/redfish/v1/UpdateService/";
     const std::string managerResetDbusPrefix =
         "/xyz/openbmc_project/state/bmc0/";
-    const std::string managerResetPrefix = "/redfish/v1/Managers/" PLATFORMBMCID
+    const std::string managerResetPrefix = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
                                            "/Actions/";
     const std::string ledGroupsDbusPrefix =
         "/xyz/openbmc_project/led/groups/enclosure_identify";
-    const std::string ledPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+    const std::string ledPrefix = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
 
     /**
      *  @brief Table used to find OriginOfCondition

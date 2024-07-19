@@ -510,7 +510,7 @@ inline void handleReplaceCertificateAction(
     std::string name;
     std::string service;
     if (crow::utility::readUrlSegments(*parsedUrl, "redfish", "v1", "Managers",
-                                       PLATFORMBMCID, "NetworkProtocol",
+                                       BMCWEB_REDFISH_MANAGER_URI_NAME, "NetworkProtocol",
                                        "HTTPS", "Certificates", std::ref(id)))
     {
         objectPath = sdbusplus::message::object_path(certs::httpsObjectPath) /
@@ -528,7 +528,7 @@ inline void handleReplaceCertificateAction(
         service = certs::ldapServiceName;
     }
     else if (crow::utility::readUrlSegments(
-                 *parsedUrl, "redfish", "v1", "Managers", PLATFORMBMCID,
+                 *parsedUrl, "redfish", "v1", "Managers", BMCWEB_REDFISH_MANAGER_URI_NAME,
                  "Truststore", "Certificates", std::ref(id)))
     {
         objectPath =

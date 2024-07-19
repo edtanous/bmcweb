@@ -1472,7 +1472,7 @@ inline void
                         .jsonValue["Actions"]["Oem"]["Nvidia"]
                                   ["#NvidiaEnvironmentMetrics.ResetEDPp"] = {
                         {"target",
-                         "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                         "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                          "/Processors/" +
                              processorId +
                              "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp"}};

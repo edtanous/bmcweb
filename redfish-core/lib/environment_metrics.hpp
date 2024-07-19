@@ -160,7 +160,7 @@ inline void requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Processors/<str>/"
         "EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ClearOOBSetPoint")
 
         .privileges({{"ConfigureComponents"}})
@@ -541,7 +541,7 @@ inline void requestRoutesEnvironmentMetrics(App& app)
 
 inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                       "/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
@@ -552,7 +552,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
         {
             return;
         }
-        std::string envMetricsURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+        std::string envMetricsURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                     "/Processors/";
         envMetricsURI += processorId;
         envMetricsURI += "/EnvironmentMetrics";
@@ -568,14 +568,14 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
             .jsonValue["Actions"]["Oem"]["Nvidia"]
                       ["#NvidiaEnvironmentMetrics.ClearOOBSetPoint"] = {
             {"target",
-             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
+             "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Processors/" +
                  processorId +
                  "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ClearOOBSetPoint"}};
 
         asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]
                                 ["#NvidiaEnvironmentMetrics.ResetEDPp"] = {
             {"target",
-             "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
+             "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Processors/" +
                  processorId +
                  "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp"}};
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
@@ -584,7 +584,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
             asyncResp, processorId);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                       "/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
@@ -742,7 +742,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 
 inline void requestRoutesMemoryEnvironmentMetrics(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                       "/Memory/<str>/EnvironmentMetrics")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
@@ -753,7 +753,7 @@ inline void requestRoutesMemoryEnvironmentMetrics(App& app)
         {
             return;
         }
-        std::string envMetricsURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+        std::string envMetricsURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
                                     "/Memory/";
         envMetricsURI += dimmId;
         envMetricsURI += "/EnvironmentMetrics";
@@ -775,7 +775,7 @@ inline void requestRoutesEdppReset(App& app)
      */
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Processors/<str>/"
         "EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ResetEDPp")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(

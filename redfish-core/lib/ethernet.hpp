@@ -1858,7 +1858,7 @@ inline void parseInterfaceData(
     const std::vector<IPv4AddressData>& ipv4Data,
     const std::vector<IPv6AddressData>& ipv6Data,
     const std::vector<StaticGatewayData>& ipv6GatewayData,
-    const std::string& route = "/redfish/v1/Managers/" PLATFORMBMCID
+    const std::string& route = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
                                "/EthernetInterfaces/")
 {
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
@@ -2205,7 +2205,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
         std::string parentInterface;
         if (!crow::utility::readUrlSegments(
-                *parsedUri, "redfish", "v1", "Managers", PLATFORMBMCID,
+                *parsedUri, "redfish", "v1", "Managers", BMCWEB_REDFISH_MANAGER_URI_NAME,
                 "EthernetInterfaces", std::ref(parentInterface)))
         {
             messages::propertyValueNotInList(
