@@ -27,6 +27,7 @@
 #include "utils/collection.hpp"
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"
+#include "utils/nvidia_async_set_callbacks.hpp"
 
 #include <boost/container/flat_map.hpp>
 #include <boost/system/error_code.hpp>
@@ -40,6 +41,7 @@
 #include <utils/conditions_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <utils/nvidia_async_set_utils.hpp>
 #include <utils/nvidia_processor_utils.hpp>
 #include <utils/port_utils.hpp>
 #include <utils/processor_utils.hpp>
@@ -2835,60 +2837,95 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         return;
     }
 
-    // Set the property, with handler to check error responses
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId, migMode](boost::system::error_code ec,
-                                     sdbusplus::message::message& msg) {
+    dbus::utility::getDbusObject(
+        cpuObjectPath,
+        std::array<std::string_view, 1>{
+            nvidia_async_operation_utils::setAsyncInterfaceName},
+        [resp, migMode, processorId, cpuObjectPath,
+         service = *inventoryService](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetObject& object) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG("Set MIG Mode property succeeded");
-            return;
+            for (const auto& [serv, _] : object)
+            {
+                if (serv != service)
+                {
+                    continue;
+                }
+
+                BMCWEB_LOG_DEBUG(
+                    "Performing Patch using Set Async Method Call");
+
+                nvidia_async_operation_utils::doGenericSetAsyncAndGatherResult(
+                    resp, std::chrono::seconds(60), service, cpuObjectPath,
+                    "com.nvidia.MigMode", "MIGModeEnabled",
+                    std::variant<bool>(migMode),
+                    nvidia_async_operation_utils::PatchMigModeCallback{resp});
+
+                return;
+            }
         }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set MIG Mode  property failed: {}",
-                         processorId, ec);
-        // Read and convert dbus error message to redfish error
-        const sd_bus_error* dbusError = msg.get_error();
-        if (dbusError == nullptr)
-        {
-            messages::internalError(resp->res);
-            return;
-        }
+        BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
 
-        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                    "Device.Error.WriteFailure") == 0)
-        {
-            // Service failed to change the config
-            messages::operationFailed(resp->res);
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Unavailable") == 0)
-        {
-            std::string errBusy = "0x50A";
-            std::string errBusyResolution =
-                "SMBPBI Command failed with error busy, please try after 60 seconds";
+        // Set the property, with handler to check error responses
+        crow::connections::systemBus->async_method_call(
+            [resp, processorId, migMode](boost::system::error_code ec,
+                                         sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG("Set MIG Mode property succeeded");
+                return;
+            }
 
-            // busy error
-            messages::asyncError(resp->res, errBusy, errBusyResolution);
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
-        {
-            std::string errTimeout = "0x600";
-            std::string errTimeoutResolution =
-                "Settings may/maynot have applied, please check get response before patching";
+            BMCWEB_LOG_DEBUG("CPU:{} set MIG Mode  property failed: {}",
+                             processorId, ec);
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
 
-            // timeout error
-            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
-        }
-        else
-        {
-            messages::internalError(resp->res);
-        }
-    },
-        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
-        "Set", "com.nvidia.MigMode", "MIGModeEnabled",
-        std::variant<bool>(migMode));
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+            service, cpuObjectPath, "org.freedesktop.DBus.Properties", "Set",
+            "com.nvidia.MigMode", "MIGModeEnabled",
+            std::variant<bool>(migMode));
+    });
 }
 
 /**
