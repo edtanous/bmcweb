@@ -91,37 +91,6 @@ inline void
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Control.Diag", "DiagConfig");
 }
-#if 0
-inline void
-    handleDiagResultGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
-{
-
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code& ec,const std::variant<std::string>& res) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("DBUS response error {}", ec);
-                if (ec.value() == boost::asio::error::host_unreachable)
-                {
-                    messages::resourceNotFound(asyncResp->res, "Get", "Diag Result");
-                    return;
-                }
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            BMCWEB_LOG_DEBUG("Get Diag result update done.");
-
-	    nlohmann::json& json = asyncResp->res.jsonValue;
-	    const std::string& jsonString = std::get<std::string>(res);
-	    nlohmann::json data = nlohmann::json::parse(jsonString);
-	    json["Oem"]["Nvidia"]["ProcessorDiagResult"] = data;
-        },
-        "xyz.openbmc_project.Settings",
-        "/xyz/openbmc_project/Control/Diag",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Control.Diag", "DiagResult");
-}
-#endif
 inline void
     handleDiagResultGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
@@ -164,7 +133,7 @@ inline void
 		jsonObject["ResultMask"] = truncatedResultMask;
 
 		//Add the object to the response array
-               json["Oem"]["Nvidia"]["ProcessorDiagResult"].push_back(jsonObject);
+                json["Oem"]["Nvidia"]["ProcessorDiagResult"].push_back(jsonObject);
             }
 
         },
@@ -183,7 +152,7 @@ inline void
                 BMCWEB_LOG_ERROR("DBUS response error {}", ec);
                 if (ec.value() == boost::asio::error::host_unreachable)
                 {
-                    messages::resourceNotFound(asyncResp->res, "Get", "DiagConfig");
+                    messages::resourceNotFound(asyncResp->res, "Get", "DiagStatus");
                     return;
                 }
                 messages::internalError(asyncResp->res);
@@ -207,7 +176,7 @@ inline void
 	    }
 	    else if(value == 0x4)
 	    { 
-	        json["Oem"]["Nvidia"]["ProcessorDiagCapabilities"]["DiagStatus"] = "Not Start";
+	        json["Oem"]["Nvidia"]["ProcessorDiagCapabilities"]["DiagStatus"] = "Not Started";
 	    }
         },
         "xyz.openbmc_project.Settings",
@@ -419,7 +388,7 @@ inline bool handleDiagSysConfigPostReq(
 {
     if(!validateDiagSysConfig(asyncResp,diagSysConfigCap))
     {
-        BMCWEB_LOG_ERROR("DiagSysConfig Json is not proper");
+        BMCWEB_LOG_ERROR("DiagSystemConfig Json is not proper");
         return false;
     }	
    
@@ -558,13 +527,13 @@ inline bool handleDiagTidConfigPostReq(
                 BMCWEB_LOG_ERROR("DBUS response error {}", ec);
                 if (ec.value() == boost::asio::error::host_unreachable)
                 {
-                    messages::resourceNotFound(asyncResp->res, "Set", "DiagConfig");
+                    messages::resourceNotFound(asyncResp->res, "Set", "DiagTidConfig");
                     return;
                 }
                 messages::internalError(asyncResp->res);
                 return;
             }
-            BMCWEB_LOG_DEBUG("DiagConfig done.");
+            BMCWEB_LOG_DEBUG("DiagTidConfig done.");
         },
         "xyz.openbmc_project.Settings",
         "/xyz/openbmc_project/Control/Diag",
