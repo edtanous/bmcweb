@@ -4942,6 +4942,7 @@ inline void requestRoutesSystemDumpServiceActionInfo(App& app)
             "DiagnosticType=SelfTest");
         OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=FPGA");
         OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=EROT");
+        OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=ROT");
         OEMDiagnosticDataType_allowableValues.push_back(
             "DiagnosticType=RetLTSSM");
         OEMDiagnosticDataType_allowableValues.push_back(
