@@ -1064,8 +1064,6 @@ inline void
 
         BMCWEB_LOG_DEBUG("Boot mode: {}", bootModeStr);
 
-<<<<<<< HEAD
-=======
         nlohmann::json::array_t allowed;
         allowed.emplace_back("None");
         allowed.emplace_back("Pxe");
@@ -1079,7 +1077,7 @@ inline void
             .jsonValue["Boot"]
                       ["BootSourceOverrideTarget@Redfish.AllowableValues"] =
             std::move(allowed);
->>>>>>> master
+
         if (bootModeStr !=
             "xyz.openbmc_project.Control.Boot.Mode.Modes.Regular")
         {
@@ -2255,7 +2253,6 @@ void setSettingsHostProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                     value);
 }
 
-<<<<<<< HEAD
 /**
  * @brief Set EntityManager Property - interface or proprty may not exist
  *
@@ -2273,20 +2270,6 @@ void setEntityMangerProperty(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 {
     setDbusProperty(aResp, entityMangerService, card1Path, interface, property,
                     value);
-=======
-    setDbusProperty(asyncResp, "Boot/BootSourceOverrideTarget",
-                    "xyz.openbmc_project.Settings",
-                    sdbusplus::message::object_path(
-                        "/xyz/openbmc_project/control/host0/boot"),
-                    "xyz.openbmc_project.Control.Boot.Source", "BootSource",
-                    bootSourceStr);
-    setDbusProperty(asyncResp, "Boot/BootSourceOverrideTarget",
-                    "xyz.openbmc_project.Settings",
-                    sdbusplus::message::object_path(
-                        "/xyz/openbmc_project/control/host0/boot"),
-                    "xyz.openbmc_project.Control.Boot.Mode", "BootMode",
-                    bootModeStr);
->>>>>>> master
 }
 
 /**
@@ -3505,9 +3488,9 @@ inline void getBootOrder(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 "#Settings.v1_3_5.Settings";
             aResp->res.jsonValue["@Redfish.Settings"]["SettingsObject"] = {
                 {"@odata.id",
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings"}};
+                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings"}};
             aResp->res.jsonValue["Boot"]["BootOptions"]["@odata.id"] =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/BootOptions";
+                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/BootOptions";
             aResp->res.jsonValue["Boot"]["BootOrder"] = bootOrder;
         }
         else
@@ -3549,7 +3532,7 @@ inline void getSecureBoot(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
         }
         // SecureBoot object found
         aResp->res.jsonValue["SecureBoot"]["@odata.id"] =
-            "/redfish/v1/Systems/" PLATFORMSYSTEMID "/SecureBoot";
+            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/SecureBoot";
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -3601,12 +3584,8 @@ inline void handleComputerSystemCollectionGet(
     }
     asyncResp->res.jsonValue["Members@odata.count"] = 1;
     nlohmann::json::object_t system;
-<<<<<<< HEAD
-    system["@odata.id"] = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
-=======
     system["@odata.id"] = boost::urls::format("/redfish/v1/Systems/{}",
                                               BMCWEB_REDFISH_SYSTEM_URI_NAME);
->>>>>>> master
     ifaceArray.emplace_back(std::move(system));
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, "xyz.openbmc_project.Settings",
@@ -3672,11 +3651,7 @@ inline void handleComputerSystemResetActionPost(
     {
         return;
     }
-<<<<<<< HEAD
-    if (systemName != PLATFORMSYSTEMID)
-=======
     if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
->>>>>>> master
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -3782,17 +3757,17 @@ inline void handleComputerSystemSettingsGet(
     }
     asyncResp->res.jsonValue["@odata.type"] =
         "#ComputerSystem.v1_17_0.ComputerSystem";
-    asyncResp->res.jsonValue["Name"] = PLATFORMSYSTEMID " Pending Settings";
+    asyncResp->res.jsonValue["Name"] = BMCWEB_REDFISH_SYSTEM_URI_NAME " Pending Settings";
     asyncResp->res.jsonValue["Id"] = "Settings";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings";
 
     getBootOrder(asyncResp, true);
     getBootProperties(asyncResp, true);
     getUefiPropertySettingsHost(asyncResp);
     getAutomaticRetry(asyncResp, true);
     asyncResp->res.jsonValue["Boot"]["BootOptions"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/BootOptions";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings/BootOptions";
 }
 
 inline void handleComputerSystemSettingsPatch(
@@ -3923,11 +3898,7 @@ inline void
         return;
     }
 
-<<<<<<< HEAD
-    if (systemName != PLATFORMSYSTEMID)
-=======
     if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
->>>>>>> master
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -3938,27 +3909,21 @@ inline void
         "</redfish/v1/JsonSchemas/ComputerSystem/ComputerSystem.json>; rel=describedby");
     asyncResp->res.jsonValue["@odata.type"] =
         "#ComputerSystem.v1_22_0.ComputerSystem";
-<<<<<<< HEAD
-    asyncResp->res.jsonValue["Name"] = PLATFORMSYSTEMID;
-    asyncResp->res.jsonValue["Id"] = PLATFORMSYSTEMID;
-=======
     asyncResp->res.jsonValue["Name"] = BMCWEB_REDFISH_SYSTEM_URI_NAME;
     asyncResp->res.jsonValue["Id"] = BMCWEB_REDFISH_SYSTEM_URI_NAME;
->>>>>>> master
     asyncResp->res.jsonValue["SystemType"] = "Physical";
     asyncResp->res.jsonValue["Description"] = PLATFORMSYSTEMDESCRIPTION;
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["ProcessorSummary"]["Count"] = 0;
-<<<<<<< HEAD
 #endif // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] = int(0);
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID;
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
 
     asyncResp->res.jsonValue["Processors"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Processors";
     asyncResp->res.jsonValue["Memory"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Memory";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Memory";
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     ist_mode_utils::getIstMode(asyncResp);
@@ -3966,64 +3931,29 @@ inline void
 
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Storage"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Storage";
 #endif
 #ifdef BMCWEB_ENABLE_FABRIC_ADAPTER
     asyncResp->res.jsonValue["FabricAdapters"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/FabricAdapters";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/FabricAdapters";
 #endif
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"]["target"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Actions/ComputerSystem.Reset";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Actions/ComputerSystem.Reset";
     asyncResp->res
         .jsonValue["Actions"]["#ComputerSystem.Reset"]["@Redfish.ActionInfo"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/ResetActionInfo";
 #endif
 
     asyncResp->res.jsonValue["LogServices"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/LogServices";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices";
 #ifdef BMCWEB_ENABLE_BIOS
     asyncResp->res.jsonValue["Bios"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Bios";
 #endif
     nlohmann::json::array_t managedBy;
     nlohmann::json& manager = managedBy.emplace_back();
-    manager["@odata.id"] = "/redfish/v1/Managers/" PLATFORMBMCID;
-=======
-    asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] =
-        double(0);
-    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/{}", BMCWEB_REDFISH_SYSTEM_URI_NAME);
-
-    asyncResp->res.jsonValue["Processors"]["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/{}/Processors", BMCWEB_REDFISH_SYSTEM_URI_NAME);
-    asyncResp->res.jsonValue["Memory"]["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/{}/Memory", BMCWEB_REDFISH_SYSTEM_URI_NAME);
-    asyncResp->res.jsonValue["Storage"]["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/{}/Storage", BMCWEB_REDFISH_SYSTEM_URI_NAME);
-    asyncResp->res.jsonValue["FabricAdapters"]["@odata.id"] =
-        boost::urls::format("/redfish/v1/Systems/{}/FabricAdapters",
-                            BMCWEB_REDFISH_SYSTEM_URI_NAME);
-
-    asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"]["target"] =
-        boost::urls::format(
-            "/redfish/v1/Systems/{}/Actions/ComputerSystem.Reset",
-            BMCWEB_REDFISH_SYSTEM_URI_NAME);
-    asyncResp->res
-        .jsonValue["Actions"]["#ComputerSystem.Reset"]["@Redfish.ActionInfo"] =
-        boost::urls::format("/redfish/v1/Systems/{}/ResetActionInfo",
-                            BMCWEB_REDFISH_SYSTEM_URI_NAME);
-
-    asyncResp->res.jsonValue["LogServices"]["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/{}/LogServices", BMCWEB_REDFISH_SYSTEM_URI_NAME);
-    asyncResp->res.jsonValue["Bios"]["@odata.id"] = boost::urls::format(
-        "/redfish/v1/Systems/{}/Bios", BMCWEB_REDFISH_SYSTEM_URI_NAME);
-
-    nlohmann::json::array_t managedBy;
-    nlohmann::json& manager = managedBy.emplace_back();
-    manager["@odata.id"] = boost::urls::format("/redfish/v1/Managers/{}",
-                                               BMCWEB_REDFISH_MANAGER_URI_NAME);
->>>>>>> master
+    manager["@odata.id"] = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME;
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
 
@@ -4041,14 +3971,14 @@ inline void
 #error "Conflicts! Please set disable-health-rollup=disabled."
 #endif
 
-    health_utils::getDeviceHealthInfo(asyncResp->res, PLATFORMSYSTEMID);
+    health_utils::getDeviceHealthInfo(asyncResp->res, BMCWEB_REDFISH_SYSTEM_URI_NAME);
 #endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                         PLATFORMSYSTEMID);
+                                                         BMCWEB_REDFISH_SYSTEM_URI_NAME);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.id"] =
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Oem/Nvidia";
+        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Oem/Nvidia";
 #endif
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     // Fill in SerialConsole info
@@ -4064,7 +3994,7 @@ inline void
 #ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
     asyncResp->res.jsonValue["EthernetInterfaces"] = {
         {"@odata.id",
-         "/redfish/v1/Systems/" PLATFORMSYSTEMID "/EthernetInterfaces"}};
+         "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/EthernetInterfaces"}};
 #endif
 
     getPortStatusAndPath(std::span{protocolToDBusForSystems},
@@ -4148,11 +4078,7 @@ inline void handleComputerSystemPatch(
                                    systemName);
         return;
     }
-<<<<<<< HEAD
-    if (systemName != PLATFORMSYSTEMID)
-=======
     if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
->>>>>>> master
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -4536,11 +4462,7 @@ inline void handleSystemCollectionResetActionGet(
         return;
     }
 
-<<<<<<< HEAD
-    if (systemName != PLATFORMSYSTEMID)
-=======
     if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME)
->>>>>>> master
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -4552,12 +4474,8 @@ inline void handleSystemCollectionResetActionGet(
         "</redfish/v1/JsonSchemas/ActionInfo/ActionInfo.json>; rel=describedby");
 
     asyncResp->res.jsonValue["@odata.id"] =
-<<<<<<< HEAD
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/ResetActionInfo";
-=======
         boost::urls::format("/redfish/v1/Systems/{}/ResetActionInfo",
                             BMCWEB_REDFISH_SYSTEM_URI_NAME);
->>>>>>> master
     asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
     asyncResp->res.jsonValue["Name"] = "Reset Action Info";
     asyncResp->res.jsonValue["Id"] = "ResetActionInfo";
@@ -4617,12 +4535,12 @@ inline void requestRoutesSystems(App& app)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleSystemCollectionResetActionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings/")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleComputerSystemSettingsGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Settings/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings/")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleComputerSystemSettingsPatch, std::ref(app)));
