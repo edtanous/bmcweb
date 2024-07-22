@@ -22,7 +22,6 @@ namespace redfish
 namespace time_utils
 {
 
-<<<<<<< HEAD
 namespace details
 {
 
@@ -45,8 +44,6 @@ inline std::string padZeros(int64_t value, size_t pad)
 
 } // namespace details
 
-=======
->>>>>>> master
 /**
  * @brief Convert string that represents value in Duration Format to its numeric
  *        equivalent.
