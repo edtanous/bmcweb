@@ -65,6 +65,8 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             messages::internalError(resp->res);
             return;
         }
+
+        bool isFoundProcessorObject = false;
         for (const auto& [objectPath, serviceMap] : subtree)
         {
             // Ignore any objects which don't end with our desired cpu name
@@ -107,9 +109,13 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
             handler(resp, processorId, objectPath, serviceMap, deviceType);
 
-            return;
+            isFoundProcessorObject = true;
+            // need to check all objpath because a few configs are set by another service
         }
-        messages::resourceNotFound(resp->res, "Processor", processorId);
+        if (isFoundProcessorObject == false)
+        {
+            messages::resourceNotFound(resp->res, "Processor", processorId);
+        }
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",

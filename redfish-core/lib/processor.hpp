@@ -1459,6 +1459,36 @@ inline void getCpuConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 }
 
 /**
+ * @brief Fill out location context of a processor by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void getProcessorLocationContext(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                               const std::string& service,
+                               const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG("Get Processor LocationContext Data");
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, service, objPath,
+        "xyz.openbmc_project.Inventory.Decorator.LocationContext", "LocationContext",
+        [objPath, aResp{std::move(aResp)}](const boost::system::error_code ec,
+                                           const std::string& property) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("DBUS response error");
+            // not throw out error to prevent aborting the resource display
+            return;
+        }
+
+        aResp->res.jsonValue["Location"]["PartLocationContext"] =
+            property;
+    });
+}
+
+/**
  * @brief Fill out location info of a processor by
  * requesting data from the given D-Bus object.
  *
@@ -1515,6 +1545,37 @@ inline void getCpuLocationType(std::shared_ptr<bmcweb::AsyncResp> aResp,
 
         aResp->res.jsonValue["Location"]["PartLocation"]["LocationType"] =
             redfish::dbus_utils::toLocationType(property);
+    });
+}
+
+/**
+ * @brief Fill out replaceable info of a processor by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void
+    getProcessorReplaceable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connectionName,
+                           const std::string& path)
+{
+    BMCWEB_LOG_DEBUG("Get Processor Replaceable");
+    sdbusplus::asio::getProperty<bool>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.Replaceable", "FieldReplaceable",
+        [asyncResp](const boost::system::error_code& ec,
+                    const bool property) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error for Replaceable");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        asyncResp->res.jsonValue["Replaceable"] =
+            property;
     });
 }
 
@@ -2715,6 +2776,11 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getCpuLocationCode(aResp, serviceName, objectPath);
             }
+            else if (interface ==
+                     "xyz.openbmc_project.Inventory.Decorator.LocationContext")
+            {
+                getProcessorLocationContext(aResp, serviceName, objectPath);
+            }
             else if (interface == "xyz.openbmc_project.Inventory."
                                   "Decorator.Location")
             {
@@ -2755,6 +2821,11 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             {
                 getProcessorResetTypeData(aResp, processorId, serviceName,
                                           objectPath);
+            }
+            else if (interface ==
+                     "xyz.openbmc_project.Inventory.Decorator.Replaceable")
+            {
+                getProcessorReplaceable(aResp, serviceName, objectPath);
             }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
