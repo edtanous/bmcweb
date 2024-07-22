@@ -866,6 +866,8 @@ inline void requestRoutesChassisControlsCollection(App& app)
                  "The collection of Controlable resource instances " +
                      chassisID}};
             getPowercontrolObjects(asyncResp, chassisID, *validChassisPath);
+            redfish::nvidia_control_utils::getClockLimitControlObjects(
+                asyncResp, chassisID, *validChassisPath);
         };
         redfish::chassis_utils::getValidChassisPath(asyncResp, chassisID,
                                                     std::move(getChassisPath));
@@ -949,7 +951,7 @@ inline void requestRoutesChassisControls(App& app)
                 "org.freedesktop.DBus.Properties", "Get",
                 "xyz.openbmc_project.Association", "endpoints");
         };
-
+  
         auto getControlCpu =
             [asyncResp, chassisID,
              controlID](const std::optional<std::string>& validChassisPath) {
@@ -1028,8 +1030,89 @@ inline void requestRoutesChassisControls(App& app)
                 "xyz.openbmc_project.Association", "endpoints");
         };
 
+        auto getChassisControl =
+            [asyncResp, chassisID, controlID,
+             getControlSystem](
+                const std::optional<std::string>& validChassisPath) {
+            if (!validChassisPath)
+            {
+                BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
+                messages::resourceNotFound(asyncResp->res, "Chassis",
+                                           chassisID);
+                return;
+            }
+
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, controlID, chassisID, validChassisPath,
+                 getControlSystem](
+                    const boost::system::error_code ec,
+                    std::variant<std::vector<std::string>>& resp) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG(
+                        "ObjectMapper::Get Associated Processor object call failed : {}",
+                        ec);
+                    getControlSystem(validChassisPath);
+                    return;
+                }
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&resp);
+                if (data == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG(
+                        "The Chassis path {} doesn't have processor",
+                        *validChassisPath);
+                    getControlSystem(validChassisPath);
+                    return;
+                }
+
+                for (auto processorPath : *data)
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, controlID, chassisID, processorPath,
+                          validChassisPath](
+                            const boost::system::error_code ec,
+                            const dbus::utility::MapperGetObject& objType) {
+                        if (ec || objType.empty())
+                        {
+                            BMCWEB_LOG_ERROR("GetObject for path {} failed",
+                                             processorPath.c_str());
+                            messages::resourceNotFound(asyncResp->res,
+                                                       "ControlID", controlID);
+                            return;
+                        }
+                        for (auto [service, interfaces] : objType)
+                        {
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.Inventory.Item.Accelerator") !=
+                                interfaces.end())
+                            {
+                                auto processorName = processorPath.substr(
+                                    processorPath.find_last_of('/') + 1);
+                                redfish::nvidia_control_utils::
+                                    getClockLimitControl(
+                                        asyncResp, chassisID, controlID,
+                                        validChassisPath, processorName);
+                                return;
+                            }
+                        }
+                    },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetObject",
+                        processorPath, std::array<const char*, 0>{});
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                *validChassisPath + "/all_processors",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+        };
+
         auto getControl =
-            [asyncResp, chassisID, getControlSystem, getControlCpu](
+            [asyncResp, chassisID, getControlSystem,
+             getChassisControl, getControlCpu](
                 const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
@@ -1039,7 +1122,8 @@ inline void requestRoutesChassisControls(App& app)
                 return;
             }
             crow::connections::systemBus->async_method_call(
-                [asyncResp, getControlSystem, getControlCpu, validChassisPath](
+                [asyncResp, getControlSystem,
+                 getControlCpu, getChassisControl, validChassisPath](
                     const boost::system::error_code ec,
                     const dbus::utility::MapperGetObject& objType) {
                 if (ec || objType.empty())
@@ -1063,7 +1147,7 @@ inline void requestRoutesChassisControls(App& app)
                     }
                 }
                 // Not a CPU
-                getControlSystem(validChassisPath);
+                getChassisControl(validChassisPath);             
             },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",

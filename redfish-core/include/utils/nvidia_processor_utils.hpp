@@ -1198,7 +1198,7 @@ inline void patchOperatingSpeedRangeMHz(
             messages::internalError(asyncResp->res);
             return; 
         }
-        std::vector<std::string>* data =
+        const std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
 
         if (data)
@@ -1244,6 +1244,184 @@ inline void patchOperatingSpeedRangeMHz(
         processorObjPath + "/parent_chassis", "org.freedesktop.DBus.Properties",
         "Get", "xyz.openbmc_project.Association", "endpoints");
 }
+
+inline void getOperatingSpeedRangeData(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& path)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, path](
+            const boost::system::error_code errorno,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) {
+        if (errorno)
+        {
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}",
+                             errorno);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        for (const auto& element : objInfo)
+        {
+            for (const auto& interface : element.second)
+            {
+                if (interface ==
+                    "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig")
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, path, interface](
+                            const boost::system::error_code errorno,
+                            const std::vector<
+                                std::pair<std::string,
+                                          std::variant<uint32_t, std::string>>>&
+                                propertiesList) {
+                        if (errorno)
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "ObjectMapper::GetObject call failed:{}",
+                                errorno);
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        for (const std::pair<std::string,
+                                             std::variant<uint32_t, std::string>>&
+                                 property : propertiesList)
+                        {
+                            std::string propertyName = property.first;
+                            if (propertyName == "MaxSpeed")
+                            {
+                                propertyName = "AllowableMax";
+                                const uint32_t* value =
+                                    std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for AllowableMax");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["OperatingSpeedRangeMHz"][propertyName] = *value;
+                                continue;
+                            }
+                            else if (propertyName == "MinSpeed")
+                            {
+                                propertyName = "AllowableMin";
+                                const uint32_t* value =
+                                    std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for AllowableMin");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["OperatingSpeedRangeMHz"][propertyName] = *value;
+                                continue;
+                            }
+                            else if (propertyName == "RequestedSpeedLimitMax")
+                            {
+                                propertyName = "SettingMax";
+                                const uint32_t* value =
+                                    std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for SettingMax");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["OperatingSpeedRangeMHz"][propertyName] = *value;
+                                continue;
+                            }
+                            else if (propertyName == "RequestedSpeedLimitMin")
+                            {
+                                propertyName = "SettingMin";
+                                const uint32_t* value =
+                                    std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for SettingMin");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue["OperatingSpeedRangeMHz"][propertyName] = *value;
+                                continue;
+                            }
+                        }
+                    },
+                        element.first, path, "org.freedesktop.DBus.Properties",
+                        "GetAll", interface);
+                }
+            }
+        }
+    },
+
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", path,
+        std::array<const char*, 0>());
+}
+
+/**
+ * @brief Fill out the operating speed range of clock for the processor.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void
+    getOperatingSpeedRange(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec,
+                         std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            return; // no chassis = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+
+        for (auto chassisPath : *data)
+        {
+            crow::connections::systemBus->async_method_call(
+                [aResp,
+                 chassisPath](const boost::system::error_code ec,
+                              std::variant<std::vector<std::string>>& resp) {
+                if (ec)
+                {
+                    return; // no chassis = no failures
+                }
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&resp);
+
+                for (auto clockControlPath : *data)
+                {
+                    aResp->res
+                        .jsonValue["OperatingSpeedRangeMHz"]["DataSourceUri"] =
+                        "/redfish/v1/Chassis/" +
+                        chassisPath.substr(chassisPath.find_last_of('/') + 1) +
+                        "/Controls/" +
+                        clockControlPath.substr(
+                            clockControlPath.find_last_of('/') + 1);
+                    getOperatingSpeedRangeData(aResp, clockControlPath);
+                }
+            },
+
+                "xyz.openbmc_project.ObjectMapper",
+                chassisPath + "/clock_controls",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+        }
+    },
+
+        "xyz.openbmc_project.ObjectMapper", objPath + "/parent_chassis",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 
 } // namespace nvidia_processor_utils
 } // namespace redfish

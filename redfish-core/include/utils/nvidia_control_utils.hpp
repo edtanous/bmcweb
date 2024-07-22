@@ -24,6 +24,278 @@ namespace redfish
 {
 namespace nvidia_control_utils
 {
+
+static std::map<std::string, std::string> clockLimitModes = {
+    {"com.nvidia.ClockMode.Mode.MaximumPerformance", "Automatic"},
+    {"com.nvidia.ClockMode.Mode.OEM", "Override"},
+    {"com.nvidia.ClockMode.Mode.PowerSaving", "Manual"},
+    {"com.nvidia.ClockMode.Mode.Static", "Disabled"}};
+
+
+inline void
+    getClockLimitControlObjects(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& chassisID,
+                           const std::string& chassisPath)
+{
+    nlohmann::json& members = asyncResp->res.jsonValue["Members"];
+    members = nlohmann::json::array();
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisID,
+         &members](const boost::system::error_code,
+                   std::variant<std::vector<std::string>>& resp) {
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            return;
+        }
+        for (const auto& object : *data)
+        {
+            sdbusplus::message::object_path objPath(object);
+            members.push_back(
+                {{"@odata.id", "/redfish/v1/Chassis/" + chassisID +
+                                   "/Controls/" + objPath.filename()}});
+        }
+        asyncResp->res.jsonValue["Members@odata.count"] = members.size();
+    },
+        "xyz.openbmc_project.ObjectMapper", chassisPath + "/clock_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+inline void getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& path,
+                            const std::string& chassisPath)
+{   
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, path](
+            const boost::system::error_code errorno,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) {
+        if (errorno)
+        {
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}",
+                             errorno);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        for (const auto& element : objInfo)
+        {
+            for (const auto& interface : element.second)
+            {
+                if (
+                    (interface == "com.nvidia.ClockMode") ||
+                    (interface == "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig") ||
+                    (interface ==
+                     "xyz.openbmc_project.Inventory.Decorator.Area"))
+                {
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, path, interface](
+                            const boost::system::error_code errorno,
+                            const std::vector<
+                                std::pair<std::string,
+                                          std::variant<uint32_t, std::string>>>&
+                                propertiesList) {
+                        if (errorno)
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "ObjectMapper::GetObject call failed:{}",
+                                errorno);
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        for (const std::pair<std::string,
+                                             std::variant<uint32_t, std::string>>&
+                                 property : propertiesList)
+                        {
+                            std::string propertyName = property.first;
+                            if (propertyName == "MaxSpeed")
+                            {
+                                propertyName = "AllowableMax";
+                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for AllowableMax");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                                continue;
+                            }
+                            else if (propertyName == "MinSpeed")
+                            {
+                                propertyName = "AllowableMin";
+                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                     BMCWEB_LOG_ERROR(
+                                        "Internal errror for AllowableMin");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                                continue;
+                            }
+                            else if (propertyName == "RequestedSpeedLimitMax")
+                            {
+                                propertyName = "SettingMax";
+                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for SettingMax");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                                continue;
+                            }
+                            else if (propertyName == "RequestedSpeedLimitMin")
+                            {
+                                propertyName = "SettingMin";
+                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "Internal errror for SettingMin");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                asyncResp->res.jsonValue[propertyName] = *value;
+                                continue;
+                            }
+                            else if (propertyName == "PhysicalContext")
+                            {
+                                const std::string* physicalcontext =
+                                    std::get_if<std::string>(&property.second);
+                                asyncResp->res.jsonValue[propertyName] =
+                                    redfish::dbus_utils::toPhysicalContext(
+                                        *physicalcontext);
+                                continue;
+                            }
+                            else if (propertyName == "ClockMode")
+                            {
+                                propertyName = "ControlMode";
+                                const std::string* mode =
+                                    std::get_if<std::string>(&property.second);
+                                std::map<std::string, std::string>::iterator
+                                    itr;
+                                for (auto& itr : clockLimitModes)
+                                {
+                                    if (*mode == itr.first)
+                                    {
+                                        asyncResp->res.jsonValue[propertyName] =
+                                            itr.second;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                        element.first, path, "org.freedesktop.DBus.Properties",
+                        "GetAll", interface);
+                }
+            }
+        }
+    },
+
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", path,
+        std::array<const char*, 0>());
+
+    auto health = std::make_shared<HealthPopulate>(asyncResp);
+    sdbusplus::asio::getProperty<std::vector<std::string>>(
+        *crow::connections::systemBus, "xyz.openbmc_project.ObjectMapper",
+        chassisPath + "/all_sensors", "xyz.openbmc_project.Association",
+        "endpoints",
+        [health](const boost::system::error_code ec2,
+                 const std::vector<std::string>& resp) {
+        if (ec2)
+        {
+            return; // no sensors = no failures
+        }
+        health->inventory = resp;
+    });
+    health->populate();
+}
+
+inline void getClockLimitControl(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisID, const std::string& controlID,
+     const std::optional<std::string>& validChassisPath, const std::string& processorName)
+{
+    if (!validChassisPath)
+    {
+        BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
+        messages::resourceNotFound(asyncResp->res, "Chassis", chassisID);
+        return;
+    }
+
+    asyncResp->res.jsonValue["@odata.type"] = "#Control.v1_3_0.Control";
+    asyncResp->res.jsonValue["SetPointUnits"] = "MHz";
+    asyncResp->res.jsonValue["Id"] = controlID;
+    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
+    asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" + chassisID +
+                                            "/Controls/" + controlID;
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisID, controlID, validChassisPath,
+         processorName](const boost::system::error_code ec,
+                        std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR(
+                "ObjectMapper::Get Associated clock control object call failed: {}",
+                ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            BMCWEB_LOG_ERROR("control id resource not found");
+            messages::resourceNotFound(asyncResp->res, "ControlID", controlID);
+            return;
+        }
+
+        auto validendpoint = false;
+        for (const auto& object : *data)
+        {
+            sdbusplus::message::object_path objPath(object);
+            if (objPath.filename() == controlID)
+            {
+                asyncResp->res.jsonValue["Name"] =
+                    "Control for " + processorName + " " + controlID;
+                asyncResp->res.jsonValue["ControlType"] = "FrequencyMHz";
+                asyncResp->res.jsonValue["Status"]["Health"] = "OK";
+                asyncResp->res.jsonValue["RelatedItem"]["@odata.id"] =
+                    "/redfish/v1/Systems/HGX_Baseboard_0/Processors/" +
+                    processorName;
+                asyncResp->res.jsonValue["Actions"]["#Control.ResetToDefaults"]
+                                        ["target"] =
+                    "/redfish/v1/Chassis/" + chassisID + "/Controls/" +
+                    controlID + "/Actions/Control.ResetToDefaults";
+                redfish::nvidia_control_utils::getChassisClockLimit(
+                    asyncResp, object, *validChassisPath);
+                validendpoint = true;
+                break;
+            }
+        }
+        if (!validendpoint)
+        {
+            BMCWEB_LOG_ERROR("control id resource not found");
+            messages::resourceNotFound(asyncResp->res, "ControlID", controlID);
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        *validChassisPath + "/clock_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+};
+
 inline void
     changeClockLimitControl(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& path, const uint32_t& value,

@@ -2867,6 +2867,7 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     }
 
     getComponentFirmwareVersion(aResp, objectPath);
+    redfish::nvidia_processor_utils::getOperatingSpeedRange(aResp, objectPath);
 
     aResp->res.jsonValue["EnvironmentMetrics"] = {
         {"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/" +
