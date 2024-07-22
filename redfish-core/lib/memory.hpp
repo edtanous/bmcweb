@@ -433,6 +433,7 @@ inline void
     const std::string* model = nullptr;
     const std::string* locationCode = nullptr;
     const std::string* locationType = nullptr;
+    const std::string* locationContext = nullptr;
     const bool* rowMappingFailureState = nullptr;
     const bool* rowMappingPendingState = nullptr;
 
@@ -448,6 +449,7 @@ inline void
         channel, "MemoryController", memoryController, "Slot", slot, "Socket",
         socket, "SparePartNumber", sparePartNumber, "Model", model,
         "LocationCode", locationCode, "LocationType", locationType,
+        "LocationContext", locationContext,
         "RowRemappingFailureState", rowMappingFailureState,
         "RowRemappingPendingState", rowMappingPendingState);
 
@@ -618,6 +620,12 @@ inline void
         asyncResp->res
             .jsonValue[jsonPtr]["Location"]["PartLocation"]["LocationType"] =
             redfish::dbus_utils::toLocationType(*locationType);
+    }
+    if (locationContext != nullptr)
+    {
+        asyncResp->res
+            .jsonValue[jsonPtr]["Location"]["PartLocationContext"] =
+            *locationContext;
     }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     if (rowMappingFailureState != nullptr)
