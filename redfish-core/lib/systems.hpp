@@ -4887,7 +4887,7 @@ inline void handleSystemProcessorDiagSysConfigActionGet(
     parameter["Name"] = "DynamicData";
     parameter["Required"] = true;
     parameter["DataType"] = "NumberArray";
-    parameter["ArraySizeMaximum"] = 250;
+    parameter["ArraySizeMaximum"] = 199;
     parameter["MinimumValue"] = 0;
     parameter["MaximunValue"] = 255;
     parameters.emplace_back(std::move(parameter));
@@ -4957,7 +4957,7 @@ inline void handleSystemProcessorDiagTidConfigActionGet(
     parameter["Name"] = "DynamicData";
     parameter["Required"] = true;
     parameter["DataType"] = "NumberArray";
-    parameter["ArraySizeMaximum"] = 50;
+    parameter["ArraySizeMaximum"] = 194;
     parameter["MinimumValue"] = 0;
     parameter["MaximunValue"] = 255;
     parameters.emplace_back(std::move(parameter));

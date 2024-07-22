@@ -220,6 +220,37 @@ inline void
         "xyz.openbmc_project.Control.Diag", "DiagMode");
 }
 
+inline bool initDiagStatus(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+{
+    //Set diag Status as not started
+    std::uint8_t diagStatus = 4;
+    std::variant<std::uint8_t> variantData = diagStatus; 
+
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](const boost::system::error_code ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error {}", ec);
+                if (ec.value() == boost::asio::error::host_unreachable)
+                {
+                    messages::resourceNotFound(asyncResp->res, "Set", "DiagStatus");
+                    return;
+                }
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            BMCWEB_LOG_DEBUG("DiagStatus done.");
+        },
+        "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/Control/Diag",
+        "org.freedesktop.DBus.Properties", "Set",
+        "xyz.openbmc_project.Control.Diag", "DiagStatus",
+        variantData);
+
+    return true;
+}
+
 inline bool clearDiagResult(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
@@ -280,6 +311,7 @@ inline bool setDiagMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp,nlohmann
     {
         val = false;
 	clearDiagResult(aResp);
+	initDiagStatus(aResp);
 	auto r = system(stopDiagTimerString.c_str());
 	if (r != 0)
 	{
