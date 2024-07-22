@@ -1297,7 +1297,7 @@ inline void requestRoutesChassisResetAction(App& app)
 #ifdef BMCWEB_ENABLE_HOST_AUX_POWER
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Chassis/<str>/Actions/Oem/NvidiaChassis.AuxPowerReset")
+        "/redfish/v1/Chassis/<str>/Actions/Oem/NvidiaChassis.AuxPowerReset/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleOemChassisResetActionInfoPost, std::ref(app)));

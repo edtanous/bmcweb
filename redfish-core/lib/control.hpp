@@ -826,7 +826,7 @@ inline void requestRoutesChassisControlsCollection(App& app)
 }
 inline void requestRoutesChassisControls(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Controls/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Controls/<str>/")
         .privileges(redfish::privileges::getControl)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1026,7 +1026,7 @@ inline void requestRoutesChassisControls(App& app)
                                                     std::move(getControl));
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Controls/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Controls/<str>/")
         .privileges(redfish::privileges::patchControl)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,

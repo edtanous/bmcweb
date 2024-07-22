@@ -197,7 +197,7 @@ inline void requestRoutesTrustedComponents(App& app)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleTrustedComponentsCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/TrustedComponents/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/TrustedComponents/<str>/")
         .privileges(redfish::privileges::privilegeSetLogin)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleTrustedComponentGet, std::ref(app)));

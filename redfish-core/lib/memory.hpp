@@ -1257,7 +1257,7 @@ inline void requestRoutesMemoryMetrics(App& app)
      * Functions triggers appropriate requests on DBus
      */
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/Memory/<str>/MemoryMetrics")
+                      "/Memory/<str>/MemoryMetrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,

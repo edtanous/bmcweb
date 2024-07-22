@@ -4421,7 +4421,7 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage")
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage/")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
@@ -4489,7 +4489,7 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.PublicKeyExchange")
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.PublicKeyExchange/")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -4597,7 +4597,7 @@ inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys")
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys/")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,

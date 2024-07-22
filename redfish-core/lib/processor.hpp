@@ -4308,7 +4308,7 @@ inline void requestRoutesProcessorMetrics(App& app)
      * Functions triggers appropriate requests on DBus
      */
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/Processors/<str>/ProcessorMetrics")
+                      "/Processors/<str>/ProcessorMetrics/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -4617,7 +4617,7 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
      */
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
-                 "MemorySummary/MemoryMetrics")
+                 "MemorySummary/MemoryMetrics/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -4826,7 +4826,7 @@ inline void requestRoutesProcessorSettings(App& app)
      */
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
-                 "Settings")
+                 "Settings/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -4841,7 +4841,7 @@ inline void requestRoutesProcessorSettings(App& app)
 
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
-                 "Settings")
+                 "Settings/")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
@@ -5013,7 +5013,7 @@ inline void requestRoutesProcessorReset(App& app)
      */
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
-                 "Actions/Processor.Reset")
+                 "Actions/Processor.Reset/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -5053,7 +5053,7 @@ inline void requestRoutesProcessorPortCollection(App& app)
      */
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
-                 "Ports")
+                 "Ports/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -5536,7 +5536,7 @@ inline void requestRoutesProcessorPort(App& app)
      */
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
-                 "Ports/<str>")
+                 "Ports/<str>/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -6078,7 +6078,7 @@ inline void requestRoutesProcessorPortMetrics(App& app)
      */
     BMCWEB_ROUTE(app,
                  "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
-                 "Ports/<str>/Metrics")
+                 "Ports/<str>/Metrics/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

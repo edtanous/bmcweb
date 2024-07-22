@@ -2477,7 +2477,7 @@ inline void requestRoutes(App& app)
         handleList(asyncResp, "/");
     });
 
-    BMCWEB_ROUTE(app, "/xyz/<path>")
+    BMCWEB_ROUTE(app, "/xyz/<path>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request& req,
@@ -2487,7 +2487,7 @@ inline void requestRoutes(App& app)
         handleDBusUrl(req, asyncResp, objectPath);
     });
 
-    BMCWEB_ROUTE(app, "/xyz/<path>")
+    BMCWEB_ROUTE(app, "/xyz/<path>/")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .methods(boost::beast::http::verb::put, boost::beast::http::verb::post,
                  boost::beast::http::verb::delete_)(
@@ -2498,7 +2498,7 @@ inline void requestRoutes(App& app)
         handleDBusUrl(req, asyncResp, objectPath);
     });
 
-    BMCWEB_ROUTE(app, "/org/<path>")
+    BMCWEB_ROUTE(app, "/org/<path>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request& req,
@@ -2508,7 +2508,7 @@ inline void requestRoutes(App& app)
         handleDBusUrl(req, asyncResp, objectPath);
     });
 
-    BMCWEB_ROUTE(app, "/org/<path>")
+    BMCWEB_ROUTE(app, "/org/<path>/")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .methods(boost::beast::http::verb::put, boost::beast::http::verb::post,
                  boost::beast::http::verb::delete_)(
@@ -2590,7 +2590,7 @@ inline void requestRoutes(App& app)
         introspectObjects(connection, "/", asyncResp);
     });
 
-    BMCWEB_ROUTE(app, "/bus/system/<str>/<path>")
+    BMCWEB_ROUTE(app, "/bus/system/<str>/<path>/")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .methods(boost::beast::http::verb::get,
                  boost::beast::http::verb::post)(handleBusSystemPost);

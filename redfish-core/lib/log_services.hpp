@@ -6217,7 +6217,7 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
 inline void requestRoutesEventLogDiagnosticDataEntry(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/LogServices/EventLog/DiagnosticData/<uint>/attachment")
+                      "/LogServices/EventLog/DiagnosticData/<uint>/attachment/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -7460,7 +7460,7 @@ static constexpr const uint32_t debugTokenTaskTimeoutSec{60};
 inline void requestRoutesDebugToken(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/LogServices/DebugTokenService")
+                      "/LogServices/DebugTokenService/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -7603,7 +7603,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
 {
     BMCWEB_ROUTE(
         app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-             "/LogServices/DebugTokenService/LogService.CollectDiagnosticData")
+             "/LogServices/DebugTokenService/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -7836,7 +7836,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
                       "/LogServices/DebugTokenService"
-                      "/Entries/<str>/attachment")
+                      "/Entries/<str>/attachment/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

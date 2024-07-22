@@ -2150,7 +2150,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/EthernetInterfaces/<str>")
+                      "/EthernetInterfaces/<str>/")
         .privileges(redfish::privileges::getEthernetInterface)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

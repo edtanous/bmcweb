@@ -449,7 +449,7 @@ inline void requestRoutesComponentIntegrity(App& app)
             interface);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -563,14 +563,14 @@ inline void requestRoutesComponentIntegrity(App& app)
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
-                      "Actions/ComponentIntegrity.SPDMGetSignedMeasurements")
+                      "Actions/ComponentIntegrity.SPDMGetSignedMeasurements/")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleSPDMGETSignedMeasurement, std::ref(app)));
 
     BMCWEB_ROUTE(app,
                  "/redfish/v1/ComponentIntegrity/<str>/"
-                 "Actions/ComponentIntegrity.SPDMGetSignedMeasurements/data")
+                 "Actions/ComponentIntegrity.SPDMGetSignedMeasurements/data/")
         .privileges(redfish::privileges::getManagerAccount)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -607,7 +607,7 @@ inline void requestRoutesComponentIntegrity(App& app)
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/ComponentIntegrity/<str>/"
-                      "SPDMGetSignedMeasurementsActionInfo")
+                      "SPDMGetSignedMeasurementsActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

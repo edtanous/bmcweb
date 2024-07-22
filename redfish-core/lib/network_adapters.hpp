@@ -572,7 +572,7 @@ inline void requestRoutesNetworkAdapters(App& app)
             std::bind_front(handleNetworkAdaptersCollectionGet, std::ref(app)));
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Chassis/<str>/NetworkAdapters/" PLATFORMNETWORKADAPTER)
+        "/redfish/v1/Chassis/<str>/NetworkAdapters/" PLATFORMNETWORKADAPTER "/")
         .privileges(redfish::privileges::getNetworkAdapter)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleNetworkAdapterGet, std::ref(app)));
@@ -584,7 +584,7 @@ inline void requestRoutesNetworkAdapters(App& app)
             handleNetworkDeviceFunctionsCollectionGet, std::ref(app)));
     BMCWEB_ROUTE(
         app, "/redfish/v1/Chassis/<str>/NetworkAdapters/" PLATFORMNETWORKADAPTER
-             "/Ports")
+             "/Ports/")
         .privileges(redfish::privileges::getPortCollection)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handlePortsCollectionGet, std::ref(app)));

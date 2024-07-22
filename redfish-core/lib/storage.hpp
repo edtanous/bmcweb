@@ -1596,14 +1596,14 @@ inline void requestRoutesDrive(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/Actions/Drive.SecureErase")
+        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/Actions/Drive.SecureErase/")
         .privileges(redfish::privileges::postDrive)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleDriveSanitizePost, std::ref(app)));
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/SanitizeActionInfo")
+        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/SanitizeActionInfo/")
         .privileges(redfish::privileges::getDrive)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleSystemDriveSanitizetActionInfoGet, std::ref(app)));
@@ -1868,13 +1868,13 @@ inline void requestRoutesChassisDriveName(App& app)
             std::bind_front(handleChassisDriveGet, std::ref(app)));
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Chassis/<str>/Drives/<str>/Actions/Drive.SecureErase")
+        app, "/redfish/v1/Chassis/<str>/Drives/<str>/Actions/Drive.SecureErase/")
         .privileges(redfish::privileges::postDrive)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleDriveSanitizePost, std::ref(app)));
 
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Chassis/<str>/Drives/<str>/SanitizeActionInfo")
+                 "/redfish/v1/Chassis/<str>/Drives/<str>/SanitizeActionInfo/")
         .privileges(redfish::privileges::getDrive)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleChassisDriveSanitizetActionInfoGet, std::ref(app)));
@@ -2115,7 +2115,7 @@ inline void requestRoutesStorageControllerCollection(App& app)
 
 inline void requestRoutesStorageController(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/1/Controllers/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/1/Controllers/<str>/")
         .privileges(redfish::privileges::getStorageController)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleSystemsStorageControllerGet, std::ref(app)));

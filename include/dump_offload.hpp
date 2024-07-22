@@ -283,7 +283,7 @@ inline void requestRoutes(App& app)
     });
 
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/LogServices/Dump/Entries/<str>/attachment")
+                      "/LogServices/Dump/Entries/<str>/attachment/")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
@@ -313,7 +313,7 @@ inline void requestRoutes(App& app)
     });
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/LogServices/FaultLog/Entries/<str>/attachment")
+                      "/LogServices/FaultLog/Entries/<str>/attachment/")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {

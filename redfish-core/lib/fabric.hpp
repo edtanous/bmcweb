@@ -1429,7 +1429,7 @@ inline void
  */
 inline void requestRoutesSwitch(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1618,7 +1618,7 @@ inline void
 
 inline void requestRoutesSwitchMetrics(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/SwitchMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/SwitchMetrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1840,7 +1840,7 @@ inline void nvswitchPostResetType(
 inline void requestRoutesNVSwitchReset(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/"
-                      "Actions/Switch.Reset")
+                      "Actions/Switch.Reset/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -2041,7 +2041,7 @@ inline void requestRoutesPortCollection(App& app)
  */
 inline void requestRoutesPort(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -2314,7 +2314,7 @@ inline void requestRoutesZoneCollection(App& app)
 
 inline void requestRoutesZone(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Zones/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Zones/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -3231,7 +3231,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  */
 inline void requestRoutesEndpoint(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Endpoints/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Endpoints/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -3860,7 +3860,7 @@ inline void getFabricsPortMetricsData(
 inline void requestRoutesPortMetrics(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Metrics")
+                 "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Metrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

@@ -425,7 +425,7 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
      */
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/Actions/Oem/NvidiaManager.ResetToDefaults")
+                      "/Actions/Oem/NvidiaManager.ResetToDefaults/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -489,7 +489,7 @@ inline void requestRoutesNvidiaManagerEmmcSecureErase(App& app)
      */
 
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/Actions/Oem/eMMC.SecureErase")
+                      "/Actions/Oem/eMMC.SecureErase/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -904,7 +904,7 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 inline void requestRouteSyncRawOobCommand(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/Actions/Oem/NvidiaManager.SyncOOBRawCommand")
+                      "/Actions/Oem/NvidiaManager.SyncOOBRawCommand/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -1149,7 +1149,7 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 inline void requestRouteAsyncRawOobCommand(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Managers/" PLATFORMBMCID
-                      "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand")
+                      "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
