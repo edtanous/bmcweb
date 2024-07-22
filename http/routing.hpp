@@ -7,6 +7,7 @@
 #include "http_request.hpp"
 #include "http_response.hpp"
 #include "logging.hpp"
+#include "persistent_data.hpp"
 #include "privileges.hpp"
 #include "routing/baserule.hpp"
 #include "routing/dynamicrule.hpp"
@@ -581,7 +582,11 @@ class Router
         BaseRule& rule = *rules[ruleIndex];
 
         BMCWEB_LOG_DEBUG("Matched rule (upgrade) '{}'", rule.rule);
-
+        if (req->session == nullptr)
+        {
+            rule.handleUpgrade(*req, asyncResp, std::move(adaptor));
+            return;
+        }
         // TODO(ed) This should be able to use std::bind_front, but it doesn't
         // appear to work with the std::move on adaptor.
         validatePrivilege(req, asyncResp, rule,
