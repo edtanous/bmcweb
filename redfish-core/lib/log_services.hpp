@@ -6866,15 +6866,48 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
                 nlohmann::json& logServiceArray =
                     asyncResp->res.jsonValue["Members"];
                 logServiceArray = nlohmann::json::array();
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
-                if ((chassisId.find("GPU") != std::string::npos ||
-                    chassisId.find("NVSwitch") != std::string::npos) && chassisId.find("RoT") == std::string::npos)
-                {
-                    logServiceArray.push_back(
-                        {{"@odata.id", "/redfish/v1/Chassis/" + chassisId +
-                                           "/LogServices/XID"}});
-                }
+                const std::vector<
+                    std::pair<std::string, std::vector<std::string>>>&
+                    connectionNames = object.second;
+                const std::string& connectionName = connectionNames[0].first;
+                
+                BMCWEB_LOG_DEBUG("XID Looking for PrettyName on service {} path {}", connectionName, path);
+                sdbusplus::asio::getProperty<std::string>(
+                    *crow::connections::systemBus, connectionName, path,
+                    "xyz.openbmc_project.Inventory.Item", "PrettyName",
+                    [asyncResp, chassisId(std::string(chassisId))](
+                        const boost::system::error_code ec,
+                        const std::string& chassisName) {
+                    if (!ec)
+                    {
+                        BMCWEB_LOG_DEBUG("XID Looking for Namespace on {}_XID", chassisName);
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, chassisId(std::string(chassisId))](
+                                const boost::system::error_code ec,
+                                const std::tuple<uint32_t, uint64_t>& /*reqData*/) {
+                            if (!ec)
+                            {
+                                nlohmann::json& logServiceArray =
+                                    asyncResp->res.jsonValue["Members"];
+                                logServiceArray.push_back(
+                                    {{"@odata.id", "/redfish/v1/Chassis/" +
+                                                       chassisId +
+                                                       "/LogServices/XID"}});
+                                asyncResp->res
+                                    .jsonValue["Members@odata.count"] =
+                                    logServiceArray.size();
+                            }
+                        },
+                            "xyz.openbmc_project.Logging",
+                            "/xyz/openbmc_project/logging",
+                            "xyz.openbmc_project.Logging.Namespace", "GetStats",
+                            chassisName + "_XID");
+                    }
+                });
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
+
                 asyncResp->res.jsonValue["Members@odata.count"] =
                     logServiceArray.size();
                 return;
