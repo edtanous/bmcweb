@@ -47,7 +47,7 @@
 #include <utils/privilege_utils.hpp>
 #include <utils/sw_utils.hpp>
 #include <utils/nvidia_pcie_utils.hpp>
-#include "utils/cpu_diag.hpp
+#include <utils/cpu_diag.hpp>
 
 #include <array>
 #include <memory>
