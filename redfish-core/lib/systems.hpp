@@ -21,6 +21,7 @@
 #include "dbus_singleton.hpp"
 #include "dbus_utility.hpp"
 #include "debug_policy.hpp"
+#include "cpu_diag.hpp"
 #include "generated/enums/computer_system.hpp"
 #include "generated/enums/resource.hpp"
 #include "hypervisor_system.hpp"
@@ -47,7 +48,6 @@
 #include <utils/privilege_utils.hpp>
 #include <utils/sw_utils.hpp>
 #include <utils/nvidia_pcie_utils.hpp>
-#include <utils/cpu_diag.hpp>
 
 #include <array>
 #include <memory>
