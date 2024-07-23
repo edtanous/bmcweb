@@ -21,7 +21,6 @@
 #include "dbus_singleton.hpp"
 #include "dbus_utility.hpp"
 #include "debug_policy.hpp"
-#include "cpu_diag.hpp"
 #include "generated/enums/computer_system.hpp"
 #include "generated/enums/resource.hpp"
 #include "hypervisor_system.hpp"
