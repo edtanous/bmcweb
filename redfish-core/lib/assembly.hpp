@@ -62,7 +62,8 @@ inline void
         BMCWEB_LOG_ERROR("Empty assembly");
         return;
     }
-    std::regex assemblyRegex("[^0-9]*([0-9]+).*");
+    // seek the last number of the path leaf name.
+    std::regex assemblyRegex(".*[^0-9]([0-9]+)$");
     std::cmatch match;
     std::string memberId;
     if (regex_match(assemblyName.c_str(), match, assemblyRegex))
@@ -133,6 +134,19 @@ inline void
                 }
                 assemblyRes["ProductionDate"] = *value;
             }
+            else if (propertyName == "LocationContext")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for PartLocationContext");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                assemblyRes["Location"]["PartLocationContext"] = *value;
+            }
             else if (propertyName == "LocationType")
             {
                 const std::string* value =
@@ -146,6 +160,20 @@ inline void
                 }
                 assemblyRes["Location"]["PartLocation"]["LocationType"] =
                     redfish::dbus_utils::toLocationType(*value);
+            }
+            else if (propertyName == "LocationCode")
+            {
+                const std::string* value =
+                    std::get_if<std::string>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for ServiceLabel");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                assemblyRes["Location"]["PartLocation"]["ServiceLabel"] =
+                    *value;
             }
             else if (propertyName == "PhysicalContext")
             {

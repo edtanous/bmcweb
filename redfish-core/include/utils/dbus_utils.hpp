@@ -220,6 +220,11 @@ inline const char* toPhysicalContext(const std::string& physicalContext)
         return "GPUSubsystem";
     }
     if (physicalContext ==
+        "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType.ProcessorModule")
+    {
+        return "ProcessorModule";
+    }
+    if (physicalContext ==
         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType.Memory")
     {
         return "Memory";
