@@ -331,6 +331,202 @@ inline void
         powerSmoothingURI;
 }
 
+inline void getClearablePcieCounters(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& service, const std::string& objPath,
+    const std::string& interface)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](
+            const boost::system::error_code ec,
+            const std::vector<
+                std::pair<std::string, std::variant<std::vector<std::string>>>>&
+                propertiesList) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Get All call Failed for the interface. ec: {}",
+                             ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        std::vector<std::string> clearableDataSource;
+        for (const std::pair<std::string,
+                             std::variant<std::vector<std::string>>>& property :
+             propertiesList)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "ClearableCounters")
+            {
+                const std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&property.second);
+
+                if (data)
+                {
+                    for (auto counter : *data)
+                    {
+                        clearableDataSource.push_back(
+                            counter.substr(counter.find_last_of('.') + 1));
+                    }
+                }
+            }
+        }
+        asyncResp->res.jsonValue["Parameters"]["AllowableValues"] =
+            clearableDataSource;
+    },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        interface.c_str());
+}
+
+/**
+ * @brief Fill out processor nvidia specific info by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       processorId       Processor ID.
+ * @param[in]       portId       Processor ID.
+ */
+inline void getClearPCIeCountersActionInfo(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& processorId, const std::string& portId)
+{
+    BMCWEB_LOG_DEBUG("Get available system processor resource");
+    crow::connections::systemBus->async_method_call(
+        [processorId, portId, asyncResp](
+            const boost::system::error_code ec,
+            const boost::container::flat_map<
+                std::string, boost::container::flat_map<
+                                 std::string, std::vector<std::string>>>&
+                subtree) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(asyncResp->res);
+
+            return;
+        }
+        for (const auto& [path, object] : subtree)
+        {
+            if (!boost::ends_with(path, processorId))
+            {
+                continue;
+            }
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, processorId,
+                 portId](const boost::system::error_code& e,
+                         std::variant<std::vector<std::string>>& resp) {
+                if (e)
+                {
+                    // no state sensors attached.
+                    BMCWEB_LOG_ERROR(
+                        "Object Mapper call failed while finding all_states association, with error {}",
+                        e);
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&resp);
+                if (data == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("No Association for all_states found");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                for (const std::string& sensorpath : *data)
+                {
+                    // Check Interface in Object or not
+                    BMCWEB_LOG_DEBUG("processor state sensor object path {}",
+                                     sensorpath);
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, sensorpath, processorId,
+                         portId](const boost::system::error_code ec,
+                                 const std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>&
+                                     object) {
+                        if (ec)
+                        {
+                            // the path does not implement port
+                            // interfaces
+                            BMCWEB_LOG_DEBUG(
+                                "no port interface on object path {}",
+                                sensorpath);
+                            return;
+                        }
+
+                        sdbusplus::message::object_path path(sensorpath);
+                        if (path.filename() != portId)
+                        {
+                            return;
+                        }
+
+                        std::string clearPcieCountersActionInfoUri =
+                            "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                            "/Processors/";
+                        clearPcieCountersActionInfoUri += processorId;
+                        clearPcieCountersActionInfoUri += "/Ports/";
+                        clearPcieCountersActionInfoUri +=
+                            portId +
+                            "/Metrics/Oem/Nvidia/ClearPCIeCountersActionInfo";
+                        asyncResp->res.jsonValue["@odata.id"] =
+                            clearPcieCountersActionInfoUri;
+                        asyncResp->res.jsonValue["@odata.type"] =
+                            "#ActionInfo.v1_2_0.ActionInfo";
+                        asyncResp->res.jsonValue["Name"] =
+                            "ClearPCIeCounters Action Info";
+                        asyncResp->res.jsonValue["Id"] =
+                            "ClearPCIeCountersActionInfo";
+
+                        for (const auto& [service, interfaces] : object)
+                        {
+                            for (auto interface : interfaces)
+                            {
+                                if (interface ==
+                                    "xyz.openbmc_project.PCIe.ClearPCIeCounters")
+                                {
+                                    asyncResp->res
+                                        .jsonValue["Parameters"]["Name"] =
+                                        "CounterType";
+                                    asyncResp->res.jsonValue["Parameters"]
+                                                            ["Required"] = true;
+                                    asyncResp->res
+                                        .jsonValue["Parameters"]["DataType"] =
+                                        "String";
+                                    getClearablePcieCounters(asyncResp, service,
+                                                             sensorpath,
+                                                             interface);
+                                    return;
+                                }
+                            }
+                        }
+                    },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetObject",
+                        sensorpath,
+                        std::array<std::string, 1>(
+                            {"xyz.openbmc_project.Inventory.Item.Port"}));
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper", path + "/all_states",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+            return;
+        }
+        // Object not found
+        messages::resourceNotFound(asyncResp->res,
+                                   "#Processor.v1_20_0.Processor", processorId);
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 2>{
+            "xyz.openbmc_project.Inventory.Item.Cpu",
+            "xyz.openbmc_project.Inventory.Item.Accelerator"});
+}
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace nvidia_processor_utils

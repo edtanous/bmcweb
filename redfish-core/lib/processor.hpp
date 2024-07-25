@@ -6282,6 +6282,26 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                             {
                                 getProcessorPortMetricsData(asyncResp, service,
                                                             sensorpath);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                                if (std::find(
+                                        interfaces.begin(), interfaces.end(),
+                                        "xyz.openbmc_project.PCIe.ClearPCIeCounters") !=
+                                    interfaces.end())
+                                {
+                                    asyncResp->res.jsonValue
+                                        ["Actions"]["Oem"]
+                                        ["#NvidiaPortMetrics.ClearPCIeCounters"]
+                                        ["target"] =
+                                        portMetricUri +
+                                        "/Actions/Oem/NvidiaPortMetrics.ClearPCIeCounters";
+                                    asyncResp->res.jsonValue
+                                        ["Actions"]["Oem"]
+                                        ["#NvidiaPortMetrics.ClearPCIeCounters"]
+                                        ["@Redfish.ActionInfo"] =
+                                        portMetricUri +
+                                        "/Oem/Nvidia/ClearPCIeCountersActionInfo";
+                                }
+#endif
                             }
                         },
                             "xyz.openbmc_project.ObjectMapper",
@@ -6310,5 +6330,33 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                 "xyz.openbmc_project.Inventory.Item.Accelerator"});
     });
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline void requestRoutesClearPCIeCountersActionInfo(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
+                 "Ports/<str>/Metrics/Oem/Nvidia/ClearPCIeCountersActionInfo")
+        .privileges(redfish::privileges::getProcessor)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId, const std::string& portId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+
+        redfish::nvidia_processor_utils::getClearPCIeCountersActionInfo(
+            asyncResp, processorId, portId);
+    });
+}
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace redfish
