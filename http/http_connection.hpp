@@ -36,6 +36,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 namespace crow
@@ -582,7 +583,21 @@ class Connection :
     void doWrite()
     {
         BMCWEB_LOG_DEBUG("{} doWrite", logPtr(this));
-        res.preparePayload();
+        ForceChunking chunked = ForceChunking::Disabled;
+
+#ifdef BMCWEB_ENABLE_CHUNKING
+        if (req->version() == 11)
+        {
+            std::string_view accept_encodings =
+                req->getHeaderValue(boost::beast::http::field::accept_encoding);
+            if (http_helpers::headerContains(accept_encodings, "chunked"))
+            {
+                chunked = ForceChunking::Enabled;
+            }
+        }
+#endif // BMCWEB_ENABLE_CHUNKING
+
+        res.preparePayload(chunked);
 
         startDeadline();
         serializer.emplace(res.response);

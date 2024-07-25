@@ -108,4 +108,43 @@ inline bool isContentTypeAllowed(std::string_view header, ContentType type,
     return type == allowed;
 }
 
+inline bool headerContains(std::string_view header, std::string_view content)
+{
+    size_t lastIndex = 0;
+    while (lastIndex < header.size())
+    {
+        size_t index = header.find(',', lastIndex);
+        if (index == std::string_view::npos)
+        {
+            index = header.size();
+        }
+        std::string_view token = header.substr(lastIndex, index - lastIndex);
+        lastIndex = index + 1;
+
+        // trim spaces
+        while (!token.empty() && std::isspace(token.front()))
+        {
+            token.remove_prefix(1);
+        }
+        while (!token.empty() && std::isspace(token.back()))
+        {
+            token.remove_suffix(1);
+        }
+
+        // ignore any q-factor weighting (;q=)
+        std::size_t separator = token.find(";q=");
+        if (separator != std::string_view::npos)
+        {
+            token = token.substr(0, separator);
+        }
+
+        if (token == content)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 } // namespace http_helpers

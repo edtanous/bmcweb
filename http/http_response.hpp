@@ -22,6 +22,11 @@ class Connection;
 
 namespace http = boost::beast::http;
 
+enum class ForceChunking {
+    Enabled,
+    Disabled
+};
+
 struct Response
 {
     template <typename Adaptor, typename Handler>
@@ -163,7 +168,7 @@ struct Response
         return response.body().payloadSize();
     }
 
-    void preparePayload()
+    void preparePayload(ForceChunking chunked=ForceChunking::Disabled)
     {
         // This code is a throw-free equivalent to
         // beast::http::message::prepare_payload
@@ -179,11 +184,15 @@ struct Response
             response.chunked(true);
             return;
         }
-#ifdef BMCWEB_ENABLE_CHUNKING
-        response.chunked(true);
-#else
-        response.content_length(*pSize);
-#endif // BMCWEB_ENABLE_CHUNKING
+
+        if (chunked==ForceChunking::Enabled)
+        {
+            response.chunked(true);
+        }
+        else
+        {
+            response.content_length(*pSize);
+        }
 
         if (is1XXReturn || result() == status::no_content ||
             result() == status::not_modified)
