@@ -502,7 +502,8 @@ inline void afterSystemGetSubTree(
 
 #ifdef BMCWEB_ENABLE_BIOS
                     // Make sure to get SMBIOS UUID
-                    if (std::filesystem::path(path).filename() == "bios")
+                    sdbusplus::message::object_path uuidPath(path);
+                    if (uuidPath.filename() == "bios")
                     {
                         sdbusplus::asio::getAllProperties(
                             *crow::connections::systemBus, connection.first, path,
