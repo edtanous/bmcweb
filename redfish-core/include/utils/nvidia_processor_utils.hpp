@@ -230,7 +230,7 @@ inline void
         }
         nlohmann::json& json = aResp->res.jsonValue;
         json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessor.v1_2_0.NvidiaGPU";
+            "#NvidiaProcessor.v1_2_0.NvidiaGPU";
         for (const auto& property : properties)
         {
             if (property.first == "PendingCCModeState")
@@ -327,7 +327,8 @@ inline void
                                     "/Processors/";
     powerSmoothingURI += processorId;
     powerSmoothingURI += "/Oem/Nvidia/PowerSmoothing";
-    aResp->res.jsonValue["PowerSmoothing"]["@odata.id"] = powerSmoothingURI;
+    aResp->res.jsonValue["Oem"]["Nvidia"]["PowerSmoothing"]["@odata.id"] =
+        powerSmoothingURI;
 }
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
