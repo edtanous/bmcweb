@@ -20,6 +20,7 @@
 #include "fan.hpp"
 #include "hypervisor_system.hpp"
 #include "leak_detection.hpp"
+#include "leak_detector.hpp"
 #include "log_services.hpp"
 #include "manager_diagnostic_data.hpp"
 #include "managers.hpp"
@@ -471,6 +472,7 @@ RedfishService::RedfishService(App& app)
 
 #ifdef BMCWEB_ENABLE_REDFISH_LEAK_DETECT
     requestRoutesLeakDetection(app);
+    requestRoutesLeakDetector(app);
 #endif
     // Note, this must be the last route registered
     requestRoutesRedfish(app);
