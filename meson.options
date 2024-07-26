@@ -613,3 +613,10 @@ option(
     value: 'enabled',
     description: 'Enable/Disable SMBPBI out of band raw command'
 )
+
+option(
+    'redfish-leak-detect',
+    type: 'feature',
+    value: 'disabled',
+    description: 'Enable/Disable Leak Detection related redfish schema'
+)

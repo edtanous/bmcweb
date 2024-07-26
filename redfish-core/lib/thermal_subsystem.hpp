@@ -31,7 +31,7 @@ inline void doThermalSubsystemCollection(
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/ThermalSubsystem/ThermalSubsystem.json>; rel=describedby");
     asyncResp->res.jsonValue["@odata.type"] =
-        "#ThermalSubsystem.v1_0_0.ThermalSubsystem";
+        "#ThermalSubsystem.v1_3_0.ThermalSubsystem";
     asyncResp->res.jsonValue["Name"] = "Thermal Subsystem";
     asyncResp->res.jsonValue["Id"] = "ThermalSubsystem";
 
@@ -44,6 +44,11 @@ inline void doThermalSubsystemCollection(
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Fans"]["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans", chassisId);
+#endif
+
+#ifdef BMCWEB_ENABLE_REDFISH_LEAK_DETECT
+    asyncResp->res.jsonValue["LeakDetection"]["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/ThermalSubsystem/LeakDetection", chassisId);
 #endif
 
     asyncResp->res.jsonValue["ThermalMetrics"]["@odata.id"] =

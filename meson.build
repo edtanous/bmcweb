@@ -143,6 +143,7 @@ feature_map = {
   'erot-reset'                                  : '-DBMCWEB_ENABLE_EROT_RESET',
   'cpu-diag-support'                            : '-DBMCWEB_ENABLE_CPU_DIAG_FEATURE',
   'command-smbpbi-oob'                          : '-DBMCWEB_COMMAND_SMBPBI_OOB',
+  'redfish-leak-detect'                         : '-DBMCWEB_ENABLE_REDFISH_LEAK_DETECT',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

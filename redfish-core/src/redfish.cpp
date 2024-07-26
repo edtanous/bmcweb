@@ -19,6 +19,7 @@
 #include "fabric_adapters.hpp"
 #include "fan.hpp"
 #include "hypervisor_system.hpp"
+#include "leak_detection.hpp"
 #include "log_services.hpp"
 #include "manager_diagnostic_data.hpp"
 #include "managers.hpp"
@@ -466,6 +467,10 @@ RedfishService::RedfishService(App& app)
     requestRoutesProcessorWorkloadPower(app);
     requestRoutesProcessorWorkloadPowerProfileCollection(app);
     requestRoutesProcessorWorkloadPowerProfile(app);
+#endif
+
+#ifdef BMCWEB_ENABLE_REDFISH_LEAK_DETECT
+    requestRoutesLeakDetection(app);
 #endif
     // Note, this must be the last route registered
     requestRoutesRedfish(app);
