@@ -128,6 +128,13 @@ inline std::optional<pcie_device::PCIeTypes>
     {
         return pcie_device::PCIeTypes::Gen5;
     }
+    /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+     * while upstream sync*/
+    // if (generationInUse ==
+    //     "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen6")
+    // {
+    //     return pcie_device::PCIeTypes::Gen6;
+    // }
     if (generationInUse.empty() ||
         generationInUse ==
             "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Unknown")
@@ -136,6 +143,44 @@ inline std::optional<pcie_device::PCIeTypes>
     }
 
     return pcie_device::PCIeTypes::Invalid;
+}
+
+inline std::optional<std::string>
+    redfishPcieGenerationStringFromDbus(const std::string& generationInUse)
+{
+    if (generationInUse ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen1")
+    {
+        return "Gen1";
+    }
+    if (generationInUse ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen2")
+    {
+        return "Gen2";
+    }
+    if (generationInUse ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen3")
+    {
+        return "Gen3";
+    }
+    if (generationInUse ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen4")
+    {
+        return "Gen4";
+    }
+    if (generationInUse ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen5")
+    {
+        return "Gen5";
+    }
+    if (generationInUse ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen6")
+    {
+        return "Gen6";
+    }
+
+    // The value is not unknown or Gen1-6, need return an internal error.
+    return std::nullopt;
 }
 
 } // namespace pcie_util

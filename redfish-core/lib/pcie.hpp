@@ -83,6 +83,11 @@ static inline std::string getPCIeType(const std::string& pcieType)
     {
         return "Gen5";
     }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeDevice.PCIeTypes.Gen6")
+    {
+        return "Gen6";
+    }
     // Unknown or others
     return "Unknown";
 }
@@ -496,39 +501,6 @@ static inline void
         "CurrentPowerState");
 }
 
-inline std::optional<std::string>
-    redfishPcieGenerationFromDbus(const std::string& generationInUse)
-{
-    if (generationInUse ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen1")
-    {
-        return "Gen1";
-    }
-    if (generationInUse ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen2")
-    {
-        return "Gen2";
-    }
-    if (generationInUse ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen3")
-    {
-        return "Gen3";
-    }
-    if (generationInUse ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen4")
-    {
-        return "Gen4";
-    }
-    if (generationInUse ==
-        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen5")
-    {
-        return "Gen5";
-    }
-
-    // The value is not unknown or Gen1-5, need return an internal error.
-    return std::nullopt;
-}
-
 // inline void requestRoutesSystemPCIeDeviceCollection(App& app)
 // {
 //     /**
@@ -565,20 +537,27 @@ inline void addPCIeSlotProperties(
         return;
     }
 
-    std::optional<pcie_device::PCIeTypes> pcieType =
-        pcie_util::redfishPcieGenerationFromDbus(generation);
+    /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+     * while upstream sync*/
+    // std::optional<pcie_device::PCIeTypes> pcieType =
+    //     pcie_util::redfishPcieGenerationFromDbus(generation);
+
+    std::optional<std::string> pcieType =
+        pcie_util::redfishPcieGenerationStringFromDbus(generation);
     if (!pcieType)
     {
         BMCWEB_LOG_WARNING("Unknown PCIeType: {}", generation);
     }
     else
     {
-        if (*pcieType == pcie_device::PCIeTypes::Invalid)
-        {
-            BMCWEB_LOG_ERROR("Invalid PCIeType: {}", generation);
-            messages::internalError(res);
-            return;
-        }
+        /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+         * while upstream sync*/
+        // if (*pcieType == pcie_device::PCIeTypes::Invalid)
+        // {
+        //     BMCWEB_LOG_ERROR("Invalid PCIeType: {}", generation);
+        //     messages::internalError(res);
+        //     return;
+        // }
         res.jsonValue["Slot"]["PCIeType"] = *pcieType;
     }
 
@@ -726,7 +705,7 @@ static inline void
                 if (value != nullptr)
                 {
                     std::optional<std::string> propValue =
-                        redfishPcieGenerationFromDbus(*value);
+                        pcie_util::redfishPcieGenerationStringFromDbus(*value);
                     if (!propValue)
                     {
                         asyncResp->res
@@ -744,7 +723,7 @@ static inline void
                 const std::string* value =
                     std::get_if<std::string>(&property.second);
                 std::optional<std::string> generationInUse =
-                    redfishPcieGenerationFromDbus(*value);
+                    pcie_util::redfishPcieGenerationStringFromDbus(*value);
                 if (!generationInUse)
                 {
                     asyncResp->res.jsonValue["PCIeInterface"]["PCIeType"] =
@@ -1177,8 +1156,13 @@ inline void addPCIeDeviceProperties(
 
     if (generationInUse != nullptr)
     {
-        std::optional<pcie_device::PCIeTypes> redfishGenerationInUse =
-            pcie_util::redfishPcieGenerationFromDbus(*generationInUse);
+        /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+        * while upstream sync*/
+        // std::optional<pcie_device::PCIeTypes> redfishGenerationInUse =
+        //     pcie_util::redfishPcieGenerationFromDbus(*generationInUse);
+
+        std::optional<std::string> redfishGenerationInUse =
+            pcie_util::redfishPcieGenerationStringFromDbus(*generationInUse);
 
         if (!redfishGenerationInUse)
         {
@@ -1187,13 +1171,15 @@ inline void addPCIeDeviceProperties(
         }
         else
         {
-            if (*redfishGenerationInUse == pcie_device::PCIeTypes::Invalid)
-            {
-                BMCWEB_LOG_ERROR("Invalid PCIe Device Generation: {}",
-                                 *generationInUse);
-                messages::internalError(asyncResp->res);
-                return;
-            }
+            /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+            * while upstream sync*/
+            // if (*redfishGenerationInUse == pcie_device::PCIeTypes::Invalid)
+            // {
+            //     BMCWEB_LOG_ERROR("Invalid PCIe Device Generation: {}",
+            //                      *generationInUse);
+            //     messages::internalError(asyncResp->res);
+            //     return;
+            // }
             asyncResp->res.jsonValue["PCIeInterface"]["PCIeType"] =
                 *redfishGenerationInUse;
         }
@@ -1201,8 +1187,13 @@ inline void addPCIeDeviceProperties(
 
     if (generationSupported != nullptr)
     {
-        std::optional<pcie_device::PCIeTypes> redfishGenerationSupported =
-            pcie_util::redfishPcieGenerationFromDbus(*generationSupported);
+        /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+        * while upstream sync*/
+        // std::optional<pcie_device::PCIeTypes> redfishGenerationSupported =
+        //     pcie_util::redfishPcieGenerationFromDbus(*generationSupported);
+
+        std::optional<std::string> redfishGenerationSupported =
+            pcie_util::redfishPcieGenerationStringFromDbus(*generationSupported);
 
         if (!redfishGenerationSupported)
         {
@@ -1211,13 +1202,15 @@ inline void addPCIeDeviceProperties(
         }
         else
         {
-            if (*redfishGenerationSupported == pcie_device::PCIeTypes::Invalid)
-            {
-                BMCWEB_LOG_ERROR("Invalid PCIe Device Generation: {}",
-                                 *generationSupported);
-                messages::internalError(asyncResp->res);
-                return;
-            }
+            /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+            * while upstream sync*/
+            // if (*redfishGenerationSupported == pcie_device::PCIeTypes::Invalid)
+            // {
+            //     BMCWEB_LOG_ERROR("Invalid PCIe Device Generation: {}",
+            //                      *generationSupported);
+            //     messages::internalError(asyncResp->res);
+            //     return;
+            // }
             asyncResp->res.jsonValue["PCIeInterface"]["MaxPCIeType"] =
                 *redfishGenerationSupported;
         }

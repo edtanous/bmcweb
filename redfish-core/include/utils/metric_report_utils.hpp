@@ -533,6 +533,11 @@ static inline std::string toPCIeType(const std::string& pcieType)
     {
         return "Gen5";
     }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeDevice.PCIeTypes.Gen6")
+    {
+        return "Gen6";
+    }
     // Unknown or others
     return "Unknown";
 }
