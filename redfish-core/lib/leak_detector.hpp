@@ -40,7 +40,7 @@ inline void getValidLeakDetectorPath(
                              const std::string& service)>& callback)
 {
     sdbusplus::message::object_path inventoryPath(
-        "/xyz/openbmc_project/inventory/item/leakdetectors/");
+        "/xyz/openbmc_project/inventory/leakdetectors/");
     sdbusplus::message::object_path leakDetectorPath =
         inventoryPath / leakDetectorId;
 
@@ -233,8 +233,56 @@ inline void handleLeakDetectorGet(
         std::bind_front(doLeakDetectorGet, asyncResp, chassisId, leakDetectorId));
 }
 
+inline void doLeakDetectorCollection(
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& chassisId,
+                            const std::optional<std::string>& validChassisPath)
+{
+    if (!validChassisPath)
+    {
+        messages::resourceNotFound(asyncResp->res, "Chassis", chassisId);
+        return;
+    }
+    asyncResp->res.addHeader(boost::beast::http::field::link,
+                   "</redfish/v1/JsonSchemas/LeakDetectorCollection/LeakDetectorCollection.json>; rel=describedby");
+    asyncResp->res.jsonValue["@odata.type"] = "#LeakDetectorCollection.LeakDetectorCollection";
+    asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/ThermalSubsystem/LeakDetection/LeakDetectors", chassisId);
+    asyncResp->res.jsonValue["Name"] = "Leak Detector Collection";
+    asyncResp->res.jsonValue["Description"] =
+        "Collection of Leak Detectors for Chassis " + chassisId;
+
+    boost::urls::url collectionUrl = boost::urls::format(
+        "/redfish/v1/Chassis/{}/ThermalSubsystem/LeakDetection/LeakDetectors",
+        chassisId);
+    collection_util::getCollectionMembersByAssociation(
+        asyncResp, std::string(collectionUrl.data(), collectionUrl.size()),
+        *validChassisPath + "/contained_by",
+        {leakDetectorInventoryInterface});
+}
+
+inline void
+    handleLeakDetectorCollectionGet(App& app, const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& chassisId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+
+    redfish::chassis_utils::getValidChassisPath(
+        asyncResp, chassisId,
+        std::bind_front(doLeakDetectorCollection, asyncResp, chassisId));
+}
+
 inline void requestRoutesLeakDetector(App& app)
 {
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/ThermalSubsystem/LeakDetection/LeakDetectors/")
+        .privileges(redfish::privileges::getLeakDetectorCollection)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleLeakDetectorCollectionGet, std::ref(app)));
+
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/ThermalSubsystem/LeakDetection/LeakDetectors/<str>/")
         .privileges(redfish::privileges::getLeakDetector)
         .methods(boost::beast::http::verb::get)(
